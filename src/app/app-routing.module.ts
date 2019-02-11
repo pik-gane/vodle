@@ -14,7 +14,12 @@ const routes: Routes = [
   {
     path: 'list',
     loadChildren: './list/list.module#ListPageModule'
-  }
+  },
+  { path: 'mypolls', loadChildren: './mypolls/mypolls.module#MypollsPageModule' },
+  { path: 'newpoll', loadChildren: './newpoll/newpoll.module#NewpollPageModule' },
+  { path: 'openpoll', loadChildren: './openpoll/openpoll.module#OpenpollPageModule' },
+  { path: 'closedpoll', loadChildren: './closedpoll/closedpoll.module#ClosedpollPageModule' },
+  { path: 'about', loadChildren: './about/about.module#AboutPageModule' }
 ];
 
 @NgModule({
