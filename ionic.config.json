@@ -1,6 +1,8 @@
 {
   "name": "maxparc-ionic",
-  "integrations": {},
+  "integrations": {
+    "cordova": {}
+  },
   "type": "angular",
   "id": "7c16bdbd"
 }
