@@ -3,10 +3,43 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>about</ion-title>
+    <ion-title>About maxparc</ion-title>
+    <ion-thumbnail slot="end">
+        <ion-img src="/assets/maxparc_icon.png"></ion-img>
+    </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
 
 <ion-content padding>
-
+  <p>
+    <b><i>maxparc</i> helps groups find their <i>maximal partial consensus</i> among any set of options.</b>
+  </p>
+  <p>
+    For each option, it shows you the current support as a grey bar on the right, 
+    and allows you to adjust your ratings in realtime. 
+    To help you converge to a full or partial consensus as broad as possible, 
+    options are listed by descending support.
+  </p>
+  <p>
+    When the poll closes, 
+    the winning option is determined by a fair algorithm that gives every voter the same influence,
+    not just those voters who happen to belong to the majority.
+  </p>
+  <p>
+    If one option is supported by all, this full consensus option will be the sure winner.
+    Otherwise <i>maxparc</i> most likely declares the option with the broadest support the winner.
+    But to achieve fairness, it must sometimes also use a certain amount of chance,
+    similar to a greencard lottery.
+  </p>
+  <small>
+    <p>
+      The exact procedure that <i>maxparc</i> uses for determining the winning option is this:
+      After the poll has closed, a voter is picked by lot.
+      Then the topmost option for which that voter's rating knob overlaps with the grey support bar is declared the winner. 
+    </p>
+    <p>
+      This way, the most supported option will have the vastly largest probability of winning,
+      and all other options' winning probability is at most as large as their support.
+    </p>
+    </small>
 </ion-content>

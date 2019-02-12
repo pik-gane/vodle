@@ -3,14 +3,18 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>Poll XXX</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
+    <ion-title>Which movie should we watch?</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
+    <ion-thumbnail slot="end">
+        <ion-img src="/assets/maxparc_icon.png"></ion-img>
+    </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <ion-list lines="full">
     <ion-item>
-      <b>What option should we choose?</b>
+      <i>Please rate all options.</i><br/>
+      <small>Poll closes Thursday 28 February 12 noon</small>
       <ion-button slot="end" float-right no-padding no-margin fill="clear">
         <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
         <!--TODO: expand a sublist with UI for overall poll data-->
@@ -27,7 +31,7 @@
         <ion-grid no-padding no-margin>
           <ion-row name="optionname" no-padding padding-top no-margin>
             <ion-col no-padding no-margin>
-              Option {{option}}<!--{{option.title}}-->
+              Movie {{option}}<!--{{option.title}}-->
             </ion-col>
             <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
               <ion-button fill="clear" float-right no-padding no-margin>
