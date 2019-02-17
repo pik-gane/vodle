@@ -45,43 +45,26 @@
 
 ### Building
 
-I did the following to get the android build going:
+I did the following to get the unsigned android debug build going:
 
-sudo npm i -g cordova
-
-npm install @ionic-native/push
-
-npm install cordova-plugin-ionic@^5.0.0
-
-npm install ajv@^6.9.1
-
-npm install fsevents@1.2.7
-
-sudo apt install openjdk-8-jdk
-
-sudo update-alternatives - -config java
-
-then select 1.8
-
-sudo update-alternatives - -config javac
-
-then select 1.8
-
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-
-sudo apt install gradle android-sdk-build-tools
-
-/home/jobst/android-sdk-linux/tools/bin/sdkmanager --install "platforms;android-27"
-
-/home/jobst/android-sdk-linux/tools/bin/sdkmanager --install "build-tools;26.0.2"
-
-/home/jobst/android-sdk-linux/tools/bin/sdkmanager --update
-
-yes | /home/jobst/android-sdk-linux/tools/bin/sdkmanager --licenses
-
-export ANDROID_HOME=/home/jobst/android-sdk-linux/
-
-ionic cordova build --prod android --verbose
+* sudo npm i -g cordova
+* npm install @ionic-native/push
+* npm install cordova-plugin-ionic@^5.0.0
+* npm install ajv@^6.9.1
+* npm install fsevents@1.2.7
+* sudo apt install openjdk-8-jdk
+* sudo update-alternatives - -config java
+  then select 1.8
+* sudo update-alternatives - -config javac
+  then select 1.8
+* export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+* sudo apt install gradle android-sdk-build-tools
+* ...android-sdk-linux/tools/bin/sdkmanager --install "platforms;android-27"
+* ...android-sdk-linux/tools/bin/sdkmanager --install "build-tools;26.0.2"
+* ...android-sdk-linux/tools/bin/sdkmanager --update
+* yes | ...android-sdk-linux/tools/bin/sdkmanager --licenses
+* export ANDROID_HOME=...android-sdk-linux/
+* ionic cordova build --prod android --verbose
 
 ### Useful links
 
