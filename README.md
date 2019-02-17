@@ -5,7 +5,7 @@
 * app name will be "vodle", logo exists
 * main focus for now: get base functionality going (setting up polls, voting, closing a poll)
 
-### Priotitised list of wanted features
+### Prioritised list of wanted features
 
 * poll setup, invitation by email
 * basic nonencrypted communication via realtime.co
