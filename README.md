@@ -9,9 +9,12 @@
 
 * poll setup, invitation by email
 * basic nonencrypted communication via realtime.co
-* interactive voting gui
+* interactive voting gui, changing pin color depending on approval state
 * at deadline: poll tally, broadcast result via realtime.co
+* add non-probabilistic mode ("allocate a budget", "allocate resources", "elect temporary representatives" 
+* optimized explanations, howtos, guides (using text of different detail and animations)
 * custom uri scheme & file extension
+* standard notification when some bar has changed by more than 5% or some pin's distance to bar end gets below 5% or time gets late
 * invitation and notifications via other messengers
 * "vodle" button for integration in websites, using custom uri + standard webservice interface to open polls
 * integration with slack via slackbot "vodle"
@@ -19,6 +22,7 @@
 * personal prioritization of polls
 * customized notification options (updates, result)
 * text message broadcast and personal messages
+* observer-only view for stakeholders or public projection 
 
 ## Ideas for publication
 
@@ -31,13 +35,24 @@
 
 ### application situations
 
-* movie
+#### probabilistic:
+
+* movie (<-- movie theatre)
+* restaurant (<-- gastro pages)
+* hotel (<-- booking engine)
+* what to cook (<-- recipe server)
 * date
+* train/flight connection (<-- carrier or specialized search engine)
 * holiday destination
+* product variant (<-- webshop)
 * band name
 * company logo
-* art awards
-* group speaker/rep
+
+### proportional allocation:
+
+* art award money
+* group speaker/rep temporary service time
+* budget, time or other resources for projects
 
 ## Implementation notes
 
@@ -70,7 +85,7 @@ I did the following to get the unsigned android debug build going:
 
 * sorting and filtering a list: https://www.djamware.com/post/5a37ceaf80aca7059c142970/ionic-3-and-angular-5-search-and-sort-list-of-data
 * push notifications: https://ionicframework.com/docs/native/push/
-* realtime.co: https://framework.realtime.co/messaging/
+* realtime.co: https://framework.realtime.co/messaging/, http://demos.realtime.co/demos/poll2.aspx, http://messaging-public.realtime.co/documentation/starting-guide/quickstart-js.html
 * app-specific url schemes (use "maxparc"?): 
     https://developer.apple.com/documentation/uikit/core_app/allowing_apps_and_websites_to_link_to_your_content/defining_a_custom_url_scheme_for_your_app
     https://stackoverflow.com/questions/2448213/how-to-implement-my-very-own-uri-scheme-on-android
