@@ -81,6 +81,26 @@ I did the following to get the unsigned android debug build going:
 * export ANDROID_HOME=...android-sdk-linux/
 * ionic cordova build --prod android --verbose
 
+### message retention
+
+On the free plan, realtime.co deletes unserved messages after 2 minutes, so an offline user will get only the messages from the last two minutes when reconnecting.
+Hence we must make sure someone sends full rating state data at least every two minutes, 
+so that a reconnecting app will receive at least one such full state together with all subsequent updates.
+The protocol for this is this:
+
+* whenever receiving a full state, the app adds a random number between 1 and 2 minutes to that state's timestamp 
+  and sets this as her "broadcast full state time".
+* when receiving newer full states, a new "broadcast full state time" is set.
+* when reaching the "broadcast full state time" before another full state is received, 
+  the app broadcasts the current full state.
+* to make sure state does not get lost when users are only online sporadically,
+  a central, continuously online maxparc server listens on the same channel, 
+  and when it has not received a full state for longer than, say, 110 seconds, 
+  it computes a new full state and broadcasts it.
+  this could even be done by a cron job executing every, say, 55 seconds.
+* note that with 100 voters and 10 options, a full state is just 1KB of data,
+  so the server only needs that much permanent storage per open poll.
+
 ### Useful links
 
 * sorting and filtering a list: https://www.djamware.com/post/5a37ceaf80aca7059c142970/ionic-3-and-angular-5-search-and-sort-list-of-data
