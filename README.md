@@ -103,9 +103,11 @@ The protocol for this is this:
 
 ### Useful links
 
+* http://unhosted.org/ for ideas on decentralization
 * sorting and filtering a list: https://www.djamware.com/post/5a37ceaf80aca7059c142970/ionic-3-and-angular-5-search-and-sort-list-of-data
 * push notifications: https://ionicframework.com/docs/native/push/
 * realtime.co: https://framework.realtime.co/messaging/, http://demos.realtime.co/demos/poll2.aspx, http://messaging-public.realtime.co/documentation/starting-guide/quickstart-js.html
+* possible alternative to realtime.co: http://sockethub.org/
 * app-specific url schemes (use "maxparc"?): 
     https://developer.apple.com/documentation/uikit/core_app/allowing_apps_and_websites_to_link_to_your_content/defining_a_custom_url_scheme_for_your_app
     https://stackoverflow.com/questions/2448213/how-to-implement-my-very-own-uri-scheme-on-android
