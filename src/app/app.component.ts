@@ -16,9 +16,14 @@ export class AppComponent {
       icon: 'home'
     },
     {
-      title: 'My Polls',
+      title: 'My polls',
       url: '/mypolls',
       icon: 'list'
+    },
+    {
+      title: 'How to use',
+      url: '/help',
+      icon: 'help'
     },
     {
       title: 'About',

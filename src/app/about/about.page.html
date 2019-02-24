@@ -1,45 +1,59 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>About maxparc</ion-title>
+    <ion-title>About vodle</ion-title>
     <ion-thumbnail slot="end">
-        <ion-img src="/assets/maxparc_icon.png"></ion-img>
+        <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding>
+<ion-content padding><!--TODO: instead of italics, emphasise word "vodle" by green color as in the logo-->
+  <!--TODO: have this as an expandable list of topics, with the first one expanded by default-->
+  <h3>What is <i>vodle?</i></h3>
   <p>
-    <b><i>maxparc</i> helps groups find their <i>maximal partial consensus</i> among any set of options.</b>
+    <b><i>vodle</i> helps a group make fair and good decisions. 
+      It finds the <i>maximal partial consensus</i> among any set of options.
+      Truly democratic, it gives everyone the same effective influence.
+    </b>
   </p>
   <p>
     For each option, it shows you the current support as a grey bar on the right, 
-    and allows you to adjust your ratings in realtime. 
-    To help you converge to a full or partial consensus as broad as possible, 
-    options are listed by descending support.
+    and allows you to adjust your ratings in realtime.
+    This way, the group tends to converge to a full or partial consensus as broad as possible. 
   </p>
   <p>
     When the poll closes, 
-    the winning option is determined by a fair algorithm that gives every voter the same influence,
+    the winning option is determined by a fair but simple algorithm that gives every voter the same influence,
     not just those voters who happen to belong to the majority.
   </p>
   <p>
     If one option is supported by all, this full consensus option will be the sure winner.
-    Otherwise <i>maxparc</i> most likely declares the option with the broadest support the winner.
+    Otherwise <i>vodle</i> most likely declares the option with the broadest support the winner.
     But to achieve fairness, it must sometimes also use a certain amount of chance,
     similar to a greencard lottery.
   </p>
   <small>
     <p>
-      The exact procedure that <i>maxparc</i> uses for determining the winning option is this:
-      After the poll has closed, a voter is picked by lot.
-      Then the topmost option for which that voter's rating knob overlaps with the grey support bar is declared the winner. 
+      The exact procedure that <i>vodle</i> uses for determining the winning option is this:
+      After the poll has closed, options are sorted by descending support and one voter is picked by lot.
+      The topmost option for which the voter's rating slider meets the grey support bar is declared the winner. 
     </p>
     <p>
       This way, the most supported option will have the vastly largest probability of winning,
-      and all other options' winning probability is at most as large as their support.
+      and every other option's winning probability is at most as large as its support.
     </p>
-    </small>
+  </small>
+  <h3>Who's behind it?</h3>
+    <p>
+      <i>vodle</i>'s algorithm was developed and optimizied for fairness by the mathematician Jobst Heitzig,
+      inspired by the "threshold model" of famous sociologist Mark Granovetter.
+      This app is open-source, authors: XXX and Jobst Heitzig with contributions by YYY.
+    </p>
+  <h3>Support <i>vodle!</i></h3>
+    <p>Spread the word, send feedback, donate, join developers, etc.</p>
+  <h3>Legal stuff</h3>
+    <p>License, authors, copyright, privacy statement, other disclaimers, etc.</p>
 </ion-content>

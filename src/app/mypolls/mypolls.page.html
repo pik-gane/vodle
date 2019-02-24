@@ -1,29 +1,25 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>My Polls</ion-title>
+    <ion-title>My polls</ion-title>
     <ion-thumbnail slot="end">
-        <ion-img src="/assets/maxparc_icon.png"></ion-img>
+      <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <ion-list lines="full">
-    <ion-item-group>
-      <ion-item name="poll_X" *ngFor="let poll of ['1','2','3','4','5','6','7','8','9']"> <!--*ngFor="let poll of polls"-->
-        <a href="openpoll?poll={{poll}}" style="text-decoration:none;">
-          Poll {{poll}}
-        </a>
-      </ion-item>
-    </ion-item-group>
-    <ion-item>
-      <ion-button slot="start" fill="clear">
-        <ion-icon name="add-circle" slot="start"></ion-icon>
-        add poll
-        <!--TODO: go to newpoll page-->
+  <ion-list lines="full"><!--TODO: allow filtering and sorting by state(open/closed/drafts)/deadline/title/creator/priority, allow setting personal priority-->
+    <ion-item name="poll_X" href="openpoll" *ngFor="let poll of ['1','2','3','4','5','6','7','8','9']"> <!--*ngFor="let poll of polls"-->
+      <!--<a href="openpoll?poll={{poll}}" style="text-decoration:none;">-->
+        Poll {{poll}}
+      <!--</a>-->
+    </ion-item>
+    <ion-item><!--TODO: replace by big blue add-circle sticking at the bottom-right of the screen?-->
+      <ion-button no-margin href="newpoll" fill="clear">
+        <ion-icon name="add-circle" slot="start"></ion-icon> add poll
       </ion-button>
     </ion-item>      
   </ion-list>

@@ -1,14 +1,48 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>
-      Welcome to maxparc
-    </ion-title>
+    <ion-title>Welcome to vodle</ion-title>
+    <ion-thumbnail slot="end">
+      <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <ion-img src="/assets/home_splash.png"></ion-img>
+<ion-content padding><!--TODO: center everything on this page?-->
+  <ion-grid no-padding>
+    <ion-row>
+      <ion-col>
+        <h3>Your group wants to decide something?</h3> 
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col>
+        <ion-button href="newpoll">
+          <ion-icon name="add-circle" slot="start"></ion-icon>
+          Set up a new poll
+        </ion-button>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col>
+        <h3>You have been invited for a poll?</h3> 
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col>
+        Click on the invitation file attached to your invitation message.
+        <br/>
+        If it doesn't open directly, please download or store the file,
+        <br/>
+        then click here:
+        <br/>
+        <ion-button>
+          <ion-icon name="document" slot="start"></ion-icon>
+          Open an invitation file
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
 </ion-content>

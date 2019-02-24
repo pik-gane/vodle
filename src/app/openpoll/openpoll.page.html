@@ -1,11 +1,11 @@
 <ion-header>
-  <ion-toolbar>
+  <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>Which movie should we watch?</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     <ion-thumbnail slot="end">
-        <ion-img src="/assets/maxparc_icon.png"></ion-img>
+      <ion-img src="/assets/topright_icon.png"></ion-img><!--TODO: make smaller and add padding to the right-->
     </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
@@ -13,14 +13,17 @@
 <ion-content>
   <ion-list lines="full">
     <ion-item>
-      <i>Please rate all options.</i><br/>
-      <small>Poll closes Thursday 28 February 12 noon</small>
+      <span>
+        <i>Please rate all options.&nbsp;</i><br/>
+      <small>Poll closes Thursday 28 February, 12 noon</small>
+      </span>
       <ion-button slot="end" float-right no-padding no-margin fill="clear">
         <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
-        <!--TODO: expand a sublist with UI for overall poll data-->
+        <!--TODO: expand a sublist with UI for overall poll data:
+        creator, personal priority, weblink, link to list of possible further options, ...-->
       </ion-button>
     </ion-item>
-    <ion-item-group>
+<!--    <ion-item-group>-->
       <ion-item name="option_X" *ngFor="let option of ['1','2','3','4','5','6','7','8','9']"> <!--*ngFor="let option of options"-->
         <!--TODO: make sure there are dividing lines between all options and the add option item-->
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
@@ -43,10 +46,10 @@
           <ion-row no-padding no-margin>
             <ion-col no-padding no-margin>
               <ion-range name="rating" pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
-                <ion-label slot="end" no-padding no-margin>
-                  <div style="position:absolute;bottom:0px;right:0px;z-index:-10;">
+                <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
+                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                      <rect x="70%" y="9" width="30%" height="17" fill="lightgrey" stroke="none"/>
+                      <rect x="70%" y="9" width="30%" height="17" fill="#bce4e5" stroke="none"/>
                       <line x1="100%" y1="0" x2="100%" y2="35" fill="none" stroke="lightgrey" stroke-width="3"/>
                     </svg>
                   </div>
@@ -56,12 +59,10 @@
           </ion-row>
         </ion-grid>
       </ion-item>
-    </ion-item-group>
+<!--    </ion-item-group>-->
     <ion-item>
-      <ion-button slot="start" fill="clear">
-        <ion-icon name="add-circle" slot="start"></ion-icon>
-        add option
-        <!--TODO: expand a sublist with UI for adding an option-->
+      <ion-button href="addoption" fill="clear">
+        <ion-icon name="add-circle" slot="start"></ion-icon> add option
       </ion-button>
     </ion-item>      
   </ion-list>

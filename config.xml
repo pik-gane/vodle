@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <widget id="de.pik_potsdam.maxparc_ionic" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-    <name>MaxParC</name>
-    <description>truly democratic group decisions</description>
-    <author email="heitzig@pik-potsdam.de" href="http://ionicframework.com/">Jobst Heitzig</author>
+    <name>vodle</name>
+    <description>everygroup's consensus</description>
+    <author email="heitzig@pik-potsdam.de" href="http://www.pik-potsdam.de/members/heitzig">Jobst Heitzig</author>
     <content src="index.html" />
     <access origin="*" />
     <allow-intent href="http://*/*" />
