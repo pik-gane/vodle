@@ -6,5 +6,8 @@ import { Component } from '@angular/core';
   styleUrls: ['home.page.scss'],
 })
 export class HomePage {
-
+  fileopen() {
+    // TODO!
+    alert("opening invitation files is not yet supported");
+  }
 }
