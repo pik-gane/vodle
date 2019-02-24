@@ -1,5 +1,3 @@
-# maxparc-ionic
-
 ## Specification notes
 
 * app name will be "vodle", logo exists
@@ -81,7 +79,12 @@ I did the following to get the unsigned android debug build going:
 * export ANDROID_HOME=...android-sdk-linux/
 * ionic cordova build --prod android --verbose
 
-### message retention
+### Useful commands
+
+* running in dev mode: in main directory of git repo: ionic serve
+* updating icons using source put in resources: 
+
+### Message retention
 
 On the free plan, realtime.co deletes unserved messages after 2 minutes, so an offline user will get only the messages from the last two minutes when reconnecting.
 Hence we must make sure someone sends full rating state data at least every two minutes, 
