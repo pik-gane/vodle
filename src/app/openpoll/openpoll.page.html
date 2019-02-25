@@ -28,7 +28,7 @@
         <!--TODO: make sure there are dividing lines between all options and the add option item-->
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="lightgrey" stroke="none"/>
-          <path [id]="'pie_'+oid" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="grey" />
+          <path [id]="'pie_'+oid" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="grey" /><!--TODO:proper color-->
         </svg>
         <!--<ion-icon name="pie" slot="start"></ion-icon>-->
         <ion-grid no-padding no-margin>
@@ -47,7 +47,8 @@
             <ion-col no-padding no-margin>
               <ion-range [id]="'slider_'+oid" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" 
                           pin="true" min="0" max="100" [value]="p.getRating(oid, p.myvid)" 
-                          style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
+                          style="--bar-height:7px;--knob-size:25px;" no-padding no-margin
+                          [color]="slidercolor[oid]">
                 <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
                   <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">

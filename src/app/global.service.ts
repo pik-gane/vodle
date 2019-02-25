@@ -132,6 +132,8 @@ export class Poll {
   getRating(oid, vid) { return this.ratings[oid][vid]; }
 
   public tally() {
+    // TODO: make sure only one thread of this runs and eval. does not take too long.
+    
     let vids = this.vids,
         oids = this.oids,
         n = vids.length,
