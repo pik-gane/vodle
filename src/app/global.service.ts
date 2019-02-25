@@ -5,6 +5,7 @@ import { Injectable } from '@angular/core';
 )
 export class GlobalService {
 
+  public test = "0";
   public polls = []; // list of polls
   public openpoll = null; // currently open poll
 
@@ -33,8 +34,9 @@ export class Poll {
 
   // constant data:
   public pid; // unique poll id
-
+  public title;
   public myvid;
+  public due; // closing time
 
   // variable data:
 
@@ -43,10 +45,10 @@ export class Poll {
   public options = {}; // dict by oid
 
   // ratings are stored redundantly:
-  public ratings = {}; // dict of dicts by oid, vid
-  public rfreqs = {}; // dict of dicts of rating frequencies by oid, rating
-  public rsums = {}; // dict of total ratings by oid
-  public stamps = {}; // dict of creation timestamps by oid 
+  private ratings = {}; // dict of dicts by oid, vid
+  private rfreqs = {}; // dict of dicts of rating frequencies by oid, rating
+  private rsums = {}; // dict of total ratings by oid
+  private stamps = {}; // dict of creation timestamps by oid 
 
   // tally results:
   public rmins = {}; // dict of minimum ratings for approval, by oid
@@ -56,7 +58,7 @@ export class Poll {
   public oid2vids = null; // dict of lists of vids of those voting for an option, by oid
   public probs = {}; // dict of winning probabilities by oid
 
-  constructor(pid=null, myvid=null, demo=null) {
+  constructor(pid=null, title=null, myvid=null, demo=null) {
     if (demo != null) { // initialize a demo poll
       this.makedemo(demo);
     } else if (pid != null) { // join an existing poll
@@ -65,9 +67,11 @@ export class Poll {
       this.joinExisting();
     } else { // set up new poll
       this.pid = Math.random(); // TODO: use better method to generate a unique id
+      this.title = title;
       this.myvid = myvid = (myvid!=null) ? myvid : Math.random();
       this.vids = [myvid];
     }
+    this.due = (new Date()).getTime() + 24*60*60*1e3; // now + one day
     GlobalService.log("poll with pid " + pid + " set up.");
   }
   joinExisting() {
@@ -78,10 +82,12 @@ export class Poll {
     this.pid = demo;
     var oids;
     if (demo == "3by3") {
+      this.title = "Demo poll with 3 options and 3 voters";
       this.myvid = "Alice";
       this.vids = ["Alice", "Bob", "Celia"]; 
       oids = ["Stone", "Scissors", "Paper"];
     } else { // 10by1000
+      this.title = "Demo poll with 10 options and 1000 voters";
       this.myvid = 0;
       this.vids = Array.from(Array(1000).keys());
       oids = Array.from(Array(10).keys());
@@ -123,6 +129,7 @@ export class Poll {
     this.rfreqs[oid][r]++;
     this.rsums[oid] += r - oldr;
   }
+  getRating(oid, vid) { return this.ratings[oid][vid]; }
 
   public tally() {
     let vids = this.vids,
@@ -146,7 +153,7 @@ export class Poll {
         if (cf*100 < n*r) { 
           // less than r% have rating < r, so all with rating >= r approve
           t = r;
-          a = n - cf;
+          a = 1 - cf/n;
           break;
         }
         cf += rfs[r];
@@ -170,17 +177,17 @@ export class Poll {
     let rsums = this.rsums,
         stamps = this.stamps;
     function cmp(oid1, oid2) {
-      GlobalService.log("      comparing " + oid1 + "," + oid2);
+//      GlobalService.log("      comparing " + oid1 + "," + oid2);
       // higher approved comes first:
       let a1 = apprs[oid1],
           a2 = apprs[oid2];
       if (a1 != a2) return a2 - a1;
-      GlobalService.log("        equal approval " + a1 + ", checking total ratings");
+//      GlobalService.log("        equal approval " + a1 + ", checking total ratings");
       // if equal, then higher total rated comes first:
       let s1 = rsums[oid1],
           s2 = rsums[oid2];
       if (s1 != s2) return s2 - s1;
-      GlobalService.log("        equal total rating " + s1 + ", using creation times as tie breaker");
+//      GlobalService.log("        equal total rating " + s1 + ", using creation times as tie breaker");
       // if still equal, youngest comes first:
       return stamps[oid2] - stamps[oid1];
     }
@@ -235,6 +242,7 @@ export class Poll {
     for (let vid of checkvids) {
       this.vid2oid[vid] = null;
     }
+    GlobalService.log("    " + checkvids.length + " voters abstain.");
 
     // winning probabilities:
     GlobalService.log("  calculating winning probabilities...");

@@ -15,7 +15,7 @@
     <ion-item>
       <span>
         <i>Please rate all options.&nbsp;</i><br/>
-      <small>Poll closes Thursday 28 February, 12 noon</small>
+      <small>Poll closes {{global.openpoll.due}}</small><!--TODO: format as proper day-of-week, date and time-->
       </span>
       <ion-button slot="end" float-right no-padding no-margin fill="clear">
         <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
@@ -24,7 +24,7 @@
       </ion-button>
     </ion-item>
 <!--    <ion-item-group>-->
-      <ion-item *ngFor="let oid of this.global.oids"> <!--*ngFor="let oid of oids"-->
+      <ion-item *ngFor="let oid of global.openpoll.oids">
         <!--TODO: make sure there are dividing lines between all options and the add option item-->
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="lightgrey" stroke="none"/>
@@ -34,7 +34,7 @@
         <ion-grid no-padding no-margin>
           <ion-row name="optionname" no-padding padding-top no-margin>
             <ion-col no-padding no-margin>
-              Movie {{oid}}<!--{{option.title}}-->
+              {{p.options[oid].name}}<!--{{option.title}}-->
             </ion-col>
             <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
               <ion-button fill="clear" float-right no-padding no-margin>
@@ -45,11 +45,15 @@
           </ion-row>
           <ion-row no-padding no-margin>
             <ion-col no-padding no-margin>
-              <ion-range [id]="'slider_'+oid" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
+              <ion-range [id]="'slider_'+oid" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" 
+                          pin="true" min="0" max="100" [value]="p.getRating(oid, p.myvid)" 
+                          style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
                 <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
                   <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                      <rect [id]="'bar_'+oid" x="70%" width="30%" y="9" height="17" fill="#bce4e5" stroke="none"/>
+                      <rect [id]="'bar_'+oid" x="100%" width="0%"
+                            y="9" height="17" fill="#bce4e5" stroke="none"/>
+                            <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oid]))+'%'" [width]="''+(100*p.apprs[oid])+'%'"-->
                       <line x1="100%" y1="0" x2="100%" y2="35" fill="none" stroke="lightgrey" stroke-width="3"/>
                     </svg>
                   </div>
