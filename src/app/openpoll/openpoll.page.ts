@@ -30,6 +30,7 @@ export class OpenpollPage implements OnInit {
   }
 
   // slider control:
+
   getSlider(oid) {
     return <HTMLInputElement>document.getElementById('slider_'+oid);
   }
@@ -37,23 +38,26 @@ export class OpenpollPage implements OnInit {
     return Number(this.getSlider(oid).value);
   }
   storeSlidersRating(oid) {
-    this.global.myratings[oid] = this.getSliderValue(oid);
+    alert(this.global.myvid);
+    this.global.ratings[oid][this.global.myvid] = this.getSliderValue(oid);
   }
+  // event listeners:
   ratingChanges(oid) {
     var slider = this.getSlider(oid),
         value = Number(slider.value);
-    this.storeSlidersRating(oid);
     // TODO:
     // change slider color: 0=red, approved=green, other=blue
     // this does not work: slider.style.setProperty('--color','success');
+  }
+  ratingChangeEnded(oid) {
+    // TODO: make sure this is really always called right after releasing the slider!
+    // this.ratingChanges(oid);
+    this.storeSlidersRating(oid);
+    // TODO: broadcast rating
     // FIXME: the following is dummy code just to show a reaction,
     // later the bar's value should not be changed here
     this.global.approvals[oid] = Math.random();
-    this.global.probs[oid] = Math.random(),
+    this.global.probs[oid] = Math.random();
     this.showStats(oid);
-  }
-  ratingChangeEnded(oid) {
-    this.ratingChanges(oid);
-    // TODO: broadcast rating
   }
 }
