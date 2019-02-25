@@ -1,13 +1,18 @@
 import { Injectable } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable(
+//  {providedIn: 'root'}
+)
 export class GlobalService {
 
   public polls = []; // list of polls
   public openpoll = null; // currently open poll
 
+  constructor() {}
+
+  static log(msg) {
+    console.log((new Date()).getTime().toString() + " " + msg);
+  }
 }
 export class Option {
   public oid;
@@ -28,6 +33,7 @@ export class Poll {
 
   // constant data:
   public pid; // unique poll id
+
   public myvid;
 
   // variable data:
@@ -45,9 +51,9 @@ export class Poll {
   // tally results:
   public rmins = {}; // dict of minimum ratings for approval, by oid
   public apprs = {}; // dict of approvals by oid
-  public oidsorted = []; // list of oids by lexicographically descending (appr, rsum, stamp)
+  public oidsorted = null; // list of oids by lexicographically descending (appr, rsum, stamp)
   public vid2oid = {}; // dict of oid of option voted for, by vid
-  public oid2vids = {}; // dict of lists of vids of those voting for an option, by oid
+  public oid2vids = null; // dict of lists of vids of those voting for an option, by oid
   public probs = {}; // dict of winning probabilities by oid
 
   constructor(pid=null, myvid=null, demo=null) {
@@ -62,21 +68,23 @@ export class Poll {
       this.myvid = myvid = (myvid!=null) ? myvid : Math.random();
       this.vids = [myvid];
     }
+    GlobalService.log("poll with pid " + pid + " set up.");
   }
   joinExisting() {
       // TODO: download current poll state
   }
   makedemo(demo) {
+    GlobalService.log("making demo poll...");
     this.pid = demo;
     var oids;
     if (demo == "3by3") {
       this.myvid = "Alice";
-      this.vids = ["Alice", "Bob", "Cecilia"]; 
+      this.vids = ["Alice", "Bob", "Celia"]; 
       oids = ["Stone", "Scissors", "Paper"];
-    } else { // 5by100
+    } else { // 10by1000
       this.myvid = 0;
-      this.vids = Array.from(Array(100).keys());
-      oids = Array.from(Array(5).keys());
+      this.vids = Array.from(Array(1000).keys());
+      oids = Array.from(Array(10).keys());
     }
     for (let oid of oids) {
       this.registerOption(new Option(oid));
@@ -89,6 +97,7 @@ export class Poll {
     for (let vid of this.vids) {
       this.setRating(oids[Math.floor(Math.random()*oids.length)], vid, 100);
     }
+    GlobalService.log("...done");
   }
   registerOption(o: Option) {
     let oid = o.oid;
@@ -103,6 +112,8 @@ export class Poll {
     this.rfreqs[oid][0] = this.vids.length;
     this.rsums[oid] = 0;
     this.stamps[oid] = o.created;
+    this.apprs[oid] = -1;
+    GlobalService.log("  registered option " + o.name);
   }
   setRating(oid, vid, r) {
     let oldr = this.ratings[oid][vid];
@@ -112,14 +123,19 @@ export class Poll {
     this.rfreqs[oid][r]++;
     this.rsums[oid] += r - oldr;
   }
+
   public tally() {
     let vids = this.vids,
         oids = this.oids,
         n = vids.length,
         m = oids.length,
         rmins = {},
-        apprs = {};
+        apprs = {},
+        oldapprs = this.apprs,
+        started = (new Date()).getTime();
+
     // approvals:
+    GlobalService.log("tallying starts. computing approvals...");
     for (let oid of oids) {
       let rfs = this.rfreqs[oid],
           cf = rfs[0], // cumulative frequency
@@ -138,31 +154,65 @@ export class Poll {
       rmins[oid] = t;
       apprs[oid] = a;
     }
+    this.rmins = rmins;
+    this.apprs = apprs;
+
     // sort options by (appr, rsum, stamp)
+    GlobalService.log("  sorting options...");
+    if (this.oidsorted == null) {
+      GlobalService.log("    for the first time...");
+      this.oidsorted = [...oids];
+    }
     let oldsorted = this.oidsorted,
         newsorted = [...oldsorted],
         i0 = null;
-    newsorted.sort(this.cmpOptions);
+    GlobalService.log("    old order: " + oldsorted);
+    let rsums = this.rsums,
+        stamps = this.stamps;
+    function cmp(oid1, oid2) {
+      GlobalService.log("      comparing " + oid1 + "," + oid2);
+      // higher approved comes first:
+      let a1 = apprs[oid1],
+          a2 = apprs[oid2];
+      if (a1 != a2) return a2 - a1;
+      GlobalService.log("        equal approval " + a1 + ", checking total ratings");
+      // if equal, then higher total rated comes first:
+      let s1 = rsums[oid1],
+          s2 = rsums[oid2];
+      if (s1 != s2) return s2 - s1;
+      GlobalService.log("        equal total rating " + s1 + ", using creation times as tie breaker");
+      // if still equal, youngest comes first:
+      return stamps[oid2] - stamps[oid1];
+    }
+    newsorted.sort(cmp);
+    GlobalService.log("    new order: " + newsorted);
     // find uppermost oid where order or approval differs:
     for (let i=0; i<m; i++) {
       let oldoid = oldsorted[i],
           newoid = newsorted[i];
-      if ((newoid != oldoid) || (apprs[newoid] != apprs[oldoid])) {
+      if ((newoid != oldoid) || (apprs[oldoid] != oldapprs[oldoid])) {
         i0 = i;
         break;
       }
     }
+    GlobalService.log("    first change at " + newsorted[i0]);
     if (i0 == null) return false; // unchanged results
 
     // so results may change...
-    this.rmins = rmins;
-    this.apprs = apprs;
     this.oidsorted = newsorted;
     // voters whose vote might have changed:
     let checkvids = [];
-    for (let i=i0; i<m; i++) {
-      checkvids += this.oid2vids[newsorted[i]];
+    if (this.oid2vids == null) {
+      checkvids = [...vids];
+      this.oid2vids = {};
+    } else {
+      for (let i=i0; i<m; i++) {
+        checkvids.push(...this.oid2vids[newsorted[i]]);
+      }
     }
+
+    // calculate votes:
+    GlobalService.log("  calculate changing votes of " + checkvids.length + " voters...");
     for (let i=i0; i<m; i++) {
       let oid = newsorted[i],
           rs = this.ratings[oid],
@@ -185,23 +235,15 @@ export class Poll {
     for (let vid of checkvids) {
       this.vid2oid[vid] = null;
     }
+
     // winning probabilities:
+    GlobalService.log("  calculating winning probabilities...");
     let nvoted = n - checkvids.length;
-    for (let oid of oids) {
-      this.probs[oid] = (nvoted>0) ? this.oid2vids[oid].length/nvoted : 1/m;
+    for (let oid of newsorted) {
+      let p = this.probs[oid] = (nvoted>0) ? this.oid2vids[oid].length/nvoted : 1/m;
+      GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
+    GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
     return true; // changed results
-  }
-  cmpOptions(oid1, oid2) {
-    // higher approved comes first:
-    let a1 = this.apprs[oid1],
-        a2 = this.apprs[oid2];
-    if (a1 != a2) return a2 - a1;
-    // if equal, then higher total rated comes first:
-    let s1 = this.rsums[oid1],
-        s2 = this.rsums[oid2];
-    if (s1 != s2) return s2 - s1;
-    // if still equal, youngest comes first:
-    return this.stamps[oid2] - this.stamps[oid1];
   }
 }

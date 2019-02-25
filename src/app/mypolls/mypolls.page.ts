@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { GlobalService, Poll } from "../global.service";
 
 @Component({
   selector: 'app-mypolls',
@@ -7,7 +8,13 @@ import { Component, OnInit } from '@angular/core';
 })
 export class MypollsPage implements OnInit {
 
-  constructor() { }
+  constructor(public global: GlobalService) { 
+    if (global.polls.length == 0) {
+      let p = new Poll(null, null, "all3by3");
+      global.polls.push(p);
+      p.tally();
+    }
+  }
 
   ngOnInit() {
   }
