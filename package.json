@@ -40,6 +40,7 @@
     "ionic2-super-tabs": "^5.2.0",
     "phonegap-plugin-multidex": "^1.0.0",
     "phonegap-plugin-push": "2.2.3",
+    "random-normal": "^1.0.0",
     "rxjs": "~6.3.3",
     "zone.js": "~0.8.29"
   },

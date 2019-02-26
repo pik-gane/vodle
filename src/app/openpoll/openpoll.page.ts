@@ -41,14 +41,19 @@ export class OpenpollPage implements OnInit {
           prob = this.p.probs[oid],
           bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
           pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
-          dx = Math.round(this.pieradius*Math.sin(this.twopi*prob)),
-          dy = Math.round(this.pieradius*(1 - Math.cos(this.twopi*prob))),
-          flag = prob > 0.5 ? " 1 " : " 0 "; 
+          R = this.pieradius,
+          dx = Math.round(R*Math.sin(this.twopi*prob)),
+          dy = Math.round(R*(1 - Math.cos(this.twopi*prob))),
+          flag = prob > 0.5 ? 1 : 0; 
       bar.width.baseVal.valueAsString = (100*appr).toString()+'%';
       bar.x.baseVal.valueAsString = (100*(1-appr)).toString()+'%';
-      pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0"+flag+"1 "+dx.toString()+" "+dy.toString()+" Z");
+      if (prob < 1) {
+        pie.setAttribute('d', "M 21,25 l 0,-"+R+" a "+R+" "+R+" 0 "+flag+" 1 "+dx+" "+dy+" Z");
+      } else { // full circle
+        pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
+      }
       this.slidercolor[oid] = (r == 0) ? 'danger' : (r + this.p.apprs[oid]*100 <= 100) ? 'primary' : 'success';
-      // TODO: make sure prob=100% shows correctly as a full disc.
+      // TODO: make sure pie piece has correct center!
     }
   }
   showOrder() {

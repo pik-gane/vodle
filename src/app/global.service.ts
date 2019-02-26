@@ -95,6 +95,10 @@ export class Poll {
     }
     for (let oid of oids) {
       this.registerOption(new Option(oid));
+    }
+    new Simulation(this);
+/*
+    for (let oid of oids) {
       // random ratings 0...99, about half are 0:
       for (let vid of this.vids) {
         this.setRating(oid, vid, Math.max(0, Math.floor(Math.random()*200) - 100));
@@ -104,6 +108,7 @@ export class Poll {
     for (let vid of this.vids) {
       this.setRating(oids[Math.floor(Math.random()*oids.length)], vid, 100);
     }
+*/
     GlobalService.log("...done");
   }
   registerOption(o: Option) {
@@ -256,5 +261,62 @@ export class Poll {
     }
     GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
     return true; // changed results
+  }
+}
+export class Simulation {
+
+  // TODO: dynamics!
+
+  public p: Poll;
+
+  // policy space model parameters:
+  public dim = 2;
+  public sigma = 1; // dispersion of options (1 = like voters)
+
+  // utility data:
+  public vpos = {}; // dict of voter coordinate arrays by vid
+  public opos = {}; // dict of option coordinate arrays by oid
+
+  constructor(p: Poll) {
+    this.p = p; 
+    // draw initial coordinates:
+    for (let oid of p.oids) {
+      this.opos[oid] = Array(this.dim).fill(0).map(i => this.sigma * this.rannor());
+    }
+    for (let vid of p.vids) {
+      this.vpos[vid] = Array(this.dim).fill(0).map(i => this.rannor());
+      this.setRatings(vid);
+    }
+    GlobalService.log("simulation set up.");
+  }
+  rannor() {
+    var u = 0, v = 0;
+    while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+    while(v === 0) v = Math.random();
+    return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+  }
+  getu(oid, vid) { // utility = - squared distance in policy space
+    let u = 0,
+        op = this.opos[oid],
+        vp = this.vpos[vid];
+    for (let i=0; i<this.dim; i++) {
+      u -= (op[i] - vp[i])**2;
+    }
+    return u;
+  }
+  setRatings(vid) { // heuristic rating: 0 = benchmark, 100 = favourite, linear interpolation in between
+    let us = {},
+        umax = -1e100,
+        umean = 0;
+    for (let oid of this.p.oids) {
+      let u = us[oid] = this.getu(oid, vid),
+          pr = this.p.probs[oid];
+      umean += u * ((pr >= 0) ? pr : 1/this.p.oids.length);
+      if (u > umax) umax = u;
+    }
+    for (let oid of this.p.oids) {
+      let r = Math.max(0, (us[oid] - umean) / (umax - umean)) * 100;
+      this.p.setRating(oid, vid, r);
+    }
   }
 }
