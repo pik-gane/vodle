@@ -14,24 +14,24 @@ export class OpenpollPage implements OnInit {
   private twopi = 2*Math.PI; 
   private slidercolor = {};
 
-  constructor(public global: GlobalService) { 
-    if (global.polls.length == 0) {
-      let p = global.openpoll = new Poll(null, null, null, "10by1000");
+  constructor(public g: GlobalService) { 
+    if (this.g.polls.length == 0) {
+      alert("OOPS, no polls -- will generate demo poll...");
+      let p = this.g.openpoll = new Poll(null, null, null, "10by1000");
       p.tally();
-      global.polls.push(p);
+      this.g.polls.push(p);
     }
   }
 
+  // lifecycle events:
   ngOnInit() {
-    this.p = this.global.openpoll;
-    for (let oid of p.oids) {
-      this.slidercolor[oid] = 'primary';
-    }
-//    alert(this.global.test); // FIXME: why does this seem to be a different instance of GlobalService than the seen in mypolls?
-//    this.global.test = "2";
-//    alert(this.global.test);
-    // TODO: as long as the above is not resolved, generate a demo poll in the constructor!
-    // TODO: AFTER page is rendered, showStats()!
+    this.p = this.g.openpoll;
+  }
+  ionViewWillEnter() {
+    this.p = this.g.openpoll;
+  }
+  ionViewDidEnter() {
+    this.showStats();
   }
 
   showStats() { // update pies and bars, but not order!

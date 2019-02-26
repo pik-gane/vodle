@@ -18,7 +18,7 @@ export class AppComponent {
     {
       title: 'Last poll used',
       url: '/openpoll',
-      icon: 'list'
+      icon: 'list-box'
     },
     {
       title: 'My polls',

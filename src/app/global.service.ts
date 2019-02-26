@@ -5,9 +5,10 @@ import { Injectable } from '@angular/core';
 )
 export class GlobalService {
 
-  public test = "0";
   public polls = []; // list of polls
   public openpoll = null; // currently open poll
+
+  public dateformatoptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
   constructor() {}
 
@@ -71,7 +72,7 @@ export class Poll {
       this.myvid = myvid = (myvid!=null) ? myvid : Math.random();
       this.vids = [myvid];
     }
-    this.due = (new Date()).getTime() + 24*60*60*1e3; // now + one day
+    this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
     GlobalService.log("poll with pid " + pid + " set up.");
   }
   joinExisting() {
@@ -133,7 +134,7 @@ export class Poll {
 
   public tally() {
     // TODO: make sure only one thread of this runs and eval. does not take too long.
-    
+
     let vids = this.vids,
         oids = this.oids,
         n = vids.length,
