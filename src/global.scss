@@ -9,3 +9,17 @@
 @import '~@ionic/angular/css/text-alignment.css';
 @import '~@ionic/angular/css/text-transformation.css';
 @import '~@ionic/angular/css/flex-utils.css';
+
+@font-face {
+    font-family: 'Quicksand';
+    font-weight: 500;
+    font-style: normal;
+    src: url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.eot');
+    src: url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.eot?#iefix') format('embedded-opentype'),
+    local('Quicksand Medium'),
+    local('Quicksand-500'),
+    url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.woff2') format('woff2'),
+    url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.woff') format('woff'),
+    url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.ttf') format('truetype'),
+    url('./assets/fonts/quicksand-500/quicksand-v9-latin-500.svg#Lato') format('svg');
+    }

@@ -1,6 +1,10 @@
 // Ionic Variables and Theming. For more info, please see:
 // http://ionicframework.com/docs/theming/
 
+$font-family-md-base: "Quicksand Medium";
+$font-family-ios-base: "Quicksand Medium";
+$font-family-wp-base: "Quicksand Medium";
+
 /** vodle's colors as SASS variables **/
 $vodle-green:#62a73b;
 $vodle-blue:#3465a4;
@@ -8,6 +12,8 @@ $vodle-light:#bce4e5;
 
 /** Ionic CSS Variables **/
 :root {
+  --ion-font-family: "Quicksand";
+
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */
   --ion-color-primary-rgb: 52, 101, 164;

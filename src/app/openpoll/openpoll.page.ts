@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { strict } from 'assert';
 import { GlobalService, Poll } from "../global.service";
+import { SortoptionsPipe } from '../sortoptions.pipe';
 
 @Component({
   selector: 'app-openpoll',
@@ -13,6 +14,7 @@ export class OpenpollPage implements OnInit {
   private pieradius = 20;
   private twopi = 2*Math.PI; 
   private slidercolor = {};
+  private opos = {}; // copied from poll but only after drag has ended
 
   constructor(public g: GlobalService) { 
     if (this.g.polls.length == 0) {
@@ -26,9 +28,11 @@ export class OpenpollPage implements OnInit {
   // lifecycle events:
   ngOnInit() {
     this.p = this.g.openpoll;
+    this.showOrder();
   }
   ionViewWillEnter() {
     this.p = this.g.openpoll;
+    this.showOrder();
   }
   ionViewDidEnter() {
     this.showStats();
@@ -58,6 +62,9 @@ export class OpenpollPage implements OnInit {
   }
   showOrder() {
     // TODO: update option ordering
+    for (let oid of this.p.oids) {
+      this.opos[oid] = this.p.opos[oid];
+    }
   }
 
   // slider control:

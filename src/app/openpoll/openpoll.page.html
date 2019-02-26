@@ -15,7 +15,7 @@
     <ion-item>
       <span>
         <i>Please rate all options.&nbsp;</i><br/>
-      <small>Poll closes {{g.openpoll.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small><!--TODO: format as proper day-of-week, date and time-->
+      <small>Poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small><!--TODO: format as proper day-of-week, date and time-->
       </span>
       <ion-button slot="end" float-right no-padding no-margin fill="clear">
         <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
@@ -24,7 +24,7 @@
       </ion-button>
     </ion-item>
 <!--    <ion-item-group>-->
-      <ion-item *ngFor="let oid of g.openpoll.oids">
+      <ion-item *ngFor="let oid of p.oids | sortoptions: {opos: opos}">
         <!--TODO: make sure there are dividing lines between all options and the add option item-->
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="lightgrey" stroke="none"/>

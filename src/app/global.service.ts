@@ -17,13 +17,17 @@ export class GlobalService {
   }
 }
 export class Option {
+
+  public p: Poll;
+
   public oid;
   public name;
   public desc;
   public uri; // weblink
   public created; // timestamp
 
-  constructor(oid, name=null, desc=null, uri=null) {
+  constructor(p, oid, name=null, desc=null, uri=null) {
+    this.p = p;
     this.oid = oid;
     this.name = name = (name!=null) ? name : oid.toString();
     this.desc = desc;
@@ -55,6 +59,7 @@ export class Poll {
   public rmins = {}; // dict of minimum ratings for approval, by oid
   public apprs = {}; // dict of approvals by oid
   public oidsorted = null; // list of oids by lexicographically descending (appr, rsum, stamp)
+  public opos = {}; // dict of sorting position by oid
   public vid2oid = {}; // dict of oid of option voted for, by vid
   public oid2vids = null; // dict of lists of vids of those voting for an option, by oid
   public probs = {}; // dict of winning probabilities by oid
@@ -94,7 +99,7 @@ export class Poll {
       oids = Array.from(Array(10).keys());
     }
     for (let oid of oids) {
-      this.registerOption(new Option(oid));
+      this.registerOption(new Option(this, oid));
     }
     new Simulation(this);
 /*
@@ -113,6 +118,7 @@ export class Poll {
   }
   registerOption(o: Option) {
     let oid = o.oid;
+    this.opos[oid] = this.oids.length;
     this.oids.push(oid);
     this.options[oid] = o;
     // initial ratings are all zero:
@@ -209,6 +215,7 @@ export class Poll {
         i0 = i;
         break;
       }
+      this.opos[newoid] = i;
     }
     GlobalService.log("    first change at " + newsorted[i0]);
     if (i0 == null) return false; // unchanged results
@@ -234,6 +241,7 @@ export class Poll {
           t = rmins[oid],
           thesevids = [],
           othervids = [];
+      this.opos[oid] = i;
       // all vids with r >= t vote for oid:
       for (let vid of checkvids){
         if (rs[vid] >= t) {

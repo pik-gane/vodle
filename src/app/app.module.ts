@@ -10,10 +10,9 @@ import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 import { GlobalService } from './global.service';
 import { SortPipe } from './sort.pipe';
-import { SortoptionsPipe } from './sortoptions.pipe';
 
 @NgModule({
-  declarations: [AppComponent, SortPipe, SortoptionsPipe],
+  declarations: [AppComponent, SortPipe],
   entryComponents: [],
   imports: [
     BrowserModule,

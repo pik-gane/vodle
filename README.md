@@ -118,6 +118,7 @@ The protocol for this is this:
     https://www.codenameone.com/blog/associating-your-app-with-file-extension-mime-types-iphone-android-windows.html
     https://stackoverflow.com/questions/3760276/android-intent-filter-associate-app-with-file-extension
 * expandable lists (for mypolls and openpoll pages): https://www.joshmorony.com/creating-an-accordion-list-in-ionic/
+* re-rendering: https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
 
 ### Issues
 * file extension and uri scheme registration not working on lineageos
