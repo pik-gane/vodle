@@ -3,7 +3,7 @@ import { Option } from "./global.service";
 
 @Pipe({
   name: 'sortoptions',
-  pure: false
+//  pure: false
 })
 export class SortoptionsPipe implements PipeTransform {
 

@@ -99,7 +99,6 @@ export class Poll {
       ["Free sci-fi movie night",
       "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
       "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction"],
-
       ["Voyage to the prehistoric planet", 
       "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
       "https://www.youtube.com/watch?v=sh2nLzOVHeQ"],
@@ -135,7 +134,7 @@ export class Poll {
       "https://www.youtube.com/watch?v=64GfUeJJLUs"],
       ["The giant of Metropolis", 
       "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
-      "https://www.youtube.com/watch?v=KPHasT4o9sg"],
+      "https://www.youtube.com/watch?v=KPHasT4o9sg"]
     ]};
     GlobalService.log("making demo poll...");
     this.pid = demo;
