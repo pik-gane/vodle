@@ -282,17 +282,17 @@ export class Simulation {
   public sigma = 1; // dispersion of options (1 = like voters)
 
   // utility data:
-  public vpos = {}; // dict of voter coordinate arrays by vid
-  public opos = {}; // dict of option coordinate arrays by oid
+  public vcoords = {}; // dict of voter coordinate arrays by vid
+  public ocoords = {}; // dict of option coordinate arrays by oid
 
   constructor(p: Poll) {
     this.p = p; 
     // draw initial coordinates:
     for (let oid of p.oids) {
-      this.opos[oid] = Array(this.dim).fill(0).map(i => this.sigma * this.rannor());
+      this.ocoords[oid] = Array(this.dim).fill(0).map(i => this.sigma * this.rannor());
     }
     for (let vid of p.vids) {
-      this.vpos[vid] = Array(this.dim).fill(0).map(i => this.rannor());
+      this.vcoords[vid] = Array(this.dim).fill(0).map(i => this.rannor());
       this.setRatings(vid);
     }
     GlobalService.log("simulation set up.");
@@ -305,8 +305,8 @@ export class Simulation {
   }
   getu(oid, vid) { // utility = - squared distance in policy space
     let u = 0,
-        op = this.opos[oid],
-        vp = this.vpos[vid];
+        op = this.ocoords[oid],
+        vp = this.vcoords[vid];
     for (let i=0; i<this.dim; i++) {
       u -= (op[i] - vp[i])**2;
     }

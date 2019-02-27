@@ -10,11 +10,12 @@ import { SortoptionsPipe } from '../sortoptions.pipe';
 })
 export class OpenpollPage implements OnInit {
 
-  private p: Poll;
+  public p: Poll;
+  public opos = {}; // copied from poll but only after drag has ended
+
   private pieradius = 20;
   private twopi = 2*Math.PI; 
   private slidercolor = {};
-  private opos = {}; // copied from poll but only after drag has ended
 
   constructor(public g: GlobalService) { 
     if (this.g.polls.length == 0) {
@@ -46,8 +47,8 @@ export class OpenpollPage implements OnInit {
           bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
           pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
           R = this.pieradius,
-          dx = Math.round(R*Math.sin(this.twopi*prob)),
-          dy = Math.round(R*(1 - Math.cos(this.twopi*prob))),
+          dx = R * Math.sin(this.twopi*prob),
+          dy = R * (1 - Math.cos(this.twopi*prob)),
           flag = prob > 0.5 ? 1 : 0; 
       bar.width.baseVal.valueAsString = (100*appr).toString()+'%';
       bar.x.baseVal.valueAsString = (100*(1-appr)).toString()+'%';
@@ -56,15 +57,20 @@ export class OpenpollPage implements OnInit {
       } else { // full circle
         pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
       }
-      this.slidercolor[oid] = (r == 0) ? 'danger' : (r + this.p.apprs[oid]*100 <= 100) ? 'primary' : 'success';
+      this.setSliderColor(oid, r);
       // TODO: make sure pie piece has correct center!
     }
   }
   showOrder() {
-    // TODO: update option ordering
-    for (let oid of this.p.oids) {
-      this.opos[oid] = this.p.opos[oid];
-    }
+    // link displayed sorting to poll's sorting:
+    this.opos = this.p.opos;
+  }
+  setSliderColor(oid, value) {
+    this.slidercolor[oid] = 
+      (value == 0) ? 'vodlered' : 
+      (value + this.p.apprs[oid]*100 <= 100) ? 'vodleblue' : 
+      (this.p.vid2oid[this.p.myvid] != oid) ? 'vodlegreen' : 
+      'vodledarkgreen'; // FIXME: although the condition is met, this does not show as darkgreen!
   }
 
   // slider control:
@@ -87,11 +93,14 @@ export class OpenpollPage implements OnInit {
     this.showStats();
   }
   // event listeners:
+  ratingChangeBegins(oid) {
+    // freeze current sort order:
+    this.opos = {...this.p.opos};
+  }
   ratingChanges(oid) {
     var slider = this.getSlider(oid),
         value = Number(slider.value);
-    this.slidercolor[oid] = (value == 0) ? 'danger' : (value + this.p.apprs[oid]*100 <= 100) ? 'primary' : 'success';
-    // TODO: voted-for option should be darker green or other shape?
+    this.setSliderColor(oid, value);
     this.storeSlidersRating(oid);
   }
   ratingChangeEnded(oid) {

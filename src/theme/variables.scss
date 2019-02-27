@@ -5,10 +5,33 @@ $font-family-md-base: "Quicksand Medium";
 $font-family-ios-base: "Quicksand Medium";
 $font-family-wp-base: "Quicksand Medium";
 
-/** vodle's colors as SASS variables **/
-$vodle-green:#62a73b;
-$vodle-blue:#3465a4;
-$vodle-light:#bce4e5;
+/** vodle slider colors: **/
+// TODO: add rgb,contrast etc.
+
+.ion-color-vodlered {
+  --ion-color-base: #d33939;
+  --ion-color-contrast: #ffffff;
+}
+.ion-color-vodleblue {
+  --ion-color-base: #3465a4;
+  --ion-color-contrast: #ffffff;
+}
+.ion-color-vodlegreen {
+  --ion-color-base: #62a73b;
+  --ion-color-contrast: #ffffff;
+}
+.ion-color-vodledarkgreen {
+  --ion-color-base: #4c822e;
+  --ion-color-contrast: #ffffff;
+}
+.ion-color-vodlelight {
+  --ion-color-base: #bce4e5;
+  --ion-color-contrast: #000000;
+}
+.ion-color-vodledark {
+  --ion-color-base: #9abcbd;
+  --ion-color-contrast: #000000;
+}
 
 /** Ionic CSS Variables **/
 :root {
