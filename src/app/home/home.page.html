@@ -10,39 +10,38 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding><!--TODO: center everything on this page?-->
-  <ion-grid no-padding>
-    <ion-row>
-      <ion-col>
-        <h3>Your group wants to decide something?</h3> 
-      </ion-col>
-    </ion-row>
-    <ion-row>
-      <ion-col>
-        <ion-button routerLink="newpoll">
-          <ion-icon name="add-circle" slot="start"></ion-icon>
-          Set up a new poll
-        </ion-button>
-      </ion-col>
-    </ion-row>
-    <ion-row>
-      <ion-col>
-        <h3>You have been invited for a poll?</h3> 
-      </ion-col>
-    </ion-row>
-    <ion-row>
-      <ion-col>
-        Click on the invitation file attached to your invitation message.
-        <br/>
-        If it doesn't open directly, please download or store the file,
-        <br/>
-        then click here:
-        <br/>
-        <ion-button (click)="fileopen()">
-          <ion-icon name="document" slot="start"></ion-icon>
-          Open an invitation file
-        </ion-button>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+<ion-content>
+  <ion-list lines="full" no-padding no-margin>
+    <ion-item-divider color="secondary">
+      <ion-label>
+        Been invited for a poll?
+      </ion-label>
+    </ion-item-divider>
+    <ion-item>
+      <ion-button (click)="fileopen()">
+        <ion-icon name="document" slot="start"></ion-icon>
+        Open an invitation file
+      </ion-button>
+      &nbsp;received&nbsp;by&nbsp;message
+    </ion-item>
+    <ion-item-divider color="secondary">
+      <ion-label>
+        Want to decide something?
+      </ion-label>
+    </ion-item-divider>
+    <ion-item>
+      <ion-button routerLink="newpoll">
+        <ion-icon name="add-circle" slot="start"></ion-icon>
+        New choice poll
+      </ion-button>
+      &nbsp;for&nbsp;picking&nbsp;one&nbsp;of&nbsp;a&nbsp;number&nbsp;of&nbsp;options
+    </ion-item>
+    <ion-item>
+      <ion-button routerLink="newpoll">
+        <ion-icon name="add-circle" slot="start"></ion-icon>
+        New allocation poll
+      </ion-button>
+      &nbsp;for&nbsp;allocating&nbsp;resources&nbsp;to&nbsp;tasks&nbsp;or&nbsp;people
+    </ion-item>
+  </ion-list>
 </ion-content>

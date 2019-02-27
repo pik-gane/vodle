@@ -26,28 +26,31 @@ export class Option {
 
   public oid;
   public name;
-  public desc;
-  public uri; // weblink
-  public linklabel; // weblink
+  public desc = null;
+  public uri = null; // weblink
   public created; // timestamp
 
-  constructor(p, oid, name=null, desc=null, uri=null, linklabel=null) {
+  constructor(p, oid, name=null, desc=null, uri=null) {
     this.p = p;
     this.oid = oid;
     this.name = name = (name!=null) ? name : oid.toString();
     this.desc = desc;
     this.uri = uri;
-    this.linklabel = linklabel;
     this.created = (new Date()).getTime(); // TODO: better use time from messaging server?
   }
 }
 export class Poll {
 
   // constant data:
+
   public pid; // unique poll id
+
   public title;
-  public myvid;
+  public desc;
+  public uri; // weblink
   public due; // closing time
+
+  public myvid;
 
   // variable data:
 
@@ -90,38 +93,76 @@ export class Poll {
       // TODO: download current poll state
   }
   makedemo(demo) {
+    // lists of [title, desc, uri] + options' [name, desc, uri]:
+//      ["", "", ""],
+    let data = {'freesf': [
+      ["Free sci-fi movie night",
+      "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
+      "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction"],
+
+      ["Voyage to the prehistoric planet", 
+      "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
+      "https://www.youtube.com/watch?v=sh2nLzOVHeQ"],
+      ["Shubian's rift (fan movie)",
+      "Earth's future space exploration leads to its first contact ever with an alien race that may not be so alien after all.",
+      "https://www.youtube.com/watch?v=B6V_w25B1Ac"],
+      ["Star pilot", 
+      "Aliens from the constellation Hydra crash-land on the island of Sardinia. A prominent scientist, his daughter, several young technicians, and a pair of Oriental spies are taken hostage by the beings so they can use them to repair their spaceship's broken engine.", 
+      "https://www.youtube.com/watch?v=jAvllP_YEdU"],
+      ["Escape from galaxy 3", 
+      "The crew of a space ship confronts an evil galactic ruler out to rule the universe.", 
+      "https://www.youtube.com/watch?v=5kvCgeNog1U"],
+      ["Mission stardust", 
+      "A team of astronauts is sent to the moon to rescue an alien who is seeking help to save her dying race. They are attacked by a force of bandit robots and discover that enemy spies are out to kill the alien.", 
+      "https://www.youtube.com/watch?v=oeRTDJ3MC2I"],
+      ["Fugitive alien", 
+      "An alien is pursued as a traitor by his own race because he refuses to kill humans.", 
+      "https://www.youtube.com/watch?v=Z71MyPmmGZI"],
+      ["Warrior of the lost world", 
+      "A group of diverse individuals are suddenly taken from their homes and flown via helicopter to a futuristic bomb shelter in the desert, one-third of a mile below the surface of the Earth.", 
+      "https://www.youtube.com/watch?v=xS5obnI5Y5Q"],
+      ["Battle of the worlds", 
+      "A runaway asteroid dubbed 'The Outsider' mysteriously begins orbiting the Earth and threatens it with lethal flying saucers.", 
+      "https://www.youtube.com/watch?v=LK6ugtd1Xdg"],
+      ["Abraxas, guardian of the universe", 
+      "An alien 'policeman' arrives on Earth to apprehend a renegade of his own race who impregnates a woman with a potentially destructive mutant embryo.", 
+      "https://www.youtube.com/watch?v=lZzZyNB81wI"],
+      ["Zontar, the thing from Venus", 
+      "A young scientist who helps a lone alien from Venus, finds out it wants to destroy man.", 
+      "https://www.youtube.com/watch?v=-e9Cs87gbwg"],
+      ["Hyper sapien: people from another star", 
+      "Three aliens from the planet Taros land on Earth and are befriended by a Wyoming rancher's son.", 
+      "https://www.youtube.com/watch?v=64GfUeJJLUs"],
+      ["The giant of Metropolis", 
+      "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
+      "https://www.youtube.com/watch?v=KPHasT4o9sg"],
+    ]};
     GlobalService.log("making demo poll...");
     this.pid = demo;
     var oids;
     if (demo == "3by3") {
-      this.title = "Demo poll with 3 options and 3 voters";
+      this.title = "Demo poll with just 3 options and 4 voters";
       this.myvid = "Alice";
-      this.vids = ["Alice", "Bob", "Celia"]; 
-      oids = ["Stone", "Scissors", "Paper"];
-    } else { // 10by1000
-      this.title = "Demo poll with 10 options and 1000 voters";
+      this.vids = ["Alice", "Bob", "Celia", "Dan"]; 
+      oids = ["Rock", "Scissors", "Paper"];
+      for (let oid of oids) {
+        this.registerOption(new Option(this, oid));
+      }
+    } else {
+      let d = data[demo];
+      this.title = d[0][0];
+      this.desc = d[0][1];
+      this.uri = d[0][2];
       this.myvid = 0;
-      this.vids = Array.from(Array(1000).keys());
-      oids = Array.from(Array(10).keys());
-    }
-    for (let oid of oids) {
-      this.registerOption(new Option(this, oid, oid, 
-        "This is the lengthy description of the "+oid+" option. It is nice to read and very informative. You will exactly know what this option is about", 
-        "http://vodle.it", "webpage"));
-    }
-    new Simulation(this);
-/*
-    for (let oid of oids) {
-      // random ratings 0...99, about half are 0:
-      for (let vid of this.vids) {
-        this.setRating(oid, vid, Math.max(0, Math.floor(Math.random()*200) - 100));
+      this.vids = Array.from(Array(100).keys());
+      for (let i=1; i<d.length; i++) {
+        this.registerOption(new Option(this, i, d[i][0], d[i][1], d[i][2]));
       }
     }
-    // random favourites get rating 100:
-    for (let vid of this.vids) {
-      this.setRating(oids[Math.floor(Math.random()*oids.length)], vid, 100);
+    new Simulation(this);
+    for (let oid of this.oids) {
+      this.setRating(oid, this.myvid, 0);
     }
-*/
     GlobalService.log("...done");
   }
   registerOption(o: Option) {
@@ -312,13 +353,13 @@ export class Simulation {
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
   }
   getu(oid, vid) { // utility = - squared distance in policy space
-    let u = 0,
+    let d2 = 0,
         op = this.ocoords[oid],
         vp = this.vcoords[vid];
     for (let i=0; i<this.dim; i++) {
-      u -= (op[i] - vp[i])**2;
+      d2 += (op[i] - vp[i])**2;
     }
-    return u;
+    return -Math.sqrt(d2); // -d2; // Math.exp(-d2);
   }
   setRatings(vid) { // heuristic rating: 0 = benchmark, 100 = favourite, linear interpolation in between
     let us = {},

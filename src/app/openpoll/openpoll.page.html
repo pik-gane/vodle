@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>Which movie should we watch?</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
+    <ion-title>{{p.title}}</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img><!--TODO: make smaller and add padding to the right-->
     </ion-thumbnail>
@@ -13,15 +13,34 @@
 <ion-content>
   <ion-list lines="full">
     <ion-item>
-      <span>
-        Please rate all options.&nbsp;<br/>
-      <small>Poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small>
-      </span>
-      <ion-button slot="end" float-right no-padding no-margin fill="clear">
-        <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
-        <!--TODO: expand a sublist with UI for overall poll data:
-        creator, personal priority, weblink, link to list of possible further options, ...-->
-      </ion-button>
+      <ion-grid no-padding no-margin>
+        <ion-row no-padding no-margin>
+          <ion-col no-padding no-margin>
+            <b>
+              <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options</span><br/>
+              <span style="color:#9abcbd"><small>poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small></span>
+            </b>
+          </ion-col>
+          <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
+            <ion-button (click)="expand('poll')" float-right no-padding no-margin fill="clear">
+              <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+        <app-expandable [expanded]="expanded=='poll'">
+          <ion-row no-padding no-margin>
+            <ion-col no-padding no-margin>
+              <!--TODO: creator, personal priority-->
+              {{p.desc}}
+              <ng-template [ngIf]="p.uri!=null">
+                <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" float-right no-padding padding-left no-margin>
+                  <ion-icon name="open" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ng-template>
+            </ion-col>
+          </ion-row>
+        </app-expandable>
+      </ion-grid>
     </ion-item>
     <ion-item *ngFor="let oid of p.oids | sortoptions: {opos: opos}">
       <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
@@ -29,13 +48,13 @@
         <path [id]="'pie_'+oid" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
       </svg>
       <ion-grid no-padding no-margin>
-        <ion-row name="optionname" no-padding padding-top no-margin>
+        <ion-row no-padding padding-top no-margin>
           <ion-col no-padding no-margin>
             <b>{{p.options[oid].name}}</b>
           </ion-col>
           <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
-            <ion-button (click)="expand(oid)" fill="clear" float-right no-padding no-margin>
-              <ion-icon [name]="(expandedoid==oid)?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+            <ion-button (click)="expand('oid_'+oid)" fill="clear" float-right no-padding no-margin>
+              <ion-icon [name]="(expanded=='oid_'+oid)?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-col>
         </ion-row>
@@ -46,7 +65,7 @@
                         pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
               <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
                 <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
                     <rect [id]="'bar_'+oid" x="100%" width="0%"
                           y="9" height="17" fill="#bce4e5" stroke="none"/>
                           <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oid]))+'%'" [width]="''+(100*p.apprs[oid])+'%'"-->
@@ -57,20 +76,24 @@
             </ion-range>
           </ion-col>  
         </ion-row>
-        <app-expandable [expandHeight]="itemExpandHeight" [expanded]="oid==expandedoid">
+        <app-expandable [expanded]="expanded=='oid_'+oid">
           <ion-row no-padding padding-bottom no-margin>
             <ion-col no-padding no-margin>
-              <b><span style="color:#bce4e5">currently
-                <span style="color:#9abcbd"> {{Math.round(p.probs[oid]*1000)/10}}%&nbsp;winning&nbsp;probability</span>
-                <span style="color:#4c822e"> (including&nbsp;your&nbsp;share)</span>,
-                {{Math.round(p.apprs[oid]*1000)/10}}%&nbsp;approval</span>
-                <span style="color:#62a73b"> (including&nbsp;you)</span>
-              <br/></b>
-              {{p.options[oid].desc}}
-              <ion-button (click)="g.showinbrowser(p.options[oid].uri)" fill="clear" float-right no-padding padding-left no-margin>
+              <b><span style="color:#9abcbd"><small>currently</small>
+                <span style="color:#769596"> {{Math.round(p.probs[oid]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
+                <small><span style="color:#4c822e" [style.display]="(votedfor==oid)?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
+                approved&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oid]*1000)/10}}%</span>
+                <span style="color:#62a73b" [style.display]="approved[oid]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
+              </b>
+              <span [style.display]="p.options[oid].desc!=null?'inline':'none'">
+                <br/>{{p.options[oid].desc}}
+              </span>
+              <ng-template [ngIf]="p.options[oid].uri!=null">
+                <ion-button (click)="g.showinbrowser(p.options[oid].uri)" fill="clear" float-right no-padding padding-left no-margin>
                   <ion-icon name="open" slot="icon-only"></ion-icon>
                 </ion-button>
-              </ion-col>
+              </ng-template>
+            </ion-col>
           </ion-row>
         </app-expandable>
       </ion-grid>

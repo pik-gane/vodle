@@ -12,27 +12,23 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
-  public expandedoid = null;
+  public approved = {}; // whether option is approved by me
+  public votedfor = null; // oid my prob. share goes to
+  public expanded = null;
 
   private pieradius = 20;
   private twopi = 2*Math.PI; 
   private slidercolor = {};
   private Math = Math;
 
-  constructor(public g: GlobalService) { 
-    if (this.g.polls.length == 0) {
-      alert("OOPS, no polls -- will generate demo poll...");
-      let p = this.g.openpoll = new Poll(null, null, null, "10by1000");
-      p.tally();
-      this.g.polls.push(p);
-    }
-  }
+  constructor(public g: GlobalService) { }
 
   // lifecycle events:
   ngOnInit() {
     this.p = this.g.openpoll;
+    this.p.tally();
     this.opos = this.p.opos;
-    this.expandedoid = null;
+    this.expanded = null;
     this.showOrder();
   }
   ionViewWillEnter() {
@@ -43,6 +39,7 @@ export class OpenpollPage implements OnInit {
   }
 
   showStats() { // update pies and bars, but not order!
+    this.votedfor = this.p.vid2oid[this.p.myvid];
     for (let oid of this.p.oids) {
       let r = this.p.getRating(oid, this.p.myvid),
           appr = this.p.apprs[oid],
@@ -60,26 +57,26 @@ export class OpenpollPage implements OnInit {
       } else { // full circle
         pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
       }
+      this.approved[oid] = (r + appr*100 > 100);
       this.setSliderColor(oid, r);
     }
   }
   showOrder() {
     // link displayed sorting to poll's sorting:
     this.opos = this.p.opos;
-    this.expandedoid = this.p.vid2oid[this.p.myvid];
   }
   setSliderColor(oid, value) {
     this.slidercolor[oid] = 
       (value == 0) ? 'vodlered' : 
       (value + this.p.apprs[oid]*100 <= 100) ? 'vodleblue' : 
-      (this.p.vid2oid[this.p.myvid] != oid) ? 'vodlegreen' : 
+      (this.votedfor != oid) ? 'vodlegreen' : 
       'vodledarkgreen'; // FIXME: although the condition is met, this does not show as darkgreen!
   }
 
   // controls:
 
-  expand(oid) {
-    this.expandedoid = (this.expandedoid == oid) ? null : oid;
+  expand(what) {
+    this.expanded = (this.expanded == what) ? null : what;
   }
   getSlider(oid) {
     return <HTMLInputElement>document.getElementById('slider_'+oid);
