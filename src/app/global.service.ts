@@ -15,6 +15,10 @@ export class GlobalService {
   static log(msg) {
     console.log((new Date()).getTime().toString() + " " + msg);
   }
+
+  showinbrowser(uri) {
+    window.open(uri,'_system','location=yes');
+  }
 }
 export class Option {
 
@@ -24,14 +28,16 @@ export class Option {
   public name;
   public desc;
   public uri; // weblink
+  public linklabel; // weblink
   public created; // timestamp
 
-  constructor(p, oid, name=null, desc=null, uri=null) {
+  constructor(p, oid, name=null, desc=null, uri=null, linklabel=null) {
     this.p = p;
     this.oid = oid;
     this.name = name = (name!=null) ? name : oid.toString();
     this.desc = desc;
     this.uri = uri;
+    this.linklabel = linklabel;
     this.created = (new Date()).getTime(); // TODO: better use time from messaging server?
   }
 }
@@ -99,7 +105,9 @@ export class Poll {
       oids = Array.from(Array(10).keys());
     }
     for (let oid of oids) {
-      this.registerOption(new Option(this, oid));
+      this.registerOption(new Option(this, oid, oid, 
+        "This is the lengthy description of the "+oid+" option. It is nice to read and very informative. You will exactly know what this option is about", 
+        "http://vodle.it", "webpage"));
     }
     new Simulation(this);
 /*

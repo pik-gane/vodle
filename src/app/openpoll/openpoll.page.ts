@@ -11,11 +11,13 @@ import { SortoptionsPipe } from '../sortoptions.pipe';
 export class OpenpollPage implements OnInit {
 
   public p: Poll;
-  public opos = {}; // copied from poll but only after drag has ended
+  public opos = {};
+  public expandedoid = null;
 
   private pieradius = 20;
   private twopi = 2*Math.PI; 
   private slidercolor = {};
+  private Math = Math;
 
   constructor(public g: GlobalService) { 
     if (this.g.polls.length == 0) {
@@ -29,11 +31,12 @@ export class OpenpollPage implements OnInit {
   // lifecycle events:
   ngOnInit() {
     this.p = this.g.openpoll;
+    this.opos = this.p.opos;
+    this.expandedoid = null;
     this.showOrder();
   }
   ionViewWillEnter() {
-    this.p = this.g.openpoll;
-    this.showOrder();
+    this.ngOnInit();
   }
   ionViewDidEnter() {
     this.showStats();
@@ -58,12 +61,12 @@ export class OpenpollPage implements OnInit {
         pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
       }
       this.setSliderColor(oid, r);
-      // TODO: make sure pie piece has correct center!
     }
   }
   showOrder() {
     // link displayed sorting to poll's sorting:
     this.opos = this.p.opos;
+    this.expandedoid = this.p.vid2oid[this.p.myvid];
   }
   setSliderColor(oid, value) {
     this.slidercolor[oid] = 
@@ -73,8 +76,11 @@ export class OpenpollPage implements OnInit {
       'vodledarkgreen'; // FIXME: although the condition is met, this does not show as darkgreen!
   }
 
-  // slider control:
+  // controls:
 
+  expand(oid) {
+    this.expandedoid = (this.expandedoid == oid) ? null : oid;
+  }
   getSlider(oid) {
     return <HTMLInputElement>document.getElementById('slider_'+oid);
   }

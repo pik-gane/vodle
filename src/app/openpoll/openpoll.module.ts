@@ -7,6 +7,8 @@ import { SortoptionsPipe } from '../sortoptions.pipe';
 import { IonicModule } from '@ionic/angular';
 
 import { OpenpollPage } from './openpoll.page';
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
+import { ExpandableComponent } from '../sharedcomponents/expandable/expandable.component';
 
 const routes: Routes = [
   {
@@ -20,7 +22,8 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    RouterModule.forChild(routes),
+    SharedcomponentsModule
   ],
   declarations: [OpenpollPage, SortoptionsPipe]
 })

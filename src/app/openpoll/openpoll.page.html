@@ -15,7 +15,7 @@
     <ion-item>
       <span>
         Please rate all options.&nbsp;<br/>
-      <small>Poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small><!--TODO: format as proper day-of-week, date and time-->
+      <small>Poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}</small>
       </span>
       <ion-button slot="end" float-right no-padding no-margin fill="clear">
         <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
@@ -23,46 +23,58 @@
         creator, personal priority, weblink, link to list of possible further options, ...-->
       </ion-button>
     </ion-item>
-      <ion-item *ngFor="let oid of p.oids | sortoptions: {opos: opos}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
-          <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none"/>
-          <path [id]="'pie_'+oid" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" /><!--TODO:proper color-->
-        </svg>
-        <ion-grid no-padding no-margin>
-          <ion-row name="optionname" no-padding padding-top no-margin>
+    <ion-item *ngFor="let oid of p.oids | sortoptions: {opos: opos}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
+        <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none"/>
+        <path [id]="'pie_'+oid" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
+      </svg>
+      <ion-grid no-padding no-margin>
+        <ion-row name="optionname" no-padding padding-top no-margin>
+          <ion-col no-padding no-margin>
+            <b>{{p.options[oid].name}}</b>
+          </ion-col>
+          <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
+            <ion-button (click)="expand(oid)" fill="clear" float-right no-padding no-margin>
+              <ion-icon [name]="(expandedoid==oid)?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+        <ion-row no-padding no-margin>
+          <ion-col no-padding no-margin>
+            <ion-range [id]="'slider_'+oid" [value]="p.getRating(oid, p.myvid)" [color]="slidercolor[oid]" 
+                        (ionFocus)="ratingChangeBegins(oid)" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" 
+                        pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
+              <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
+                <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                    <rect [id]="'bar_'+oid" x="100%" width="0%"
+                          y="9" height="17" fill="#bce4e5" stroke="none"/>
+                          <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oid]))+'%'" [width]="''+(100*p.apprs[oid])+'%'"-->
+                    <line x1="100%" y1="0" x2="100%" y2="35" fill="none" stroke="#bce4e5" stroke-width="3"/>
+                  </svg>
+                </div>
+              </ion-label>
+            </ion-range>
+          </ion-col>  
+        </ion-row>
+        <app-expandable [expandHeight]="itemExpandHeight" [expanded]="oid==expandedoid">
+          <ion-row no-padding padding-bottom no-margin>
             <ion-col no-padding no-margin>
-              {{p.options[oid].name}}
-              <expandable [expandHeight]="itemExpandHeight" [expanded]="item.expanded">
-                Hello people
-              </expandable>
-            </ion-col>
-            <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
-              <ion-button fill="clear" float-right no-padding no-margin>
-                <ion-icon name="arrow-dropdown" slot="icon-only"></ion-icon>
-                <!--TODO: expand a sublist with UI for option data-->
-              </ion-button>
-            </ion-col>
+              <b><span style="color:#bce4e5">currently
+                <span style="color:#9abcbd"> {{Math.round(p.probs[oid]*1000)/10}}%&nbsp;winning&nbsp;probability</span>
+                <span style="color:#4c822e"> (including&nbsp;your&nbsp;share)</span>,
+                {{Math.round(p.apprs[oid]*1000)/10}}%&nbsp;approval</span>
+                <span style="color:#62a73b"> (including&nbsp;you)</span>
+              <br/></b>
+              {{p.options[oid].desc}}
+              <ion-button (click)="g.showinbrowser(p.options[oid].uri)" fill="clear" float-right no-padding padding-left no-margin>
+                  <ion-icon name="open" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-col>
           </ion-row>
-          <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin>
-              <ion-range [id]="'slider_'+oid" [value]="p.getRating(oid, p.myvid)" [color]="slidercolor[oid]" 
-                          (ionFocus)="ratingChangeBegins(oid)" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" 
-                          pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
-                <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
-                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                      <rect [id]="'bar_'+oid" x="100%" width="0%"
-                            y="9" height="17" fill="#bce4e5" stroke="none"/>
-                            <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oid]))+'%'" [width]="''+(100*p.apprs[oid])+'%'"-->
-                      <line x1="100%" y1="0" x2="100%" y2="35" fill="none" stroke="#bce4e5" stroke-width="3"/>
-                    </svg>
-                  </div>
-                </ion-label>
-              </ion-range>
-            </ion-col>  
-          </ion-row>
-        </ion-grid>
-      </ion-item>
+        </app-expandable>
+      </ion-grid>
+    </ion-item>
     <ion-item>
       <ion-button routerLink="addoption" fill="clear">
         <ion-icon name="add-circle" slot="start"></ion-icon> add option

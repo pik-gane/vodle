@@ -1,6 +1,6 @@
 ## Specification notes
 
-* app name will be "vodle", logo exists
+* app name is "vodle", logo exists, domain name vodle.it is reserved
 * main focus for now: get base functionality going (setting up polls, voting, closing a poll)
 
 ### Prioritised list of wanted features
@@ -27,7 +27,7 @@
 ### channels
 
 * app shops
-* "vodle.co" web app
+* web app at vodle.it
 * promote "vodle" button to cinemas etc.
 * get startups to use it
 
