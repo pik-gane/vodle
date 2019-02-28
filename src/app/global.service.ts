@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 
+declare var require: any;
+
 @Injectable(
 //  {providedIn: 'root'}
 )
@@ -19,7 +21,20 @@ export class GlobalService {
   showinbrowser(uri) {
     window.open(uri,'_system','location=yes');
   }
+
+  require('dotenv').load();
+ 
+  // Load the Cloudant library.
+  private Cloudant = require('@cloudant/cloudant');
+  // Initialize Cloudant with settings from .env
+  private cloudant_username = process.env.cloudant_username;
+  private cloudant_password = process.env.cloudant_password;
+  private cloudant;
+  dbconnect() {
+    this.cloudant = this.Cloudant({ account:this.cloudant_username, password:this.cloudant_password });
+  }
 }
+
 export class Option {
 
   public p: Poll;
@@ -39,6 +54,7 @@ export class Option {
     this.created = (new Date()).getTime(); // TODO: better use time from messaging server?
   }
 }
+
 export class Poll {
 
   // constant data:

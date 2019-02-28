@@ -3,7 +3,7 @@ import { Option } from "./global.service";
 
 @Pipe({
   name: 'sortoptions',
-//  pure: false
+//  pure: false // FIXME: pure:false made android app show additional empty items!
 })
 export class SortoptionsPipe implements PipeTransform {
 

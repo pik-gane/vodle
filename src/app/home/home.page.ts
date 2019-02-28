@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { GlobalService, Poll } from "../global.service";
 
 @Component({
@@ -6,7 +6,7 @@ import { GlobalService, Poll } from "../global.service";
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
 })
-export class HomePage {
+export class HomePage implements OnInit{
 
   constructor(public g: GlobalService) {
     if (this.g.polls.length == 0) {
@@ -14,6 +14,9 @@ export class HomePage {
       this.g.polls.push(p);
       this.g.polls.push(new Poll(null, null, null, "3by3"));
     }
+  }
+
+  ngOnInit() {
   }
 
   fileopen() {

@@ -104,6 +104,67 @@ The protocol for this is this:
 * note that with 100 voters and 10 options, a full state is just 1KB of data,
   so the server only needs that much permanent storage per open poll.
 
+Alternatively, a cloud database such as IBM Cloudant could be used to store data persistently as JSON documents
+
+### JSON document database design
+
+(all ids are uuids or guids, all `data` elements are inner json documents encrypted by a poll-specific key distributed initially but not stored in the db)
+
+poll document:
+```
+{
+    "pid":  string, // poll id
+    "data": string,
+}
+```
+where data contains:
+```
+{
+    "title":    string,
+    "desc":     string,
+    "uri":      string|null, // general weblink
+    "repo_uri": string|null, // weblink to repository of potential options
+
+    "due":      timestamp,
+    "status":   "draft"|"open"|"closed",
+    "winner":   string|null, // option id
+}
+```
+
+option document (added by individual voter, never changed later):
+```
+{
+    "pid":  string,
+    "oid":  string, // option id
+    "data": string,
+}
+```
+where data contains:
+```
+{
+    "name": string,
+    "desc": string,
+    "appr": float,
+    "prob": float,
+}
+```
+
+voter document (controlled by single voter, updated whenever some rating is updated):
+```
+    "pid":  string,
+    "vid":  string, // voter id
+    "data": string,
+}
+```
+where data contains:
+```
+{
+    "pubkey":  string, // used for signing stuff?
+    "ratings": { oid: int, ... }, // dictionary of ratings
+}
+```
+
+
 ### Useful links
 
 * http://unhosted.org/ for ideas on decentralization
@@ -111,6 +172,8 @@ The protocol for this is this:
 * push notifications: https://ionicframework.com/docs/native/push/
 * realtime.co: https://framework.realtime.co/messaging/, http://demos.realtime.co/demos/poll2.aspx, http://messaging-public.realtime.co/documentation/starting-guide/quickstart-js.html
 * possible alternative to realtime.co: http://sockethub.org/
+* ionic and rest webservices: https://www.djamware.com/post/5b5cffaf80aca707dd4f65aa/building-crud-mobile-app-using-ionic-4-angular-6-and-cordova#ch2 
+* ionic and IBM cloudant (for persistance?): https://www.npmjs.com/package/@cloudant/cloudant, https://console.bluemix.net/docs/services/Cloudant/api/document.html#documents, https://www.ibm.com/blogs/bluemix/2016/12/create-feedback-app-ionic-cloudant/, https://console.bluemix.net/docs/runtimes/nodejs/getting-started.html#getting-started-tutorial
 * app-specific url schemes (use "maxparc"?): 
     https://developer.apple.com/documentation/uikit/core_app/allowing_apps_and_websites_to_link_to_your_content/defining_a_custom_url_scheme_for_your_app
     https://stackoverflow.com/questions/2448213/how-to-implement-my-very-own-uri-scheme-on-android
@@ -119,6 +182,7 @@ The protocol for this is this:
     https://stackoverflow.com/questions/3760276/android-intent-filter-associate-app-with-file-extension
 * expandable lists (for mypolls and openpoll pages): https://www.joshmorony.com/creating-an-accordion-list-in-ionic/
 * re-rendering: https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
+* async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
 
 ### Issues
 * file extension and uri scheme registration not working on lineageos
