@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-declare var require: any;
+import * as Cloudant from '@cloudant/cloudant'
 
 @Injectable(
 //  {providedIn: 'root'}
@@ -12,6 +12,8 @@ export class GlobalService {
 
   public dateformatoptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
+  private cloudant;
+  
   constructor() {}
 
   static log(msg) {
@@ -22,16 +24,12 @@ export class GlobalService {
     window.open(uri,'_system','location=yes');
   }
 
-  require('dotenv').load();
- 
-  // Load the Cloudant library.
-  private Cloudant = require('@cloudant/cloudant');
-  // Initialize Cloudant with settings from .env
-  private cloudant_username = process.env.cloudant_username;
-  private cloudant_password = process.env.cloudant_password;
-  private cloudant;
-  dbconnect() {
-    this.cloudant = this.Cloudant({ account:this.cloudant_username, password:this.cloudant_password });
+  dbconnect() { // FIXME: doesn't compile...
+//    require('dotenv').load(); // FIXME
+    // Initialize Cloudant
+    let cloudant_username = "08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix", // FIXME: this does not work: process.env.cloudant_username,
+        cloudant_password = "7f468f3a4a42dc300f2aff089380ae09154abe355b7e679c00bebc3fcd8bf8e5"; // FIXME: this does not work: process.env.cloudant_password;
+    this.cloudant = Cloudant({ account:cloudant_username, password:cloudant_password });
   }
 }
 
@@ -39,19 +37,19 @@ export class Option {
 
   public p: Poll;
 
-  public oid;
-  public name;
-  public desc = null;
-  public uri = null; // weblink
-  public created; // timestamp
+  public oid: string;
+  public name: string;
+  public desc: string = null;
+  public uri: string = null; // weblink
+  public created: Date; // timestamp
 
-  constructor(p, oid, name=null, desc=null, uri=null) {
+  constructor(p:Poll, oid:string, name:string=null, desc:string=null, uri:string=null) {
     this.p = p;
     this.oid = oid;
     this.name = name = (name!=null) ? name : oid.toString();
     this.desc = desc;
     this.uri = uri;
-    this.created = (new Date()).getTime(); // TODO: better use time from messaging server?
+    this.created = new Date(); // TODO: better use time from messaging server?
   }
 }
 
@@ -59,37 +57,37 @@ export class Poll {
 
   // constant data:
 
-  public pid; // unique poll id
+  public pid: string; // unique poll id
 
-  public title;
-  public desc;
-  public uri; // weblink
-  public due; // closing time
+  public title: string;
+  public desc: string = null;
+  public uri: string = null; // weblink
+  public due: Date; // closing time
 
-  public myvid;
+  public myvid: string;
 
   // variable data:
 
-  public vids = []; // list of voter ids // TODO: make anonymous
-  public oids = []; // list of options ids
-  public options = {}; // dict by oid
+  public vids: string[] = []; // list of voter ids // TODO: make anonymous
+  public oids: string[] = []; // list of options ids
+  public options: {} = {}; // dict by oid
 
   // ratings are stored redundantly:
-  private ratings = {}; // dict of dicts by oid, vid
-  private rfreqs = {}; // dict of dicts of rating frequencies by oid, rating
-  private rsums = {}; // dict of total ratings by oid
-  private stamps = {}; // dict of creation timestamps by oid 
+  private ratings: {} = {}; // dict of dicts by oid, vid
+  private rfreqs: {} = {}; // dict of dicts of rating frequencies by oid, rating
+  private rsums: {} = {}; // dict of total ratings by oid
+  private stamps: {} = {}; // dict of creation timestamps by oid 
 
   // tally results:
-  public rmins = {}; // dict of minimum ratings for approval, by oid
-  public apprs = {}; // dict of approvals by oid
-  public oidsorted = null; // list of oids by lexicographically descending (appr, rsum, stamp)
-  public opos = {}; // dict of sorting position by oid
-  public vid2oid = {}; // dict of oid of option voted for, by vid
-  public oid2vids = null; // dict of lists of vids of those voting for an option, by oid
-  public probs = {}; // dict of winning probabilities by oid
+  public rmins: {} = {}; // dict of minimum ratings for approval, by oid
+  public apprs: {} = {}; // dict of approvals by oid
+  public oidsorted: string[] = null; // list of oids by lexicographically descending (appr, rsum, stamp)
+  public opos: {} = {}; // dict of sorting position by oid
+  public vid2oid: {} = {}; // dict of oid of option voted for, by vid
+  public oid2vids: {} = null; // dict of lists of vids of those voting for an option, by oid
+  public probs: {} = {}; // dict of winning probabilities by oid
 
-  constructor(pid=null, title=null, myvid=null, demo=null) {
+  constructor(pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
     if (demo != null) { // initialize a demo poll
       this.makedemo(demo);
     } else if (pid != null) { // join an existing poll
@@ -97,9 +95,9 @@ export class Poll {
       this.myvid = myvid;
       this.joinExisting();
     } else { // set up new poll
-      this.pid = Math.random(); // TODO: use better method to generate a unique id
+      this.pid = Math.random().toString(); // TODO: use better method to generate a unique id
       this.title = title;
-      this.myvid = myvid = (myvid!=null) ? myvid : Math.random();
+      this.myvid = myvid = (myvid!=null) ? myvid : Math.random().toString();
       this.vids = [myvid];
     }
     this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
@@ -108,7 +106,7 @@ export class Poll {
   joinExisting() {
       // TODO: download current poll state
   }
-  makedemo(demo) {
+  makedemo(demo:string) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
 //      ["", "", ""],
     let data = {'freesf': [
@@ -168,10 +166,10 @@ export class Poll {
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
-      this.myvid = 0;
-      this.vids = Array.from(Array(100).keys());
+      this.myvid = "me";
+      this.vids = Array.from(Array(100).keys()).map(i => "v"+i);
       for (let i=1; i<d.length; i++) {
-        this.registerOption(new Option(this, i, d[i][0], d[i][1], d[i][2]));
+        this.registerOption(new Option(this, "o"+i, d[i][0], d[i][1], d[i][2]));
       }
     }
     new Simulation(this);
@@ -180,7 +178,7 @@ export class Poll {
     }
     GlobalService.log("...done");
   }
-  registerOption(o: Option) {
+  registerOption(o:Option) {
     let oid = o.oid;
     this.opos[oid] = this.oids.length;
     this.oids.push(oid);
@@ -197,7 +195,7 @@ export class Poll {
     this.apprs[oid] = -1;
     GlobalService.log("  registered option " + o.name);
   }
-  setRating(oid, vid, r) {
+  setRating(oid:string, vid:string, r:number) {
     let oldr = this.ratings[oid][vid];
     // update all redundant ratings data:
     this.ratings[oid][vid] = r;
@@ -205,7 +203,9 @@ export class Poll {
     this.rfreqs[oid][r]++;
     this.rsums[oid] += r - oldr;
   }
-  getRating(oid, vid) { return this.ratings[oid][vid]; }
+  getRating(oid:string, vid:string) { 
+    return this.ratings[oid][vid]; 
+  }
 
   public tally() {
     // TODO: make sure only one thread of this runs and eval. does not take too long.
@@ -254,7 +254,7 @@ export class Poll {
     GlobalService.log("    old order: " + oldsorted);
     let rsums = this.rsums,
         stamps = this.stamps;
-    function cmp(oid1, oid2) {
+    function cmp(oid1:string, oid2:string) {
 //      GlobalService.log("      comparing " + oid1 + "," + oid2);
       // higher approved comes first:
       let a1 = apprs[oid1],
@@ -342,14 +342,14 @@ export class Simulation {
   public p: Poll;
 
   // policy space model parameters:
-  public dim = 2;
-  public sigma = 1; // dispersion of options (1 = like voters)
+  public dim: number = 2;
+  public sigma: number = 1; // dispersion of options (1 = like voters)
 
   // utility data:
-  public vcoords = {}; // dict of voter coordinate arrays by vid
-  public ocoords = {}; // dict of option coordinate arrays by oid
+  public vcoords: {} = {}; // dict of voter coordinate arrays by vid
+  public ocoords: {} = {}; // dict of option coordinate arrays by oid
 
-  constructor(p: Poll) {
+  constructor(p:Poll) {
     this.p = p; 
     // draw initial coordinates:
     for (let oid of p.oids) {
@@ -362,12 +362,12 @@ export class Simulation {
     GlobalService.log("simulation set up.");
   }
   rannor() {
-    var u = 0, v = 0;
+    let u = 0, v = 0;
     while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
     while(v === 0) v = Math.random();
     return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
   }
-  getu(oid, vid) { // utility = - squared distance in policy space
+  getu(oid:string, vid:string) { // utility = - squared distance in policy space
     let d2 = 0,
         op = this.ocoords[oid],
         vp = this.vcoords[vid];
@@ -376,7 +376,7 @@ export class Simulation {
     }
     return -Math.sqrt(d2); // -d2; // Math.exp(-d2);
   }
-  setRatings(vid) { // heuristic rating: 0 = benchmark, 100 = favourite, linear interpolation in between
+  setRatings(vid:string) { // heuristic rating: 0 = benchmark, 100 = favourite, linear interpolation in between
     let us = {},
         umax = -1e100,
         umean = 0;

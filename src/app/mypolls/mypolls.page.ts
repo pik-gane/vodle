@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { GlobalService, Poll } from "../global.service";
+import { GlobalService } from "../global.service";
 
 @Component({
   selector: 'app-mypolls',

@@ -173,7 +173,11 @@ where data contains:
 * realtime.co: https://framework.realtime.co/messaging/, http://demos.realtime.co/demos/poll2.aspx, http://messaging-public.realtime.co/documentation/starting-guide/quickstart-js.html
 * possible alternative to realtime.co: http://sockethub.org/
 * ionic and rest webservices: https://www.djamware.com/post/5b5cffaf80aca707dd4f65aa/building-crud-mobile-app-using-ionic-4-angular-6-and-cordova#ch2 
-* ionic and IBM cloudant (for persistance?): https://www.npmjs.com/package/@cloudant/cloudant, https://console.bluemix.net/docs/services/Cloudant/api/document.html#documents, https://www.ibm.com/blogs/bluemix/2016/12/create-feedback-app-ionic-cloudant/, https://console.bluemix.net/docs/runtimes/nodejs/getting-started.html#getting-started-tutorial
+* ionic and IBM cloudant (for persistance?): 
+    https://console.bluemix.net/docs/services/Cloudant/api/document.html#documents, 
+    https://www.npmjs.com/package/@cloudant/cloudant, 
+    https://www.ibm.com/blogs/bluemix/2016/12/create-feedback-app-ionic-cloudant/, 
+    https://console.bluemix.net/docs/runtimes/nodejs/getting-started.html#getting-started-tutorial
 * app-specific url schemes (use "maxparc"?): 
     https://developer.apple.com/documentation/uikit/core_app/allowing_apps_and_websites_to_link_to_your_content/defining_a_custom_url_scheme_for_your_app
     https://stackoverflow.com/questions/2448213/how-to-implement-my-very-own-uri-scheme-on-android

@@ -21,6 +21,11 @@ export class OpenpollPage implements OnInit {
   private slidercolor = {};
   private Math = Math;
 
+  private submit_hold = false;
+  private submit_count = 0;
+  private submit_triggered = false;
+  private submit_ratings = {};
+
   constructor(public g: GlobalService) { }
 
   // lifecycle events:
@@ -95,7 +100,6 @@ export class OpenpollPage implements OnInit {
     this.p.tally();
     this.showStats();
   }
-  // event listeners:
   ratingChangeBegins(oid) {
     // freeze current sort order:
     this.opos = {...this.p.opos};
@@ -105,9 +109,45 @@ export class OpenpollPage implements OnInit {
         value = Number(slider.value);
     this.setSliderColor(oid, value);
     this.storeSlidersRating(oid);
+    this.submit_ratings[oid] = true;
+    if (this.submit_triggered) {
+      this.holdSubmit();
+    } else {
+      this.triggerSubmit();
+    } 
   }
   ratingChangeEnded(oid) {
     // TODO: make sure this is really always called right after releasing the slider!
     this.showOrder();
+  }
+
+  // submission:
+
+  holdSubmit() {
+    GlobalService.log("holding submits");
+    this.submit_hold = true;
+  }
+  async triggerSubmit() {
+    this.submit_count++;
+    GlobalService.log("submit no. "+this.submit_count+" triggered.");
+    this.submit_triggered = this.submit_hold = true;
+    while (this.submit_hold) {
+      this.submit_hold = false;
+      await this.sleep(1000);
+    }
+    let submit_ratings = this.submit_ratings;
+    this.submit_ratings = {};
+    this.submit_triggered = this.submit_hold = false;
+    GlobalService.log("submitting no."+this.submit_count);
+    for (let oid in submit_ratings) {
+      GlobalService.log("  "+oid+":"+this.p.getRating(oid, this.p.myvid));
+    }
+  }
+  sleep(ms) { 
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(true);
+      }, ms);
+    });
   }
 }
