@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { strict } from 'assert';
 import { GlobalService, Poll } from "../global.service";
 import { SortoptionsPipe } from '../sortoptions.pipe';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-openpoll',
@@ -12,6 +13,7 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
+  public ratings = {}; // my ratings
   public approved = {}; // whether option is approved by me
   public votedfor = null; // oid my prob. share goes to
   public expanded = null;
@@ -21,18 +23,23 @@ export class OpenpollPage implements OnInit {
   private slidercolor = {};
   private Math = Math;
 
+  private submit_interval = 1000; // ms to wait before submitting updates
   private submit_hold = false;
   private submit_count = 0;
   private submit_triggered = false;
   private submit_ratings = {};
 
-  constructor(public g: GlobalService) { }
+  constructor(public g: GlobalService, public httpClient: HttpClient) {
+  }
 
   // lifecycle events:
   ngOnInit() {
-    this.p = this.g.openpoll;
+    let p = this.p = this.g.openpoll;
     this.p.tally();
     this.opos = this.p.opos;
+    for (let oid of p.oids) {
+      this.ratings[oid] = p.getRating(oid, p.myvid);
+    }
     this.expanded = null;
     this.showOrder();
   }
@@ -95,7 +102,9 @@ export class OpenpollPage implements OnInit {
     return Number(this.getSlider(oid).value);
   }
   storeSlidersRating(oid) {
-    this.p.setRating(oid, this.p.myvid, this.getSliderValue(oid));
+    let r = Math.round(this.getSliderValue(oid));
+    this.ratings[oid] = r;
+    this.p.setRating(oid, this.p.myvid, r);
     // TODO: broadcast rating
     this.p.tally();
     this.showStats();
@@ -123,25 +132,49 @@ export class OpenpollPage implements OnInit {
 
   // submission:
 
-  holdSubmit() {
+  holdSubmit() { // make submission hold for another submit_interval
     GlobalService.log("holding submits");
     this.submit_hold = true;
   }
   async triggerSubmit() {
-    this.submit_count++;
-    GlobalService.log("submit no. "+this.submit_count+" triggered.");
+    // trigger a submission that is 
+    // delayed by at least submit_interval after the last change:
+    let sc = this.submit_count++;
+    GlobalService.log("submit no. "+sc+" triggered.");
     this.submit_triggered = this.submit_hold = true;
     while (this.submit_hold) {
+      // wait until no further changes happened within 
+      // the last submit_interval
       this.submit_hold = false;
-      await this.sleep(1000);
+      await this.sleep(this.submit_interval);
     }
+    // now now changes have happened within the last submit_interval,
+    // so we can actually do the submission
     let submit_ratings = this.submit_ratings;
     this.submit_ratings = {};
     this.submit_triggered = this.submit_hold = false;
-    GlobalService.log("submitting no."+this.submit_count);
+    GlobalService.log("submitting no. "+sc);
     for (let oid in submit_ratings) {
       GlobalService.log("  "+oid+":"+this.p.getRating(oid, this.p.myvid));
     }
+    let doc = JSON.stringify({
+      "_id": this.p.pid + "/" + this.p.myvid, // unique document id in db
+      // TODO: do we need to specify _rev as well?
+      "pid": this.p.pid,
+      "vid": this.p.myvid,
+      "pubkey": null,
+      "ratings": this.ratings
+      }),
+      url = "TODO!";
+    // TODO: put document into db using http put
+    this.httpClient.post(url, doc, 
+                        {headers: {header:"Content-Type: application/json"}})
+      .subscribe(res => {
+        GlobalService.log('submission no. "+sc+" POST returned '+res);
+      });
+    // TODO: catch http errors:
+    //  404 not found: error?
+    //  network not reachable or timeout: try again later
   }
   sleep(ms) { 
     return new Promise(resolve => {

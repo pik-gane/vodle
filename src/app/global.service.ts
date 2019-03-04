@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 
-import * as Cloudant from '@cloudant/cloudant'
-
 @Injectable(
 //  {providedIn: 'root'}
 )
@@ -25,11 +23,8 @@ export class GlobalService {
   }
 
   dbconnect() { // FIXME: doesn't compile...
-//    require('dotenv').load(); // FIXME
     // Initialize Cloudant
-    let cloudant_username = "08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix", // FIXME: this does not work: process.env.cloudant_username,
-        cloudant_password = "7f468f3a4a42dc300f2aff089380ae09154abe355b7e679c00bebc3fcd8bf8e5"; // FIXME: this does not work: process.env.cloudant_password;
-    this.cloudant = Cloudant({ account:cloudant_username, password:cloudant_password });
+//    this.cloudant = Cloudant({ account:cloudant_username, password:cloudant_password });
   }
 }
 
@@ -101,7 +96,7 @@ export class Poll {
       this.vids = [myvid];
     }
     this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
-    GlobalService.log("poll with pid " + pid + " set up.");
+    GlobalService.log("poll with pid " + this.pid + " set up.");
   }
   joinExisting() {
       // TODO: download current poll state
@@ -166,8 +161,8 @@ export class Poll {
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
-      this.myvid = "me";
       this.vids = Array.from(Array(100).keys()).map(i => "v"+i);
+      this.myvid = this.vids[0];
       for (let i=1; i<d.length; i++) {
         this.registerOption(new Option(this, "o"+i, d[i][0], d[i][1], d[i][2]));
       }
@@ -198,13 +193,26 @@ export class Poll {
   setRating(oid:string, vid:string, r:number) {
     let oldr = this.ratings[oid][vid];
     // update all redundant ratings data:
+    if (r%1 != 0) {
+      GlobalService.log("WARN: noninteger rating "+r+" for "+oid+" by "+vid);
+      r = Math.round(r);
+    }
     this.ratings[oid][vid] = r;
     this.rfreqs[oid][oldr]--;
     this.rfreqs[oid][r]++;
     this.rsums[oid] += r - oldr;
   }
-  getRating(oid:string, vid:string) { 
+  getRating(oid:string, vid:string) {
     return this.ratings[oid][vid]; 
+  }
+
+  log(msg) {
+    GlobalService.log(msg+" poll="+JSON.stringify({
+      "pid":this.pid,
+      "oids":this.oids,
+      "vids":this.vids,
+      "ratings":this.ratings
+    }));
   }
 
   public tally() {
@@ -387,7 +395,7 @@ export class Simulation {
       if (u > umax) umax = u;
     }
     for (let oid of this.p.oids) {
-      let r = Math.max(0, (us[oid] - umean) / (umax - umean)) * 100;
+      let r = Math.round(Math.max(0, (us[oid] - umean) / (umax - umean)) * 100);
       this.p.setRating(oid, vid, r);
     }
   }
