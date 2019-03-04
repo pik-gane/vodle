@@ -28,6 +28,7 @@ export class OpenpollPage implements OnInit {
   private submit_count = 0;
   private submit_triggered = false;
   private submit_ratings = {};
+  private cloudant_url = null;
 
   constructor(public g: GlobalService, public httpClient: HttpClient) {
   }
@@ -50,6 +51,13 @@ export class OpenpollPage implements OnInit {
     this.showStats();
   }
 
+  sleep(ms) { 
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(true);
+      }, ms);
+    });
+  }
   showStats() { // update pies and bars, but not order!
     this.votedfor = this.p.vid2oid[this.p.myvid];
     for (let oid of this.p.oids) {
@@ -164,23 +172,35 @@ export class OpenpollPage implements OnInit {
       "vid": this.p.myvid,
       "pubkey": null,
       "ratings": this.ratings
-      }),
-      url = "TODO!";
+    });
+    doc = `
+    {
+      "_id": "13dc7817dc4e8ff423f090d28b43252c",
+      "modified": 238946.8264,
+      "pid": "freesf",
+      "oid": "1",
+      "name": "A",
+      "desc": null,
+      "appr": 1,
+      "prob": 0.7
+    }
+    `;
+    if (!this.cloudant_url) {
+      this.cloudant_url = prompt("cloudant url:") + "/maxparc";
+    }
     // TODO: put document into db using http put
-    this.httpClient.post(url, doc, 
-                        {headers: {header:"Content-Type: application/json"}})
-      .subscribe(res => {
-        GlobalService.log('submission no. "+sc+" POST returned '+res);
-      });
+//    this.httpClient.post(this.cloudant_url, doc, 
+//                    //  {headers: {header:"Content-Type: application/json"}}
+//                      )
+    this.httpClient.get("https://jsonplaceholder.typicode.com/todos/1" //this.cloudant_url+"/13dc7817dc4e8ff423f090d28b43252c", 
+      //  {headers: {header:"Content-Type: application/json"}}
+        )
+        .subscribe(res => {
+      GlobalService.log('submission no. "+sc+" POST returned '+JSON.stringify(res));
+    });
+    // FIXME: currently this results in ERROR: Object { headers: {…}, status: 0, statusText: "Unknown Error", url: "https://...", ok: false, name: "HttpErrorResponse", message: "Http failure response for https://...: 0 Unknown Error", error: error }    
     // TODO: catch http errors:
     //  404 not found: error?
     //  network not reachable or timeout: try again later
-  }
-  sleep(ms) { 
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(true);
-      }, ms);
-    });
   }
 }

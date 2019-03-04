@@ -82,7 +82,7 @@
               <b><span style="color:#9abcbd"><small>currently</small>
                 <span style="color:#769596"> {{Math.round(p.probs[oid]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
                 <small><span style="color:#4c822e" [style.display]="(votedfor==oid)?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
-                approved&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oid]*1000)/10}}%</span>
+                supported&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oid]*1000)/10}}%</span>
                 <span style="color:#62a73b" [style.display]="approved[oid]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
               </b>
               <span [style.display]="p.options[oid].desc!=null?'inline':'none'">

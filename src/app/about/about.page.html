@@ -10,18 +10,19 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding><!--TODO: instead of italics, emphasise word "vodle" by green color as in the logo-->
+<ion-content padding>
   <!--TODO: have this as an expandable list of topics, with the first one expanded by default-->
-  <h3>What is <i>vodle?</i></h3>
+  <h3>What is vodle?</h3>
   <p>
-    <b><i>vodle</i> helps a group make fair and good decisions. 
+    <b>vodle helps a group make fair and good decisions. 
       It finds the <i>maximal partial consensus</i> among any set of options.
       Truly democratic, it gives everyone the same effective influence.
     </b>
   </p>
   <p>
-    For each option, it shows you the current support as a grey bar on the right, 
-    and allows you to adjust your ratings in realtime.
+    For each option, it shows you the current support as a light bar on the right, 
+    and allows you to adjust your ratings in realtime using sliders.
+    When your slider touches the support bar, it turns green to indicate that you support that option as well.
     This way, the group tends to converge to a full or partial consensus as broad as possible. 
   </p>
   <p>
@@ -31,15 +32,15 @@
   </p>
   <p>
     If one option is supported by all, this full consensus option will be the sure winner.
-    Otherwise <i>vodle</i> most likely declares the option with the broadest support the winner.
+    Otherwise vodle most likely declares the option with the broadest support the winner.
     But to achieve fairness, it must sometimes also use a certain amount of chance,
     similar to a greencard lottery.
   </p>
   <small>
     <p>
-      The exact procedure that <i>vodle</i> uses for determining the winning option is this:
+      The exact procedure that vodle uses for determining the winning option is this:
       After the poll has closed, options are sorted by descending support and one voter is picked by lot.
-      The topmost option for which the voter's rating slider meets the grey support bar is declared the winner. 
+      The topmost option for which that voter's slider is green is declared the winner. 
     </p>
     <p>
       This way, the most supported option will have the vastly largest probability of winning,
@@ -50,9 +51,9 @@
     <p>
       <i>vodle</i>'s algorithm was developed and optimizied for fairness by the mathematician Jobst Heitzig,
       inspired by the "threshold model" of famous sociologist Mark Granovetter.
-      This app is open-source, authors: XXX and Jobst Heitzig with contributions by YYY.
+      This app is open-source, authors: Jobst Heitzig and XXX with contributions by YYY.
     </p>
-  <h3>Support <i>vodle!</i></h3>
+  <h3>Support vodle!</h3>
     <p>Spread the word, send feedback, donate, join developers, etc.</p>
   <h3>Legal stuff</h3>
     <p>License, authors, copyright, privacy statement, other disclaimers, etc.</p>

@@ -80,6 +80,7 @@ export class Poll {
   public opos: {} = {}; // dict of sorting position by oid
   public vid2oid: {} = {}; // dict of oid of option voted for, by vid
   public oid2vids: {} = null; // dict of lists of vids of those voting for an option, by oid
+  public abstaining: string[] = []; // list of abstaining voters
   public probs: {} = {}; // dict of winning probabilities by oid
 
   constructor(pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
@@ -211,7 +212,8 @@ export class Poll {
       "pid":this.pid,
       "oids":this.oids,
       "vids":this.vids,
-      "ratings":this.ratings
+      "ratings":this.ratings,
+      "myvote":this.vid2oid[this.myvid]
     }));
   }
 
@@ -289,8 +291,8 @@ export class Poll {
       }
       this.opos[newoid] = i;
     }
-    GlobalService.log("    first change at " + newsorted[i0]);
     if (i0 == null) return false; // unchanged results
+    GlobalService.log("    first change at " + newsorted[i0]);
 
     // so results may change...
     this.oidsorted = newsorted;
@@ -303,6 +305,7 @@ export class Poll {
       for (let i=i0; i<m; i++) {
         checkvids.push(...this.oid2vids[newsorted[i]]);
       }
+      checkvids.push(...this.abstaining);
     }
 
     // calculate votes:
@@ -330,6 +333,7 @@ export class Poll {
     for (let vid of checkvids) {
       this.vid2oid[vid] = null;
     }
+    this.abstaining = checkvids;
     GlobalService.log("    " + checkvids.length + " voters abstain.");
 
     // winning probabilities:
@@ -340,6 +344,7 @@ export class Poll {
       GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
     GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
+    this.log("");
     return true; // changed results
   }
 }
