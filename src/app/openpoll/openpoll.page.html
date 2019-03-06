@@ -30,7 +30,7 @@
         <app-expandable [expanded]="expanded=='poll'">
           <ion-row no-padding no-margin>
             <ion-col no-padding no-margin>
-              <!--TODO: creator, personal priority-->
+              <!--TODO: creator, personal priority, no. of abstentions-->
               {{p.desc}}
               <ng-template [ngIf]="p.uri!=null">
                 <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" float-right no-padding padding-left no-margin>
