@@ -33,7 +33,6 @@ export class OpenpollPage implements OnInit {
   // lifecycle events:
   ngOnInit() {
     let p = this.p = this.g.openpoll;
-    p.g = this.g;
     this.p.tally();
     this.opos = this.p.opos;
     this.expanded = null;
@@ -150,8 +149,8 @@ export class OpenpollPage implements OnInit {
       this.submit_hold = false;
       await this.sleep(this.submit_interval);
     }
+    this.submit_triggered = this.submit_hold = false;
     this.p.submitRatings({...this.submit_ratings});
     this.submit_ratings = {};
-    this.submit_triggered = this.submit_hold = false;
   }
 }

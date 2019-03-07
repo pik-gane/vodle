@@ -16,9 +16,19 @@ export class GlobalService {
 
   // for communicating with cloudant JSON database:
   public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
+  public cloudant_up = "08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix:7f468f3a4a42dc300f2aff089380ae09154abe355b7e679c00bebc3fcd8bf8e5"; // TODO: remove before committing!!
   public cloudant_headers: HttpHeaders = null;
   
-  constructor(public http: HttpClient) {}
+  constructor(public http: HttpClient) {
+    if (!this.cloudant_up) {
+      this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
+    }
+    this.cloudant_headers = new HttpHeaders({
+      'Authorization': 'Basic ' + btoa(this.cloudant_up),
+      'content-type': 'application/json',
+      'accept': 'application/json'
+    });
+  }
 
   static log(msg) {
     console.log((new Date()).getTime().toString() + " " + msg);
@@ -91,7 +101,8 @@ export class Poll {
   private cloudant_docurl: string = null;
   private cloudant_doc: {} = null; // object containing voter's ratings
 
-  constructor(pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
+  constructor(g:GlobalService, pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
+    this.g = g;
     if (demo != null) { // initialize a demo poll
       this.makedemo(demo);
     } else if (pid != null) { // join an existing poll
@@ -105,7 +116,16 @@ export class Poll {
       this.vids = [myvid];
     }
     this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
+    this.cloudant_doc = {
+      "_id": this.pid + "_" + this.myvid, // unique document id in db
+      "pid": this.pid,
+      "vid": this.myvid,
+      "pubkey": null,
+      "ratings": this.myratings
+    };
+    this.cloudant_docurl = this.g.cloudant_dburl + "/" + this.cloudant_doc["_id"];
     GlobalService.log("poll with pid " + this.pid + " set up.");
+    this.getCompleteState();
   }
   joinExisting() {
       // TODO: download current poll state
@@ -167,7 +187,7 @@ export class Poll {
       }
     } else {
       let d = data[demo],
-          n = 4;
+          n = 5;
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
@@ -252,6 +272,7 @@ export class Poll {
           cf = rfs[0], // cumulative frequency
           t = 101, // threshold for approval
           a = 0; // approval
+      // TODO: make sure sum(rfs) = n.
       // find smallest r so that less than r% of voters have rating < r:
       for (let r=1; r<=100; r++) {
         if (cf*100 < n*r) { 
@@ -292,6 +313,7 @@ export class Poll {
           s2 = rsums[oid2];
       if (s1 != s2) return s2 - s1;
 //      GlobalService.log("        equal total rating " + s1 + ", using creation times as tie breaker");
+      return (oid2 > oid1) ? 1 : -1; // FIXME: this is only so that same order on different devices
       // if still equal, youngest comes first:
       return stamps[oid2] - stamps[oid1];
     }
@@ -384,9 +406,7 @@ export class Poll {
         for (let doc of value["docs"]) {
           let vid = doc["vid"],
               rs = doc["ratings"];
-          GlobalService.log("  setting ratings "+vid+":"+JSON.stringify(rs)+" from "+JSON.stringify(doc));
           for (let oid in rs) {
-            GlobalService.log("  setting rating "+oid+","+vid+":"+JSON.stringify(rs[oid])+" of type "+typeof(rs[oid]));
             this.setRating(oid, vid, rs[oid]);
           }
         }
@@ -395,6 +415,7 @@ export class Poll {
       },
       (error: {}) => { // at post failure:
         GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
+        alert(JSON.stringify(error));
       }
     );
   }
@@ -404,22 +425,6 @@ export class Poll {
     // so we can actually do the submission
     for (let oid in submit_ratings) {
       GlobalService.log("  "+oid+":"+this.getRating(oid, this.myvid));
-    }
-    if (!this.g.cloudant_headers) {
-      let up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
-      this.g.cloudant_headers = new HttpHeaders({
-          'Authorization': 'Basic ' + btoa(up),
-          'content-type': 'application/json',
-          'accept': 'application/json'
-      });
-      this.cloudant_doc = {
-        "_id": this.pid + "_" + this.myvid, // unique document id in db
-        "pid": this.pid,
-        "vid": this.myvid,
-        "pubkey": null,
-        "ratings": this.myratings
-      };
-      this.cloudant_docurl = this.g.cloudant_dburl+ "/" + this.cloudant_doc["_id"];
     }
     if ("_rev" in this.cloudant_doc) {
       // first try to put updated doc with known _rev (should normally succeed):
