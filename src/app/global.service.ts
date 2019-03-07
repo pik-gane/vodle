@@ -158,14 +158,15 @@ export class Poll {
         this.registerOption(new Option(this, oid));
       }
     } else {
-      let d = data[demo];
+      let d = data[demo],
+          n = 100;
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
-      this.vids = Array.from(Array(100).keys()).map(i => "v"+i);
-      this.myvid = this.vids[0];
+      this.vids = Array.from(Array(n).keys()).map(i => "v" + i);
+      this.myvid = "v" + Math.floor(Math.random() * n);
       for (let i=1; i<d.length; i++) {
-        this.registerOption(new Option(this, "o"+i, d[i][0], d[i][1], d[i][2]));
+        this.registerOption(new Option(this, "o" + i, d[i][0], d[i][1], d[i][2]));
       }
     }
     new Simulation(this);

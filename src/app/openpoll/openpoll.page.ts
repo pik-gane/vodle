@@ -3,6 +3,7 @@ import { strict } from 'assert';
 import { GlobalService, Poll } from "../global.service";
 import { SortoptionsPipe } from '../sortoptions.pipe';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { finalize } from 'rxjs/operators';
 
 @Component({
   selector: 'app-openpoll',
@@ -28,9 +29,12 @@ export class OpenpollPage implements OnInit {
   private submit_count = 0;
   private submit_triggered = false;
   private submit_ratings = {};
-  private cloudant_user = null;
-  private cloudant_password = null;
+
+  // for communicating with cloudant JSON database:
+  private cloudant_url = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
   private cloudant_headers: HttpHeaders = null;
+  private cloudant_doc = null; // JSON document containing voter's ratings
+  private cloudant_rev = null; // that document's last revision
 
   constructor(public g: GlobalService, private http: HttpClient) {
   }
@@ -167,43 +171,51 @@ export class OpenpollPage implements OnInit {
     for (let oid in submit_ratings) {
       GlobalService.log("  "+oid+":"+this.p.getRating(oid, this.p.myvid));
     }
-    let doc = JSON.stringify({
-      "_id": this.p.pid + "/" + this.p.myvid, // unique document id in db
-      // TODO: do we need to specify _rev as well?
-      "pid": this.p.pid,
-      "vid": this.p.myvid,
-      "pubkey": null,
-      "ratings": this.ratings
-    });
-    doc = `
-    {
-      "_id": "13dc7817dc4e8ff423f090d28b43252c",
-      "modified": 238946.8264,
-      "pid": "freesf",
-      "oid": "1",
-      "name": "A",
-      "desc": null,
-      "appr": 1,
-      "prob": 0.7
-    }
-    `;
     if (!this.cloudant_headers) {
-      let up = prompt("cloudant user:password");
+      let up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
       this.cloudant_headers = new HttpHeaders({
           'Authorization': 'Basic ' + btoa(up),
           'content-type': 'application/json',
           'accept': 'application/json'
       });
+      this.cloudant_doc = {
+        "_id": this.p.pid + "_" + this.p.myvid, // unique document id in db
+        "pid": this.p.pid,
+        "vid": this.p.myvid,
+        "pubkey": null,
+        "ratings": this.ratings
+      };
     }
-    // TODO: put document into db using http put
-//    this.httpClient.post(this.cloudant_url, doc, 
-//                    //  {headers: {header:"Content-Type: application/json"}}
-//                      )
-    this.http.get(
-      "/cloudant/13dc7817dc4e8ff423f090d28b43252c", 
-      {headers: this.cloudant_headers})
-        .subscribe(res => {
-          GlobalService.log('submission no. "+sc+" POST returned '+JSON.stringify(res));
-    });
+    // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
+    GlobalService.log("submission no. "+sc+" GETting doc..."); 
+    this.http.get(this.cloudant_url + "/" + this.cloudant_doc._id, {headers: this.cloudant_headers}).pipe(finalize(
+      () => {
+        GlobalService.log("submission no. "+sc+" PUTting doc="+JSON.stringify(this.cloudant_doc)); 
+        this.http.put(this.cloudant_url + "/" + this.cloudant_doc._id, JSON.stringify(this.cloudant_doc), {headers: this.cloudant_headers}).pipe(finalize(
+          () => {
+            this.http.get(this.cloudant_url, {headers: this.cloudant_headers}).subscribe(
+              value => {
+                  GlobalService.log("submission no. "+sc+" GET db returned "+JSON.stringify(value));
+            });
+          }
+      )).subscribe(
+          value => {
+            GlobalService.log("submission no. "+sc+" PUT of doc returned "+JSON.stringify(value));
+          },
+          error => {
+            GlobalService.log("WARN: submission no. "+sc+" PUT of doc returned error"+JSON.stringify(error));
+          },
+        );    
+      }
+    )).subscribe(
+      value => {
+        GlobalService.log("submission no. "+sc+" GET doc returned _rev="+value["_rev"]);
+        this.cloudant_doc["_rev"] = this.cloudant_rev = value["_rev"];
+      },
+      error => {
+        GlobalService.log("submission no. "+sc+" GET doc returned error "+JSON.stringify(error));
+        delete this.cloudant_doc["_rev"];
+      },
+    );
   }
 }
