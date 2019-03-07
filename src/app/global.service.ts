@@ -3,6 +3,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
+import { Storage } from '@ionic/storage';
 
 @Injectable(
 //  {providedIn: 'root'}
@@ -16,10 +17,12 @@ export class GlobalService {
 
   // for communicating with cloudant JSON database:
   public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
-  public cloudant_up = "08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix:7f468f3a4a42dc300f2aff089380ae09154abe355b7e679c00bebc3fcd8bf8e5"; // TODO: remove before committing!!
+  public cloudant_dburl2 = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
+  public cloudant_up: string 
+    ;
   public cloudant_headers: HttpHeaders = null;
   
-  constructor(public http: HttpClient) {
+  constructor(public http: HttpClient, public storage: Storage) {
     if (!this.cloudant_up) {
       this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
     }
@@ -96,6 +99,10 @@ export class Poll {
   public oid2vids: {} = null; // dict of lists of vids of those voting for an option, by oid
   public abstaining: string[] = []; // list of abstaining voters
   public probs: {} = {}; // dict of winning probabilities by oid
+  public min_approval: number = null;
+  public expected_approval: number = null;
+  public max_approval: number = null;
+  public voting_share: number = null;
 
   // for communicating with cloudant JSON database:
   private cloudant_docurl: string = null;
@@ -377,15 +384,26 @@ export class Poll {
     // winning probabilities:
     GlobalService.log("  calculating winning probabilities...");
     let nvoted = n - checkvids.length;
+    this.min_approval = 1;
+    this.expected_approval = 0;
+    this.max_approval = 0;
+    this.voting_share = nvoted / n;
     for (let oid of newsorted) {
       let p = this.probs[oid] = (nvoted>0) ? this.oid2vids[oid].length/nvoted : 1/m;
+      if (apprs[oid] < this.min_approval) {
+        this.min_approval = apprs[oid];
+      }
+      this.expected_approval += p * apprs[oid];
+      if (apprs[oid] > this.max_approval) {
+        this.max_approval = apprs[oid];
+      }
       GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
     GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
     return true; // changed results
   }
 
-  getCompleteState() {
+  getCompleteState(trial:number = 1) {
     // get complete poll state from cloudant
     GlobalService.log("posting full cloudant query for poll "+this.pid); 
     this.g.http.post(this.g.cloudant_dburl + "/_find", JSON.stringify({
@@ -414,8 +432,14 @@ export class Poll {
         this.log("");
       },
       (error: {}) => { // at post failure:
-        GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
-        alert(JSON.stringify(error));
+        if (trial == 1) {
+          // assume error is because of missing proxy.
+          this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
+          this.getCompleteState(2);
+        } else {
+          GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
+          alert(JSON.stringify(error));
+        }
       }
     );
   }

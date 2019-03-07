@@ -28,8 +28,10 @@
     "@ionic-native/status-bar": "^5.0.0",
     "@ionic/angular": "^4.0.0",
     "@ionic/pro": "2.0.4",
+    "@ionic/storage": "^2.2.0",
     "ajv": "^6.9.1",
     "cordova-android": "7.1.4",
+    "cordova-browser": "5.0.4",
     "cordova-ios": "4.5.5",
     "cordova-plugin-advanced-http": "2.0.5",
     "cordova-plugin-device": "^2.0.2",
@@ -40,6 +42,7 @@
     "cordova-plugin-splashscreen": "^5.0.2",
     "cordova-plugin-statusbar": "^2.4.2",
     "cordova-plugin-whitelist": "^1.3.3",
+    "cordova-sqlite-storage": "3.1.0",
     "cordova-support-google-services": "^1.1.0",
     "core-js": "^2.5.4",
     "ionic2-super-tabs": "^5.2.0",
@@ -86,11 +89,13 @@
       "cordova-plugin-ionic-webview": {
         "ANDROID_SUPPORT_ANNOTATIONS_VERSION": "27.+"
       },
-      "cordova-plugin-advanced-http": {}
+      "cordova-plugin-advanced-http": {},
+      "cordova-sqlite-storage": {}
     },
     "platforms": [
       "android",
-      "ios"
+      "ios",
+      "browser"
     ]
   }
 }

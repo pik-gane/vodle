@@ -11,6 +11,7 @@ import { AppRoutingModule } from './app-routing.module';
 
 import { SortPipe } from './sort.pipe';
 import { HttpClientModule } from '@angular/common/http';
+import { IonicStorageModule } from '@ionic/storage';
 
 import { GlobalService } from './global.service';
 
@@ -20,6 +21,7 @@ import { GlobalService } from './global.service';
   imports: [
     BrowserModule,
     IonicModule.forRoot(),
+    IonicStorageModule.forRoot(),
     AppRoutingModule,
     HttpClientModule
   ],
