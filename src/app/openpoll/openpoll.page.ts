@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { strict } from 'assert';
 import { GlobalService, Poll } from "../global.service";
 import { SortoptionsPipe } from '../sortoptions.pipe';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 @Component({
   selector: 'app-openpoll',
@@ -30,8 +30,9 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
   private cloudant_user = null;
   private cloudant_password = null;
+  private cloudant_headers: HttpHeaders = null;
 
-  constructor(public g: GlobalService, public httpClient: HttpClient) {
+  constructor(public g: GlobalService, private http: HttpClient) {
   }
 
   // lifecycle events:
@@ -186,24 +187,23 @@ export class OpenpollPage implements OnInit {
       "prob": 0.7
     }
     `;
-    if (!this.cloudant_user) {
-      this.cloudant_user = prompt("cloudant user:");
-      this.cloudant_password = prompt("cloudant password:");
+    if (!this.cloudant_headers) {
+      let up = prompt("cloudant user:password");
+      this.cloudant_headers = new HttpHeaders({
+          'Authorization': 'Basic ' + btoa(up),
+          'content-type': 'application/json',
+          'accept': 'application/json'
+      });
     }
     // TODO: put document into db using http put
 //    this.httpClient.post(this.cloudant_url, doc, 
 //                    //  {headers: {header:"Content-Type: application/json"}}
 //                      )
-    this.httpClient.get(
+    this.http.get(
       "/cloudant/13dc7817dc4e8ff423f090d28b43252c", 
-      //  {headers: {header:"Content-Type: application/json"}}
-      {headers : {
-        'content-type': 'application/json',
-        accept: 'application/json'
-      }}
-        )
+      {headers: this.cloudant_headers})
         .subscribe(res => {
-      GlobalService.log('submission no. "+sc+" POST returned '+JSON.stringify(res));
+          GlobalService.log('submission no. "+sc+" POST returned '+JSON.stringify(res));
     });
   }
 }
