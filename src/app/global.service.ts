@@ -1,3 +1,5 @@
+// TODO: move Option, Poll, Simulation into separate files but avoid circular dependencies...
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
@@ -7,8 +9,8 @@ import { finalize } from 'rxjs/operators';
 )
 export class GlobalService {
 
-  public polls = []; // list of polls
-  public openpoll = null; // currently open poll
+  public polls: Poll[] = []; // list of polls
+  public openpoll: Poll = null; // currently open poll
 
   public dateformatoptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
@@ -60,7 +62,7 @@ export class Poll {
   public uri: string = null; // weblink
   public due: Date; // closing time
 
-  public myvid: string;
+  public myvid: string = "";
 
   // variable data:
 
@@ -70,6 +72,7 @@ export class Poll {
 
   // ratings are stored redundantly:
   private ratings: {} = {}; // dict of dicts by oid, vid
+  private myratings: {} = {}; // dict by oid
   private rfreqs: {} = {}; // dict of dicts of rating frequencies by oid, rating
   private rsums: {} = {}; // dict of total ratings by oid
   private stamps: {} = {}; // dict of creation timestamps by oid 
@@ -164,7 +167,7 @@ export class Poll {
       }
     } else {
       let d = data[demo],
-          n = 10;
+          n = 4;
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
@@ -205,15 +208,21 @@ export class Poll {
       r = Math.round(r);
     }
     this.ratings[oid][vid] = r;
+    if (vid == this.myvid) {
+      this.myratings[oid] = r;
+    }
     this.rfreqs[oid][oldr]--;
     this.rfreqs[oid][r]++;
     this.rsums[oid] += r - oldr;
+  }
+  setMyRating(oid:string, r:number) {
+    this.setRating(oid, this.myvid, r);
   }
   getRating(oid:string, vid:string) {
     return this.ratings[oid][vid]; 
   }
 
-  log(msg) {
+  log(msg:string) {
     GlobalService.log(msg+" poll="+JSON.stringify({
       "pid":this.pid,
       "oids":this.oids,
@@ -354,6 +363,42 @@ export class Poll {
     return true; // changed results
   }
 
+  getCompleteState() {
+    // get complete poll state from cloudant
+    GlobalService.log("posting full cloudant query for poll "+this.pid); 
+    this.g.http.post(this.g.cloudant_dburl + "/_find", JSON.stringify({
+        "selector": { "pid": this.pid },
+        "fields": ["vid", "ratings"],
+        "limit": 200
+      }), {headers: this.g.cloudant_headers})
+    .pipe(finalize( // after post has finished:
+      () => {
+        GlobalService.log("  post finished"); 
+      }
+    ))
+    .subscribe(
+      (value: {}) => { // at post success:
+        GlobalService.log("  posting full cloudant query succeeded, no. docs returned: " + value["docs"].length);
+        // TODO: also process poll doc and options docs!
+        // process voter docs:
+        for (let doc of value["docs"]) {
+          let vid = doc["vid"],
+              rs = doc["ratings"];
+          GlobalService.log("  setting ratings "+vid+":"+JSON.stringify(rs)+" from "+JSON.stringify(doc));
+          for (let oid in rs) {
+            GlobalService.log("  setting rating "+oid+","+vid+":"+JSON.stringify(rs[oid])+" of type "+typeof(rs[oid]));
+            this.setRating(oid, vid, rs[oid]);
+          }
+        }
+        this.tally();
+        this.log("");
+      },
+      (error: {}) => { // at post failure:
+        GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
+      }
+    );
+  }
+
   submitRatings(submit_ratings){
     // now now changes have happened within the last submit_interval,
     // so we can actually do the submission
@@ -372,7 +417,7 @@ export class Poll {
         "pid": this.pid,
         "vid": this.myvid,
         "pubkey": null,
-        "ratings": this.ratings
+        "ratings": this.myratings
       };
       this.cloudant_docurl = this.g.cloudant_dburl+ "/" + this.cloudant_doc["_id"];
     }
@@ -389,7 +434,7 @@ export class Poll {
     // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
     this.g.http.put(this.cloudant_docurl, jsondoc, {headers: this.g.cloudant_headers})
     .pipe(finalize( // after put has finished:
-      () => { // TODO: what to do actually?
+      () => {
         GlobalService.log("  put finished"); 
       }
     ))
@@ -397,6 +442,8 @@ export class Poll {
       (value: {}) => { // at put success:
         GlobalService.log("  putting cloudant doc succeeded, new rev is " + value["rev"]);
         this.cloudant_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
+        // FIXME: the following is just for testing:
+        this.getCompleteState()
       },
       (error: {}) => { // at put failure:
         if (trial==1) {
@@ -421,7 +468,6 @@ export class Poll {
       (value: {}) => { // after get success
         GlobalService.log("  getting cloudant doc returned _rev="+value["_rev"]);
         this.cloudant_doc["_rev"] = value["_rev"];
-        GlobalService.log("  doc is now "+JSON.stringify(this.cloudant_doc));
       },
       (error: {}) => {
         GlobalService.log("  getting cloudant doc returned error "+JSON.stringify(error));

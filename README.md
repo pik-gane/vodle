@@ -174,6 +174,7 @@ where data contains:
 * possible alternative to realtime.co: http://sockethub.org/
 * ionic and rest webservices: https://www.djamware.com/post/5b5cffaf80aca707dd4f65aa/building-crud-mobile-app-using-ionic-4-angular-6-and-cordova#ch2 
 * ionic and IBM cloudant (for persistance?): 
+    https://console.bluemix.net/docs/services/Cloudant/api/cloudant_query.html#finding-documents-by-using-an-index, 
     https://ionicframework.com/docs/native/http/, https://ionicacademy.com/http-calls-ionic/,
     https://console.bluemix.net/docs/services/Cloudant/api/document.html#documents, 
     https://www.npmjs.com/package/@cloudant/cloudant, 

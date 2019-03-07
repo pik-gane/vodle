@@ -12,7 +12,6 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
-  public ratings = {}; // my ratings
   public approved = {}; // whether option is approved by me
   public votedfor = null; // oid my prob. share goes to
   public expanded = null;
@@ -37,9 +36,6 @@ export class OpenpollPage implements OnInit {
     p.g = this.g;
     this.p.tally();
     this.opos = this.p.opos;
-    for (let oid of p.oids) {
-      this.ratings[oid] = p.getRating(oid, p.myvid);
-    }
     this.expanded = null;
     this.showOrder();
   }
@@ -110,8 +106,7 @@ export class OpenpollPage implements OnInit {
   }
   storeSlidersRating(oid) {
     let r = Math.round(this.getSliderValue(oid));
-    this.ratings[oid] = r;
-    this.p.setRating(oid, this.p.myvid, r);
+    this.p.setMyRating(oid, r);
     // TODO: broadcast rating
     this.p.tally();
     this.showStats();
