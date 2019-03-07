@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { finalize } from 'rxjs/operators';
 
 @Injectable(
 //  {providedIn: 'root'}
@@ -10,9 +12,11 @@ export class GlobalService {
 
   public dateformatoptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
-  private cloudant;
+  // for communicating with cloudant JSON database:
+  public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
+  public cloudant_headers: HttpHeaders = null;
   
-  constructor() {}
+  constructor(public http: HttpClient) {}
 
   static log(msg) {
     console.log((new Date()).getTime().toString() + " " + msg);
@@ -20,11 +24,6 @@ export class GlobalService {
 
   showinbrowser(uri) {
     window.open(uri,'_system','location=yes');
-  }
-
-  dbconnect() { // FIXME: doesn't compile...
-    // Initialize Cloudant
-//    this.cloudant = Cloudant({ account:cloudant_username, password:cloudant_password });
   }
 }
 
@@ -51,6 +50,8 @@ export class Option {
 export class Poll {
 
   // constant data:
+
+  public g: GlobalService;
 
   public pid: string; // unique poll id
 
@@ -82,6 +83,10 @@ export class Poll {
   public oid2vids: {} = null; // dict of lists of vids of those voting for an option, by oid
   public abstaining: string[] = []; // list of abstaining voters
   public probs: {} = {}; // dict of winning probabilities by oid
+
+  // for communicating with cloudant JSON database:
+  private cloudant_docurl: string = null;
+  private cloudant_doc: {} = null; // object containing voter's ratings
 
   constructor(pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
     if (demo != null) { // initialize a demo poll
@@ -159,7 +164,7 @@ export class Poll {
       }
     } else {
       let d = data[demo],
-          n = 100;
+          n = 10;
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
@@ -214,6 +219,7 @@ export class Poll {
       "oids":this.oids,
       "vids":this.vids,
       "ratings":this.ratings,
+      "myvid":this.myvid,
       "myvote":this.vid2oid[this.myvid]
     }));
   }
@@ -345,10 +351,86 @@ export class Poll {
       GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
     GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
-    this.log("");
     return true; // changed results
   }
+
+  submitRatings(submit_ratings){
+    // now now changes have happened within the last submit_interval,
+    // so we can actually do the submission
+    for (let oid in submit_ratings) {
+      GlobalService.log("  "+oid+":"+this.getRating(oid, this.myvid));
+    }
+    if (!this.g.cloudant_headers) {
+      let up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
+      this.g.cloudant_headers = new HttpHeaders({
+          'Authorization': 'Basic ' + btoa(up),
+          'content-type': 'application/json',
+          'accept': 'application/json'
+      });
+      this.cloudant_doc = {
+        "_id": this.pid + "_" + this.myvid, // unique document id in db
+        "pid": this.pid,
+        "vid": this.myvid,
+        "pubkey": null,
+        "ratings": this.ratings
+      };
+      this.cloudant_docurl = this.g.cloudant_dburl+ "/" + this.cloudant_doc["_id"];
+    }
+    if ("_rev" in this.cloudant_doc) {
+      // first try to put updated doc with known _rev (should normally succeed):
+      this.putCloudantStoredRev(1);
+    } else {
+      this.putCloudantFetchedRev();
+    }
+  }
+  putCloudantStoredRev(trial:number) {
+    let jsondoc = JSON.stringify(this.cloudant_doc);
+    GlobalService.log("putting cloudant doc with rev " + this.cloudant_doc["_rev"]); 
+    // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
+    this.g.http.put(this.cloudant_docurl, jsondoc, {headers: this.g.cloudant_headers})
+    .pipe(finalize( // after put has finished:
+      () => { // TODO: what to do actually?
+        GlobalService.log("  put finished"); 
+      }
+    ))
+    .subscribe(
+      (value: {}) => { // at put success:
+        GlobalService.log("  putting cloudant doc succeeded, new rev is " + value["rev"]);
+        this.cloudant_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
+      },
+      (error: {}) => { // at put failure:
+        if (trial==1) {
+          GlobalService.log("  putting cloudant doc returned error"+JSON.stringify(error));
+          // assume failure was because of wrong _rev, so try getting correct rev:
+          this.putCloudantFetchedRev();
+        } else {
+          GlobalService.log("  WARN: 2nd putting cloudant doc returned error"+JSON.stringify(error));
+        }
+      }
+    );    
+  }
+  putCloudantFetchedRev() {
+    GlobalService.log("getting cloudant doc"); 
+    this.g.http.get(this.cloudant_docurl, {headers: this.g.cloudant_headers})
+    .pipe(finalize( // after get has finished:
+      () => {
+        this.putCloudantStoredRev(2);
+      }
+    ))
+    .subscribe(
+      (value: {}) => { // after get success
+        GlobalService.log("  getting cloudant doc returned _rev="+value["_rev"]);
+        this.cloudant_doc["_rev"] = value["_rev"];
+        GlobalService.log("  doc is now "+JSON.stringify(this.cloudant_doc));
+      },
+      (error: {}) => {
+        GlobalService.log("  getting cloudant doc returned error "+JSON.stringify(error));
+        delete this.cloudant_doc["_rev"];
+      }
+    );
+  }
 }
+
 export class Simulation {
 
   // TODO: dynamics!
