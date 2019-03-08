@@ -16,10 +16,11 @@ export class OpenpollPage implements OnInit {
   public votedfor = null; // oid my prob. share goes to
   public expanded = null;
 
+  public Math = Math;
+
   private pieradius = 20;
   private twopi = 2*Math.PI; 
   private slidercolor = {};
-  private Math = Math;
 
   private submit_interval = 1000; // ms to wait before submitting updates
   private submit_hold = false;

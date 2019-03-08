@@ -479,8 +479,13 @@ export class Poll {
           GlobalService.log("  putting cloudant doc returned error"+JSON.stringify(error));
           // assume failure was because of wrong _rev, so try getting correct rev:
           this.putCloudantFetchedRev();
+        } else if (trial==2) {
+          GlobalService.log("  2nd putting cloudant doc returned error"+JSON.stringify(error));
+          // assume error is because of missing proxy.
+          this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
+          this.putCloudantStoredRev(2);
         } else {
-          GlobalService.log("  WARN: 2nd putting cloudant doc returned error"+JSON.stringify(error));
+          GlobalService.log("  3rd putting cloudant doc returned error"+JSON.stringify(error));
         }
       }
     );    

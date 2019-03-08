@@ -190,6 +190,7 @@ where data contains:
 * re-rendering: https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
 * async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
 * http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
+* simple web server: https://jorge.fbarr.net/2017/06/11/simplehttpserver-with-ssl/
 
 ### Issues
 * file extension and uri scheme registration not working on lineageos
