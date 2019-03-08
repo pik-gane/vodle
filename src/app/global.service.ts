@@ -67,11 +67,11 @@ export class GlobalService {
       'accept': 'application/json'
     });
     if (Object.keys(this.polls).length == 0) {
-      let p = new Poll(this).makedemo("freesf");
-      this.polls[p.pid] = p;
-      this.openpid = p.pid;
-      p = new Poll(this).makedemo("3by3");
-      this.polls[p.pid] = p;
+      for (let demo in this.demodata) {
+        let p = new Poll(this).makedemo(demo);
+        this.openpid = p.pid;
+        this.polls[p.pid] = p;
+      }
     }
     this.openpoll = this.polls[this.openpid];
   }
@@ -102,6 +102,96 @@ export class GlobalService {
   showinbrowser(uri) {
     window.open(uri,'_system','location=yes');
   }
+
+  public demodata = {
+    'president' : [
+      ["President of the world",
+      "Imagine we elect this person for four years of office and the following candidates were all available",
+      null],
+      ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
+      ["Princess Leia", null, "https://en.wikipedia.org/wiki/Princess_Leia"],
+      ["Ada Lovelace", null ,"https://en.wikipedia.org/wiki/Ada_Lovelace"],
+      ["Wilma Mankiller", null, "https://en.wikipedia.org/wiki/Wilma_Mankiller"],
+      ["Rigoberta Menchú", null, "https://en.wikipedia.org/wiki/Rigoberta_Mench%C3%BA"],
+      ["Angela Merkel", null, "https://en.wikipedia.org/wiki/Angela_Merkel"],
+      ["Nadia Murad", null, "https://en.wikipedia.org/wiki/Nadia_Murad"],
+      ["Emmy Noether", null, "https://en.wikipedia.org/wiki/Emmy_Noether"],
+      ["Michelle Obama", null, "https://en.wikipedia.org/wiki/Michelle_Obama"],
+      ["Lisa Simpson", null, "https://en.wikipedia.org/wiki/Lisa_Simpson"],
+      ["Ellen Johnson Sirleaf", null, "https://en.wikipedia.org/wiki/Ellen_Johnson_Sirleaf"],
+      ["Marie Skłodowska Curie", null, "https://en.wikipedia.org/wiki/Marie_Curie"],
+      ["Mother Teresa", null, "https://en.wikipedia.org/wiki/Mother_Teresa"],
+      ["Malala Yousafzai", null, "https://en.wikipedia.org/wiki/Malala_Yousafzai"]
+    ],
+    'system' : [
+      ["Form of government",
+      "Imagine we choose a form of government for the next century",
+      "https://en.wikipedia.org/wiki/List_of_forms_of_government"],
+      ["Direct democracy", "using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
+      ["Liquid democracy (majority)", "using majority voting", "https://en.wikipedia.org/wiki/Liquid_democracy"],
+      ["Liquid democracy (consensus)", "using something like this app", "https://vodle.it"],
+      ["Representative democracy (majority)", "using majority voting by representatives", "https://en.wikipedia.org/wiki/Representative_democracy"],
+      ["Representative democracy (consensus)", "with reps using something like this app", "https://vodle.it"],
+      ["Electocracy", null, "https://en.wikipedia.org/wiki/Electocracy"],
+      ["Meritocracy or Technocracy", null, "https://en.wikipedia.org/wiki/Meritocracy"],
+      ["Geniocracy or Noocracy", null, "https://en.wikipedia.org/wiki/Geniocracy"],
+      ["Socialism, Communism, or Ergatocracy", null, "https://en.wikipedia.org/wiki/Socialism"],
+      ["Demarchy", null, "https://en.wikipedia.org/wiki/Sortition"],
+      ["Anarchism", null, "https://en.wikipedia.org/wiki/Anarchism"]
+    ],
+    'nachtreffen' : [
+      ["Zeitbudget beim Nachtreffen",
+      "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen",
+      null],
+      ["Angefangenes fertigstellen", "z.B. unfertige Projekte", null],
+      ["Dokumentieren", "Berichte, Zusammenfassungen, Softwaredokumentation...", null],
+      ["Kolleg auswerten", "Revue passieren lassen, AGs vergleichen, Verbesserungsvorschläge, ...", null],
+      ["Verwertung beginnen", "z.B. wiss. Papers schreiben, Software entwickeln, Unterrichtsmaterialien...", null],
+      ["Planen", "neue Projekte, Veranstaltungen, ..."],
+      ["Exkursion", "z.B. zu Google oder Greenpeace", null],
+      ["Urlaub machen", null, null]
+    ],
+    'freesf': [
+      ["Free sci-fi movie night",
+      "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
+      "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction"],
+      ["Voyage to the prehistoric planet", 
+      "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
+      "https://www.youtube.com/watch?v=sh2nLzOVHeQ"],
+      ["Shubian's rift (fan movie)",
+      "Earth's future space exploration leads to its first contact ever with an alien race that may not be so alien after all.",
+      "https://www.youtube.com/watch?v=B6V_w25B1Ac"],
+      ["Star pilot", 
+      "Aliens from the constellation Hydra crash-land on the island of Sardinia. A prominent scientist, his daughter, several young technicians, and a pair of Oriental spies are taken hostage by the beings so they can use them to repair their spaceship's broken engine.", 
+      "https://www.youtube.com/watch?v=jAvllP_YEdU"],
+      ["Escape from galaxy 3", 
+      "The crew of a space ship confronts an evil galactic ruler out to rule the universe.", 
+      "https://www.youtube.com/watch?v=5kvCgeNog1U"],
+      ["Mission stardust", 
+      "A team of astronauts is sent to the moon to rescue an alien who is seeking help to save her dying race. They are attacked by a force of bandit robots and discover that enemy spies are out to kill the alien.", 
+      "https://www.youtube.com/watch?v=oeRTDJ3MC2I"],
+      ["Fugitive alien", 
+      "An alien is pursued as a traitor by his own race because he refuses to kill humans.", 
+      "https://www.youtube.com/watch?v=Z71MyPmmGZI"],
+      ["Warrior of the lost world", 
+      "A group of diverse individuals are suddenly taken from their homes and flown via helicopter to a futuristic bomb shelter in the desert, one-third of a mile below the surface of the Earth.", 
+      "https://www.youtube.com/watch?v=xS5obnI5Y5Q"],
+      ["Battle of the worlds", 
+      "A runaway asteroid dubbed 'The Outsider' mysteriously begins orbiting the Earth and threatens it with lethal flying saucers.", 
+      "https://www.youtube.com/watch?v=LK6ugtd1Xdg"],
+      ["Abraxas, guardian of the universe", 
+      "An alien 'policeman' arrives on Earth to apprehend a renegade of his own race who impregnates a woman with a potentially destructive mutant embryo.", 
+      "https://www.youtube.com/watch?v=lZzZyNB81wI"],
+      ["Zontar, the thing from Venus", 
+      "A young scientist who helps a lone alien from Venus, finds out it wants to destroy man.", 
+      "https://www.youtube.com/watch?v=-e9Cs87gbwg"],
+      ["Hyper sapien: people from another star", 
+      "Three aliens from the planet Taros land on Earth and are befriended by a Wyoming rancher's son.", 
+      "https://www.youtube.com/watch?v=64GfUeJJLUs"],
+      ["The giant of Metropolis", 
+      "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
+      "https://www.youtube.com/watch?v=KPHasT4o9sg"]
+    ]};
 }
 
 export class Option {
@@ -211,47 +301,6 @@ export class Poll {
   makedemo(demo:string) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
 //      ["", "", ""],
-    let data = {'freesf': [
-      ["Free sci-fi movie night",
-      "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
-      "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction"],
-      ["Voyage to the prehistoric planet", 
-      "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
-      "https://www.youtube.com/watch?v=sh2nLzOVHeQ"],
-      ["Shubian's rift (fan movie)",
-      "Earth's future space exploration leads to its first contact ever with an alien race that may not be so alien after all.",
-      "https://www.youtube.com/watch?v=B6V_w25B1Ac"],
-      ["Star pilot", 
-      "Aliens from the constellation Hydra crash-land on the island of Sardinia. A prominent scientist, his daughter, several young technicians, and a pair of Oriental spies are taken hostage by the beings so they can use them to repair their spaceship's broken engine.", 
-      "https://www.youtube.com/watch?v=jAvllP_YEdU"],
-      ["Escape from galaxy 3", 
-      "The crew of a space ship confronts an evil galactic ruler out to rule the universe.", 
-      "https://www.youtube.com/watch?v=5kvCgeNog1U"],
-      ["Mission stardust", 
-      "A team of astronauts is sent to the moon to rescue an alien who is seeking help to save her dying race. They are attacked by a force of bandit robots and discover that enemy spies are out to kill the alien.", 
-      "https://www.youtube.com/watch?v=oeRTDJ3MC2I"],
-      ["Fugitive alien", 
-      "An alien is pursued as a traitor by his own race because he refuses to kill humans.", 
-      "https://www.youtube.com/watch?v=Z71MyPmmGZI"],
-      ["Warrior of the lost world", 
-      "A group of diverse individuals are suddenly taken from their homes and flown via helicopter to a futuristic bomb shelter in the desert, one-third of a mile below the surface of the Earth.", 
-      "https://www.youtube.com/watch?v=xS5obnI5Y5Q"],
-      ["Battle of the worlds", 
-      "A runaway asteroid dubbed 'The Outsider' mysteriously begins orbiting the Earth and threatens it with lethal flying saucers.", 
-      "https://www.youtube.com/watch?v=LK6ugtd1Xdg"],
-      ["Abraxas, guardian of the universe", 
-      "An alien 'policeman' arrives on Earth to apprehend a renegade of his own race who impregnates a woman with a potentially destructive mutant embryo.", 
-      "https://www.youtube.com/watch?v=lZzZyNB81wI"],
-      ["Zontar, the thing from Venus", 
-      "A young scientist who helps a lone alien from Venus, finds out it wants to destroy man.", 
-      "https://www.youtube.com/watch?v=-e9Cs87gbwg"],
-      ["Hyper sapien: people from another star", 
-      "Three aliens from the planet Taros land on Earth and are befriended by a Wyoming rancher's son.", 
-      "https://www.youtube.com/watch?v=64GfUeJJLUs"],
-      ["The giant of Metropolis", 
-      "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
-      "https://www.youtube.com/watch?v=KPHasT4o9sg"]
-    ]};
     GlobalService.log("making demo poll...");
     this.pid = demo;
     var oids;
@@ -264,7 +313,7 @@ export class Poll {
         this.registerOption({'oid':oid});
       }
     } else {
-      let d = data[demo],
+      let d = this.g.demodata[demo],
           n = 5;
       this.title = d[0][0];
       this.desc = d[0][1];

@@ -197,4 +197,24 @@ where data contains:
 
 
 ### Issues
-* file extension and uri scheme registration not working on lineageos
+* see inline!
+
+### TODO until Springe
+
+mandatory
+* enter name, use hash value as vid, notify if already in use
+* make sure data exchange works seemless
+* store time series of aggregate data: min/avg/max appr., nonabstentions, min/avg/max own rating, no.approved own, amount of rating change per time 
+* deal with due date
+* ensure availability of server
+* distinguish alloc from choice in wording
+
+optionally
+* add option functionality
+* redirect vodle.it to sandstorm.pik-potsdam.de
+
+in print:
+* predefined usernames, short explanation, anonymity disclaimer
+
+on some questionnaire website:
+* short exit poll: rate useability of gui, transparency of algorithm, acceptability of result, free text for improvement
