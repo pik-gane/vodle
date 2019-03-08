@@ -10,19 +10,54 @@ import { Storage } from '@ionic/storage';
 )
 export class GlobalService {
 
-  public polls: Poll[] = []; // list of polls
-  public openpoll: Poll = null; // currently open poll
+  // constants or session-specific data:
 
-  public dateformatoptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
+  public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
   // for communicating with cloudant JSON database:
   public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
   public cloudant_dburl2 = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
-  public cloudant_up: string 
-    ;
   public cloudant_headers: HttpHeaders = null;
+
+  public polls: {} = {}; // dict of Polls by pid
+  public openpoll: Poll = null; // currently open poll
   
+  // data to be persisted in storage:
+  public state_attributes = ["openpid", "username", "cloudant_up", "pollstates"];
+  public openpid: string = null;
+  public username: string = null; // overall username
+  public cloudant_up: string; // cloudant credentials
+  public pollstates: {} = {};
+
   constructor(public http: HttpClient, public storage: Storage) {
+    // restore state from storage:
+    this.storage.get('state')
+    .then(
+      (s) => {
+        GlobalService.log('getting state from storage succeeded');
+        for (let a of this.state_attributes) {
+          if ((s != null) && (a in s)) {
+            this[a] = s[a];
+            GlobalService.log('  ' + a);
+            if (a == "pollstates") {
+              for (let pid in this.pollstates) {
+                if (!(pid in this.polls)) {
+                  this.polls[pid] = new Poll(this, {'pid':pid});
+                }
+                this.polls[pid].restore_state();
+              }
+            }
+          }
+        }
+        this.init();
+      },
+      (error) => {
+        GlobalService.log('getting state from storage failed with error ' + error);
+        this.init();
+      });
+  }
+  init() { // called after state restoration finished
+    GlobalService.log('initializing...');
     if (!this.cloudant_up) {
       this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
     }
@@ -31,6 +66,33 @@ export class GlobalService {
       'content-type': 'application/json',
       'accept': 'application/json'
     });
+    if (Object.keys(this.polls).length == 0) {
+      let p = new Poll(this).makedemo("freesf");
+      this.polls[p.pid] = p;
+      this.openpid = p.pid;
+      p = new Poll(this).makedemo("3by3");
+      this.polls[p.pid] = p;
+    }
+    this.openpoll = this.polls[this.openpid];
+  }
+
+  save_state() {
+    let s = {};
+    for (let a of this.state_attributes) {
+      s[a] = this[a];
+    }
+    for (let pid in this.polls) {
+      this.polls[pid].save_state();
+    }
+    this.storage.set('state', s)
+    .then(
+      (s) => {
+        GlobalService.log("storing state succeeded");
+      },
+      (error) => {
+        GlobalService.log("storing state failed with error " + error);        
+      }
+    );
   }
 
   static log(msg) {
@@ -44,41 +106,27 @@ export class GlobalService {
 
 export class Option {
 
-  public p: Poll;
-
   public oid: string;
   public name: string;
   public desc: string = null;
   public uri: string = null; // weblink
   public created: Date; // timestamp
 
-  constructor(p:Poll, oid:string, name:string=null, desc:string=null, uri:string=null) {
-    this.p = p;
-    this.oid = oid;
-    this.name = name = (name!=null) ? name : oid.toString();
-    this.desc = desc;
-    this.uri = uri;
-    this.created = new Date(); // TODO: better use time from messaging server?
-  }
 }
 
 export class Poll {
 
+  // nonredundant state data:
+
   // constant data:
-
-  public g: GlobalService;
-
   public pid: string; // unique poll id
-
   public title: string;
   public desc: string = null;
   public uri: string = null; // weblink
   public due: Date; // closing time
-
   public myvid: string = "";
 
   // variable data:
-
   public vids: string[] = []; // list of voter ids // TODO: make anonymous
   public oids: string[] = []; // list of options ids
   public options: {} = {}; // dict by oid
@@ -89,6 +137,12 @@ export class Poll {
   private rfreqs: {} = {}; // dict of dicts of rating frequencies by oid, rating
   private rsums: {} = {}; // dict of total ratings by oid
   private stamps: {} = {}; // dict of creation timestamps by oid 
+
+  private state_attributes = ['pid', 'title', 'desc', 'uri', 'due', 'myvid',
+    'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps'];
+
+  // redundant session data:
+  public g: GlobalService;
 
   // tally results:
   public rmins: {} = {}; // dict of minimum ratings for approval, by oid
@@ -108,35 +162,52 @@ export class Poll {
   private cloudant_docurl: string = null;
   private cloudant_doc: {} = null; // object containing voter's ratings
 
-  constructor(g:GlobalService, pid:string=null, title:string=null, myvid:string=null, demo:string=null) {
+  constructor(g:GlobalService, data:{}=null) {
     this.g = g;
-    if (demo != null) { // initialize a demo poll
-      this.makedemo(demo);
-    } else if (pid != null) { // join an existing poll
-      this.pid = pid;
-      this.myvid = myvid;
-      this.joinExisting();
-    } else { // set up new poll
-      this.pid = Math.random().toString(); // TODO: use better method to generate a unique id
-      this.title = title;
-      this.myvid = myvid = (myvid!=null) ? myvid : Math.random().toString();
-      this.vids = [myvid];
+    if (data) {
+      for (let a of this.state_attributes) {
+        if (a in data) {
+          GlobalService.log("  " + a + ":" + data[a]);
+          this[a] = data[a];
+          GlobalService.log("    stored: " + this[a]);
+        }
+      }
     }
-    this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
-    this.cloudant_doc = {
-      "_id": this.pid + "_" + this.myvid, // unique document id in db
-      "pid": this.pid,
-      "vid": this.myvid,
-      "pubkey": null,
-      "ratings": this.myratings
-    };
-    this.cloudant_docurl = this.g.cloudant_dburl + "/" + this.cloudant_doc["_id"];
-    GlobalService.log("poll with pid " + this.pid + " set up.");
-    this.getCompleteState();
+    GlobalService.log("poll object for " + this.pid + " constructed");
+//    this.getCompleteState();
   }
+
+  save_state() {
+    GlobalService.log("locally saving poll...");
+    if (!(this.pid in this.g.pollstates)) {
+      this.g.pollstates[this.pid] = {};
+    }
+    let s = this.g.pollstates[this.pid];
+    for (let a of this.state_attributes) {
+      s[a] = this[a];
+//      GlobalService.log("  " + a + ":" + JSON.stringify(this[a]));
+    }
+//    GlobalService.log("  " + JSON.stringify(s));
+    GlobalService.log("  done.");
+  }
+
+  restore_state() {
+    GlobalService.log("locally restoring poll " + this.pid + "...");
+    let s = this.g.pollstates[this.pid];
+//    GlobalService.log("  " + JSON.stringify(s));
+    for (let a of this.state_attributes) {
+      this[a] = s[a];
+//      GlobalService.log("  " + a + ":" + JSON.stringify(this[a]));
+    }
+    this.tally();
+    GlobalService.log("  done.");
+  }
+
   joinExisting() {
       // TODO: download current poll state
+      return this;
   }
+
   makedemo(demo:string) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
 //      ["", "", ""],
@@ -190,7 +261,7 @@ export class Poll {
       this.vids = ["Alice", "Bob", "Celia", "Dan"]; 
       oids = ["Rock", "Scissors", "Paper"];
       for (let oid of oids) {
-        this.registerOption(new Option(this, oid));
+        this.registerOption({'oid':oid});
       }
     } else {
       let d = data[demo],
@@ -201,17 +272,23 @@ export class Poll {
       this.vids = Array.from(Array(n).keys()).map(i => "v" + i);
       this.myvid = "v" + Math.floor(Math.random() * n);
       for (let i=1; i<d.length; i++) {
-        this.registerOption(new Option(this, "o" + i, d[i][0], d[i][1], d[i][2]));
+        this.registerOption({'oid':"o"+i, 'name':d[i][0], 'desc':d[i][1], 'uri':d[i][2]});
       }
     }
     new Simulation(this);
     for (let oid of this.oids) {
       this.setRating(oid, this.myvid, 0);
     }
+    this.due = new Date((new Date()).getTime() + 24*60*60*1e3); // now + one day
     GlobalService.log("...done");
+    return this;
   }
-  registerOption(o:Option) {
-    let oid = o.oid;
+
+  registerOption(o:{}) {
+    let oid = o['oid'];
+    if (!('name' in o)) {
+      o['name'] = oid;
+    }
     this.opos[oid] = this.oids.length;
     this.oids.push(oid);
     this.options[oid] = o;
@@ -223,10 +300,11 @@ export class Poll {
     this.rfreqs[oid] = Array(101).fill(0);
     this.rfreqs[oid][0] = this.vids.length;
     this.rsums[oid] = 0;
-    this.stamps[oid] = o.created;
+    this.stamps[oid] = o['created'];
     this.apprs[oid] = -1;
-    GlobalService.log("  registered option " + o.name);
+    GlobalService.log("  registered option " + o['name']);
   }
+
   setRating(oid:string, vid:string, r:number) {
     let oldr = this.ratings[oid][vid];
     // update all redundant ratings data:
@@ -429,6 +507,7 @@ export class Poll {
           }
         }
         this.tally();
+        this.g.save_state();
         this.log("");
       },
       (error: {}) => { // at post failure:
@@ -444,12 +523,26 @@ export class Poll {
     );
   }
 
+  prepareCloudantDoc() {
+    if (!this.cloudant_doc) {
+      this.cloudant_doc = {
+        "_id": this.pid + "_" + this.myvid, // unique document id in db
+        "pid": this.pid,
+        "vid": this.myvid,
+        "pubkey": null,
+        "ratings": this.myratings
+      };
+      this.cloudant_docurl = this.g.cloudant_dburl + "/" + this.cloudant_doc["_id"];
+    }
+  }
+
   submitRatings(submit_ratings){
     // now now changes have happened within the last submit_interval,
     // so we can actually do the submission
     for (let oid in submit_ratings) {
       GlobalService.log("  "+oid+":"+this.getRating(oid, this.myvid));
     }
+    this.prepareCloudantDoc();
     if ("_rev" in this.cloudant_doc) {
       // first try to put updated doc with known _rev (should normally succeed):
       this.putCloudantStoredRev(1);

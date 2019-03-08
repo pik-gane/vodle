@@ -109,6 +109,7 @@ export class OpenpollPage implements OnInit {
     this.p.setMyRating(oid, r);
     // TODO: broadcast rating
     this.p.tally();
+    this.g.save_state();
     this.showStats();
   }
   ratingChangeBegins(oid) {

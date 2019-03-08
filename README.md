@@ -79,6 +79,10 @@ I did the following to get the unsigned android debug build going:
 * export ANDROID_HOME=...android-sdk-linux/
 * ionic cordova build --prod android --verbose
 
+On the test web server:
+
+* sudo /usr/local/bin/ionic serve --ssl --prod --address sandstorm.pik-potsdam.de --port 443  
+
 ### Useful commands
 
 * running in dev mode: in main directory of git repo: ionic serve
@@ -190,7 +194,7 @@ where data contains:
 * re-rendering: https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
 * async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
 * http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
-* simple web server: https://jorge.fbarr.net/2017/06/11/simplehttpserver-with-ssl/
+
 
 ### Issues
 * file extension and uri scheme registration not working on lineageos

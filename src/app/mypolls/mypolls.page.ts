@@ -8,6 +8,8 @@ import { GlobalService } from "../global.service";
 })
 export class MypollsPage implements OnInit {
 
+  public Object = Object;
+  
   constructor(public g: GlobalService) { }
 
   ngOnInit() { }

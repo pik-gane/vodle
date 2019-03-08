@@ -12,8 +12,8 @@
 
 <ion-content>
   <ion-list lines="full"><!--TODO: allow filtering and sorting by state(open/closed/drafts)/deadline/title/creator/priority, allow setting personal priority-->
-    <ion-item *ngFor="let p of g.polls" [id]="'poll_'+p.pid" (click)="g.openpoll = p" [routerLink]="'/openpoll'" >
-        {{p.title}}
+    <ion-item *ngFor="let pid of Object.keys(g.polls)" [id]="'poll_'+pid" (click)="g.openpoll = g.polls[pid]" [routerLink]="'/openpoll'" >
+        {{g.polls[pid].title}}
     </ion-item>
     <ion-item><!--TODO: replace by big blue add-circle sticking at the bottom-right of the screen?-->
       <ion-button no-margin routerLink="newpoll" fill="clear">
