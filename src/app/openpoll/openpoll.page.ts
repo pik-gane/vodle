@@ -30,6 +30,8 @@ export class OpenpollPage implements OnInit {
   private submit_triggered = false;
   private submit_ratings = {};
 
+  private do_updates = false;
+
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
               public events: Events,
@@ -45,6 +47,8 @@ export class OpenpollPage implements OnInit {
   // lifecycle events:
   ngOnInit() {
     let p = this.p = this.g.openpoll;
+    this.do_updates = true;
+    this.loopUpdate();
     this.p.tally();
 //    this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
@@ -58,6 +62,7 @@ export class OpenpollPage implements OnInit {
     this.showStats();
   }
   ionViewWillLeave() {
+    this.do_updates = false;
     if (this.submit_triggered) {
       this.doSubmit();
     }
@@ -107,7 +112,7 @@ export class OpenpollPage implements OnInit {
 /*      for (let oid of this.p.oids) {
         this.getSlider(oid).disabled = true;
       }*/
-      for (let i of [0,1]) { // someone claimed loading twice would help but it doesn't...
+      for (let i of [0]) { // someone claimed loading twice would help but it doesn't...
         const loadingElement = await this.loadingController.create({
           message: 'Sorting options by support',
           spinner: 'crescent',
@@ -206,6 +211,14 @@ export class OpenpollPage implements OnInit {
     this.submit_triggered = this.submit_hold = false;
     this.p.submitRatings({...this.submit_ratings});
     this.submit_ratings = {};
+  }
+
+  async loopUpdate() {
+    // every 20 sec, update full state
+    while (this.do_updates) {
+      this.p.getCompleteState();
+      await this.sleep(20e3);
+    }
   }
 
   closePoll() {
