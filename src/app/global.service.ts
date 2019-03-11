@@ -107,7 +107,8 @@ export class GlobalService {
     'president' : [
       ["President of the world",
       "Imagine we elect this person for four years of office and the following candidates were all available",
-      null],
+      null,
+      'winner'],
       ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
       ["Princess Leia", null, "https://en.wikipedia.org/wiki/Princess_Leia"],
       ["Ada Lovelace", null ,"https://en.wikipedia.org/wiki/Ada_Lovelace"],
@@ -126,7 +127,8 @@ export class GlobalService {
     'system' : [
       ["Form of government",
       "Imagine we choose a form of government for the next century",
-      "https://en.wikipedia.org/wiki/List_of_forms_of_government"],
+      "https://en.wikipedia.org/wiki/List_of_forms_of_government",
+      'winner'],
       ["Direct democracy", "using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
       ["Liquid democracy (majority)", "using majority voting", "https://en.wikipedia.org/wiki/Liquid_democracy"],
       ["Liquid democracy (consensus)", "using something like this app", "https://vodle.it"],
@@ -139,22 +141,11 @@ export class GlobalService {
       ["Demarchy", null, "https://en.wikipedia.org/wiki/Sortition"],
       ["Anarchism", null, "https://en.wikipedia.org/wiki/Anarchism"]
     ],
-    'nachtreffen' : [
-      ["Zeitbudget beim Nachtreffen",
-      "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen",
-      null],
-      ["Angefangenes fertigstellen", "z.B. unfertige Projekte", null],
-      ["Dokumentieren", "Berichte, Zusammenfassungen, Softwaredokumentation...", null],
-      ["Kolleg auswerten", "Revue passieren lassen, AGs vergleichen, Verbesserungsvorschläge, ...", null],
-      ["Verwertung beginnen", "z.B. wiss. Papers schreiben, Software entwickeln, Unterrichtsmaterialien...", null],
-      ["Planen", "neue Projekte, Veranstaltungen, ..."],
-      ["Exkursion", "z.B. zu Google oder Greenpeace", null],
-      ["Urlaub machen", null, null]
-    ],
     'freesf': [
       ["Free sci-fi movie night",
       "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
-      "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction"],
+      "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction",
+      'winner'],
       ["Voyage to the prehistoric planet", 
       "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
       "https://www.youtube.com/watch?v=sh2nLzOVHeQ"],
@@ -191,7 +182,20 @@ export class GlobalService {
       ["The giant of Metropolis", 
       "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
       "https://www.youtube.com/watch?v=KPHasT4o9sg"]
-    ]};
+    ],
+    'nachtreffen' : [
+      ["Zeitbudget beim Nachtreffen",
+      "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen",
+      null, 'share'],
+      ["Angefangenes fertigstellen", "z.B. unfertige Projekte", null],
+      ["Dokumentieren", "Berichte, Zusammenfassungen, Softwaredokumentation...", null],
+      ["Kolleg auswerten", "Revue passieren lassen, AGs vergleichen, Verbesserungsvorschläge, ...", null],
+      ["Verwertung beginnen", "z.B. wiss. Papers schreiben, Software entwickeln, Unterrichtsmaterialien...", null],
+      ["Planen", "neue Projekte, Veranstaltungen, ..."],
+      ["Exkursion", "z.B. zu Google oder Greenpeace", null],
+      ["Urlaub machen", null, null]
+    ]  
+  };
 }
 
 export class Option {
@@ -210,6 +214,7 @@ export class Poll {
 
   // constant data:
   public pid: string; // unique poll id
+  public type: string = 'winner'; // 'winner' or 'share'
   public title: string;
   public desc: string = null;
   public uri: string = null; // weblink
@@ -228,7 +233,7 @@ export class Poll {
   private rsums: {} = {}; // dict of total ratings by oid
   private stamps: {} = {}; // dict of creation timestamps by oid 
 
-  private state_attributes = ['pid', 'title', 'desc', 'uri', 'due', 'myvid',
+  private state_attributes = ['pid', 'type', 'title', 'desc', 'uri', 'due', 'myvid',
     'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps'];
 
   // redundant session data:
@@ -318,6 +323,7 @@ export class Poll {
       this.title = d[0][0];
       this.desc = d[0][1];
       this.uri = d[0][2];
+      this.type = d[0][3];
       this.vids = Array.from(Array(n).keys()).map(i => "v" + i);
       this.myvid = "v" + Math.floor(Math.random() * n);
       for (let i=1; i<d.length; i++) {

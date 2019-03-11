@@ -33,6 +33,11 @@
         About
       </ion-button>
     </ion-item>
+    <ion-item>
+      <ion-text slot="start">Username:</ion-text><ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" 
+        id="username" (ionChange)="changeUsername()" (ionBlur)="showUsername()"></ion-input>
+    </ion-item>
+<!--
     <ion-item-divider color="secondary">
       <ion-label>
         Been invited for a poll?
@@ -82,8 +87,11 @@
         </ion-col></ion-row>
       </ion-grid>
     </ion-item>
-    <ion-item>
-      <ion-button (click)="g.storage.clear()">clear storage</ion-button>
-    </ion-item>
+-->
+    <ng-template [ngIf]="g.username=='glinda'">
+      <ion-item>
+        <ion-button (click)="g.storage.clear()">clear storage</ion-button>
+      </ion-item>
+    </ng-template>
   </ion-list>
 </ion-content>

@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { NavController } from '@ionic/angular';
 import { strict } from 'assert';
 import { GlobalService, Poll } from "../global.service";
 import { SortoptionsPipe } from '../sortoptions.pipe';
+import { LoadingController } from '@ionic/angular';
 
 @Component({
   selector: 'app-openpoll',
@@ -12,6 +14,7 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
+  public oidsorted: string[] = [];
   public approved = {}; // whether option is approved by me
   public votedfor = null; // oid my prob. share goes to
   public expanded = null;
@@ -28,14 +31,17 @@ export class OpenpollPage implements OnInit {
   private submit_triggered = false;
   private submit_ratings = {};
 
-  constructor(public g: GlobalService) {
+  constructor(public navCtrl: NavController, 
+              public loadingController: LoadingController,
+              public g: GlobalService) {
   }
 
   // lifecycle events:
   ngOnInit() {
     let p = this.p = this.g.openpoll;
     this.p.tally();
-    this.opos = this.p.opos;
+//    this.opos = this.p.opos;
+    this.oidsorted = [...this.p.oidsorted];
     this.expanded = null;
     this.showOrder();
   }
@@ -44,6 +50,11 @@ export class OpenpollPage implements OnInit {
   }
   ionViewDidEnter() {
     this.showStats();
+  }
+  ionViewWillLeave() {
+    if (this.submit_triggered) {
+      this.doSubmit();
+    }
   }
 
   sleep(ms) { 
@@ -76,10 +87,32 @@ export class OpenpollPage implements OnInit {
       this.setSliderColor(oid, r);
     }
   }
-  showOrder() {
+  async showOrder() {
     // link displayed sorting to poll's sorting:
-    this.opos = this.p.opos;
+//    this.opos = this.p.opos; // if using pipe
+    let changed = false;
+    for (let i in this.oidsorted) {
+      if (this.oidsorted[i] != this.p.oidsorted[i]) {
+        changed = true;
+        break;
+      }
+    }
+    if (changed) {
+      const loadingElement = await this.loadingController.create({
+        message: 'Sorting options by support',
+        spinner: 'crescent',
+        duration: 1000
+      });
+      await loadingElement.present();
+      const { role, data } = await loadingElement.onDidDismiss();  
+  //    let active = this.navCtrl.getActive(); // or getByIndex(int) if you know it
+  //    this.navCtrl.remove(active.index);
+  //    this.navCtrl.push(active.component);
+      this.oidsorted = [...this.p.oidsorted];
+      this.navCtrl.navigateRoot('/openpoll');
+    }
   }
+
   setSliderColor(oid, value) {
     this.slidercolor[oid] = 
       (value == 0) ? 'vodlered' : 
@@ -130,7 +163,6 @@ export class OpenpollPage implements OnInit {
   }
   ratingChangeEnded(oid) {
     // TODO: make sure this is really always called right after releasing the slider!
-    this.showOrder();
   }
 
   // submission:
@@ -151,6 +183,10 @@ export class OpenpollPage implements OnInit {
       this.submit_hold = false;
       await this.sleep(this.submit_interval);
     }
+    this.showOrder();
+    this.doSubmit();
+  }
+  doSubmit() {
     this.submit_triggered = this.submit_hold = false;
     this.p.submitRatings({...this.submit_ratings});
     this.submit_ratings = {};

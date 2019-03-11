@@ -14,6 +14,13 @@ export class HomePage implements OnInit{
   ngOnInit() {
   }
 
+  changeUsername() {
+    this.g.username = (document.getElementById('username') as HTMLInputElement).value;
+    this.g.save_state();
+  }
+  showUsername() {
+  }
+
   fileopen() {
     // TODO!
     alert("opening invitation files is not yet supported");

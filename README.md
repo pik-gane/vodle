@@ -191,9 +191,10 @@ where data contains:
     https://www.codenameone.com/blog/associating-your-app-with-file-extension-mime-types-iphone-android-windows.html
     https://stackoverflow.com/questions/3760276/android-intent-filter-associate-app-with-file-extension
 * expandable lists (for mypolls and openpoll pages): https://www.joshmorony.com/creating-an-accordion-list-in-ionic/
-* re-rendering: https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
+* re-rendering: https://forum.ionicframework.com/t/ionic-refresh-current-page/47167/11, https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
 * async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
 * http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
+* trigger svg animation: https://stackoverflow.com/questions/8455773/svg-trigger-animation-with-event
 
 
 ### Issues
@@ -207,7 +208,7 @@ mandatory
 * store time series of aggregate data: min/avg/max appr., nonabstentions, min/avg/max own rating, no.approved own, amount of rating change per time 
 * deal with due date
 * ensure availability of server
-* distinguish alloc from choice in wording
+* distinguish alloc from choice in wording: icons cut, trophy 
 
 optionally
 * add option functionality
@@ -216,5 +217,5 @@ optionally
 in print:
 * predefined usernames, short explanation, anonymity disclaimer
 
-on some questionnaire website:
+on some questionnaire website (https://www.surveymonkey.de/r/M9KK8SQ):
 * short exit poll: rate useability of gui, transparency of algorithm, acceptability of result, free text for improvement
