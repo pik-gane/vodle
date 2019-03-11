@@ -47,6 +47,10 @@ export class OpenpollPage implements OnInit {
   // lifecycle events:
   ngOnInit() {
     let p = this.p = this.g.openpoll;
+    if (!this.p) {
+      this.navCtrl.navigateRoot("/");
+      return;
+    }
     this.do_updates = true;
     this.loopUpdate();
     this.p.tally();
