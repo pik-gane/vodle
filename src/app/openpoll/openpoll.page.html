@@ -12,6 +12,11 @@
 
 <ion-content>
   <ion-list lines="full">
+    <ng-template [ngIf]="g.username=='glinda'">
+      <ion-item>
+        <ion-button (click)="closePoll()">close poll</ion-button>
+      </ion-item>
+    </ng-template>
     <ion-item>
       <ion-grid no-padding no-margin>
         <ion-row no-padding no-margin>
@@ -19,8 +24,8 @@
             <b>
               <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options</span><br/>
               <span style="color:#9abcbd">
-                  <small>{{Math.round(p.expected_approval*1000)/10}}%&nbsp;consensus so far –
-                  poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}
+                  <small>{{Math.round(p.expected_approval*1000)/10}}%&nbsp;consensus so far 
+                  <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
                 </small>
               </span>
             </b>
@@ -70,16 +75,16 @@
         </ion-row>
         <ion-row no-padding no-margin>
           <ion-col no-padding no-margin>
-            <ion-range [id]="'slider_'+oid" [value]="p.getRating(oid, p.myvid)" [color]="slidercolor[oid]" 
+            <ion-range [id]="'slider_'+oid" [value]="p.getRating(oid, p.myvid)" [color]="slidercolor[oid]" [disabled]="p.open"
                         (ionFocus)="ratingChangeBegins(oid)" (ionChange)="ratingChanges(oid)" (ionBlur)="ratingChangeEnded(oid)" 
-                        pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;" no-padding no-margin>
+                        pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px" no-padding no-margin>
               <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
                 <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
-                    <rect [id]="'bar_'+oid" x="100%" width="0%"
-                          y="9" height="17" fill="#bce4e5" stroke="none"/>
+                    <rect [id]="'bar_'+oid" x="100%" width="0%" y="8" height="18" fill="#bce4e5" stroke="none"/>
                           <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oid]))+'%'" [width]="''+(100*p.apprs[oid])+'%'"-->
-                    <line x1="100%" y1="0" x2="100%" y2="35" fill="none" stroke="#bce4e5" stroke-width="3"/>
+                    <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
+                    <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
                   </svg>
                 </div>
               </ion-label>

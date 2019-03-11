@@ -1,9 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { NavController } from '@ionic/angular';
+import { Component, OnInit, NgZone } from '@angular/core';
+import { NavController, Events, LoadingController } from '@ionic/angular';
 import { strict } from 'assert';
-import { GlobalService, Poll } from "../global.service";
 import { SortoptionsPipe } from '../sortoptions.pipe';
-import { LoadingController } from '@ionic/angular';
+import { GlobalService, Poll } from "../global.service";
 
 @Component({
   selector: 'app-openpoll',
@@ -33,7 +32,14 @@ export class OpenpollPage implements OnInit {
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
+              public events: Events,
+              private zone: NgZone,
               public g: GlobalService) {
+    this.events.subscribe('updateScreen', () => {
+      this.zone.run(() => {
+        console.log('force update the screen');
+      });
+    });
   }
 
   // lifecycle events:
@@ -98,18 +104,28 @@ export class OpenpollPage implements OnInit {
       }
     }
     if (changed) {
-      const loadingElement = await this.loadingController.create({
-        message: 'Sorting options by support',
-        spinner: 'crescent',
-        duration: 1000
-      });
-      await loadingElement.present();
-      const { role, data } = await loadingElement.onDidDismiss();  
+/*      for (let oid of this.p.oids) {
+        this.getSlider(oid).disabled = true;
+      }*/
+      for (let i of [0,1]) { // someone claimed loading twice would help but it doesn't...
+        const loadingElement = await this.loadingController.create({
+          message: 'Sorting options by support',
+          spinner: 'crescent',
+          duration: 1000
+        });
+        await loadingElement.present();
+        await loadingElement.onDidDismiss();  
+      }
+      this.oidsorted = [...this.p.oidsorted]; // FIXME: avoid sliders getting stuck!
+      this.events.publish('updateScreen');
   //    let active = this.navCtrl.getActive(); // or getByIndex(int) if you know it
   //    this.navCtrl.remove(active.index);
   //    this.navCtrl.push(active.component);
-      this.oidsorted = [...this.p.oidsorted];
-      this.navCtrl.navigateRoot('/openpoll');
+  // this.navCtrl.navigateRoot('/openpoll');
+/*
+  for (let oid of this.p.oids) {
+        this.getSlider(oid).disabled = this.p.open ? false : true;
+      }*/
     }
   }
 
@@ -190,5 +206,25 @@ export class OpenpollPage implements OnInit {
     this.submit_triggered = this.submit_hold = false;
     this.p.submitRatings({...this.submit_ratings});
     this.submit_ratings = {};
+  }
+
+  closePoll() {
+    if (confirm("really close the poll?")) {
+      this.p.tally();
+      this.p.open = false;
+      if (this.p.type=='winner') {
+        let r = Math.random(),
+            cum = 0,
+            winner = null;
+        for (let oid of this.p.oidsorted) {
+          cum += this.p.probs[oid];
+          if (cum > r) {
+            winner = oid;
+            break;
+          }
+        }
+        alert("The winner (topmost option supported by randomly drawn voter) is: " + this.p.options[winner].name);
+      }
+    }
   }
 }

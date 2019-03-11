@@ -225,6 +225,7 @@ export class Poll {
   public vids: string[] = []; // list of voter ids // TODO: make anonymous
   public oids: string[] = []; // list of options ids
   public options: {} = {}; // dict by oid
+  public open: boolean = true;
 
   // ratings are stored redundantly:
   private ratings: {} = {}; // dict of dicts by oid, vid
@@ -233,7 +234,7 @@ export class Poll {
   private rsums: {} = {}; // dict of total ratings by oid
   private stamps: {} = {}; // dict of creation timestamps by oid 
 
-  private state_attributes = ['pid', 'type', 'title', 'desc', 'uri', 'due', 'myvid',
+  private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid',
     'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps'];
 
   // redundant session data:
