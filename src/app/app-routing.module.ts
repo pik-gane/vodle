@@ -17,7 +17,8 @@ const routes: Routes = [
   { path: 'closedpoll', loadChildren: './closedpoll/closedpoll.module#ClosedpollPageModule' },
   { path: 'about', loadChildren: './about/about.module#AboutPageModule' },
   { path: 'help', loadChildren: './help/help.module#HelpPageModule' },
-  { path: 'addoption', loadChildren: './addoption/addoption.module#AddoptionPageModule' }
+  { path: 'addoption', loadChildren: './addoption/addoption.module#AddoptionPageModule' },
+  { path: 'waitsorting', loadChildren: './waitsorting/waitsorting.module#WaitsortingPageModule' }
 ];
 
 @NgModule({

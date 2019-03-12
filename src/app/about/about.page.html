@@ -31,6 +31,8 @@
     not just those voters who happen to belong to the majority.
   </p>
   <p>
+    <ion-icon name="trophy" float-left></ion-icon>&nbsp;
+    For polls selecting a <i>single option,</i> the decision is made as follows.
     If one option is supported by all, this full consensus option will be the sure winner.
     Otherwise vodle most likely declares the option with the broadest support the winner.
     But to achieve fairness, it must sometimes also use a certain amount of chance,
@@ -47,11 +49,24 @@
       and every other option's winning probability is at most as large as its support.
     </p>
   </small>
+  <p>
+      <ion-icon name="cut" float-left></ion-icon>&nbsp;
+      For polls allocating <i>shares</i> of a budget to several options, the procedure is similar:
+      If one option is supported by all, this full consensus option will get the full budget.
+      Otherwise vodle allocates the largest share to the option with the broadest support,
+      and smaller shares to the other options.
+  </p>
+  <small>
+    <p>
+      Exact procedure: Options are sorted by descending support. 
+      Then each option's share is proportional to the number of voters who support this option but no higher-up option. 
+    </p>
+  </small>
   <h3>Who's behind it?</h3>
     <p>
       <i>vodle</i>'s algorithm was developed and optimizied for fairness by the mathematician Jobst Heitzig,
       inspired by the "threshold model" of famous sociologist Mark Granovetter.
-      This app is open-source, authors: Jobst Heitzig and XXX with contributions by YYY.
+      This app will soon go open-source, authors: Jobst Heitzig and XXX with contributions by YYY.
     </p>
   <h3>Support vodle!</h3>
     <p>Spread the word, send feedback, donate, join developers, etc.</p>

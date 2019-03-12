@@ -106,7 +106,7 @@ export class GlobalService {
   public demodata = {
     'president' : [
       ["President of the world",
-      "Imagine we elect this person for four years of office and the following candidates were all available",
+      "Imagine we elect this person for four years of office and the following candidates were all available...",
       null,
       'winner'],
       ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
@@ -126,7 +126,7 @@ export class GlobalService {
     ],
     'system' : [
       ["Form of government",
-      "Imagine we choose a form of government for the next century",
+      "Imagine we choose a form of government for the next century...",
       "https://en.wikipedia.org/wiki/List_of_forms_of_government",
       'winner'],
       ["Direct democracy", "using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
@@ -185,7 +185,7 @@ export class GlobalService {
     ],
     'nachtreffen' : [
       ["Zeitbudget beim Nachtreffen",
-      "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen",
+      "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen...",
       null, 'share'],
       ["Angefangenes fertigstellen", "z.B. unfertige Projekte", null],
       ["Dokumentieren", "Berichte, Zusammenfassungen, Softwaredokumentation...", null],
@@ -325,8 +325,8 @@ export class Poll {
       this.desc = d[0][1];
       this.uri = d[0][2];
       this.type = d[0][3];
-      this.vids = Array.from(Array(n).keys()).map(i => "v" + i);
-      this.myvid = "v" + Math.floor(Math.random() * n);
+      this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
+      this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
       for (let i=1; i<d.length; i++) {
         this.registerOption({'oid':"o"+i, 'name':d[i][0], 'desc':d[i][1], 'uri':d[i][2]});
       }
@@ -555,9 +555,13 @@ export class Poll {
         GlobalService.log("  posting full cloudant query succeeded, no. docs returned: " + value["docs"].length);
         // TODO: also process poll doc and options docs!
         // process voter docs:
+        this.vids = [this.myvid];
         for (let doc of value["docs"]) {
           let vid = doc["vid"],
               rs = doc["ratings"];
+          if (vid!=this.myvid) {
+            this.vids.push(vid);
+          }
           for (let oid in rs) {
             this.setRating(oid, vid, rs[oid]);
           }
@@ -573,7 +577,7 @@ export class Poll {
           this.getCompleteState(2);
         } else {
           GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
-          alert(JSON.stringify(error));
+//          alert(JSON.stringify(error));
         }
       }
     );
@@ -632,7 +636,7 @@ export class Poll {
           GlobalService.log("  2nd putting cloudant doc returned error"+JSON.stringify(error));
           // assume error is because of missing proxy.
           this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
-          this.putCloudantStoredRev(2);
+          this.putCloudantStoredRev(3);
         } else {
           GlobalService.log("  3rd putting cloudant doc returned error"+JSON.stringify(error));
         }

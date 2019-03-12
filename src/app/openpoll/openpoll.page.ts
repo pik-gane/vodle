@@ -11,9 +11,13 @@ import { GlobalService, Poll } from "../global.service";
 })
 export class OpenpollPage implements OnInit {
 
+  public Array = Array;
+
   public p: Poll;
   public opos = {};
   public oidsorted: string[] = [];
+  public sortingcounter: number = 0;
+
   public approved = {}; // whether option is approved by me
   public votedfor = null; // oid my prob. share goes to
   public expanded = null;
@@ -31,6 +35,7 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
 
   private do_updates = false;
+  private update_interval = 2000; // ms to wait before getting next update
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
@@ -126,7 +131,9 @@ export class OpenpollPage implements OnInit {
         await loadingElement.onDidDismiss();  
       }
       this.oidsorted = [...this.p.oidsorted]; // FIXME: avoid sliders getting stuck!
-      this.events.publish('updateScreen');
+      this.sortingcounter++;
+//      this.navCtrl.navigateForward('/waitsorting');
+//      this.events.publish('updateScreen');
   //    let active = this.navCtrl.getActive(); // or getByIndex(int) if you know it
   //    this.navCtrl.remove(active.index);
   //    this.navCtrl.push(active.component);
@@ -149,10 +156,11 @@ export class OpenpollPage implements OnInit {
   // controls:
 
   expand(what) {
+    GlobalService.log("expanding "+what)
     this.expanded = (this.expanded == what) ? null : what;
   }
   getSlider(oid) {
-    return <HTMLInputElement>document.getElementById('slider_'+oid);
+    return <HTMLInputElement>document.getElementById('slider_'+oid+"_"+this.sortingcounter);
   }
   setSliderValues() {
     for (let oid of this.p.oids) {
@@ -221,7 +229,7 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
-      await this.sleep(20e3);
+      await this.sleep(this.update_interval);
     }
   }
 
