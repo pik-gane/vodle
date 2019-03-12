@@ -229,6 +229,8 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
+      this.showOrder();
+      this.showStats();
       await this.sleep(this.update_interval);
     }
   }
