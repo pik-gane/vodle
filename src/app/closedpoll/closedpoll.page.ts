@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { GlobalService } from "../global.service";
 
 @Component({
   selector: 'app-closedpoll',
@@ -7,7 +8,7 @@ import { Component, OnInit } from '@angular/core';
 })
 export class ClosedpollPage implements OnInit {
 
-  constructor() { }
+  constructor(public g: GlobalService) { }
 
   ngOnInit() {
   }
