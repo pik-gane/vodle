@@ -1,8 +1,9 @@
-import { Component, OnInit, NgZone } from '@angular/core';
+import { Component, OnInit, NgZone, ViewChild } from '@angular/core';
 import { NavController, Events, LoadingController } from '@ionic/angular';
 import { strict } from 'assert';
 import { SortoptionsPipe } from '../sortoptions.pipe';
 import { GlobalService, Poll } from "../global.service";
+import { Chart } from 'chart.js';
 
 @Component({
   selector: 'app-openpoll',
@@ -10,6 +11,9 @@ import { GlobalService, Poll } from "../global.service";
   styleUrls: ['./openpoll.page.scss'],
 })
 export class OpenpollPage implements OnInit {
+
+  @ViewChild('chartCanvas') chartCanvas;
+  chart: any;
 
   public Array = Array;
 
@@ -65,9 +69,42 @@ export class OpenpollPage implements OnInit {
     this.showOrder();
   }
   ionViewWillEnter() {
-    this.ngOnInit();
+    if (this.g.username=='') {
+      alert("Please enter a your username first!");
+      this.navCtrl.navigateBack('/home');
+    } else { 
+      this.ngOnInit();
+    }
+  }
+  makeChart() {
+    this.chart = new Chart(this.chartCanvas.nativeElement, {
+      type: 'line',
+      data: {
+//          labels: ["participation", "max. support", "consensus level", "min. support"],
+          datasets: [
+            {
+              label: 'participation',
+              data: [.12, .19, .3, .5, .2, .3],
+            },
+            {
+              label: 'max. support',
+              data: [.3, .12, .19, .3, .5, .2],
+            }
+          ]
+      },
+      options: {
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      beginAtZero:true
+                  }
+              }]
+          }
+      }
+    });
   }
   ionViewDidEnter() {
+    this.makeChart();
     this.showStats();
   }
   ionViewWillLeave() {

@@ -195,27 +195,25 @@ where data contains:
 * async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
 * http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
 * trigger svg animation: https://stackoverflow.com/questions/8455773/svg-trigger-animation-with-event
-
+* charts: https://www.chartjs.org/
 
 ### Issues
 * see inline!
+* make proxy send auth header:
+```
+    ,"headers": {
+      "Origin": ???,
+      "Content-Type": "application/json",
+      "Authorization": "Basic ..."
+    }
+```
 
 ### TODO until Springe
 
 mandatory
-* enter name, use hash value as vid, notify if already in use
-* make sure data exchange works seemless
-* store time series of aggregate data: min/avg/max appr., nonabstentions, min/avg/max own rating, no.approved own, amount of rating change per time 
-* deal with due date
 * ensure availability of server
-* distinguish alloc from choice in wording: icons cut, trophy 
 
 optionally
 * add option functionality
 * redirect vodle.it to sandstorm.pik-potsdam.de
 
-in print:
-* predefined usernames, short explanation, anonymity disclaimer
-
-on some questionnaire website (https://www.surveymonkey.de/r/M9KK8SQ):
-* short exit poll: rate useability of gui, transparency of algorithm, acceptability of result, free text for improvement

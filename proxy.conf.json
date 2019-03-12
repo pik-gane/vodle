@@ -1,10 +1,10 @@
 {
   "/cloudant": {
-      "target": "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc",
-      "changeOrigin": true,
-      "secure": false,
-      "logLevel": "debug",
-      "pathRewrite": {
+    "target": "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc",
+    "changeOrigin": true,
+    "secure": false,
+    "logLevel": "debug",
+    "pathRewrite": {
       "^/cloudant": ""
     }
   }

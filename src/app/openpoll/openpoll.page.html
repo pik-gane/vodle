@@ -4,17 +4,22 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
-      <ion-title>{{p.title}}</ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
+      <ion-title>
+        {{p.title}}
+      </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
-    <ion-thumbnail slot="end">
-      <ion-img src="/assets/topright_icon.png"></ion-img><!--TODO: make smaller and add padding to the right-->
-    </ion-thumbnail>
+    <ion-button slot="end" routerLink="/pollstats" fill="clear">
+      <ion-icon name="pulse"></ion-icon>
+    </ion-button>
+<!--<ion-thumbnail slot="end">
+      <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>-->
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
 <ng-template [ngIf]="p!=null">
-    <ion-list lines="full">
+  <ion-list lines="full">
     <ng-template [ngIf]="g.username=='glinda'">
       <ion-item>
         <ion-button (click)="closePoll()">close poll</ion-button>
@@ -27,7 +32,7 @@
             <b>
               <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options</span><br/>
               <span style="color:#9abcbd">
-                  <small>{{Math.round(p.expected_approval*1000)/10}}%&nbsp;consensus so far 
+                  <small>{{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so far 
                   <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
                 </small>
               </span>
@@ -49,7 +54,8 @@
                   <ion-icon name="open" slot="icon-only"></ion-icon>
                 </ion-button>
               </ng-template>
-              <br/><b><span style="color:#9abcbd"><small>currently
+              <br/>
+              <b><span style="color:#9abcbd"><small>currently
                 {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
                 the largest support is {{Math.round(p.max_approval*1000)/10}}%,
                 the smallest is {{Math.round(p.min_approval*1000)/10}}%.

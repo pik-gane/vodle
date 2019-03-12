@@ -241,6 +241,7 @@ export class Poll {
 
   // history of statistics:
   private history: number[][] = []; // list of [timestamp, nonabstentions, max, avg, min approval]
+  public histories: number[][][] = []; // histories of all voters
 
   private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid',
     'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps', 'history'];
@@ -585,7 +586,7 @@ export class Poll {
     GlobalService.log("posting full cloudant query for poll "+this.pid); 
     this.g.http.post(this.g.cloudant_dburl + "/_find", JSON.stringify({
         "selector": { "pid": this.pid },
-        "fields": ["vid", "ratings"],
+        "fields": ["vid", "ratings", "history"],
         "limit": 200
       }), {headers: this.g.cloudant_headers})
     .pipe(finalize( // after post has finished:
@@ -599,9 +600,11 @@ export class Poll {
         // TODO: also process poll doc and options docs!
         // process voter docs:
         let vids = [this.myvid];
+        this.histories = [];
         for (let doc of value["docs"]) {
           let vid = doc["vid"],
               rs = doc["ratings"];
+          this.histories.push(doc["history"]);
           if (vid!=this.myvid) {
             vids.push(vid);
             if (!this.vids.includes(vid)) { // new voter in database

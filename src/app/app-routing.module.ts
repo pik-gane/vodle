@@ -18,7 +18,8 @@ const routes: Routes = [
   { path: 'about', loadChildren: './about/about.module#AboutPageModule' },
   { path: 'help', loadChildren: './help/help.module#HelpPageModule' },
   { path: 'addoption', loadChildren: './addoption/addoption.module#AddoptionPageModule' },
-  { path: 'waitsorting', loadChildren: './waitsorting/waitsorting.module#WaitsortingPageModule' }
+  { path: 'waitsorting', loadChildren: './waitsorting/waitsorting.module#WaitsortingPageModule' },
+  { path: 'pollstats', loadChildren: './pollstats/pollstats.module#PollstatsPageModule' }
 ];
 
 @NgModule({
