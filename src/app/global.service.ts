@@ -15,6 +15,7 @@ export class GlobalService {
   static dologs = true; // set to false in production
 
   public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
+  public history_interval = 1000 * 60; // * 60; hourly
 
   // for communicating with cloudant JSON database:
   public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
@@ -27,7 +28,7 @@ export class GlobalService {
   // data to be persisted in storage:
   public state_attributes = ["openpid", "username", "cloudant_up", "pollstates"];
   public openpid: string = null;
-  public username: string = null; // overall username
+  public username: string = ''; // overall username
   public cloudant_up: string; // cloudant credentials
   public pollstates: {} = {};
 
@@ -238,8 +239,11 @@ export class Poll {
   private rsums: {} = {}; // dict of total ratings by oid
   private stamps: {} = {}; // dict of creation timestamps by oid 
 
+  // history of statistics:
+  private history: number[][] = []; // list of [timestamp, nonabstentions, max, avg, min approval]
+
   private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid',
-    'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps'];
+    'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps', 'history'];
 
   // redundant session data:
   public g: GlobalService;
@@ -567,6 +571,12 @@ export class Poll {
       GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
     GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
+
+    // store stats:
+    let t = new Date().getTime();
+    if ((this.history.length==0) || (t > this.history[this.history.length-1][0] + this.g.history_interval)) {
+      this.history.push([t, n, this.voting_share, this.max_approval, this.expected_approval, this.min_approval]);
+    }
     return true; // changed results
   }
 
@@ -631,7 +641,8 @@ export class Poll {
         "pid": this.pid,
         "vid": this.myvid,
         "pubkey": null,
-        "ratings": this.myratings
+        "ratings": this.myratings,
+        "history": this.history
       };
       this.cloudant_docurl = this.g.cloudant_dburl + "/" + this.cloudant_doc["_id"];
     }

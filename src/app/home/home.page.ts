@@ -8,6 +8,8 @@ import { GlobalService, Poll } from "../global.service";
 })
 export class HomePage implements OnInit{
 
+  public editing: boolean = false;
+
   constructor(public g: GlobalService) {
   }
 
@@ -15,6 +17,7 @@ export class HomePage implements OnInit{
   }
 
   changeUsername() {
+    this.editing = false;
     let u = this.g.username = (document.getElementById('username') as HTMLInputElement).value;
     for (let pid of Object.keys(this.g.polls)) {
       let p = this.g.polls[pid]
@@ -27,6 +30,9 @@ export class HomePage implements OnInit{
     this.g.save_state();
   }
   showUsername() {
+  }
+  ionViewWillEnter() {
+    this.editing = (this.g.username == null);
   }
 
   fileopen() {

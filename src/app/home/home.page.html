@@ -13,12 +13,12 @@
 <ion-content>
   <ion-list lines="full" no-padding no-margin>
     <ion-item>
-      <ion-button routerLink="/openpoll" fill="clear">
+      <ion-button routerLink="/openpoll" fill="clear" [disabled]="g.username==''">
         <ion-icon name="git-commit" slot="start"></ion-icon>
         Last used
       </ion-button>
       &nbsp;
-      <ion-button routerLink="/mypolls" fill="clear">
+      <ion-button routerLink="/mypolls" fill="clear" [disabled]="g.username==''">
         <ion-icon name="list" slot="start"></ion-icon>
         My polls
       </ion-button>
@@ -35,7 +35,8 @@
     </ion-item>
     <ion-item>
       <ion-text slot="start">Username:</ion-text><ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" 
-        id="username" (ionChange)="changeUsername()" (ionBlur)="showUsername()"></ion-input>
+        id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
+      <ion-button (click)="editing=true"><ion-icon name="edit"></ion-icon>edit</ion-button>
     </ion-item>
 <!--
     <ion-item-divider color="secondary">
