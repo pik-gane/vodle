@@ -17,7 +17,12 @@ export class HomePage implements OnInit{
   changeUsername() {
     let u = this.g.username = (document.getElementById('username') as HTMLInputElement).value;
     for (let pid of Object.keys(this.g.polls)) {
-      this.g.polls[pid].myvid = u;
+      let p = this.g.polls[pid]
+      if (u!=p.myvid) {
+        p.deregisterVoter(p.myvid);
+        p.myvid = u;
+        p.registerVoter(u);
+      }
     }
     this.g.save_state();
   }

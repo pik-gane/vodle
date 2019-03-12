@@ -12,6 +12,8 @@ export class GlobalService {
 
   // constants or session-specific data:
 
+  static dologs = true; // set to false in production
+
   public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
 
   // for communicating with cloudant JSON database:
@@ -96,7 +98,9 @@ export class GlobalService {
   }
 
   static log(msg) {
-    console.log((new Date()).getTime().toString() + " " + msg);
+    if (GlobalService.dologs) {
+      console.log((new Date()).getTime().toString() + " " + msg);
+    }
   }
 
   showinbrowser(uri) {
@@ -361,6 +365,33 @@ export class Poll {
     GlobalService.log("  registered option " + o['name']);
   }
 
+  registerVoter(vid:string) {
+    if (!this.vids.includes(vid)) {
+      this.vids.push(vid);
+      for (let oid of this.oids) {
+        this.ratings[oid][vid] = 0;
+        this.rfreqs[oid][0]++;
+      }
+    }
+  }
+  deregisterVoter(vid:string) {
+    if (this.vids.includes(vid)) {
+      // TODO: do more elegantly
+      let vids = [];
+      for(let vid2 of this.vids) {
+        if (vid2!=vid) {
+          vids.push(vid2);
+        }
+      }
+      this.vids = vids;
+      for (let oid of this.oids) {
+        this.setRating(oid, vid, 0);
+        this.rfreqs[oid][0]--;
+        delete this.ratings[oid][vid];
+      }
+    }
+  }
+
   setRating(oid:string, vid:string, r:number) {
     let oldr = this.ratings[oid][vid];
     // update all redundant ratings data:
@@ -378,6 +409,7 @@ export class Poll {
   }
   setMyRating(oid:string, r:number) {
     this.setRating(oid, this.myvid, r);
+    GlobalService.log("set own rating for "+oid+" to "+this.myratings[oid]+"="+this.ratings[oid][this.myvid]);
   }
   getRating(oid:string, vid:string) {
     return this.ratings[oid][vid]; 
@@ -413,6 +445,7 @@ export class Poll {
           cf = rfs[0], // cumulative frequency
           t = 101, // threshold for approval
           a = 0; // approval
+//      GlobalService.log("  oid "+oid+":"+rfs);
       // TODO: make sure sum(rfs) = n.
       // find smallest r so that less than r% of voters have rating < r:
       for (let r=1; r<=100; r++) {
@@ -555,15 +588,23 @@ export class Poll {
         GlobalService.log("  posting full cloudant query succeeded, no. docs returned: " + value["docs"].length);
         // TODO: also process poll doc and options docs!
         // process voter docs:
-        this.vids = [this.myvid];
+        let vids = [this.myvid];
         for (let doc of value["docs"]) {
           let vid = doc["vid"],
               rs = doc["ratings"];
           if (vid!=this.myvid) {
-            this.vids.push(vid);
+            vids.push(vid);
+            if (!this.vids.includes(vid)) { // new voter in database
+              this.registerVoter(vid);
+            }
+            for (let oid in rs) {
+              this.setRating(oid, vid, rs[oid]);
+            }
           }
-          for (let oid in rs) {
-            this.setRating(oid, vid, rs[oid]);
+        }
+        for (let vid of this.vids) {
+          if (!vids.includes(vid)) { // voter no longer in database
+            this.deregisterVoter(vid);
           }
         }
         this.tally();
