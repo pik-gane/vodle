@@ -31,6 +31,7 @@ export class PollstatsPage implements OnInit {
     for (let h of p.histories) {
       hall = hall.concat(h);
     }
+    GlobalService.log("history:" + JSON.stringify(hall));
     hall.sort((d, e) => d[0] - e[0]);
     for (let d of hall) {
       let x = d[0];

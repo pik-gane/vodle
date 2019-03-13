@@ -4,6 +4,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 import { Storage } from '@ionic/storage';
+import { Secret } from './secret';
 
 @Injectable(
 //  {providedIn: 'root'}
@@ -62,8 +63,11 @@ export class GlobalService {
   init() { // called after state restoration finished
     GlobalService.log('initializing...');
     if (!this.cloudant_up) {
-      this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
-    }
+      this.cloudant_up = Secret.cloudant_up;
+      if (!this.cloudant_up) {
+        this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
+     }
+    } 
     this.cloudant_headers = new HttpHeaders({
       'Authorization': 'Basic ' + btoa(this.cloudant_up),
       'content-type': 'application/json',
@@ -231,6 +235,8 @@ export class Poll {
   public oids: string[] = []; // list of options ids
   public options: {} = {}; // dict by oid
   public open: boolean = true;
+  public winner = null;
+  public lastrated: number = 0; // time of last own rating
 
   // ratings are stored redundantly:
   private ratings: {} = {}; // dict of dicts by oid, vid
@@ -243,7 +249,7 @@ export class Poll {
   private history: number[][] = []; // list of [timestamp, nonabstentions, max, avg, min approval]
   public histories: number[][][] = []; // histories of all voters
 
-  private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid',
+  private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid', 'lastrated',
     'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps', 'history'];
 
   // redundant session data:
@@ -377,18 +383,24 @@ export class Poll {
         this.ratings[oid][vid] = 0;
         this.rfreqs[oid][0]++;
       }
+      this.abstaining.push(vid);
     }
   }
   deregisterVoter(vid:string) {
     if (this.vids.includes(vid)) {
       // TODO: do more elegantly
-      let vids = [];
+      let vids = [],
+          abs = [];
       for(let vid2 of this.vids) {
         if (vid2!=vid) {
           vids.push(vid2);
+          if (vid2 in this.abstaining) {
+            abs.push(vid2);
+          }
         }
       }
       this.vids = vids;
+      this.abstaining = abs;
       for (let oid of this.oids) {
         this.setRating(oid, vid, 0);
         this.rfreqs[oid][0]--;
@@ -413,6 +425,7 @@ export class Poll {
     this.rsums[oid] += r - oldr;
   }
   setMyRating(oid:string, r:number) {
+    this.lastrated = new Date().getTime();
     this.setRating(oid, this.myvid, r);
     GlobalService.log("set own rating for "+oid+" to "+this.myratings[oid]+"="+this.ratings[oid][this.myvid]);
   }
@@ -427,7 +440,8 @@ export class Poll {
       "vids":this.vids,
       "ratings":this.ratings,
       "myvid":this.myvid,
-      "myvote":this.vid2oid[this.myvid]
+      "myvote":this.vid2oid[this.myvid],
+      "lastrated":this.lastrated
     }));
   }
 
@@ -586,7 +600,7 @@ export class Poll {
     GlobalService.log("posting full cloudant query for poll "+this.pid); 
     this.g.http.post(this.g.cloudant_dburl + "/_find", JSON.stringify({
         "selector": { "pid": this.pid },
-        "fields": ["vid", "ratings", "history"],
+        "fields": ["vid", "ratings", "history", "lastrated"],
         "limit": 200
       }), {headers: this.g.cloudant_headers})
     .pipe(finalize( // after post has finished:
@@ -603,13 +617,16 @@ export class Poll {
         this.histories = [];
         for (let doc of value["docs"]) {
           let vid = doc["vid"],
-              rs = doc["ratings"];
+              rs = doc["ratings"],
+              t = doc["lastrated"];
           this.histories.push(doc["history"]);
           if (vid!=this.myvid) {
             vids.push(vid);
             if (!this.vids.includes(vid)) { // new voter in database
               this.registerVoter(vid);
             }
+          }
+          if ((vid!=this.myvid)||(t>this.lastrated)) {
             for (let oid in rs) {
               this.setRating(oid, vid, rs[oid]);
             }
@@ -644,6 +661,7 @@ export class Poll {
         "pid": this.pid,
         "vid": this.myvid,
         "pubkey": null,
+        "lastrated":this.lastrated,
         "ratings": this.myratings,
         "history": this.history
       };

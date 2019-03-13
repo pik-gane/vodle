@@ -1,9 +1,6 @@
-import { Component, OnInit, NgZone, ViewChild } from '@angular/core';
+import { Component, OnInit, NgZone } from '@angular/core';
 import { NavController, Events, LoadingController } from '@ionic/angular';
-import { strict } from 'assert';
-import { SortoptionsPipe } from '../sortoptions.pipe';
 import { GlobalService, Poll } from "../global.service";
-import { Chart } from 'chart.js';
 
 @Component({
   selector: 'app-openpoll',
@@ -11,9 +8,6 @@ import { Chart } from 'chart.js';
   styleUrls: ['./openpoll.page.scss'],
 })
 export class OpenpollPage implements OnInit {
-
-  @ViewChild('chartCanvas') chartCanvas;
-  chart: any;
 
   public Array = Array;
 
@@ -39,7 +33,7 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
 
   private do_updates = false;
-  private update_interval = 2000; // ms to wait before getting next update
+  private update_interval = 20e3; // ms to wait before getting next update
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
@@ -76,35 +70,7 @@ export class OpenpollPage implements OnInit {
       this.ngOnInit();
     }
   }
-  makeChart() {
-    this.chart = new Chart(this.chartCanvas.nativeElement, {
-      type: 'line',
-      data: {
-//          labels: ["participation", "max. support", "consensus level", "min. support"],
-          datasets: [
-            {
-              label: 'participation',
-              data: [.12, .19, .3, .5, .2, .3],
-            },
-            {
-              label: 'max. support',
-              data: [.3, .12, .19, .3, .5, .2],
-            }
-          ]
-      },
-      options: {
-          scales: {
-              yAxes: [{
-                  ticks: {
-                      beginAtZero:true
-                  }
-              }]
-          }
-      }
-    });
-  }
   ionViewDidEnter() {
-    this.makeChart();
     this.showStats();
   }
   ionViewWillLeave() {

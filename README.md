@@ -212,6 +212,7 @@ where data contains:
 
 mandatory
 * ensure availability of server
+* include link to https://www.surveymonkey.de/r/M9KK8SQ
 
 optionally
 * add option functionality

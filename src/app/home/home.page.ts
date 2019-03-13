@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { GlobalService, Poll } from "../global.service";
+import { NavController } from '@ionic/angular';
 
 @Component({
   selector: 'app-home',
@@ -10,7 +11,7 @@ export class HomePage implements OnInit{
 
   public editing: boolean = false;
 
-  constructor(public g: GlobalService) {
+  constructor(public g: GlobalService, public navCtrl: NavController) {
   }
 
   ngOnInit() {

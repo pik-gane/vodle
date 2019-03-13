@@ -9,14 +9,13 @@ import { StatusBar } from '@ionic-native/status-bar/ngx';
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 
-import { SortPipe } from './sort.pipe';
 import { HttpClientModule } from '@angular/common/http';
 import { IonicStorageModule } from '@ionic/storage';
 
 import { GlobalService } from './global.service';
 
 @NgModule({
-  declarations: [AppComponent, SortPipe],
+  declarations: [AppComponent],
   entryComponents: [],
   imports: [
     BrowserModule,

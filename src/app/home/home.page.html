@@ -13,12 +13,12 @@
 <ion-content>
   <ion-list lines="full" no-padding no-margin>
     <ion-item>
-      <ion-button routerLink="/openpoll" fill="clear" [disabled]="g.username==''">
+      <ion-button routerLink="/openpoll" [disabled]="g.username==''"><!--fill="clear" -->
         <ion-icon name="git-commit" slot="start"></ion-icon>
         Last used
       </ion-button>
       &nbsp;
-      <ion-button routerLink="/mypolls" fill="clear" [disabled]="g.username==''">
+      <ion-button routerLink="/mypolls" [disabled]="g.username==''"><!--fill="clear"-->
         <ion-icon name="list" slot="start"></ion-icon>
         My polls
       </ion-button>
@@ -36,7 +36,17 @@
     <ion-item>
       <ion-text slot="start">Username:</ion-text><ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" 
         id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
-      <ion-button (click)="editing=true"><ion-icon name="create"></ion-icon>edit</ion-button>
+      <ng-template [ngIf]="!editing">
+        <ion-button no-padding no-margin (click)="editing=true"><ion-icon name="create"></ion-icon>&nbsp;edit</ion-button>
+      </ng-template>
+      <ng-template [ngIf]="editing">
+        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')"><ion-icon name="checkmark"></ion-icon>&nbsp;OK</ion-button>
+      </ng-template>
+    </ion-item>
+    <ion-item>
+      Am Ende der Woche: Bitte kurzen&nbsp; 
+      <a href="https://www.surveymonkey.de/r/M9KK8SQ">Feedbackfragebogen <ion-icon name="open" fill="clear"></ion-icon></a> 
+      &nbsp;ausfüllen – Danke! 
     </ion-item>
 <!--
     <ion-item-divider color="secondary">
