@@ -670,11 +670,12 @@ export class Poll {
   }
 
   submitRatings(submit_ratings){
-    // now now changes have happened within the last submit_interval,
+    // now no changes have happened within the last submit_interval,
     // so we can actually do the submission
     for (let oid in submit_ratings) {
       GlobalService.log("  "+oid+":"+this.getRating(oid, this.myvid));
     }
+    this.tally();
     this.prepareCloudantDoc();
     if ("_rev" in this.cloudant_doc) {
       // first try to put updated doc with known _rev (should normally succeed):

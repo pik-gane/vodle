@@ -34,13 +34,15 @@ export class PollstatsPage implements OnInit {
     GlobalService.log("history:" + JSON.stringify(hall));
     hall.sort((d, e) => d[0] - e[0]);
     for (let d of hall) {
-      let x = d[0];
-      if (x<minx) minx=x;
-      if (x>maxx) maxx=x;
-      participation.push({'x':x,'y':d[2]});
-      maxsupport.push({'x':x,'y':d[3]});
-      consensus.push({'x':x,'y':d[4]});
-      minsupport.push({'x':x,'y':d[5]});
+      if (d[2] > 0) { // filter out initial 0000 entries
+        let x = d[0];
+        if (x<minx) minx=x;
+        if (x>maxx) maxx=x;
+        participation.push({'x':x,'y':d[2]});
+        maxsupport.push({'x':x,'y':d[3]});
+        consensus.push({'x':x,'y':d[4]});
+        minsupport.push({'x':x,'y':d[5]});
+      }
     }
     this.chart = new Chart(this.chartCanvas.nativeElement, {
       type: 'line',
@@ -61,6 +63,7 @@ export class PollstatsPage implements OnInit {
             {
               label: 'consensus',
               borderColor: 'green',
+              borderWidth: 10,
               fill: false,
               data: consensus,
             },
@@ -73,6 +76,14 @@ export class PollstatsPage implements OnInit {
           ]
       },
       options: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            fontFamily: "Quicksand Medium",
+            usePointStyle: true,
+            padding: 50
+          }
+        },
         elements: {
           line: {
               tension: 0
