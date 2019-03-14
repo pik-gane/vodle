@@ -69,7 +69,6 @@ export class GlobalService {
      }
     } 
     this.cloudant_headers = new HttpHeaders({
-      'Authorization': 'Basic ' + btoa(this.cloudant_up),
       'content-type': 'application/json',
       'accept': 'application/json'
     });
@@ -498,6 +497,7 @@ export class Poll {
     }
     this.rmins = rmins;
     this.apprs = apprs;
+//    console.log("apprs,rmins:"+JSON.stringify([apprs,rmins]));
 
     // sort options by (appr, rsum, stamp)
     GlobalService.log("  sorting options...");
@@ -600,9 +600,9 @@ export class Poll {
       if (apprs[oid] > this.max_approval) {
         this.max_approval = apprs[oid];
       }
-      GlobalService.log("    " + oid + ": " + (p*100) + "%");
+//      GlobalService.log("    " + oid + ": " + (p*100) + "%");
     }
-    GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds.");
+    GlobalService.log("done tallying after " + ((new Date()).getTime()-started).toString() + " milliseconds");
 
     // store stats:
     let t = new Date().getTime();
@@ -656,11 +656,17 @@ export class Poll {
         }
         this.tally();
         this.g.save_state();
-        this.log("");
+//        this.log("");
       },
       (error: {}) => { // at post failure:
         if (trial == 1) {
           // assume error is because of missing proxy.
+          GlobalService.log("  INFO: posting full cloudant query to proxy returned error"+JSON.stringify(error));
+          this.g.cloudant_headers = new HttpHeaders({
+            'Authorization': 'Basic ' + btoa(this.g.cloudant_up),
+            'content-type': 'application/json',
+            'accept': 'application/json'
+          });
           this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
           this.getCompleteState(2);
         } else {

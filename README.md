@@ -87,6 +87,18 @@ On the test web server:
 
 * running in dev mode: in main directory of git repo: ionic serve
 * updating icons using source put in resources: 
+* starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
+* logging into container: sudo docker exec -it couch bash
+* sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
+```
+curl -X PUT http://localhost:5984/maxparc
+curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/file_compression -d '"snappy"'
+curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/max_document_size -d '"1000000"'
+```
+* replicate db:
+```
+curl -H 'Content-Type: application/json' -X POST http://localhost:5984/_replicate -d ' {"source": "https://.....@08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc/", "target": "http://localhost:5984/maxparc/"}'
+```
 
 ### Message retention
 
@@ -212,9 +224,22 @@ where data contains:
 
 mandatory
 * ensure availability of server
-* include link to https://www.surveymonkey.de/r/M9KK8SQ
+* reactivate survey link and zeitbudget poll
 
 optionally
 * add option functionality
 * redirect vodle.it to sandstorm.pik-potsdam.de
+* use local couchdb, https://hub.docker.com/_/couchdb
 
+* choose between proxies
+```
+"https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc"
+```
+and
+```
+```
+
+### lessons from copan test
+
+* many avoid a 100 rating, leading to many abstentions
+* resorting can be annoying

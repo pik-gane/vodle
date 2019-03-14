@@ -33,7 +33,7 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
 
   private do_updates = false;
-  private update_interval = 20e3; // ms to wait before getting next update
+  private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
