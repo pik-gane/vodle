@@ -138,17 +138,17 @@ export class GlobalService {
       "Imagine we choose a form of government for the next century...",
       "https://en.wikipedia.org/wiki/List_of_forms_of_government",
       'winner'],
-      ["Direct democracy", "using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
-      ["Liquid democracy (majority)", "using majority voting", "https://en.wikipedia.org/wiki/Liquid_democracy"],
-      ["Liquid democracy (consensus)", "using something like this app", "https://vodle.it"],
-      ["Representative democracy (majority)", "using majority voting by representatives", "https://en.wikipedia.org/wiki/Representative_democracy"],
-      ["Representative democracy (consensus)", "with reps using something like this app", "https://vodle.it"],
-      ["Electocracy", null, "https://en.wikipedia.org/wiki/Electocracy"],
-      ["Meritocracy or Technocracy", null, "https://en.wikipedia.org/wiki/Meritocracy"],
-      ["Geniocracy or Noocracy", null, "https://en.wikipedia.org/wiki/Geniocracy"],
-      ["Socialism, Communism, or Ergatocracy", null, "https://en.wikipedia.org/wiki/Socialism"],
-      ["Demarchy", null, "https://en.wikipedia.org/wiki/Sortition"],
-      ["Anarchism", null, "https://en.wikipedia.org/wiki/Anarchism"]
+      ["Direct democracy", "government in which the people represent themselves and vote directly for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
+      ["Liquid democracy (majority)", "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Liquid_democracy"],
+      ["Liquid democracy (consensus)", "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using something like this app", "https://vodle.it"],
+      ["Representative democracy (majority)", "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using majority voting by representatives", "https://en.wikipedia.org/wiki/Representative_democracy"],
+      ["Representative democracy (consensus)", "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using something like this app", "https://vodle.it"],
+      ["Electocracy", "where citizens are able to vote for their government but cannot participate directly in governmental decision making and where the government does not share any power", "https://en.wikipedia.org/wiki/Electocracy"],
+      ["Meritocracy or Technocracy", "a system of governance where groups are selected on the basis of people's ability, knowledge in a given area, and contributions to society", "https://en.wikipedia.org/wiki/Meritocracy"],
+      ["Geniocracy or Noocracy", "a system of governance where creativity, innovation, intelligence and wisdom are required for those who wish to govern, or in which decision making is in the hands of philosophers", "https://en.wikipedia.org/wiki/Geniocracy"],
+      ["Socialism, Communism, or Ergatocracy", "A system in which workers, democratically and/or socially own the means of production. The economic framework may be decentralized and self-managed in autonomous economic units, as in libertarian systems, or centrally planned, as in authoritarian systems. Public services such as healthcare and education would be commonly, collectively, and/or state owned.", "https://en.wikipedia.org/wiki/Socialism"],
+      ["Demarchy", 'government in which the state is governed by randomly selected decision makers who have been selected by sortition (lot) from a broadly inclusive pool of eligible citizens. These groups, sometimes termed "policy juries", "citizens\' juries", or "consensus conferences", deliberately make decisions about public policies in much the same way that juries decide criminal cases', "https://en.wikipedia.org/wiki/Sortition"],
+      ["Anarchism", "A system that advocates self-governed societies based on voluntary institutions. These are often described as stateless societies, although several authors have defined them more specifically as institutions based on non-hierarchical or free associations. Anarchism holds the state to be undesirable, unnecessary, and/or harmful.", "https://en.wikipedia.org/wiki/Anarchism"]
     ],
     'freesf': [
       ["Free sci-fi movie night",
@@ -192,6 +192,7 @@ export class GlobalService {
       "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
       "https://www.youtube.com/watch?v=KPHasT4o9sg"]
     ],
+/*
     'nachtreffen' : [
       ["Zeitbudget beim Nachtreffen",
       "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen...",
@@ -204,6 +205,22 @@ export class GlobalService {
       ["Exkursion", "z.B. zu Google oder Greenpeace", null],
       ["Urlaub machen", null, null]
     ]  
+*/
+    'copan' : [
+      ["copan Jour Fixe Time Budget",
+      "How do we want to use the time in the future?",
+      null, "share"],
+      ["Intro round for newbies", "", null],
+      ["Everyone's work update round", "", null],
+      ["Talk on someone's own work", "", null],
+      ["Presentation of one interesting article", "", null],
+      ["Help with a current problem in someone's work", "", null],
+      ["Planning of activities", "", null],
+      ["Strategic discussions (PIK, copan)", "", null],
+      ["Open discussion on scientific topics", "", null],
+      ["Open discussion of nonscientific topics", "", null],
+      ["Small talk", "", null]
+    ]
   };
 }
 
@@ -264,10 +281,10 @@ export class Poll {
   public oid2vids: {} = null; // dict of lists of vids of those voting for an option, by oid
   public abstaining: string[] = []; // list of abstaining voters
   public probs: {} = {}; // dict of winning probabilities by oid
-  public min_approval: number = null;
-  public expected_approval: number = null;
-  public max_approval: number = null;
-  public voting_share: number = null;
+  public min_approval: number = 0;
+  public expected_approval: number = 0;
+  public max_approval: number = 0;
+  public voting_share: number = 0;
 
   // for communicating with cloudant JSON database:
   private cloudant_docurl: string = null;

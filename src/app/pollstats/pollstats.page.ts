@@ -21,7 +21,7 @@ export class PollstatsPage implements OnInit {
   }
   makeChart() {
     let p = this.g.openpoll,
-        hall = [],
+        hall = [[new Date().getTime(), p.vids.length, p.voting_share, p.max_approval, p.expected_approval, p.min_approval]],
         participation = [],
         maxsupport = [],
         consensus = [],
@@ -76,6 +76,7 @@ export class PollstatsPage implements OnInit {
           ]
       },
       options: {
+        maintainAspectRatio: false,
         legend: {
           position: 'bottom',
           labels: {
@@ -100,20 +101,30 @@ export class PollstatsPage implements OnInit {
             xAxes: [{
               type: 'linear',
               position: 'bottom',
+              scaleLabel: {
+                labelString: 'time'
+              },
               gridLines: {
                 display: false
               },
               ticks: {
                 min:minx,
                 max:maxx,
-                display:false
-              }
+                stepSize:maxx-minx,
+//                display:false
+                callback: function(value, index, values) {
+                  return (value==minx)?'start':'now';
+                }
+            }
             }],
             yAxes: [{
                 ticks: {
                   min:0,
                   max:1,
-                  stepSize:1
+                  stepSize:1,
+                  callback: function(value, index, values) {
+                    return ''+(value*100)+"%";
+                  }
                 }
             }]
         }
