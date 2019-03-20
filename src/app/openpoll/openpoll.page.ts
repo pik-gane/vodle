@@ -33,6 +33,8 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
 
   private do_updates = false;
+  private refresh_paused = false;
+  public needs_refresh = false;
   private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
   constructor(public navCtrl: NavController, 
@@ -60,7 +62,7 @@ export class OpenpollPage implements OnInit {
 //    this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
     this.expanded = null;
-    this.showOrder();
+    this.updateOrder();
   }
   ionViewWillEnter() {
     if (this.g.username=='') {
@@ -110,9 +112,7 @@ export class OpenpollPage implements OnInit {
       this.setSliderColor(oid, r);
     }
   }
-  async showOrder() {
-    // link displayed sorting to poll's sorting:
-//    this.opos = this.p.opos; // if using pipe
+  async updateOrder(force=false) {
     let changed = false;
     for (let i in this.oidsorted) {
       if (this.oidsorted[i] != this.p.oidsorted[i]) {
@@ -121,31 +121,21 @@ export class OpenpollPage implements OnInit {
       }
     }
     if (changed) {
-/*      for (let oid of this.p.oids) {
-        this.getSlider(oid).disabled = true;
-      }*/
-      for (let i of [0]) { // someone claimed loading twice would help but it doesn't...
-        const loadingElement = await this.loadingController.create({
-          message: 'Sorting options by support',
-          spinner: 'crescent',
-          duration: 1000
-        });
-        await loadingElement.present();
-        await loadingElement.onDidDismiss();  
-      }
-      this.oidsorted = [...this.p.oidsorted]; // FIXME: avoid sliders getting stuck!
-      this.sortingcounter++;
-//      this.navCtrl.navigateForward('/waitsorting');
-//      this.events.publish('updateScreen');
-  //    let active = this.navCtrl.getActive(); // or getByIndex(int) if you know it
-  //    this.navCtrl.remove(active.index);
-  //    this.navCtrl.push(active.component);
-  // this.navCtrl.navigateRoot('/openpoll');
-/*
-  for (let oid of this.p.oids) {
-        this.getSlider(oid).disabled = this.p.open ? false : true;
-      }*/
+      this.needs_refresh = true;
     }
+    if (force || (this.needs_refresh && !(this.submit_triggered || this.refresh_paused))) {
+      // link displayed sorting to poll's sorting:
+      const loadingElement = await this.loadingController.create({
+        message: 'Sorting options by support\nuse sync button to toggle auto-sorting.',
+        spinner: 'crescent',
+        duration: 1000
+      });
+      await loadingElement.present();
+      await loadingElement.onDidDismiss();  
+      this.oidsorted = [...this.p.oidsorted];
+      this.sortingcounter++;
+      this.needs_refresh = false;
+    } 
   }
 
   setSliderColor(oid, value) {
@@ -157,6 +147,17 @@ export class OpenpollPage implements OnInit {
   }
 
   // controls:
+
+  pauseRefresh() {
+    this.refresh_paused = true;
+  }
+  unpauseRefresh() {
+    this.refresh_paused = false;
+    this.updateOrder(true);
+  }
+  refreshOnce() {
+    this.updateOrder(true);
+  }
 
   expand(what) {
     GlobalService.log("expanding "+what)
@@ -219,7 +220,7 @@ export class OpenpollPage implements OnInit {
       this.submit_hold = false;
       await this.sleep(this.submit_interval);
     }
-    this.showOrder();
+    this.updateOrder();
     this.doSubmit();
   }
   doSubmit() {
@@ -232,7 +233,7 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
-      this.showOrder();
+      this.updateOrder();
       this.showStats();
       await this.sleep(this.update_interval);
     }

@@ -8,12 +8,21 @@
         {{p.title}}
       </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
-    <ion-button slot="end" routerLink="/pollstats" fill="clear">
-      <ion-icon name="pulse"></ion-icon>
-    </ion-button>
-<!--<ion-thumbnail slot="end">
-      <ion-img src="/assets/topright_icon.png"></ion-img>
-    </ion-thumbnail>-->
+    <ng-template [ngIf]="!refresh_paused">
+      <ion-button slot="end" (click)="pauseRefresh()" fill="clear">
+        <ion-icon name="refresh"></ion-icon>
+      </ion-button>
+    </ng-template>
+    <ng-template [ngIf]="refresh_paused && !needs_refresh">
+      <ion-button slot="end" (click)="unpauseRefresh()" fill="clear">
+        <ion-icon src="/assets/icon/md-norefresh.svg"></ion-icon>
+      </ion-button>
+    </ng-template>
+    <ng-template [ngIf]="refresh_paused && needs_refresh">
+      <ion-button slot="end" (click)="refreshOnce()" fill="clear">
+        <ion-icon src="/assets/icon/md-needsrefresh.svg"></ion-icon>
+      </ion-button>
+    </ng-template>
   </ion-toolbar>
 </ion-header>
 
@@ -41,6 +50,9 @@
           <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
             <ion-button (click)="expand('poll')" float-right no-padding no-margin fill="clear">
               <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+            </ion-button>
+            <ion-button slot="end" routerLink="/pollstats" fill="clear">
+              <ion-icon name="pulse"></ion-icon>
             </ion-button>
           </ion-col>
         </ion-row>
@@ -103,7 +115,7 @@
         <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
           <ion-row no-padding padding-bottom no-margin>
             <ion-col no-padding no-margin>
-              <b><span style="color:#9abcbd"><small>currently&nbsp;</small>
+              <b><span style="color:#9abcbd"><small>currently </small>
                 <ng-template [ngIf]="p.type=='winner'">
                   <span style="color:#769596"> {{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
                 </ng-template>

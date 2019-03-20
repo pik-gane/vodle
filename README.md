@@ -223,6 +223,7 @@ where data contains:
 ### TODO until Springe
 
 mandatory
+* implement drawing of winners
 * ensure availability of server
 * reactivate survey link and zeitbudget poll
 
@@ -230,7 +231,8 @@ optionally
 * add option functionality
 * redirect vodle.it to sandstorm.pik-potsdam.de
 * use local couchdb, https://hub.docker.com/_/couchdb
-
+* add better explanations, also for result
+* notify on top when abstaining or when rating less than half at positive rating or when low consensus
 * choose between proxies
 ```
 "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc"
@@ -241,5 +243,6 @@ and
 
 ### lessons from copan test
 
-* many avoid a 100 rating, leading to many abstentions
+* many avoid a 100 rating, leading to many abstentions -> add warnings, maybe also add "submit" button?
 * resorting can be annoying
+* clearer explanation (+ Q&A)
