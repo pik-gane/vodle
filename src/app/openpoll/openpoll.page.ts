@@ -33,7 +33,7 @@ export class OpenpollPage implements OnInit {
   private submit_ratings = {};
 
   private do_updates = false;
-  private refresh_paused = false;
+  public refresh_paused = false;
   public needs_refresh = false;
   private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
