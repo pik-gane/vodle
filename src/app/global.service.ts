@@ -18,10 +18,10 @@ export class GlobalService {
   public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
   public history_interval = 1000 * 60; // * 60; hourly
 
-  // for communicating with cloudant JSON database:
-  public cloudant_dburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
-  public cloudant_dburl2 = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
-  public cloudant_headers: HttpHeaders = null;
+  // for communicating with couchdb JSON database:
+  public couchdburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
+  public cloudantdburl = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
+  public dbheaders: HttpHeaders = null;
 
   public polls: {} = {}; // dict of Polls by pid
   public openpoll: Poll = null; // currently open poll
@@ -68,7 +68,7 @@ export class GlobalService {
         this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
      }
     } 
-    this.cloudant_headers = new HttpHeaders({
+    this.dbheaders = new HttpHeaders({
       'content-type': 'application/json',
       'accept': 'application/json'
     });
@@ -615,11 +615,11 @@ export class Poll {
   getCompleteState(trial:number = 1) {
     // get complete poll state from cloudant
     GlobalService.log("posting full cloudant query for poll "+this.pid); 
-    this.g.http.post(this.g.cloudant_dburl + "/_find", JSON.stringify({
+    this.g.http.post(this.g.couchdburl + "/_find", JSON.stringify({
         "selector": { "pid": this.pid },
         "fields": ["vid", "ratings", "history", "lastrated"],
         "limit": 200
-      }), {headers: this.g.cloudant_headers})
+      }), {headers: this.g.dbheaders})
     .pipe(finalize( // after post has finished:
       () => {
         GlobalService.log("  post finished"); 
@@ -662,12 +662,12 @@ export class Poll {
         if (trial == 1) {
           // assume error is because of missing proxy.
           GlobalService.log("  INFO: posting full cloudant query to proxy returned error"+JSON.stringify(error));
-          this.g.cloudant_headers = new HttpHeaders({
+          this.g.dbheaders = new HttpHeaders({
             'Authorization': 'Basic ' + btoa(this.g.cloudant_up),
             'content-type': 'application/json',
             'accept': 'application/json'
           });
-          this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
+          this.g.couchdburl = this.g.cloudantdburl; // hence use non-proxy url
           this.getCompleteState(2);
         } else {
           GlobalService.log("  WARN: posting full cloudant query returned error"+JSON.stringify(error));
@@ -688,7 +688,7 @@ export class Poll {
         "ratings": this.myratings,
         "history": this.history
       };
-      this.cloudant_docurl = this.g.cloudant_dburl + "/" + this.cloudant_doc["_id"];
+      this.cloudant_docurl = this.g.couchdburl + "/" + this.cloudant_doc["_id"];
     }
   }
 
@@ -711,7 +711,7 @@ export class Poll {
     let jsondoc = JSON.stringify(this.cloudant_doc);
     GlobalService.log("putting cloudant doc with rev " + this.cloudant_doc["_rev"]); 
     // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
-    this.g.http.put(this.cloudant_docurl, jsondoc, {headers: this.g.cloudant_headers})
+    this.g.http.put(this.cloudant_docurl, jsondoc, {headers: this.g.dbheaders})
     .pipe(finalize( // after put has finished:
       () => {
         GlobalService.log("  put finished"); 
@@ -732,7 +732,7 @@ export class Poll {
         } else if (trial==2) {
           GlobalService.log("  2nd putting cloudant doc returned error"+JSON.stringify(error));
           // assume error is because of missing proxy.
-          this.g.cloudant_dburl = this.g.cloudant_dburl2; // hence use non-proxy url
+          this.g.couchdburl = this.g.cloudantdburl; // hence use non-proxy url
           this.putCloudantStoredRev(3);
         } else {
           GlobalService.log("  3rd putting cloudant doc returned error"+JSON.stringify(error));
@@ -742,7 +742,7 @@ export class Poll {
   }
   putCloudantFetchedRev() {
     GlobalService.log("getting cloudant doc"); 
-    this.g.http.get(this.cloudant_docurl, {headers: this.g.cloudant_headers})
+    this.g.http.get(this.cloudant_docurl, {headers: this.g.dbheaders})
     .pipe(finalize( // after get has finished:
       () => {
         this.putCloudantStoredRev(2);
