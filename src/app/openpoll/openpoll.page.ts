@@ -82,13 +82,6 @@ export class OpenpollPage implements OnInit {
     }
   }
 
-  sleep(ms) { 
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(true);
-      }, ms);
-    });
-  }
   showStats() { // update pies and bars, but not order!
     this.votedfor = this.p.vid2oid[this.p.myvid];
     for (let oid of this.p.oids) {
@@ -218,7 +211,7 @@ export class OpenpollPage implements OnInit {
       // wait until no further changes happened within 
       // the last submit_interval
       this.submit_hold = false;
-      await this.sleep(this.submit_interval);
+      await this.g.sleep(this.submit_interval);
     }
     this.updateOrder();
     this.doSubmit();
@@ -235,27 +228,14 @@ export class OpenpollPage implements OnInit {
       this.p.getCompleteState();
       this.updateOrder();
       this.showStats();
-      await this.sleep(this.update_interval);
+      await this.g.sleep(this.update_interval);
     }
   }
 
   closePoll() {
     if (confirm("really close the poll?")) {
-      this.p.tally();
-      this.p.open = false;
-      if (this.p.type=='winner') {
-        let r = Math.random(),
-            cum = 0,
-            winner = null;
-        for (let oid of this.p.oidsorted) {
-          cum += this.p.probs[oid];
-          if (cum > r) {
-            winner = oid;
-            break;
-          }
-        }
-        alert("The winner (topmost option supported by randomly drawn voter) is: " + this.p.options[winner].name);
-      }
+      this.p.close();
+      this.navCtrl.navigateForward("/closedpoll");
     }
   }
 }

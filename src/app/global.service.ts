@@ -111,6 +111,14 @@ export class GlobalService {
     window.open(uri,'_system','location=yes');
   }
 
+  sleep(ms) { 
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(true);
+      }, ms);
+    });
+  }
+
   public demodata = {
     'president' : [
       ["President of the world",
@@ -252,6 +260,7 @@ export class Poll {
   public options: {} = {}; // dict by oid
   public open: boolean = true;
   public winner = null;
+  public ran = null; // random number used to determine winner
   public lastrated: number = 0; // time of last own rating
 
   // ratings are stored redundantly:
@@ -761,6 +770,28 @@ export class Poll {
       }
     );
   }
+
+  close() {
+    this.tally();
+    this.open = false;
+    if (this.type=='winner') {
+      let s = 0,
+          cum = 0;
+      for (let oid of this.oids) {
+        for (let vid of this.vids) {
+          s += this.getRating(oid, vid);
+        }
+      }
+      this.ran = (s % 100) / 100; // TODO: use much better random number generator
+      for (let oid of this.oidsorted) {
+        cum += this.probs[oid];
+        if (cum > this.ran) {
+          this.winner = this.options[oid];
+          break;
+        }
+      }
+    }
+  }  
 }
 
 export class Simulation {
