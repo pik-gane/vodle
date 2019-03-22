@@ -117,19 +117,19 @@ export class GlobalService {
       "Imagine we elect this person for four years of office and the following candidates were all available...",
       null,
       'winner'],
-      ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
+//      ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
       ["Princess Leia", null, "https://en.wikipedia.org/wiki/Princess_Leia"],
       ["Ada Lovelace", null ,"https://en.wikipedia.org/wiki/Ada_Lovelace"],
       ["Wilma Mankiller", null, "https://en.wikipedia.org/wiki/Wilma_Mankiller"],
-      ["Rigoberta Menchú", null, "https://en.wikipedia.org/wiki/Rigoberta_Mench%C3%BA"],
-      ["Angela Merkel", null, "https://en.wikipedia.org/wiki/Angela_Merkel"],
-      ["Nadia Murad", null, "https://en.wikipedia.org/wiki/Nadia_Murad"],
+//      ["Rigoberta Menchú", null, "https://en.wikipedia.org/wiki/Rigoberta_Mench%C3%BA"],
+//      ["Angela Merkel", null, "https://en.wikipedia.org/wiki/Angela_Merkel"],
+//      ["Nadia Murad", null, "https://en.wikipedia.org/wiki/Nadia_Murad"],
       ["Emmy Noether", null, "https://en.wikipedia.org/wiki/Emmy_Noether"],
       ["Michelle Obama", null, "https://en.wikipedia.org/wiki/Michelle_Obama"],
       ["Lisa Simpson", null, "https://en.wikipedia.org/wiki/Lisa_Simpson"],
       ["Ellen Johnson Sirleaf", null, "https://en.wikipedia.org/wiki/Ellen_Johnson_Sirleaf"],
       ["Marie Skłodowska Curie", null, "https://en.wikipedia.org/wiki/Marie_Curie"],
-      ["Mother Teresa", null, "https://en.wikipedia.org/wiki/Mother_Teresa"],
+//      ["Mother Teresa", null, "https://en.wikipedia.org/wiki/Mother_Teresa"],
       ["Malala Yousafzai", null, "https://en.wikipedia.org/wiki/Malala_Yousafzai"]
     ],
     'system' : [
@@ -137,12 +137,12 @@ export class GlobalService {
       "Imagine we choose a form of government for the next century...",
       "https://en.wikipedia.org/wiki/List_of_forms_of_government",
       'winner'],
-      ["Direct democracy", "government in which the people represent themselves and vote directly for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
+//      ["Direct democracy", "government in which the people represent themselves and vote directly for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
       ["Liquid democracy (majority)", "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Liquid_democracy"],
       ["Liquid democracy (consensus)", "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using something like this app", "https://vodle.it"],
       ["Representative democracy (majority)", "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using majority voting by representatives", "https://en.wikipedia.org/wiki/Representative_democracy"],
       ["Representative democracy (consensus)", "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using something like this app", "https://vodle.it"],
-      ["Electocracy", "where citizens are able to vote for their government but cannot participate directly in governmental decision making and where the government does not share any power", "https://en.wikipedia.org/wiki/Electocracy"],
+//      ["Electocracy", "where citizens are able to vote for their government but cannot participate directly in governmental decision making and where the government does not share any power", "https://en.wikipedia.org/wiki/Electocracy"],
       ["Meritocracy or Technocracy", "a system of governance where groups are selected on the basis of people's ability, knowledge in a given area, and contributions to society", "https://en.wikipedia.org/wiki/Meritocracy"],
       ["Geniocracy or Noocracy", "a system of governance where creativity, innovation, intelligence and wisdom are required for those who wish to govern, or in which decision making is in the hands of philosophers", "https://en.wikipedia.org/wiki/Geniocracy"],
       ["Socialism, Communism, or Ergatocracy", "A system in which workers, democratically and/or socially own the means of production. The economic framework may be decentralized and self-managed in autonomous economic units, as in libertarian systems, or centrally planned, as in authoritarian systems. Public services such as healthcare and education would be commonly, collectively, and/or state owned.", "https://en.wikipedia.org/wiki/Socialism"],
@@ -191,7 +191,6 @@ export class GlobalService {
       "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.", 
       "https://www.youtube.com/watch?v=KPHasT4o9sg"]
     ],
-/*
     'nachtreffen' : [
       ["Zeitbudget beim Nachtreffen",
       "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen...",
@@ -204,7 +203,7 @@ export class GlobalService {
       ["Exkursion", "z.B. zu Google oder Greenpeace", null],
       ["Urlaub machen", null, null]
     ]  
-*/
+/*
     'copan' : [
       ["copan Jour Fixe Time Budget",
       "How do we want to use the time in the future?",
@@ -220,6 +219,7 @@ export class GlobalService {
       ["Open discussion of nonscientific topics", "", null],
       ["Small talk", "", null]
     ]
+*/
   };
 }
 
@@ -285,9 +285,9 @@ export class Poll {
   public max_approval: number = 0;
   public voting_share: number = 0;
 
-  // for communicating with cloudant JSON database:
-  private cloudant_docurl: string = null;
-  private cloudant_doc: {} = null; // object containing voter's ratings
+  // for communicating with couchdb JSON database:
+  private couchdb_docurl: string = null;
+  private couchdb_doc: {} = null; // object containing voter's ratings
 
   constructor(g:GlobalService, data:{}=null) {
     this.g = g;
@@ -645,7 +645,9 @@ export class Poll {
           }
           if ((vid!=this.myvid)||(t>this.lastrated)) {
             for (let oid in rs) {
-              this.setRating(oid, vid, rs[oid]);
+              if (this.oids.includes(oid)) {
+                this.setRating(oid, vid, rs[oid]);
+              }
             }
           }
         }
@@ -678,8 +680,8 @@ export class Poll {
   }
 
   prepareCloudantDoc() {
-    if (!this.cloudant_doc) {
-      this.cloudant_doc = {
+    if (!this.couchdb_doc) {
+      this.couchdb_doc = {
         "_id": this.pid + "_" + this.myvid, // unique document id in db
         "pid": this.pid,
         "vid": this.myvid,
@@ -688,7 +690,7 @@ export class Poll {
         "ratings": this.myratings,
         "history": this.history
       };
-      this.cloudant_docurl = this.g.couchdburl + "/" + this.cloudant_doc["_id"];
+      this.couchdb_docurl = this.g.couchdburl + "/" + this.couchdb_doc["_id"];
     }
   }
 
@@ -700,7 +702,7 @@ export class Poll {
     }
     this.tally();
     this.prepareCloudantDoc();
-    if ("_rev" in this.cloudant_doc) {
+    if ("_rev" in this.couchdb_doc) {
       // first try to put updated doc with known _rev (should normally succeed):
       this.putCloudantStoredRev(1);
     } else {
@@ -708,10 +710,10 @@ export class Poll {
     }
   }
   putCloudantStoredRev(trial:number) {
-    let jsondoc = JSON.stringify(this.cloudant_doc);
-    GlobalService.log("putting cloudant doc with rev " + this.cloudant_doc["_rev"]); 
+    let jsondoc = JSON.stringify(this.couchdb_doc);
+    GlobalService.log("putting cloudant doc with rev " + this.couchdb_doc["_rev"]); 
     // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
-    this.g.http.put(this.cloudant_docurl, jsondoc, {headers: this.g.dbheaders})
+    this.g.http.put(this.couchdb_docurl, jsondoc, {headers: this.g.dbheaders})
     .pipe(finalize( // after put has finished:
       () => {
         GlobalService.log("  put finished"); 
@@ -720,7 +722,7 @@ export class Poll {
     .subscribe(
       (value: {}) => { // at put success:
         GlobalService.log("  putting cloudant doc succeeded, new rev is " + value["rev"]);
-        this.cloudant_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
+        this.couchdb_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
         // FIXME: the following is just for testing:
         this.getCompleteState()
       },
@@ -742,7 +744,7 @@ export class Poll {
   }
   putCloudantFetchedRev() {
     GlobalService.log("getting cloudant doc"); 
-    this.g.http.get(this.cloudant_docurl, {headers: this.g.dbheaders})
+    this.g.http.get(this.couchdb_docurl, {headers: this.g.dbheaders})
     .pipe(finalize( // after get has finished:
       () => {
         this.putCloudantStoredRev(2);
@@ -751,11 +753,11 @@ export class Poll {
     .subscribe(
       (value: {}) => { // after get success
         GlobalService.log("  getting cloudant doc returned _rev="+value["_rev"]);
-        this.cloudant_doc["_rev"] = value["_rev"];
+        this.couchdb_doc["_rev"] = value["_rev"];
       },
       (error: {}) => {
         GlobalService.log("  getting cloudant doc returned error "+JSON.stringify(error));
-        delete this.cloudant_doc["_rev"];
+        delete this.couchdb_doc["_rev"];
       }
     );
   }

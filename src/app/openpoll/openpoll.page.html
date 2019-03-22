@@ -5,6 +5,9 @@
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
       <ion-title>
+        <ng-template [ngIf]="g.username=='glinda'">
+          <ion-button (click)="closePoll()" no-padding no-margin>close</ion-button>
+        </ng-template>
         {{p.title}}
       </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
@@ -29,11 +32,6 @@
 <ion-content>
 <ng-template [ngIf]="p!=null">
   <ion-list lines="full">
-    <ng-template [ngIf]="g.username=='glinda'">
-      <ion-item>
-        <ion-button (click)="closePoll()">close poll</ion-button>
-      </ion-item>
-    </ng-template>
     <ion-item>
       <ion-grid no-padding no-margin>
         <ion-row no-padding no-margin>
@@ -48,12 +46,12 @@
               <i>{{p.desc}}</i><br/>&nbsp;<br/>
             </ng-template>
             <b>
-              <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options<br/>
-              <ion-button routerLink="/help" fill="clear" float-right no-padding padding-left no-margin>
-                <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
-              </ion-button>
-              <small>It's a good idea to give your favourite 100, all worse-than-average 0, and all better-than-average something larger than 0.</small></span>
+              <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
+              <small><a routerLink="/help">(how?)</a></small>
               <br/>
+              <small>It's a good idea to give one option 100, all better-than-average options something larger than 0,
+              and all worse-than-average options zero.<br/>&nbsp;
+              </small></span>
               <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
             </b>
           </ion-col>
@@ -66,12 +64,14 @@
         <app-expandable [expanded]="expanded=='poll'">
           <ion-row no-padding no-margin>
             <ion-col no-padding no-margin>
-              <ion-button float-left no-padding routerLink="/pollstats" fill="clear">
-                <ion-icon name="pulse" size="large"></ion-icon>
+              <ion-button float-right no-padding routerLink="/pollstats">
+                <ion-icon name="pulse" size="small"></ion-icon>
               </ion-button>
-              <b><span style="color:#9abcbd"><small>
+              <b>
+                <span style="color:#769596">
                 {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so far.
-                Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
+                </span>
+                <span style="color:#9abcbd"><small>Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
                 the largest support is {{Math.round(p.max_approval*1000)/10}}%,
                 the smallest is {{Math.round(p.min_approval*1000)/10}}%.
               </small></span></b>

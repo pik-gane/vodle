@@ -34,10 +34,10 @@ export class PollstatsPage implements OnInit {
     GlobalService.log("history:" + JSON.stringify(hall));
     hall.sort((d, e) => d[0] - e[0]);
     for (let d of hall) {
-      if (d[2] > 0) { // filter out initial 0000 entries
+      if ((d[1] > 1) && (d[2] > 0)) { // filter out incomplete entries
         let x = d[0];
-        if (x<minx) minx=x;
-        if (x>maxx) maxx=x;
+        if (x < minx) minx = x;
+        if (x > maxx) maxx = x;
         participation.push({'x':x,'y':d[2]});
         maxsupport.push({'x':x,'y':d[3]});
         consensus.push({'x':x,'y':d[4]});
@@ -61,7 +61,7 @@ export class PollstatsPage implements OnInit {
               data: maxsupport,
             },
             {
-              label: 'consensus',
+              label: (p.type=='winner')?'consensus':'focus',
               borderColor: 'green',
               borderWidth: 10,
               fill: false,

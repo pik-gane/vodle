@@ -173,9 +173,9 @@
         <ion-item *ngFor="let q of faqs" button (click)="e_q[q[0]] = !(e_q[q[0]] || false)">
           <ion-icon [name]="e_q[q[0]]?'arrow-dropup':'arrow-dropdown'" no-padding no-margin size="small"></ion-icon>
           <ion-label button text-wrap>
-            <b>{{q[0]}}</b>
+            <div [innerHTML]="'<b>'+q[0]+'</b>'"></div>
             <ng-template [ngIf]="e_q[q[0]]">
-              <br/>{{q[1]}}
+              <div [innerHTML]="q[1]"></div>
             </ng-template>
           </ion-label>
         </ion-item>
