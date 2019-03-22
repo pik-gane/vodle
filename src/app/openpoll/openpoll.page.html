@@ -42,8 +42,9 @@
                   <ion-icon name="open" slot="icon-only"></ion-icon>
                 </ion-button>
               </ng-template>
+              <h4>{{p.desc}}</h4>
+              <small><b><span style="color:#9abcbd">created by Jobst</span></b></small><br/>&nbsp;<br/>
               <!--TODO: creator, personal priority, no. of abstentions-->
-              <i>{{p.desc}}</i><br/>&nbsp;<br/>
             </ng-template>
             <b>
               <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
@@ -69,12 +70,17 @@
               </ion-button>
               <b>
                 <span style="color:#769596">
-                {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so far.
+                  {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so far,
+                  poll closes Thu 28 Mar 2019.
                 </span>
-                <span style="color:#9abcbd"><small>Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
-                the largest support is {{Math.round(p.max_approval*1000)/10}}%,
-                the smallest is {{Math.round(p.min_approval*1000)/10}}%.
-              </small></span></b>
+                <span style="color:#9abcbd">
+                  <small>
+                    Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
+                    the largest support is {{Math.round(p.max_approval*1000)/10}}%,
+                    the smallest is {{Math.round(p.min_approval*1000)/10}}%.
+                  </small>
+                </span>
+              </b>
             </ion-col>
           </ion-row>
         </app-expandable>
@@ -106,7 +112,7 @@
                 <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
                     <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" fill="#bce4e5" stroke="none"/>
-                          <!--would like but doesn't work: [x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
+                          <!--TODO: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
                     <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
                     <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
                   </svg>
@@ -118,7 +124,7 @@
         <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
           <ion-row no-padding padding-bottom no-margin>
             <ion-col no-padding no-margin>
-              <ion-button routerLink="/explainoption" float-right no-padding>
+              <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" float-right no-padding>
                 <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
               </ion-button>
               <b><span style="color:#9abcbd"><small>currently </small>

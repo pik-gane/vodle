@@ -102,7 +102,8 @@ export class PollstatsPage implements OnInit {
               type: 'linear',
               position: 'bottom',
               scaleLabel: {
-                labelString: 'time'
+                labelString: 'time',
+                display: true
               },
               gridLines: {
                 display: false

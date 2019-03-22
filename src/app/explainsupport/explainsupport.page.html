@@ -1,0 +1,37 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>Support for {{o.name}}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100">
+    <!--ratings panel:-->
+    <g transform="translate(11 11) scale(0.7 0.7) scale(1 -1) translate(0 -100)">
+      <line x1="0" y1="0" x2="100" y2="100" stroke="grey" stroke-width="0.2"/>
+      <g *ngFor="let item of [].constructor(n); let i = index">
+        <line [attr.y1]="100*(i+.5)/n" [attr.y2]="100*(i+.5)/n" [attr.x1]="-.5" [attr.x2]="rs[i]" stroke="#bce4e5"/>
+      </g>
+      <g *ngFor="let item of [].constructor(n); let i = index">
+        <line [attr.x1]="100*(i+.5)/n" [attr.x2]="100*(i+.5)/n" [attr.y1]="-.5" [attr.y2]="rs[i]" [attr.stroke]="cs[i]"/>
+      </g>
+      <line [attr.y1]="100*(myi+.5)/n" [attr.y2]="100*(myi+.5)/n" [attr.x1]="-.5" [attr.x2]="myr" stroke-width="3" [attr.stroke]="cs[myi]"/>
+      <line x1="105" y1="0" x2="110" y2="0" stroke="#bce4e5" stroke-width="0.2"/>
+      <line x1="105" y1="50" x2="110" y2="50" stroke="#bce4e5" stroke-width="0.2"/>
+      <line x1="105" y1="100" x2="110" y2="100" stroke="#bce4e5" stroke-width="0.2"/>
+      <rect [attr.x]="100*(1-a)" y="-15" [attr.width]="100*a" height="10" fill="#bce4e5" stroke="none"/>
+      <g transform="scale(1 -1)" font-family="Quicksand Medium" font-size="5px" >
+        <text x="50" y="-105" fill="black" text-anchor="middle">ratings</text>
+        <text x="-2" [attr.y]="1.5-100*(myi+.5)/n" [attr.fill]="cs[myi]" font-weight="bold" text-anchor="end">you</text>
+        <text x="112" y="1.5" fill="#bce4e5">0</text>
+        <text x="112" y="-48.5" fill="#bce4e5">50</text>
+        <text x="112" y="-98.5" fill="#bce4e5">100</text>
+        <text x="100" y="11.5" fill="black" text-anchor="end">{{Math.round(a*1000)/10}}%&nbsp;</text>
+        <text x="100" y="11.5" fill="black">&nbsp;support</text>
+      </g>
+    </g>
+  </svg>
+</ion-content>

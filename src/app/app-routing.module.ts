@@ -18,7 +18,8 @@ const routes: Routes = [
   { path: 'about', loadChildren: './about/about.module#AboutPageModule' },
   { path: 'help', loadChildren: './help/help.module#HelpPageModule' },
   { path: 'addoption', loadChildren: './addoption/addoption.module#AddoptionPageModule' },
-  { path: 'pollstats', loadChildren: './pollstats/pollstats.module#PollstatsPageModule' }
+  { path: 'pollstats', loadChildren: './pollstats/pollstats.module#PollstatsPageModule' },
+  { path: 'explainsupport/:oid', loadChildren: './explainsupport/explainsupport.module#ExplainsupportPageModule' }
 ];
 
 @NgModule({
