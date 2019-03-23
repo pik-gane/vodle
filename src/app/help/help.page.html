@@ -90,7 +90,7 @@
           <ion-label text-wrap>
               Your ratings determine which options you <b>support</b>. In the end, every
               voter supports some number of options – zero, one, or more than one –
-              and then the winner is determined in a way I explain later.
+              and then the winner is found in a way I explain later.
             </ion-label>
           </ion-item>
           <ion-item>
@@ -112,7 +112,10 @@
               voters do so as well</i>. How many are "enough"? That depends on how far to
               the right you move your rating slider. If your rating is at, say, 83,
               that means you promise to support the option if at least 17% of the
-              voters do so as well. Why 17%? Because 83 + 17 = 100. In the app, you
+              voters do so as well. Why 17%? Because 83 + 17 = 100. In other words,
+              the larger your rating, the fewer voters you require to also support the option 
+              before you are willing to support it as well.<br/>
+              In the app, you
               can see very easily whether you currently support an option, because we
               show you the percentage of current supporters as a light bar coming in
               from the right of the screen. If your slider, coming in from the left,
@@ -140,7 +143,7 @@
             <ion-label text-wrap>                  
               The exact procedure to find the winner when no option has 100%
               support is very simple: One voter is determined by lot, everyone having
-              the same chance of being that voter. Of the options that this voter
+              the same chance of being that voter. Among the options that this voter
               supports, the one with the largest overall support is the winner.
               The pie piece to the left of each option shows the resulting probability
               that this option wins. 
@@ -150,7 +153,7 @@
             <ion-label text-wrap>                  
               If the poll is about allocating a budget, the size of each option's shares
               is calculated the same way: the share is proportional to the number of voters
-              who support this option but who support no other option that has a larger overall support.
+              that support this option but no other option with a larger overall support.
             </ion-label>
           </ion-item>
           <ion-item>

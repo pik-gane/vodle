@@ -208,6 +208,7 @@ where data contains:
 * http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
 * trigger svg animation: https://stackoverflow.com/questions/8455773/svg-trigger-animation-with-event
 * charts: https://www.chartjs.org/
+* fullscreen: https://ionicframework.com/docs/native/android-full-screen
 
 ### Issues
 * see inline!
