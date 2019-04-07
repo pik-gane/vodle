@@ -7,9 +7,7 @@
 
 * poll setup, invitation by email
 * basic nonencrypted communication via realtime.co
-* interactive voting gui, changing pin color depending on approval state
 * at deadline: poll tally, broadcast result via realtime.co
-* add non-probabilistic mode ("allocate a budget", "allocate resources", "elect temporary representatives" 
 * optimized explanations, howtos, guides (using text of different detail and animations)
 * custom uri scheme & file extension
 * standard notification when some bar has changed by more than 5% or some pin's distance to bar end gets below 5% or time gets late
@@ -56,6 +54,17 @@
 
 * many small TODOs etc. are contained in inline comments in code
 
+### Main technologies used
+
+* app: ionic framework: typescript/javascript, angular/html/svg
+* communication: JSON: couchdb server for state persistence, TODO: realtime messenging server
+
+### Very coarse overview of source code file tree
+
+* src/app/about|help|home|mypolls|openpoll|pollstats etc.: folders of indivudual pages.
+* src/app/openpoll/openpoll.page.ts|html: gui logics and layout
+* src/app/global.service.ts: background logics with classes for polls and options
+
 ### Building
 
 I did the following to get the unsigned android debug build going:
@@ -86,7 +95,6 @@ On the test web server:
 ### Useful commands
 
 * running in dev mode: in main directory of git repo: ionic serve
-* updating icons using source put in resources: 
 * starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
 * logging into container: sudo docker exec -it couch bash
 * sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
@@ -120,9 +128,9 @@ The protocol for this is this:
 * note that with 100 voters and 10 options, a full state is just 1KB of data,
   so the server only needs that much permanent storage per open poll.
 
-Alternatively, a cloud database such as IBM Cloudant could be used to store data persistently as JSON documents
+Currently, a cloud database is used to store data persistently as JSON documents
 
-### JSON document database design
+### future JSON document database design
 
 (all ids are uuids or guids, all `data` elements are inner json documents encrypted by a poll-specific key distributed initially but not stored in the db)
 
@@ -211,24 +219,10 @@ where data contains:
 * fullscreen: https://ionicframework.com/docs/native/android-full-screen
 
 ### Issues
-* see inline!
-* make proxy send auth header:
-```
-    ,"headers": {
-      "Origin": ???,
-      "Content-Type": "application/json",
-      "Authorization": "Basic ..."
-    }
-```
 
-### TODO until Springe
-
-optionally
-* add option functionality
-* notify on top when abstaining or when rating less than half at positive rating or when low consensus
+see inline!
 
 ### lessons from copan test
 
 * many avoid a 100 rating, leading to many abstentions -> add warnings, maybe also add "submit" button?
-* resorting can be annoying
-* clearer explanation (+ Q&A)
+* clearer explanations (+ Q&A)
