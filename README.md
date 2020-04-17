@@ -1,6 +1,6 @@
-## Specification notes
+Development of a group decision / voting app "vodle"
+====================================================
 
-* app name is "vodle", logo exists, domain name vodle.it is reserved
 * main focus for now: get base functionality going (setting up polls, voting, closing a poll)
 
 ### Prioritised list of wanted features
