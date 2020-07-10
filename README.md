@@ -226,3 +226,4 @@ see inline!
 
 * many avoid a 100 rating, leading to many abstentions -> add warnings, maybe also add "submit" button?
 * clearer explanations (+ Q&A)
+
