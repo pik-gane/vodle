@@ -1,3 +1,5 @@
+This is Marius' development branch!
+
 Development of a group decision / voting app "vodle"
 ====================================================
 
