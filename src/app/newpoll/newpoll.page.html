@@ -9,12 +9,127 @@
       Save as draft
     </ion-button>
     <ion-button slot="end">
-        <ion-icon name="send" slot="start"></ion-icon>
-        Send invitations
+      <ion-icon name="send" slot="start"></ion-icon>
+      Send invitations
     </ion-button>
   </ion-toolbar>
 </ion-header>
 
 <ion-content padding>
-  ...
+
+  <ion-list lines="full">
+    <ion-title slot="start">Poll</ion-title>
+    <ion-item>
+      <ion-text slot="start">Poll ID</ion-text>
+      <ion-input placeholder="Enter the poll name" required="true" autofocus="true" id="pid"></ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-text slot="start">Poll Title</ion-text>
+      <ion-input placeholder="Enter the poll question or title" required="true" autofocus="true" id="ptitle">
+      </ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-text slot="start">Poll Description</ion-text>
+      <ion-input placeholder="Enter the description of the poll" required="true" autofocus="true" id="pdesc">
+      </ion-input>
+    </ion-item>
+    <ion-title slot="start">Options</ion-title>
+    <!-- -->
+
+
+
+    <form [formGroup]="myForm">
+      <ion-item *ngFor="let control of myForm.controls | keyvalue">
+        <ion-item [formControlName]="control.key">
+          <ion-text slot="start">Option Name</ion-text>
+          <ion-input type="text" id="{{control.key}}name" placeholder="Enter the name of the option" required>
+          </ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-text slot="start">Option Description</ion-text>
+          <ion-input type="text" id="{{control.key}}desc" placeholder="Enter the description of the option" required>
+          </ion-input>
+        </ion-item>
+        <ion-icon (click)="removeControl(control)" name="close-circle"></ion-icon>
+      </ion-item>
+
+
+
+      <!-- </ion-item>
+      <ion-item *ngFor="let control of myForm.controls | keyvalue">
+        <ion-input required type="text" [formControlName]="control.key" placeHolder="option name..."></ion-input>
+      </ion-item>  -->
+    </form>
+
+
+    <ion-button expand="full" color="light" (click)="addControl()">New Option</ion-button>
+    <ion-button expand="full" (click)="generatePoll()">Generate Poll</ion-button>
+    <!--
+        <ion-button (ionBlur)="setnewPoll()">
+        <ng-template [ngIf]="!editing">
+          <ion-button no-padding no-margin (click)="editing=true">
+            <ion-icon name="create"></ion-icon>&nbsp;edit
+          </ion-button>
+        </ng-template>
+        <ng-template [ngIf]="editing">
+          <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
+            <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+          </ion-button>
+        </ng-template>
+      </ion-button>
+    -->
+    <!--
+          <ion-item-divider color="secondary">
+            <ion-label>
+              Been invited for a poll?
+            </ion-label>
+          </ion-item-divider>
+          <ion-item>
+            <ion-grid no-padding no-margin>
+              <ion-row no-padding no-margin padding-top><ion-col no-padding no-margin>
+                <ion-button (click)="fileopen()">
+                  <ion-icon name="document" slot="start"></ion-icon>
+                    Open an invitation file
+                </ion-button>
+              </ion-col></ion-row>
+              <ion-row no-padding no-margin padding-bottom><ion-col no-padding no-margin>
+                received as a message attachment
+              </ion-col></ion-row>
+            </ion-grid>
+          </ion-item>
+          <ion-item-divider color="secondary">
+            <ion-label>
+              Want to decide something?
+            </ion-label>
+          </ion-item-divider>
+          <ion-item>
+            <ion-grid no-padding no-margin>
+              <ion-row no-padding no-margin padding-top><ion-col no-padding no-margin>
+                <ion-button routerLink="/newpoll">
+                  <ion-icon name="add-circle" slot="start"></ion-icon>
+                  New choice poll
+                </ion-button>
+              </ion-col></ion-row>
+              <ion-row no-padding no-margin padding-bottom><ion-col no-padding no-margin>
+                for picking one of a number of options
+              </ion-col></ion-row>
+            </ion-grid>
+          </ion-item>
+          <ion-item>
+            <ion-grid no-padding no-margin>
+              <ion-row no-padding no-margin padding-top><ion-col no-padding no-margin>
+                <ion-button routerLink="/newpoll">
+                  <ion-icon name="add-circle" slot="start"></ion-icon>
+                  New allocation poll
+                </ion-button>
+              </ion-col></ion-row>
+              <ion-row no-padding no-margin padding-bottom><ion-col no-padding no-margin>
+                for allocacting resources to tasks or people
+              </ion-col></ion-row>
+            </ion-grid>
+          </ion-item>
+      -->
+
+  </ion-list>
+
 </ion-content>

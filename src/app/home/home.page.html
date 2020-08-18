@@ -13,12 +13,14 @@
 <ion-content>
   <ion-list lines="full" no-padding no-margin>
     <ion-item>
-      <ion-button routerLink="/openpoll" [disabled]="g.username==''"><!--fill="clear" -->
+      <ion-button routerLink="/openpoll" [disabled]="g.username==''">
+        <!--fill="clear" -->
         <ion-icon name="git-commit" slot="start"></ion-icon>
         Last used
       </ion-button>
       &nbsp;
-      <ion-button routerLink="/mypolls" [disabled]="g.username==''"><!--fill="clear"-->
+      <ion-button routerLink="/mypolls" [disabled]="g.username==''">
+        <!--fill="clear"-->
         <ion-icon name="list" slot="start"></ion-icon>
         My polls
       </ion-button>
@@ -26,29 +28,69 @@
       <ion-button routerLink="/help" fill="clear">
         <ion-icon name="help" slot="start"></ion-icon>
         Help
-      </ion-button>  
+      </ion-button>
       &nbsp;
       <ion-button routerLink="/about" fill="clear">
         <ion-icon name="information-circle" slot="start"></ion-icon>
         About
       </ion-button>
+      <!-- Missing new poll?-->
     </ion-item>
     <ion-item>
-      <ion-text slot="start">Username:</ion-text><ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" 
-        id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
-      <ng-template [ngIf]="!editing">
-        <ion-button no-padding no-margin (click)="editing=true"><ion-icon name="create"></ion-icon>&nbsp;edit</ion-button>
+      <ion-text slot="start">Group name:</ion-text>
+      <ion-input [value]="g.groupname" placeholder="Enter the group name" required="true" autofocus="true"
+        id="groupname"></ion-input>
+      <!-- <ng-template [ngIf]="!editing">
+        <ion-button no-padding no-margin (click)="editing=true">
+          <ion-icon name="create"></ion-icon>&nbsp;edit
+        </ion-button>
       </ng-template>
       <ng-template [ngIf]="editing">
-        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')"><ion-icon name="checkmark"></ion-icon>&nbsp;OK</ion-button>
+        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+        </ion-button>
+      </ng-template> -->
+    </ion-item>
+    <ion-item>
+      <ion-text slot="start">Group Password:</ion-text>
+      <ion-input placeholder="Enter the group password" required="true" autofocus="true" id="password"></ion-input>
+      <!-- <ng-template [ngIf]="!editing">
+        <ion-button no-padding no-margin (click)="editing=true">
+          <ion-icon name="create"></ion-icon>&nbsp;edit
+        </ion-button>
+      </ng-template>
+      <ng-template [ngIf]="editing">
+        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+        </ion-button>
+      </ng-template> -->
+    </ion-item>
+    <ion-item>
+      <ion-button slot="start" (click)="checkGroup()">Log In</ion-button>
+      <ion-button (click)="formnewGroup()">New Group</ion-button>
+    </ion-item>
+    <ion-item>
+      <ion-text slot="start">Username:</ion-text>
+      <ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true"
+        id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
+      <ng-template [ngIf]="!editing">
+        <ion-button no-padding no-margin (click)="editing=true">
+          <ion-icon name="create"></ion-icon>&nbsp;edit
+        </ion-button>
+      </ng-template>
+      <ng-template [ngIf]="editing">
+        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+        </ion-button>
       </ng-template>
     </ion-item>
     <ion-item>
-      Am Ende der Woche: Bitte kurzen&nbsp; 
-      <a href="https://www.surveymonkey.de/r/M9KK8SQ">Feedbackfragebogen <ion-icon name="open" fill="clear"></ion-icon></a> 
-      &nbsp;ausfüllen – Danke! 
+      Am Ende der Woche: Bitte kurzen&nbsp;
+      <a href="https://www.surveymonkey.de/r/M9KK8SQ">Feedbackfragebogen <ion-icon name="open" fill="clear"></ion-icon>
+      </a>
+      &nbsp;ausfüllen – Danke!
     </ion-item>
-<!--
+    <!--
     <ion-item-divider color="secondary">
       <ion-label>
         Been invited for a poll?

@@ -1,40 +1,44 @@
-import { Component } from '@angular/core';
+import { Component } from "@angular/core";
 
-import { Platform } from '@ionic/angular';
-import { SplashScreen } from '@ionic-native/splash-screen/ngx';
-import { StatusBar } from '@ionic-native/status-bar/ngx';
+import { Platform } from "@ionic/angular";
+import { SplashScreen } from "@ionic-native/splash-screen/ngx";
+import { StatusBar } from "@ionic-native/status-bar/ngx";
 
 @Component({
-  selector: 'app-root',
-  templateUrl: 'app.component.html',
+  selector: "app-root",
+  templateUrl: "app.component.html",
 })
 export class AppComponent {
   public appPages = [
     {
-      title: 'Home',
-      url: '/home',
-      icon: 'home'
+      title: "Home",
+      url: "/home",
+      icon: "home",
     },
     {
-      title: 'Last poll used',
-      url: '/openpoll',
-      icon: 'git-commit' // or list-box
+      title: "Last poll used",
+      url: "/openpoll",
+      icon: "git-commit", // or list-box
     },
     {
-      title: 'My polls',
-      url: '/mypolls',
-      icon: 'list'
+      title: "My polls",
+      url: "/mypolls",
+      icon: "list",
     },
     {
-      title: 'How to use',
-      url: '/help',
-      icon: 'help'
+      title: "How to use",
+      url: "/help",
+      icon: "help",
     },
     {
-      title: 'About',
-      url: '/about',
-      icon: 'information-circle'
-    }
+      title: "New poll",
+      url: "/newpoll",
+    },
+    {
+      title: "About",
+      url: "/about",
+      icon: "information-circle",
+    },
   ];
 
   constructor(
