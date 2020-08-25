@@ -1,7 +1,19 @@
-import { Component, OnInit, NgZone } from "@angular/core";
+import { Component, OnInit, NgZone, NgModule } from "@angular/core";
 import { NavController, Events, LoadingController } from "@ionic/angular";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
+import { Option } from "../option";
+import {
+  FormGroup,
+  FormBuilder,
+  FormControl,
+  FormArray,
+  Validators,
+} from "@angular/forms";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { templateSourceUrl } from "@angular/compiler";
+import { ActivatedRoute } from "@angular/router";
+//import { routerNgProbeToken } from "@angular/router/src/router_module";
 //import {CommonModule} from "@angular/common";
 
 @Component({
@@ -11,6 +23,12 @@ import { Poll } from "../poll";
 })
 export class OpenpollPage implements OnInit {
   public Array = Array;
+  public myForm: FormGroup;
+  public Object = Object;
+  //public options: FormArray;
+
+  //private formBuilder: FormBuilder;
+  //public control: FormControl;
 
   public p: Poll;
   public opos = {};
@@ -38,29 +56,61 @@ export class OpenpollPage implements OnInit {
   public needs_refresh = false;
   private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
+  public optionCount: number = 0;
+  public addingOption: boolean = false;
+
   constructor(
     public navCtrl: NavController,
     public loadingController: LoadingController,
     public events: Events,
     private zone: NgZone,
-    public g: GlobalService
+    public g: GlobalService,
+    private formBuilder: FormBuilder, //private control: FormControl,
+    private route: ActivatedRoute
   ) {
-    this.p = this.g.openpoll;
+    // if (this.g.username == "") {
+    //   // if online:
+
+    //   // if offline:
+    //   this.g.storage.get("state").then((s) => {
+    //     GlobalService.log("getting state from storage succeeded");
+    //     this.g.openpid = s["openpid"];
+    //     this.g.username = s["username"];
+    //     this.g.pollstates = s["pollstates"];
+    //     this.g.polls[this.g.openpid].restore_state();
+    //     this.p = this.g.polls[this.g.openpid];
+    //     if (this.g.username == "") {
+    //       alert("Please enter your username first!");
+    //       this.navCtrl.navigateBack("/home");
+    //     }
+    //     //this.ngOnInit();
+    //   });
+    // }
+
+    //this.p = this.g.polls[this.g.openpid];
     this.events.subscribe("updateScreen", () => {
       this.zone.run(() => {
         console.log("force update the screen");
       });
     });
+    // this.myForm = this.formBuilder.group({
+    //   option1: ["", Validators.required],
+    // });
+    // this.myForm.disable();
   }
 
   // lifecycle events:
   ngOnInit() {
-    this.p = this.g.openpoll;
-    //this.p.tally();
-    if (!this.p) {
-      this.navCtrl.navigateRoot("/");
-      return;
-    }
+    // } else {
+    this.p = this.g.polls[this.g.openpid];
+    this.myForm = this.formBuilder.group({
+      options: this.formBuilder.array([]),
+    });
+
+    // if (!this.p) {
+    //   this.navCtrl.navigateRoot("/");
+    //   return;
+    // }
 
     //p.getPollInfo();
     this.do_updates = true;
@@ -69,19 +119,45 @@ export class OpenpollPage implements OnInit {
 
     this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
+    for (var i = 0; i < Object.keys(this.p.options).length; i++) {
+      console.log(this.p.options[this.oidsorted[i]]);
+    }
     this.expanded = null;
     this.updateOrder();
   }
+  get optionForms() {
+    return this.myForm.get("options") as FormArray;
+  }
   ionViewWillEnter() {
-    if (this.g.username == "") {
-      alert("Please enter a your username first!");
-      this.navCtrl.navigateBack("/home");
-    } else {
-      this.ngOnInit();
-    }
+    //   if (this.g.username == "") {
+    //     // if online:
+    //     // if offline:
+    //     this.g.storage.get("state").then((s) => {
+    //       GlobalService.log("getting state from storage succeeded");
+    //       this.g.openpid = s["openpid"];
+    //       this.g.username = s["username"];
+    //       this.g.pollstates = s["pollstates"];
+    //       this.g.polls[this.g.openpid].restore_state();
+    //       if (this.g.username == "") {
+    //         alert("Please enter your username first!");
+    //         this.navCtrl.navigateBack("/home");
+    //       }
+    //       this.ngOnInit();
+    //     });
+    //   } else {
+    //     this.ngOnInit();
+    //   }
+    // }
+    this.ngOnInit();
+    // if (this.g.username == "") {
+    //   alert("Please enter a your username first!");
+    //   this.navCtrl.navigateBack("/home");
+    // } else {
+
+    // }
   }
   ionViewDidEnter() {
-    this.showStats();
+    //this.showStats();
   }
   ionViewWillLeave() {
     this.do_updates = false;
@@ -269,7 +345,7 @@ export class OpenpollPage implements OnInit {
     while (this.do_updates) {
       this.p.getCompleteState();
       this.updateOrder();
-      //this.showStats();
+      this.showStats();
       await this.g.sleep(this.update_interval);
     }
   }
@@ -279,5 +355,68 @@ export class OpenpollPage implements OnInit {
       this.p.close();
       this.navCtrl.navigateForward("/closedpoll");
     }
+  }
+  newOption() {
+    if (!this.addingOption) {
+      this.addingOption = true;
+      const option = this.formBuilder.group({
+        oname: [""],
+        desc: [""],
+      });
+
+      this.optionForms.push(option);
+    }
+
+    // if (this.optionCount == 0) {
+    //   // value accessor required
+    //   this.optionCount++;
+    //   this.myForm.enable();
+    // } else {
+    //   this.optionCount++;
+    //   this.myForm.addControl(
+    //     "option" + this.optionCount,
+    //     new FormControl("", Validators.required)
+    //   );
+    // }
+  }
+  deleteOption(i: number) {
+    this.optionForms.removeAt(i);
+  }
+  addOption() {
+    this.do_updates = false;
+    let index = this.p.oids.length + 1;
+
+    this.p.optioncount = this.p.oids.length + this.optionForms.controls.length;
+
+    for (let option in this.optionForms.controls) {
+      let oid = "o" + index;
+      this.p.oids.indexOf(oid) === -1
+        ? this.p.oids.push(oid)
+        : GlobalService.log(oid + " added to p.oids");
+      index++;
+      let oname = (document.getElementById(
+        option + ".oname"
+      ) as HTMLInputElement).value;
+      let desc = (document.getElementById(option + ".desc") as HTMLInputElement)
+        .value;
+      let o = new Option(this.p.pid + "_" + oid, oid, oname, desc, "");
+
+      let sorted = this.p.registerOption(o, "addOption");
+      if (this.p.optioncount == Object.keys(this.p.options).length) {
+        this.g.save_state().then((s) => {
+          this.p.setnewPoll();
+          this.p.tally();
+          this.oidsorted = this.p.oidsorted;
+          this.do_updates = true;
+          this.loopUpdate();
+          this.optionForms.removeAt(0);
+          this.addingOption = false;
+        });
+
+        //this.g.getPolls();
+      }
+    }
+    //await this.g.sleep(10000);
+    //this.do_updates = true;
   }
 }

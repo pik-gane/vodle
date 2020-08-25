@@ -172,9 +172,9 @@ export class Poll {
     this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
     this.mygid = this.g.groupname;
     this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
-    for (let i = 1; i < d.length; i++) {
-      let o = new Option("o" + i, "", d[i][0], d[i][1], d[i][2]);
-    }
+    // for (let i = 1; i < d.length; i++) {
+    //   let o = new Option("o" + i, "", d[i][0], d[i][1], d[i][2]);
+    // }
     // }
 
     for (let oid of this.oids) {
@@ -184,37 +184,38 @@ export class Poll {
     GlobalService.log("...done");
     return this;
   }
-  setnewPoll(rawpoll: string[][]) {
+  setnewPoll(rawpoll?: string[][]) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
     //      ["", "", ""],
     GlobalService.log("making new poll...");
     //this.pid = demo;
-    var oids;
-
-    this.pid = rawpoll[0][0];
-    this.title = rawpoll[0][1];
-    this.desc = rawpoll[0][2];
-    //this.uri = rawpoll[0][3];
-    this.type = "winner";
-    // Why here? \\
-    this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
-    this.mygid = this.g.groupname;
-    this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
-    for (let i = 1; i < rawpoll.length; i++) {
-      let o = new Option(
-        "o" + i,
-        "",
-        rawpoll[i][0],
-        rawpoll[i][1],
-        rawpoll[i][2] // URI ja oder nein?
-      );
-      this.couchdb_optiondocs[o.oid] = o;
-      this.registerOption(o);
+    if (rawpoll) {
+      this.pid = rawpoll[0][0];
+      this.title = rawpoll[0][1];
+      this.desc = rawpoll[0][2];
+      //this.uri = rawpoll[0][3];
+      this.type = "winner";
+      // Why here? \\
+      this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
+      this.mygid = this.g.groupname;
+      this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
+      for (let i = 1; i < rawpoll.length; i++) {
+        let o = new Option(
+          this.pid + "_o" + i,
+          "o" + i,
+          rawpoll[i][0],
+          rawpoll[i][1],
+          "" // URI ja oder nein?
+        );
+        //this.couchdb_optiondocs[o.oid] = o;
+        this.registerOption(o, "newOption");
+      }
     }
+
     this.couchdb_pollurl = this.g.couchdburl + "/" + this.pid;
     this.prepareCouchdbPolldoc();
     if (!this.couchdb_polldoc["_rev"]) {
-      this.fetchRev(this.couchdb_pollurl, this.couchdb_polldoc)
+      this.fetchRev(this.couchdb_pollurl)
         .pipe(
           finalize(
             // after get has finished:
@@ -228,6 +229,7 @@ export class Poll {
                   "  putting cloudant doc succeeded, new rev is " + value["rev"]
                 );
                 this.couchdb_polldoc["_rev"] = this.rev = value["rev"]; // ! value's key is "rev" not "_rev" here
+                this.g.save_state();
               });
             }
           )
@@ -251,9 +253,9 @@ export class Poll {
     }
 
     //new Simulation(this);
-    for (let oid of this.oids) {
-      this.setRating(oid, this.myvid, 0);
-    }
+    // for (let oid of this.oids) {
+    //   this.setRating(oid, this.myvid, 0);
+    // }
     this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
     GlobalService.log("...done");
     return this;
@@ -267,10 +269,11 @@ export class Poll {
         type: this.type,
         gid: this.mygid,
         oids: this.oids,
+        uri: "",
       };
     }
   }
-  fetchRev(url: string, doc: {}) {
+  fetchRev(url: string) {
     return this.g.http.get(url, { headers: this.g.dbheaders });
   }
   putDoctoCouchdb(url: string, doc: {}) {
@@ -361,7 +364,11 @@ export class Poll {
     );
   }
   getRating(oid: string, vid: string) {
-    return this.ratings[oid][vid];
+    try {
+      return this.ratings[oid][vid];
+    } catch {
+      return 0;
+    }
   }
 
   log(msg: string) {
@@ -421,7 +428,7 @@ export class Poll {
 
     // sort options by (appr, rsum, stamp)
     GlobalService.log("  sorting options...");
-    if (this.oidsorted == null) {
+    if (this.oidsorted == null || this.oidsorted.length != oids.length) {
       GlobalService.log("    for the first time...");
       this.oidsorted = [...oids];
     }
@@ -575,8 +582,8 @@ export class Poll {
         //this.options[o.oid] = o;
         if (
           !(this.options[o.oid] == undefined) &&
-          this.options[o.oid].rev == o.rev &&
-          o.rev != undefined
+          this.options[o.oid].rev == o._rev &&
+          o._rev != undefined
         ) {
           return;
         }
@@ -586,8 +593,8 @@ export class Poll {
         this.registerVoter(this.g.username); // wenn schon mal abgestimmt, wie geht es dann weiter?
         if (this.optioncount == this.oids.length) {
           this.tally();
+          this.g.save_state();
         }
-        this.g.save_state();
       });
   }
 
@@ -873,67 +880,130 @@ export class Poll {
       }
     }
   }
-  registerOption(o: Option) {
+  registerOption(o: Option, reason?: string) {
     //let oid = o["oid"];
     if (o.name == null) {
       o.name = o.oid;
     }
 
-    if (this.couchdb_optiondocs[o.oid]) {
+    if (reason == "newOption" || reason == "addOption") {
       // to do: schöner
+      this.oids.indexOf(o.oid) === -1
+        ? this.oids.push(o.oid)
+        : GlobalService.log(o.oid + " added to p.oids");
+      this.opos[o.oid] = this.oids.length;
+      let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri);
 
-      let url = this.g.couchdburl + "/" + this.pid + "_" + o.oid;
-      this.fetchRev(url, this.couchdb_optiondocs[o.oid])
-        .pipe(
-          finalize(
-            // after get has finished:
-            () => {
-              this.putDoctoCouchdb(
-                url,
-                this.couchdb_optiondocs[o.oid]
-              ).subscribe((value: {}) => {
-                // at put success:
-                GlobalService.log(
-                  "  putting cloudant doc succeeded, new rev is " + value["rev"]
-                );
-                this.couchdb_optiondocs[o.oid]["_rev"] = o.rev = value["rev"]; // ! value's key is "rev" not "_rev" here
-              });
-            }
-          )
-        )
-        .subscribe(
-          (value: {}) => {
-            // after get success
-            GlobalService.log(
-              "  getting cloudant doc returned _rev=" + value["_rev"]
-            );
-            this.couchdb_optiondocs[o.oid]["_rev"] = o.rev = value["_rev"];
-            this.oids.push(o.oid);
-          },
-          (error: {}) => {
-            GlobalService.log(
-              "  getting cloudant doc returned error " + JSON.stringify(error)
-            );
-          }
-        );
+      this.options[o.oid] = oObject;
+      // initial ratings are all zero:
+      this.ratings[o.oid] = {};
+      for (let vid of this.vids) {
+        this.ratings[o.oid][vid] = 0;
+      }
+      this.rfreqs[o.oid] = Array(101).fill(0);
+      this.rfreqs[o.oid][0] = this.vids.length;
+      this.rsums[o.oid] = 0;
+      //this.stamps[o.oid] = o["created"];
+      this.apprs[o.oid] = -1;
+      this.setRating(o.oid, this.g.username, 0);
+      //console.log(Object.keys(this.ratings).length);
+
+      GlobalService.log("  registered option " + o.name);
+
+      let cloudurl = this.g.couchdburl + "/" + this.pid + "_" + o.oid;
+      this.putDoctoCouchdb(cloudurl, o).subscribe(
+        (value: {}) => {
+          GlobalService.log(
+            "  putting cloudant doc succeeded, new rev is " + value["rev"]
+          );
+          o._rev = value["rev"]; // ! value's key is "rev" not "_rev" here
+          let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
+
+          this.options[o.oid] = oObject;
+        },
+        // this.fetchRev(cloudurl)
+        //   .pipe(
+        //     finalize(
+        //       // after get has finished:
+        //       () => {
+        //         this.putDoctoCouchdb(cloudurl, o).subscribe((value: {}) => {
+        //           // at put success:
+        //           GlobalService.log(
+        //             "  putting cloudant doc succeeded, new rev is " + value["rev"]
+        //           );
+        //           o._rev = value["rev"]; // ! value's key is "rev" not "_rev" here
+        //         });
+        //       }
+        //     )
+        //   )
+        //   .subscribe(
+        //     (value: {}) => {
+        //       // after get success
+        //       GlobalService.log(
+        //         "  getting cloudant doc returned _rev=" + value["_rev"]
+        //       );
+        //       o._rev = value["_rev"];
+        //       this.oids.indexOf(o.oid) === -1
+        //         ? this.oids.push(o.oid)
+        //         : GlobalService.log(o.oid + " added to p.oids");
+        //       this.opos[o.oid] = this.oids.length;
+        //       let oObject = new Option(
+        //         o._id,
+        //         o._rev,
+        //         o.oid,
+        //         o.name,
+        //         o.desc,
+        //         o.uri
+        //       );
+
+        //       this.options[o.oid] = oObject;
+        //       // initial ratings are all zero:
+        //       this.ratings[o.oid] = {};
+        //       for (let vid of this.vids) {
+        //         this.ratings[o.oid][vid] = 0;
+        //       }
+        //       this.rfreqs[o.oid] = Array(101).fill(0);
+        //       this.rfreqs[o.oid][0] = this.vids.length;
+        //       this.rsums[o.oid] = 0;
+        //       //this.stamps[o.oid] = o["created"];
+        //       this.apprs[o.oid] = -1;
+        //       console.log(Object.keys(this.ratings).length);
+        //       if (
+        //         reason == "addOption" &&
+        //         this.optioncount == Object.keys(this.ratings).length
+        //       ) {
+        //         //this.g.save_state();
+        //         this.setnewPoll();
+
+        //         //this.g.getPolls();
+        //       }
+
+        //       GlobalService.log("  registered option " + o.name);
+
+        (error: {}) => {
+          GlobalService.log(
+            "  getting cloudant doc returned error " + JSON.stringify(error)
+          );
+        }
+      );
     } else {
-      // TO DO: Was passiert wenn es schon gibt?
-    }
-    this.opos[o.oid] = this.oids.length;
+      this.optioncount++;
+      this.opos[o.oid] = this.oids.length;
+      let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
 
-    this.options[o.oid] = o;
-    // initial ratings are all zero:
-    this.ratings[o.oid] = {};
-    for (let vid of this.vids) {
-      this.ratings[o.oid][vid] = 0;
-    }
-    this.rfreqs[o.oid] = Array(101).fill(0);
-    this.rfreqs[o.oid][0] = this.vids.length;
-    this.rsums[o.oid] = 0;
-    //this.stamps[o.oid] = o["created"];
-    this.apprs[o.oid] = -1;
-    this.optioncount = this.optioncount + 1;
+      this.options[o.oid] = oObject;
+      // initial ratings are all zero:
+      this.ratings[o.oid] = {};
+      for (let vid of this.vids) {
+        this.ratings[o.oid][vid] = 0;
+      }
+      this.rfreqs[o.oid] = Array(101).fill(0);
+      this.rfreqs[o.oid][0] = this.vids.length;
+      this.rsums[o.oid] = 0;
+      //this.stamps[o.oid] = o["created"];
+      this.apprs[o.oid] = -1;
 
-    GlobalService.log("  registered option " + o.name);
+      GlobalService.log("  registered option " + o.name);
+    }
   }
 }

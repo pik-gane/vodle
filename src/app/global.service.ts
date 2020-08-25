@@ -35,7 +35,7 @@ export class GlobalService {
   public dbheaders: HttpHeaders = null;
 
   public polls: {} = {}; // dict of Polls by pid
-  public openpoll: Poll = null; // currently open poll
+  //public openpoll: Poll = null; // currently open poll
 
   // data to be persisted in storage:
   public state_attributes = [
@@ -63,31 +63,30 @@ export class GlobalService {
 
     // restore state from storage:
 
-    // this.storage.get("state").then((s) => {
-    //   GlobalService.log("getting state from storage succeeded");
-    //   for (let a of this.state_attributes) {
-    //     if (s != null && a in s) {
-    //       this[a] = s[a];
-    //       GlobalService.log("  " + a);
-    //       if (a == "pollstates") {
-    //         for (let pid in this.pollstates) {
-    //           if (!(pid in this.polls)) {
-    //             this.polls[pid] = new Poll(this, { pid: pid });
-    //           }
-    //           this.polls[pid].restore_state();
-    //         }
-    //       }
-    //     }
-    //   }
-    //   this.init();
-    //   // },
-    //   // (error) => {
-    //   //   GlobalService.log(
-    //   //     "getting state from storage failed with error " + error
-    //   //   );
-    //   //   this.init();
-    //});
-    this.init();
+    this.storage.get("state").then((s) => {
+      GlobalService.log("getting state from storage succeeded");
+      for (let a of this.state_attributes) {
+        if (s != null && a in s) {
+          this[a] = s[a];
+          GlobalService.log("  " + a);
+          if (a == "pollstates") {
+            for (let pid in this.pollstates) {
+              if (!(pid in this.polls)) {
+                this.polls[pid] = new Poll(this, { pid: pid });
+              }
+              this.polls[pid].restore_state();
+            }
+          }
+        }
+      }
+      //this.init();
+      // },
+      // (error) => {
+      //   GlobalService.log(
+      //     "getting state from storage failed with error " + error
+      //   );
+      //   this.init();
+    });
   }
   init() {
     // called after state restoration finished
@@ -111,9 +110,7 @@ export class GlobalService {
     // }
     // this.openpoll = this.polls[this.openpid];
   }
-  restore_data() {
-    this.getPolls();
-  }
+
   save_state() {
     let s = {};
     for (let a of this.state_attributes) {
@@ -122,7 +119,7 @@ export class GlobalService {
     for (let pid in this.polls) {
       this.polls[pid].save_state();
     }
-    this.storage.set("state", s).then(
+    return this.storage.set("state", s).then(
       (s) => {
         GlobalService.log("storing state succeeded");
       },
@@ -199,31 +196,32 @@ export class GlobalService {
 
     let db_url = this.couchdburl + "/" + this.couchdb_groupdoc["_id"];
     GlobalService.log(db_url);
-    this.http
-      .get(db_url, { headers: this.dbheaders })
-      .pipe(
-        finalize(
-          // after get has finished:
-          () => {
-            this.putGroup(db_url);
-          }
-        )
-      )
-      .subscribe(
-        (value: {}) => {
-          // after get success
-          GlobalService.log(
-            "  getting cloudant doc returned _rev=" + value["_rev"]
-          );
-          this.couchdb_groupdoc["_rev"] = value["_rev"];
-        },
-        (error: {}) => {
-          GlobalService.log(
-            "  getting cloudant doc returned error " + JSON.stringify(error)
-          );
-          delete this.couchdb_groupdoc["_rev"];
-        }
-      );
+    this.putGroup(db_url);
+    // this.http
+    //   .get(db_url, { headers: this.dbheaders })
+    //   .pipe(
+    //     finalize(
+    //       // after get has finished:
+    //       () => {
+    //         this.putGroup(db_url);
+    //       }
+    //     )
+    //   )
+    //   .subscribe(
+    //     (value: {}) => {
+    //       // after get success
+    //       GlobalService.log(
+    //         "  getting cloudant doc returned _rev=" + value["_rev"]
+    //       );
+    //       this.couchdb_groupdoc["_rev"] = value["_rev"];
+    //     },
+    //     (error: {}) => {
+    //       GlobalService.log(
+    //         "  getting cloudant doc returned error " + JSON.stringify(error)
+    //       );
+    //       delete this.couchdb_groupdoc["_rev"];
+    //     }
+    //   );
   }
   getGroup(inputgname: string): Observable<IGroup[]> {
     let groupurl = this.couchdburl + "/" + inputgname;

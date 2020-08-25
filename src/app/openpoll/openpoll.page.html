@@ -91,7 +91,7 @@
         </ion-grid>
       </ion-item>
 
-      <ion-item *ngFor="let item of [].constructor(p.oids.length) ; index as i">
+      <ion-item *ngFor="let item of [].constructor(oidsorted.length); index as i">
 
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
@@ -167,7 +167,41 @@
           </app-expandable>
         </ion-grid>
       </ion-item>
+
       <!-- Array(p.oids.length).fill(0).map(i => i) | sortoptions: {opos: opos}-->
+
+      <form [formGroup]="myForm">
+        <ion-grid *ngIf="this.addingOption" [formArrayName]="optionForms">
+          <ion-item *ngFor="let option of optionForms.controls; let i=index" formGroupName="i">
+            <ion-item>
+              <ion-text slot="start">Option Name</ion-text>
+              <ion-input type="text" id="{{i}}.oname" formControlName="oname" placeholder="Enter the name of the option"
+                required>
+              </ion-input>
+            </ion-item>
+            <ion-item>
+              <ion-text slot="start">Option Description</ion-text>
+              <ion-input type="text" id="{{i}}.desc" formControlName="desc"
+                placeholder="Enter the description of the option" required>
+              </ion-input>
+            </ion-item>
+            <ion-icon (click)="deleteOption(i)" name="close-circle"></ion-icon>
+
+
+          </ion-item>
+        </ion-grid>
+      </form>
+
+
+      <ion-button *ngIf="!this.addingOption" expand="full" color="light" (click)="newOption()">New Option</ion-button>
+      <ion-button *ngIf="this.addingOption" expand="full" color="light" (click)="addOption()">Add Option</ion-button>
+
+      <!--ion-item *ngFor="let control of myForm.controls | keyvalue"-->
+
+
+
+
+
 
       <!--/ng-template-->
 

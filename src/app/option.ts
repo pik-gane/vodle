@@ -13,11 +13,12 @@ import { THIS_EXPR } from "@angular/compiler/src/output/output_ast";
 
 export class Option {
   constructor(
+    public _id: string,
     public oid: string,
-    public rev: string,
     public name: string,
     public desc: string,
-    public uri: string
+    public uri: string,
+    public _rev?: string
   ) {
     // this.p = p;
     // if (data) {

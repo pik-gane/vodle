@@ -25,7 +25,7 @@ export class ExplainsupportPage implements OnInit {
   constructor(private route: ActivatedRoute, public g: GlobalService) {}
 
   ngOnInit() {
-    let p = (this.p = this.g.openpoll),
+    let p = (this.p = this.g.polls[this.g.openpid]),
       oid = (this.oid = this.route.snapshot.paramMap.get("oid")),
       o = (this.o = this.p.options[this.oid]),
       rs = (this.rs = []),

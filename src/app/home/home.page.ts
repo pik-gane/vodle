@@ -45,7 +45,7 @@ export class HomePage implements OnInit {
             "Success",
             "Group is existing and you are free to proceed"
           );
-          this.g.restore_data();
+          this.g.getPolls();
           // for (let pid of Object.keys(this.g.polls)) {
           //let p = this.g.polls[pid];
           // if (u != p.myvid) {

@@ -54,7 +54,5 @@ export class NewpollPage implements OnInit {
     let p = new Poll(this.g).setnewPoll(rawpoll);
     this.g.openpid = p.pid;
     this.g.polls[p.pid] = p;
-
-    this.g.openpoll = this.g.polls[this.g.openpid];
   }
 }
