@@ -90,7 +90,7 @@ I did the following to get the unsigned android debug build going:
 
 On the test web server:
 
-* sudo /usr/local/bin/ionic serve --ssl --prod --address sandstorm.pik-potsdam.de --port 443  
+* sudo nohup /usr/local/bin/ionic serve --ssl --prod --address sandstorm.pik-potsdam.de --port 443 --no-open -- --ssl-cert ... --ssl-key ... &
 
 ### Useful commands
 
