@@ -235,7 +235,16 @@ export class GlobalService {
         this.couchdburl + "/_find",
         JSON.stringify({
           selector: { gid: this.groupname },
-          fields: ["_id", "_rev", "title", "type", "oids", "desc", "uri"],
+          fields: [
+            "_id",
+            "_rev",
+            "title",
+            "type",
+            "oids",
+            "desc",
+            "due",
+            "uri",
+          ],
           limit: 200,
         }),
         { headers: this.dbheaders }
@@ -262,6 +271,7 @@ export class GlobalService {
             rev = doc["_rev"],
             oids = doc["oids"],
             desc = doc["desc"],
+            due = doc["doc"],
             uri = doc["uri"];
 
           if (this.polls[pid] == undefined || rev != this.polls[pid].rev) {
@@ -275,6 +285,7 @@ export class GlobalService {
               mygid: this.groupname,
               oids: oids,
               desc: desc,
+              due: due,
               uri: uri,
             });
           }

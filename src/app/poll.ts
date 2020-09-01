@@ -7,8 +7,7 @@ import { finalize, map } from "rxjs/operators";
 //import { Storage } from "@ionic/storage";
 //import { IGroup } from "./igroup";
 import { Observable } from "rxjs";
-import { IPoll } from "./ipoll";
-import { IOption } from "./ioption";
+
 import { Option } from "./option";
 import { resolve } from "dns";
 
@@ -193,6 +192,7 @@ export class Poll {
       this.pid = rawpoll[0][0];
       this.title = rawpoll[0][1];
       this.desc = rawpoll[0][2];
+      this.due = new Date(rawpoll[0][3]);
       //this.uri = rawpoll[0][3];
       this.type = "winner";
       // Why here? \\
@@ -214,49 +214,48 @@ export class Poll {
 
     this.couchdb_pollurl = this.g.couchdburl + "/" + this.pid;
     this.prepareCouchdbPolldoc();
-    if (!this.couchdb_polldoc["_rev"]) {
-      this.fetchRev(this.couchdb_pollurl)
-        .pipe(
-          finalize(
-            // after get has finished:
-            () => {
-              this.putDoctoCouchdb(
-                this.couchdb_pollurl,
-                this.couchdb_polldoc
-              ).subscribe((value: {}) => {
-                // at put success:
-                GlobalService.log(
-                  "  putting cloudant doc succeeded, new rev is " + value["rev"]
-                );
-                this.couchdb_polldoc["_rev"] = this.rev = value["rev"]; // ! value's key is "rev" not "_rev" here
-                this.g.save_state();
-              });
-            }
-          )
-        )
-        .subscribe(
-          (value: {}) => {
-            // after get success
-            GlobalService.log(
-              "  getting cloudant doc returned _rev=" + value["_rev"]
-            );
-            this.couchdb_polldoc["_rev"] = this.rev = value["_rev"];
-          },
-          (error: {}) => {
-            GlobalService.log(
-              "  getting cloudant doc returned error " + JSON.stringify(error)
-            );
+
+    this.fetchRev(this.couchdb_pollurl)
+      .pipe(
+        finalize(
+          // after get has finished:
+          () => {
+            this.putDoctoCouchdb(
+              this.couchdb_pollurl,
+              this.couchdb_polldoc
+            ).subscribe((value: {}) => {
+              // at put success:
+              GlobalService.log(
+                "  putting cloudant doc succeeded, new rev is " + value["rev"]
+              );
+              this.couchdb_polldoc["_rev"] = this.rev = value["rev"]; // ! value's key is "rev" not "_rev" here
+              this.g.save_state();
+            });
           }
-        );
-    } else {
-      // TO DO: Was passiert wenn es schon gibt?
-    }
+        )
+      )
+      .subscribe(
+        (value: {}) => {
+          // after get success
+          GlobalService.log(
+            "  getting cloudant doc returned _rev=" + value["_rev"]
+          );
+          this.couchdb_polldoc["_rev"] = this.rev = value["_rev"];
+        },
+        (error: {}) => {
+          GlobalService.log(
+            "  getting cloudant doc returned error " + JSON.stringify(error)
+          );
+        }
+      );
+
+    // TO DO: Was passiert wenn es schon gibt?
 
     //new Simulation(this);
     // for (let oid of this.oids) {
     //   this.setRating(oid, this.myvid, 0);
     // }
-    this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
+    //this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
     GlobalService.log("...done");
     return this;
   }
@@ -266,6 +265,7 @@ export class Poll {
         _id: this.pid,
         title: this.title,
         desc: this.desc,
+        due: this.due,
         type: this.type,
         gid: this.mygid,
         oids: this.oids,
@@ -589,7 +589,7 @@ export class Poll {
         }
         this.registerOption(o); // hier war ich
         console.log(this.options);
-        this.setRating(o.oid, this.g.username, 0);
+
         this.registerVoter(this.g.username); // wenn schon mal abgestimmt, wie geht es dann weiter?
         if (this.optioncount == this.oids.length) {
           this.tally();
@@ -704,10 +704,12 @@ export class Poll {
                 this.registerVoter(vid);
               }
             }
-            if (vid != this.myvid || t > this.lastrated) {
+            if ((vid != this.myvid || t > this.lastrated) && this.due >= t) {
               for (let oid in rs) {
                 if (this.oids.includes(oid)) {
                   this.setRating(oid, vid, rs[oid]);
+                } else {
+                  this.getOption(this.pid + "_" + oid);
                 }
               }
             }
@@ -860,6 +862,7 @@ export class Poll {
   }
 
   close() {
+    this.getCompleteState();
     this.tally();
     this.open = false;
     if (this.type == "winner") {
@@ -870,6 +873,9 @@ export class Poll {
           s += this.getRating(oid, vid);
         }
       }
+      var seedrandom = require("seedrandom");
+      var rng = seedrandom(s);
+      this.ran = rng();
       this.ran = (s % 100) / 100; // TODO: use much better random number generator
       for (let oid of this.oidsorted) {
         cum += this.probs[oid];
@@ -987,6 +993,9 @@ export class Poll {
         }
       );
     } else {
+      this.oids.indexOf(o.oid) === -1
+        ? this.oids.push(o.oid)
+        : GlobalService.log(o.oid + " added to p.oids");
       this.optioncount++;
       this.opos[o.oid] = this.oids.length;
       let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
@@ -1002,7 +1011,19 @@ export class Poll {
       this.rsums[o.oid] = 0;
       //this.stamps[o.oid] = o["created"];
       this.apprs[o.oid] = -1;
-
+      for (let vid of this.vids) {
+        // if (vid == this.myvid) {
+        //   if (this.g.polls[this.pid].myratings[o.oid] != null) {
+        //     this.setRating(
+        //       o.oid,
+        //       this.g.username,
+        //       this.g.polls[this.pid].myratings[o.oid]
+        //     );
+        //   }
+        // } else {
+        // }
+        this.ratings[o.oid][vid] = 0;
+      }
       GlobalService.log("  registered option " + o.name);
     }
   }

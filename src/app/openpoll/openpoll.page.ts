@@ -103,6 +103,11 @@ export class OpenpollPage implements OnInit {
   ngOnInit() {
     // } else {
     this.p = this.g.polls[this.g.openpid];
+    if (this.p.due <= new Date()) {
+      this.p.close();
+      this.navCtrl.navigateForward("/closedpoll");
+      return;
+    }
     this.myForm = this.formBuilder.group({
       options: this.formBuilder.array([]),
     });
@@ -215,8 +220,9 @@ export class OpenpollPage implements OnInit {
   }
   async updateOrder(force = false) {
     let changed = false;
-    for (let i in this.oidsorted) {
-      if (this.oidsorted[i] != this.p.oidsorted[i]) {
+    let posnewlyoidsorted = this.g.polls[this.p.pid].oidsorted;
+    for (let i in posnewlyoidsorted) {
+      if (this.oidsorted[i] != posnewlyoidsorted[i]) {
         changed = true;
         break;
       }
@@ -235,9 +241,11 @@ export class OpenpollPage implements OnInit {
         spinner: "crescent",
         duration: 1000,
       });
+      this.p = this.g.polls[this.p.pid];
+      this.oidsorted = posnewlyoidsorted;
       await loadingElement.present();
       await loadingElement.onDidDismiss();
-      this.oidsorted = [...this.p.oidsorted];
+      //this.oidsorted = [...this.p.oidsorted];
       this.sortingcounter++;
       this.needs_refresh = false;
     }
