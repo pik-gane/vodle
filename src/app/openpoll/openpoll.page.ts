@@ -103,7 +103,7 @@ export class OpenpollPage implements OnInit {
   ngOnInit() {
     // } else {
     this.p = this.g.polls[this.g.openpid];
-    if (this.p.due <= new Date()) {
+    if (this.p.due <= new Date().getTime()) {
       this.p.close();
       this.navCtrl.navigateForward("/closedpoll");
       return;
@@ -111,7 +111,7 @@ export class OpenpollPage implements OnInit {
     this.myForm = this.formBuilder.group({
       options: this.formBuilder.array([]),
     });
-
+    this.p.getCompleteState();
     // if (!this.p) {
     //   this.navCtrl.navigateRoot("/");
     //   return;
@@ -169,6 +169,7 @@ export class OpenpollPage implements OnInit {
     if (this.submit_triggered) {
       this.doSubmit();
     }
+    this.g.polls[this.p.pid] = this.p;
   }
 
   showStats() {

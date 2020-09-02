@@ -4,27 +4,19 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>
-      {{g.openpoll.title}}
+      {{p.title}}
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content no-padding no-margin>
+<ion-content class="ion-no-padding ion-no-margin">
   <svg xmlns="http://www.w3.org/2000/svg" width="80%" height="80%" viewBox="0 0 500 500">
     <g transform="translate(250 250)">
-      <circle cx="0" cy="0" r="200" fill="#bce4e5" stroke="none"/>
+      <circle cx="0" cy="0" r="200" fill="#bce4e5" stroke="none" />
       <g id="c" font-family="Quicksand Medium" font-size="12px">
-        <animateTransform
-          attributeName="transform"
-          type="rotate"
-          from="0 0 0"
-          [attr.to]="'-'+(360*(3+g.openpoll.ran))+' 0 0'"
-          fill="freeze"
-          [attr.dur]="(g.openpoll.type=='winner')?'5s':'0s'"
-          calcMode="spline"
-          keyTimes="0;1"
-          keySplines="0 0.25 0.5 1"
-          />
+        <animateTransform attributeName="transform" type="rotate" from="0 0 0" [attr.to]="'-'+(360*(3+p.ran))+' 0 0'"
+          fill="freeze" [attr.dur]="(p.type=='winner')?'5s':'0s'" calcMode="spline" keyTimes="0;1"
+          keySplines="0 0.25 0.5 1" />
         <g *ngFor="let pi of pieces">
           <g [attr.transform]="'rotate('+pi['angle']+' 0 0)'">
             <path [attr.d]="pi['d']" fill="#9abcbd" [attr.fill-opacity]="pi['alpha']" />
@@ -33,38 +25,40 @@
         </g>
       </g>
     </g>
-    <ng-template [ngIf]="g.openpoll.type=='winner'">
-      <path d="M 245,0 l 0,90 l 5,10 l 5,-10 l 0,-90 Z" fill="#000000" stroke="none"/>
+    <ng-template [ngIf]="p.type=='winner'">
+      <path d="M 245,0 l 0,90 l 5,10 l 5,-10 l 0,-90 Z" fill="#000000" stroke="none" />
     </ng-template>
   </svg>
-<!--[attr.transform]="'rotate(0 0 '+pi['rotate']+')'" -->
+  <!--[attr.transform]="'rotate(0 0 '+pi['rotate']+')'" -->
   <ng-template [ngIf]="showwinner">
-    <ion-list no-padding no-margin lines="none">
+    <ion-list class="ion-no-padding ion-no-margin" lines="none">
       <ion-item>
         <ion-grid no-padding no-margin>
           <ion-row no-padding padding-top no-margin>
             <ion-col no-padding no-margin>
-              <b>{{g.openpoll.winner.name}}</b>
+              <b>{{p.winner.name}}</b>
             </ion-col>
           </ion-row>
-            <ion-row no-padding padding-bottom no-margin>
-              <ion-col no-padding no-margin>
-                <b><span style="color:#9abcbd">
-                  <small>supported&nbsp;by&nbsp;</small>{{Math.round(g.openpoll.apprs[g.openpoll.winner.oid]*1000)/10}}%</span>
-                  <span style="color:#62a73b" [style.display]="approved[g.openpoll.winner.oid]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
-                </b>
-                <span [style.display]="g.openpoll.winner.desc!=null?'inline':'none'">
-                  <br/>{{g.openpoll.winner.desc}}
-                </span>
-                <ng-template [ngIf]="g.openpoll.winner.uri!=null">
-                  <ion-button (click)="g.showinbrowser(g.openpoll.winner.uri)" fill="clear" float-right no-padding padding-left no-margin>
-                    <ion-icon name="open" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ng-template>
-              </ion-col>
-            </ion-row>
+          <ion-row no-padding padding-bottom no-margin>
+            <ion-col no-padding no-margin>
+              <b><span style="color:#9abcbd">
+                  <small>supported&nbsp;by&nbsp;</small>{{Math.round(p.apprs[p.winner.oid]*1000)/10}}%</span>
+                <span style="color:#62a73b"
+                  [style.display]="approved[p.winner.oid]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
+              </b>
+              <span [style.display]="p.winner.desc!=null?'inline':'none'">
+                <br />{{p.winner.desc}}
+              </span>
+              <ng-template [ngIf]="p.winner.uri!=null">
+                <ion-button (click)="g.showinbrowser(p.winner.uri)" fill="clear" float-right no-padding padding-left
+                  no-margin>
+                  <ion-icon name="open" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ng-template>
+            </ion-col>
+          </ion-row>
         </ion-grid>
-      </ion-item>  
+      </ion-item>
     </ion-list>
   </ng-template>
 </ion-content>

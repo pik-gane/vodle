@@ -21,7 +21,7 @@ export class Poll {
   public title: string;
   public desc: string = null;
   public uri: string = null; // weblink
-  public due: Date; // closing time
+  public due: number; // closing time
   public myvid: string = "";
   public mygid: string = "";
 
@@ -179,7 +179,7 @@ export class Poll {
     for (let oid of this.oids) {
       this.setRating(oid, this.myvid, 0);
     }
-    this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
+    //this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
     GlobalService.log("...done");
     return this;
   }
@@ -192,7 +192,7 @@ export class Poll {
       this.pid = rawpoll[0][0];
       this.title = rawpoll[0][1];
       this.desc = rawpoll[0][2];
-      this.due = new Date(rawpoll[0][3]);
+      this.due = new Date(rawpoll[0][3]).getTime();
       //this.uri = rawpoll[0][3];
       this.type = "winner";
       // Why here? \\
@@ -580,13 +580,13 @@ export class Poll {
       )
       .subscribe((o) => {
         //this.options[o.oid] = o;
-        if (
-          !(this.options[o.oid] == undefined) &&
-          this.options[o.oid].rev == o._rev &&
-          o._rev != undefined
-        ) {
-          return;
-        }
+        // if (
+        //   !(this.options[o.oid] == undefined) &&
+        //   this.options[o.oid].rev == o._rev &&
+        //   o._rev != undefined
+        // ) {
+        //   return;
+        // }
         this.registerOption(o); // hier war ich
         console.log(this.options);
 
@@ -704,7 +704,9 @@ export class Poll {
                 this.registerVoter(vid);
               }
             }
-            if ((vid != this.myvid || t > this.lastrated) && this.due >= t) {
+            let limit = this.due;
+            if (this.due > t && t > this.lastrated) {
+              //||vid != this.myvid  ) ) {
               for (let oid in rs) {
                 if (this.oids.includes(oid)) {
                   this.setRating(oid, vid, rs[oid]);
@@ -767,18 +769,21 @@ export class Poll {
   }
 
   submitRatings(submit_ratings) {
-    // now no changes have happened within the last submit_interval,
-    // so we can actually do the submission
-    for (let oid in submit_ratings) {
-      GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
-    }
-    this.tally();
-    this.prepareCloudantDoc();
-    if ("_rev" in this.couchdb_doc) {
-      // first try to put updated doc with known _rev (should normally succeed):
-      this.putCloudantStoredRev(1);
-    } else {
-      this.putCloudantFetchedRev();
+    let now = new Date().getTime();
+    if (this.due >= now) {
+      // now no changes have happened within the last submit_interval,
+      // so we can actually do the submission
+      for (let oid in submit_ratings) {
+        GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
+      }
+      this.tally();
+      this.prepareCloudantDoc();
+      if ("_rev" in this.couchdb_doc) {
+        // first try to put updated doc with known _rev (should normally succeed):
+        this.putCloudantStoredRev(1);
+      } else {
+        this.putCloudantFetchedRev();
+      }
     }
   }
   putCloudantStoredRev(trial: number) {
@@ -1011,6 +1016,7 @@ export class Poll {
       this.rsums[o.oid] = 0;
       //this.stamps[o.oid] = o["created"];
       this.apprs[o.oid] = -1;
+      this.setRating(o.oid, this.g.username, 0);
       for (let vid of this.vids) {
         // if (vid == this.myvid) {
         //   if (this.g.polls[this.pid].myratings[o.oid] != null) {

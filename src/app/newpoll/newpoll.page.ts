@@ -5,6 +5,7 @@ import {
   FormControl,
   Validators,
 } from "@angular/forms";
+import { NavController } from "@ionic/angular";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
 
@@ -18,7 +19,11 @@ export class NewpollPage implements OnInit {
 
   public optionCount: number = 1;
 
-  constructor(private formBuilder: FormBuilder, public g: GlobalService) {
+  constructor(
+    public navCtrl: NavController,
+    private formBuilder: FormBuilder,
+    public g: GlobalService
+  ) {
     this.myForm = formBuilder.group({
       option1: ["", Validators.required],
     });
@@ -42,6 +47,7 @@ export class NewpollPage implements OnInit {
         (document.getElementById("pid") as HTMLInputElement).value,
         (document.getElementById("ptitle") as HTMLInputElement).value,
         (document.getElementById("pdesc") as HTMLInputElement).value,
+        (document.getElementById("pddue") as HTMLInputElement).value,
       ],
     ];
     for (let i = 1; i <= this.optionCount; i++) {
@@ -54,5 +60,6 @@ export class NewpollPage implements OnInit {
     let p = new Poll(this.g).setnewPoll(rawpoll);
     this.g.openpid = p.pid;
     this.g.polls[p.pid] = p;
+    this.navCtrl.navigateForward("/openpoll");
   }
 }

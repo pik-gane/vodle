@@ -7,7 +7,7 @@ export interface IPoll {
   gid: string;
   open: boolean;
   uri: string;
-  due: Date;
+  due: number;
   oids: {};
 
   // "vids",

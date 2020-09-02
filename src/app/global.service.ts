@@ -271,7 +271,7 @@ export class GlobalService {
             rev = doc["_rev"],
             oids = doc["oids"],
             desc = doc["desc"],
-            due = doc["doc"],
+            due = doc["due"],
             uri = doc["uri"];
 
           if (this.polls[pid] == undefined || rev != this.polls[pid].rev) {

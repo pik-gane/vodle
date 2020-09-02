@@ -134,7 +134,7 @@ export class PollstatsPage implements OnInit {
                 min: 0,
                 max: 1,
                 stepSize: 1,
-                callback: function (value, index, values) {
+                callback: function (value: number, index, values) {
                   return "" + value * 100 + "%";
                 },
               },

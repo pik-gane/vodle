@@ -15,7 +15,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding>
+<ion-content class="ion-padding">
 
   <ion-list lines="full">
     <ion-title slot="start">Poll</ion-title>
@@ -35,7 +35,8 @@
     </ion-item>
     <ion-item>
       <ion-text slot="start">Due date</ion-text>
-      <ion-datetime displayFormat="DD/MM/YYYY" placeholder="Select date" required="true" autofocus="true" id="pddate">
+      <ion-datetime displayFormat="DD/MM/YYYY HH:MM" placeholder="Select date" required="true" autofocus="true"
+        id="pddue">
       </ion-datetime>
     </ion-item>
     <ion-title slot="start">Options</ion-title>
@@ -45,14 +46,16 @@
 
     <form [formGroup]="myForm">
       <ion-item *ngFor="let control of myForm.controls | keyvalue">
-        <ion-item [formControlName]="control.key">
+        <ion-item>
           <ion-text slot="start">Option Name</ion-text>
-          <ion-input type="text" id="{{control.key}}name" placeholder="Enter the name of the option" required>
+          <ion-input type="text" [formControlName]="control.key" id="{{control.key}}name"
+            placeholder="Enter the name of the option" required>
           </ion-input>
         </ion-item>
         <ion-item>
           <ion-text slot="start">Option Description</ion-text>
-          <ion-input type="text" id="{{control.key}}desc" placeholder="Enter the description of the option" required>
+          <ion-input type="text" [formControlName]="control.key" id="{{control.key}}desc"
+            placeholder="Enter the description of the option" required>
           </ion-input>
         </ion-item>
         <ion-icon (click)="removeControl(control)" name="close-circle"></ion-icon>

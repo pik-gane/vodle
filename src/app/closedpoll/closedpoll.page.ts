@@ -14,11 +14,18 @@ export class ClosedpollPage implements OnInit {
   public pieces = [];
   public p: Poll;
 
+  public approved = {}; // whether option is approved by me
+
   constructor(public g: GlobalService) {}
 
-  ngOnInit() {}
-  ionViewWillEnter() {
+  ngOnInit() {
     this.p = this.g.polls[this.g.openpid];
+    for (let oid in this.p.oids) {
+      this.approved[oid] =
+        this.p.getRating(oid, this.p.myvid) + this.p.apprs[oid] * 100 > 100;
+    }
+  }
+  ionViewWillEnter() {
     let cum = 0,
       R = 200,
       twopi = 2 * Math.PI,
