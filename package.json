@@ -52,6 +52,7 @@
     "phonegap-plugin-multidex": "^1.0.0",
     "phonegap-plugin-push": "2.2.3",
     "random-normal": "^1.0.0",
+    "seedrandom": "^3.0.5",
     "zone.js": "~0.8.29"
   },
   "devDependencies": {

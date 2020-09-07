@@ -2,6 +2,7 @@ import { GlobalService } from "./global.service";
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { finalize, map } from "rxjs/operators";
+import { seedrandom } from "seedrandom";
 //import { map } from "rxjs/add/operator/map";
 
 //import { Storage } from "@ionic/storage";
@@ -568,7 +569,7 @@ export class Poll {
   getOption(id: string) {
     let optionurl = this.g.couchdburl + "/" + id;
     return this.g.http
-      .get<Option>(optionurl)
+      .get<Option>(optionurl, { headers: this.g.dbheaders })
       .pipe(
         map((responseData) => {
           let o: Option;
@@ -735,7 +736,7 @@ export class Poll {
                 JSON.stringify(error)
             );
             this.g.dbheaders = new HttpHeaders({
-              Authorization: "Basic " + btoa(this.g.cloudant_up),
+              Authorization: "Basic " + btoa(this.g.couchdb),
               "content-type": "application/json",
               accept: "application/json",
             });
@@ -879,9 +880,10 @@ export class Poll {
         }
       }
       var seedrandom = require("seedrandom");
-      var rng = seedrandom(s);
+
+      var rng = seedrandom(s.toString());
       this.ran = rng();
-      this.ran = (s % 100) / 100; // TODO: use much better random number generator
+
       for (let oid of this.oidsorted) {
         cum += this.probs[oid];
         if (cum > this.ran) {

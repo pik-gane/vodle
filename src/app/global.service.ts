@@ -10,7 +10,7 @@ import { Observable } from "rxjs";
 import { Poll } from "./poll";
 import { DomElementSchemaRegistry } from "@angular/compiler";
 
-//import { Secret } from "./secret";
+import { Secret } from "./secret";
 
 @Injectable()
 //  {providedIn: 'root'}
@@ -50,7 +50,7 @@ export class GlobalService {
   public grouppw: string = "";
 
   public username: string = ""; // overall username
-  public cloudant_up: string; // cloudant credentials
+  public couchdb: string; // cloudant credentials
   public pollstates: {} = {};
   private couchdb_groupdoc: {} = null; //store credentials for group
 
@@ -79,7 +79,7 @@ export class GlobalService {
           }
         }
       }
-      //this.init();
+      this.init();
       // },
       // (error) => {
       //   GlobalService.log(
@@ -91,13 +91,14 @@ export class GlobalService {
   init() {
     // called after state restoration finished
     GlobalService.log("initializing...");
-    // if (!this.cloudant_up) {
-    //   this.cloudant_up = Secret.cloudant_up;
-    //   if (!this.cloudant_up) {
-    //     this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
-    //   }
-    // }
+    if (!this.couchdb) {
+      this.couchdb = new Secret().couchdb;
+      if (!this.couchdb) {
+        this.couchdb = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
+      }
+    }
     this.dbheaders = new HttpHeaders({
+      Authorization: "Basic " + btoa(this.couchdb),
       "content-type": "application/json",
       accept: "application/json",
     });
@@ -225,7 +226,7 @@ export class GlobalService {
   }
   getGroup(inputgname: string): Observable<IGroup[]> {
     let groupurl = this.couchdburl + "/" + inputgname;
-    return this.http.get<IGroup[]>(groupurl);
+    return this.http.get<IGroup[]>(groupurl, { headers: this.dbheaders });
   }
 
   getPolls() {

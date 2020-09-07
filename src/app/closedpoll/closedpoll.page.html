@@ -49,7 +49,7 @@
               <span [style.display]="p.winner.desc!=null?'inline':'none'">
                 <br />{{p.winner.desc}}
               </span>
-              <ng-template [ngIf]="p.winner.uri!=null">
+              <ng-template [ngIf]="p.winner.uri!=''">
                 <ion-button (click)="g.showinbrowser(p.winner.uri)" fill="clear" float-right no-padding padding-left
                   no-margin>
                   <ion-icon name="open" slot="icon-only"></ion-icon>
