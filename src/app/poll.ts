@@ -2,7 +2,7 @@ import { GlobalService } from "./global.service";
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { finalize, map } from "rxjs/operators";
-import { seedrandom } from "seedrandom";
+//import { seedrandom } from "seedrandom";
 //import { map } from "rxjs/add/operator/map";
 
 //import { Storage } from "@ionic/storage";
@@ -705,14 +705,25 @@ export class Poll {
                 this.registerVoter(vid);
               }
             }
-            let limit = this.due;
-            if (this.due > t && t > this.lastrated) {
+            let oi = this.oids;
+            if (this.due > t && vid != this.myvid) {
+              //&& t > this.lastrated) {
               //||vid != this.myvid  ) ) {
               for (let oid in rs) {
                 if (this.oids.includes(oid)) {
                   this.setRating(oid, vid, rs[oid]);
                 } else {
                   this.getOption(this.pid + "_" + oid);
+                }
+              }
+            } else if (
+              this.due > t &&
+              t > this.lastrated &&
+              vid == this.myvid
+            ) {
+              for (let oid in rs) {
+                if (this.oids.includes(oid)) {
+                  this.setRating(oid, vid, rs[oid]);
                 }
               }
             }
@@ -769,14 +780,17 @@ export class Poll {
     }
   }
 
-  submitRatings(submit_ratings) {
+  submitRatings(submit_ratings?) {
     let now = new Date().getTime();
     if (this.due >= now) {
       // now no changes have happened within the last submit_interval,
       // so we can actually do the submission
-      for (let oid in submit_ratings) {
-        GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
+      if (submit_ratings != undefined) {
+        for (let oid in submit_ratings) {
+          GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
+        }
       }
+
       this.tally();
       this.prepareCloudantDoc();
       if ("_rev" in this.couchdb_doc) {
@@ -904,7 +918,7 @@ export class Poll {
       this.oids.indexOf(o.oid) === -1
         ? this.oids.push(o.oid)
         : GlobalService.log(o.oid + " added to p.oids");
-      this.opos[o.oid] = this.oids.length;
+      this.opos[o.oid] = this.oids.length - 1;
       let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri);
 
       this.options[o.oid] = oObject;
@@ -933,6 +947,9 @@ export class Poll {
           let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
 
           this.options[o.oid] = oObject;
+          if ((reason = "addOption")) {
+            this.submitRatings();
+          }
         },
         // this.fetchRev(cloudurl)
         //   .pipe(
@@ -1004,7 +1021,7 @@ export class Poll {
         ? this.oids.push(o.oid)
         : GlobalService.log(o.oid + " added to p.oids");
       this.optioncount++;
-      this.opos[o.oid] = this.oids.length;
+      this.opos[o.oid] = this.oids.length - 1;
       let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
 
       this.options[o.oid] = oObject;

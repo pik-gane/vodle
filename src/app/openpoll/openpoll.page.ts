@@ -1,4 +1,12 @@
-import { Component, OnInit, NgZone, NgModule } from "@angular/core";
+import {
+  Component,
+  OnInit,
+  OnChanges,
+  NgZone,
+  SimpleChanges,
+  NgModule,
+  Input,
+} from "@angular/core";
 import { NavController, Events, LoadingController } from "@ionic/angular";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
@@ -32,7 +40,7 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
-  public oidsorted: string[] = [];
+  @Input() oidsorted: string[] = [];
   public sortingcounter: number = 0;
 
   public approved = {}; // whether option is approved by me
@@ -158,12 +166,12 @@ export class OpenpollPage implements OnInit {
     //   alert("Please enter a your username first!");
     //   this.navCtrl.navigateBack("/home");
     // } else {
-
     // }
   }
   ionViewDidEnter() {
     //this.showStats();
   }
+
   ionViewWillLeave() {
     this.do_updates = false;
     if (this.submit_triggered) {
@@ -225,6 +233,7 @@ export class OpenpollPage implements OnInit {
     for (let i in posnewlyoidsorted) {
       if (this.oidsorted[i] != posnewlyoidsorted[i]) {
         changed = true;
+
         break;
       }
     }
@@ -343,6 +352,7 @@ export class OpenpollPage implements OnInit {
     this.updateOrder();
     this.doSubmit();
   }
+
   doSubmit() {
     this.submit_triggered = this.submit_hold = false;
     this.p.submitRatings({ ...this.submit_ratings });
@@ -353,6 +363,7 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
+
       this.updateOrder();
       this.showStats();
       await this.g.sleep(this.update_interval);

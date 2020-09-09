@@ -14,12 +14,13 @@
     </ng-template>
     <ng-template [ngIf]="!refresh_paused">
       <ion-button slot="end" (click)="pauseRefresh()" fill="clear" no-margin>
-        <ion-icon name="refresh" size="large"></ion-icon>
+        <ion-text color="primary">Freeze Order</ion-text>
       </ion-button>
     </ng-template>
     <ng-template [ngIf]="refresh_paused && !needs_refresh">
       <ion-button slot="end" (click)="unpauseRefresh()" fill="clear" no-margin>
-        <ion-icon src="/assets/icon/md-norefresh.svg" size="large"></ion-icon>
+        <ion-text color="primary">Update Order</ion-text>
+        <!--ion-icon src="/assets/icon/md-norefresh.svg" size="large"></ion-icon-->
       </ion-button>
     </ng-template>
     <ng-template [ngIf]="refresh_paused && needs_refresh">
