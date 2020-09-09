@@ -599,65 +599,6 @@ export class Poll {
       });
   }
 
-  async getPollInfo() {
-    // poll document from cloud
-    await this.getOptionInfo();
-    // await this.getPoll(this.pid)
-    //   .toPromise()
-    //   .then(async (p) => {
-    //     await this.getOptionInfo();
-    //   });
-
-    // return new Promise((resolve, reject) => {
-    //   this.getPoll(this.pid).subscribe((data: {}) => {
-    //     if (data) {
-    //       if (!(this.g.polls[this.pid]["rev"] == data["_rev"])) {
-    //         this.g.polls[this.pid] = {}; // poll from anew
-    //         for (let a of this.state_attributes) {
-    //           if (a in data) {
-    //             this.g.polls[this.pid].push({ a: data[a] });
-    //             this[a] = data[a];
-    //           }
-    //           for (let oid in this.oids) {
-    //             this.getOptionInfo(oid);
-    //           }
-    //           resolve(true);
-    //         }
-    //       }
-    //     }
-    //   }),
-    //     (err) => {
-    //       resolve(false);
-    //     };
-    // });
-  }
-  async getOptionInfo() {
-    // option documents from cloud
-    for (let oid of this.oids) {
-      await this.getOption(this.pid + "_" + oid);
-    }
-    // return new Promise ((resolve,reject) => {
-
-    //   resolve(true)})
-    // return new Promise((resolve, reject) => {
-    //   this.getOption(this.pid + "_" + oid).subscribe((odata: {}) => {
-    //     if (odata) {
-    //       if (!(this.options[oid]["rev"] == odata["_rev"])) {
-    //         this.options[oid] = null; // option from anew
-    //         let o = new Option(this); // Fix me: Ganz hässlich!
-    //         for (let b in o.option_attributes) {
-    //           this.options[oid].push({ b: odata[b] });
-    //         }
-    //       }
-    //       resolve(true);
-    //     }
-    //   });
-    //   (err) => {
-    //     resolve(false);
-    //   };
-    // });
-  }
-
   getCompleteState(trial: number = 1) {
     // get complete poll state from cloudant
     GlobalService.log("posting full cloudant query for poll " + this.pid);

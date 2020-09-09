@@ -40,7 +40,7 @@ export class OpenpollPage implements OnInit {
 
   public p: Poll;
   public opos = {};
-  @Input() oidsorted: string[] = [];
+  public oidsorted: string[] = [];
   public sortingcounter: number = 0;
 
   public approved = {}; // whether option is approved by me
@@ -136,7 +136,7 @@ export class OpenpollPage implements OnInit {
       console.log(this.p.options[this.oidsorted[i]]);
     }
     this.expanded = null;
-    this.updateOrder();
+    //this.updateOrder();
   }
   get optionForms() {
     return this.myForm.get("options") as FormArray;
@@ -161,7 +161,7 @@ export class OpenpollPage implements OnInit {
     //     this.ngOnInit();
     //   }
     // }
-    this.ngOnInit();
+    //this.ngOnInit();
     // if (this.g.username == "") {
     //   alert("Please enter a your username first!");
     //   this.navCtrl.navigateBack("/home");
@@ -193,46 +193,52 @@ export class OpenpollPage implements OnInit {
         dx = R * Math.sin(this.twopi * prob),
         dy = R * (1 - Math.cos(this.twopi * prob)),
         flag = prob > 0.5 ? 1 : 0;
-      bar.width.baseVal.valueAsString = (100 * appr).toString() + "%";
-      bar.x.baseVal.valueAsString = (100 * (1 - appr)).toString() + "%";
-      if (prob < 1) {
-        pie.setAttribute(
-          "d",
-          "M 21,25 l 0,-" +
-            R +
-            " a " +
-            R +
-            " " +
-            R +
-            " 0 " +
-            flag +
-            " 1 " +
-            dx +
-            " " +
-            dy +
-            " Z"
-        );
-      } else {
-        // full circle
-        pie.setAttribute(
-          "d",
-          "M 21,25 l 0,-20 a 20 20 0 1 1 0 " +
-            2 * R +
-            " a 20 20 0 1 1 0 " +
-            -2 * R +
-            " Z"
-        );
+      if (bar != null) {
+        bar.width.baseVal.valueAsString = (100 * appr).toString() + "%";
+        bar.x.baseVal.valueAsString = (100 * (1 - appr)).toString() + "%";
+        if (prob < 1) {
+          pie.setAttribute(
+            "d",
+            "M 21,25 l 0,-" +
+              R +
+              " a " +
+              R +
+              " " +
+              R +
+              " 0 " +
+              flag +
+              " 1 " +
+              dx +
+              " " +
+              dy +
+              " Z"
+          );
+        } else {
+          // full circle
+          pie.setAttribute(
+            "d",
+            "M 21,25 l 0,-20 a 20 20 0 1 1 0 " +
+              2 * R +
+              " a 20 20 0 1 1 0 " +
+              -2 * R +
+              " Z"
+          );
+        }
+        this.approved[oid] = r + appr * 100 > 100;
+        this.setSliderColor(oid, r);
       }
-      this.approved[oid] = r + appr * 100 > 100;
-      this.setSliderColor(oid, r);
     }
   }
   async updateOrder(force = false) {
     let changed = false;
     let posnewlyoidsorted = this.g.polls[this.p.pid].oidsorted;
     for (let i in posnewlyoidsorted) {
-      if (this.oidsorted[i] != posnewlyoidsorted[i]) {
+      if (
+        this.oidsorted.length != 0 &&
+        this.oidsorted[i] != posnewlyoidsorted[i]
+      ) {
         changed = true;
+        //this.do_updates = false;
 
         break;
       }
@@ -251,13 +257,16 @@ export class OpenpollPage implements OnInit {
         spinner: "crescent",
         duration: 1000,
       });
-      this.p = this.g.polls[this.p.pid];
+      //this.do_updates = false;
+      this.p.options = this.g.polls[this.p.pid]["options"];
       this.oidsorted = posnewlyoidsorted;
       await loadingElement.present();
       await loadingElement.onDidDismiss();
       //this.oidsorted = [...this.p.oidsorted];
       this.sortingcounter++;
       this.needs_refresh = false;
+      //this.do_updates = true;
+      //this.loopUpdate();
     }
   }
 
@@ -275,6 +284,7 @@ export class OpenpollPage implements OnInit {
   // controls:
 
   pauseRefresh() {
+    this.do_updates = false;
     this.refresh_paused = true;
   }
   unpauseRefresh() {
@@ -349,7 +359,7 @@ export class OpenpollPage implements OnInit {
       this.submit_hold = false;
       await this.g.sleep(this.submit_interval);
     }
-    this.updateOrder();
+    //this.updateOrder();
     this.doSubmit();
   }
 
