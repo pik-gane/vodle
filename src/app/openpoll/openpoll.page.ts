@@ -7,7 +7,12 @@ import {
   NgModule,
   Input,
 } from "@angular/core";
-import { NavController, Events, LoadingController } from "@ionic/angular";
+import {
+  NavController,
+  Events,
+  LoadingController,
+  AlertController,
+} from "@ionic/angular";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
 import { Option } from "../option";
@@ -66,6 +71,7 @@ export class OpenpollPage implements OnInit {
 
   public optionCount: number = 0;
   public addingOption: boolean = false;
+  public closed: boolean = false;
 
   constructor(
     public navCtrl: NavController,
@@ -74,7 +80,8 @@ export class OpenpollPage implements OnInit {
     private zone: NgZone,
     public g: GlobalService,
     private formBuilder: FormBuilder, //private control: FormControl,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public alertController: AlertController
   ) {
     // if (this.g.username == "") {
     //   // if online:
@@ -109,13 +116,8 @@ export class OpenpollPage implements OnInit {
 
   // lifecycle events:
   ngOnInit() {
-    // } else {
     this.p = this.g.polls[this.g.openpid];
-    if (this.p.due <= new Date().getTime()) {
-      this.p.close();
-      this.navCtrl.navigateForward("/closedpoll");
-      return;
-    }
+
     this.myForm = this.formBuilder.group({
       options: this.formBuilder.array([]),
     });
@@ -125,11 +127,6 @@ export class OpenpollPage implements OnInit {
     //   return;
     // }
 
-    //p.getPollInfo();
-    this.do_updates = true;
-    this.p.tally();
-    this.loopUpdate();
-
     this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
     for (var i = 0; i < Object.keys(this.p.options).length; i++) {
@@ -137,6 +134,12 @@ export class OpenpollPage implements OnInit {
     }
     this.expanded = null;
     //this.updateOrder();
+    // if (this.p.due < new Date().getTime()) {
+    //   this.p.close();
+    //   this.closed = true;
+    //   //this.navCtrl.navigateForward("/greypoll");
+    //   //return;
+    // }
   }
   get optionForms() {
     return this.myForm.get("options") as FormArray;
@@ -169,7 +172,9 @@ export class OpenpollPage implements OnInit {
     // }
   }
   ionViewDidEnter() {
-    //this.showStats();
+    this.do_updates = true;
+    this.p.tally();
+    this.loopUpdate();
   }
 
   ionViewWillLeave() {
@@ -250,18 +255,22 @@ export class OpenpollPage implements OnInit {
       force ||
       (this.needs_refresh && !(this.submit_triggered || this.refresh_paused))
     ) {
-      // link displayed sorting to poll's sorting:
-      const loadingElement = await this.loadingController.create({
-        message:
-          "Sorting options by support\nuse sync button to toggle auto-sorting.",
-        spinner: "crescent",
-        duration: 1000,
-      });
-      //this.do_updates = false;
       this.p.options = this.g.polls[this.p.pid]["options"];
       this.oidsorted = posnewlyoidsorted;
-      await loadingElement.present();
-      await loadingElement.onDidDismiss();
+      // link displayed sorting to poll's sorting:
+      if (!this.closed) {
+        const loadingElement = await this.loadingController.create({
+          message:
+            "Sorting options by support\nuse sync button to toggle auto-sorting.",
+          spinner: "crescent",
+          duration: 1000,
+        });
+        await loadingElement.present();
+        await loadingElement.onDidDismiss();
+      }
+
+      //this.do_updates = false;
+
       //this.oidsorted = [...this.p.oidsorted];
       this.sortingcounter++;
       this.needs_refresh = false;
@@ -325,15 +334,18 @@ export class OpenpollPage implements OnInit {
     this.opos = { ...this.p.opos };
   }
   ratingChanges(oid) {
-    var slider = this.getSlider(oid),
-      value = Number(slider.value);
-    this.setSliderColor(oid, value);
-    this.storeSlidersRating(oid);
-    this.submit_ratings[oid] = true;
-    if (this.submit_triggered) {
-      this.holdSubmit();
-    } else {
-      this.triggerSubmit();
+    let now = new Date().getTime();
+    if (this.p.due > now && !this.closed) {
+      var slider = this.getSlider(oid),
+        value = Number(slider.value);
+      this.setSliderColor(oid, value);
+      this.storeSlidersRating(oid);
+      this.submit_ratings[oid] = true;
+      if (this.submit_triggered) {
+        this.holdSubmit();
+      } else {
+        this.triggerSubmit();
+      }
     }
   }
   ratingChangeEnded(oid) {
@@ -373,17 +385,38 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
-
+      if (this.p.closed) {
+        this.closed = this.p.closed;
+        this.p.close();
+        this.closedPollAlert();
+        this.updateOrder();
+        this.showStats();
+        return;
+      }
       this.updateOrder();
       this.showStats();
+
       await this.g.sleep(this.update_interval);
+      // if (this.p.due < new Date().getTime()) {
+      //   this.p.close();
+      //   this.do_updates = false;
+      //   this.closed = true;
+      //   //this.navCtrl.navigateForward("/greypoll");
+      //   break;
+      // }
     }
   }
 
   closePoll() {
     if (confirm("really close the poll?")) {
+      this.do_updates = false;
+      this.closed = true;
+      this.p.firstclosed = true;
+      this.p.closed = true;
       this.p.close();
-      this.navCtrl.navigateForward("/closedpoll");
+      this.closedPollAlert();
+      this.p.submitRatings();
+      //this.navCtrl.navigateForward("/closedpoll");
     }
   }
   newOption() {
@@ -448,5 +481,25 @@ export class OpenpollPage implements OnInit {
     }
     //await this.g.sleep(10000);
     //this.do_updates = true;
+  }
+  showResults() {
+    this.navCtrl.navigateForward("/closedpoll");
+  }
+  async closedPollAlert() {
+    const alert = await this.alertController.create({
+      cssClass: "my-custom-class",
+      header: "Poll Closed",
+      message: "This poll is closed. Click the Button to show results!",
+      buttons: [
+        {
+          text: "Show results",
+          handler: () => {
+            this.navCtrl.navigateForward("/closedpoll");
+          },
+        },
+      ],
+    });
+
+    alert.present();
   }
 }

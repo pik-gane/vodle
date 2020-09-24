@@ -2,10 +2,11 @@
 
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
-import { finalize } from "rxjs/operators";
+import { finalize, map } from "rxjs/operators";
 import { Storage } from "@ionic/storage";
 import { IGroup } from "./igroup";
 import { Observable } from "rxjs";
+import { AlertController } from "@ionic/angular";
 
 import { Poll } from "./poll";
 import { DomElementSchemaRegistry } from "@angular/compiler";
@@ -38,23 +39,23 @@ export class GlobalService {
   //public openpoll: Poll = null; // currently open poll
 
   // data to be persisted in storage:
-  public state_attributes = [
-    "openpid",
-    "username",
-    "cloudant_up",
-    "pollstates",
-    //"groupname", wegen Login
-  ];
+  public state_attributes = ["openpid", "username", "groupname", "pollstates"];
   public openpid: string = null;
   public groupname: string = ""; //name of the poll group
   public grouppw: string = "";
+  public accAllowed: boolean = false;
 
   public username: string = ""; // overall username
   public couchdb: string; // cloudant credentials
   public pollstates: {} = {};
   private couchdb_groupdoc: {} = null; //store credentials for group
 
-  constructor(public http: HttpClient, public storage: Storage) {
+  constructor(
+    public http: HttpClient,
+    public storage: Storage,
+    public alertController: AlertController
+  ) {
+    GlobalService.log("start constructor");
     this.dbheaders = new HttpHeaders({
       "content-type": "application/json",
       accept: "application/json",
@@ -102,20 +103,14 @@ export class GlobalService {
       "content-type": "application/json",
       accept: "application/json",
     });
-    // if (Object.keys(this.polls).length == 0) {
-    //   for (let demo in this.demodata) {
-    //     let p = new Poll(this).makedemo(demo);
-    //     this.openpid = p.pid;
-    //     this.polls[p.pid] = p;
-    //   }
-    // }
-    // this.openpoll = this.polls[this.openpid];
   }
 
   save_state() {
     let s = {};
     for (let a of this.state_attributes) {
-      s[a] = this[a];
+      if (this[a] != undefined) {
+        s[a] = this[a];
+      }
     }
     for (let pid in this.polls) {
       this.polls[pid].save_state();
@@ -226,6 +221,7 @@ export class GlobalService {
   }
   getGroup(inputgname: string): Observable<IGroup[]> {
     let groupurl = this.couchdburl + "/" + inputgname;
+    //return this.http.get(groupurl, { headers: this.dbheaders })
     return this.http.get<IGroup[]>(groupurl, { headers: this.dbheaders });
   }
 
@@ -245,6 +241,7 @@ export class GlobalService {
             "desc",
             "due",
             "uri",
+            "closed",
           ],
           limit: 200,
         }),
@@ -273,7 +270,8 @@ export class GlobalService {
             oids = doc["oids"],
             desc = doc["desc"],
             due = doc["due"],
-            uri = doc["uri"];
+            uri = doc["uri"],
+            closed = doc["closed"]; // put in documents
 
           if (this.polls[pid] == undefined || rev != this.polls[pid].rev) {
             this.polls[pid] = null;
@@ -288,6 +286,7 @@ export class GlobalService {
               desc: desc,
               due: due,
               uri: uri,
+              closed: closed,
             });
           }
         }
@@ -307,6 +306,28 @@ export class GlobalService {
           }
         }
       });
+  }
+  async presentAlert(head: string, msg: string) {
+    const alert = await this.alertController.create({
+      cssClass: "my-custom-class",
+      header: head,
+      message: msg,
+      buttons: ["OK"],
+    });
+
+    await alert.present();
+  }
+  checkGroup() {
+    return this.getGroup(this.groupname).pipe(
+      map((responsedata: {}) => {
+        if (responsedata && responsedata["pw"] == this.grouppw) {
+          this.accAllowed = true;
+          this.getPolls();
+        }
+        this.save_state();
+        return this.accAllowed;
+      })
+    );
   }
 
   public demodata = {

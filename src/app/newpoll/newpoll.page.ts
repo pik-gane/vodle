@@ -18,6 +18,7 @@ export class NewpollPage implements OnInit {
   public myForm: FormGroup;
 
   public optionCount: number = 1;
+  public p: Poll;
 
   constructor(
     public navCtrl: NavController,
@@ -57,9 +58,10 @@ export class NewpollPage implements OnInit {
       ];
     }
 
-    let p = new Poll(this.g).setnewPoll(rawpoll);
-    this.g.openpid = p.pid;
-    this.g.polls[p.pid] = p;
+    this.p = new Poll(this.g, { pid: rawpoll[0][0] }).setnewPoll(rawpoll);
+
+    this.g.openpid = this.p.pid;
+    this.g.polls[this.p.pid] = this.p;
     this.navCtrl.navigateForward("/openpoll");
   }
 }

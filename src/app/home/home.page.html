@@ -53,7 +53,8 @@
     </ion-item>
     <ion-item>
       <ion-text slot="start">Group Password:</ion-text>
-      <ion-input type="password" placeholder="Enter the group password" required="true" autofocus="true" id="password">
+      <ion-input [value]="g.grouppw" type="password" placeholder="Enter the group password" required="true"
+        autofocus="true" id="password">
       </ion-input>
       <!-- <ng-template [ngIf]="!editing">
         <ion-button no-padding no-margin (click)="editing=true">
@@ -67,7 +68,7 @@
       </ng-template> -->
     </ion-item>
     <ion-item>
-      <ion-button slot="start" (click)="checkGroup()">Log In</ion-button>
+      <ion-button slot="start" (click)="prepareGroup()">Log In</ion-button>
       <ion-button (click)="formnewGroup()">New Group</ion-button>
     </ion-item>
     <ion-item>
@@ -80,7 +81,7 @@
         </ion-button>
       </ng-template>
       <ng-template [ngIf]="editing">
-        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
+        <ion-button no-padding no-margin>
           <ion-icon name="checkmark"></ion-icon>&nbsp;OK
         </ion-button>
       </ng-template>

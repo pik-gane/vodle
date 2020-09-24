@@ -18,6 +18,9 @@
       <ion-icon [name]="(g.polls[pid].type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
       {{g.polls[pid].title}}
     </ion-item>
+    <ion-button expand="full" color="light" (click)="newPoll()">New Poll
+    </ion-button>
+
     <!--TODO: replace by big blue add-circle sticking at the bottom-right of the screen?:-->
     <!--    <ion-item>
       <ion-button no-margin routerLink="newpoll" fill="clear">

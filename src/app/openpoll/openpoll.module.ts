@@ -9,7 +9,6 @@ import { IonicModule } from "@ionic/angular";
 
 import { OpenpollPage } from "./openpoll.page";
 import { SharedcomponentsModule } from "../sharedcomponents/sharedcomponents.module";
-import { ExpandableComponent } from "../sharedcomponents/expandable/expandable.component";
 
 const routes: Routes = [
   {

@@ -25,12 +25,14 @@ export class Poll {
   public due: number; // closing time
   public myvid: string = "";
   public mygid: string = "";
+  public closed: boolean = false;
+  public firstclosed: boolean = false;
 
   // variable data:
   public vids: string[] = []; // list of voter ids // TODO: make anonymous
   public oids: string[] = []; // list of options ids
   public options: {} = {}; // dict by oid
-  public open: boolean = true;
+
   public winner = null;
   public ran = null; // random number used to determine winner
   public lastrated: number = 0; // time of last own rating
@@ -51,7 +53,6 @@ export class Poll {
     "pid",
     "rev",
     "type",
-    "open",
     "title",
     "desc",
     "uri",
@@ -68,6 +69,8 @@ export class Poll {
     "rsums",
     "stamps",
     "history",
+    "closed",
+    "firstclosed",
   ];
 
   // redundant session data:
@@ -108,7 +111,7 @@ export class Poll {
     }
 
     GlobalService.log("poll object for " + this.pid + " constructed");
-    //    this.getCompleteState();
+
     if (!(this.myvid in this.vids)) {
       this.vids.push(this.myvid);
     }
@@ -127,6 +130,7 @@ export class Poll {
       //      GlobalService.log("  " + a + ":" + JSON.stringify(this[a]));
     }
     //    GlobalService.log("  " + JSON.stringify(s));
+
     GlobalService.log("  done.");
   }
 
@@ -187,7 +191,7 @@ export class Poll {
   setnewPoll(rawpoll?: string[][]) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
     //      ["", "", ""],
-    GlobalService.log("making new poll...");
+    GlobalService.log("creating new poll...");
     //this.pid = demo;
     if (rawpoll) {
       this.pid = rawpoll[0][0];
@@ -271,6 +275,7 @@ export class Poll {
         gid: this.mygid,
         oids: this.oids,
         uri: "",
+        closed: this.closed,
       };
     }
   }
@@ -556,15 +561,6 @@ export class Poll {
     }
     return true; // changed results
   }
-  getPoll(pid: string): Observable<Poll> {
-    let pollurl = this.g.couchdburl + "/" + pid;
-    return this.g.http.get<Poll>(pollurl).pipe(
-      map((item) => {
-        return new Poll(this.g, item);
-      })
-    );
-  }
-  // Als nächstes: ngIf options.length >= 1, Ioption, subscribe in method, this.options array of Ioption
 
   getOption(id: string) {
     let optionurl = this.g.couchdburl + "/" + id;
@@ -603,14 +599,16 @@ export class Poll {
     // get complete poll state from cloudant
     GlobalService.log("posting full cloudant query for poll " + this.pid);
 
-    //this.getPollInfo();
+    let checkclose = false;
+    let mycl: boolean;
+
     // user rating documents from cloud
     this.g.http
       .post(
         this.g.couchdburl + "/_find",
         JSON.stringify({
           selector: { pid: this.pid, mygid: this.mygid },
-          fields: ["vid", "ratings", "history", "lastrated"],
+          fields: ["vid", "ratings", "history", "lastrated", "closed"],
           limit: 200,
         }),
         { headers: this.g.dbheaders }
@@ -637,7 +635,8 @@ export class Poll {
           for (let doc of value["docs"]) {
             let vid = doc["vid"],
               rs = doc["ratings"],
-              t = doc["lastrated"];
+              t = doc["lastrated"],
+              cl = doc["closed"];
             this.histories.push(doc["history"]);
             if (vid != this.myvid) {
               vids.push(vid);
@@ -646,10 +645,8 @@ export class Poll {
                 this.registerVoter(vid);
               }
             }
-            let oi = this.oids;
+            // get ratings by others
             if (this.due > t && vid != this.myvid) {
-              //&& t > this.lastrated) {
-              //||vid != this.myvid  ) ) {
               for (let oid in rs) {
                 if (this.oids.includes(oid)) {
                   this.setRating(oid, vid, rs[oid]);
@@ -657,6 +654,7 @@ export class Poll {
                   this.getOption(this.pid + "_" + oid);
                 }
               }
+              // get own rating
             } else if (
               this.due > t &&
               t > this.lastrated &&
@@ -668,6 +666,15 @@ export class Poll {
                 }
               }
             }
+            // if poll is closed by myself but results not shown yet
+            // maybe change
+            if (vid == this.myvid) {
+              mycl = cl;
+            }
+            // check if was already closed by someone else
+            if (cl == true) {
+              checkclose = true;
+            }
           }
           for (let vid of this.vids) {
             if (!vids.includes(vid)) {
@@ -677,7 +684,23 @@ export class Poll {
           }
           this.tally();
           this.g.save_state();
-          //        this.log("");
+          // if first person to access after due time reached
+          if (
+            this.due < new Date().getTime() &&
+            !this.closed &&
+            checkclose == false
+          ) {
+            this.closed = true;
+            this.firstclosed = true;
+          }
+          console.log(checkclose + " + " + this.closed);
+          // if other person accesses after has already been closed set own document to closed
+          if (checkclose) {
+            this.closed = true;
+            if (!mycl) {
+              this.submitRatings();
+            }
+          }
         },
         (error: {}) => {
           //at post failure:
@@ -716,30 +739,30 @@ export class Poll {
         lastrated: this.lastrated,
         ratings: this.myratings,
         history: this.history,
+        closed: this.closed,
       };
-      this.couchdb_docurl = this.g.couchdburl + "/" + this.couchdb_doc["_id"];
     }
+    this.couchdb_doc["closed"] = this.closed;
+
+    this.couchdb_docurl = this.g.couchdburl + "/" + this.couchdb_doc["_id"];
   }
 
   submitRatings(submit_ratings?) {
-    let now = new Date().getTime();
-    if (this.due >= now) {
-      // now no changes have happened within the last submit_interval,
-      // so we can actually do the submission
-      if (submit_ratings != undefined) {
-        for (let oid in submit_ratings) {
-          GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
-        }
+    // now no changes have happened within the last submit_interval,
+    // so we can actually do the submission
+    if (submit_ratings != undefined) {
+      for (let oid in submit_ratings) {
+        GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
       }
+    }
 
-      this.tally();
-      this.prepareCloudantDoc();
-      if ("_rev" in this.couchdb_doc) {
-        // first try to put updated doc with known _rev (should normally succeed):
-        this.putCloudantStoredRev(1);
-      } else {
-        this.putCloudantFetchedRev();
-      }
+    this.tally();
+    this.prepareCloudantDoc();
+    if ("_rev" in this.couchdb_doc) {
+      // first try to put updated doc with known _rev (should normally succeed):
+      this.putCloudantStoredRev(1);
+    } else {
+      this.putCloudantFetchedRev();
     }
   }
   putCloudantStoredRev(trial: number) {
@@ -825,7 +848,7 @@ export class Poll {
   close() {
     this.getCompleteState();
     this.tally();
-    this.open = false;
+    this.closed = true;
     if (this.type == "winner") {
       let s = 0,
         cum = 0;
@@ -889,6 +912,7 @@ export class Poll {
 
           this.options[o.oid] = oObject;
           if ((reason = "addOption")) {
+            this.lastrated = new Date().getTime();
             this.submitRatings();
           }
         },

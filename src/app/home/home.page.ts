@@ -18,51 +18,30 @@ export class HomePage implements OnInit {
   ) {}
 
   ngOnInit() {}
-  async presentAlert(head: string, msg: string) {
-    const alert = await this.alertController.create({
-      cssClass: "my-custom-class",
-      header: head,
-      subHeader: "Subtitle",
-      message: msg,
-      buttons: ["OK"],
-    });
-
-    await alert.present();
-  }
-  checkGroup() {
+  prepareGroup() {
     if (this.g.username == "") {
-      this.presentAlert("Error", "Please verify your user name");
+      this.g.presentAlert("Error", "Please verify your user name");
     } else {
-      let u = this.g.username;
-
-      let gname = (document.getElementById("groupname") as HTMLInputElement)
-        .value;
-      let pw = (document.getElementById("password") as HTMLInputElement).value;
-      this.g.getGroup(gname).subscribe((data: {}) => {
-        if (data && data["pw"] == pw) {
-          this.g.groupname = gname;
-          this.presentAlert(
-            "Success",
-            "Group is existing and you are free to proceed"
-          );
-          this.g.getPolls();
-          // for (let pid of Object.keys(this.g.polls)) {
-          //let p = this.g.polls[pid];
-          // if (u != p.myvid) {
-          //   p.deregisterVoter(p.myvid);
-          //   p.myvid = u;
-          //   p.registerVoter(u);
-          // }
-          // TODO: deregister voter
-          //p.registerVoter(u);
-          // }
-          //this.g.save_state();
-        } else {
-          this.presentAlert("Error", "Please use existing group credentials");
-        }
-      });
+      let gname = (this.g.groupname = (document.getElementById(
+        "groupname"
+      ) as HTMLInputElement).value);
+      let pw = (this.g.grouppw = (document.getElementById(
+        "password"
+      ) as HTMLInputElement).value);
     }
+    this.g.checkGroup().subscribe((acc) => {
+      if (acc == true) {
+        this.g.presentAlert(
+          "Success",
+          "Group is existing and you are free to proceed"
+        );
+        this.navCtrl.navigateForward("/mypolls");
+      } else {
+        this.g.presentAlert("Error", "Please use existing group credentials");
+      }
+    });
   }
+
   formnewGroup() {
     //manchmal funktioniert es hier nicht --> schauen woran es liegt
     this.editing = false;
