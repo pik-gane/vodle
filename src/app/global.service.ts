@@ -317,12 +317,14 @@ export class GlobalService {
 
     await alert.present();
   }
-  checkGroup() {
+  checkGroup(update: boolean) {
     return this.getGroup(this.groupname).pipe(
       map((responsedata: {}) => {
         if (responsedata && responsedata["pw"] == this.grouppw) {
           this.accAllowed = true;
-          this.getPolls();
+          if (update) {
+            this.getPolls();
+          }
         }
         this.save_state();
         return this.accAllowed;

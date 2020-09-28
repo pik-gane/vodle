@@ -5,7 +5,7 @@ import {
   FormControl,
   Validators,
 } from "@angular/forms";
-import { NavController } from "@ionic/angular";
+import { NavController, LoadingController } from "@ionic/angular";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
 
@@ -22,20 +22,37 @@ export class NewpollPage implements OnInit {
 
   constructor(
     public navCtrl: NavController,
+    public loadingController: LoadingController,
     private formBuilder: FormBuilder,
     public g: GlobalService
   ) {
     this.myForm = formBuilder.group({
-      option1: ["", Validators.required],
+      option1: this.formBuilder.group({
+        name: [""],
+        desc: [""],
+      }),
     });
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.g.checkGroup(false).subscribe((acc) => {
+      if (acc == false) {
+        this.g.presentAlert(
+          "Wrong Credentials",
+          "Please enter your right user credentials and use implemented refresh buttons!"
+        );
+        this.navCtrl.navigateBack("/home");
+      }
+    });
+  }
   addControl() {
     this.optionCount++;
     this.myForm.addControl(
       "option" + this.optionCount,
-      new FormControl("", Validators.required)
+      new FormGroup({
+        name: new FormControl(""),
+        desc: new FormControl(""),
+      })
     );
   }
   removeControl(control) {
@@ -57,11 +74,28 @@ export class NewpollPage implements OnInit {
         (document.getElementById(`option${i}desc`) as HTMLInputElement).value,
       ];
     }
+    let pid = rawpoll[0][0];
+    if (!(pid in this.g.polls)) {
+      this.p = new Poll(this.g, { pid: rawpoll[0][0] }).setnewPoll(rawpoll);
+      this.g.openpid = this.p.pid;
+      this.g.polls[this.p.pid] = this.p;
+      this.waitRev();
+    } else {
+      this.g.presentAlert(
+        "Poll Id already exists",
+        "Change Poll Id to create new poll!"
+      );
+    }
+  }
+  async waitRev() {
+    const loadingElement = await this.loadingController.create({
+      message: "Generating Poll",
+      spinner: "crescent",
+      duration: 2000,
+    });
+    await loadingElement.present();
+    await loadingElement.onDidDismiss();
 
-    this.p = new Poll(this.g, { pid: rawpoll[0][0] }).setnewPoll(rawpoll);
-
-    this.g.openpid = this.p.pid;
-    this.g.polls[this.p.pid] = this.p;
     this.navCtrl.navigateForward("/openpoll");
   }
 }

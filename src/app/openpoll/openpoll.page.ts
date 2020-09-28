@@ -116,12 +116,22 @@ export class OpenpollPage implements OnInit {
 
   // lifecycle events:
   ngOnInit() {
+    this.g.checkGroup(false).subscribe((acc) => {
+      if (acc == false) {
+        this.g.presentAlert(
+          "Wrong Credentials",
+          "Please enter your right user credentials and use implemented refresh buttons!"
+        );
+        this.navCtrl.navigateBack("/home");
+        return;
+      }
+    });
     this.p = this.g.polls[this.g.openpid];
 
     this.myForm = this.formBuilder.group({
       options: this.formBuilder.array([]),
     });
-    this.p.getCompleteState();
+    this.p.getCompleteState(1, true);
     // if (!this.p) {
     //   this.navCtrl.navigateRoot("/");
     //   return;

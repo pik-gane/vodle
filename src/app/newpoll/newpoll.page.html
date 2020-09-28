@@ -39,6 +39,8 @@
         id="pddue">
       </ion-datetime>
     </ion-item>
+  </ion-list>
+  <ion-list>
     <ion-title slot="start">Options</ion-title>
     <!-- -->
 
@@ -46,17 +48,19 @@
 
     <form [formGroup]="myForm">
       <ion-item *ngFor="let control of myForm.controls | keyvalue">
-        <ion-item>
-          <ion-text slot="start">Option Name</ion-text>
-          <ion-input type="text" [formControlName]="control.key" id="{{control.key}}name"
-            placeholder="Enter the name of the option" required>
-          </ion-input>
-        </ion-item>
-        <ion-item>
-          <ion-text slot="start">Option Description</ion-text>
-          <ion-input type="text" [formControlName]="control.key" id="{{control.key}}desc"
-            placeholder="Enter the description of the option" required>
-          </ion-input>
+        <ion-item [formGroupName]="control.key">
+          <ion-item>
+            <ion-text slot="start">Option Name</ion-text>
+            <ion-input type="text" formControlName="name" [value]="" id="{{control.key}}name"
+              placeholder="Enter the name of the option" required>
+            </ion-input>
+          </ion-item>
+          <ion-item slot="end">
+            <ion-text slot="start">Option Description</ion-text>
+            <ion-input type="text" formControlName="desc" id="{{control.key}}desc"
+              placeholder="Enter the description of the option" required>
+            </ion-input>
+          </ion-item>
         </ion-item>
         <ion-icon (click)="removeControl(control)" name="close-circle"></ion-icon>
       </ion-item>

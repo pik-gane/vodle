@@ -29,17 +29,20 @@ export class HomePage implements OnInit {
         "password"
       ) as HTMLInputElement).value);
     }
-    this.g.checkGroup().subscribe((acc) => {
-      if (acc == true) {
-        this.g.presentAlert(
-          "Success",
-          "Group is existing and you are free to proceed"
-        );
-        this.navCtrl.navigateForward("/mypolls");
-      } else {
-        this.g.presentAlert("Error", "Please use existing group credentials");
-      }
-    });
+    this.navCtrl.navigateForward("/mypolls");
+
+    // now on mypolls
+    // this.g.checkGroup().subscribe((acc) => {
+    //   if (acc == true) {
+    //     this.g.presentAlert(
+    //       "Success",
+    //       "Group is existing and you are free to proceed"
+    //     );
+    //     this.navCtrl.navigateForward("/mypolls");
+    //   } else {
+    //     this.g.presentAlert("Error", "Please use existing group credentials");
+    //   }
+    // });
   }
 
   formnewGroup() {

@@ -1,6 +1,7 @@
 import { Component, OnInit, ApplicationInitStatus } from "@angular/core";
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll";
+import { NavController } from "@ionic/angular";
 import { NgModule, Input } from "@angular/core";
 
 import { Option } from "../option";
@@ -54,11 +55,18 @@ export class ClosedpollPage implements OnInit {
   // public closed: boolean = false;
   // public sortingcounter: number = 0;
 
-  constructor(
-    public g: GlobalService // temporary //private formBuilder: FormBuilder
-  ) {}
+  constructor(public g: GlobalService, public navCtrl: NavController) {}
 
   ngOnInit() {
+    this.g.checkGroup(false).subscribe((acc) => {
+      if (acc == false) {
+        this.g.presentAlert(
+          "Wrong Credentials",
+          "Please enter your right user credentials and use implemented refresh buttons!"
+        );
+        this.navCtrl.navigateBack("/home");
+      }
+    });
     this.p = this.g.polls[this.g.openpid];
     this.oidsorted = this.p.oidsorted;
     this.votedfor = this.p.vid2oid[this.p.myvid];

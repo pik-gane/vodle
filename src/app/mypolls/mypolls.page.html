@@ -4,15 +4,24 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>My polls</ion-title>
+    <ion-button slot="end" (click)="refresh()" fill="clear" no-margin>
+      <ion-icon name="refresh" size="large"></ion-icon>
+    </ion-button>
+
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
+
+
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <ion-list lines="full">
     <!--TODO: allow filtering and sorting by state(open/closed/drafts)/deadline/title/creator/priority, allow setting personal priority-->
+    <ng-template [ngIf]="Object.keys(g.polls).length==0">
+      <ion-title text-center>No Polls yet created</ion-title>
+    </ng-template>
     <ion-item *ngFor="let pid of Object.keys(g.polls)" [id]="'poll_'+pid" (click)="g.openpid = pid"
       [routerLink]="'/openpoll'">
       <ion-icon [name]="(g.polls[pid].type=='share')?'cut':'trophy'"></ion-icon>&nbsp;

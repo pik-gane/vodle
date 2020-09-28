@@ -595,7 +595,7 @@ export class Poll {
       });
   }
 
-  getCompleteState(trial: number = 1) {
+  getCompleteState(trial: number = 1, firstupdate?: boolean) {
     // get complete poll state from cloudant
     GlobalService.log("posting full cloudant query for poll " + this.pid);
 
@@ -657,7 +657,7 @@ export class Poll {
               // get own rating
             } else if (
               this.due > t &&
-              t > this.lastrated &&
+              (t > this.lastrated || firstupdate) &&
               vid == this.myvid
             ) {
               for (let oid in rs) {
@@ -693,7 +693,7 @@ export class Poll {
             this.closed = true;
             this.firstclosed = true;
           }
-          console.log(checkclose + " + " + this.closed);
+
           // if other person accesses after has already been closed set own document to closed
           if (checkclose) {
             this.closed = true;
@@ -788,8 +788,8 @@ export class Poll {
             "  putting cloudant doc succeeded, new rev is " + value["rev"]
           );
           this.couchdb_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
-          // FIXME: the following is just for testing:
-          this.getCompleteState();
+
+          //this.getCompleteState();
         },
         (error: {}) => {
           // at put failure:
