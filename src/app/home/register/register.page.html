@@ -1,0 +1,36 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Register</ion-title>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+
+    <ion-thumbnail slot="end">
+      <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+
+  </ion-toolbar>
+</ion-header>
+
+<ion-content padding>
+  <ion-list>
+
+    <ion-item>
+      <ion-label position="floating">User ID:</ion-label>
+      <ion-input type="email" placeholder="Mail address" autofocus="true" id="mail">
+      </ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating">User Password</ion-label>
+      <ion-input type="password" placeholder="User password" autofocus="true" id="userpw1">
+      </ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating">Repeat Password</ion-label>
+      <ion-input type="password" placeholder="User password" autofocus="true" id="userpw2">
+      </ion-input>
+    </ion-item>
+    <ion-button expand="full" (click)="submitUserCredentials()">Submit</ion-button>
+  </ion-list>
+
+</ion-content>

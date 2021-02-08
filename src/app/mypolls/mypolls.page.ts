@@ -23,16 +23,28 @@ export class MypollsPage implements OnInit {
       spinner: "crescent",
     });
     await loadingElement.present();
-    this.g.checkGroup(true).subscribe((acc) => {
+    this.g.checkGroup(true).subscribe((promise) => {
       loadingElement.dismiss();
-      if (acc == false) {
+      promise.then((acc) => {
+        if (acc == false) {
+          this.g.presentAlert(
+            "Wrong Credentials",
+            "Please enter your right user credentials and use implemented refresh buttons!"
+          );
+          this.navCtrl.navigateBack("/home");
+        } else {
+          GlobalService.log("Successful Login to Group");
+          // already before this.g.checkUser();
+          // TODO: what if reloading page
+        }
+      });
+    }),
+      (error: {}) => {
         this.g.presentAlert(
           "Wrong Credentials",
-          "Please enter your right user credentials and use implemented refresh buttons!"
+          "Please ask your group admin for the right encoded passwords!"
         );
-        this.navCtrl.navigateBack("/home");
-      }
-    });
+      };
   }
   ionViewDidEnter() {}
 
@@ -46,15 +58,17 @@ export class MypollsPage implements OnInit {
     });
     await refreshElement.present();
 
-    this.g.checkGroup(true).subscribe((acc) => {
-      refreshElement.dismiss();
-      if (acc == false) {
-        this.g.presentAlert(
-          "Wrong Credentials",
-          "Please enter your user credentials first!"
-        );
-        this.navCtrl.navigateBack("/home");
-      }
+    this.g.checkGroup(true).subscribe((promise) => {
+      promise.then((acc) => {
+        refreshElement.dismiss();
+        if (acc == false) {
+          this.g.presentAlert(
+            "Wrong Credentials",
+            "Please enter your user credentials first!"
+          );
+          this.navCtrl.navigateBack("/home");
+        }
+      });
     });
   }
 }

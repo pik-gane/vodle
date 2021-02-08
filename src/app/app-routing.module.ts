@@ -41,7 +41,9 @@ const routes: Routes = [
     path: "explainsupport/:oid",
     loadChildren:
       "./explainsupport/explainsupport.module#ExplainsupportPageModule",
-  },
+  },  { path: 'register', loadChildren: './home/register/register.module#RegisterPageModule' },
+  { path: 'new-group', loadChildren: './home/new-group/new-group.module#NewGroupPageModule' },
+
 ];
 
 @NgModule({

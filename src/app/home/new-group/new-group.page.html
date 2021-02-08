@@ -1,0 +1,41 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Register Group</ion-title>
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+
+    <ion-thumbnail slot="end">
+      <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+
+  </ion-toolbar>
+</ion-header>
+<ion-list>
+  <ion-item>
+    <h4>To register your Group, please first create the credentials of the group!</h4>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">Group ID:</ion-label>
+    <ion-input placeholder="Unique Group ID" autofocus="true" id="groupID">
+    </ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">Group Password</ion-label>
+    <ion-input type="password" placeholder="Group password" autofocus="true" id="grouppw1">
+    </ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">Repeat Password</ion-label>
+    <ion-input type="password" placeholder="Group password" autofocus="true" id="grouppw2">
+    </ion-input>
+  </ion-item>
+  <ion-item>
+    <ion-label position="floating">CouchDB credentials:</ion-label>
+    <ion-input placeholder="Name of CouchDB and password separated by ':'" autofocus="true" id="couchdb"></ion-input>
+  </ion-item>
+  <ion-button expand="full" (click)="submitGroupCredentials()">Submit</ion-button>
+</ion-list>
+<ion-content padding>
+
+</ion-content>

@@ -9,7 +9,6 @@ import {
 } from "@angular/core";
 import {
   NavController,
-  Events,
   LoadingController,
   AlertController,
 } from "@ionic/angular";
@@ -37,6 +36,7 @@ import { ActivatedRoute } from "@angular/router";
 export class OpenpollPage implements OnInit {
   public Array = Array;
   public myForm: FormGroup;
+  public introOptionsForm: FormGroup;
   public Object = Object;
   //public options: FormArray;
 
@@ -72,11 +72,13 @@ export class OpenpollPage implements OnInit {
   public optionCount: number = 0;
   public addingOption: boolean = false;
   public closed: boolean = false;
+  public introduction: boolean;
+  public optionColor: string[] = [];
+  public introOptionRating: number[] = [];
 
   constructor(
     public navCtrl: NavController,
     public loadingController: LoadingController,
-    public events: Events,
     private zone: NgZone,
     public g: GlobalService,
     private formBuilder: FormBuilder, //private control: FormControl,
@@ -85,7 +87,6 @@ export class OpenpollPage implements OnInit {
   ) {
     // if (this.g.username == "") {
     //   // if online:
-
     //   // if offline:
     //   this.g.storage.get("state").then((s) => {
     //     GlobalService.log("getting state from storage succeeded");
@@ -101,13 +102,12 @@ export class OpenpollPage implements OnInit {
     //     //this.ngOnInit();
     //   });
     // }
-
     //this.p = this.g.polls[this.g.openpid];
-    this.events.subscribe("updateScreen", () => {
-      this.zone.run(() => {
-        console.log("force update the screen");
-      });
-    });
+    // this.events.subscribe("updateScreen", () => {
+    //   this.zone.run(() => {
+    //     console.log("force update the screen");
+    //   });
+    // });
     // this.myForm = this.formBuilder.group({
     //   option1: ["", Validators.required],
     // });
@@ -116,16 +116,20 @@ export class OpenpollPage implements OnInit {
 
   // lifecycle events:
   ngOnInit() {
-    this.g.checkGroup(false).subscribe((acc) => {
-      if (acc == false) {
-        this.g.presentAlert(
-          "Wrong Credentials",
-          "Please enter your right user credentials and use implemented refresh buttons!"
-        );
-        this.navCtrl.navigateBack("/home");
-        return;
-      }
-    });
+    //TODO: Check Group for first user
+    // this.g.checkGroup(false).subscribe((promise) => {
+    //   promise.then((acc) => {
+    //     if (acc == false) {
+    //       this.g.presentAlert(
+    //         "Wrong Credentials",
+    //         "Please enter your right user credentials and use implemented refresh buttons!"
+    //       );
+    //       this.navCtrl.navigateBack("/home");
+    //       return;
+    //     }
+    //   });
+    // });
+    this.introduction = true;
     this.p = this.g.polls[this.g.openpid];
 
     this.myForm = this.formBuilder.group({
@@ -139,10 +143,17 @@ export class OpenpollPage implements OnInit {
 
     this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
-    for (var i = 0; i < Object.keys(this.p.options).length; i++) {
-      console.log(this.p.options[this.oidsorted[i]]);
+
+    if (this.p.checkIfVoted()) {
+      this.introduction = false;
+    } else {
+      this.introduction = true;
+      for (let i = 0; i < this.oidsorted.length; i++) {
+        this.optionColor[i] = "light";
+        this.introOptionRating[i] = 0;
+      }
+      this.expanded = null;
     }
-    this.expanded = null;
     //this.updateOrder();
     // if (this.p.due < new Date().getTime()) {
     //   this.p.close();
@@ -153,6 +164,9 @@ export class OpenpollPage implements OnInit {
   }
   get optionForms() {
     return this.myForm.get("options") as FormArray;
+  }
+  get introOptionsArray() {
+    return this.introOptionsForm.get("options") as FormArray;
   }
   ionViewWillEnter() {
     //   if (this.g.username == "") {
@@ -183,8 +197,11 @@ export class OpenpollPage implements OnInit {
   }
   ionViewDidEnter() {
     this.do_updates = true;
+
     this.p.tally();
-    this.loopUpdate();
+    if (!this.introduction) {
+      this.loopUpdate();
+    }
   }
 
   ionViewWillLeave() {
@@ -331,9 +348,9 @@ export class OpenpollPage implements OnInit {
   getSliderValue(oid) {
     return Number(this.getSlider(oid).value);
   }
-  storeSlidersRating(oid) {
-    let r = Math.round(this.getSliderValue(oid));
-    this.p.setMyRating(oid, r);
+  storeSlidersRating(oid: string, value: number) {
+    //let r = Math.round(this.getSliderValue(oid));
+    this.p.setMyRating(oid, value);
     // TODO: broadcast rating
     this.p.tally();
     this.g.save_state();
@@ -343,13 +360,13 @@ export class OpenpollPage implements OnInit {
     // freeze current sort order:
     this.opos = { ...this.p.opos };
   }
-  ratingChanges(oid) {
+  ratingChanges(oid: string, value: number) {
     let now = new Date().getTime();
     if (this.p.due > now && !this.closed) {
-      var slider = this.getSlider(oid),
-        value = Number(slider.value);
+      // var slider = this.getSlider(oid),
+      //   value = Number(slider.value);
       this.setSliderColor(oid, value);
-      this.storeSlidersRating(oid);
+      this.storeSlidersRating(oid, value);
       this.submit_ratings[oid] = true;
       if (this.submit_triggered) {
         this.holdSubmit();
@@ -395,6 +412,8 @@ export class OpenpollPage implements OnInit {
     // every 20 sec, update full state
     while (this.do_updates) {
       this.p.getCompleteState();
+      // update poll
+      this.p = this.g.polls[this.p.pid];
       if (this.p.closed) {
         this.closed = this.p.closed;
         this.p.close();
@@ -477,7 +496,7 @@ export class OpenpollPage implements OnInit {
       let sorted = this.p.registerOption(o, "addOption");
       if (this.p.optioncount == Object.keys(this.p.options).length) {
         this.g.save_state().then((s) => {
-          this.p.setnewPoll();
+          this.p.setPoll(false);
           this.p.tally();
           this.oidsorted = this.p.oidsorted;
           this.do_updates = true;
@@ -511,5 +530,73 @@ export class OpenpollPage implements OnInit {
     });
 
     alert.present();
+  }
+  skipIntro() {
+    this.introduction = false;
+    this.do_updates = true;
+    this.loopUpdate();
+  }
+  tickFavOption(i: number) {
+    if (this.optionColor[i] == "light") {
+      this.optionColor[i] = "success";
+      this.introOptionRating[i] = 100;
+    } else {
+      this.optionColor[i] = "light";
+      this.introOptionRating[i] = 0;
+    }
+  }
+  tickOption(i: number) {
+    if (this.optionColor[i] == "light") {
+      this.optionColor[i] = "secondary";
+      this.introOptionRating[i] = 50;
+    } else if (this.optionColor[i] == "secondary") {
+      this.optionColor[i] = "success";
+      this.introOptionRating[i] = 100;
+    } else {
+      this.optionColor[i] = "light";
+      this.introOptionRating[i] = 0;
+    }
+  }
+
+  setIntroRating(i: number) {
+    this.introOptionRating[i] =
+      101 -
+      parseInt(
+        (document.getElementById(
+          "introRating_" + this.oidsorted[i]
+        ) as HTMLInputElement).value
+      );
+    if (this.introOptionRating[i] >= 100) {
+      this.optionColor[i] = "success";
+      this.introOptionRating[i] = 100;
+    } else if (this.introOptionRating[i] <= 1) {
+      this.optionColor[i] = "light";
+      this.introOptionRating[i] = 0;
+    } else {
+      this.optionColor[i] = "secondary";
+    }
+  }
+  proceed() {
+    for (let i = 0; i < this.oidsorted.length; i++) {
+      this.ratingChanges(this.oidsorted[i], this.introOptionRating[i]);
+    }
+    this.introduction = false;
+    this.do_updates = true;
+    this.loopUpdate();
+  }
+  simpleVote() {
+    for (let i = 0; i < this.oidsorted.length; i++) {
+      let rating = this.p.getRating(this.oidsorted[i], this.p.myvid);
+      if (rating == 100) {
+        this.optionColor[i] = "success";
+      } else if (rating == 0) {
+        this.optionColor[i] = "light";
+      } else {
+        this.optionColor[i] = "secondary";
+      }
+    }
+    this.introduction = true;
+
+    this.do_updates = false;
   }
 }

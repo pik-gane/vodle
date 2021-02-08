@@ -35,14 +35,16 @@ export class NewpollPage implements OnInit {
   }
 
   ngOnInit() {
-    this.g.checkGroup(false).subscribe((acc) => {
-      if (acc == false) {
-        this.g.presentAlert(
-          "Wrong Credentials",
-          "Please enter your right user credentials and use implemented refresh buttons!"
-        );
-        this.navCtrl.navigateBack("/home");
-      }
+    this.g.checkGroup(false).subscribe((promise) => {
+      promise.then((acc) => {
+        if (acc == false) {
+          this.g.presentAlert(
+            "Wrong Credentials",
+            "Please enter your right user credentials and use implemented refresh buttons!"
+          );
+          this.navCtrl.navigateBack("/home");
+        }
+      });
     });
   }
   addControl() {
@@ -59,7 +61,7 @@ export class NewpollPage implements OnInit {
     this.myForm.removeControl(control.key);
     console.log(control.key.getElementById("oname").value);
   }
-  generatePoll() {
+  async generatePoll() {
     let rawpoll: string[][] = [
       [
         (document.getElementById("pid") as HTMLInputElement).value,
@@ -76,7 +78,8 @@ export class NewpollPage implements OnInit {
     }
     let pid = rawpoll[0][0];
     if (!(pid in this.g.polls)) {
-      this.p = new Poll(this.g, { pid: rawpoll[0][0] }).setnewPoll(rawpoll);
+      this.p = new Poll(this.g, { pid: rawpoll[0][0] });
+      await this.p.setPoll(true, rawpoll);
       this.g.openpid = this.p.pid;
       this.g.polls[this.p.pid] = this.p;
       this.waitRev();

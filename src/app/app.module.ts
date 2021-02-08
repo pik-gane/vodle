@@ -14,6 +14,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { IonicStorageModule } from "@ionic/storage";
 
 import { GlobalService } from "./global.service";
+import { LocalNotifications } from "@ionic-native/local-notifications/ngx";
 
 @NgModule({
   declarations: [AppComponent],

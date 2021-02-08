@@ -38,8 +38,7 @@
               {
                 "input": "src/global.scss"
               }
-            ],
-            "scripts": []
+            ]
           },
           "configurations": {
             "production": {

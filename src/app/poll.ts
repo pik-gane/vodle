@@ -1,4 +1,7 @@
+//import {config} from "../app.config"
 import { GlobalService } from "./global.service";
+//const crypto = require("crypto");
+//const crypto = require("crypto-browserify");
 import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { finalize, map } from "rxjs/operators";
@@ -11,6 +14,11 @@ import { Observable } from "rxjs";
 
 import { Option } from "./option";
 import { resolve } from "dns";
+import * as forge from "node-forge";
+import { v4 as uuidv4 } from "uuid";
+import { FormGroupDirective } from "@angular/forms";
+//const { generateKeyPair, publicEncrypt, privateDecrypt } = require("crypto");
+//import { generateKeyPair, privateDecrypt, publicEncrypt } from "crypto";
 
 export class Poll {
   // nonredundant state data:
@@ -59,6 +67,7 @@ export class Poll {
     "due",
     "myvid",
     "mygid",
+    "pubs",
     "lastrated",
     "vids",
     "oids",
@@ -71,6 +80,8 @@ export class Poll {
     "history",
     "closed",
     "firstclosed",
+    "myprivKey", //evtl raus
+    "mypubKey", // evtl raus
   ];
 
   // redundant session data:
@@ -91,12 +102,22 @@ export class Poll {
   public voting_share: number = 0;
 
   // for communicating with couchdb JSON database:
-  private couchdb_docurl: string = null; //per poll per user
+  private votingDoc_url: string = null; //per poll per user
   private couchdb_pollurl: string = null;
-  private couchdb_doc: {} = null; // object containing voter's ratings
+  private votingDoc_data: {} = null; // object containing voter's ratings
+  private votingDoc: {} = null;
   private couchdb_polldoc: {} = null; //object containing general poll information
   private couchdb_optiondocs: {}[] = [];
   private results: Observable<Option[]>;
+
+  //Encryption data
+  public rsa = forge.pki.rsa;
+  private myprivKey: string;
+  public mypubKey: string;
+  public pubs: string[] = [];
+  public pubKeys: forge.pki.rsa.PublicKey[] = [];
+
+  public signedRatings: string;
 
   constructor(g: GlobalService, data: {} = null) {
     this.g = g;
@@ -109,14 +130,20 @@ export class Poll {
         }
       }
     }
-
+    // Transforming public keys as pem strings into data structure that is needed to verify:
+    if (this.pubs) {
+      for (let i in this.pubs) {
+        this.pubKeys[i] = forge.pki.publicKeyFromPem(this.pubs[i]);
+      }
+    }
     GlobalService.log("poll object for " + this.pid + " constructed");
 
-    if (!(this.myvid in this.vids)) {
+    if (this.myvid != "" && !this.vids.includes(this.myvid)) {
+      // TODO: vielleicht woanders schon erledigt
       this.vids.push(this.myvid);
     }
 
-    this.save_state();
+    //this.save_state();
   }
 
   save_state() {
@@ -143,6 +170,7 @@ export class Poll {
       this[a] = s[a];
       //      GlobalService.log("  " + a + ":" + JSON.stringify(this[a]));
     }
+
     this.tally();
     GlobalService.log("  done.");
   }
@@ -152,48 +180,12 @@ export class Poll {
     return this;
   }
 
-  makedemo(demo: string) {
-    // lists of [title, desc, uri] + options' [name, desc, uri]:
-    //      ["", "", ""],
-    GlobalService.log("making demo poll...");
-    this.pid = demo;
-    var oids;
-    // if (demo == "3by3") {
-    //   this.title = "Demo poll with just 3 options and 4 voters";
-    //   this.myvid = "Alice";
-    //   this.vids = ["Alice", "Bob", "Celia", "Dan"];
-    //   oids = ["Rock", "Scissors", "Paper"];
-    //   for (let oid of oids) {
-    //     let o = new Option(this, { oid: oid });
-    //   }
-    // } else {
-    let d = this.g.demodata[demo],
-      n = 5;
-    this.title = d[0][0];
-    this.desc = d[0][1];
-    this.uri = d[0][2];
-    this.type = d[0][3];
-    this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
-    this.mygid = this.g.groupname;
-    this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
-    // for (let i = 1; i < d.length; i++) {
-    //   let o = new Option("o" + i, "", d[i][0], d[i][1], d[i][2]);
-    // }
-    // }
-
-    for (let oid of this.oids) {
-      this.setRating(oid, this.myvid, 0);
-    }
-    //this.due = new Date(new Date().getTime() + 24 * 60 * 60 * 1e3); // now + one day
-    GlobalService.log("...done");
-    return this;
-  }
-  setnewPoll(rawpoll?: string[][]) {
+  async setPoll(newPoll: boolean, rawpoll?: string[][]) {
     // lists of [title, desc, uri] + options' [name, desc, uri]:
     //      ["", "", ""],
     GlobalService.log("creating new poll...");
     //this.pid = demo;
-    if (rawpoll) {
+    if (newPoll) {
       this.pid = rawpoll[0][0];
       this.title = rawpoll[0][1];
       this.desc = rawpoll[0][2];
@@ -201,30 +193,52 @@ export class Poll {
       //this.uri = rawpoll[0][3];
       this.type = "winner";
       // Why here? \\
-      this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
+      //this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
       this.mygid = this.g.groupname;
-      this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);
-      for (let i = 1; i < rawpoll.length; i++) {
-        let o = new Option(
-          this.pid + "_o" + i,
-          "o" + i,
-          rawpoll[i][0],
-          rawpoll[i][1],
-          "" // URI ja oder nein?
-        );
-        //this.couchdb_optiondocs[o.oid] = o;
-        this.registerOption(o, "newOption");
-      }
-    }
 
-    this.couchdb_pollurl = this.g.couchdburl + "/" + this.pid;
+      await this.g.informServer(this.pid).then(async (success) => {
+        if (success) {
+          await this.g.requestFromServer(this.pid).then((value) => {
+            this.myprivKey = value["mydata"]["privKey"];
+            this.mypubKey = value["mydata"]["pubKey"];
+            this.myvid = value["mydata"]["vid"];
+            this.pubs = value["publicKeys"];
+            //this.pubs.push(this.mypubKey);
+            for (let i = 0; i < this.pubs.length; i++) {
+              this.pubKeys[i] = forge.pki.publicKeyFromPem(this.pubs[i]);
+            }
+            //this.pubKeys.push(forge.pki.publicKeyFromPem(this.mypubKey));
+            this.registerVoter(this.myvid);
+
+            for (let i = 1; i < rawpoll.length; i++) {
+              let o = new Option(
+                this.pid + "_o" + i,
+                "o" + i,
+                rawpoll[i][0],
+                rawpoll[i][1],
+                "" // URI ja oder nein?
+              );
+              //this.couchdb_optiondocs[o.oid] = o;
+              this.registerOption(o, "newOption");
+            }
+          });
+        }
+      });
+    }
+    return this.putPolldoc();
+  }
+  putPolldoc() {
+    //TODO: if successful return poll object
+    this.couchdb_pollurl =
+      this.g.couchdburl + "/" + this.g.groupname + "_" + this.pid;
     this.prepareCouchdbPolldoc();
 
-    this.fetchRev(this.couchdb_pollurl)
+    this.g.http
+      .get(this.couchdb_pollurl, { headers: this.g.dbheaders })
       .pipe(
         finalize(
           // after get has finished:
-          () => {
+          async () => {
             this.putDoctoCouchdb(
               this.couchdb_pollurl,
               this.couchdb_polldoc
@@ -234,6 +248,8 @@ export class Poll {
                 "  putting cloudant doc succeeded, new rev is " + value["rev"]
               );
               this.couchdb_polldoc["_rev"] = this.rev = value["rev"]; // ! value's key is "rev" not "_rev" here
+
+              this.tally();
               this.g.save_state();
             });
           }
@@ -267,7 +283,7 @@ export class Poll {
   prepareCouchdbPolldoc() {
     if (!this.couchdb_polldoc) {
       this.couchdb_polldoc = {
-        _id: this.pid,
+        pid: this.pid,
         title: this.title,
         desc: this.desc,
         due: this.due,
@@ -276,12 +292,11 @@ export class Poll {
         oids: this.oids,
         uri: "",
         closed: this.closed,
+        vids: this.vids,
       };
     }
   }
-  fetchRev(url: string) {
-    return this.g.http.get(url, { headers: this.g.dbheaders });
-  }
+
   putDoctoCouchdb(url: string, doc: {}) {
     let jsondoc = JSON.stringify(doc);
     return this.g.http.put(url, jsondoc, { headers: this.g.dbheaders }).pipe(
@@ -301,7 +316,7 @@ export class Poll {
   // }
 
   registerVoter(vid: string) {
-    if (!this.vids.includes(vid)) {
+    if (vid != "" && !this.vids.includes(vid)) {
       this.vids.push(vid);
       for (let oid of this.oids) {
         this.ratings[oid][vid] = 0;
@@ -334,28 +349,30 @@ export class Poll {
   }
 
   setRating(oid: string, vid: string, r: number) {
-    let oldr = 0;
-    if (this.ratings[oid] != undefined) {
-      oldr = this.ratings[oid][vid];
+    if (vid != "") {
+      let oldr = 0;
+      if (this.ratings[oid] != undefined) {
+        oldr = this.ratings[oid][vid];
+      }
+      //let oldr = this.ratings[oid][vid];
+      // if (oldr == undefined) {
+      //   oldr = 0;
+      // }
+      // update all redundant ratings data:
+      if (r % 1 != 0) {
+        GlobalService.log(
+          "WARN: noninteger rating " + r + " for " + oid + " by " + vid
+        );
+        r = Math.round(r);
+      }
+      this.ratings[oid][vid] = r;
+      if (vid == this.myvid) {
+        this.myratings[oid] = r;
+      }
+      this.rfreqs[oid][oldr]--;
+      this.rfreqs[oid][r]++;
+      this.rsums[oid] += r - oldr;
     }
-    //let oldr = this.ratings[oid][vid];
-    // if (oldr == undefined) {
-    //   oldr = 0;
-    // }
-    // update all redundant ratings data:
-    if (r % 1 != 0) {
-      GlobalService.log(
-        "WARN: noninteger rating " + r + " for " + oid + " by " + vid
-      );
-      r = Math.round(r);
-    }
-    this.ratings[oid][vid] = r;
-    if (vid == this.myvid) {
-      this.myratings[oid] = r;
-    }
-    this.rfreqs[oid][oldr]--;
-    this.rfreqs[oid][r]++;
-    this.rsums[oid] += r - oldr;
   }
   setMyRating(oid: string, r: number) {
     this.lastrated = new Date().getTime();
@@ -584,10 +601,10 @@ export class Poll {
         // ) {
         //   return;
         // }
-        this.registerOption(o); // hier war ich
+        this.registerOption(o); // TODO: nicht wieder auf Null machen hier war ich
         console.log(this.options);
 
-        this.registerVoter(this.g.username); // wenn schon mal abgestimmt, wie geht es dann weiter?
+        this.registerVoter(this.myvid); //TODO: registerVoter überflüssig?
         if (this.optioncount == this.oids.length) {
           this.tally();
           this.g.save_state();
@@ -608,7 +625,7 @@ export class Poll {
         this.g.couchdburl + "/_find",
         JSON.stringify({
           selector: { pid: this.pid, mygid: this.mygid },
-          fields: ["vid", "ratings", "history", "lastrated", "closed"],
+          fields: ["vid", "encdoc", "signature"],
           limit: 200,
         }),
         { headers: this.g.dbheaders }
@@ -630,58 +647,89 @@ export class Poll {
           );
 
           // process voter docs:
-          let vids = [this.myvid];
+          let vids = [];
+          let temppubKeys = [];
+          this.pubKeys.forEach((val) => {
+            temppubKeys.push(Object.assign({}, val));
+          });
+
           this.histories = [];
           for (let doc of value["docs"]) {
             let vid = doc["vid"],
-              rs = doc["ratings"],
-              t = doc["lastrated"],
-              cl = doc["closed"];
-            this.histories.push(doc["history"]);
-            if (vid != this.myvid) {
-              vids.push(vid);
-              if (!this.vids.includes(vid)) {
-                // new voter in database
-                this.registerVoter(vid);
-              }
-            }
-            // get ratings by others
-            if (this.due > t && vid != this.myvid) {
-              for (let oid in rs) {
-                if (this.oids.includes(oid)) {
-                  this.setRating(oid, vid, rs[oid]);
-                } else {
-                  this.getOption(this.pid + "_" + oid);
-                }
-              }
-              // get own rating
-            } else if (
-              this.due > t &&
-              (t > this.lastrated || firstupdate) &&
-              vid == this.myvid
-            ) {
-              for (let oid in rs) {
-                if (this.oids.includes(oid)) {
-                  this.setRating(oid, vid, rs[oid]);
-                }
-              }
-            }
-            // if poll is closed by myself but results not shown yet
-            // maybe change
-            if (vid == this.myvid) {
-              mycl = cl;
-            }
-            // check if was already closed by someone else
-            if (cl == true) {
-              checkclose = true;
-            }
-          }
-          for (let vid of this.vids) {
+              encdoc = doc["encdoc"],
+              signature = doc["signature"];
+
             if (!vids.includes(vid)) {
-              // voter no longer in database
-              this.deregisterVoter(vid);
+              vids.push(vid);
+
+              if (this.verifyDocument(encdoc, signature, temppubKeys)) {
+                let decdoc = JSON.parse(
+                  this.g.decryptCredential(
+                    encdoc,
+                    this.g.grouppw,
+                    this.g.groupsalt,
+                    this.g.groupiv
+                  )
+                );
+                let rs = decdoc["ratings"],
+                  t = decdoc["lastrated"],
+                  cl = decdoc["closed"];
+                this.histories.push(decdoc["history"]);
+
+                // TODO: Voter joins later:
+                // if (!this.vids.includes(vid)) {
+                //   // new voter in database
+                //   this.registerVoter(vid);
+                // }
+                // get ratings by others
+                if (this.due > t && vid != this.myvid) {
+                  for (let oid in rs) {
+                    if (this.oids.includes(oid)) {
+                      this.setRating(oid, vid, rs[oid]);
+                    } else {
+                      this.getOption(this.pid + "_" + oid);
+                    }
+                  }
+                  // get own rating
+                } else if (
+                  this.due > t &&
+                  (t > this.lastrated || firstupdate) &&
+                  vid == this.myvid
+                ) {
+                  for (let oid in rs) {
+                    if (this.oids.includes(oid)) {
+                      this.setRating(oid, vid, rs[oid]);
+                    }
+                  }
+                }
+                // if poll is closed by myself but results not shown yet
+                // maybe change
+                if (vid == this.myvid) {
+                  mycl = cl;
+                }
+                // check if was already closed by someone else
+                if (cl == true) {
+                  checkclose = true;
+                }
+              }
             }
           }
+          for (let vid of vids) {
+            if (!this.vids.includes(vid)) {
+              //this.registerVoter(vid);
+              this.g.getPolls();
+              //this.updatepubKeys(vid);
+              //TODO: update variables after getting polls
+              break;
+            }
+          }
+          // TODO: allow joining
+          // for (let vid of this.vids) {
+          //   if (!vids.includes(vid)) {
+          //     // voter no longer in database
+          //     this.deregisterVoter(vid);
+          //   }
+          // }
           this.tally();
           this.g.save_state();
           // if first person to access after due time reached
@@ -727,29 +775,57 @@ export class Poll {
         }
       );
   }
-
-  prepareCloudantDoc() {
-    if (!this.couchdb_doc) {
-      this.couchdb_doc = {
-        _id: this.pid + "_" + this.myvid + "_" + this.mygid, // unique document id in db
-        pid: this.pid,
-        vid: this.myvid,
-        mygid: this.mygid,
-        pubkey: null,
+  updatepubKeys(vid: string) {
+    let pubs = this.g.polls[this.pid].pubs;
+    for (let pub of pubs) {
+      if (!this.pubs.includes(pub)) {
+        this.registerVoter(vid);
+        //this.pubKeys = [];
+        for (let i in pubs) {
+          this.pubKeys[i] = forge.pki.publicKeyFromPem(this.pubs[i]);
+        }
+        return;
+      }
+    }
+  }
+  prepareVotingDoc() {
+    if (!this.votingDoc_data) {
+      this.votingDoc_data = {
         lastrated: this.lastrated,
         ratings: this.myratings,
         history: this.history,
         closed: this.closed,
       };
     }
-    this.couchdb_doc["closed"] = this.closed;
-
-    this.couchdb_docurl = this.g.couchdburl + "/" + this.couchdb_doc["_id"];
+    this.votingDoc_data["closed"] = this.closed;
+    let encdoc = this.g.encryptCredential(
+      JSON.stringify(this.votingDoc_data),
+      this.g.grouppw,
+      this.g.groupsalt,
+      this.g.groupiv
+    );
+    let signature = this.signDocument(encdoc);
+    this.votingDoc_url = this.g.couchdburl + "/" + this.myvid;
+    // Voting Doc structure:
+    return {
+      _id: this.mygid + "_" + this.pid + "_" + this.myvid, // unique document id in db
+      mygid: this.mygid,
+      pid: this.pid,
+      vid: this.myvid,
+      encdoc: encdoc,
+      signature: signature,
+    };
   }
 
   submitRatings(submit_ratings?) {
     // now no changes have happened within the last submit_interval,
     // so we can actually do the submission
+
+    // if (!(this.pubkey in this.keys)) {
+    //   //this.keys.push(this.pubkey);
+    //   this.setnewPoll();
+    // }
+
     if (submit_ratings != undefined) {
       for (let oid in submit_ratings) {
         GlobalService.log("  " + oid + ":" + this.getRating(oid, this.myvid));
@@ -757,8 +833,8 @@ export class Poll {
     }
 
     this.tally();
-    this.prepareCloudantDoc();
-    if ("_rev" in this.couchdb_doc) {
+    this.votingDoc = this.prepareVotingDoc();
+    if ("_rev" in this.votingDoc) {
       // first try to put updated doc with known _rev (should normally succeed):
       this.putCloudantStoredRev(1);
     } else {
@@ -766,13 +842,13 @@ export class Poll {
     }
   }
   putCloudantStoredRev(trial: number) {
-    let jsondoc = JSON.stringify(this.couchdb_doc);
+    let jsondoc = JSON.stringify(this.votingDoc);
     GlobalService.log(
-      "putting cloudant doc with rev " + this.couchdb_doc["_rev"]
+      "putting cloudant doc with rev " + this.votingDoc["_rev"]
     );
     // this request processing follows https://github.com/angular/angular/issues/7865#issuecomment-409105458 :
     this.g.http
-      .put(this.couchdb_docurl, jsondoc, { headers: this.g.dbheaders })
+      .put(this.votingDoc_url, jsondoc, { headers: this.g.dbheaders })
       .pipe(
         finalize(
           // after put has finished:
@@ -787,7 +863,7 @@ export class Poll {
           GlobalService.log(
             "  putting cloudant doc succeeded, new rev is " + value["rev"]
           );
-          this.couchdb_doc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
+          this.votingDoc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
 
           //this.getCompleteState();
         },
@@ -819,7 +895,7 @@ export class Poll {
   putCloudantFetchedRev() {
     GlobalService.log("getting cloudant doc");
     this.g.http
-      .get(this.couchdb_docurl, { headers: this.g.dbheaders })
+      .get(this.votingDoc_url, { headers: this.g.dbheaders })
       .pipe(
         finalize(
           // after get has finished:
@@ -834,13 +910,13 @@ export class Poll {
           GlobalService.log(
             "  getting cloudant doc returned _rev=" + value["_rev"]
           );
-          this.couchdb_doc["_rev"] = value["_rev"];
+          this.votingDoc["_rev"] = value["_rev"];
         },
         (error: {}) => {
           GlobalService.log(
             "  getting cloudant doc returned error " + JSON.stringify(error)
           );
-          delete this.couchdb_doc["_rev"];
+          delete this.votingDoc["_rev"];
         }
       );
   }
@@ -878,7 +954,7 @@ export class Poll {
     }
 
     if (reason == "newOption" || reason == "addOption") {
-      // to do: schöner
+      // todo: schöner
       this.oids.indexOf(o.oid) === -1
         ? this.oids.push(o.oid)
         : GlobalService.log(o.oid + " added to p.oids");
@@ -886,17 +962,33 @@ export class Poll {
       let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri);
 
       this.options[o.oid] = oObject;
-      // initial ratings are all zero:
-      this.ratings[o.oid] = {};
-      for (let vid of this.vids) {
-        this.ratings[o.oid][vid] = 0;
+      // ratings are either saved from previous sessions or all zero
+      if (this.ratings[o.oid] != undefined) {
+        if (this.rfreqs[o.oid] == undefined) {
+          this.rfreqs[o.oid] = Array(101).fill(0);
+        }
+        this.rsums[o.oid] = 0;
+        for (let vid of this.vids) {
+          if (this.ratings[o.oid][vid] == undefined) {
+            this.ratings[o.oid][vid] = 0;
+            this.rfreqs[o.oid][0] += 1;
+          } else {
+            this.rsums[o.oid] += this.ratings[o.oid][vid];
+          }
+        }
+      } else {
+        this.ratings[o.oid] = {};
+        for (let vid of this.vids) {
+          this.ratings[o.oid][vid] = 0;
+        }
+        this.rfreqs[o.oid] = Array(101).fill(0);
+        this.rfreqs[o.oid][0] = this.vids.length;
+        this.rsums[o.oid] = 0;
       }
-      this.rfreqs[o.oid] = Array(101).fill(0);
-      this.rfreqs[o.oid][0] = this.vids.length;
-      this.rsums[o.oid] = 0;
+
       //this.stamps[o.oid] = o["created"];
       this.apprs[o.oid] = -1;
-      this.setRating(o.oid, this.g.username, 0);
+      this.setRating(o.oid, this.myvid, this.ratings[o.oid][this.myvid]);
       //console.log(Object.keys(this.ratings).length);
 
       GlobalService.log("  registered option " + o.name);
@@ -911,7 +1003,7 @@ export class Poll {
           let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
 
           this.options[o.oid] = oObject;
-          if ((reason = "addOption")) {
+          if (reason == "addOption") {
             this.lastrated = new Date().getTime();
             this.submitRatings();
           }
@@ -990,31 +1082,93 @@ export class Poll {
       let oObject = new Option(o._id, o.oid, o.name, o.desc, o.uri, o._rev);
 
       this.options[o.oid] = oObject;
-      // initial ratings are all zero:
-      this.ratings[o.oid] = {};
-      for (let vid of this.vids) {
-        this.ratings[o.oid][vid] = 0;
+      // ratings are either saved from previous sessions or all zero
+      if (this.ratings[o.oid] != undefined) {
+        if (this.rfreqs[o.oid] == undefined) {
+          this.rfreqs[o.oid] = Array(101).fill(0);
+        }
+        this.rsums[o.oid] = 0;
+        for (let vid of this.vids) {
+          if (this.ratings[o.oid][vid] == undefined) {
+            this.ratings[o.oid][vid] = 0;
+            this.rfreqs[o.oid][0] += 1;
+          } else {
+            this.rsums[o.oid] += this.ratings[o.oid][vid];
+          }
+        }
+      } else {
+        this.ratings[o.oid] = {};
+        for (let vid of this.vids) {
+          this.ratings[o.oid][vid] = 0;
+        }
+        this.rfreqs[o.oid] = Array(101).fill(0);
+        this.rfreqs[o.oid][0] = this.vids.length;
+        this.rsums[o.oid] = 0;
       }
-      this.rfreqs[o.oid] = Array(101).fill(0);
-      this.rfreqs[o.oid][0] = this.vids.length;
-      this.rsums[o.oid] = 0;
+
       //this.stamps[o.oid] = o["created"];
       this.apprs[o.oid] = -1;
-      this.setRating(o.oid, this.g.username, 0);
-      for (let vid of this.vids) {
-        // if (vid == this.myvid) {
-        //   if (this.g.polls[this.pid].myratings[o.oid] != null) {
-        //     this.setRating(
-        //       o.oid,
-        //       this.g.username,
-        //       this.g.polls[this.pid].myratings[o.oid]
-        //     );
-        //   }
-        // } else {
-        // }
-        this.ratings[o.oid][vid] = 0;
-      }
+      this.setRating(o.oid, this.myvid, this.ratings[o.oid][this.myvid]);
+      //for (let vid of this.vids) {
+      // if (vid == this.myvid) {
+      //   if (this.g.polls[this.pid].myratings[o.oid] != null) {
+      //     this.setRating(
+      //       o.oid,
+      //       this.g.username,
+      //       this.g.polls[this.pid].myratings[o.oid]
+      //     );
+      //   }
+      // } else {
+      // }
+
+      //}
       GlobalService.log("  registered option " + o.name);
     }
+  }
+
+  signDocument(encdoc: string) {
+    let priv = forge.pki.decryptRsaPrivateKey(this.myprivKey, "top secret"); //TODO: update pass phrase
+
+    let md = forge.md.sha384.create();
+    md.update(encdoc, "utf8");
+    let signature = forge.util.bytesToHex(priv.sign(md));
+    return signature;
+  }
+
+  verifyDocument(
+    encdoc: string,
+    signature: string,
+    temppubKeys: forge.pki.rsa.PublicKey[]
+  ) {
+    let md = forge.md.sha384.create();
+    md.update(encdoc, "utf8");
+    GlobalService.log("verifying voting docs:");
+    let verified: boolean;
+    for (let key of temppubKeys) {
+      try {
+        verified = key.verify(
+          md.digest().bytes(),
+          forge.util.hexToBytes(signature)
+        );
+        GlobalService.log("Verified voting doc with this public key");
+        temppubKeys.splice(temppubKeys.indexOf(key, 0), 1);
+        break;
+      } catch {
+        verified = false;
+        GlobalService.log("No success with this public key");
+      }
+    }
+    return verified;
+
+    //TODO: no other vote is possible by vid
+  }
+
+  checkIfVoted() {
+    for (let oid in this.myratings) {
+      if (this.myratings[oid] != 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }

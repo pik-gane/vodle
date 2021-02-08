@@ -12,86 +12,87 @@
 
 <ion-content>
   <ion-list lines="full" no-padding no-margin>
-    <ion-item>
-      <ion-button routerLink="/openpoll" [disabled]="g.username==''">
-        <!--fill="clear" -->
-        <ion-icon name="git-commit" slot="start"></ion-icon>
-        Last used
-      </ion-button>
-      &nbsp;
-      <ion-button routerLink="/mypolls" [disabled]="g.username==''">
-        <!--fill="clear"-->
-        <ion-icon name="list" slot="start"></ion-icon>
-        My polls
-      </ion-button>
-      &nbsp;
-      <ion-button routerLink="/help" fill="clear">
-        <ion-icon name="help" slot="start"></ion-icon>
-        Help
-      </ion-button>
-      &nbsp;
-      <ion-button routerLink="/about" fill="clear">
-        <ion-icon name="information-circle" slot="start"></ion-icon>
-        About
-      </ion-button>
-      <!-- Missing new poll?-->
-    </ion-item>
-    <ion-item>
-      <ion-text slot="start">Group name:</ion-text>
-      <ion-input [value]="g.groupname" placeholder="Enter the group name" required="true" autofocus="true"
-        id="groupname"></ion-input>
-      <!-- <ng-template [ngIf]="!editing">
-        <ion-button no-padding no-margin (click)="editing=true">
-          <ion-icon name="create"></ion-icon>&nbsp;edit
+
+    <ng-template [ngIf]="g.groupAccAllowed">
+      <ion-item>
+        <ion-button routerLink="/openpoll" [disabled]="g.username==''">
+          <!--fill="clear" -->
+          <ion-icon name="git-commit" slot="start"></ion-icon>
+          Last used
         </ion-button>
-      </ng-template>
-      <ng-template [ngIf]="editing">
-        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+        &nbsp;
+        <ion-button routerLink="/mypolls" [disabled]="g.username==''">
+          <!--fill="clear"-->
+          <ion-icon name="list" slot="start"></ion-icon>
+          My polls
         </ion-button>
-      </ng-template> -->
-    </ion-item>
-    <ion-item>
-      <ion-text slot="start">Group Password:</ion-text>
-      <ion-input [value]="g.grouppw" type="password" placeholder="Enter the group password" required="true"
-        autofocus="true" id="password">
-      </ion-input>
-      <!-- <ng-template [ngIf]="!editing">
-        <ion-button no-padding no-margin (click)="editing=true">
-          <ion-icon name="create"></ion-icon>&nbsp;edit
+        &nbsp;
+        <ion-button routerLink="/help" fill="clear">
+          <ion-icon name="help" slot="start"></ion-icon>
+          Help
         </ion-button>
-      </ng-template>
-      <ng-template [ngIf]="editing">
-        <ion-button no-padding no-margin (click)="navCtrl.navigateForward('/mypolls')">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+        &nbsp;
+        <ion-button routerLink="/about" fill="clear">
+          <ion-icon name="information-circle" slot="start"></ion-icon>
+          About
         </ion-button>
-      </ng-template> -->
-    </ion-item>
-    <ion-item>
-      <ion-button slot="start" (click)="prepareGroup()">Log In</ion-button>
-      <ion-button (click)="formnewGroup()">New Group</ion-button>
-    </ion-item>
-    <ion-item>
-      <ion-text slot="start">Username:</ion-text>
-      <ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true"
-        id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
-      <ng-template [ngIf]="!editing">
-        <ion-button no-padding no-margin (click)="editing=true">
-          <ion-icon name="create"></ion-icon>&nbsp;edit
-        </ion-button>
-      </ng-template>
-      <ng-template [ngIf]="editing">
-        <ion-button no-padding no-margin>
-          <ion-icon name="checkmark"></ion-icon>&nbsp;OK
-        </ion-button>
-      </ng-template>
-    </ion-item>
-    <ion-item>
+        <!-- Missing new poll?-->
+      </ion-item>
+      <ion-item>
+        <ion-text slot="start">Verified Group: {{g.groupname}}</ion-text>
+      </ion-item>
+      <ion-item>
+        <ion-text slot="start">Group Link to share: {{g.groupLink}}</ion-text>
+      </ion-item>
+      <ion-item>
+        <ion-text slot="start">User ID:</ion-text>
+        <ion-input [value]="g.username" placeholder="Mail address" required="true" autofocus="true" id="user">
+        </ion-input>
+        <!-- <ng-template [ngIf]="!editing">
+          <ion-button no-padding no-margin (click)="editing=true">
+            <ion-icon name="create"></ion-icon>&nbsp;edit
+          </ion-button>
+        </ng-template>
+        <ng-template [ngIf]="editing">
+          <ion-button no-padding no-margin>
+            <ion-icon name="checkmark"></ion-icon>&nbsp;OK
+          </ion-button>
+        </ng-template> -->
+      </ion-item>
+      <ion-item>
+        <ion-text slot="start">User Password</ion-text>
+        <ion-input [value]="g.userpw" type="password" placeholder="User password" autofocus="true" id="userpw">
+        </ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-button slot="start" (click)="verifyUser()">Log In</ion-button>
+        <ion-button fill="clear" (click)="register()" slot="end">Register</ion-button>
+        <!-- <ion-button fill="clear" (click)="putUser()" slot="end">Put User</ion-button> -->
+      </ion-item>
+    </ng-template>
+    <ng-template [ngIf]="!grouplogin">
+      <ion-item>
+        <ion-text slot="start">Group Link:</ion-text>
+        <ion-input type="password" placeholder="Encrypted code" autofocus="true" id="magicLink">
+        </ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-button (click)="verifyGroup()">Verify Group</ion-button>
+
+        <ion-button fill="clear" (click)="formnewGroup()" slot="end">New Group</ion-button>
+
+      </ion-item>
+
+    </ng-template>
+
+
+
+    <!-- <ion-item>
       Am Ende der Woche: Bitte kurzen&nbsp;
       <a href="https://www.surveymonkey.de/r/M9KK8SQ">Feedbackfragebogen <ion-icon name="open" fill="clear"></ion-icon>
       </a>
       &nbsp;ausfüllen – Danke!
-    </ion-item>
+    </ion-item> -->
     <!--
     <ion-item-divider color="secondary">
       <ion-label>

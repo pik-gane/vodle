@@ -6,7 +6,13 @@ import { finalize, map } from "rxjs/operators";
 import { Storage } from "@ionic/storage";
 import { IGroup } from "./igroup";
 import { Observable } from "rxjs";
-import { AlertController } from "@ionic/angular";
+import { AlertController, Platform } from "@ionic/angular";
+import * as bcrypt from "bcryptjs";
+import * as forge from "node-forge";
+// import {
+//   ELocalNotificationTriggerUnit,
+//   LocalNotifications,
+// } from "@ionic-native/local-notifications/ngx";
 
 import { Poll } from "./poll";
 import { DomElementSchemaRegistry } from "@angular/compiler";
@@ -39,28 +45,76 @@ export class GlobalService {
   //public openpoll: Poll = null; // currently open poll
 
   // data to be persisted in storage:
-  public state_attributes = ["openpid", "username", "groupname", "pollstates"];
+  public state_attributes = ["openpid", "userCredentials", "pollstates"];
   public openpid: string = null;
-  public groupname: string = ""; //name of the poll group
-  public grouppw: string = "";
+  public groupname: string = ""; //name of the group
+  public grouppw: string = ""; //TODO: encode
+  public userids: string[] = [];
+  public aUserids: string[] = [];
   public accAllowed: boolean = false;
+  public groupAccAllowed: boolean = false;
+  public userCredentials: {} = {};
+  public credentialAttributes = [
+    "username",
+    "userpw",
+    "groupname",
+    "grouppw",
+    "groupLink",
+    "couchdb",
+    "iv",
+    "salt",
+    "myprivKeys",
+    "myvids",
+    "mypubKeys",
+    "allPubKeys",
+  ];
 
   public username: string = ""; // overall username
+  public myaUserid: string = "";
+  public encprivpw: string = "";
+  public userpw: string = "";
   public couchdb: string; // cloudant credentials
   public pollstates: {} = {};
   private couchdb_groupdoc: {} = null; //store credentials for group
 
+  //for encryption
+  private iv: string;
+  private salt: string;
+  public groupiv: string; //"d55652a931e346e485494488f090afa3"; //TODO: Group Salt, Group iv
+  public groupsalt: string;
+  // "ddc2e02ab1a22a40397c595a5d712ac0d3dbe9cf40622042c1f03cd6fa67b3c5cd633d53523720cc2725a1a639414648ab4cfa57fbd7bdfaf7334df570fca86b20c6e63acbe6255de8c035e1eac8203d6546c520d4cb71743f48213ec32550c8c2dcc65de5c84a6ed8d878";
+  public groupLink: string = "";
+
+  private myprivKeys: {} = {};
+  private myvids: {} = {};
+  public mypubKeys: {} = {};
+  public allPubKeys: {} = {};
+
   constructor(
     public http: HttpClient,
     public storage: Storage,
-    public alertController: AlertController
+    public alertController: AlertController,
+    //private localNotifications: LocalNotifications,
+    private plt: Platform
   ) {
     GlobalService.log("start constructor");
     this.dbheaders = new HttpHeaders({
       "content-type": "application/json",
       accept: "application/json",
     });
-    // restore state from couchdb:
+    // TO DO: local notifications
+    // this.plt.ready().then(() => {
+    //   this.localNotifications.on("trigger").subscribe((res) => {
+    //     console.log("trigger: ", res);
+    //     let message = res.data ? res.data.mydata : "";
+    //     this.presentAlert(res.title, res.text);
+    //   });
+    //   this.localNotifications.on("click").subscribe((res) => {
+    //     console.log("click: ", res);
+    //     let message = res.data ? res.data.mydata : "";
+    //     this.presentAlert(res.title, res.text);
+    //   });
+    // });
 
     // restore state from storage:
 
@@ -80,37 +134,42 @@ export class GlobalService {
           }
         }
       }
+      for (let b of this.credentialAttributes) {
+        if (this.userCredentials[b] != "") {
+          this[b] = this.userCredentials[b];
+        }
+      }
       this.init();
-      // },
-      // (error) => {
-      //   GlobalService.log(
-      //     "getting state from storage failed with error " + error
-      //   );
-      //   this.init();
     });
   }
   init() {
     // called after state restoration finished
-    GlobalService.log("initializing...");
-    if (!this.couchdb) {
-      this.couchdb = new Secret().couchdb;
-      if (!this.couchdb) {
-        this.couchdb = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
-      }
+    GlobalService.log("try initializing...");
+    if (this.couchdb) {
+      GlobalService.log("initializing...");
+      // if (!this.couchdb) {
+      //   this.couchdb = prompt("cloudant user:password");
+      // }
+      this.dbheaders = new HttpHeaders({
+        Authorization: "Basic " + btoa(this.couchdb),
+        "content-type": "application/json",
+        accept: "application/json",
+      });
     }
-    this.dbheaders = new HttpHeaders({
-      Authorization: "Basic " + btoa(this.couchdb),
-      "content-type": "application/json",
-      accept: "application/json",
-    });
   }
 
   save_state() {
     let s = {};
+    for (let b of this.credentialAttributes) {
+      if (this[b] != "") {
+        this.userCredentials[b] = this[b];
+      }
+    }
     for (let a of this.state_attributes) {
       if (this[a] != undefined) {
         s[a] = this[a];
       }
+      // TODO: encrypt grouppw
     }
     for (let pid in this.polls) {
       this.polls[pid].save_state();
@@ -143,97 +202,135 @@ export class GlobalService {
     });
   }
 
-  putGroup(db_url: string) {
-    // TO DO: verallgemeinern, manchmal funktioniert es nicht
-    let jsondoc = JSON.stringify(this.couchdb_groupdoc);
-    GlobalService.log(
-      "putting cloudant doc with rev " + this.couchdb_groupdoc["_rev"]
-    );
-
-    this.http
-      .put(db_url, jsondoc, { headers: this.dbheaders })
-      .pipe(
-        finalize(
-          // after put has finished:
-          () => {
-            GlobalService.log("  put finished");
-          }
-        )
-      )
-      .subscribe(
-        (value: {}) => {
-          // at put success:
-          GlobalService.log(
-            "  putting cloudant doc succeeded, new rev is " + value["rev"]
-          );
-          this.couchdb_groupdoc["_rev"] = value["rev"]; // ! value's key is "rev" not "_rev" here
-        },
-        (error: {}) => {
-          // at put failure:
-
-          GlobalService.log(
-            "  putting cloudant doc returned error" + JSON.stringify(error)
-          );
-          // assume failure was because of wrong _rev, so try getting correct rev:
-
-          // assume error is because of missing proxy.
-          //this.g.couchdburl = this.g.cloudantdburl; // hence use non-proxy url
+  putDocument(inputname: string, doc: {}) {
+    let docurl = this.couchdburl + "/" + inputname;
+    let jsondoc = JSON.stringify(doc);
+    return this.http.put(docurl, jsondoc, { headers: this.dbheaders }).pipe(
+      finalize(
+        // after put has finished:
+        () => {
+          GlobalService.log("  put finished");
         }
-      );
-    // save state in storage
+      )
+    );
   }
   registerGroup(gname: string, password: string) {
     // TO DO: verallgemeinern
     GlobalService.log("getting cloudant doc");
+    let groupiv = forge.random.getBytesSync(16);
+    let groupsalt = forge.random.getBytesSync(128);
+    this.groupiv = forge.util.bytesToHex(groupiv);
+    this.groupsalt = forge.util.bytesToHex(groupsalt);
+
     this.couchdb_groupdoc = {
       _id: gname, // unique document id in db
-      pw: password,
+      pw: this.encryptCredential(
+        password,
+        password,
+        this.groupsalt,
+        this.groupiv
+      ),
+      userids: this.userids,
+      aUserids: this.aUserids,
+      groupiv: this.groupiv,
+      groupsalt: this.groupsalt,
     };
 
-    let db_url = this.couchdburl + "/" + this.couchdb_groupdoc["_id"];
-    GlobalService.log(db_url);
-    this.putGroup(db_url);
-    // this.http
-    //   .get(db_url, { headers: this.dbheaders })
-    //   .pipe(
-    //     finalize(
-    //       // after get has finished:
-    //       () => {
-    //         this.putGroup(db_url);
-    //       }
-    //     )
-    //   )
-    //   .subscribe(
-    //     (value: {}) => {
-    //       // after get success
+    //let db_url = this.couchdburl + "/" + this.couchdb_groupdoc["_id"];
+    //GlobalService.log(db_url);
+
+    //TODO: check if groupname already exists
+    return this.putDocument(
+      this.couchdb_groupdoc["_id"],
+      this.couchdb_groupdoc
+    );
+    // .then(
+    //   (onfulfillment: {}) => {
+    //     (response) => {
+    //       // at put success:
     //       GlobalService.log(
-    //         "  getting cloudant doc returned _rev=" + value["_rev"]
+    //         "  putting cloudant doc succeeded, new rev is " + response["rev"]
     //       );
-    //       this.couchdb_groupdoc["_rev"] = value["_rev"];
-    //     },
-    //     (error: {}) => {
-    //       GlobalService.log(
-    //         "  getting cloudant doc returned error " + JSON.stringify(error)
-    //       );
-    //       delete this.couchdb_groupdoc["_rev"];
-    //     }
-    //   );
+    //       this.couchdb_groupdoc["_rev"] = response["rev"]; // ! value's key is "rev" not "_rev" here
+    //     };
+    //   },
+    //   (error: {}) => {
+    //     // at put failure:
+    //     GlobalService.log(
+    //       "  putting cloudant doc returned error" + JSON.stringify(error)
+    //     );
+    //   }
+    // );
   }
-  getGroup(inputgname: string): Observable<IGroup[]> {
-    let groupurl = this.couchdburl + "/" + inputgname;
-    //return this.http.get(groupurl, { headers: this.dbheaders })
-    return this.http.get<IGroup[]>(groupurl, { headers: this.dbheaders });
+  updateGroupDoc() {
+    this.couchdb_groupdoc = {
+      _id: this.groupname, // unique document id in db
+      pw: this.encryptCredential(
+        this.grouppw,
+        this.grouppw,
+        this.groupsalt,
+        this.groupiv
+      ),
+      userids: this.userids,
+      aUserids: this.aUserids,
+      groupiv: this.groupiv,
+      groupsalt: this.groupsalt,
+    };
+    this.fetchRev(this.groupname, this.couchdb_groupdoc);
+  }
+  updateUserDoc() {
+    var doc = {
+      auserid: this.myaUserid,
+      userpw: this.encprivpw,
+      iv: this.iv,
+      salt: this.salt,
+      groupId: this.encryptCredential(
+        this.groupname,
+        this.userpw,
+        this.salt,
+        this.iv
+      ),
+      grouppw: this.encryptCredential(
+        this.grouppw,
+        this.userpw,
+        this.salt,
+        this.iv
+      ),
+      myprivKeys: this.myprivKeys, //TODO: Encrypt
+      mypubKeys: this.mypubKeys,
+      myvids: this.myvids,
+      allpubKeys: this.allPubKeys,
+    };
+    this.fetchRev(this.myaUserid, doc);
+  }
+  updatePollDoc(pid: string) {
+    let p = this.polls[pid];
+    let doc = {
+      pid: pid,
+      title: p.title,
+      desc: p.desc,
+      due: p.due,
+      type: p.type,
+      gid: p.mygid,
+      oids: p.oids,
+      uri: "",
+      closed: p.closed,
+      vids: p.vids,
+    };
+    this.fetchRev(this.groupname + "_" + pid, doc);
   }
 
   getPolls() {
     GlobalService.log("posting full cloudant query for polls");
-    return this.http
+    let updateUser = false;
+    this.http
       .post(
         this.couchdburl + "/_find",
         JSON.stringify({
-          selector: { gid: this.groupname },
+          selector: { gid: this.groupname }, // change selector
           fields: [
             "_id",
+            "pid",
             "_rev",
             "title",
             "type",
@@ -242,6 +339,7 @@ export class GlobalService {
             "due",
             "uri",
             "closed",
+            "vids",
           ],
           limit: 200,
         }),
@@ -263,7 +361,10 @@ export class GlobalService {
         );
 
         for (let doc of value["docs"]) {
-          let pid = doc["_id"],
+          // string value of pubkeys -> transformation in constructor of class poll
+          let pubs: string[] = [];
+          let vids: string[] = [];
+          let pid = doc["pid"],
             title = doc["title"],
             type = doc["type"],
             rev = doc["_rev"],
@@ -271,38 +372,91 @@ export class GlobalService {
             desc = doc["desc"],
             due = doc["due"],
             uri = doc["uri"],
-            closed = doc["closed"]; // put in documents
+            closed = doc["closed"];
+
+          let updatePoll = false;
+          if (doc["vids"]) {
+            vids = doc["vids"];
+          }
+
+          // erst Abfrage in storage, dann Userdoc, dann Server
 
           if (this.polls[pid] == undefined || rev != this.polls[pid].rev) {
-            this.polls[pid] = null;
-            this.polls[pid] = new Poll(this, {
-              pid: pid,
-              title: title,
-              type: type,
-              rev: rev,
-              myvid: this.username,
-              mygid: this.groupname,
-              oids: oids,
-              desc: desc,
-              due: due,
-              uri: uri,
-              closed: closed,
-            });
+            //this.polls[pid] = null;
+
+            if (this.myprivKeys[pid] == undefined) {
+              this.requestFromServer(pid)
+                .then((data) => {
+                  pubs = data["publicKeys"];
+                  vids.push(this.myvids[pid]); //TODO: mix
+
+                  this.polls[pid] = new Poll(this, {
+                    pid: pid,
+                    title: title,
+                    type: type,
+                    rev: rev,
+                    myvid: this.myvids[pid],
+                    mygid: this.groupname,
+                    oids: oids,
+                    desc: desc,
+                    due: due,
+                    uri: uri,
+                    closed: closed,
+                    myprivKey: this.myprivKeys[pid],
+                    mypubKey: this.mypubKeys[pid],
+                    pubs: pubs,
+                    vids: vids,
+                  });
+                  for (let oid of oids) {
+                    this.polls[pid].getOption(pid + "_" + oid);
+                  }
+                  // update poll doc with own vid
+                  this.updatePollDoc(pid); //TODO: error handling
+                })
+                .catch((err) => {
+                  this.presentAlert(
+                    "Error",
+                    "Something went wrong when requesting your encryption keys"
+                  );
+                });
+            } else {
+              let saved = this.pollstates[pid] != undefined;
+              this.polls[pid] = new Poll(this, {
+                pid: pid,
+                title: title,
+                type: type,
+                rev: rev,
+                myvid: this.myvids[pid],
+                mygid: this.groupname,
+                oids: oids,
+                desc: desc,
+                due: due,
+                uri: uri,
+                closed: closed,
+                myprivKey: this.myprivKeys[pid],
+                mypubKey: this.mypubKeys[pid],
+                pubs: this.allPubKeys[pid],
+                vids: vids,
+                myratings: saved ? this.pollstates[pid].myratings : {},
+                ratings: saved ? this.pollstates[pid].ratings : {},
+                rfreqs: saved ? this.pollstates[pid].rfreqs : {},
+                rsums: saved ? this.pollstates[pid].rsums : {},
+                stamps: saved ? this.pollstates[pid].stamps : {},
+              });
+              for (let oid of oids) {
+                this.polls[pid].getOption(pid + "_" + oid);
+              }
+            }
           }
         }
 
+        // delete polls that are not part of couchdb
         for (let poll in this.polls) {
           console.log(
             poll + ": " + (poll["pid"] == value["docs"][poll["pid"]])
           );
           if (!(poll["pid"] == value["docs"][poll["pid"]])) {
             delete this.polls[poll];
-          }
-        }
-        for (let poll in this.polls) {
-          let p = this.polls[poll];
-          for (let oid of p.oids) {
-            p.getOption(p.pid + "_" + oid);
           }
         }
       });
@@ -317,228 +471,263 @@ export class GlobalService {
 
     await alert.present();
   }
-  checkGroup(update: boolean) {
-    return this.getGroup(this.groupname).pipe(
-      map((responsedata: {}) => {
-        if (responsedata && responsedata["pw"] == this.grouppw) {
-          this.accAllowed = true;
-          if (update) {
-            this.getPolls();
-          }
+  getDocument(inputname: string) {
+    let documenturl = this.couchdburl + "/" + inputname;
+    //return this.http.get(groupurl, { headers: this.dbheaders })
+    return this.http.get(documenturl, { headers: this.dbheaders });
+  }
+
+  fetchRev(inputname: string, doc: {}) {
+    this.getDocument(inputname)
+      .pipe(
+        finalize(() => {
+          // TODO: Catch errors
+          this.putDocument(inputname, doc).subscribe((value: {}) => {
+            GlobalService.log(
+              "Updating group doc in couchdb succeeded, new rev is: " +
+                value["_rev"]
+            );
+          });
+        })
+      )
+      .subscribe(
+        (value: {}) => {
+          doc["_rev"] = value["_rev"];
+        },
+        (error) => {
+          GlobalService.log("Fetching Rev returned error");
         }
-        this.save_state();
+      );
+  }
+  checkGroup(update: boolean) {
+    return this.getDocument(this.groupname).pipe(
+      map(async (responsedata: {}) => {
+        try {
+          console.log(responsedata);
+          this.userids = responsedata["userids"];
+          this.aUserids = responsedata["aUserids"];
+          this.groupsalt = responsedata["groupsalt"];
+          this.groupiv = responsedata["groupiv"];
+
+          console.log(responsedata["pw"]);
+          let decrpw = this.decryptCredential(
+            responsedata["pw"],
+            this.grouppw,
+            this.groupsalt,
+            this.groupiv
+          );
+          console.log(decrpw);
+          let isMatch = decrpw == this.grouppw;
+
+          if (responsedata && isMatch) {
+            this.groupAccAllowed = true;
+            if (update) {
+              this.getPolls();
+            }
+          }
+          // this.save_state();
+          return this.groupAccAllowed;
+        } catch {
+          return this.groupAccAllowed;
+        }
+      })
+    );
+  }
+
+  checkUser() {
+    let documentname = this.encryptCredential(
+      this.username,
+      this.userpw,
+      this.groupsalt,
+      this.groupiv
+    );
+    return this.getDocument(documentname).pipe(
+      map(async (userResponse: {}) => {
+        let salt = userResponse["salt"],
+          iv = userResponse["iv"],
+          encryptedpw = userResponse["userpw"];
+        console.log(encryptedpw);
+        try {
+          let pw = this.decryptCredential(encryptedpw, this.userpw, salt, iv);
+
+          if (this.userpw == pw) {
+            this.accAllowed = true;
+            this.myaUserid = documentname;
+            this.encprivpw = encryptedpw;
+            this.salt = salt;
+            this.iv = iv;
+            if (userResponse["myprivKeys"]) {
+              this.myprivKeys = userResponse["myprivKeys"];
+              this.mypubKeys = userResponse["mypubKeys"];
+              this.myvids = userResponse["myvids"];
+              this.allPubKeys = userResponse["allpubKeys"];
+            }
+          } else {
+            this.accAllowed = false;
+          }
+        } catch {
+          this.accAllowed = false;
+        }
         return this.accAllowed;
       })
     );
   }
 
-  public demodata = {
-    president: [
-      [
-        "President of the world",
-        "Imagine we elect this person for four years of office and the following candidates were all available...",
-        null,
-        "winner",
-      ],
-      //      ["Solina Chau", null, "https://en.wikipedia.org/wiki/Solina_Chau"],
-      ["Princess Leia", null, "https://en.wikipedia.org/wiki/Princess_Leia"],
-      ["Ada Lovelace", null, "https://en.wikipedia.org/wiki/Ada_Lovelace"],
-      [
-        "Wilma Mankiller",
-        null,
-        "https://en.wikipedia.org/wiki/Wilma_Mankiller",
-      ],
-      //      ["Rigoberta Menchú", null, "https://en.wikipedia.org/wiki/Rigoberta_Mench%C3%BA"],
-      //      ["Angela Merkel", null, "https://en.wikipedia.org/wiki/Angela_Merkel"],
-      //      ["Nadia Murad", null, "https://en.wikipedia.org/wiki/Nadia_Murad"],
-      ["Emmy Noether", null, "https://en.wikipedia.org/wiki/Emmy_Noether"],
-      ["Michelle Obama", null, "https://en.wikipedia.org/wiki/Michelle_Obama"],
-      ["Lisa Simpson", null, "https://en.wikipedia.org/wiki/Lisa_Simpson"],
-      [
-        "Ellen Johnson Sirleaf",
-        null,
-        "https://en.wikipedia.org/wiki/Ellen_Johnson_Sirleaf",
-      ],
-      [
-        "Marie Skłodowska Curie",
-        null,
-        "https://en.wikipedia.org/wiki/Marie_Curie",
-      ],
-      //      ["Mother Teresa", null, "https://en.wikipedia.org/wiki/Mother_Teresa"],
-      [
-        "Malala Yousafzai",
-        null,
-        "https://en.wikipedia.org/wiki/Malala_Yousafzai",
-      ],
-    ],
-    system: [
-      [
-        "Form of government",
-        "Imagine we choose a form of government for the next century...",
-        "https://en.wikipedia.org/wiki/List_of_forms_of_government",
-        "winner",
-      ],
-      //      ["Direct democracy", "government in which the people represent themselves and vote directly for new laws and public policy using majority voting", "https://en.wikipedia.org/wiki/Direct_democracy"],
-      [
-        "Liquid democracy (majority)",
-        "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using majority voting",
-        "https://en.wikipedia.org/wiki/Liquid_democracy",
-      ],
-      [
-        "Liquid democracy (consensus)",
-        "government in which the people represent themselves or choose to temporarily delegate their vote to another voter to vote for new laws and public policy using something like this app",
-        "https://vodle.it",
-      ],
-      [
-        "Representative democracy (majority)",
-        "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using majority voting by representatives",
-        "https://en.wikipedia.org/wiki/Representative_democracy",
-      ],
-      [
-        "Representative democracy (consensus)",
-        "wherein the people or citizens of a country elect representatives to create and implement public policy in place of active participation by the people, with representatives using something like this app",
-        "https://vodle.it",
-      ],
-      //      ["Electocracy", "where citizens are able to vote for their government but cannot participate directly in governmental decision making and where the government does not share any power", "https://en.wikipedia.org/wiki/Electocracy"],
-      [
-        "Meritocracy or Technocracy",
-        "a system of governance where groups are selected on the basis of people's ability, knowledge in a given area, and contributions to society",
-        "https://en.wikipedia.org/wiki/Meritocracy",
-      ],
-      [
-        "Geniocracy or Noocracy",
-        "a system of governance where creativity, innovation, intelligence and wisdom are required for those who wish to govern, or in which decision making is in the hands of philosophers",
-        "https://en.wikipedia.org/wiki/Geniocracy",
-      ],
-      [
-        "Socialism, Communism, or Ergatocracy",
-        "A system in which workers, democratically and/or socially own the means of production. The economic framework may be decentralized and self-managed in autonomous economic units, as in libertarian systems, or centrally planned, as in authoritarian systems. Public services such as healthcare and education would be commonly, collectively, and/or state owned.",
-        "https://en.wikipedia.org/wiki/Socialism",
-      ],
-      [
-        "Demarchy",
-        'government in which the state is governed by randomly selected decision makers who have been selected by sortition (lot) from a broadly inclusive pool of eligible citizens. These groups, sometimes termed "policy juries", "citizens\' juries", or "consensus conferences", deliberately make decisions about public policies in much the same way that juries decide criminal cases',
-        "https://en.wikipedia.org/wiki/Sortition",
-      ],
-      [
-        "Anarchism",
-        "A system that advocates self-governed societies based on voluntary institutions. These are often described as stateless societies, although several authors have defined them more specifically as institutions based on non-hierarchical or free associations. Anarchism holds the state to be undesirable, unnecessary, and/or harmful.",
-        "https://en.wikipedia.org/wiki/Anarchism",
-      ],
-    ],
-    freesf: [
-      [
-        "Free sci-fi movie night",
-        "Let's watch one of these popular full-length sci-fi movies in English on Youtube!",
-        "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction",
-        "winner",
-      ],
-      [
-        "Voyage to the prehistoric planet",
-        "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
-        "https://www.youtube.com/watch?v=sh2nLzOVHeQ",
-      ],
-      [
-        "Shubian's rift (fan movie)",
-        "Earth's future space exploration leads to its first contact ever with an alien race that may not be so alien after all.",
-        "https://www.youtube.com/watch?v=B6V_w25B1Ac",
-      ],
-      [
-        "Star pilot",
-        "Aliens from the constellation Hydra crash-land on the island of Sardinia. A prominent scientist, his daughter, several young technicians, and a pair of Oriental spies are taken hostage by the beings so they can use them to repair their spaceship's broken engine.",
-        "https://www.youtube.com/watch?v=jAvllP_YEdU",
-      ],
-      [
-        "Escape from galaxy 3",
-        "The crew of a space ship confronts an evil galactic ruler out to rule the universe.",
-        "https://www.youtube.com/watch?v=5kvCgeNog1U",
-      ],
-      [
-        "Mission stardust",
-        "A team of astronauts is sent to the moon to rescue an alien who is seeking help to save her dying race. They are attacked by a force of bandit robots and discover that enemy spies are out to kill the alien.",
-        "https://www.youtube.com/watch?v=oeRTDJ3MC2I",
-      ],
-      [
-        "Fugitive alien",
-        "An alien is pursued as a traitor by his own race because he refuses to kill humans.",
-        "https://www.youtube.com/watch?v=Z71MyPmmGZI",
-      ],
-      [
-        "Warrior of the lost world",
-        "A group of diverse individuals are suddenly taken from their homes and flown via helicopter to a futuristic bomb shelter in the desert, one-third of a mile below the surface of the Earth.",
-        "https://www.youtube.com/watch?v=xS5obnI5Y5Q",
-      ],
-      [
-        "Battle of the worlds",
-        "A runaway asteroid dubbed 'The Outsider' mysteriously begins orbiting the Earth and threatens it with lethal flying saucers.",
-        "https://www.youtube.com/watch?v=LK6ugtd1Xdg",
-      ],
-      [
-        "Abraxas, guardian of the universe",
-        "An alien 'policeman' arrives on Earth to apprehend a renegade of his own race who impregnates a woman with a potentially destructive mutant embryo.",
-        "https://www.youtube.com/watch?v=lZzZyNB81wI",
-      ],
-      [
-        "Zontar, the thing from Venus",
-        "A young scientist who helps a lone alien from Venus, finds out it wants to destroy man.",
-        "https://www.youtube.com/watch?v=-e9Cs87gbwg",
-      ],
-      [
-        "Hyper sapien: people from another star",
-        "Three aliens from the planet Taros land on Earth and are befriended by a Wyoming rancher's son.",
-        "https://www.youtube.com/watch?v=64GfUeJJLUs",
-      ],
-      [
-        "The giant of Metropolis",
-        "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.",
-        "https://www.youtube.com/watch?v=KPHasT4o9sg",
-      ],
-    ],
-    nachtreffen: [
-      [
-        "Zeitbudget beim Nachtreffen",
-        "Stellt Euch vor, wir können eine weitere Woche Zeit auf diese Aktivitäten verteilen...",
-        null,
-        "share",
-      ],
-      ["Angefangenes fertigstellen", "z.B. unfertige Projekte", null],
-      [
-        "Dokumentieren",
-        "Berichte, Zusammenfassungen, Softwaredokumentation...",
-        null,
-      ],
-      [
-        "Kolleg auswerten",
-        "Revue passieren lassen, AGs vergleichen, Verbesserungsvorschläge, ...",
-        null,
-      ],
-      [
-        "Verwertung beginnen",
-        "z.B. wiss. Papers schreiben, Software entwickeln, Unterrichtsmaterialien...",
-        null,
-      ],
-      ["Planen", "neue Projekte, Veranstaltungen, ..."],
-      ["Exkursion", "z.B. zu Google oder Greenpeace", null],
-      ["Urlaub machen", null, null],
-    ],
-    /*
-      'copan' : [
-        ["copan Jour Fixe Time Budget",
-        "How do we want to use the time in the future?",
-        null, "share"],
-        ["Intro round for newbies", "", null],
-        ["Everyone's work update round", "", null],
-        ["Talk on someone's own work", "", null],
-        ["Presentation of one interesting article", "", null],
-        ["Help with a current problem in someone's work", "", null],
-        ["Planning of activities", "", null],
-        ["Strategic discussions (PIK, copan)", "", null],
-        ["Open discussion on scientific topics", "", null],
-        ["Open discussion of nonscientific topics", "", null],
-        ["Small talk", "", null]
-      ]
-  */
-  };
+  createUser(user: string, pw: string) {
+    this.username = user;
+    this.userpw = pw;
+
+    const iv = forge.random.getBytesSync(16);
+    const salt = forge.random.getBytesSync(128);
+    //save in Hex format
+    this.iv = forge.util.bytesToHex(iv);
+    this.salt = forge.util.bytesToHex(salt);
+    var documentname = this.encryptCredential(
+      user,
+      pw,
+      this.groupsalt,
+      this.groupiv
+    );
+    let encryptedpw = this.encryptCredential(pw, pw, this.salt, this.iv);
+    var doc = {
+      auserid: documentname,
+      userpw: encryptedpw,
+      iv: this.iv,
+      salt: this.salt,
+      groupid: this.encryptCredential(this.groupname, pw, this.salt, this.iv),
+      grouppw: this.encryptCredential(this.grouppw, pw, this.salt, this.iv),
+    };
+
+    //let db_url = this.couchdburl + "/" + documentname;
+    return this.putDocument(documentname, doc).pipe(
+      map((value) => {
+        this.aUserids.push(documentname);
+        //   this.encryptCredential(
+        //     this.username,
+        //     this.userpw,
+        //     forge.util.hexToBytes(this.groupsalt),
+        //     forge.util.hexToBytes(this.groupiv)
+        //   )
+        // );
+        this.userids.push(this.username);
+
+        this.updateGroupDoc();
+        // TODO?: this.couchdb_groupdoc["_rev"] = response["rev"];
+        return this.putUserToServer(documentname, encryptedpw).then(
+          (onfulfill) => {
+            return onfulfill;
+          },
+          (onreject) => {
+            return false;
+          }
+        );
+      })
+    );
+  }
+  encryptCredential(msg: string, pw: string, salt: string, iv: string): string {
+    let key = forge.pkcs5.pbkdf2(pw, salt, 10, 16);
+    let cipher = forge.cipher.createCipher("AES-CBC", key);
+    cipher.start({ iv: iv });
+    cipher.update(forge.util.createBuffer(msg));
+    cipher.finish();
+    // convert utf8 to hex for saving
+    return forge.util.bytesToHex(forge.util.encodeUtf8(cipher.output.data));
+
+    // Buffer.from(cipher.output.data, "utf8").toString("hex");
+  }
+  decryptCredential(
+    encrypted: string,
+    pw: string,
+    salt: string,
+    iv: string
+  ): string {
+    // change hex to utf8
+    let encryptedUtf = forge.util.decodeUtf8(forge.util.hexToBytes(encrypted));
+    // create ByteStringBuffer as Input for decipher
+    let buffer = new forge.util.ByteStringBuffer(encryptedUtf);
+    var key = forge.pkcs5.pbkdf2(pw, salt, 10, 16);
+    var decipher = forge.cipher.createDecipher("AES-CBC", key);
+    decipher.start({ iv: iv });
+    decipher.update(buffer);
+    var result = decipher.finish(); // check 'result' for true/false
+    // outputs decrypted hex
+    return decipher.output.toString();
+  }
+  async putUserToServer(encusername: string, userpw: string) {
+    let options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        //Authorization: "Basic " + window.btoa("Marius:password")
+      },
+      body: JSON.stringify({
+        username: encusername,
+        userpw: userpw,
+      }),
+    };
+    const response = await fetch(
+      "http://localhost:3000/userServerConnection",
+      options
+    );
+    const json = await response.json();
+    return json["status"] == "Success";
+  }
+  async informServer(pid: string) {
+    let options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Basic " + window.btoa(this.myaUserid + ":" + this.encprivpw),
+      },
+      body: JSON.stringify({
+        pollid: pid,
+        groupid: this.groupname,
+        aUserids: this.aUserids,
+      }),
+    };
+    const response = await fetch("http://localhost:3000/newpoll", options);
+    const json = await response.json();
+    return json["status"] == "Success";
+  }
+  async requestFromServer(pid: string) {
+    let options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Basic " + window.btoa(this.myaUserid + ":" + this.encprivpw),
+      },
+      body: JSON.stringify({
+        pollid: pid,
+        groupid: this.groupname,
+      }),
+    };
+    // TODO: wegen g.polls[pid].type kommt hier ein Fehler in mypolls.html
+    const response = await fetch(
+      "http://localhost:3000/serverrequest",
+      options
+    );
+    const json = await response.json();
+    let mydata = json["mydata"];
+    let publicKeys = json["publicKeys"];
+    this.allPubKeys[pid] = publicKeys;
+    this.myprivKeys[pid] = mydata["privKey"]; // TODO: Encrypt privKeys
+    this.mypubKeys[pid] = mydata["pubKey"];
+    this.myvids[pid] = mydata["vid"];
+    this.updateUserDoc();
+    return { mydata, publicKeys };
+  }
+  // scheduleNotification() {
+  //   this.localNotifications.schedule({
+  //     id: 1,
+  //     title: "Attention",
+  //     text: "New Poll",
+  //     data: { mydata: "This is my hidden data" },
+  //     trigger: { at: new Date(new Date().getTime() + 5 * 1000) },
+  //     // foreground: true
+  //   });
+  // }
 }
 
 export class Option {
@@ -547,68 +736,4 @@ export class Option {
   public desc: string = null;
   public uri: string = null; // weblink
   public created: Date; // timestamp
-}
-
-export class Simulation {
-  // TODO: dynamics!
-
-  public p: Poll;
-
-  // policy space model parameters:
-  public dim: number = 2;
-  public sigma: number = 1; // dispersion of options (1 = like voters)
-
-  // utility data:
-  public vcoords: {} = {}; // dict of voter coordinate arrays by vid
-  public ocoords: {} = {}; // dict of option coordinate arrays by oid
-
-  constructor(p: Poll) {
-    this.p = p;
-    // draw initial coordinates:
-    for (let oid of p.oids) {
-      this.ocoords[oid] = Array(this.dim)
-        .fill(0)
-        .map((i) => this.sigma * this.rannor());
-    }
-    for (let vid of p.vids) {
-      this.vcoords[vid] = Array(this.dim)
-        .fill(0)
-        .map((i) => this.rannor());
-      this.setRatings(vid);
-    }
-    GlobalService.log("simulation set up.");
-  }
-  rannor() {
-    let u = 0,
-      v = 0;
-    while (u === 0) u = Math.random(); //Converting [0,1) to (0,1)
-    while (v === 0) v = Math.random();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-  }
-  getu(oid: string, vid: string) {
-    // utility = - squared distance in policy space
-    let d2 = 0,
-      op = this.ocoords[oid],
-      vp = this.vcoords[vid];
-    for (let i = 0; i < this.dim; i++) {
-      d2 += (op[i] - vp[i]) ** 2;
-    }
-    return -Math.sqrt(d2); // -d2; // Math.exp(-d2);
-  }
-  setRatings(vid: string) {
-    // heuristic rating: 0 = benchmark, 100 = favourite, linear interpolation in between
-    let us = {},
-      umax = -1e100,
-      umean = 0;
-    for (let oid of this.p.oids) {
-      let u = (us[oid] = this.getu(oid, vid)),
-        pr = this.p.probs[oid];
-      umean += u * (pr >= 0 ? pr : 1 / this.p.oids.length);
-      if (u > umax) umax = u;
-    }
-    for (let oid of this.p.oids) {
-      let r = Math.round(Math.max(0, (us[oid] - umean) / (umax - umean)) * 100);
-      this.p.setRating(oid, vid, r);
-    }
-  }
 }

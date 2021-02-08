@@ -58,14 +58,16 @@ export class ClosedpollPage implements OnInit {
   constructor(public g: GlobalService, public navCtrl: NavController) {}
 
   ngOnInit() {
-    this.g.checkGroup(false).subscribe((acc) => {
-      if (acc == false) {
-        this.g.presentAlert(
-          "Wrong Credentials",
-          "Please enter your right user credentials and use implemented refresh buttons!"
-        );
-        this.navCtrl.navigateBack("/home");
-      }
+    this.g.checkGroup(false).subscribe((promise) => {
+      promise.then((acc) => {
+        if (acc == false) {
+          this.g.presentAlert(
+            "Wrong Credentials",
+            "Please enter your right user credentials and use implemented refresh buttons!"
+          );
+          this.navCtrl.navigateBack("/home");
+        }
+      });
     });
     this.p = this.g.polls[this.g.openpid];
     this.oidsorted = this.p.oidsorted;
@@ -183,12 +185,13 @@ export class ClosedpollPage implements OnInit {
   }
   checkFirstTime() {
     if (this.p.closed && this.p.firstclosed) {
+      // TODO: good documentation for closing poll
       this.animateWheel = true;
       this.p.firstclosed = false;
       // set own rating document closed so that others can see it is closed
       this.p.submitRatings();
       // set poll document closed
-      this.p.setnewPoll();
+      this.p.setPoll(false);
     }
   }
 }

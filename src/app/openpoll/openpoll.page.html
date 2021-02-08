@@ -12,9 +12,9 @@
       </ion-title>
       <!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
-    <ng-template [ngIf]="!refresh_paused&&!closed">
+    <ng-template [ngIf]="!refresh_paused&&!closed&&!introduction">
       <ion-button slot="end" (click)="pauseRefresh()" fill="clear" no-margin>
-        <ion-text color="primary">Freeze Order</ion-text>
+        <ion-text color="primary" style="font-size: 10px;">Freeze Order</ion-text>
       </ion-button>
     </ng-template>
     <ng-template [ngIf]="refresh_paused && !needs_refresh&&!closed">
@@ -32,77 +32,311 @@
 </ion-header>
 
 <ion-content>
+
   <ng-template [ngIf]="p!=null">
-    <ion-list lines="full">
-      <ion-item>
-        <ion-grid no-padding no-margin>
-          <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin>
-              <ng-template [ngIf]="expanded=='poll'">
-                <ng-template [ngIf]="p.uri!=null">
-                  <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" float-right no-padding padding-left
-                    no-margin>
-                    <ion-icon name="open" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ng-template>
-                <h4>{{p.desc}}</h4>
-                <small><b><span style="color:#9abcbd">created by Jobst</span></b></small><br />&nbsp;<br />
-                <!--TODO: creator, personal priority, no. of abstentions-->
+    <ng-template [ngIf]="introduction">
+
+      <ion-slides pager="true">
+        <ion-slide>
+          <h3 style="font-weight: bold;">
+            Welcome to this poll
+          </h3>
+          <p style="font-size: 15px;color:black">If you have difficulties finding the right ratings for this poll,
+            answer these questions to get to
+            know the voting method and facilitate your voting behaviour. Skip this part if you are already
+            familiar with the proceedings.</p>
+          <h6 style="font-weight:bold">
+            Poll description:
+          </h6>
+          <p style="font-size: 15px;color:black">
+            {{p.desc}}
+          </p>
+          <ion-button expand="full" color="primary" (click)="skipIntro()">Skip</ion-button>
+        </ion-slide>
+        <ion-slide>
+          <h3>
+            What is your favourite option?
+          </h3>
+          <h6>Feel free to tick more than one option</h6>
+
+          <!-- <ion-item button *ngFor="let item of [].constructor(oidsorted.length); index as i" color="{{optionColor[i]}}"
+            (click)="tickOption(i)" expand="full">{{p.options[oidsorted[i]].name}}
+
+          </ion-item> -->
+
+          <p *ngFor="let item of [].constructor(oidsorted.length); index as i">
+            <ion-button expand="full" color="{{optionColor[i]}}" (click)="tickFavOption(i)">
+
+              {{p.options[oidsorted[i]].name}}
+            </ion-button>
+          </p>
+          <ion-grid>
+            <ion-row>
+              <ion-col size="3">
+                <p style="font-size: 12px;">
+                  Options:
+                </p>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #62a73b">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="white">FAVOURITE</text>
+                </svg>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #f4f5f8;stroke-width:0.4;stroke:rgb(0,0,0)">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="black">OTHER</text>
+                </svg>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </ion-slide>
+        <ion-slide>
+          <h3>
+            Are there any options that you are ok with but don't support 100%?
+          </h3>
+          <p *ngFor="let item of [].constructor(oidsorted.length); index as i">
+            <ion-button expand="full" color="{{optionColor[i]}}" (click)="tickOption(i)">
+
+              {{p.options[oidsorted[i]].name}}
+            </ion-button>
+          </p>
+          <ion-grid>
+            <ion-row>
+              <ion-col size="3">
+                <p style="font-size: 12px;">
+                  Options:
+                </p>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #62a73b">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="white">FAVOURITE</text>
+                </svg>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #aed3d4">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="black">NOT BEST</text>
+                </svg>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #f4f5f8;stroke-width:0.4;stroke:rgb(0,0,0)">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="black">OTHER</text>
+                </svg>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+
+        </ion-slide>
+        <ion-slide>
+          <h5>
+            What minimal percentage of voters would need to support those options that you support them too?
+          </h5>
+          <ion-grid>
+            <ion-row *ngFor="let item of [].constructor(oidsorted.length); index as i">
+              <ng-template [ngIf]="optionColor[i]=='success'">
+                <ion-col size="4">
+                  <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="100%" height="100%" style="fill:#62a73b">
+                    </rect>
+                    <text x="50%" y="60%" text-anchor="middle" font-size="10"
+                      fill="white">{{p.options[oidsorted[i]].name}}: </text>
+                  </svg>
+                </ion-col>
+                <ion-col size="3">
+                  <ion-input value="0" type="number" max="100" min="0" id="introRating_{{oidsorted[i]}}"
+                    (ionBlur)="setIntroRating(i)"></ion-input>
+                </ion-col>
+                <ion-col size="5">
+
+                  <p style="font-size:10px">
+                    Your Rating for this Option will be {{introOptionRating[i]}}
+                  </p>
+
+                </ion-col>
               </ng-template>
-              <b>
-                <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
-                  <small><a routerLink="/help">(how?)</a></small>
-                  <br />
-                  <small> It's a good idea to give one option 100, all better-than-average options something larger
-                    than
-                    0,
-                    and all worse-than-average options zero.<br />&nbsp;
-                  </small></span>
-                <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
-              </b>
-            </ion-col>
-            <ion-col size="1" no-padding no-margin>
-              <!--TODO: improve placement-->
-              <ion-button (click)="expand('poll')" float-right no-padding no-margin fill="clear">
-                <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
-          <app-expandable [expanded]="expanded=='poll'">
+              <ng-template [ngIf]="optionColor[i]=='secondary'">
+                <ion-col size="4">
+                  <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="100%" height="100%" style="fill: #aed3d4">
+                    </rect>
+                    <text x="50%" y="60%" text-anchor="middle" font-size="10"
+                      fill="black">{{p.options[oidsorted[i]].name}}:</text>
+                  </svg>
+
+                </ion-col>
+                <ion-col size="3">
+                  <ion-input value="{{101-introOptionRating[i]}}" type="number" max="100" min="0"
+                    id="introRating_{{oidsorted[i]}}" (ionBlur)="setIntroRating(i)"></ion-input>
+                </ion-col>
+                <ion-col size="5">
+
+                  <p style="font-size:10px">
+                    Your Rating for this Option will be {{introOptionRating[i]}}
+                  </p>
+
+                </ion-col>
+
+              </ng-template>
+              <ng-template [ngIf]="optionColor[i]=='light'">
+                <ion-col size="4">
+                  <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" y="0" width="100%" height="100%" style="fill:#f4f5f8">
+                    </rect>
+                    <text x="50%" y="60%" text-anchor="middle" font-size="10"
+                      fill="black">{{p.options[oidsorted[i]].name}}: </text>
+                  </svg>
+                </ion-col>
+                <ion-col size="3">
+                  <ion-input value="100" type="number" max="100" min="0" id="introRating_{{oidsorted[i]}}"
+                    (ionBlur)="setIntroRating(i)"></ion-input>
+                </ion-col>
+                <ion-col size="5">
+
+                  <p style="font-size:10px">
+
+                    Your Rating for this Option will be {{introOptionRating[i]}}
+                  </p>
+
+                </ion-col>
+
+              </ng-template>
+            </ion-row>
+            <ion-row>
+              <ion-col size="3">
+                <p style="font-size: 12px;">
+                  Options:
+                </p>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #62a73b">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="white">FAVOURITE</text>
+                </svg>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #aed3d4">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="black">NOT BEST</text>
+                </svg>
+              </ion-col>
+              <ion-col size="3">
+                <svg width="100%" height="30" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0" y="0" width="100%" height="30" style="fill: #f4f5f8;stroke-width:0.4;stroke:rgb(0,0,0)">
+                  </rect>
+                  <text x="50%" y="60%" text-anchor="middle" font-size="8" fill="black">OTHER</text>
+                </svg>
+              </ion-col>
+            </ion-row>
+
+
+          </ion-grid>
+          <h4 style="font-size:10px">Have a look how the group thinks about this poll and adjust the ratings by
+            yourself:
+          </h4>
+          <ion-button expand="full" (click)="proceed()">Proceed</ion-button>
+
+
+        </ion-slide>
+      </ion-slides>
+    </ng-template>
+    <ng-template [ngIf]="!introduction">
+      <ion-list lines="full">
+        <ion-item>
+          <ion-button routerLink="/mypolls" [disabled]="g.username==''">
+            <!--fill="clear"-->
+            <ion-icon name="list" slot="start"></ion-icon>
+            My polls
+          </ion-button>
+          &nbsp;
+          <ion-button (click)="simpleVote()">
+            <!--fill="clear"-->
+            <ion-icon name="list" slot="start"></ion-icon>
+            Simple Voting
+          </ion-button>
+          <ion-button routerLink="/help" fill="clear">
+            <ion-icon name="help" slot="start"></ion-icon>
+            Help
+          </ion-button>
+          &nbsp;
+          <ion-button routerLink="/about" fill="clear">
+            <ion-icon name="information-circle" slot="start"></ion-icon>
+            About
+          </ion-button>
+          <!-- Missing new poll?-->
+        </ion-item>
+        <ion-item>
+          <ion-grid no-padding no-margin>
             <ion-row no-padding no-margin>
               <ion-col no-padding no-margin>
-                <ion-button float-right no-padding routerLink="/pollstats">
-                  <ion-icon name="pulse" size="small"></ion-icon>
-                </ion-button>
+                <ng-template [ngIf]="expanded=='poll'">
+                  <ng-template [ngIf]="p.uri!=null">
+                    <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" float-right no-padding padding-left
+                      no-margin>
+                      <ion-icon name="open" slot="icon-only"></ion-icon>
+                    </ion-button>
+                  </ng-template>
+                  <h4>{{p.desc}}</h4>
+                  <small><b><span style="color:#9abcbd">created by Jobst</span></b></small><br />&nbsp;<br />
+                  <!--TODO: creator, personal priority, no. of abstentions-->
+                </ng-template>
                 <b>
-                  <span style="color:#769596">
-                    {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so
-                    far,
-                    poll closes Thu 28 Mar 2019.
-                  </span>
-                  <span style="color:#9abcbd">
-                    <small>
-                      Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
-                      the largest support is {{Math.round(p.max_approval*1000)/10}}%,
-                      the smallest is {{Math.round(p.min_approval*1000)/10}}%.
-                    </small>
-                  </span>
+                  <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
+                    <small><a routerLink="/help">(how?)</a></small>
+                    <br />
+                    <small> It's a good idea to give one option 100, all better-than-average options something larger
+                      than
+                      0,
+                      and all worse-than-average options zero.<br />&nbsp;
+                    </small></span>
+                  <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
                 </b>
               </ion-col>
-            </ion-row>
-          </app-expandable>
-          <ng-template [ngIf]="closed">
-            <ion-row>
-              <ion-col>
-                <ion-button expand="full" color="light" (click)="showResults()">Show full results</ion-button>
+              <ion-col size="1" no-padding no-margin>
+                <!--TODO: improve placement-->
+                <ion-button (click)="expand('poll')" float-right no-padding no-margin fill="clear">
+                  <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+                </ion-button>
               </ion-col>
             </ion-row>
+            <app-expandable [expanded]="expanded=='poll'">
+              <ion-row no-padding no-margin>
+                <ion-col no-padding no-margin>
+                  <ion-button float-right no-padding routerLink="/pollstats">
+                    <ion-icon name="pulse" size="small"></ion-icon>
+                  </ion-button>
+                  <b>
+                    <span style="color:#769596">
+                      {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so
+                      far,
+                      poll closes {{p.due}}
+                    </span>
+                    <span style="color:#9abcbd">
+                      <small>
+                        Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
+                        the largest support is {{Math.round(p.max_approval*1000)/10}}%,
+                        the smallest is {{Math.round(p.min_approval*1000)/10}}%.
+                      </small>
+                    </span>
+                  </b>
+                </ion-col>
+              </ion-row>
+            </app-expandable>
 
-          </ng-template>
-        </ion-grid>
-      </ion-item>
+          </ion-grid>
+        </ion-item>
 
-      <!--ng-template [ngIf]="closed==true">
+        <!--ng-template [ngIf]="closed==true">
         <ion-item>
           <ion-grid no-padding no-margin>
             <ion-row>
@@ -121,123 +355,128 @@
         </ion-item>
       </ng-template-->
 
-      <ion-item *ngFor="let item of [].constructor(oidsorted.length); index as i">
+        <ion-item *ngFor="let item of [].constructor(oidsorted.length); index as i">
 
-        <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
-          <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
-          <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
-        </svg>
-        <ion-grid no-padding no-margin>
-          <ion-row no-padding padding-top no-margin>
-            <ion-col no-padding no-margin>
-              <b>{{p.options[oidsorted[i]].name}}</b>
-            </ion-col>
-            <ion-col size="1" no-padding no-margin>
-              <!--TODO: improve placement-->
-              <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" float-right no-padding no-margin>
-                <ion-icon [name]="(expanded=='oid_'+oidsorted[i])?'arrow-dropup':'arrow-dropdown'" slot="icon-only">
-                </ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
-          <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin>
-              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" [value]="p.getRating(oidsorted[i], p.myvid)"
-                [color]="slidercol[oidsorted[i]]" (ionFocus)="ratingChangeBegins(oidsorted[i])"
-                (ionChange)="ratingChanges(oidsorted[i])" (ionBlur)="ratingChangeEnded(oidsorted[i])" pin="true" min="0"
-                max="100" style="--bar-height:7px;--knob-size:25px" no-padding no-margin [disabled]="closed">
-                <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
-                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;left:0px">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                      <!--FIXME: in landscape mode on Android, the bars are too narrow!-->
-                      <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" fill="#bce4e5"
-                        stroke="none" />
-                      <!--TODO: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
-                      <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3" />
-                      <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />
-                    </svg>
-                  </div>
-                </ion-label>
-              </ion-range>
-            </ion-col>
-          </ion-row>
-          <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
-            <ion-row no-padding padding-bottom no-margin>
+          <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
+            <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
+            <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
+          </svg>
+          <ion-grid no-padding no-margin>
+            <ion-row no-padding padding-top no-margin>
               <ion-col no-padding no-margin>
-                <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" float-right no-padding>
-                  <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
+                <b>{{p.options[oidsorted[i]].name}}</b>
+              </ion-col>
+              <ion-col size="1" no-padding no-margin>
+                <!--TODO: improve placement-->
+                <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" float-right no-padding no-margin>
+                  <ion-icon [name]="(expanded=='oid_'+oidsorted[i])?'arrow-dropup':'arrow-dropdown'" slot="icon-only">
+                  </ion-icon>
                 </ion-button>
-                <b><span style="color:#9abcbd"><small>currently </small>
-                    <ng-template [ngIf]="p.type=='winner'">
-                      <span style="color:#769596">
-                        {{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
-                    </ng-template>
-                    <ng-template [ngIf]="p.type=='share'">
-                      <span
-                        style="color:#769596">getting&nbsp;{{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
-                    </ng-template>
-                    <small><span style="color:#4c822e"
-                        [style.display]="(votedfor==oidsorted[i])?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
-                      supported&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oidsorted[i]]*1000)/10}}%
-                  </span>
-                  <span style="color:#62a73b"
-                    [style.display]="approved[oidsorted[i]]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
-                </b>
-                <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
-                  <br />{{p.options[oidsorted[i]].desc}}
-                </span>
-                <ng-template [ngIf]="p.options[oidsorted[i]].uri!=null">
-                  <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].uri)" fill="clear" float-right no-padding
-                    padding-left no-margin>
-                    <ion-icon name="open" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ng-template>
               </ion-col>
             </ion-row>
-          </app-expandable>
-        </ion-grid>
-      </ion-item>
+            <ion-row no-padding no-margin>
+              <ion-col no-padding no-margin>
+                <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" [value]="p.getRating(oidsorted[i], p.myvid)"
+                  [color]="slidercol[oidsorted[i]]" (ionFocus)="ratingChangeBegins(oidsorted[i])"
+                  (ionChange)="ratingChanges(oidsorted[i],getSliderValue(oidsorted[i]))"
+                  (ionBlur)="ratingChangeEnded(oidsorted[i])" pin="true" min="0" max="100"
+                  style="--bar-height:7px;--knob-size:25px" no-padding no-margin [disabled]="closed">
+                  <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
+                    <div style="position:absolute;bottom:0px;right:11px;z-index:-10;left:0px">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                        <!--FIXME: in landscape mode on Android, the bars are too narrow!-->
+                        <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" fill="#bce4e5"
+                          stroke="none" />
+                        <!--TODO: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
+                        <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3" />
+                        <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />
+                      </svg>
+                    </div>
+                  </ion-label>
+                </ion-range>
+              </ion-col>
+            </ion-row>
+            <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter"
+              [expanded]="expanded=='oid_'+oidsorted[i]">
+              <ion-row no-padding padding-bottom no-margin>
+                <ion-col no-padding no-margin>
+                  <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" float-right no-padding>
+                    <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
+                  </ion-button>
+                  <b><span style="color:#9abcbd"><small>currently </small>
+                      <ng-template [ngIf]="p.type=='winner'">
+                        <span style="color:#769596">
+                          {{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
+                      </ng-template>
+                      <ng-template [ngIf]="p.type=='share'">
+                        <span
+                          style="color:#769596">getting&nbsp;{{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
+                      </ng-template>
+                      <small><span style="color:#4c822e"
+                          [style.display]="(votedfor==oidsorted[i])?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
+                        supported&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oidsorted[i]]*1000)/10}}%
+                    </span>
+                    <span style="color:#62a73b"
+                      [style.display]="approved[oidsorted[i]]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
+                  </b>
+                  <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
+                    <br />{{p.options[oidsorted[i]].desc}}
+                  </span>
+                  <ng-template [ngIf]="p.options[oidsorted[i]].uri!=null">
+                    <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].uri)" fill="clear" float-right
+                      no-padding padding-left no-margin>
+                      <ion-icon name="open" slot="icon-only"></ion-icon>
+                    </ion-button>
+                  </ng-template>
+                </ion-col>
+              </ion-row>
+            </app-expandable>
+          </ion-grid>
+        </ion-item>
 
-      <!-- Array(p.oids.length).fill(0).map(i => i) | sortoptions: {opos: opos}-->
+        <!-- Array(p.oids.length).fill(0).map(i => i) | sortoptions: {opos: opos}-->
 
-      <form [formGroup]="myForm">
-        <ion-grid *ngIf="this.addingOption" [formArrayName]="optionForms">
-          <ion-item *ngFor="let option of optionForms.controls; let i=index" formGroupName="i">
-            <ion-item>
-              <ion-text slot="start">Option Name</ion-text>
-              <ion-input type="text" id="{{i}}.oname" formControlName="oname" placeholder="Enter the name of the option"
-                required>
-              </ion-input>
+        <form [formGroup]="myForm">
+          <ion-grid *ngIf="this.addingOption" [formArrayName]="optionForms">
+            <ion-item *ngFor="let option of optionForms.controls; let i=index" formGroupName="i">
+              <ion-item>
+                <ion-text slot="start">Option Name</ion-text>
+                <ion-input type="text" id="{{i}}.oname" formControlName="oname"
+                  placeholder="Enter the name of the option" required>
+                </ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-text slot="start">Option Description</ion-text>
+                <ion-input type="text" id="{{i}}.desc" formControlName="desc"
+                  placeholder="Enter the description of the option" required>
+                </ion-input>
+              </ion-item>
+              <ion-icon (click)="deleteOption(i)" name="close-circle"></ion-icon>
+
+
             </ion-item>
-            <ion-item>
-              <ion-text slot="start">Option Description</ion-text>
-              <ion-input type="text" id="{{i}}.desc" formControlName="desc"
-                placeholder="Enter the description of the option" required>
-              </ion-input>
-            </ion-item>
-            <ion-icon (click)="deleteOption(i)" name="close-circle"></ion-icon>
+          </ion-grid>
+        </form>
 
 
-          </ion-item>
-        </ion-grid>
-      </form>
+        <ion-button *ngIf="!this.addingOption&&!closed" expand="full" color="light" (click)="newOption()">New Option
+        </ion-button>
+        <ion-button *ngIf="this.addingOption&&!closed" expand="full" color="light" (click)="addOption()">Add Option
+        </ion-button>
+        <ng-template [ngIf]="closed">
+          <ion-button expand="full" color="light" (click)="showResults()">Show full results</ion-button>
+        </ng-template>
 
-
-      <ion-button *ngIf="!this.addingOption&&!closed" expand="full" color="light" (click)="newOption()">New Option
-      </ion-button>
-      <ion-button *ngIf="this.addingOption&&!closed" expand="full" color="light" (click)="addOption()">Add Option
-      </ion-button>
-
-      <!--ion-item *ngFor="let control of myForm.controls | keyvalue"-->
+        <!--ion-item *ngFor="let control of myForm.controls | keyvalue"-->
 
 
 
 
 
 
-      <!--/ng-template-->
+        <!--/ng-template-->
 
-      <!--    <ion-item>
+        <!--    <ion-item>
       <ion-button routerLink="addoption" fill="clear">
         <ion-icon name="add-circle" slot="start"></ion-icon> add option
       </ion-button>
@@ -245,6 +484,7 @@
     <ion-item>
       <span style="color:#9abcbd"><small>your voter id: {{p.myvid}}</small></span>
     </ion-item>-->
-    </ion-list>
+      </ion-list>
+    </ng-template>
   </ng-template>
 </ion-content>
