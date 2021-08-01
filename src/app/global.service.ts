@@ -37,8 +37,10 @@ export class GlobalService {
   public history_interval = 1000 * 60; // * 60; hourly
 
   // for communicating with couchdb JSON database:
-  public couchdburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
+  public couchdburl: string = "";
   // public cloudantdburl = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
+  public couchdbcredentials: string = "";
+
   public dbheaders: HttpHeaders = null;
 
   public polls: {} = {}; // dict of Polls by pid
@@ -60,7 +62,8 @@ export class GlobalService {
     "groupname",
     "grouppw",
     "groupLink",
-    "couchdb",
+    "couchdburl",
+    "couchdbcredentials",
     "iv",
     "salt",
     "myprivKeys",
@@ -73,7 +76,7 @@ export class GlobalService {
   public myaUserid: string = "";
   public encprivpw: string = "";
   public userpw: string = "";
-  public couchdb: string; // cloudant credentials
+
   public pollstates: {} = {};
   private couchdb_groupdoc: {} = null; //store credentials for group
 
@@ -145,13 +148,13 @@ export class GlobalService {
   init() {
     // called after state restoration finished
     GlobalService.log("try initializing...");
-    if (this.couchdb) {
+    if (this.couchdbcredentials) {
       GlobalService.log("initializing...");
       // if (!this.couchdb) {
       //   this.couchdb = prompt("cloudant user:password");
       // }
       this.dbheaders = new HttpHeaders({
-        Authorization: "Basic " + btoa(this.couchdb),
+        Authorization: "Basic " + btoa(this.couchdbcredentials),
         "content-type": "application/json",
         accept: "application/json",
       });
@@ -221,17 +224,35 @@ export class GlobalService {
     let groupsalt = forge.random.getBytesSync(128);
     this.groupiv = forge.util.bytesToHex(groupiv);
     this.groupsalt = forge.util.bytesToHex(groupsalt);
-
+    let linktoEncrypt =
+      this.groupname +
+      ">" +
+      this.grouppw +
+      ">" +
+      this.couchdburl +
+      ">" +
+      this.couchdbcredentials;
+    this.groupLink = this.simpleEncrypt(linktoEncrypt,this.grouppw)
+    // Hier war ich simpleEncrypt muss stimmen
+    this.groupLink = this.encryptCredential(
+      linktoEncrypt,
+      this.grouppw,
+      this.groupsalt,
+      this.groupiv
+    );
+    let docToEncrypt = JSON.stringify({
+      pw: password,
+      userids: this.userids,
+      aUaserids: this.aUserids,
+    });
     this.couchdb_groupdoc = {
       _id: gname, // unique document id in db
-      pw: this.encryptCredential(
-        password,
+      data: this.encryptCredential(
+        docToEncrypt,
         password,
         this.groupsalt,
         this.groupiv
       ),
-      userids: this.userids,
-      aUserids: this.aUserids,
       groupiv: this.groupiv,
       groupsalt: this.groupsalt,
     };
@@ -384,7 +405,10 @@ export class GlobalService {
           if (this.polls[pid] == undefined || rev != this.polls[pid].rev) {
             //this.polls[pid] = null;
 
-            if (this.myprivKeys[pid] == undefined) {
+            if (
+              this.myprivKeys == undefined ||
+              this.myprivKeys[pid] == undefined
+            ) {
               this.requestFromServer(pid)
                 .then((data) => {
                   pubs = data["publicKeys"];
@@ -504,18 +528,23 @@ export class GlobalService {
       map(async (responsedata: {}) => {
         try {
           console.log(responsedata);
-          this.userids = responsedata["userids"];
-          this.aUserids = responsedata["aUserids"];
+
           this.groupsalt = responsedata["groupsalt"];
           this.groupiv = responsedata["groupiv"];
 
-          console.log(responsedata["pw"]);
-          let decrpw = this.decryptCredential(
-            responsedata["pw"],
-            this.grouppw,
-            this.groupsalt,
-            this.groupiv
+          let data = JSON.parse(
+            this.decryptCredential(
+              responsedata["data"],
+              this.grouppw,
+              this.groupsalt,
+              this.groupiv
+            )
           );
+
+          this.userids = data["userids"];
+          this.aUserids = data["aUserids"];
+          console.log(data["pw"]);
+          let decrpw = data["pw"];
           console.log(decrpw);
           let isMatch = decrpw == this.grouppw;
 
@@ -624,6 +653,17 @@ export class GlobalService {
       })
     );
   }
+  simpleEncrypt(msg: string, pw: string): string {
+    let salt = "123456789";
+    let iv = "123456789";
+    let key = forge.pkcs5.pbkdf2(pw, salt, 10, 16);
+    let cipher = forge.cipher.createCipher("AES-CBC", key);
+    cipher.start({ iv: iv });
+    cipher.update(forge.util.createBuffer(msg));
+    cipher.finish();
+    // convert utf8 to hex for saving
+    return forge.util.bytesToHex(forge.util.encodeUtf8(cipher.output.data));
+  }
   encryptCredential(msg: string, pw: string, salt: string, iv: string): string {
     let key = forge.pkcs5.pbkdf2(pw, salt, 10, 16);
     let cipher = forge.cipher.createCipher("AES-CBC", key);
@@ -711,8 +751,16 @@ export class GlobalService {
     const json = await response.json();
     let mydata = json["mydata"];
     let publicKeys = json["publicKeys"];
+    if (this.myvids == undefined) {
+      this.myvids = {};
+      this.allPubKeys = {};
+      this.mypubKeys = {};
+      this.myprivKeys = {};
+    }
     this.allPubKeys[pid] = publicKeys;
+
     this.myprivKeys[pid] = mydata["privKey"]; // TODO: Encrypt privKeys
+
     this.mypubKeys[pid] = mydata["pubKey"];
     this.myvids[pid] = mydata["vid"];
     this.updateUserDoc();

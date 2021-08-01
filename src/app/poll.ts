@@ -196,36 +196,36 @@ export class Poll {
       //this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
       this.mygid = this.g.groupname;
 
-      await this.g.informServer(this.pid).then(async (success) => {
-        if (success) {
-          await this.g.requestFromServer(this.pid).then((value) => {
-            this.myprivKey = value["mydata"]["privKey"];
-            this.mypubKey = value["mydata"]["pubKey"];
-            this.myvid = value["mydata"]["vid"];
-            this.pubs = value["publicKeys"];
-            //this.pubs.push(this.mypubKey);
-            for (let i = 0; i < this.pubs.length; i++) {
-              this.pubKeys[i] = forge.pki.publicKeyFromPem(this.pubs[i]);
-            }
-            //this.pubKeys.push(forge.pki.publicKeyFromPem(this.mypubKey));
-            this.registerVoter(this.myvid);
+      let success = await this.g.informServer(this.pid);
 
-            for (let i = 1; i < rawpoll.length; i++) {
-              let o = new Option(
-                this.pid + "_o" + i,
-                "o" + i,
-                rawpoll[i][0],
-                rawpoll[i][1],
-                "" // URI ja oder nein?
-              );
-              //this.couchdb_optiondocs[o.oid] = o;
-              this.registerOption(o, "newOption");
-            }
-          });
-        }
-      });
+      if (success) {
+        await this.g.requestFromServer(this.pid).then((value) => {
+          this.myprivKey = value["mydata"]["privKey"];
+          this.mypubKey = value["mydata"]["pubKey"];
+          this.myvid = value["mydata"]["vid"];
+          this.pubs = value["publicKeys"];
+          //this.pubs.push(this.mypubKey);
+          for (let i = 0; i < this.pubs.length; i++) {
+            this.pubKeys[i] = forge.pki.publicKeyFromPem(this.pubs[i]);
+          }
+          //this.pubKeys.push(forge.pki.publicKeyFromPem(this.mypubKey));
+          this.registerVoter(this.myvid);
+
+          for (let i = 1; i < rawpoll.length; i++) {
+            let o = new Option(
+              this.pid + "_o" + i,
+              "o" + i,
+              rawpoll[i][0],
+              rawpoll[i][1],
+              "" // URI ja oder nein?
+            );
+            //this.couchdb_optiondocs[o.oid] = o;
+            this.registerOption(o, "newOption");
+          }
+        });
+        this.putPolldoc();
+      }
     }
-    return this.putPolldoc();
   }
   putPolldoc() {
     //TODO: if successful return poll object
@@ -759,7 +759,7 @@ export class Poll {
                 JSON.stringify(error)
             );
             this.g.dbheaders = new HttpHeaders({
-              Authorization: "Basic " + btoa(this.g.couchdb),
+              Authorization: "Basic " + btoa(this.g.couchdbcredentials),
               "content-type": "application/json",
               accept: "application/json",
             });

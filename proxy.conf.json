@@ -1,11 +1,11 @@
 {
-  "/cloudant": {
+  "/couchdb": {
     "target": "http://localhost:5984/maxparc1",
     "changeOrigin": true,
     "secure": false,
     "logLevel": "debug",
     "pathRewrite": {
-      "^/cloudant": ""
+      "^/couchdb": ""
     }
   }
 }

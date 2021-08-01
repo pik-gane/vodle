@@ -100,10 +100,20 @@ export class HomePage implements OnInit {
     try {
       let decMessage = window.atob(magicLink);
 
-      let decArray = decMessage.split(":");
+      this.g.groupname = (document.getElementById(
+        "groupid"
+      ) as HTMLInputElement).value;
+      this.g.grouppw = (document.getElementById(
+        "grouppw"
+      ) as HTMLInputElement).value;
+
+      // Hier war ich: magicLink decrypt
+
+      let decArray = decMessage.split(">");
       this.g.groupname = decArray[0];
       this.g.grouppw = decArray[1];
-      this.g.couchdb = decArray[2] + ":" + decArray[3];
+      this.g.couchdburl = decArray[2];
+      this.g.couchdbcredentials = decArray[3];
       this.g.init(); // prepare couchdb access
       this.g.checkGroup(false).subscribe(
         (promise) => {

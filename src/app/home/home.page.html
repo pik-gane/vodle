@@ -72,6 +72,15 @@
     </ng-template>
     <ng-template [ngIf]="!grouplogin">
       <ion-item>
+        <ion-text slot="start">Group ID:</ion-text>
+        <ion-input placeholder="Enter group ID here" id="groupid"></ion-input>
+      </ion-item>
+      <ion-item>
+        <ion-text slot="start">Group password:</ion-text>
+        <ion-input type="password" placeholder="Enter group password here" id="grouppw"></ion-input>
+      </ion-item>
+      <ion-item>
+
         <ion-text slot="start">Group Link:</ion-text>
         <ion-input type="password" placeholder="Encrypted code" autofocus="true" id="magicLink">
         </ion-input>

@@ -21,19 +21,38 @@
     </ion-input>
   </ion-item>
   <ion-item>
-    <ion-label position="floating">Group Password</ion-label>
+    <ion-label position="floating">Group Password:</ion-label>
     <ion-input type="password" placeholder="Group password" autofocus="true" id="grouppw1">
     </ion-input>
   </ion-item>
   <ion-item>
-    <ion-label position="floating">Repeat Password</ion-label>
+    <ion-label position="floating">Repeat Password:</ion-label>
     <ion-input type="password" placeholder="Group password" autofocus="true" id="grouppw2">
     </ion-input>
   </ion-item>
   <ion-item>
-    <ion-label position="floating">CouchDB credentials:</ion-label>
-    <ion-input placeholder="Name of CouchDB and password separated by ':'" autofocus="true" id="couchdb"></ion-input>
+    <ion-label position="floating">Group members:</ion-label>
+    <ion-textarea placeholder="Enter Email adresses of group members, dividided by semikolon or comma" autofocus="true"
+      id="groupmembers">
+    </ion-textarea>
   </ion-item>
+  <ion-item>
+    <ion-label>Use CouchDB of sandstorm server for data storage:</ion-label>
+    <ion-checkbox checked="true" [(ngModel)]="sandstormcouchdb"></ion-checkbox>
+  </ion-item>
+
+  <ng-template [ngIf]="!sandstormcouchdb">
+    <ion-item>
+
+      <ion-label position="floating">Use own CouchDB access:</ion-label>
+      <ion-input placeholder="URL to extern CouchDB" autofocus="true" id="couchdburl"></ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating">Credentials of existing couchdb:</ion-label>
+      <ion-input type="password" placeholder="username:password" id="couchdbcredentials"></ion-input>
+    </ion-item>
+  </ng-template>
+
   <ion-button expand="full" (click)="submitGroupCredentials()">Submit</ion-button>
 </ion-list>
 <ion-content padding>
