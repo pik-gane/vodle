@@ -1,0 +1,11 @@
+{
+  "/cloudant": {
+    "target": "http://localhost:5984/maxparc",
+    "changeOrigin": true,
+    "secure": false,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/cloudant": ""
+    }
+  }
+}
