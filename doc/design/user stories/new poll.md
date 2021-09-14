@@ -7,7 +7,10 @@ user can:
   - title
   - description
   - url
-  - db credentials (url, username, password), using user's default
+  - "database" (using user's defaults): 
+    - "database url"
+    - "database username"
+    - "database password"
   - closing datetime
 - "add option" (see [[new option.md]])
 - "invite voters" to open a new email window containing a preformatted subject and body with a deep link to the poll
