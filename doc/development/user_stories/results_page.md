@@ -1,4 +1,4 @@
-issue unassigned
+issue #51
 
 after poll has closed, the "poll" page has three sections:
 - poll metadata as for an open poll
