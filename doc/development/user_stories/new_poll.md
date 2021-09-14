@@ -1,4 +1,4 @@
-issue unassigned
+issue #53
 
 user can:
 - "new poll" on "my polls" page
