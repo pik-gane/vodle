@@ -1,4 +1,4 @@
-issue unassigned
+issue #52
 
 on "poll" page, user can: 
 - "add option" (round "+" button)
