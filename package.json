@@ -31,7 +31,7 @@
     "@ionic/storage": "^2.2.0",
     "@types/chart.js": "^2.7.48",
     "ajv": "^6.9.1",
-    "chart.js": "^2.7.3",
+    "chart.js": "^2.9.4",
     "cordova-android": "7.1.4",
     "cordova-browser": "5.0.4",
     "cordova-ios": "4.5.5",
