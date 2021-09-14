@@ -11,6 +11,7 @@ user can:
   - closing datetime
 - "add option" (see [[new option.md]])
 - "invite voters" to open a new email window containing a preformatted subject and body with a deep link to the poll
+- "cancel"
 
 
 
