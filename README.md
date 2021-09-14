@@ -4,7 +4,7 @@ Current goal: complete a "minimal viable product" (MVP) that runs as a web-app o
 
 (Later: extend functionality and deploy as android/ios app as well)
 
-**Contributors: please look at the Issues page!**
+**Contributors: please look at the Issues page and the folder [doc/development](doc/development)!**
 
 ## Basic architecture
 
