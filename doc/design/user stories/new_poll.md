@@ -16,7 +16,7 @@ user can:
     - "after 24 hours"
     - "after seven days"
     - "at a specific date and time", then enter that
-- "add option" (see [[new option.md]])
+- "add option" (see [add option](add_option.md))
 - "invite voters" to open a new email window containing a preformatted subject and body with a deep link to the poll
 - "cancel"
 
