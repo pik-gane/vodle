@@ -7,7 +7,7 @@ user can:
   - title
   - description
   - url
-  - "database" (using user's defaults): 
+  - "where to store poll data" (`poll_db`, using `user_db` as default): 
     - "database url"
     - "database username"
     - "database password"
