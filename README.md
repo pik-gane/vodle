@@ -1,24 +1,45 @@
-Development of a group decision / voting app "vodle"
-====================================================
+# Development of a group decision / voting app "vodle"
 
-* main focus for now: get base functionality going (setting up polls, voting, closing a poll)
+Current goal: complete a "minimal viable product" (MVP) that runs as a web-app only and provides base functionality (setting up polls, voting, seeing and understanding results)
 
-### Prioritised list of wanted features
+(Later: extend functionality and deploy as android/ios app as well)
 
-* poll setup, invitation by email
-* basic nonencrypted communication via realtime.co
-* at deadline: poll tally, broadcast result via realtime.co
-* optimized explanations, howtos, guides (using text of different detail and animations)
-* custom uri scheme & file extension
-* standard notification when some bar has changed by more than 5% or some pin's distance to bar end gets below 5% or time gets late
-* invitation and notifications via other messengers
-* "vodle" button for integration in websites, using custom uri + standard webservice interface to open polls
-* integration with slack via slackbot "vodle"
-* extracting lists of potential options from webpages (e.g. movie theatre program) 
-* personal prioritization of polls
-* customized notification options (updates, result)
-* text message broadcast and personal messages
-* observer-only view for stakeholders or public projection 
+**Contributors: please look at the Issues page!**
+
+## Basic architecture
+
+* web/android/ios app
+* communication between voters via any couchdb database
+* no other central server for now (but probably later for certain tasks)
+
+## Technology stack
+
+* App development framework: Ionic (typescript, angular)
+* GUI: html, svg
+* Communication: JSON, Email (later also messenger apps)
+* Deep links
+
+## Very coarse overview of source code file tree
+
+* src/app/about|help|home|mypolls|openpoll|pollstats etc.: folders of individual app pages.
+* src/app/whatever/whatever.page.ts|html: gui logics and layout
+* src/app/global.service.ts: background logics with classes for polls and options etc.
+
+## Useful commands
+
+* running in dev mode: in main directory of git repo: ionic serve
+* starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
+* logging into container: sudo docker exec -it couch bash
+* sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
+```
+curl -X PUT http://localhost:5984/maxparc
+curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/file_compression -d '"snappy"'
+curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/max_document_size -d '"1000000"'
+```
+* replicate db:
+```
+curl -H 'Content-Type: application/json' -X POST http://localhost:5984/_replicate -d ' {"source": "https://.....@08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc/", "target": "http://localhost:5984/maxparc/"}'
+```
 
 ## Ideas for publication
 
@@ -50,22 +71,10 @@ Development of a group decision / voting app "vodle"
 * group speaker/rep temporary service time
 * budget, time or other resources for projects
 
-## Implementation notes
 
-* many small TODOs etc. are contained in inline comments in code
+# [OLD STUFF, please ignore for now:]
 
-### Main technologies used
-
-* app: ionic framework: typescript/javascript, angular/html/svg
-* communication: JSON: couchdb server for state persistence, TODO: realtime messenging server
-
-### Very coarse overview of source code file tree
-
-* src/app/about|help|home|mypolls|openpoll|pollstats etc.: folders of indivudual pages.
-* src/app/openpoll/openpoll.page.ts|html: gui logics and layout
-* src/app/global.service.ts: background logics with classes for polls and options
-
-### Building
+## Building
 
 I did the following to get the unsigned android debug build going:
 
@@ -88,25 +97,25 @@ I did the following to get the unsigned android debug build going:
 * export ANDROID_HOME=...android-sdk-linux/
 * ionic cordova build --prod android --verbose
 
-On the test web server:
+## Prioritised list of wanted features
 
-* sudo nohup /usr/local/bin/ionic serve --ssl --prod --address sandstorm.pik-potsdam.de --port 443 --no-open -- --ssl-cert ... --ssl-key ... &
+* poll setup, invitation by email
+* basic nonencrypted communication via realtime.co
+* at deadline: poll tally, broadcast result via realtime.co
+* optimized explanations, howtos, guides (using text of different detail and animations)
+* custom uri scheme & file extension
+* standard notification when some bar has changed by more than 5% or some pin's distance to bar end gets below 5% or time gets late
+* invitation and notifications via other messengers
+* "vodle" button for integration in websites, using custom uri + standard webservice interface to open polls
+* integration with slack via slackbot "vodle"
+* extracting lists of potential options from webpages (e.g. movie theatre program) 
+* personal prioritization of polls
+* customized notification options (updates, result)
+* text message broadcast and personal messages
+* observer-only view for stakeholders or public projection 
 
-### Useful commands
 
-* running in dev mode: in main directory of git repo: ionic serve
-* starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
-* logging into container: sudo docker exec -it couch bash
-* sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
-```
-curl -X PUT http://localhost:5984/maxparc
-curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/file_compression -d '"snappy"'
-curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/max_document_size -d '"1000000"'
-```
-* replicate db:
-```
-curl -H 'Content-Type: application/json' -X POST http://localhost:5984/_replicate -d ' {"source": "https://.....@08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc/", "target": "http://localhost:5984/maxparc/"}'
-```
+## Implementation notes
 
 ### Message retention
 
@@ -129,64 +138,6 @@ The protocol for this is this:
   so the server only needs that much permanent storage per open poll.
 
 Currently, a cloud database is used to store data persistently as JSON documents
-
-### future JSON document database design
-
-(all ids are uuids or guids, all `data` elements are inner json documents encrypted by a poll-specific key distributed initially but not stored in the db)
-
-poll document:
-```
-{
-    "pid":  string, // poll id
-    "data": string,
-}
-```
-where data contains:
-```
-{
-    "title":    string,
-    "desc":     string,
-    "uri":      string|null, // general weblink
-    "repo_uri": string|null, // weblink to repository of potential options
-
-    "due":      timestamp,
-    "status":   "draft"|"open"|"closed",
-    "winner":   string|null, // option id
-}
-```
-
-option document (added by individual voter, never changed later):
-```
-{
-    "pid":  string,
-    "oid":  string, // option id
-    "data": string,
-}
-```
-where data contains:
-```
-{
-    "name": string,
-    "desc": string,
-    "appr": float,
-    "prob": float,
-}
-```
-
-voter document (controlled by single voter, updated whenever some rating is updated):
-```
-    "pid":  string,
-    "vid":  string, // voter id
-    "data": string,
-}
-```
-where data contains:
-```
-{
-    "pubkey":  string, // used for signing stuff?
-    "ratings": { oid: int, ... }, // dictionary of ratings
-}
-```
 
 
 ### Useful links
@@ -218,9 +169,6 @@ where data contains:
 * charts: https://www.chartjs.org/
 * fullscreen: https://ionicframework.com/docs/native/android-full-screen
 
-### Issues
-
-see inline!
 
 ### lessons from copan test
 
