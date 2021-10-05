@@ -23,6 +23,10 @@ const routes: Routes = [
     path: 'mypolls',
     loadChildren: () => import('./mypolls/mypolls.module').then( m => m.MypollsPageModule)
   },
+  {
+    path: 'poll',
+    loadChildren: () => import('./poll/poll.module').then( m => m.PollPageModule)
+  },
 ];
 
 @NgModule({

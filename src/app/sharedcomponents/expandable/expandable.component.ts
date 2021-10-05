@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, Renderer, Input, ViewChild } from '@angular/core';
+import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild } from '@angular/core';
 
 @Component({
   selector: 'app-expandable',
@@ -11,12 +11,12 @@ export class ExpandableComponent implements OnInit {
   @Input('expanded') expanded;
   @Input('expandHeight') expandHeight;
 
-  constructor(public renderer: Renderer) {
+  constructor(public renderer: Renderer2) {
 
   }
 
   ngAfterViewInit(){
-      this.renderer.setElementStyle(this.expandWrapper.nativeElement, 'height', this.expandHeight + 'px');    
+      this.renderer.setStyle(this.expandWrapper.nativeElement, 'height', this.expandHeight + 'px');    
   }
 
   ngOnInit() { }
