@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>About vodle</ion-title>
+    <ion-thumbnail slot="end">
+        <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!--TODO: have this as an expandable list of topics, with the first one expanded by default-->
+  <h3>What is vodle?</h3>
+  <p>
+    <b>vodle helps a group make fair and good decisions. 
+      It finds the <i>maximal partial consensus</i> among any set of options.
+      Truly democratic, it gives everyone the same effective influence.
+    </b>
+  </p>
+  <p>
+    For each option, it shows you the current approval as a light bar on the right, 
+    and allows you to adjust your ratings in realtime using sliders.
+    When your slider touches the approval bar, it turns green to indicate that you approve that option as well.
+    This way, the group tends to converge to a full or partial consensus as broad as possible. 
+  </p>
+  <p>
+    When the poll closes, 
+    the winning option is determined by a fair but simple algorithm that gives every voter the same influence,
+    not just those voters who happen to be in a majority.
+  </p>
+  <p>
+    <ion-icon name="trophy" float-left></ion-icon>&nbsp;
+    In <b>choice polls</b> (where your group is selecting a <i>single option</i>), 
+    the decision is made as follows.
+    If one option is approved by all, this full consensus option will be the sure winner.
+    Otherwise vodle most likely declares the option with the broadest approval the winner.
+    But to achieve fairness, it must sometimes also use a certain amount of chance,
+    similar to a greencard lottery.
+  </p>
+  <small>
+    <p>
+      The exact procedure that vodle uses for determining the winning option is this:
+      After the poll has closed, options are sorted by descending approval and one voter is picked by lot.
+      The top-most option for which that voter's slider is green is declared the winner. 
+    </p>
+    <p>
+      This way, the most-approved option will have the vastly largest probability of winning.
+      Other options' winning probabilities are at most as large as their approval scores (in percent of all voters who do not abstain).
+    </p>
+  </small>
+  <p>
+      <ion-icon name="cut" float-left></ion-icon>&nbsp;
+      In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several targets or recipients), 
+      the procedure is similar:
+      If one target is approved by all, you have full consensus, so this target will get the full budget.
+      Otherwise vodle allocates the largest share of the budget to the target with the broadest approval,
+      and smaller shares to the other targets.
+  </p>
+  <small>
+    <p>
+      Exact procedure: Targets are sorted by descending approval. 
+      Then each target's share is proportional to the number of voters 
+      who approve this target but no higher-up target. 
+    </p>
+  </small>
+  <h3>Who's behind it?</h3>
+    <p>
+      vodle's algorithm was developed and optimizied for fairness by the mathematician Jobst Heitzig,
+      inspired by the "threshold model" of famous sociologist Mark Granovetter, in collaboration with Forest W. Simmons.
+      This app is open-source, code hosted on <a href="https://github.com/mensch72/maxparc-ionic">github</a>. 
+      Main developer: Jobst Heitzig. Contributors: Marius Amrhein.
+    </p>
+  <h3>Support vodle!</h3>
+    <p>As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href="https://sandstorm.pik-potsdam.de/assets/landing-page/index.html#support">how you might support us!</a></p>
+</ion-content>
