@@ -85,7 +85,6 @@ export class PollPage implements OnInit {
   showStats() { // update pies and bars, but not order!
     this.votedfor = this.p.vid2oid[this.p.myvid];
     for (let oid of this.p.oids) {
-      GlobalService.log("trying to get "+'bar_'+oid);
       let r = this.p.getRating(oid, this.p.myvid),
           appr = this.p.apprs[oid],
           prob = this.p.probs[oid],

@@ -61,3 +61,22 @@
 html {
     --ion-font-family: 'Quicksand';
 }
+
+ion-content {
+    .error-message
+    {
+        color: red;
+        font-size: 14px;
+        margin-left: 15px;
+        margin-top: 5px;
+    }
+}
+/* Set the width to the full container and center the content */
+ion-select {
+    width: 100%;
+}
+.sc-ion-alert-md-h  {
+    --width: 90%;
+    --min-width: 90%;
+    --max-width: 90%;
+}

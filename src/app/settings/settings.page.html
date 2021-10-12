@@ -1,0 +1,133 @@
+<ion-header>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Settings</ion-title>
+    <ion-thumbnail slot="end">
+      <ion-img src="/assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form [formGroup]="formGroup" (ngSubmit)="onSubmit(formGroup.value)">
+    <ion-item color="primary">
+      Data storage 
+    </ion-item>
+    <ion-item>
+      <small>To be able to access your data safely from different devices, please give an email address, set a password, 
+      and select a server where vodle will store your encrypted data. </small>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating" color="primary">Email</ion-label>
+      <ion-input type="text" formControlName="email" required></ion-input>
+    </ion-item>
+    <div class="validation-errors">
+    <ng-container *ngFor="let validation of validation_messages.email">
+      <div class="error-message" *ngIf="formGroup.get('email').hasError(validation.type) 
+          && (formGroup.get('email').dirty || formGroup.get('email').touched)">
+        {{ validation.message }}
+      </div>
+    </ng-container>
+    </div>
+    <ion-item>
+      <ion-label position="floating" color="primary">Password</ion-label>
+      <ion-input type="password" formControlName="password" required></ion-input><!--TODO: add show/hide toggle-->
+    </ion-item>
+    <div class="validation-errors">
+    <ng-container *ngFor="let validation of validation_messages.password">
+      <div class="error-message" *ngIf="formGroup.get('password').hasError(validation.type) 
+          && (formGroup.get('password').dirty || formGroup.get('password').touched)">
+        {{ validation.message }}
+      </div>
+    </ng-container>
+    </div>
+    <ion-item>
+      <ion-label position="floating" color="primary">Retype password</ion-label>
+      <ion-input type="password" formControlName="confirm_password" required></ion-input>
+    </ion-item>
+    <div class="validation-errors">
+    <ng-container *ngFor="let validation of validation_messages.passwords_match">
+      <div class="error-message" *ngIf="formGroup.hasError('must_match') 
+          && (formGroup.get('confirm_password').dirty || formGroup.get('confirm_password').touched)">
+        {{ validation.message }}
+      </div>
+    </ng-container>
+    </div>
+    <ion-item>
+      <ion-label position="floating" color="primary">Server</ion-label>
+      <ion-select formControlName="server" cancelText="Cancel" okText="OK">
+        <ion-select-option value="default">vodle central default server</ion-select-option>
+        <ion-select-option value="poll">same as for one of my polls</ion-select-option>
+        <ion-select-option value="other">other</ion-select-option>
+      </ion-select>
+    </ion-item>
+    <ng-container *ngIf="formGroup.get('server').value=='poll'">
+      <ion-item>
+        <ion-label position="floating" color="primary">Which poll's server do you want to use for your personal data?</ion-label>
+        <ion-select formControlName="server_from_poll" cancelText="Cancel" okText="OK">
+          <ion-select-option value="TODO">[TODO: list of all polls]</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </ng-container>    
+    <ng-container *ngIf="formGroup.get('server').value=='other'">
+      <ion-item>
+        <small>Please enter the URL, username and password for any CouchDB database where you want your data to be stored:</small>
+      </ion-item>
+      <ion-item>
+        <ion-label position="floating" color="primary">Database URL</ion-label>
+        <ion-input type="text" formControlName="db_url" required></ion-input>
+      </ion-item>
+      <div class="validation-errors">
+        <ng-container *ngFor="let validation of validation_messages.db_url">
+          <div class="error-message" *ngIf="formGroup.get('db_url').hasError(validation.type) 
+              && (formGroup.get('db_url').dirty || formGroup.get('db_url').touched)">
+            {{ validation.message }}
+          </div>
+        </ng-container>
+      </div>
+      <ion-item>
+        <ion-label position="floating" color="primary">Database username</ion-label>
+        <ion-input type="text" formControlName="db_username" required></ion-input>
+      </ion-item>
+      <div class="validation-errors">
+        <ng-container *ngFor="let validation of validation_messages.db_username">
+          <div class="error-message" *ngIf="formGroup.get('db_username').hasError(validation.type) 
+              && (formGroup.get('db_username').dirty || formGroup.get('db_username').touched)">
+            {{ validation.message }}
+          </div>
+        </ng-container>
+      </div>
+      <ion-item>
+        <ion-label position="floating" color="primary">Database password</ion-label>
+        <ion-input type="password" formControlName="db_password" required></ion-input>
+      </ion-item>
+      <div class="validation-errors">
+        <ng-container *ngFor="let validation of validation_messages.db_password">
+          <div class="error-message" *ngIf="formGroup.get('db_password').hasError(validation.type) 
+              && (formGroup.get('db_password').dirty || formGroup.get('db_password').touched)">
+            {{ validation.message }}
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+    <ion-item color="primary">
+      Appearance 
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating" color="primary">Language</ion-label>
+      <ion-select formControlName="language" cancelText="Cancel" okText="OK">
+        <ion-select-option value="en">English</ion-select-option>
+        <ion-select-option value="de">Deutsch</ion-select-option>
+      </ion-select>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating" color="primary">Theme</ion-label>
+      <ion-select formControlName="theme" cancelText="Cancel" okText="OK">
+        <ion-select-option value="light">Light</ion-select-option>
+        <ion-select-option value="dark">Dark</ion-select-option>
+      </ion-select>
+    </ion-item>
+  </form>
+</ion-content>

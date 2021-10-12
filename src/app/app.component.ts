@@ -22,12 +22,12 @@ export class AppComponent {
       url: '/mypolls',
       icon: 'list'
     },
-/*    {
+    {
       title: 'Settings',
       url: '/settings',
       icon: 'settings'
     },
-*/    {
+    {
       title: 'How to use',
       url: '/help',
       icon: 'help'

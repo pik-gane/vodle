@@ -104,8 +104,8 @@
             </ion-col>
           </ion-row>
           <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin>
-              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" [value]="p.getRating(oidsorted[i], p.myvid)" [color]="slidercolor[oidsorted[i]]"
+            <ion-col no-padding no-margin><!--[color]="slidercolor[oidsorted[i]]"-->
+              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" [value]="p.getRating(oidsorted[i], p.myvid)" 
                           (ionFocus)="ratingChangeBegins(oidsorted[i])" (ionChange)="ratingChanges(oidsorted[i])" (ionBlur)="ratingChangeEnded(oidsorted[i])" 
                           pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px" no-padding no-margin>
                 <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
