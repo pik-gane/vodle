@@ -11,7 +11,7 @@
 </ion-header>
 
 <ion-content>
-  <form [formGroup]="formGroup" (ngSubmit)="onSubmit(formGroup.value)">
+  <form [formGroup]="formGroup">
     <ion-item color="primary">
       Data storage 
     </ion-item>
@@ -19,10 +19,21 @@
       <small>To be able to access your data safely from different devices, please give an email address, set a password, 
       and select a server where vodle will store your encrypted data. </small>
     </ion-item>
-    <ion-item>
-      <ion-label position="floating" color="primary">Email</ion-label>
-      <ion-input type="text" formControlName="email" required></ion-input>
-    </ion-item>
+    <ion-grid class="ion-no-padding">
+      <ion-row class="ion-no-padding ion-align-items-bottom">
+        <ion-col class="ion-no-padding">
+          <ion-item>
+            <ion-label position="floating" color="primary">Email</ion-label>
+            <ion-input type="text" formControlName="email" required [disabled]="!editing_email"></ion-input>      
+            <!--TODO: click OK when hitting enter and valid-->
+          </ion-item>
+        </ion-col>
+        <ion-button color="light" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
+          <!--TODO: give focus to field-->
+          <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_email?'OK':'edit'}}
+        </ion-button>      
+      </ion-row>
+    </ion-grid>
     <div class="validation-errors">
     <ng-container *ngFor="let validation of validation_messages.email">
       <div class="error-message" *ngIf="formGroup.get('email').hasError(validation.type) 
@@ -31,30 +42,48 @@
       </div>
     </ng-container>
     </div>
-    <ion-item>
-      <ion-label position="floating" color="primary">Password</ion-label>
-      <ion-input type="password" formControlName="password" required></ion-input><!--TODO: add show/hide toggle-->
-    </ion-item>
-    <div class="validation-errors">
-    <ng-container *ngFor="let validation of validation_messages.password">
-      <div class="error-message" *ngIf="formGroup.get('password').hasError(validation.type) 
-          && (formGroup.get('password').dirty || formGroup.get('password').touched)">
-        {{ validation.message }}
+
+    <div formGroupName="pw">
+      <ion-grid class="ion-no-padding">
+        <ion-row class="ion-no-padding ion-align-items-bottom">
+          <ion-col class="ion-no-padding">
+            <ion-item>
+              <ion-label position="floating" color="primary">Password</ion-label>
+              <ion-input [type]="showing_password?'text':'password'" formControlName="password" required [disabled]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
+            </ion-item>
+          </ion-col>
+          <ion-button color="light" (click)="showing_password=!showing_password">
+            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_password?'hide':'show'}}
+          </ion-button>      
+          <ion-button color="light" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
+            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_password?'OK':'edit'}}
+          </ion-button>      
+        </ion-row>
+      </ion-grid>
+      <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.password">
+        <div class="error-message" *ngIf="formGroup.get('pw.password').hasError(validation.type) 
+            && (formGroup.get('pw.password').dirty || formGroup.get('pw.password').touched)">
+          {{ validation.message }}
+        </div>
+      </ng-container>
       </div>
-    </ng-container>
+      <ng-container *ngIf="editing_password">
+        <ion-item>
+          <ion-label position="floating" color="primary">Retype password</ion-label>
+          <ion-input [type]="showing_password?'text':'password'" formControlName="confirm_password" required [disabled]="!editing_password"></ion-input>
+        </ion-item>
+        <div class="validation-errors">
+        <ng-container *ngFor="let validation of validation_messages.passwords_match">
+          <div class="error-message" *ngIf="formGroup.get('pw').hasError('must_match') 
+              && (formGroup.get('pw.confirm_password').dirty || formGroup.get('pw.confirm_password').touched)">
+            {{ validation.message }}
+          </div>
+        </ng-container>
+        </div>
+      </ng-container>
     </div>
-    <ion-item>
-      <ion-label position="floating" color="primary">Retype password</ion-label>
-      <ion-input type="password" formControlName="confirm_password" required></ion-input>
-    </ion-item>
-    <div class="validation-errors">
-    <ng-container *ngFor="let validation of validation_messages.passwords_match">
-      <div class="error-message" *ngIf="formGroup.hasError('must_match') 
-          && (formGroup.get('confirm_password').dirty || formGroup.get('confirm_password').touched)">
-        {{ validation.message }}
-      </div>
-    </ng-container>
-    </div>
+
     <ion-item>
       <ion-label position="floating" color="primary">Server</ion-label>
       <ion-select formControlName="server" cancelText="Cancel" okText="OK">
@@ -99,10 +128,19 @@
           </div>
         </ng-container>
       </div>
-      <ion-item>
-        <ion-label position="floating" color="primary">Database password</ion-label>
-        <ion-input type="password" formControlName="db_password" required></ion-input>
-      </ion-item>
+      <ion-grid class="ion-no-padding">
+        <ion-row class="ion-no-padding ion-align-items-bottom">
+          <ion-col class="ion-no-padding">
+            <ion-item>
+              <ion-label position="floating" color="primary">Database password</ion-label>
+              <ion-input [type]="showing_db_password?'text':'password'"  formControlName="db_password" required></ion-input>
+            </ion-item>
+          </ion-col>
+          <ion-button color="light" (click)="showing_db_password=!showing_db_password">
+            <ion-icon [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
+          </ion-button>      
+        </ion-row>
+      </ion-grid>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.db_password">
           <div class="error-message" *ngIf="formGroup.get('db_password').hasError(validation.type) 
@@ -112,7 +150,8 @@
         </ng-container>
       </div>
     </ng-container>
-    <ion-item color="primary">
+
+    <!--<ion-item color="primary">
       Appearance 
     </ion-item>
     <ion-item>
@@ -128,6 +167,6 @@
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>
-    </ion-item>
+    </ion-item>-->
   </form>
 </ion-content>

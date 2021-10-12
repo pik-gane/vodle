@@ -1,6 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 
+/*
+TODO:
+- when changing password or server, alert that user needs to update password or server on other devices as well
+*/
+
+
 // custom validator to check that two fields match
 export function passwords_match(control: AbstractControl): ValidationErrors | null {
   if (control) {
@@ -24,18 +30,30 @@ export function passwords_match(control: AbstractControl): ValidationErrors | nu
 export class SettingsPage implements OnInit {
 
   formGroup: FormGroup;
+  editing_email: Boolean;
+  editing_password: Boolean;
+  showing_password: Boolean;
+  showing_db_password: Boolean;
 
   constructor(public formBuilder: FormBuilder) { }
 
   ngOnInit() {
+    this.editing_email = false;
+    this.editing_password = false;
+    this.showing_password = false;
+    this.showing_db_password = false;
     this.formGroup = this.formBuilder.group({
       email: new FormControl('your@email.address', Validators.compose([Validators.required, Validators.email])),
-      password: new FormControl('', Validators.compose([
-        Validators.required,
-        Validators.minLength(8),
-        Validators.pattern('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$') //this is for the letters (both uppercase and lowercase) and numbers validation
-      ])),
-      confirm_password: new FormControl('', Validators.required),
+      pw: this.formBuilder.group({
+        password: new FormControl('', Validators.compose([
+          Validators.required,
+          Validators.minLength(8),
+          Validators.pattern('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$') //this is for the letters (both uppercase and lowercase) and numbers validation
+        ])),
+        confirm_password: new FormControl('', Validators.required),
+      }, {
+        validators: [passwords_match]
+      }),
       server: new FormControl('default', Validators.required),
       server_from_poll: new FormControl('TODO', Validators.required),
       db_url: new FormControl('', Validators.required), // TODO: validator
@@ -43,8 +61,6 @@ export class SettingsPage implements OnInit {
       db_password: new FormControl('', Validators.required), // TODO: validator
       language: new FormControl('en', Validators.required),
       theme: new FormControl('light', Validators.required),
-    }, {
-      validators: [passwords_match]
     });
   }
 
