@@ -31,6 +31,10 @@ const routes: Routes = [
     path: 'settings',
     loadChildren: () => import('./settings/settings.module').then( m => m.SettingsPageModule)
   },
+  {
+    path: 'draftpoll',
+    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
+  },
 ];
 
 @NgModule({

@@ -20,7 +20,7 @@
       and select a server where vodle will store your encrypted data. </small>
     </ion-item>
     <ion-grid class="ion-no-padding">
-      <ion-row class="ion-no-padding ion-align-items-bottom">
+      <ion-row class="ion-no-padding">
         <ion-col class="ion-no-padding">
           <ion-item>
             <ion-label position="floating" color="primary">Email</ion-label>
@@ -28,7 +28,7 @@
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
-        <ion-button color="light" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
+        <ion-button style="padding-top: 10px;" color="light" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
           <!--TODO: give focus to field-->
           <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_email?'OK':'edit'}}
         </ion-button>      
@@ -45,17 +45,17 @@
 
     <div formGroupName="pw">
       <ion-grid class="ion-no-padding">
-        <ion-row class="ion-no-padding ion-align-items-bottom">
+        <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
             <ion-item>
               <ion-label position="floating" color="primary">Password</ion-label>
               <ion-input [type]="showing_password?'text':'password'" formControlName="password" required [disabled]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
             </ion-item>
           </ion-col>
-          <ion-button color="light" (click)="showing_password=!showing_password">
+          <ion-button style="padding-top: 10px;" color="light" (click)="showing_password=!showing_password">
             <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_password?'hide':'show'}}
           </ion-button>      
-          <ion-button color="light" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
+          <ion-button style="padding-top: 10px;" color="light" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
             <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_password?'OK':'edit'}}
           </ion-button>      
         </ion-row>
@@ -129,14 +129,14 @@
         </ng-container>
       </div>
       <ion-grid class="ion-no-padding">
-        <ion-row class="ion-no-padding ion-align-items-bottom">
+        <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
             <ion-item>
               <ion-label position="floating" color="primary">Database password</ion-label>
               <ion-input [type]="showing_db_password?'text':'password'"  formControlName="db_password" required></ion-input>
             </ion-item>
           </ion-col>
-          <ion-button color="light" (click)="showing_db_password=!showing_db_password">
+          <ion-button style="padding-top: 10px;"  color="light" (click)="showing_db_password=!showing_db_password">
             <ion-icon [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
           </ion-button>      
         </ion-row>
