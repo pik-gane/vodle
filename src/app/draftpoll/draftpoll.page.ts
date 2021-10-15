@@ -31,7 +31,7 @@ export class DraftpollPage implements OnInit {
       option_descr0: new FormControl(''),
       option_url0: new FormControl('', Validators.pattern(urlRegex)),
     });
-    this.stage = 1;
+    this.stage = 6;
     this.option_stage = 0;
     this.expanded = Array<boolean>(this.n_options);
   }

@@ -1,0 +1,69 @@
+<form [formGroup]="selectServerFormGroup">
+  <ion-item>
+    <ion-label position="floating" color="primary">Server</ion-label>
+    <ion-select formControlName="server" cancelText="Cancel" okText="OK">
+      <ion-select-option *ngIf="page!='settings'" value="default">same as for my personal data</ion-select-option>
+      <ion-select-option value="central">vodle central default server</ion-select-option>
+      <ion-select-option value="poll">same as for {{page=='settings'?'one of my polls':'some other poll'}}</ion-select-option>
+      <ion-select-option value="other">other</ion-select-option>
+    </ion-select>
+  </ion-item>
+  <ng-container *ngIf="selectServerFormGroup.get('server').value=='poll'">
+    <ion-item>
+      <ion-label position="floating" color="primary">Which poll's server do you want to use for your personal data?</ion-label>
+      <ion-select formControlName="server_from_poll" cancelText="Cancel" okText="OK">
+        <ion-select-option value="TODO">[TODO: list of all polls]</ion-select-option>
+      </ion-select>
+    </ion-item>
+  </ng-container>    
+  <ng-container *ngIf="selectServerFormGroup.get('server').value=='other'">
+    <ion-item>
+      <small>Please enter the URL, username and password for any CouchDB database where you want your data to be stored:</small>
+    </ion-item>
+    <ion-item>
+      <ion-label position="floating" color="primary">Database URL</ion-label>
+      <ion-input type="text" formControlName="db_url" required></ion-input>
+    </ion-item>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.db_url">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_url').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_url').dirty || selectServerFormGroup.get('db_url').touched)">
+          {{ validation.message }}
+        </div>
+      </ng-container>
+    </div>
+    <ion-item>
+      <ion-label position="floating" color="primary">Database username</ion-label>
+      <ion-input type="text" formControlName="db_username" required></ion-input>
+    </ion-item>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.db_username">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_username').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_username').dirty || selectServerFormGroup.get('db_username').touched)">
+          {{ validation.message }}
+        </div>
+      </ng-container>
+    </div>
+    <ion-grid class="ion-no-padding">
+      <ion-row class="ion-no-padding">
+        <ion-col class="ion-no-padding">
+          <ion-item>
+            <ion-label position="floating" color="primary">Database password</ion-label>
+            <ion-input [type]="showing_db_password?'text':'password'"  formControlName="db_password" required></ion-input>
+          </ion-item>
+        </ion-col>
+        <ion-button style="padding-top: 10px;"  color="light" (click)="showing_db_password=!showing_db_password">
+          <ion-icon [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
+        </ion-button>      
+      </ion-row>
+    </ion-grid>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.db_password">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_password').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_password').dirty || selectServerFormGroup.get('db_password').touched)">
+          {{ validation.message }}
+        </div>
+      </ng-container>
+    </div>
+  </ng-container>
+</form>

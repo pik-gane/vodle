@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 
 import { SettingsPageRoutingModule } from './settings-routing.module';
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
 
 import { SettingsPage } from './settings.page';
 
@@ -13,7 +14,8 @@ import { SettingsPage } from './settings.page';
     FormsModule,
     IonicModule,
     ReactiveFormsModule,
-    SettingsPageRoutingModule
+    SettingsPageRoutingModule,
+    SharedcomponentsModule
   ],
   declarations: [SettingsPage]
 })

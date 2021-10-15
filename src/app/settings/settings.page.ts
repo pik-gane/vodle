@@ -6,7 +6,6 @@ TODO:
 - when changing password or server, alert that user needs to update password or server on other devices as well
 */
 
-
 // custom validator to check that two fields match
 export function passwords_match(control: AbstractControl): ValidationErrors | null {
   if (control) {
@@ -54,11 +53,6 @@ export class SettingsPage implements OnInit {
       }, {
         validators: [passwords_match]
       }),
-      server: new FormControl('default', Validators.required),
-      server_from_poll: new FormControl('TODO', Validators.required),
-      db_url: new FormControl('', Validators.required), // TODO: validator
-      db_username: new FormControl('', Validators.required), // TODO: validator
-      db_password: new FormControl('', Validators.required), // TODO: validator
       language: new FormControl('en', Validators.required),
       theme: new FormControl('light', Validators.required),
     });
@@ -76,15 +70,6 @@ export class SettingsPage implements OnInit {
     ],
     'passwords_match': [
       { message: 'Passwords must match.' }
-    ],
-    'db_url': [
-      { type: 'required', message: 'Database URL is required.' }
-    ],
-    'db_username': [
-      { type: 'required', message: 'Database username is required.' }
-    ],
-    'db_password': [
-      { type: 'required', message: 'Database password is required.' }
     ],
   }
 }

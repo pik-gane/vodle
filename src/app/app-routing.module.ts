@@ -35,6 +35,10 @@ const routes: Routes = [
     path: 'draftpoll',
     loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
   },
+  {
+    path: 'publishpoll',
+    loadChildren: () => import('./publishpoll/publishpoll.module').then( m => m.PublishpollPageModule)
+  },
 ];
 
 @NgModule({

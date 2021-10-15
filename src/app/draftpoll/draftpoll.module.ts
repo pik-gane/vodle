@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 
 import { DraftpollPageRoutingModule } from './draftpoll-routing.module';
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
 
 import { DraftpollPage } from './draftpoll.page';
 
@@ -14,7 +15,8 @@ import { DraftpollPage } from './draftpoll.page';
     FormsModule,
     IonicModule,
     ReactiveFormsModule,
-    DraftpollPageRoutingModule
+    DraftpollPageRoutingModule,
+    SharedcomponentsModule
   ],
   declarations: [DraftpollPage]
 })
