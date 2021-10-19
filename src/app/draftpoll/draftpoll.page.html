@@ -4,6 +4,14 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>Edit poll data</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear">
+        <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" (click)="showkebap($event)">
+        <ion-icon ios="ellipsis-horizontal" md="ellipsis-vertical" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
@@ -13,14 +21,12 @@
 <ion-content>
   <form [formGroup]="formGroup">
 
-    <!--TODO: highlight (e.g. bigger, bold, colored etc.) current stage-->
-
     <ion-item color="primary">
       General information 
     </ion-item>
-    <ion-item><!--stage 0-->
+    <ion-item [color]="stage==0?'warning':'white'"><!--stage 0-->
       <ion-label position="floating" color="primary"><span [class]="stage==0?'current-field':''">In this poll, the group will...</span></ion-label>
-      <ion-select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
+      <ion-select #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
           (ionChange)="stage=max(stage,formGroup.get('poll_type').valid?1:0)">
         <ion-select-option value="choice">...select one of several options</ion-select-option>
         <ion-select-option value="allocation">...divide some resource between several targets</ion-select-option>
@@ -35,10 +41,10 @@
       </ng-container>
     </div>
     <ng-container *ngIf="stage>0">
-      <ion-item><!--stage 1-->
+      <ion-item [color]="stage==1?'warning':'light'"><!--stage 1-->
         <ion-label position="floating" color="primary"><span [class]="stage==1?'current-field':''">Poll title</span></ion-label>
-        <ion-input tabindex="1" type="text" formControlName="poll_title" required inputmode="text"
-          placeholder="Some short headline, maybe in the form of a question, like 'what film to watch?'"
+        <ion-input autofocus tabindex="1" type="text" formControlName="poll_title" required inputmode="text"
+          placeholder="A short headline, maybe in the form of a question, like ‘what film to watch?’"
           (ionBlur)="stage=max(stage,formGroup.get('poll_title').valid?2:0)"></ion-input>      
       </ion-item>
       <div class="validation-errors">
@@ -51,12 +57,12 @@
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>1">
-      <ion-item><!--stage 2-->
-        <ion-label position="floating" color="primary"><span [class]="stage==2?'current-field':''">Description (optional)</span></ion-label>
-        <ion-textarea tabindex="2" rows="1" auto-grow type="text" formControlName="poll_descr" inputmode="text"
-          placeholder="Some more information about this poll?"
+      <ion-item [color]="stage==2?'warning':'white'"><!--stage 2-->
+        <ion-label position="floating" color="primary"><span [class]="stage==2?'current-field':''">Description</span></ion-label>
+        <ion-textarea autofocus tabindex="2" rows="1" auto-grow type="text" formControlName="poll_descr" inputmode="text"
+          placeholder="Some more information about this poll (optional)"
           (ionBlur)="stage=max(stage,formGroup.get('poll_descr').valid?3:0)"></ion-textarea>
-        <ion-button *ngIf="stage==2 && formGroup.get('poll_descr').value==''" color="primary" slot="end">Skip</ion-button>
+        <ion-button tabindex="-1" *ngIf="stage==2 && formGroup.get('poll_descr').value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.poll_descr">
@@ -68,12 +74,15 @@
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>2">
-      <ion-item><!--stage 3-->
-        <ion-label position="floating" color="primary"><span [class]="stage==3?'current-field':''">“Read more” link (optional)</span></ion-label>
+      <ion-item [color]="stage==3?'warning':'white'"><!--stage 3-->
+        <ion-label position="floating" color="primary"><span [class]="stage==3?'current-field':''">“Read more” link</span></ion-label>
         <ion-input tabindex="3" type="text" formControlName="poll_url" inputmode="url"
-          placeholder="A link to some webpage containing more details?"
+          placeholder="A link to some webpage containing more details (optional)"
           (ionBlur)="stage=max(stage,formGroup.get('poll_url').valid?4:0)"></ion-input>
-          <ion-button *ngIf="stage==3 && formGroup.get('poll_url').value==''" color="primary" slot="end">Skip</ion-button>
+          <ion-button tabindex="-1" *ngIf="stage==3 && formGroup.get('poll_url').value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
+          <ion-button tabindex="-1" *ngIf="formGroup.get('poll_url').valid && formGroup.get('poll_url').value!=''" fill="clear" slot="end" class="skip-button" (click)="test_url(formGroup.get('poll_url').value)">
+            <ion-icon name="open-outline"></ion-icon>&nbsp;Test
+          </ion-button>
         </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.poll_url">
@@ -85,7 +94,7 @@
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>3">
-      <ion-item><!--stage 4-->
+      <ion-item [color]="stage==4?'warning':'white'"><!--stage 4-->
         <ion-label position="floating" color="primary"><span [class]="stage==4?'current-field':''">Closing date and time</span></ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
         <ion-datetime tabindex="4" formControlName="poll_closing_datetime" required pickerFormat="DD MMMM YYYY HH mm"
@@ -103,21 +112,32 @@
     </ng-container>    
 
     <ng-container *ngIf="stage>4"><!--stage 5-->
+      <ion-item color="light" (click)="advanced_expanded=!advanced_expanded">
+        <!--TODO: icon does not show!-->
+        <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
+        <ion-label><small>&nbsp;&nbsp;&nbsp;Advanced settings</small></ion-label>
+      </ion-item>
+      <ng-container *ngIf="advanced_expanded">
+        <app-select-server [page]="'draftpoll'"></app-select-server><!--stage 6-->
+      </ng-container>
+  
       <ion-item color="primary">
         {{formGroup.get('poll_type').value=='choice' ? 'Options' : 'Possible targets'}}
       </ion-item>
 
       <div *ngFor="let item of [].constructor(n_options); let i = index">
-        <ion-item color="light"><!--option_stage 0-->
-          <ion-button (click)="expanded[i]=!expanded[i]" fill="clear" slot="start" class="ion-no-padding ion-no-margin">
-            <ion-icon [name]="expanded[i]?'caret-down-outline':'caret-forward-outline'" slot="icon-only" padding-top></ion-icon>
+        <ion-item [color]="i == n_options-1 && option_stage==0?'warning':'light'"><!--option_stage 0-->
+          <ion-button (click)="expanded[i]=!expanded[i]" fill="clear" slot="start" class="field-expander">
+            <ion-icon [name]="expanded[i]?'caret-down-outline':'caret-forward-outline'" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-label position="floating" color="primary"><span [class]="option_stage==0?'current-field':''">{{i < n_options-1 ? '' : i==0 ? 'First' : i==1 ? 'Second' : 'Another'}} {{formGroup.get('poll_type').value=='choice' ? 'Option' : 'Target'}} name{{i == n_options-1 && i > 1 ? '?' : ''}}</span></ion-label>
+          <ion-label position="floating" color="primary"><span [class]="option_stage==0?'current-field':''">{{formGroup.get('poll_type').value=='choice' ? 'Option' : 'Target'}} name</span></ion-label>
           <ion-input type="text" [formControlName]="'option_name'+i" required 
           [placeholder]="'A short name for this '+(formGroup.get('poll_type').value=='choice' ? 'option' : 'possible target')"
           (ionBlur)="option_stage=max(option_stage,formGroup.get('option_name'+i).valid?1:0);expanded[i]=true"></ion-input>      
-          <ion-button *ngIf="i == n_options-1 && i > 1" color="primary" slot="end"
-            (click)="stage=max(stage,6)">No more for now</ion-button>
+          <ion-button *ngIf="i == n_options-1 && i > 1 && formGroup.get('option_name'+i).value==''" color="primary" slot="end" class="skip-button"
+            (click)="no_more()">No more for now</ion-button>
+          <ion-button *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && formGroup.get('option_name'+i).value=='')" fill="clear" color="primary" slot="end" class="skip-button"
+            (click)="del_option(i)"><ion-icon slot="icon-only" name="trash-outline"></ion-icon></ion-button>
           </ion-item>
         <div class="validation-errors">
           <ng-container *ngFor="let validation of validation_messages.poll_title">
@@ -128,12 +148,12 @@
           </ng-container>
         </div>
         <ng-container *ngIf="option_stage>0 && expanded[i]">
-          <ion-item><!--option_stage 1-->
+          <ion-item [color]="i == n_options-1 && option_stage==1?'warning':'white'"><!--option_stage 1-->
             <ion-label position="floating" color="primary"><span [class]="option_stage==1?'current-field':''">Description (optional)</span></ion-label>
             <ion-textarea rows="1" auto-grow type="text" [formControlName]="'option_descr'+i" 
               [placeholder]="'Some more information about ‘'+formGroup.get('option_name'+i).value+'’?'"
               (ionBlur)="option_stage=max(option_stage,formGroup.get('option_descr'+i).valid?2:0)"></ion-textarea>
-            <ion-button *ngIf="option_stage==1 && i == n_options-1 && formGroup.get('option_descr'+i).value==''" color="primary" slot="end">Skip</ion-button>
+            <ion-button *ngIf="option_stage==1 && i == n_options-1 && formGroup.get('option_descr'+i).value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
           </ion-item>
           <div class="validation-errors">
             <ng-container *ngFor="let validation of validation_messages.poll_descr">
@@ -145,12 +165,15 @@
           </div>
         </ng-container>    
         <ng-container *ngIf="option_stage>1 && expanded[i]">
-          <ion-item><!--option_stage 2-->
+          <ion-item [color]="i == n_options-1 && option_stage==2?'warning':'white'"><!--option_stage 2-->
             <ion-label position="floating" color="primary"><span [class]="option_stage==2?'current-field':''">“Read more” link (optional)</span></ion-label>
             <ion-input type="text" [formControlName]="'option_url'+i" 
               [placeholder]="'A link to some webpage containing more details about ‘'+formGroup.get('option_name'+i).value+'’?'"
               (ionBlur)="blur_option_url(i)"></ion-input>
-            <ion-button *ngIf="option_stage==2 && i == n_options-1 && formGroup.get('option_url'+i).value==''" color="primary" slot="end">Skip</ion-button>
+            <ion-button *ngIf="option_stage==2 && i == n_options-1 && formGroup.get('option_url'+i).value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
+            <ion-button *ngIf="formGroup.get('option_url'+i).valid && formGroup.get('option_url'+i).value!=''" fill="clear" slot="end" class="skip-button" (click)="test_url(formGroup.get('option_url'+i).value)">
+              <ion-icon name="open-outline"></ion-icon>&nbsp;Test
+            </ion-button>
           </ion-item>
           <div class="validation-errors">
             <ng-container *ngFor="let validation of validation_messages.poll_url">
@@ -163,24 +186,20 @@
         </ng-container>    
       </div>
 
-      <ion-item>
+      <ion-item lines="none" *ngIf="option_stage==10 && formGroup.get('option_url'+(n_options-1)).valid">
+        <ion-button shape="round" (click)="add_option()"><ion-icon slot="icon-only" name="add"></ion-icon></ion-button>
+      </ion-item>
+      <ion-item lines="none">
         <small>Please list at least two {{formGroup.get('poll_type').value=='choice' ? 'options' : 'targets'}}. 
+          Don't bother about their order.
           Further {{formGroup.get('poll_type').value=='choice' ? 'options' : 'targets'}} 
           can always be added later by the group as long as the poll is running.</small>
       </ion-item>
     </ng-container>
 
-    <ng-container *ngIf="stage>5">
-      <ion-item color="primary">
-        <small>Advanced options</small>
-      </ion-item>
-      <app-select-server [page]="'draftpoll'"></app-select-server><!--stage 6-->
-    </ng-container>
-
-    <ion-item>
-      <ion-button color="light"><ion-icon name="trash-outline"></ion-icon>&nbsp;Cancel / delete</ion-button>&nbsp;
-      <ion-button color="dark"><ion-icon name="save"></ion-icon>&nbsp;Save draft</ion-button>
-      <ion-button color="primary" slot="end" [disabled]="!(stage>5 && formGroup.valid)"><ion-icon name="checkmark"></ion-icon>&nbsp;Ready</ion-button>
+    <ion-item lines="none">
+      <ion-label class="ion-text-end" *ngIf="formGroup.get('poll_title').valid"><small>(Draft saved under ‘My polls’)</small></ion-label>
+      <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" shape="round"><ion-icon name="checkmark"></ion-icon>&nbsp;Ready</ion-button>
     </ion-item>
   </form>
 </ion-content>

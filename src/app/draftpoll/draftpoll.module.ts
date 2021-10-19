@@ -8,6 +8,7 @@ import { DraftpollPageRoutingModule } from './draftpoll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
 
 import { DraftpollPage } from './draftpoll.page';
+export { DraftpollPage } from './draftpoll.page';
 
 @NgModule({
   imports: [
