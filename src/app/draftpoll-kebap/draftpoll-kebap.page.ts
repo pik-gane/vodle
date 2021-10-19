@@ -23,8 +23,10 @@ export class DraftpollKebapPage implements OnInit {
 
   send4review() { 
     this.parent.send4review(); 
+    this.popover.dismiss();
   }
   import() { 
-    this.parent.import(); 
+    this.parent.import_csv_dialog(); 
+    this.popover.dismiss();
   }
 }

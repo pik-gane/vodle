@@ -101,4 +101,20 @@ ion-select {
     top: 15px;
 }
 .kebap .popover-content{ --width: auto; }
-//.sc-ion-textarea-md { padding: 0px!important; }
+
+.file-button {
+    position: relative;
+    overflow: hidden;
+    margin: 10px;
+}
+input.file {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+    filter: alpha(opacity=0);    
+}

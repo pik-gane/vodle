@@ -1,8 +1,9 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { PopoverController, IonSelect } from '@ionic/angular';
+import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
+import { AlertController } from '@ionic/angular'; 
 
 const urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
 
@@ -21,8 +22,13 @@ export class DraftpollPage implements OnInit {
   advanced_expanded: boolean;
   n_options: number;
   @ViewChild(IonSelect) type_select: IonSelect;
+  @ViewChild(IonToggle) detailstoggle: IonToggle;
 
-  constructor(public formBuilder: FormBuilder, private popover: PopoverController) { }
+  constructor(
+    public formBuilder: FormBuilder, 
+    private popover: PopoverController,
+    public alertCtrl: AlertController,
+    ) { }
 
   ngOnInit() {
     this.n_options = 1;
@@ -36,7 +42,7 @@ export class DraftpollPage implements OnInit {
       option_descr0: new FormControl(''),
       option_url0: new FormControl('', Validators.pattern(urlRegex)),
     });
-    this.stage = 0;
+    this.stage = 5;
     this.option_stage = 0;
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
@@ -51,12 +57,23 @@ export class DraftpollPage implements OnInit {
     window.open(url,'_blank');
   }
 
+  blur_option_name(i: number, d: boolean) {
+    if (d) {
+      this.option_stage = this.max(this.option_stage, this.formGroup.get('option_name'+i).valid?1:0);
+      this.expanded[i] = true;
+    } else if (this.formGroup.get('option_name'+i).valid && i==this.n_options-1) {
+      this.next_option(i)
+    }
+  }
   blur_option_url(i: number) {
     if (this.formGroup.get('option_url'+i).valid && i==this.n_options-1) {
-      this.option_stage = this.max(this.option_stage, 3);
-      this.expanded[i] = false
-      this.add_option();
+      this.next_option(i)
     }
+  }
+  next_option(i: number) {
+    this.option_stage = this.max(this.option_stage, 3);
+    this.expanded[i] = false
+    this.add_option();
   }
 
   del_option(i: number) {
@@ -73,18 +90,20 @@ export class DraftpollPage implements OnInit {
   }
 
   no_more() {
-    this.n_options--;
-    this.option_stage = 10;
-    this.formGroup.removeControl('option_name'+this.n_options);
-    this.formGroup.removeControl('option_descr'+this.n_options);
-    this.formGroup.removeControl('option_url'+this.n_options);
+    if (this.formGroup.get('option_name'+(this.n_options-1)).value=='') {
+      this.n_options--;
+      this.option_stage = 10;
+      this.formGroup.removeControl('option_name'+this.n_options);
+      this.formGroup.removeControl('option_descr'+this.n_options);
+      this.formGroup.removeControl('option_url'+this.n_options);
+    }
   }
 
-  add_option() {
+  add_option(name='', descr='', url='') {
     let i = this.n_options;
-    this.formGroup.addControl('option_name'+i, new FormControl('', Validators.required));
-    this.formGroup.addControl('option_descr'+i, new FormControl(''));
-    this.formGroup.addControl('option_url'+i, new FormControl('', Validators.pattern(urlRegex)));
+    this.formGroup.addControl('option_name'+i, new FormControl(name, Validators.required));
+    this.formGroup.addControl('option_descr'+i, new FormControl(descr));
+    this.formGroup.addControl('option_url'+i, new FormControl(url, Validators.pattern(urlRegex)));
     this.option_stage = 0;
     this.n_options++;
   }
@@ -125,7 +144,60 @@ export class DraftpollPage implements OnInit {
   send4review() { 
     console.log("2"); 
   }
-  import() { 
-    console.log("2"); 
+
+  async import_csv_dialog() { 
+    const confirm = await this.alertCtrl.create({ 
+      header: 'Import options from file', 
+      message: 'The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;"Name"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description", "URL"', 
+      buttons: [
+        { 
+          text: 'Cancel', 
+          role: 'Cancel',
+          handler: () => { 
+            console.log('Confirm Cancel.');  
+          } 
+        },
+        { 
+          text: 'Choose file',
+          role: 'Ok', 
+          handler: () => {
+            document.getElementById("choosefile").click();
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  } 
+
+  import_csv(event: Event) {
+    const file = (event.target as HTMLInputElement).files[0];
+    const reader = new FileReader();
+    const page = this;
+    reader.onload = function (event) {
+      const content = event.target.result as string;
+      for (var row of content.split("\n")) {
+        var cols = row.split(/\s*"\s*,\s*"\s*/);
+        if (cols.length>0) {
+          cols[0] = cols[0].slice(cols[0].indexOf('"')+1);
+          cols[cols.length-1] = cols[cols.length-1].slice(0, cols[cols.length-1].indexOf('"'));
+          cols = cols.map(c => c.trim());
+          if (cols[0] != "") {
+            page.no_more();
+            if (cols.length==1) { 
+              page.add_option(cols[0]);
+            } else if (cols.length==2) { 
+              page.add_option(cols[0], cols[1]);
+              page.detailstoggle.checked = true;
+            } else { 
+              page.add_option(cols[0], cols[1], cols[2]); 
+              page.detailstoggle.checked = true;
+            }
+            page.stage = 10;
+            page.option_stage = 10;
+          }
+        }
+      }
+    }
+    reader.readAsText(file);
   }
 }

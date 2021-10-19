@@ -27,8 +27,10 @@
     "@ionic/angular": "^5.5.2",
     "@ionic/storage": "^3.0.6",
     "@ionic/storage-angular": "^3.0.6",
+    "buffer": "^6.0.3",
     "openpgp": "^5.0.0",
     "rxjs": "~6.6.0",
+    "stream": "^0.0.2",
     "tslib": "^2.2.0",
     "zone.js": "~0.11.4"
   },
