@@ -42,7 +42,7 @@ export class SettingsPage implements OnInit {
     this.showing_password = false;
     this.showing_db_password = false;
     this.formGroup = this.formBuilder.group({
-      email: new FormControl('your@email.address', Validators.compose([Validators.required, Validators.email])),
+      email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
       pw: this.formBuilder.group({
         password: new FormControl('', Validators.compose([
           Validators.required,
@@ -60,16 +60,16 @@ export class SettingsPage implements OnInit {
 
   validation_messages = {
     'email': [
-      { type: 'required', message: 'Email is required.' },
-      { type: 'email', message: 'Email must be a valid email address.' }
+      { type: 'required', message: 'validation.email-required' },
+      { type: 'email', message: 'validation.email-valid' }
     ],
     'password': [
-      { type: 'required', message: 'Password is required.' },
-      { type: 'minlength', message: 'Password must be at least 8 characters long.' },
-      { type: 'pattern', message: 'Password must contain a lowercase letter, an uppercase letter, and a number.' }  // verify that this is really what the validator tests
+      { type: 'required', message: 'validation.password-required' },
+      { type: 'minlength', message: 'validation.password-length' },
+      { type: 'pattern', message: 'validation.password-pattern' }  // verify that this is really what the validator tests
     ],
     'passwords_match': [
-      { message: 'Passwords must match.' }
+      { message: 'validation.passwords-match' }
     ],
   }
 }
