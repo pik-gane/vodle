@@ -29,7 +29,7 @@
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
-        <ion-button style="padding-top: 10px;" color="light" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
+        <ion-button style="padding-top: 10px;" color="primary" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
           <!--TODO: give focus to field-->
           <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_email?'OK':'edit'}}
         </ion-button>      
@@ -51,12 +51,12 @@
             <ion-item>
               <ion-label position="floating" color="primary">Password</ion-label>
               <ion-input [type]="showing_password?'text':'password'" formControlName="password" required [disabled]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
+              <ion-button style="padding-top: 10px;" slot="end" fill="clear" color="primary" (click)="showing_password=!showing_password">
+                <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_password?'hide':'show'}}
+              </ion-button>      
             </ion-item>
           </ion-col>
-          <ion-button style="padding-top: 10px;" color="light" (click)="showing_password=!showing_password">
-            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_password?'hide':'show'}}
-          </ion-button>      
-          <ion-button style="padding-top: 10px;" color="light" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
+          <ion-button style="padding-top: 10px;" color="primary" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
             <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{editing_password?'OK':'edit'}}
           </ion-button>
         </ion-row>

@@ -44,20 +44,14 @@
         </div>
       </ng-container>
     </div>
-    <ion-grid class="ion-no-padding">
-      <ion-row class="ion-no-padding">
-        <ion-col class="ion-no-padding">
           <ion-item>
             <ion-label position="floating" color="primary">Database password</ion-label>
             <ion-input [type]="showing_db_password?'text':'password'"  formControlName="db_password" required></ion-input>
-          </ion-item>
-        </ion-col>
-        <ion-button style="padding-top: 10px;"  color="light" (click)="showing_db_password=!showing_db_password">
+        <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_password=!showing_db_password">
           <ion-icon [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
         </ion-button>      
-      </ion-row>
-    </ion-grid>
-    <div class="validation-errors">
+      </ion-item>
+      <div class="validation-errors">
       <ng-container *ngFor="let validation of validation_messages.db_password">
         <div class="error-message" *ngIf="selectServerFormGroup.get('db_password').hasError(validation.type) 
             && (selectServerFormGroup.get('db_password').dirty || selectServerFormGroup.get('db_password').touched)">
