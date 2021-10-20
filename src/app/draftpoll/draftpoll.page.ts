@@ -1,11 +1,26 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl, ValidatorFn } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 import { AlertController } from '@ionic/angular'; 
 
 const urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
+
+export function is_in_future(control: AbstractControl): ValidationErrors | null {
+  if (control) {
+    let currentDateTime = new Date();
+//    currentDateTime.setHours(0,0,0,0);
+    let controlValue = new Date(control.value);
+//    controlValue.setHours(0,0,0,0);
+    console.log("checking "+currentDateTime+"<"+controlValue);
+    if (currentDateTime >= controlValue)
+    {
+        return {past: true};
+    }
+    return null;
+  }
+}
 
 @Component({
   selector: 'app-draftpoll',
@@ -37,7 +52,7 @@ export class DraftpollPage implements OnInit {
       poll_title: new FormControl('', Validators.required),
       poll_descr: new FormControl(''),
       poll_url: new FormControl('', Validators.pattern(urlRegex)),
-      poll_closing_datetime: new FormControl(''), // TODO: validate is in future
+      poll_closing_datetime: new FormControl('', is_in_future), // TODO: validate is in future
       option_name0: new FormControl('', Validators.required),
       option_descr0: new FormControl(''),
       option_url0: new FormControl('', Validators.pattern(urlRegex)),
@@ -47,6 +62,8 @@ export class DraftpollPage implements OnInit {
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
   }
+
+  now() { return new Date(); }
 
   ionViewWillEnter() {
     if (this.formGroup.get('poll_type').value=='') this.type_select.open()
@@ -118,15 +135,18 @@ export class DraftpollPage implements OnInit {
     'poll_url': [
       { type: 'pattern', message: 'Please enter a valid URL.' },
     ],
-    'option_name0': [
+    'poll_closing_datetime': [
+      { message: 'Please select a date and time in the future.' },
+    ],
+    'option_name': [
       { type: 'required', message: 'Option name is required.' },
     ],
-    'option_url0': [
+    'option_url': [
       { type: 'pattern', message: 'Please enter a valid URL.' },
     ],
   }
 
-  showkebap(event)
+  showkebap(event: Event)
   {
     this.popover.create({
         event, 

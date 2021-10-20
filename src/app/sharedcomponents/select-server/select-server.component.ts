@@ -26,13 +26,13 @@ export class SelectServerComponent implements OnInit {
 
   validation_messages = {
     'db_url': [
-      { type: 'required', message: 'Database URL is required.' }
+      { type: 'required', message: 'validation.db-url-required' }
     ],
     'db_username': [
-      { type: 'required', message: 'Database username is required.' }
+      { type: 'required', message: 'validation.db-user-required' }
     ],
     'db_password': [
-      { type: 'required', message: 'Database password is required.' }
+      { type: 'required', message: 'validation.db-pw-required' }
     ],
   }
 }

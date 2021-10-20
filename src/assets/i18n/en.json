@@ -1,24 +1,42 @@
 {
     "data-storage": "Data storage",
+    "db-url": "Database URL",
+    "db-user": "Database username",
+    "db-pw": "Database password",
     "edit": "Edit",
     "email": "Email",
     "hide": "Hide",
     "OK": "OK",
     "password": "Password",
     "retype-password": "Retype password",
+    "select-cancel": "Cancel",
+    "server": "Server",
     "show": "Show",
 
+    "select-server": {
+        "same-as-personal": "same as for my personal data",
+        "central": "vodle central default server",
+        "same-as-some-poll": "same as for one of my polls",
+        "same-as-other-poll": "same as for some other poll",
+        "other": "other",
+        "which-poll": "Which poll's server do you want to use for your personal data?",
+        "which-other-poll": "Which other poll's server do you want to use for this poll as well?",
+        "please-enter-couchdb": "Please enter the URL, username and password for any CouchDB database where you want your data to be stored:"
+    },
     "settings": {
         "-page-title": "Settings",
         "data-storage-msg": "To be able to access your data safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
         "email-placeholder": "Please specify the email address you want to use with vodle"
     },
     "validation": {
+        "db-pw-required": "Database password is required.",
+        "db-url-required": "Database URL is required.",
+        "db-user-required": "Database username is required.",
         "email-required": "Email is required.",
         "email-valid": "Email must be a valid email address.",
-        "password-required": "Password is required.",
         "password-length": "Password must be at least 8 characters long.",
         "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
+        "password-required": "Password is required.",
         "passwords-match": "Passwords must match."
     }
 }

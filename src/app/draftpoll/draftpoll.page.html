@@ -101,12 +101,12 @@
         <ion-label position="floating" color="primary"><span [class]="stage==4?'current-field':''">Closing date and time</span></ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
         <ion-datetime tabindex="4" formControlName="poll_closing_datetime" required pickerFormat="DD MMMM YYYY HH mm"
-          displayFormat="DDDD, DD MMMM YYYY, HH:mm"
+          displayFormat="DDDD, DD MMMM YYYY, HH:mm" [min]="now().toISOString()"
           (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?5:0)"></ion-datetime>
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.poll_closing_datetime">
-          <div class="error-message" *ngIf="formGroup.get('poll_closing_datetime').hasError(validation.type) 
+          <div class="error-message" *ngIf="(!formGroup.get('poll_closing_datetime').valid) 
               && (formGroup.get('poll_closing_datetime').dirty || formGroup.get('poll_closing_datetime').touched)">
             {{ validation.message }}
           </div>
@@ -148,7 +148,7 @@
             (click)="del_option(i)"><ion-icon slot="icon-only" name="trash-outline"></ion-icon></ion-button>
           </ion-item>
         <div class="validation-errors">
-          <ng-container *ngFor="let validation of validation_messages.poll_title">
+          <ng-container *ngFor="let validation of validation_messages.option_name">
             <div class="error-message" *ngIf="formGroup.get('option_name'+i).hasError(validation.type) 
                 && (formGroup.get('option_name'+i).dirty || formGroup.get('option_name'+i).touched)">
               {{ validation.message }}
@@ -165,7 +165,7 @@
             <ion-button *ngIf="option_stage==1 && i == n_options-1 && formGroup.get('option_descr'+i).value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
           </ion-item>
           <div class="validation-errors">
-            <ng-container *ngFor="let validation of validation_messages.poll_descr">
+            <ng-container *ngFor="let validation of validation_messages.option_descr">
               <div class="error-message" *ngIf="formGroup.get('option_descr'+i).hasError(validation.type) 
                   && (formGroup.get('option_descr'+i).dirty || formGroup.get('option_descr'+i).touched)">
                 {{ validation.message }}
@@ -186,7 +186,7 @@
             </ion-button>
           </ion-item>
           <div class="validation-errors">
-            <ng-container *ngFor="let validation of validation_messages.poll_url">
+            <ng-container *ngFor="let validation of validation_messages.option_url">
               <div class="error-message" *ngIf="formGroup.get('option_url'+i).hasError(validation.type) 
                   && (formGroup.get('option_url'+i).dirty || formGroup.get('option_url'+i).touched)">
                 {{ validation.message }}
@@ -209,7 +209,8 @@
 
     <ion-item lines="none">
       <ion-label class="ion-text-end" *ngIf="formGroup.get('poll_title').valid"><small>(Draft saved under ‘My polls’)</small></ion-label>
-      <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" shape="round"><ion-icon name="checkmark"></ion-icon>&nbsp;Ready</ion-button>
+      <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" shape="round"
+        (click)="formGroup.get('poll_closing_datetime').updateValueAndValidity()"><ion-icon name="checkmark"></ion-icon>&nbsp;Ready</ion-button>
     </ion-item>
 
     <input hidden id="choosefile" type="file" class="file" (change)="import_csv($event)" />
