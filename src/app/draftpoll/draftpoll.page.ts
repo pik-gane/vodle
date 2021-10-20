@@ -1,9 +1,11 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl, ValidatorFn } from '@angular/forms';
+import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 import { AlertController } from '@ionic/angular'; 
+
+import { GlobalService, Poll } from "../global.service";
 
 const urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
 
@@ -30,12 +32,16 @@ export function is_in_future(control: AbstractControl): ValidationErrors | null 
 export class DraftpollPage implements OnInit {
 
   max = Math.max;
+
+  p: Poll;
+  oids: Array<string>;
   formGroup: FormGroup;
   stage: number
   option_stage: number;
   expanded: Array<boolean>;
   advanced_expanded: boolean;
   n_options: number;
+
   @ViewChild(IonSelect) type_select: IonSelect;
   @ViewChild(IonToggle) detailstoggle: IonToggle;
 
@@ -43,24 +49,36 @@ export class DraftpollPage implements OnInit {
     public formBuilder: FormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
-    ) { }
+    public g: GlobalService,
+  ) { }
 
+//   private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid', 'lastrated', 'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps', 'history'];
+  
   ngOnInit() {
-    this.n_options = 1;
+    let p = this.p = this.g.openpoll || new Poll(this.g);
+    console.log(p);
     this.formGroup = this.formBuilder.group({
-      poll_type: new FormControl('', Validators.required),
-      poll_title: new FormControl('', Validators.required),
-      poll_descr: new FormControl(''),
-      poll_url: new FormControl('', Validators.pattern(urlRegex)),
-      poll_closing_datetime: new FormControl('', is_in_future), // TODO: validate is in future
-      option_name0: new FormControl('', Validators.required),
-      option_descr0: new FormControl(''),
-      option_url0: new FormControl('', Validators.pattern(urlRegex)),
+      poll_type: new FormControl(p.type, Validators.required),
+      poll_title: new FormControl(p.title, Validators.required),
+      poll_descr: new FormControl(p.desc),
+      poll_url: new FormControl(p.uri, Validators.pattern(urlRegex)),
+      poll_closing_datetime: new FormControl(p.due, is_in_future), // TODO: validate is in future
     });
-    this.stage = 5;
-    this.option_stage = 0;
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
+    this.n_options = p.oids.length;
+    this.oids = [];
+    this.stage = 0;
+    for (let oid of p.oids) {
+      let o = p.options[oid];
+      this.add_option(oid, o.name, o.desc, o.uri);
+      this.stage = 5;
+      this.option_stage = 10;
+    }
+    if (this.n_options==0) {
+      this.add_option();
+      this.option_stage = 0;
+    }
   }
 
   now() { return new Date(); }
@@ -116,10 +134,12 @@ export class DraftpollPage implements OnInit {
     }
   }
 
-  add_option(name='', descr='', url='') {
+  add_option(oid:string="", name:string="", desc:string="", url:string="") {
+    if (oid=="") { oid = '' + Math.random(); }
+    this.p.registerOption({oid:oid, name:name, desc:desc, uri:url});
     let i = this.n_options;
     this.formGroup.addControl('option_name'+i, new FormControl(name, Validators.required));
-    this.formGroup.addControl('option_descr'+i, new FormControl(descr));
+    this.formGroup.addControl('option_descr'+i, new FormControl(desc));
     this.formGroup.addControl('option_url'+i, new FormControl(url, Validators.pattern(urlRegex)));
     this.option_stage = 0;
     this.n_options++;
@@ -204,12 +224,12 @@ export class DraftpollPage implements OnInit {
           if (cols[0] != "") {
             page.no_more();
             if (cols.length==1) { 
-              page.add_option(cols[0]);
+              page.add_option("", cols[0]);
             } else if (cols.length==2) { 
-              page.add_option(cols[0], cols[1]);
+              page.add_option("", cols[0], cols[1]);
               page.detailstoggle.checked = true;
             } else { 
-              page.add_option(cols[0], cols[1], cols[2]); 
+              page.add_option("", cols[0], cols[1], cols[2]); 
               page.detailstoggle.checked = true;
             }
             page.stage = 10;

@@ -28,8 +28,8 @@
       <ion-label position="floating" color="primary"><span [class]="stage==0?'current-field':''">In this poll, the group will...</span></ion-label>
       <ion-select #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
           (ionChange)="stage=max(stage,formGroup.get('poll_type').valid?1:0)">
-        <ion-select-option value="choice">...select one of several options</ion-select-option>
-        <ion-select-option value="allocation">...divide some resource between several targets</ion-select-option>
+        <ion-select-option value="winner">...select one of several options</ion-select-option>
+        <ion-select-option value="share">...divide some resource between several targets</ion-select-option>
       </ion-select>
     </ion-item>
     <div class="validation-errors">
@@ -125,7 +125,7 @@
       </ng-container>
   
       <ion-item color="primary">
-        {{formGroup.get('poll_type').value=='choice' ? 'Options' : 'Possible targets'}}
+        {{formGroup.get('poll_type').value=='winner' ? 'Options' : 'Possible targets'}}
         <ion-button slot="end" fill="clear" (click)="detailstoggle.checked=!detailstoggle.checked">
           <span style="color: white">Details</span>
           <ion-toggle #detailstoggle name="detail-toggle" (click)="detailstoggle.checked=!detailstoggle.checked" color="light" style="--handle-background: black"></ion-toggle>
@@ -137,9 +137,9 @@
           <ion-button *ngIf="detailstoggle.checked" (click)="expanded[i]=!expanded[i]" fill="clear" slot="start" class="field-expander">
             <ion-icon [name]="expanded[i]?'caret-down-outline':'caret-forward-outline'" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-label position="floating" color="primary"><span [class]="option_stage==0?'current-field':''">{{formGroup.get('poll_type').value=='choice' ? 'Option' : 'Target'}} name</span></ion-label>
+          <ion-label position="floating" color="primary"><span [class]="option_stage==0?'current-field':''">{{formGroup.get('poll_type').value=='winner' ? 'Option' : 'Target'}} name</span></ion-label>
           <ion-input type="text" [formControlName]="'option_name'+i" required 
-            [placeholder]="'A short name for this '+(formGroup.get('poll_type').value=='choice' ? 'option' : 'possible target')"
+            [placeholder]="'A short name for this '+(formGroup.get('poll_type').value=='winner' ? 'option' : 'possible target')"
             style="font-weight: bold; font-style: italic;"
             (ionBlur)="blur_option_name(i, detailstoggle.checked)"></ion-input>      
           <ion-button *ngIf="i == n_options-1 && i > 1 && formGroup.get('option_name'+i).value==''" color="primary" slot="end" class="skip-button"
@@ -200,9 +200,9 @@
         <ion-button shape="round" (click)="add_option()"><ion-icon slot="icon-only" name="add"></ion-icon></ion-button>
       </ion-item>
       <ion-item lines="none">
-        <small>Please list at least two {{formGroup.get('poll_type').value=='choice' ? 'options' : 'targets'}}. 
+        <small>Please list at least two {{formGroup.get('poll_type').value=='winner' ? 'options' : 'targets'}}. 
           Don't bother about their ordering.
-          Further {{formGroup.get('poll_type').value=='choice' ? 'options' : 'targets'}} 
+          Further {{formGroup.get('poll_type').value=='winner' ? 'options' : 'targets'}} 
           can always be added later by the group as long as the poll is running.</small>
       </ion-item>
     </ng-container>

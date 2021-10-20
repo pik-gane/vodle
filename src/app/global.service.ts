@@ -247,7 +247,7 @@ export class Poll {
 
   // constant data:
   public pid: string; // unique poll id
-  public type: string = 'winner'; // 'winner' or 'share'
+  public type: string; // 'winner' or 'share'
   public title: string;
   public desc: string = null;
   public uri: string = null; // weblink
