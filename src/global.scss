@@ -107,3 +107,15 @@ ion-select {
     overflow: hidden;
     margin: 10px;
 }
+.labelautowidth {
+    min-width: auto!important;
+    width: auto!important;
+    max-width: auto!important;
+    flex: none;
+    margin-right: 0;
+}
+.selectfullwidth {
+    padding-left: 0px;
+    padding-top: 12px;
+    min-width: 100%!important;
+}

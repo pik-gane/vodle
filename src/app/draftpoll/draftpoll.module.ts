@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { IonicModule } from '@ionic/angular';
 
@@ -17,7 +18,8 @@ export { DraftpollPage } from './draftpoll.page';
     IonicModule,
     ReactiveFormsModule,
     DraftpollPageRoutingModule,
-    SharedcomponentsModule
+    SharedcomponentsModule,
+    TranslateModule.forChild()
   ],
   declarations: [DraftpollPage]
 })

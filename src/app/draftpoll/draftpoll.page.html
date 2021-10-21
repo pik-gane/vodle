@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>Edit poll data</ion-title>
+    <ion-title>{{'draftpoll.-page-title'|translate}}</ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear">
         <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
@@ -21,47 +21,45 @@
 <ion-content>
   <form [formGroup]="formGroup">
 
-    <ion-item color="primary">
-      General information 
-    </ion-item>
+    <ion-item color="primary">{{'draftpoll.general-information'|translate}}</ion-item>
     <ion-item [color]="stage==0?'warning':''"><!--stage 0-->
-      <ion-label position="floating" color="primary"><span [class]="stage==0?'current-field':''">In this poll, the group will...</span></ion-label>
-      <ion-select #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
+      <ion-label class="labelautowidth" color="primary"><span [class]="stage==0?'current-field':''">{{'draftpoll.type-label'|translate}}&nbsp;</span></ion-label>
+      <ion-select class="selectfullwidth" #ionSelects #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
           (ionChange)="stage=max(stage,formGroup.get('poll_type').valid?1:0)">
-        <ion-select-option value="winner">...select one of several options</ion-select-option>
-        <ion-select-option value="share">...divide some resource between several targets</ion-select-option>
+        <ion-select-option value="winner">{{'draftpoll.type-winner'|translate}}</ion-select-option>
+        <ion-select-option value="share">{{'draftpoll.type-share'|translate}}</ion-select-option>
       </ion-select>
     </ion-item>
     <div class="validation-errors">
       <ng-container *ngFor="let validation of validation_messages.poll_type">
         <div class="error-message" *ngIf="formGroup.get('poll_type').hasError(validation.type) 
             && (formGroup.get('poll_type').dirty || formGroup.get('poll_type').touched)">
-          {{ validation.message }}
+          {{ validation.message|translate }}
         </div>
       </ng-container>
     </div>
     <ng-container *ngIf="stage>0">
       <ion-item [color]="stage==1?'warning':'light'"><!--stage 1-->
-        <ion-label position="floating" color="primary"><span [class]="stage==1?'current-field':''">Poll title</span></ion-label>
+        <ion-label position="floating" color="primary"><span [class]="stage==1?'current-field':''">{{'draftpoll.title-label'|translate}}</span></ion-label>
         <ion-input autofocus tabindex="1" type="text" formControlName="poll_title" required inputmode="text"
           style="font-weight: bold; font-style: italic;"
-          placeholder="A short headline, maybe in the form of a question, like ‘what film to watch?’"
+          [placeholder]="'draftpoll.title-placeholder'|translate"
           (ionBlur)="stage=max(stage,formGroup.get('poll_title').valid?2:0)"></ion-input>      
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.poll_title">
           <div class="error-message" *ngIf="formGroup.get('poll_title').hasError(validation.type) 
               && (formGroup.get('poll_title').dirty || formGroup.get('poll_title').touched)">
-            {{ validation.message }}
+            {{ validation.message|translate }}
           </div>
         </ng-container>
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>1">
       <ion-item [color]="stage==2?'warning':''"><!--stage 2-->
-        <ion-label position="floating" color="primary"><span [class]="stage==2?'current-field':''">Description</span></ion-label>
+        <ion-label position="floating" color="primary"><span [class]="stage==2?'current-field':''">{{'draftpoll.desc-label'|translate}}</span></ion-label>
         <ion-textarea autofocus tabindex="2" rows="1" auto-grow type="text" formControlName="poll_descr" inputmode="text"
-          placeholder="Some more information about this poll (optional)"
+          [placeholder]="'draftpoll.desc-placeholder'|translate"
           style="font-style: italic;"
           (ionBlur)="stage=max(stage,formGroup.get('poll_descr').valid?3:0)"></ion-textarea>
         <ion-button tabindex="-1" *ngIf="stage==2 && formGroup.get('poll_descr').value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
@@ -70,16 +68,16 @@
         <ng-container *ngFor="let validation of validation_messages.poll_descr">
           <div class="error-message" *ngIf="formGroup.get('poll_descr').hasError(validation.type) 
               && (formGroup.get('poll_descr').dirty || formGroup.get('poll_descr').touched)">
-            {{ validation.message }}
+            {{ validation.message|translate }}
           </div>
         </ng-container>
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>2">
       <ion-item [color]="stage==3?'warning':''"><!--stage 3-->
-        <ion-label position="floating" color="primary"><span [class]="stage==3?'current-field':''">“Read more” link</span></ion-label>
+        <ion-label position="floating" color="primary"><span [class]="stage==3?'current-field':''">{{'draftpoll.url-label'|translate}}</span></ion-label>
         <ion-input tabindex="3" type="text" formControlName="poll_url" inputmode="url"
-          placeholder="A link to some webpage containing more details (optional)"
+          [placeholder]="'draftpoll.url-placeholder'|translate"
           style="font-size: smaller;"
           (ionBlur)="stage=max(stage,formGroup.get('poll_url').valid?4:0)"></ion-input>
           <ion-button tabindex="-1" *ngIf="stage==3 && formGroup.get('poll_url').value==''" color="primary" slot="end" class="skip-button">Skip</ion-button>
@@ -91,27 +89,38 @@
         <ng-container *ngFor="let validation of validation_messages.poll_url">
           <div class="error-message" *ngIf="formGroup.get('poll_url').hasError(validation.type) 
               && (formGroup.get('poll_url').dirty || formGroup.get('poll_url').touched)">
-            {{ validation.message }}
+            {{ validation.message|translate }}
           </div>
         </ng-container>
       </div>
     </ng-container>    
     <ng-container *ngIf="stage>3">
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
-        <ion-label position="floating" color="primary"><span [class]="stage==4?'current-field':''">Closing date and time</span></ion-label>
+        <ion-label class="labelautowidth" color="primary"><span [class]="stage==4?'current-field':''">{{'draftpoll.closing-type-label'|translate}}&nbsp;</span></ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
-        <ion-datetime tabindex="4" formControlName="poll_closing_datetime" required pickerFormat="DD MMMM YYYY HH mm"
-          displayFormat="DDDD, DD MMMM YYYY, HH:mm" [min]="now().toISOString()"
-          (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?5:0)"></ion-datetime>
+        <ion-select class="selectfullwidth" tabindex="4" formControlName="poll_closing_datetime_type" required  cancelText="Cancel" okText="OK" 
+            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime_type').valid?5:0)">
+          <ion-select-option value="midnight">{{'draftpoll.closing-type-midnight'|translate}}</ion-select-option>
+          <ion-select-option value="custom">{{'draftpoll.closing-type-custom'|translate}}</ion-select-option>
+        </ion-select>
       </ion-item>
-      <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.poll_closing_datetime">
-          <div class="error-message" *ngIf="(!formGroup.get('poll_closing_datetime').valid) 
-              && (formGroup.get('poll_closing_datetime').dirty || formGroup.get('poll_closing_datetime').touched)">
-            {{ validation.message }}
-          </div>
-        </ng-container>
-      </div>
+      <ng-container *ngIf="formGroup.get('poll_closing_datetime_type').value=='custom'">
+        <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
+          <ion-label position="floating" color="primary"><span [class]="stage==4?'current-field':''">{{'draftpoll.closing-datetime-label'|translate}}</span></ion-label>
+          <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
+          <ion-datetime tabindex="5" formControlName="poll_closing_datetime" pickerFormat="DD MMMM YYYY HH mm"
+            displayFormat="DDDD, DD MMMM YYYY, HH:mm" [min]="now().toISOString()"
+            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?5:0)"></ion-datetime>
+        </ion-item>
+        <div class="validation-errors">
+          <ng-container *ngFor="let validation of validation_messages.poll_closing_datetime">
+            <div class="error-message" *ngIf="(!formGroup.get('poll_closing_datetime').valid) 
+                && (formGroup.get('poll_closing_datetime').dirty || formGroup.get('poll_closing_datetime').touched)">
+              {{ validation.message|translate }}
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
     </ng-container>    
 
     <ng-container *ngIf="stage>4"><!--stage 5-->
@@ -151,7 +160,7 @@
           <ng-container *ngFor="let validation of validation_messages.option_name">
             <div class="error-message" *ngIf="formGroup.get('option_name'+i).hasError(validation.type) 
                 && (formGroup.get('option_name'+i).dirty || formGroup.get('option_name'+i).touched)">
-              {{ validation.message }}
+              {{ validation.message|translate }}
             </div>
           </ng-container>
         </div>
@@ -168,7 +177,7 @@
             <ng-container *ngFor="let validation of validation_messages.option_descr">
               <div class="error-message" *ngIf="formGroup.get('option_descr'+i).hasError(validation.type) 
                   && (formGroup.get('option_descr'+i).dirty || formGroup.get('option_descr'+i).touched)">
-                {{ validation.message }}
+                {{ validation.message|translate }}
               </div>
             </ng-container>
           </div>
@@ -189,7 +198,7 @@
             <ng-container *ngFor="let validation of validation_messages.option_url">
               <div class="error-message" *ngIf="formGroup.get('option_url'+i).hasError(validation.type) 
                   && (formGroup.get('option_url'+i).dirty || formGroup.get('option_url'+i).touched)">
-                {{ validation.message }}
+                {{ validation.message|translate }}
               </div>
             </ng-container>
           </div>

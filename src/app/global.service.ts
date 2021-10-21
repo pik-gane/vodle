@@ -249,8 +249,9 @@ export class Poll {
   public pid: string; // unique poll id
   public type: string; // 'winner' or 'share'
   public title: string;
-  public desc: string = null;
-  public uri: string = null; // weblink
+  public desc: string;
+  public uri: string; // weblink
+  public due_type: string = "midnight";
   public due: Date; // closing time
   public myvid: string = "";
 

@@ -28,6 +28,23 @@
         "data-storage-msg": "To be able to access your data safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
         "email-placeholder": "Please specify the email address you want to use with vodle"
     },
+    "draftpoll": {
+        "-page-title": "Edit poll",
+        "general-information": "General information",
+        "type-label": "In this poll, the group will...",
+        "type-winner": "select one of several options",
+        "type-share": "divide some resource between several targets",
+        "title-label": "Poll title",
+        "title-placeholder": "A short headline, maybe in the form of a question, like ‘what film to watch?’",
+        "desc-label": "Description",
+        "desc-placeholder": "Some more information about this poll (optional)",
+        "url-label": "“Read more” link",
+        "url-placeholder": "Some webpage with more details when voter clicks “read more” (optional)",
+        "closing-type-label": "Poll will close...",
+        "closing-type-midnight": "at midnight",
+        "closing-type-custom": "at a specific date and time",
+        "closing-datetime-label": "Closing date and time"
+    },
     "validation": {
         "db-pw-required": "Database password is required.",
         "db-url-required": "Database URL is required.",
@@ -37,6 +54,13 @@
         "password-length": "Password must be at least 8 characters long.",
         "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
         "password-required": "Password is required.",
-        "passwords-match": "Passwords must match."
+        "passwords-match": "Passwords must match.",
+        "poll-type-required": "Please select.",
+        "poll-title-required": "Poll title is required.",
+        "poll-url-valid": "Please enter a valid URL.",
+        "poll-closing-datetime-type-required": "Please select.",
+        "poll-closing-datetime-future": "Please select a date and time in the future.",
+        "option-name-required": "A name is required.",
+        "option-url-valid": "Please enter a valid URL."
     }
 }

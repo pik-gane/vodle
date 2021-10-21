@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
@@ -44,6 +44,7 @@ export class DraftpollPage implements OnInit {
 
   @ViewChild(IonSelect) type_select: IonSelect;
   @ViewChild(IonToggle) detailstoggle: IonToggle;
+  @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
   constructor(
     public formBuilder: FormBuilder, 
@@ -51,8 +52,6 @@ export class DraftpollPage implements OnInit {
     public alertCtrl: AlertController,
     public g: GlobalService,
   ) { }
-
-//   private state_attributes = ['pid', 'type', 'open', 'title', 'desc', 'uri', 'due', 'myvid', 'lastrated', 'vids', 'oids', 'options', 'ratings', 'myratings', 'rfreqs', 'rsums', 'stamps', 'history'];
   
   ngOnInit() {
     let p = this.p = this.g.openpoll || new Poll(this.g);
@@ -62,7 +61,8 @@ export class DraftpollPage implements OnInit {
       poll_title: new FormControl(p.title, Validators.required),
       poll_descr: new FormControl(p.desc),
       poll_url: new FormControl(p.uri, Validators.pattern(urlRegex)),
-      poll_closing_datetime: new FormControl(p.due, is_in_future), // TODO: validate is in future
+      poll_closing_datetime_type: new FormControl(p.due_type, Validators.required),
+      poll_closing_datetime: new FormControl(p.due, is_in_future),
     });
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
@@ -83,8 +83,12 @@ export class DraftpollPage implements OnInit {
 
   now() { return new Date(); }
 
+  ionViewDidLoad() {
+    this.ionSelects.map((select) => select.value = select.value);
+  }
+  
   ionViewWillEnter() {
-    if (this.formGroup.get('poll_type').value=='') this.type_select.open()
+    if (!this.formGroup.get('poll_type').value) this.type_select.open()
   }
 
   test_url(url: string) {
@@ -147,22 +151,25 @@ export class DraftpollPage implements OnInit {
 
   validation_messages = {
     'poll_type': [
-      { type: 'required', message: 'Please select.' },
+      { type: 'required', message: 'validation.poll-type-required' },
     ],
     'poll_title': [
-      { type: 'required', message: 'Poll title is required.' },
+      { type: 'required', message: 'poll-title-required' },
     ],
     'poll_url': [
-      { type: 'pattern', message: 'Please enter a valid URL.' },
+      { type: 'pattern', message: 'poll-url-valid' },
+    ],
+    'poll_closing_datetime_type': [
+      { type: 'required', message: 'poll-closing-datetime-type-required' },
     ],
     'poll_closing_datetime': [
-      { message: 'Please select a date and time in the future.' },
+      { message: 'poll-closing-datetime-future' },
     ],
     'option_name': [
-      { type: 'required', message: 'Option name is required.' },
+      { type: 'required', message: 'option-name-required' },
     ],
     'option_url': [
-      { type: 'pattern', message: 'Please enter a valid URL.' },
+      { type: 'pattern', message: 'option-url-valid' },
     ],
   }
 
