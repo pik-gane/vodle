@@ -11,6 +11,8 @@ export class GlobalService {
 
   // constants or session-specific data:
 
+  public urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
+
   static dologs = true; // set to false in production
 
   public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
@@ -251,7 +253,7 @@ export class Poll {
   public title: string;
   public desc: string;
   public uri: string; // weblink
-  public due_type: string = "midnight";
+  public due_type: string;
   public due: Date; // closing time
   public myvid: string = "";
 
@@ -400,6 +402,20 @@ export class Poll {
     this.stamps[oid] = o['created'];
     this.apprs[oid] = -1;
     GlobalService.log("  registered option " + o['name']);
+  }
+  deregisterOption(oid:string) {
+    if (this.oids.includes(oid)) {
+      GlobalService.log("  deregistering option " + this.options[oid].name);
+      // TODO: do more elegantly
+      let oids = [];
+      for(let oid2 of this.oids) {
+        if (oid2!=oid) {
+          oids.push(oid2);
+        }
+      }
+      this.oids = oids;
+      delete this.opos[oid], this.options[oid], this.ratings[oid], this.rfreqs[oid], this.rsums[oid], this.stamps[oid], this.apprs[oid];
+    }
   }
 
   registerVoter(vid:string) {

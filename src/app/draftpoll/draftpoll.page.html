@@ -21,7 +21,12 @@
 <ion-content>
   <form [formGroup]="formGroup">
 
-    <ion-item color="primary">{{'draftpoll.general-information'|translate}}</ion-item>
+    <ion-item color="primary">{{'draftpoll.general-information'|translate}}
+      <ion-button slot="end" fill="clear" (click)="detailstoggle.checked=!detailstoggle.checked">
+        <span style="color: white">Details</span>
+        <ion-toggle #detailstoggle name="detail-toggle" (click)="detailstoggle.checked=!detailstoggle.checked" color="light" style="--handle-background: black; padding-right: 0;"></ion-toggle>
+      </ion-button>
+    </ion-item>
     <ion-item [color]="stage==0?'warning':''"><!--stage 0-->
       <ion-label class="labelautowidth" color="primary"><span [class]="stage==0?'current-field':''">{{'draftpoll.type-label'|translate}}&nbsp;</span></ion-label>
       <ion-select class="selectfullwidth" #ionSelects #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
@@ -42,9 +47,9 @@
       <ion-item [color]="stage==1?'warning':'light'"><!--stage 1-->
         <ion-label position="floating" color="primary"><span [class]="stage==1?'current-field':''">{{'draftpoll.title-label'|translate}}</span></ion-label>
         <ion-input autofocus tabindex="1" type="text" formControlName="poll_title" required inputmode="text"
-          style="font-weight: bold; font-style: italic;"
+          style="font-weight: bold; font-style: italic; font-size: larger;"
           [placeholder]="'draftpoll.title-placeholder'|translate"
-          (ionBlur)="stage=max(stage,formGroup.get('poll_title').valid?2:0)"></ion-input>      
+          (ionBlur)="stage=max(stage,formGroup.get('poll_title').valid?(detailstoggle.checked?2:4):0)"></ion-input>      
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.poll_title">
@@ -55,7 +60,7 @@
         </ng-container>
       </div>
     </ng-container>    
-    <ng-container *ngIf="stage>1">
+    <ng-container *ngIf="stage>1 && detailstoggle.checked">
       <ion-item [color]="stage==2?'warning':''"><!--stage 2-->
         <ion-label position="floating" color="primary"><span [class]="stage==2?'current-field':''">{{'draftpoll.desc-label'|translate}}</span></ion-label>
         <ion-textarea autofocus tabindex="2" rows="1" auto-grow type="text" formControlName="poll_descr" inputmode="text"
@@ -73,7 +78,7 @@
         </ng-container>
       </div>
     </ng-container>    
-    <ng-container *ngIf="stage>2">
+    <ng-container *ngIf="stage>2 && detailstoggle.checked">
       <ion-item [color]="stage==3?'warning':''"><!--stage 3-->
         <ion-label position="floating" color="primary"><span [class]="stage==3?'current-field':''">{{'draftpoll.url-label'|translate}}</span></ion-label>
         <ion-input tabindex="3" type="text" formControlName="poll_url" inputmode="url"
@@ -98,19 +103,25 @@
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
         <ion-label class="labelautowidth" color="primary"><span [class]="stage==4?'current-field':''">{{'draftpoll.closing-type-label'|translate}}&nbsp;</span></ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
-        <ion-select class="selectfullwidth" tabindex="4" formControlName="poll_closing_datetime_type" required  cancelText="Cancel" okText="OK" 
-            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime_type').valid?5:0)">
-          <ion-select-option value="midnight">{{'draftpoll.closing-type-midnight'|translate}}</ion-select-option>
+        <ion-select #ionSelects class="selectfullwidth" tabindex="4" formControlName="poll_closing_datetime_type" required [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime_type').value=='custom'?5:6)">
           <ion-select-option value="custom">{{'draftpoll.closing-type-custom'|translate}}</ion-select-option>
+          <ion-select-option value="midnight">{{'draftpoll.closing-type-midnight'|translate}}</ion-select-option>
+          <ion-select-option value="tomorrow-noon">{{'draftpoll.closing-type-tomorrow-noon'|translate}}</ion-select-option>
+          <ion-select-option value="tomorrow-night">{{'draftpoll.closing-type-tomorrow-night'|translate}}</ion-select-option>
+          <ion-select-option value="sunday-night">{{'draftpoll.closing-type-sunday-night'|translate}}</ion-select-option>
+          <ion-select-option value="week">{{'draftpoll.closing-type-week'|translate}}</ion-select-option>
+          <ion-select-option value="two-weeks">{{'draftpoll.closing-type-two-weeks'|translate}}</ion-select-option>
+          <ion-select-option value="month">{{'draftpoll.closing-type-month'|translate}}</ion-select-option>
         </ion-select>
       </ion-item>
       <ng-container *ngIf="formGroup.get('poll_closing_datetime_type').value=='custom'">
-        <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
-          <ion-label position="floating" color="primary"><span [class]="stage==4?'current-field':''">{{'draftpoll.closing-datetime-label'|translate}}</span></ion-label>
+        <ion-item [color]="stage==5?'warning':''"><!--stage 5-->
+          <ion-label position="floating" color="primary"><span [class]="stage==5?'current-field':''">{{'draftpoll.closing-datetime-label'|translate}}</span></ion-label>
           <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
           <ion-datetime tabindex="5" formControlName="poll_closing_datetime" pickerFormat="DD MMMM YYYY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" [min]="now().toISOString()"
-            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?5:0)"></ion-datetime>
+            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?6:0)"></ion-datetime>
         </ion-item>
         <div class="validation-errors">
           <ng-container *ngFor="let validation of validation_messages.poll_closing_datetime">
@@ -123,22 +134,21 @@
       </ng-container>
     </ng-container>    
 
-    <ng-container *ngIf="stage>4"><!--stage 5-->
+    <ng-container *ngIf="stage>5"><!--stage 6-->
       <ion-item color="light" (click)="advanced_expanded=!advanced_expanded">
-        <!--TODO: icon does not show!-->
         <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
-        <ion-label><small>&nbsp;&nbsp;&nbsp;Advanced settings</small></ion-label>
+        <ion-label><small>&nbsp;&nbsp;&nbsp;{{'draftpoll.advanced-settings'|translate}}</small></ion-label>
       </ion-item>
       <ng-container *ngIf="advanced_expanded">
-        <app-select-server [page]="'draftpoll'"></app-select-server><!--stage 6-->
+        <app-select-server [page]="'draftpoll'"></app-select-server><!--stage 7-->
       </ng-container>
   
       <ion-item color="primary">
-        {{formGroup.get('poll_type').value=='winner' ? 'Options' : 'Possible targets'}}
-        <ion-button slot="end" fill="clear" (click)="detailstoggle.checked=!detailstoggle.checked">
+        {{(formGroup.get('poll_type').value=='winner' ? 'options' : 'possible-targets')|translate}}
+<!--        <ion-button slot="end" fill="clear" (click)="detailstoggle.checked=!detailstoggle.checked">
           <span style="color: white">Details</span>
           <ion-toggle #detailstoggle name="detail-toggle" (click)="detailstoggle.checked=!detailstoggle.checked" color="light" style="--handle-background: black"></ion-toggle>
-        </ion-button>
+        </ion-button>-->
       </ion-item>
 
       <div *ngFor="let item of [].constructor(n_options); let i = index">

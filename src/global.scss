@@ -82,6 +82,7 @@ ion-select {
     --width: 90%;
     --min-width: 90%;
     --max-width: 90%;
+    --max-height: 90%!important;
 }
 .current-field {
 //    font-weight: 900;
@@ -116,6 +117,6 @@ ion-select {
 }
 .selectfullwidth {
     padding-left: 0px;
-    padding-top: 12px;
+    padding-top: 11px;
     min-width: 100%!important;
 }

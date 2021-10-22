@@ -1,7 +1,7 @@
 <form [formGroup]="selectServerFormGroup">
   <ion-item>
     <ion-label position="floating" color="primary">{{'server'|translate}}</ion-label>
-    <ion-select formControlName="server" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate">
+    <ion-select formControlName="server" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" [style]="page!='settings'?'font-size: smaller;':''">
       <ion-select-option *ngIf="page!='settings'" value="default">{{'select-server.same-as-personal'|translate}}</ion-select-option>
       <ion-select-option value="central">{{'select-server.central'|translate}}</ion-select-option>
       <ion-select-option value="poll">{{(page=='settings'?'select-server.same-as-some-poll':'select-server.same-as-other-poll')|translate}}</ion-select-option>
@@ -11,8 +11,10 @@
   <ng-container *ngIf="selectServerFormGroup.get('server').value=='poll'">
     <ion-item>
       <ion-label position="floating" color="primary">{{(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate}}</ion-label>
-      <ion-select formControlName="server_from_poll" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate">
-        <ion-select-option value="TODO">[TODO: list of all polls]</ion-select-option>
+      <ion-select formControlName="server_from_poll" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" [style]="page!='settings'?'font-size: smaller;':''">
+        <ng-container *ngFor="let pid of Object.keys(g.polls)">
+          <ion-select-option *ngIf="pid!=g.openpoll.pid" [value]="pid">{{g.polls[pid].title}}</ion-select-option>
+        </ng-container>
       </ion-select>
     </ion-item>
   </ng-container>    
@@ -22,7 +24,7 @@
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-url'|translate}}</ion-label>
-      <ion-input type="text" formControlName="db_url" required></ion-input>
+      <ion-input [style]="page!='settings'?'font-size: smaller;':''" type="text" formControlName="db_url" required></ion-input>
     </ion-item>
     <div class="validation-errors">
       <ng-container *ngFor="let validation of validation_messages.db_url">
@@ -34,7 +36,7 @@
     </div>
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-user'|translate}}</ion-label>
-      <ion-input type="text" formControlName="db_username" required></ion-input>
+      <ion-input [style]="page!='settings'?'font-size: smaller;':''" type="text" formControlName="db_username" required></ion-input>
     </ion-item>
     <div class="validation-errors">
       <ng-container *ngFor="let validation of validation_messages.db_username">
@@ -46,9 +48,12 @@
     </div>
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-pw'|translate}}</ion-label>
-      <ion-input [type]="showing_db_password?'text':'password'"  formControlName="db_password" required></ion-input>
+      <ion-input [style]="page!='settings'?'font-size: smaller;':''" [type]="showing_db_password?'text':'password'" 
+        formControlName="db_password" required
+        (keydown.enter)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
+        (keydown.tab)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"></ion-input>
       <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_password=!showing_db_password">
-        <ion-icon [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
+        <ion-icon tabindex="-1" [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
       </ion-button>      
     </ion-item>
     <div class="validation-errors">

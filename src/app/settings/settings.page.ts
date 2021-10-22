@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { IonInput } from '@ionic/angular';
 
 /*
 TODO:
@@ -27,6 +28,8 @@ export function passwords_match(control: AbstractControl): ValidationErrors | nu
   styleUrls: ['./settings.page.scss'],
 })
 export class SettingsPage implements OnInit {
+
+  @ViewChild(IonInput) retype_password: IonInput;
 
   formGroup: FormGroup;
   editing_email: Boolean;

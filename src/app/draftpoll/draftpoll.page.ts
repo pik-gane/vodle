@@ -5,17 +5,12 @@ import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 import { AlertController } from '@ionic/angular'; 
 
-import { GlobalService, Poll } from "../global.service";
-
-const urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
+import { GlobalService, Poll, Option } from "../global.service";
 
 export function is_in_future(control: AbstractControl): ValidationErrors | null {
-  if (control) {
+  if (control && control.value) {
     let currentDateTime = new Date();
-//    currentDateTime.setHours(0,0,0,0);
     let controlValue = new Date(control.value);
-//    controlValue.setHours(0,0,0,0);
-    console.log("checking "+currentDateTime+"<"+controlValue);
     if (currentDateTime >= controlValue)
     {
         return {past: true};
@@ -54,13 +49,13 @@ export class DraftpollPage implements OnInit {
   ) { }
   
   ngOnInit() {
-    let p = this.p = this.g.openpoll || new Poll(this.g);
+    let p = this.p = this.g.openpoll = this.g.openpoll || new Poll(this.g, {title:'', desc:'', uri:''});
     console.log(p);
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
       poll_title: new FormControl(p.title, Validators.required),
       poll_descr: new FormControl(p.desc),
-      poll_url: new FormControl(p.uri, Validators.pattern(urlRegex)),
+      poll_url: new FormControl(p.uri, Validators.pattern(this.g.urlRegex)),
       poll_closing_datetime_type: new FormControl(p.due_type, Validators.required),
       poll_closing_datetime: new FormControl(p.due, is_in_future),
     });
@@ -71,7 +66,7 @@ export class DraftpollPage implements OnInit {
     this.stage = 0;
     for (let oid of p.oids) {
       let o = p.options[oid];
-      this.add_option(oid, o.name, o.desc, o.uri);
+      this.add_controls(o);
       this.stage = 5;
       this.option_stage = 10;
     }
@@ -118,33 +113,46 @@ export class DraftpollPage implements OnInit {
   del_option(i: number) {
     if (confirm("Delete " + (this.formGroup.get('poll_type').value=='choice' ? 'option' : 'target') 
           + " ‘" + this.formGroup.get('option_name'+i).value + "’")) {
+      this.p.deregisterOption(this.oids[i]);
       // move metadata of options i+1,i+2,... back one slot to i,i+1,..., then decrease n_options:
       for (let j=i+1; j<this.n_options; j++) {
+        this.oids[j-1] = this.oids[j];
         this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
         this.formGroup.get('option_descr'+(j-1)).setValue(this.formGroup.get('option_descr'+j).value); 
         this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
       }
       this.n_options--;
+      this.remove_last_controls();
     }
   }
 
   no_more() {
     if (this.formGroup.get('option_name'+(this.n_options-1)).value=='') {
-      this.n_options--;
       this.option_stage = 10;
-      this.formGroup.removeControl('option_name'+this.n_options);
-      this.formGroup.removeControl('option_descr'+this.n_options);
-      this.formGroup.removeControl('option_url'+this.n_options);
+      this.n_options--;
+      this.remove_last_controls();
     }
+  }
+
+  remove_last_controls() {
+    this.oids = this.oids.slice(0, this.n_options);
+    this.formGroup.removeControl('option_name'+this.n_options);
+    this.formGroup.removeControl('option_descr'+this.n_options);
+    this.formGroup.removeControl('option_url'+this.n_options);
   }
 
   add_option(oid:string="", name:string="", desc:string="", url:string="") {
     if (oid=="") { oid = '' + Math.random(); }
     this.p.registerOption({oid:oid, name:name, desc:desc, uri:url});
+    this.add_controls(this.p.options[oid]);
+  }
+
+  add_controls(o: Option) {
     let i = this.n_options;
-    this.formGroup.addControl('option_name'+i, new FormControl(name, Validators.required));
-    this.formGroup.addControl('option_descr'+i, new FormControl(desc));
-    this.formGroup.addControl('option_url'+i, new FormControl(url, Validators.pattern(urlRegex)));
+    this.oids.push(o.oid);
+    this.formGroup.addControl('option_name'+i, new FormControl(o.name, Validators.required));
+    this.formGroup.addControl('option_descr'+i, new FormControl(o.desc));
+    this.formGroup.addControl('option_url'+i, new FormControl(o.uri, Validators.pattern(this.g.urlRegex)));
     this.option_stage = 0;
     this.n_options++;
   }
@@ -154,22 +162,22 @@ export class DraftpollPage implements OnInit {
       { type: 'required', message: 'validation.poll-type-required' },
     ],
     'poll_title': [
-      { type: 'required', message: 'poll-title-required' },
+      { type: 'required', message: 'validation.poll-title-required' },
     ],
     'poll_url': [
-      { type: 'pattern', message: 'poll-url-valid' },
+      { type: 'pattern', message: 'validation.poll-url-valid' },
     ],
     'poll_closing_datetime_type': [
-      { type: 'required', message: 'poll-closing-datetime-type-required' },
+      { type: 'required', message: 'validation.poll-closing-datetime-type-required' },
     ],
     'poll_closing_datetime': [
-      { message: 'poll-closing-datetime-future' },
+      { message: 'validation.poll-closing-datetime-future' },
     ],
     'option_name': [
-      { type: 'required', message: 'option-name-required' },
+      { type: 'required', message: 'validation.option-name-required' },
     ],
     'option_url': [
-      { type: 'pattern', message: 'option-url-valid' },
+      { type: 'pattern', message: 'validation.option-url-valid' },
     ],
   }
 
