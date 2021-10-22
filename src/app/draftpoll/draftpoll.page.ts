@@ -63,7 +63,7 @@ export class DraftpollPage implements OnInit {
     this.advanced_expanded = false;
     this.n_options = p.oids.length;
     this.oids = [];
-    this.stage = 0;
+    this.stage = p.type?1:0;
     for (let oid of p.oids) {
       let o = p.options[oid];
       this.add_controls(o);

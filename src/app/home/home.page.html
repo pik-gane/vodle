@@ -12,13 +12,14 @@
 
 <ion-content class="ion-padding" [fullscreen]="false">
   <ion-list lines="full" no-padding no-margin>
+    <!--
     <ion-item>
-      <ion-button routerLink="/openpoll" [disabled]="g.username==''"><!--fill="clear" -->
+      <ion-button routerLink="/openpoll" [disabled]="g.username==''">
         <ion-icon name="git-commit" slot="start"></ion-icon>
         Last used
       </ion-button>
       &nbsp;
-      <ion-button routerLink="/mypolls" [disabled]="g.username==''"><!--fill="clear"-->
+      <ion-button routerLink="/mypolls" [disabled]="g.username==''">
         <ion-icon name="list" slot="start"></ion-icon>
         My polls
       </ion-button>
@@ -36,7 +37,6 @@
     <ion-item>
       <ion-text slot="start">Username:</ion-text>
       <ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
-      <!--FIXME: the following button is wrongly disabled: -->
     </ion-item>
     <ion-item>
       <ng-template [ngIf]="!editing" slot="end">
@@ -51,10 +51,12 @@
         Want to decide something?
       </ion-label>
     </ion-item-divider>
+  -->
+
     <ion-item>
       <ion-grid no-padding no-margin>
         <ion-row no-padding no-margin padding-top><ion-col no-padding no-margin>
-          <ion-button routerLink="/draftpoll">
+          <ion-button (click)="new_poll('winner')">
             <ion-icon name="add-circle" slot="start"></ion-icon>
             New
             &nbsp;<ion-icon name="trophy"></ion-icon>&nbsp;
@@ -69,7 +71,7 @@
     <ion-item>
       <ion-grid no-padding no-margin>
         <ion-row no-padding no-margin padding-top><ion-col no-padding no-margin>
-          <ion-button routerLink="/draftpoll">
+          <ion-button (click)="new_poll('share')">
             <ion-icon name="add-circle" slot="start"></ion-icon>
             New 
             &nbsp;<ion-icon name="cut"></ion-icon>&nbsp;

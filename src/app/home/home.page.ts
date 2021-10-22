@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
 import { GlobalService, Poll } from "../global.service";
 
 @Component({
@@ -10,7 +12,9 @@ export class HomePage {
 
   public editing: boolean = false;
 
-  constructor(public g: GlobalService) {}
+  constructor(
+    public router: Router,
+    public g: GlobalService) {}
 
   changeUsername() {
     this.editing = false;
@@ -29,5 +33,10 @@ export class HomePage {
   }
   ionViewWillEnter() {
     this.editing = (this.g.username == null);
+  }
+
+  new_poll(type:string) {
+    this.g.openpoll = new Poll(this.g, {type:type, title:'', desc:'', uri:''});
+    this.router.navigate(['/draftpoll']);
   }
 }
