@@ -78,7 +78,13 @@ ion-content {
 ion-select {
     width: 100%;
 }
-.sc-ion-alert-md-h  {
+.sc-ion-alert-md-h {
+    --width: 90%;
+    --min-width: 90%;
+    --max-width: 90%;
+    --max-height: 90%!important;
+}
+.sc-ion-popover-md {
     --width: 90%;
     --min-width: 90%;
     --max-width: 90%;

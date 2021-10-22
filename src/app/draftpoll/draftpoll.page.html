@@ -35,7 +35,7 @@
             [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'"></ion-icon>&nbsp;
           </span>
         </ion-label>
-      <ion-select class="selectfullwidth" #ionSelects #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
+      <ion-select interface="popover" class="selectfullwidth" #ionSelects #type_select autofocus tabindex="0" formControlName="poll_type" cancelText="Cancel" okText="OK" 
           (ionChange)="stage=max(stage,formGroup.get('poll_type').valid?1:0)">
         <ion-select-option value="winner">{{'draftpoll.type-winner'|translate}}</ion-select-option>
         <ion-select-option value="share">{{'draftpoll.type-share'|translate}}</ion-select-option>
@@ -109,7 +109,7 @@
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
         <ion-label class="labelautowidth" color="primary"><span [class]="stage==4?'current-field':''">{{'draftpoll.closing-type-label'|translate}}&nbsp;</span></ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
-        <ion-select #ionSelects class="selectfullwidth" tabindex="4" formControlName="poll_closing_datetime_type" required [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+        <ion-select #ionSelects interface="popover" class="selectfullwidth" tabindex="4" formControlName="poll_closing_datetime_type" required [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
             (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime_type').value=='custom'?5:6)">
           <ion-select-option value="custom">{{'draftpoll.closing-type-custom'|translate}}</ion-select-option>
           <ion-select-option value="midnight">{{'draftpoll.closing-type-midnight'|translate}}</ion-select-option>

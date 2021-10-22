@@ -83,7 +83,7 @@ export class DraftpollPage implements OnInit {
   }
   
   ionViewWillEnter() {
-    if (!this.formGroup.get('poll_type').value) this.type_select.open()
+    if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
 
   test_url(url: string) {
