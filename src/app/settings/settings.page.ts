@@ -1,6 +1,7 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { IonInput } from '@ionic/angular';
+import { IonInput, IonSelect } from '@ionic/angular';
+import { TranslateService } from '@ngx-translate/core';
 
 /*
 TODO:
@@ -30,6 +31,7 @@ export function passwords_match(control: AbstractControl): ValidationErrors | nu
 export class SettingsPage implements OnInit {
 
   @ViewChild(IonInput) retype_password: IonInput;
+  @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
   formGroup: FormGroup;
   editing_email: Boolean;
@@ -37,7 +39,9 @@ export class SettingsPage implements OnInit {
   showing_password: Boolean;
   showing_db_password: Boolean;
 
-  constructor(public formBuilder: FormBuilder) { }
+  constructor(
+    public formBuilder: FormBuilder,
+    public translate: TranslateService) { }
 
   ngOnInit() {
     this.editing_email = false;
@@ -59,6 +63,7 @@ export class SettingsPage implements OnInit {
       language: new FormControl('en', Validators.required),
       theme: new FormControl('light', Validators.required),
     });
+    this.set_lang();
   }
 
   validation_messages = {
@@ -74,5 +79,14 @@ export class SettingsPage implements OnInit {
     'passwords_match': [
       { message: 'validation.passwords-match' }
     ],
+  }
+
+  ionViewDidLoad() {
+    this.ionSelects.map((select) => select.value = select.value);
+    this.set_lang();
+  }
+  
+  set_lang() {
+    this.translate.use(this.formGroup.get('language').value);
   }
 }

@@ -30,7 +30,8 @@
     "settings": {
         "-page-title": "Settings",
         "data-storage-msg": "To be able to access your data safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
-        "email-placeholder": "Please specify the email address you want to use with vodle"
+        "email-placeholder": "Please specify the email address you want to use with vodle",
+        "appearance": "Appearance"
     },
     "draftpoll": {
         "-page-title": "Edit poll",

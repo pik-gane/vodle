@@ -94,21 +94,23 @@
 
   <app-select-server [page]="'settings'"></app-select-server>
 
-<!--<ion-item color="primary">
-      Appearance 
+  <form [formGroup]="formGroup">
+    <ion-item color="primary">
+      {{'settings.appearance'|translate}}
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary">Language</ion-label>
-      <ion-select formControlName="language" cancelText="Cancel" okText="OK">
-        <ion-select-option value="en">English</ion-select-option>
+      <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_lang()">
         <ion-select-option value="de">Deutsch</ion-select-option>
+        <ion-select-option value="en">English</ion-select-option>
       </ion-select>
     </ion-item>
-    <ion-item>
+  <!--  <ion-item>
       <ion-label position="floating" color="primary">Theme</ion-label>
       <ion-select formControlName="theme" cancelText="Cancel" okText="OK">
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>
     </ion-item>-->
+  </form>
 </ion-content>
