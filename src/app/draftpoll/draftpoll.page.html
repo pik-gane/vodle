@@ -125,9 +125,12 @@
         <ion-item [color]="stage==5?'warning':''"><!--stage 5-->
           <ion-label position="floating" color="primary"><span [class]="stage==5?'current-field':''">{{'draftpoll.closing-datetime-label'|translate}}</span></ion-label>
           <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
+          <!--TODO: translation-->
           <ion-datetime tabindex="5" formControlName="poll_closing_datetime" pickerFormat="DD MMMM YYYY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" [min]="now().toISOString()"
-            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?6:0)"></ion-datetime>
+            (ionChange)="stage=max(stage,formGroup.get('poll_closing_datetime').valid?6:0)"
+            [dayNames]="'daynames-sunday-to-saturday'|translate"
+            [monthNames]="'monthnames'|translate"></ion-datetime>
         </ion-item>
         <div class="validation-errors">
           <ng-container *ngFor="let validation of validation_messages.poll_closing_datetime">
@@ -236,7 +239,7 @@
     <ion-item lines="none">
       <ion-label class="ion-text-end" *ngIf="formGroup.get('poll_title').valid"><small>{{'draftpoll.draft-saved'|translate}}</small></ion-label>
       <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" shape="round"
-        (click)="formGroup.get('poll_closing_datetime').updateValueAndValidity()"><ion-icon name="checkmark"></ion-icon>&nbsp;Ready</ion-button>
+        (click)="formGroup.get('poll_closing_datetime').updateValueAndValidity()"><ion-icon name="checkmark"></ion-icon>&nbsp;{{'ready'|translate}}</ion-button>
     </ion-item>
 
     <input hidden id="choosefile" type="file" class="file" (change)="import_csv($event)" />

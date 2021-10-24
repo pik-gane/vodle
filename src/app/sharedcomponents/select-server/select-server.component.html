@@ -53,7 +53,7 @@
         (keydown.enter)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
         (keydown.tab)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"></ion-input>
       <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_password=!showing_db_password">
-        <ion-icon tabindex="-1" [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{showing_db_password?'hide':'show'}}
+        <ion-icon tabindex="-1" [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{(showing_db_password?'hide':'show')|translate}}
       </ion-button>      
     </ion-item>
     <div class="validation-errors">
