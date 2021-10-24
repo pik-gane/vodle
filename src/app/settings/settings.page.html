@@ -25,7 +25,7 @@
             <ion-label position="floating" color="primary">{{'email'|translate}}</ion-label>
             <ion-input type="text" formControlName="email" required inputmode="email"
               [placeholder]="'settings.email-placeholder'|translate"
-              [disabled]="!editing_email"
+              [readonly]="!editing_email"
               (keydown.enter)="editing_email=!formGroup.get('email').valid"
               (keydown.tab)="editing_email=!formGroup.get('email').valid"></ion-input>
             <!--TODO: click OK when hitting enter and valid-->
@@ -33,7 +33,7 @@
         </ion-col>
         <ion-button tabindex="-1" style="padding-top: 10px;" color="primary" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
           <!--TODO: give focus to field-->
-          <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_email?'OK':'edit')|translate}}
+          <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_email?'OK':'settings.edit')|translate}}
         </ion-button>      
       </ion-row>
     </ion-grid>
@@ -53,14 +53,14 @@
             <ion-item>
               <ion-label position="floating" color="primary">{{'password'|translate}}</ion-label>
               <ion-input [type]="showing_password?'text':'password'" formControlName="password" required 
-                [disabled]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
+                [readonly]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
             </ion-item>
           </ion-col>
           <ion-button tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" (click)="showing_password=!showing_password">
             <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{(showing_password?'hide':'show')|translate}}
           </ion-button>
           <ion-button tabindex="-1" style="padding-top: 10px;" color="primary" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
-            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_password?'OK':'edit')|translate}}
+            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_password?'OK':'settings.edit')|translate}}
           </ion-button>
         </ion-row>
       </ion-grid>

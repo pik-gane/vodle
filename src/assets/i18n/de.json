@@ -35,6 +35,7 @@
         "-page-title": "Einstellungen",
         "data-storage-msg": "Um auf Deine Daten sicher von verschiedenen Geräten zugreifen zu können, gibt bitte eine Emailadresse an, lege ein Passwort fest, und wähle einen Server aus, wo vodle Deine Daten verschlüsselt ablegen soll.",
         "email-placeholder": "Bitte gib die Emailadresse an, die Du für vodle verwenden möchtest.",
+        "edit": "Ändern",
         "appearance": "Aussehen"
     },
     "draftpoll": {
