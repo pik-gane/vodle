@@ -1,9 +1,11 @@
 import { Injectable, HostListener, SkipSelf } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
+// TODO: replace Storage by PouchCouch:
 import { Storage } from '@ionic/storage-angular';
 import { Secret } from './secret';
-import { NONE_TYPE } from '@angular/compiler';
+
+import { PouchCouchService } from './pouch-couch.service';
 
 @Injectable({
   providedIn: 'root'
@@ -34,7 +36,10 @@ export class GlobalService {
   public cloudant_up: string; // cloudant credentials
   public pollstates: {} = {};
 
-  constructor(public http: HttpClient, public storage: Storage) {
+  constructor(
+      public http: HttpClient, 
+      public storage: Storage,
+      public pc: PouchCouchService) {
     // TODO: this does not seem to work:
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
@@ -882,45 +887,4 @@ export class Simulation {
   }
 
 
-  // ***************** sketch of future data handling:
-
-  get(key:string):string {
-    this._update_local_from_remote(key);
-    return this._get_without_checking(key);
-  }
-  set(key:string, new_value:string) {
-    this._set_locally_without_checking(key, new_value);
-    // check whether remote value is more recent than local one
-    // and potentially handle conflict or at least notify in console:
-    let remote_value:string = this._get_remotely_changed_value(key);
-    if (remote_value) {
-      console.log("WARNING: when setting value of "+key+", I found it had changed remotely.");
-    }
-    this._set_remotely_without_checking(key, new_value);
-  }
-
-  _process_change_feed_item() {
-    // if remote timestamp newer than local one, _set_locally_without_checking
-  }
-  _update_local_from_remote(key:string) {
-    let remote_value:string = this._get_remotely_changed_value(key);
-    if (remote_value) {
-      this._set_locally_without_checking(key, remote_value)
-    }
-  }
-  _get_remotely_changed_value(key:string):string {
-    // fetch remote json doc with id=pwenc(email+key)
-    // if remote value is more recent than local one, return it, else return null
-    return null;
-  }
-  _get_without_checking(key:string):string {
-    // return local value or null if key nonexistent
-    return null
-  }
-  _set_locally_without_checking(key:string, value:string) {
-    // set key:value and _timestamp_key:now in local storage
-  }
-  _set_remotely_without_checking(key:string, value:string) {
-    // send json doc with id=pwenc(email+key), email=pwenc(email), data=pwenc({value:value, timestamp:now, device:deviceid})
-  }
 }
