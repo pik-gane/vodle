@@ -3,19 +3,19 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 import * as CryptoJS from 'crypto-js';
 
 // some keys are only stored locally and not synced to a remote CouchDB:
-const only_local_keys = ['email', 'password', 'couchdb_url', 'couchdb_username', 'couchdb_password'];
+const local_only_keys = ['email', 'password', 'couchdb_url', 'couchdb_username', 'couchdb_password'];
 
 const crypto_algorithm = 'des-ede3';
 
 function encrypt(value, password:string) {
   const result = CryptoJS.AES.encrypt(''+value, password).toString();
-  console.log("encrypted "+value+" to "+result);
+//  console.log("encrypted "+value+" to "+result);
   return result;
 }
 
 function decrypt(value:string, password:string) {
   const result = CryptoJS.AES.decrypt(value, password).toString(CryptoJS.enc.Utf8);
-  console.log("decrypted "+value+" to "+result);
+//  console.log("decrypted "+value+" to "+result);
   return result;
 }
 
@@ -24,45 +24,76 @@ function decrypt(value:string, password:string) {
 })
 export class PouchCouchService {
 
-  private cache: {};
-  private localDB: PouchDB.Database;
-  private remoteDB: PouchDB.Database;
+  private user_cache: {}; // temporary storage of user data
+  private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
+  private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
+  private remote_user_DB: PouchDB.Database; // persistent remote copy of synced user data
+
+  private pids: Set<string>; // list of pids 
+  private poll_caches: {}; // temporary storage of poll data
+  private local_poll_DBs: {}; // persistent local copies of this user's part of the poll data
+  private remote_poll_DBs: {}; // persistent remote copies of complete poll data
 
   constructor() {
-    let b = encrypt("Hello World!","my password");
-    let a = decrypt(b, "my password");
-    let w = decrypt(b, "bad");
-
-    this.localDB = new PouchDB('local_user_data');
-    // if empty, reroute to settings page
-    // else copy all content to cache
-    this.fill_cache();
-    // if remote server is specified in localDB, call this.startSync()
+    this.user_cache = {};
+    this.local_only_user_DB = new PouchDB('local_only_user');
+    this.local_synced_user_DB = new PouchDB('local_synced_user');
+    this.start_user_sync();
+    this.fill_user_cache();
+    for (let pid of this.pids) {
+      this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
+//      this.start_poll_sync(pid);
+      this.fill_poll_cache(pid);
+    }
   }
 
-  private fill_cache() {
-    // TODO: read all docs with id in only_local_keys and extract their values:
-    this.localDB.get({'_id':'email'}).then(function (doc) {
-      let email = this.cache['email'] = doc['value'];
-      this.localDB.get({'_id':'password'}).then(function (doc) {
-        let pw = this.cache['password'] = doc['value'],
-            enc_email = encrypt(email, pw);
-        // read all docs with email=pwenc(email) and extract their values:
-        this.localDB.allDocs({
-          include_docs: true,
-          attachments: true
-        }).then(function (result) {
-          for (let row of result.rows) {
-            let doc = row.doc;
-            if (doc['email'] == enc_email) {
-              var key = decrypt(doc['key'], pw), value = decrypt(doc['value'], pw);
-              this.cache[key] = value;
-              console.log("fill_cache "+key+": "+value);
-            }
-          }
-        }).catch(function (err) {
-          console.log(err);
-        });
+  public getu(key:string):string {
+    // get user data item
+    let value = this.user_cache[key];
+    console.log("getu "+key+": "+value);
+    return value;
+  }
+  public getp(pid:string, key:string):string {
+    // get poll data item
+    let value = this.poll_caches[pid][key];
+    console.log("getp "+pid+"/"+key+": "+value);
+    return value;
+  }
+
+  public setu(key:string, value:string) {
+    // set user data item
+    this.user_cache[key] = value;
+    console.log("setu "+key+": "+value);
+    return this.store_user_data(key, value);
+  }
+  public setp(pid:string, key:string, value:string) {
+    // set poll data item
+    this.poll_caches[pid][key] = value;
+    console.log("setp "+pid+"/"+key+": "+value);
+    return this.store_poll_data(pid, key, value);
+  }
+
+  private fill_user_cache() {
+    // fills temporary cache with values from persistent DBs.
+    this.pids = new Set();
+    this.poll_caches = {};
+    this.local_poll_DBs = {};
+    this.remote_poll_DBs = {};
+    // read all local-only docs:
+    this.local_only_user_DB.allDocs({include_docs: true}).then(result => {
+      for (let row of result.rows) {
+        let doc = row.doc, key = doc['_id'], value = doc['val'];
+        this.user_cache[key] = value;
+        console.log("fill_cache "+key+": "+value);
+      }
+      // read and decrypt all synced docs:
+      let pw = this.user_cache['password'];
+      this.local_synced_user_DB.allDocs({
+        include_docs: true
+      }).then(function (result) {
+        for (let row of result.rows) {
+          this.doc2user_cache(row.doc);
+        }
       }).catch(function (err) {
         console.log(err);
       });
@@ -70,72 +101,125 @@ export class PouchCouchService {
       console.log(err);
     });
   }
-
-  public get(key:string):string {
-    let value = this.cache[key];
-    console.log("get "+key+": "+value);
-    return value;
+  private fill_poll_cache(pid:string) {
+    // fills temporary cache with values from persistent DBs.
+    // read and decrypt all synced docs:
+    this.local_poll_DBs[pid].allDocs({
+      include_docs: true
+    }).then(function (result) {
+      for (let row of result.rows) {
+        this.doc2poll_cache(pid, row.doc);
+      }
+    }).catch(function (err) {
+      console.log(err);
+    });
   }
 
-  public set(key:string, value:string) {
-    this.cache[key] = value;
+  private store_all_userdata() {
+    // stores user_cache in suitable DBs. 
+    for (let [key, value] of Object.entries(this.user_cache)) {
+      this.store_user_data(key, value as string);
+    }
+  }
+  private store_all_polldata(pid:string) {
+    // stores poll_cache[pid] in suitable DBs. 
+    for (let [key, value] of Object.entries(this.poll_caches[pid])) {
+      this.store_poll_data(pid, key, value as string);
+    }
+  }
+
+  private store_user_data(key:string, value:string) {
+    // stores key and value in suitable DB. 
     var doc;
-    if (key in only_local_keys) {
+    if (key in local_only_keys) {
       // simply use key as doc id and don't encrypt:
-      doc = {'_id':key, 'value':value};
+      doc = {_id:key, val:value};
+      this.local_only_user_DB.put(doc);
     } else {
-      // store encrypted and marked with an owner, device and timestamp:
-      let email = this.cache['email'], pw = this.cache['password'];
-      if ((!email)||(!pw)) {
-        // TODO: alert?
+      // store encrypted and marked with email as owner: //, device and timestamp:
+      let email = this.user_cache['email'], pw = this.user_cache['password'];
+      if ((!email) || (!pw)) {
+        console.log("WARNING: couldn't set "+key+" in local_synced_used_DB since email or password are missing!");
         return false;
       }
+      let enc_email = encrypt(email, pw);
       doc = {
-        '_id': encrypt(email+':'+key, pw), 
-        'owner': encrypt(email ,pw),  // will be used to filter what is synced!
-        'key': encrypt(key, pw),
-        'value': encrypt(value, pw),
-        'device': encrypt('TODO:device_ID', pw),
-        'timestamp': encrypt(new Date(), pw),
+        '_id': enc_email+'/'+key, 
+        'em': enc_email,  // will be used to filter what is synced!
+        'key': key,
+        'val': encrypt(value, pw),
+//        'dev': encrypt('TODO:device_ID', pw),
+//        'ts': encrypt(new Date(), pw),
       };
+      this.local_synced_user_DB.put(doc);
     }
-    console.log("set "+key+": "+value);
-    this.localDB.put(doc);
+    return true;
+  }
+  private store_poll_data(pid:string, key:string, value:string) {
+    // stores key and value in suitable DB. 
+    var doc;
+    // store encrypted and marked with voter id as owner: //, device and timestamp:
+    let db = this.local_poll_DBs[pid], pw = this.user_cache["pid."+pid+'.password'], vid = this.user_cache["pid."+pid+'.voter_id'];
+    if ((!db) || (!pw) || (!vid)) {
+      console.log("WARNING: couldn't set "+key+" in local_poll_DB since db or poll password or voter id are missing!");
+      return false;
+    }
+    doc = {
+      '_id': pid+'/'+vid+'/'+key,
+      'pid': pid,  // will be used to filter what is synced! 
+      'vid': vid,  // will be used to filter what is synced!
+      'key': key,
+      'val': encrypt(value, pw),
+//      'dev': encrypt('TODO:device_ID', pw),
+//      'ts': encrypt(new Date(), pw),
+    };
+    db.put(doc);
     return true;
   }
 
-  private startSync() {
-    // later do something like this:
-    /* 
-    this.remoteDB = new PouchDB('http://localhost:5984/cloudo');
+  private start_user_sync() {
+    if (this.local_synced_user_DB) { 
+      this.local_synced_user_DB.sync(this.remote_user_DB, {
+        live: true,
+        retry: true,
+        include_docs: true
+      }).on('change', this.handle_user_db_change
+      ).on('paused', info => {
+        // replication was paused, usually because of a lost connection
+        console.log("pausing user data syncing");
+      }).on('active', info => {
+        // replication was resumed
+        console.log("resuming user data syncing");
+      }).on('error', err => {
+        // totally unhandled error (shouldn't happen)
+        console.log("ERROR: "+err);
+      });
+      return true;
+    } else return false;
+  }
 
-    localDB.sync(remoteDB, {
-      live: true,
-      retry: true
-    }).on('change', function (change) {
-      // yo, something changed!
-    }).on('paused', function (info) {
-      // replication was paused, usually because of a lost connection
-    }).on('active', function (info) {
-      // replication was resumed
-    }).on('error', function (err) {
-      // totally unhandled error (shouldn't happen)
-    });
-
-    */
-  }
-  private stopSync() {
-    // stop current syncing
-  }
-  private deleteRemote() {
-    // delete remote data when server changed
-  }
-  private handleChange(change){
-    if(change.deleted){
-      // extract key and delete from cache
+  private handle_user_db_change(change) {
+    if (change.deleted){
+      var key = change.doc['key'];
+      delete this.user_cache[key];
     } else {
-      // A document was updated or added
-      // extract key, value and update cache
+      this.doc2user_cache(change.doc);
+    }    
+  }
+
+  private doc2user_cache(doc) {
+    var key = doc['key'], value = decrypt(doc['val'], this.user_cache['password']);
+    this.user_cache[key] = value;
+    console.log("doc2user_cache "+key+": "+value);
+    if (key.startsWith('pid.') && key.endsWith('.pid')) {
+      let pid = value;
+      this.pids.add(pid);
     }
   }
+  private doc2poll_cache(pid, doc) {
+    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["pid."+pid+'.password']);
+    this.poll_caches[pid][key] = value;
+    console.log("doc2poll_cache "+pid+"/"+key+": "+value);
+  }
+
 }
