@@ -1,15 +1,22 @@
 import { Injectable } from '@angular/core';
 import * as PouchDB from 'pouchdb/dist/pouchdb';
-import { resourceLimits } from 'worker_threads';
+import * as CryptoJS from 'crypto-js';
 
 // some keys are only stored locally and not synced to a remote CouchDB:
 const only_local_keys = ['email', 'password', 'couchdb_url', 'couchdb_username', 'couchdb_password'];
 
+const crypto_algorithm = 'des-ede3';
+
 function encrypt(value, password:string) {
-  return ''+value; // FIXME
+  const result = CryptoJS.AES.encrypt(''+value, password).toString();
+  console.log("encrypted "+value+" to "+result);
+  return result;
 }
+
 function decrypt(value:string, password:string) {
-  return value; // FIXME
+  const result = CryptoJS.AES.decrypt(value, password).toString(CryptoJS.enc.Utf8);
+  console.log("decrypted "+value+" to "+result);
+  return result;
 }
 
 @Injectable({
@@ -21,7 +28,11 @@ export class PouchCouchService {
   private localDB: PouchDB.Database;
   private remoteDB: PouchDB.Database;
 
-  constructor() { 
+  constructor() {
+    let b = encrypt("Hello World!","my password");
+    let a = decrypt(b, "my password");
+    let w = decrypt(b, "bad");
+
     this.localDB = new PouchDB('local_user_data');
     // if empty, reroute to settings page
     // else copy all content to cache

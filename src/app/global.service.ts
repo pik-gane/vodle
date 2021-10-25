@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 // TODO: replace Storage by PouchCouch:
 import { Storage } from '@ionic/storage-angular';
-import { Secret } from './secret';
 
 import { PouchCouchService } from './pouch-couch.service';
 
@@ -75,7 +74,7 @@ export class GlobalService {
   init() { // called after state restoration finished
     GlobalService.log('initializing...');
     if (!this.cloudant_up) {
-      this.cloudant_up = Secret.cloudant_up;
+      this.cloudant_up = '';
       if (!this.cloudant_up) {
         this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
      }
