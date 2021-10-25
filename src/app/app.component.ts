@@ -51,4 +51,5 @@ export class AppComponent {
     translate.use('de');
     translate.use('en');
   }
+
 }

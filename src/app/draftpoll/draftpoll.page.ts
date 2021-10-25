@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
@@ -49,7 +49,13 @@ export class DraftpollPage implements OnInit {
   ) { }
   
   ngOnInit() {
-    let p = this.p = this.g.openpoll = this.g.openpoll || new Poll(this.g, {title:'', desc:'', uri:''});
+    let p = this.g.openpoll; 
+    if (!p) {
+      p = this.p = this.g.openpoll = new Poll(this.g, {title:'', desc:'', uri:''});
+      this.g.polls[p.pid] = p;
+    } else {
+      p = this.p = this.g.openpoll;
+    }
     console.log(p);
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
@@ -76,6 +82,18 @@ export class DraftpollPage implements OnInit {
     }
   }
 
+//  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: Event) {
+    // this seems to be called properly. TODO: perform cleanup! maybe move this to central app place?
+    this.ionViewWillLeave();
+    this.p.title="Hoho!";
+//    return false;
+  }
+  ionViewWillLeave() {
+    console.log("!");
+    window.alert("!");
+  }
+  
   now() { return new Date(); }
 
   ionViewDidLoad() {
