@@ -28,7 +28,8 @@
               [placeholder]="'settings.email-placeholder'|translate"
               [readonly]="!editing_email"
               (keydown.enter)="editing_email=!formGroup.get('email').valid"
-              (keydown.tab)="editing_email=!formGroup.get('email').valid"></ion-input>
+              (keydown.tab)="editing_email=!formGroup.get('email').valid"
+              (ionChange)="set_email()"></ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
@@ -54,7 +55,8 @@
             <ion-item>
               <ion-label position="floating" color="primary">{{'password'|translate}}</ion-label>
               <ion-input [type]="showing_password?'text':'password'" formControlName="password" required 
-                [readonly]="!editing_password"></ion-input><!--TODO: add show/hide toggle-->
+                [readonly]="!editing_password"
+                (ionChange)="set_password()"></ion-input><!--TODO: add show/hide toggle-->
             </ion-item>
           </ion-col>
           <ion-button tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" (click)="showing_password=!showing_password">
@@ -79,7 +81,8 @@
           <ion-input #retype_password [type]="showing_password?'text':'password'" formControlName="confirm_password" required 
             [disabled]="!editing_password"
             (keydown.enter)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
-            (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"></ion-input>
+            (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
+            (ionChange)="set_password()"></ion-input>
         </ion-item>
         <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.passwords_match">
@@ -101,7 +104,7 @@
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary"><ion-icon name="language-outline"></ion-icon>&nbsp;{{'language'|translate}}</ion-label>
-      <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_lang()">
+      <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
         <ion-select-option value="de">Deutsch</ion-select-option>
         <ion-select-option value="en">English</ion-select-option>
       </ion-select>

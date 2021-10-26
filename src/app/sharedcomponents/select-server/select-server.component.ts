@@ -1,7 +1,7 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 
-import { GlobalService, Poll, Option } from "../../global.service";
+import { GlobalService } from "../../global.service";
 
 @Component({
   selector: 'app-select-server',
@@ -12,6 +12,7 @@ export class SelectServerComponent implements OnInit {
 
   public Object = Object;
 
+  public parent; // the page object using this component
   @Input() page: string;
 
   selectServerFormGroup: FormGroup;
@@ -23,8 +24,8 @@ export class SelectServerComponent implements OnInit {
 
   ngOnInit() {
     this.selectServerFormGroup = this.formBuilder.group({
-      server: new FormControl(this.page=='settings'?'central':'default', Validators.required),
-      server_from_poll: new FormControl('TODO', Validators.required),
+      db: new FormControl(this.page=='settings'?'central':'default', Validators.required),
+      db_from_pid: new FormControl('TODO', Validators.required),
       db_url: new FormControl('', Validators.pattern(this.g.urlRegex)), // TODO: validator
       db_username: new FormControl('', Validators.required), // TODO: validator
       db_password: new FormControl('', Validators.required), // TODO: validator
@@ -47,4 +48,26 @@ export class SelectServerComponent implements OnInit {
   blur() {
     // TODO: remove focus from any input element and optionally set it on parent component's next element
   }
+
+  set_db() {
+    let c = this.selectServerFormGroup.get('db');
+    if (c.valid) this.parent.set_db(c.value);
+  }
+  set_db_from_pid() {
+    let c = this.selectServerFormGroup.get('db_from_pid');
+    if (c.valid) this.parent.set_db_from_pid(c.value);
+  }
+  set_db_url() {
+    let c = this.selectServerFormGroup.get('db_url');
+    if (c.valid) this.parent.set_db_url(c.value);
+  }
+  set_db_username() {
+    let c = this.selectServerFormGroup.get('db_username');
+    if (c.valid) this.parent.set_db_username(c.value);
+  }
+  set_db_password() {
+    let c = this.selectServerFormGroup.get('db_password');
+    if (c.valid) this.parent.set_db_password(c.value);
+  }
+
 }

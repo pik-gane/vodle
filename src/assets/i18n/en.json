@@ -33,7 +33,7 @@
     },
     "settings": {
         "-page-title": "Settings",
-        "data-storage-msg": "To be able to access your data safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
+        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
         "email-placeholder": "Please specify the email address you want to use with vodle",
         "edit": "Edit",
         "appearance": "Appearance"

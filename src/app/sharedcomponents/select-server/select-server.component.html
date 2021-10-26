@@ -1,24 +1,26 @@
 <form [formGroup]="selectServerFormGroup">
   <ion-item>
     <ion-label position="floating" color="primary">{{'server'|translate}}</ion-label>
-    <ion-select formControlName="server" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" [style]="page!='settings'?'font-size: smaller;':''">
+    <ion-select formControlName="db" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
+        [style]="page!='settings'?'font-size: smaller;':''"
+        (ionChange)="set_db()">
       <ion-select-option *ngIf="page!='settings'" value="default">{{'select-server.same-as-personal'|translate}}</ion-select-option>
       <ion-select-option value="central">{{'select-server.central'|translate}}</ion-select-option>
       <ion-select-option value="poll">{{(page=='settings'?'select-server.same-as-some-poll':'select-server.same-as-other-poll')|translate}}</ion-select-option>
       <ion-select-option value="other">{{'select-server.other'|translate}}</ion-select-option>
     </ion-select>
   </ion-item>
-  <ng-container *ngIf="selectServerFormGroup.get('server').value=='poll'">
+  <ng-container *ngIf="selectServerFormGroup.get('db').value=='poll'">
     <ion-item>
       <ion-label position="floating" color="primary">{{(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate}}</ion-label>
-      <ion-select formControlName="server_from_poll" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" [style]="page!='settings'?'font-size: smaller;':''">
+      <ion-select formControlName="db_from_pid" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" [style]="page!='settings'?'font-size: smaller;':''">
         <ng-container *ngFor="let pid of Object.keys(g.polls)">
           <ion-select-option *ngIf="pid!=g.openpoll.pid" [value]="pid">{{g.polls[pid].title}}</ion-select-option>
         </ng-container>
       </ion-select>
     </ion-item>
   </ng-container>    
-  <ng-container *ngIf="selectServerFormGroup.get('server').value=='other'">
+  <ng-container *ngIf="selectServerFormGroup.get('db').value=='other'">
     <ion-item>
       <small>{{'select-server.please-enter-couchdb'|translate}}</small>
     </ion-item>

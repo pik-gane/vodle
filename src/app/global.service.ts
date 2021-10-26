@@ -4,7 +4,8 @@ import { finalize } from 'rxjs/operators';
 // TODO: replace Storage by PouchCouch:
 import { Storage } from '@ionic/storage-angular';
 
-import { PouchCouchService } from './pouch-couch.service';
+import { DataService } from './data.service';
+import { SettingsService } from './settings.service';
 
 @Injectable({
   providedIn: 'root'
@@ -38,8 +39,12 @@ export class GlobalService {
   constructor(
       public http: HttpClient, 
       public storage: Storage,
-      public pc: PouchCouchService) {
-    // TODO: this does not seem to work:
+      public D: DataService,
+      public settings: SettingsService,
+      ) {
+    // make this service available to the other services:
+    D.G = settings.G = this;
+
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
     // make sure storage exists:
@@ -95,10 +100,9 @@ export class GlobalService {
 
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
-    // TODO: not working yet...
     console.log("onBeforeUnload...");
-    event.preventDefault();
-    return false;
+    //event.preventDefault();
+    //return false;
   }
 
   save_state() {

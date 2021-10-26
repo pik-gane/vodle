@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { PouchCouchService } from './pouch-couch.service';
+import { SettingsService } from './settings.service';
 
-describe('PouchCouchService', () => {
-  let service: PouchCouchService;
+describe('SettingsService', () => {
+  let service: SettingsService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(PouchCouchService);
+    service = TestBed.inject(SettingsService);
   });
 
   it('should be created', () => {

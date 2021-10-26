@@ -14,7 +14,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { IonicStorageModule } from '@ionic/storage-angular';
 
 import { GlobalService } from './global.service';
-//import { PouchCouchService } from './pouch-couch.service';
+//import { DataService } from './data.service';
 
 export function createTranslateLoader(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -41,7 +41,7 @@ export function createTranslateLoader(http: HttpClient) {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     GlobalService,
-//    PouchCouchService
+//    DataService
   ],
   bootstrap: [AppComponent],
 })
