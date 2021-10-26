@@ -78,9 +78,9 @@ export class SettingsPage implements OnInit {
     this.ionSelects.map((select) => select.value = select.value);
   }
 
-  pc_changed() {
-    // called whenever data stored in pc has changed
-    console.log("pc changed on settings page");
+  data_changed() {
+    // called whenever data stored in database has changed
+    console.log("data changed while on settings page");
     this.fill_form();
   }
 

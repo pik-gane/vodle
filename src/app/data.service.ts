@@ -6,20 +6,25 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 
 import * as CryptoJS from 'crypto-js';
 const crypto_algorithm = 'des-ede3';
+const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but constant value
 
 // some keys are only stored locally and not synced to a remote CouchDB:
-const local_only_keys = ['email', 'password', 'db_url', 'db_username', 'db_password'];
-const keys_triggering_data_move = ['email', 'password', 'db_url', 'db_username', 'db_password'];
+const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
+const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
+
+function encrypt_deterministically(value, password:string) {
+  var aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
+  const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
+  return result;
+}
 
 function encrypt(value, password:string) {
-  const result = CryptoJS.AES.encrypt(''+value, password).toString();
-//  console.log("encrypted "+value+" to "+result);
+  const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
   return result;
 }
 
 function decrypt(value:string, password:string) {
   const result = CryptoJS.AES.decrypt(value, password).toString(CryptoJS.enc.Utf8);
-//  console.log("decrypted "+value+" to "+result);
   return result;
 }
 
@@ -30,7 +35,7 @@ export class DataService {
 
   public G: GlobalService;
   public page; // current page, used for notifying of changes via its pc_changed() method
-  
+
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
@@ -46,9 +51,10 @@ export class DataService {
   ){
     this.user_cache = {};
     this.local_only_user_DB = new PouchDB('local_only_user');
+//    this.local_only_user_DB.destroy();
     this.local_synced_user_DB = new PouchDB('local_synced_user');
-    this.start_user_sync();
-    this.fill_user_cache();
+//    this.local_synced_user_DB.destroy();
+    this.start_initialization();
     for (let pid of this.pids) {
       this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
 //      this.start_poll_sync(pid);
@@ -95,7 +101,7 @@ export class DataService {
     return this.store_poll_data(pid, key, value);
   }
 
-  private fill_user_cache() {
+  private start_initialization() {
     // fills temporary cache with values from persistent DBs.
     this.pids = new Set();
     this.poll_caches = {};
@@ -118,7 +124,26 @@ export class DataService {
         this.translate.use(value);      
       }
     }
-    // now fetch all synced docs:
+    // connect to remote_user_DB:
+    var db = this.user_cache['db'], db_url, db_username, db_password;
+    if (db=='central') {
+      db_url = "http://localhost:5984"; // replace by actual vodle could url later
+      db_username = "public";
+      db_password = "none";
+    } else if (db=="poll") {
+      // TODO!
+    } else if (db=="other") {
+      db_url = this.user_cache['db_url'];
+      db_username = this.user_cache['db_username'];
+      db_password = this.user_cache['db_password'];
+    }
+    if (db_url) {
+      console.log("trying to connect to "+db_url+" as "+db_username+" with password "+db_password);
+      this.remote_user_DB = new PouchDB(db_url, {auth:{username:db_username, password:db_password}});
+    }
+    // start synchronisation asynchronously:
+    this.start_user_sync();
+    // don't wait (might take too long) but meanwhile fetch all current local versions of synced docs:
     let pw = this.user_cache['password'];
     this.local_synced_user_DB.allDocs({
       include_docs: true
@@ -131,7 +156,44 @@ export class DataService {
     for (let row of result.rows) {
       this.doc2user_cache(row.doc);
     }
-    this.page.pc_changed();
+    this.page.data_changed();
+  }
+
+  private start_user_sync() {
+    if (this.remote_user_DB) { 
+      this.local_synced_user_DB.sync(this.remote_user_DB, {
+//        live: true,
+//        retry: true,
+        include_docs: true
+      }).on('change', this.handle_user_db_change
+      ).on('paused', info => {
+        // replication was paused, usually because of a lost connection
+        console.log("pausing user data syncing: "+info);
+      }).on('active', info => {
+        // replication was resumed
+        console.log("resuming user data syncing: "+JSON.stringify(info));
+      }).on('denied', function (err) {
+        // a document failed to replicate (e.g. due to permissions)
+        console.log("ERROR: denied, "+err);
+      }).on('complete', function (info) {
+        // handle complete
+        console.log("completed user data syncing: "+JSON.stringify(info));
+      }).on('error', err => {
+        // totally unhandled error (shouldn't happen)
+        console.log("ERROR: "+err);
+      });
+      return true;
+    } else return false;
+  }
+  private handle_user_db_change(change) {
+    console.log("handle_user_db_change: "+JSON.stringify(change.doc));
+    if (change.deleted){
+      var key = change.doc['key'];
+      delete this.user_cache[key];
+    } else {
+      this.doc2user_cache(change.doc);
+    }
+    this.page.data_changed();
   }
 
   private fill_poll_cache(pid:string) {
@@ -182,7 +244,7 @@ export class DataService {
         console.log("WARNING: couldn't set "+key+" in local_synced_used_DB since email or password are missing!");
         return false;
       }
-      let enc_email = encrypt(email, pw), _id = enc_email+'/'+key, val = encrypt(value, pw);
+      let enc_email = encrypt_deterministically(email, pw), _id = enc_email+'/'+key, val = encrypt(value, pw);
       this.local_synced_user_DB.get(_id).then(doc => {
         doc.val = val;
   //        doc.dev = encrypt('TODO:device_ID', pw),
@@ -224,38 +286,8 @@ export class DataService {
     return true;
   }
 
-  private start_user_sync() {
-    if (this.remote_user_DB) { 
-      this.local_synced_user_DB.sync(this.remote_user_DB, {
-        live: true,
-        retry: true,
-        include_docs: true
-      }).on('change', this.handle_user_db_change
-      ).on('paused', info => {
-        // replication was paused, usually because of a lost connection
-        console.log("pausing user data syncing");
-      }).on('active', info => {
-        // replication was resumed
-        console.log("resuming user data syncing");
-      }).on('error', err => {
-        // totally unhandled error (shouldn't happen)
-        console.log("ERROR: "+err);
-      });
-      return true;
-    } else return false;
-  }
-
   private move_user_data(old_values) {
     // TODO!
-  }
-
-  private handle_user_db_change(change) {
-    if (change.deleted){
-      var key = change.doc['key'];
-      delete this.user_cache[key];
-    } else {
-      this.doc2user_cache(change.doc);
-    }    
   }
 
   private doc2user_cache(doc) {
