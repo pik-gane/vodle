@@ -51,7 +51,9 @@ export class SelectServerComponent implements OnInit {
 
   set_db() {
     let c = this.selectServerFormGroup.get('db');
-    if (c.valid) this.parent.set_db(c.value);
+    if (c.valid) {
+      this.parent.set_db(c.value);
+    }
   }
   set_db_from_pid() {
     let c = this.selectServerFormGroup.get('db_from_pid');

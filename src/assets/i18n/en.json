@@ -1,5 +1,5 @@
 {
-    "data-storage": "Data storage",
+    "data-storage": "Personal data",
     "daynames-sunday-to-saturday": "Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
     "db-url": "Database URL",
     "db-user": "Database username",
@@ -22,20 +22,21 @@
     "test": "Test",
 
     "select-server": {
-        "same-as-personal": "same as for my personal data",
-        "central": "vodle central default server",
-        "same-as-some-poll": "same as for one of my polls",
-        "same-as-other-poll": "same as for some other poll",
-        "other": "other",
-        "which-poll": "Which poll's server do you want to use for your personal data?",
-        "which-other-poll": "Which other poll's server do you want to use for this poll as well?",
-        "please-enter-couchdb": "Please enter the URL, username and password for any CouchDB database where you want your data to be stored:"
+        "same-as-personal": "like my personal data (see ‘Settings’)",
+        "central": "in the vodle cloud",
+        "same-as-some-poll": "like for one of my polls",
+        "same-as-other-poll": "like for some other poll",
+        "other": "in a certain CouchDB database",
+        "which-poll": "Which poll's data location do you want to use for your personal data?",
+        "which-other-poll": "Which other poll's data location do you want to use for this poll as well?",
+        "please-enter-couchdb": "Please enter the URL, username and password for that CouchDB database."
     },
     "settings": {
         "-page-title": "Settings",
-        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address, set a password, and select a server where vodle will store your encrypted data.",
+        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
         "email-placeholder": "Please specify the email address you want to use with vodle",
         "edit": "Edit",
+        "db-label": "Where shall vodle store your encrypted data?",
         "appearance": "Appearance"
     },
     "draftpoll": {
@@ -61,6 +62,7 @@
         "closing-type-month": "after one month",
         "closing-datetime-label": "Closing date and time",
         "advanced-settings": "Advanced settings",
+        "db-label": "Where shall vodle store the poll's encrypted data?",
         "option-name-label": "Option name",
         "target-name-label": "Target name",
         "option-name-placeholder": "A short name for this option",

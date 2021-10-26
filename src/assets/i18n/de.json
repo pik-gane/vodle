@@ -1,5 +1,5 @@
 {
-    "data-storage": "Datenhaltung",
+    "data-storage": "Persönliche Daten",
     "daynames-sunday-to-saturday": "Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag",
     "db-url": "Databank-URL",
     "db-user": "Databank-Nutzername",
@@ -22,20 +22,21 @@
     "test": "Testen",
 
     "select-server": {
-        "same-as-personal": "der selbe wie für meine persönlichen Daten",
-        "central": "vodle zentraler Standardserver",
-        "same-as-some-poll": "der selbe wie für eine meiner Abstimmungen",
-        "same-as-other-poll": "der selbe wie für eine andere Abstimmung",
-        "other": "ein anderer Server",
-        "which-poll": "Den Server von welcher Abstimmung möchtest Du auch für Deine persönlichen Daten verwenden?",
-        "which-other-poll": "Den Server von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
-        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password irgendeiner CouchDB-Datenbank ein, in der Du die Daten speichern möchtest:"
+        "same-as-personal": "wie für meine persönlichen Daten (siehe ‘Einstellungen’)",
+        "central": "in der vodle-Cloud",
+        "same-as-some-poll": "wie für eine meiner Abstimmungen",
+        "same-as-other-poll": "wie für eine andere Abstimmung",
+        "other": "in einer bestimmten CouchDB-Datenbank",
+        "which-poll": "Den Speicherort von welcher Abstimmung möchtest Du auch für Deine persönlichen Daten verwenden?",
+        "which-other-poll": "Den Speicherort von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
+        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password der CouchDB-Datenbank ein:"
     },
     "settings": {
         "-page-title": "Einstellungen",
-        "data-storage-msg": "Um Deine Daten speichern und darauf sicher von verschiedenen Geräten zugreifen zu können, gibt bitte eine Emailadresse an, lege ein Passwort fest, und wähle einen Server aus, wo vodle Deine Daten verschlüsselt ablegen soll.",
+        "data-storage-msg": "Um Deine Daten speichern und darauf sicher von verschiedenen Geräten zugreifen zu können, gibt bitte eine Emailadresse an und lege ein Passwort fest.",
         "email-placeholder": "Bitte gib die Emailadresse an, die Du für vodle verwenden möchtest.",
         "edit": "Ändern",
+        "db-label": "Wo soll vodle Deine Daten verschlüsselt ablegen?",
         "appearance": "Aussehen"
     },
     "draftpoll": {
@@ -61,6 +62,7 @@
         "closing-type-month": "nach einem Monat",
         "closing-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung schließt",
         "advanced-settings": "Erweiterte Einstellungen",
+        "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
         "option-name-label": "Name der Option",
         "target-name-label": "Name des Ziels",
         "option-name-placeholder": "Ein kurzer Name für diese Option",

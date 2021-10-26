@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ViewChildren, QueryList, HostListener } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 
@@ -96,14 +96,11 @@ export class DraftpollPage implements OnInit {
   
   now() { return new Date(); }
 
-  ionViewDidLoad() {
+  ionViewDidEnter() {
     this.ionSelects.map((select) => select.value = select.value);
-  }
-  
-  ionViewWillEnter() {
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
-
+  
   test_url(url: string) {
     if (!url.startsWith("http")) url = "http://" + url; // TODO: improve this logic
     window.open(url,'_blank');

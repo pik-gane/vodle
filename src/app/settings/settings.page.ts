@@ -42,7 +42,7 @@ export class SettingsPage implements OnInit {
   editing_email: Boolean;
   editing_password: Boolean;
   showing_password: Boolean;
-  showing_db_password: Boolean;
+  advanced_expanded: Boolean;
 
   constructor(
     public formBuilder: FormBuilder,
@@ -54,7 +54,7 @@ export class SettingsPage implements OnInit {
     this.editing_email = false;
     this.editing_password = false;
     this.showing_password = false;
-    this.showing_db_password = false;
+    this.advanced_expanded = false;
     this.formGroup = this.formBuilder.group({
       email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
       pw: this.formBuilder.group({
@@ -72,8 +72,8 @@ export class SettingsPage implements OnInit {
     });
   }
 
-  ionViewDidLoad() {
-    this.select_server.parent = this; // FIXME!
+  ionViewDidEnter() {
+    this.select_server.parent = this;
     this.fill_form();
     this.ionSelects.map((select) => select.value = select.value);
   }
