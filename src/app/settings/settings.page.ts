@@ -75,7 +75,7 @@ export class SettingsPage implements OnInit {
   ionViewDidEnter() {
     this.select_server.parent = this;
     this.fill_form();
-    this.ionSelects.map((select) => select.value = select.value);
+//    this.ionSelects.map((select) => select.value = select.value);
   }
 
   data_changed() {
@@ -85,7 +85,7 @@ export class SettingsPage implements OnInit {
   }
 
   fill_form() {
-    // fill form fields with values from pc or defaults
+    // fill form fields with values from data or defaults
     this.formGroup.setValue({
       email: this.G.settings.email||'',
       pw: {

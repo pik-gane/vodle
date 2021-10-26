@@ -51,7 +51,7 @@ export class SelectServerComponent implements OnInit {
 
   set_db() {
     let c = this.selectServerFormGroup.get('db');
-    if (c.valid) {
+    if (c.valid && (c.value!='') && c.value) {
       this.parent.set_db(c.value);
     }
   }

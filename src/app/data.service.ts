@@ -125,9 +125,10 @@ export class DataService {
       }
     }
     // connect to remote_user_DB:
-    var db = this.user_cache['db'], db_url, db_username, db_password;
+    let db = this.user_cache['db'];
+    var db_url, db_username, db_password;
     if (db=='central') {
-      db_url = "http://localhost:5984"; // replace by actual vodle could url later
+      db_url = "http://localhost:5984/vodle_cloud"; // replace by actual vodle could url later
       db_username = "public";
       db_password = "none";
     } else if (db=="poll") {
@@ -162,20 +163,20 @@ export class DataService {
   private start_user_sync() {
     if (this.remote_user_DB) { 
       this.local_synced_user_DB.sync(this.remote_user_DB, {
-//        live: true,
-//        retry: true,
+        live: true,
+        retry: true,
         include_docs: true
-      }).on('change', this.handle_user_db_change
+      }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', info => {
         // replication was paused, usually because of a lost connection
         console.log("pausing user data syncing: "+info);
       }).on('active', info => {
         // replication was resumed
         console.log("resuming user data syncing: "+JSON.stringify(info));
-      }).on('denied', function (err) {
+      }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
         console.log("ERROR: denied, "+err);
-      }).on('complete', function (info) {
+      }).on('complete', info => {
         // handle complete
         console.log("completed user data syncing: "+JSON.stringify(info));
       }).on('error', err => {
@@ -187,13 +188,19 @@ export class DataService {
   }
   private handle_user_db_change(change) {
     console.log("handle_user_db_change: "+JSON.stringify(change.doc));
+    let local_changes = false;
     if (change.deleted){
       var key = change.doc['key'];
       delete this.user_cache[key];
-    } else {
-      this.doc2user_cache(change.doc);
+      local_changes = true;
+    } else if (change.direction=='pull') {
+      console.log(JSON.stringify(change));
+      for (let doc of change.change.docs) {
+        console.log(JSON.stringify(doc));
+        local_changes = this.doc2user_cache(doc);
+      }
     }
-    this.page.data_changed();
+    if (local_changes) this.page.data_changed();
   }
 
   private fill_poll_cache(pid:string) {
@@ -231,8 +238,11 @@ export class DataService {
     if (local_only_keys.includes(key)) {
       // simply use key as doc id and don't encrypt:
       this.local_only_user_DB.get(key).then(doc => {
-        doc.val = value;
-        this.local_only_user_DB.put(doc);
+        if (doc.val != value) {
+          doc.val = value;
+          this.local_only_user_DB.put(doc);
+          console.log("local only user DB put "+key+": "+value)
+        }
       }).catch(err => {
         doc = {_id:key, val:value};
         this.local_only_user_DB.put(doc);  
@@ -246,10 +256,13 @@ export class DataService {
       }
       let enc_email = encrypt_deterministically(email, pw), _id = enc_email+'/'+key, val = encrypt(value, pw);
       this.local_synced_user_DB.get(_id).then(doc => {
-        doc.val = val;
+        if (decrypt(doc.val, pw) != value) {
+          doc.val = val;
   //        doc.dev = encrypt('TODO:device_ID', pw),
   //        doc.ts = encrypt(new Date(), pw),
-        this.local_synced_user_DB.put(doc);
+          this.local_synced_user_DB.put(doc);
+          console.log("local synced user DB put "+key+": "+value)
+        }
       }).catch(err => {
         doc = {
           '_id': _id, 
@@ -290,14 +303,28 @@ export class DataService {
     // TODO!
   }
 
-  private doc2user_cache(doc) {
-    var key = doc['key'], value = decrypt(doc['val'], this.user_cache['password']);
-    this.user_cache[key] = value;
-    console.log("doc2user_cache "+key+": "+value);
-    if (key.startsWith('pid/') && key.endsWith('/pid')) {
-      let pid = value;
-      this.pids.add(pid);
+  private doc2user_cache(doc): boolean {
+    // returns whether the value actually changed.
+    let value_changed = false;
+    var key = doc['key'];
+    if (!local_only_keys.includes(key)) {
+      var cyphertext = doc['val'];
+        if (cyphertext) {
+        var value = decrypt(cyphertext, this.user_cache['password']);
+        if (this.user_cache[key] != value) {
+          this.user_cache[key] = value;
+          value_changed = true;
+        }
+        console.log("doc2user_cache "+key+": "+value);
+        if (key.startsWith('pid/') && key.endsWith('/pid')) {
+          let pid = value;
+          this.pids.add(pid);
+        }
+      } else {
+        console.log("WARNING: corrupt doc "+JSON.stringify(doc));
+      }
     }
+    return value_changed;
   }
   private doc2poll_cache(pid, doc) {
     var key = doc['key'], value = decrypt(doc['val'], this.user_cache["pid."+pid+'.password']);
