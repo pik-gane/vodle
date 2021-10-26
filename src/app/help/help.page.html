@@ -15,54 +15,40 @@
 
     <ion-item button (click)="e_short = !e_short" no-padding color="primary">
       <ion-icon [name]="e_short?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
-      <ion-label><b>How to vote – short version</b></ion-label>
+      <ion-label><b>{{'help.h1'|translate}}</b></ion-label>
     </ion-item>
     <ng-template [ngIf]="e_short">
       <ion-item>
         <ion-label text-wrap>
-          Select a poll from&nbsp;<a routerLink="/mypolls">My polls</a><!-- or open a poll invitation that was sent to you-->.
+          <span [innerHtml]="'help.p11a'|translate"></span>&nbsp;<a routerLink="/mypolls"><span [innerHtml]="'help.p11b'|translate"></span></a>&nbsp;<span [innerHtml]="'help.p11c'|translate"></span>
         </ion-label>
       </ion-item>
       <ion-item>
         <ion-label text-wrap>
-          <b>Rate</b> the options by using the sliders. 
-          In <i>vodle</i>, your rating of an option is called your “<b>willingness to approve</b>” that option.
+          <span [innerHtml]="'help.p12a'|translate"></span>
           <ul>
-            <li>
-              Give your <b>favourite</b> option a rating of <b>100</b> (drag the slider completely to the right). 
-              This means you approve this option for sure. 
-            </li>
-            <li>
-              Give every option that you find <b>better than average</b> a rating <b>larger than zero</b> (slider gets blue or green).
-              This means you are willing to approve this option under certain conditions. 
-            </li>
-            <li>
-              Leave options that you find <b>worse than average</b> at <b>zero</b> (slider is a red dot).
-              This means you don't approve these options.
-            </li>
+            <li [innerHtml]="'help.p12b'|translate"></li>
+            <li [innerHtml]="'help.p12c'|translate"></li>
+            <li [innerHtml]="'help.p12d'|translate"></li>
           </ul>
         </ion-label>
       </ion-item>
       <ion-item>
         <ion-label text-wrap>
-          <b>Adjust</b> your “willingness to approve” ratings as the poll develops:
+          <span [innerHtml]="'help.p13a'|translate"></span>
           <ul>
-            <li>
-              The <b>light bars</b> to the right show what options currently get much <b>approval</b>.
-              If you think an option is an acceptable <b>compromise</b> or is even a potential <b>consensus</b>, 
-              then <b>increase your “willingness to approve” rating</b> until the slider enters the bar and gets green.   
-            </li>
+            <li [innerHtml]="'help.p13b'|translate"></li>
+            <li [innerHtml]="'help.p13c'|translate"></li>
           </ul>
         </ion-label>
       </ion-item>
-      <ion-item>
+<!--      <ion-item>
         <ion-label text-wrap>
           See <b>more information</b> on a poll or option by pressing the <b>dropdown buttons</b> on the right.
         </ion-label>
-      </ion-item>
+      </ion-item>-->
       <ion-item>
-        <ion-label text-wrap>
-          Options are <b>listed by descending approval</b>, the most approved option is always on top. 
+        <ion-label text-wrap [innerHtml]="'help.p14'|translate">
           <!--If you want to <b>freeze</b> the current sorting of options on your screen, 
           use the <b>refresh button</b> in the top-right corner to disable automatic resorting.
           If that button shows an <b>exclamation mark</b>, the ordering needs a refresh.-->
@@ -70,15 +56,13 @@
       </ion-item>
       <ion-item>
         <ion-label text-wrap>
-          <b>The pie chart to the left determine the result of the poll when it closes:</b>
+          <span [innerHtml]="'help.p15a'|translate"></span>
           <ul>
-            <li>
-              In a poll for selecting a <i>single option</i>&nbsp;<ion-icon name="trophy"></ion-icon>
-              the pie pieces show how probable it is that each option wins.
+            <li><!--TODO: make icons align better vertically:-->
+              <span [innerHtml]="'help.p15b1'|translate"></span>&nbsp;<ion-icon name="trophy"></ion-icon>&nbsp;<span [innerHtml]="'help.p15b2'|translate"></span> 
             </li>
             <li>
-              In a poll for allocating <i>shares</i> of a budget <ion-icon name="cut"></ion-icon>
-              the pie pieces show the shares that will be allocated to each possible target.
+              <span [innerHtml]="'help.p15c1'|translate"></span>&nbsp;<ion-icon name="cut"></ion-icon>&nbsp;<span [innerHtml]="'help.p15c2'|translate"></span> 
             </li>
           </ul>
         </ion-label>

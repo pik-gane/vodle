@@ -50,7 +50,7 @@
         "desc-label": "Beschreibung",
         "desc-placeholder": "Etwas mehr Informationen zu dieser Abstimmung (optional)",
         "url-label": "„mehr lesen“-Link",
-        "url-placeholder": "Eine Webseite mit mehr Details, wenn die Wähler:in “mehr lesen” anklickt (optional)",
+        "url-placeholder": "Eine Webseite mit mehr Details, wenn die Wähler:in „mehr lesen“ anklickt (optional)",
         "closing-type-label": "Die Abstimmung schließt...",
         "closing-type-custom": "an einem bestimmten Datum und Uhrzeit",
         "closing-type-midnight": "um Mitternacht",
@@ -96,5 +96,24 @@
         "poll-closing-datetime-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
         "option-name-required": "Ein Name wird benötigt.",
         "option-url-valid": "Bitte gib eine gültige URL ein."
+    },
+    "help": {
+        "h1": "Wie stimmt man ab? – kurze Version",
+        "p11a": "Wähle eine Abstimmung aus", 
+        "p11b": "Meine Abstimmungen",
+        "p11c": "oder klicke auf einen Abstimmungs-Link, der Dir geschickt wurde.",
+        "p12a": "Benutze die Schieberegler, um die Optionen (oder Ziele) zu <b>bewerten</b>. <i>Vodle</i> interpretiert Deine Bewertung einer Option als Deine „<b>Bereitschaft</b>“, dieser Option „<b>zuzustimmen</b>“.",
+        "p12b": "Bewerte Deine <b>Favouriten-</b>Option mit <b>100</b> (zieh den Regler ganz nach rechts). Damit stimmst Du dieser Option auf jeden Fall zu.",
+        "p12c": "Gib allen <b>überdurchschnittlichen</b> Optionen eine Bewertung <b>größer als Null</b> (der Regler wird blau oder grün). Das bedeutet, dass Du diesen Optionen unter Umständen zustimmen würdest.",
+        "p12d": "Lass alle <b>unterdurchschnittlichen</b> Optionen auf Null (Regler ist ein roter Punkt). Damit stimmst Du diesen Optionen auf keinen Fall zu.",
+        "p13a": "Solange die Abstimmung läuft, passe Deine „Zustimm-Bereitschaft“ an die Lage an:",
+        "p13b": "Die <b>hellen Balken</b> rechts zeigen, welche Optionen gerade viel <b>Zustimmung</b> bekommen.",
+        "p13c": "Wenn Du denkst, eine Option könnte ein akzeptabler <b>Kompromiss</b> oder sogar ein möglicher <b>Konsens</b> sein, dann <b>erhöhe Deine „Zustimm-Bereitschaft“</b> bis der Regler in den Balken ragt und grün wird.",
+        "p14": "Die Optionen sind <b>nach absteigender Zustimmung geordnet</b>, die Option mit der meisten Zustimmung ist immer oben.",
+        "p15a": "<b>Die Tortendiagramme links bestimmen das Ergebnis der Abstimmung, sobald sie endet:</b>",
+        "p15b1": "Bei Abstimmungen, in der eine", 
+        "p15b2": "<i>einzelne Option</i> gewählt wird, zeigt jedes Tortenstück, wie wahrscheinlich es ist, dass diese Option gewinnt.",
+        "p15c1": "Bei Abstimmungen, in der ein",
+        "p15c2": "<i>Budget aufgeteilt</i> wird, zeigen die Tortenstücke die Budget-Anteile, die den möglichen Zielen zugewiesen werden."
     }
 }

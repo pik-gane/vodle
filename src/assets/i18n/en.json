@@ -96,5 +96,24 @@
         "poll-closing-datetime-future": "This date and time is in the past.",
         "option-name-required": "A name is required.",
         "option-url-valid": "Please enter a valid URL."
+    },
+    "help": {
+        "h1": "How to vote – short version",
+        "p11a": "Select a poll from", 
+        "p11b": "My polls",
+        "p11c": "or click on a poll link that was sent to you.",
+        "p12a": "<b>Rate</b> the options (or targets) by using the sliders. <i>Vodle</i> interprets your rating of an option as your “<b>willingness to approve</b>” that option.",
+        "p12b": "Give your <b>favourite</b> option a rating of <b>100</b> (drag the slider completely to the right). This way you approve that option for sure.",
+        "p12c": "Give every option that you find <b>better than average</b> a rating <b>larger than zero</b> (slider gets blue or green). This means you are willing to approve this option under certain conditions.",
+        "p12d": "Leave options that you find <b>worse than average</b> at <b>zero</b> (slider is a red dot). This means you won't approve these options no matter what.",
+        "p13a": "As long as the poll is running, <b>adjust</b> your “willingness to approve” ratings to the situation:",
+        "p13b": "The <b>light bars</b> to the right show what options currently get much <b>approval</b>.",
+        "p13c": "If you think an option is an acceptable <b>compromise</b> or is even a potential <b>consensus</b>, then <b>increase your “willingness to approve” rating</b> until the slider enters the bar and gets green.",
+        "p14": "Options are <b>listed by descending approval</b>, the most approved option is always on top.",
+        "p15a": "<b>The pie charts to the left determine the result of the poll when it closes:</b>",
+        "p15b1": "In a poll for selecting a", 
+        "p15b2": "<i>single option</i>, the pie pieces show how probable it is that each option wins.",
+        "p15c1": "In a poll for allocating",
+        "p15c2": "<i>shares</i> of a budget, the pie pieces show the shares that will be allocated to each possible target."
     }
 }

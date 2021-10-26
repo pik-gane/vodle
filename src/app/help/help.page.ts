@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-help',
@@ -155,7 +156,7 @@ so C wins in that case, even though A has a larger total rating (but is not appr
 */
 ];
 
-constructor() { }
+  constructor(public translate: TranslateService) { }
 
   ngOnInit() {
   }
