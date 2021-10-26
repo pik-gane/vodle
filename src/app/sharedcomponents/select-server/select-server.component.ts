@@ -48,7 +48,7 @@ export class SelectServerComponent implements OnInit {
   blur() {
     // TODO: remove focus from any input element and optionally set it on parent component's next element
   }
-
+  
   set_db() {
     let c = this.selectServerFormGroup.get('db');
     if (c.valid && (c.value!='') && c.value) {
