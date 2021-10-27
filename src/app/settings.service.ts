@@ -6,9 +6,10 @@ import { GlobalService } from './global.service';
 })
 export class SettingsService {
 
-  public G: GlobalService;
+  private G: GlobalService;
 
   constructor() { }
+  public setG(G:GlobalService) { this.G = G; }
 
   public get email(): string { return this.G.D.getu('email'); }
   public set email(value: string) { this.G.D.setu('email', value); }

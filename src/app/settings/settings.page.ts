@@ -50,7 +50,7 @@ export class SettingsPage implements OnInit {
     public G: GlobalService) { }
 
   ngOnInit() {
-    this.G.D.page = this;
+    this.G.D.setpage(this);
     this.editing_email = false;
     this.editing_password = false;
     this.showing_password = false;
@@ -71,7 +71,7 @@ export class SettingsPage implements OnInit {
       theme: new FormControl('', Validators.required),
     });
   }
-
+  
   ionViewDidEnter() {
     this.select_server.parent = this;
     this.fill_form();
@@ -87,20 +87,20 @@ export class SettingsPage implements OnInit {
   fill_form() {
     // fill form fields with values from data or defaults
     this.formGroup.setValue({
-      email: this.G.settings.email||'',
+      email: this.G.S.email||'',
       pw: {
-        password: this.G.settings.password||'',
-        confirm_password: this.G.settings.password||'',
+        password: this.G.S.password||'',
+        confirm_password: this.G.S.password||'',
       },
-      language: this.G.settings.language||'en',
-      theme: this.G.settings.theme||'light',
+      language: this.G.S.language||'en',
+      theme: this.G.S.theme||'light',
     });
     this.select_server.selectServerFormGroup.setValue({
-      db: this.G.settings.db||'',
-      db_from_pid: this.G.settings.db_from_pid||'',
-      db_url: this.G.settings.db_url||'',
-      db_username: this.G.settings.db_username||'',
-      db_password: this.G.settings.db_password||'',
+      db: this.G.S.db||'',
+      db_from_pid: this.G.S.db_from_pid||'',
+      db_url: this.G.S.db_url||'',
+      db_username: this.G.S.db_username||'',
+      db_password: this.G.S.db_password||'',
     });
   }
 
@@ -121,34 +121,34 @@ export class SettingsPage implements OnInit {
   
   set_email() {
     let c = this.formGroup.get('email');
-    if (c.valid) this.G.settings.email = c.value; // will trigger data move
+    if (c.valid) this.G.S.email = c.value; // will trigger data move
   }
   set_password() {
     let fg = this.formGroup.get('pw');
-    if (fg.valid) this.G.settings.password = fg.get('password').value; // will trigger data move
+    if (fg.valid) this.G.S.password = fg.get('password').value; // will trigger data move
   }
   set_db(value: string) {
-    this.G.settings.db = value;
+    this.G.S.db = value;
   }
   set_db_from_pid(value: string) {
-    this.G.settings.db_from_pid = value;
+    this.G.S.db_from_pid = value;
   }
   set_db_url(value: string) {
-    this.G.settings.db_url = value;
+    this.G.S.db_url = value;
   }
   set_db_username(value: string) {
-    this.G.settings.db_username = value;
+    this.G.S.db_username = value;
   }
   set_db_password(value: string) {
-    this.G.settings.db_password = value;
+    this.G.S.db_password = value;
   }
   set_language() {
     let c = this.formGroup.get('language');
-    if (c.valid) this.G.settings.language = c.value;
+    if (c.valid) this.G.S.language = c.value;
   }
   set_theme() {
     let c = this.formGroup.get('theme');
-    if (c.valid) this.G.settings.theme = c.value;
+    if (c.valid) this.G.S.theme = c.value;
   }
 
 }

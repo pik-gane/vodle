@@ -60,7 +60,7 @@ export class DraftpollPage implements OnInit {
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
       poll_title: new FormControl(p.title, Validators.required),
-      poll_descr: new FormControl(p.desc),
+      poll_desc: new FormControl(p.desc),
       poll_url: new FormControl(p.uri, Validators.pattern(this.g.urlRegex)),
       poll_closing_datetime_type: new FormControl(p.due_type, Validators.required),
       poll_closing_datetime: new FormControl(p.due, is_in_future),

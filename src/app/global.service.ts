@@ -6,6 +6,7 @@ import { Storage } from '@ionic/storage-angular';
 
 import { DataService } from './data.service';
 import { SettingsService } from './settings.service';
+import { PollService } from './poll.service';
 
 @Injectable({
   providedIn: 'root'
@@ -41,10 +42,13 @@ export class GlobalService {
       public http: HttpClient, 
       public storage: Storage,
       public D: DataService,
-      public settings: SettingsService,
+      public P: PollService,
+      public S: SettingsService,
       ) {
     // make this service available to the other services:
-    D.G = settings.G = this;
+    D.setG(this); 
+    P.setG(this); 
+    S.setG(this);
 
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;

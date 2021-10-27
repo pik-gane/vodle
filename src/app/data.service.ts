@@ -33,8 +33,8 @@ function decrypt(value:string, password:string) {
 })
 export class DataService {
 
-  public G: GlobalService;
-  public page; // current page, used for notifying of changes via its pc_changed() method
+  private G: GlobalService;
+  private page; // current page, used for notifying of changes via its pc_changed() method
 
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
@@ -61,6 +61,8 @@ export class DataService {
       this.fill_poll_cache(pid);
     }
   }
+  public setG(G:GlobalService) { this.G = G; }
+  public setpage(page) { this.page = page; }
 
   public getu(key:string):string {
     // get user data item
@@ -316,7 +318,7 @@ export class DataService {
           value_changed = true;
         }
         console.log("doc2user_cache "+key+": "+value);
-        if (key.startsWith('pid/') && key.endsWith('/pid')) {
+        if (key.startsWith('p/') && key.endsWith('/pid')) {
           let pid = value;
           this.pids.add(pid);
         }
@@ -327,7 +329,7 @@ export class DataService {
     return value_changed;
   }
   private doc2poll_cache(pid, doc) {
-    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["pid."+pid+'.password']);
+    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["p/"+pid+'/password']);
     this.poll_caches[pid][key] = value;
     console.log("doc2poll_cache "+pid+"/"+key+": "+value);
   }
