@@ -32,6 +32,8 @@ export class SelectServerComponent implements OnInit {
     });
   }
 
+  public setParent(parent) { this.parent = parent; }
+  
   validation_messages = {
     'db_url': [
       { type: 'required', message: 'validation.db-url-required' },

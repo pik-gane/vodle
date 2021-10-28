@@ -6,6 +6,7 @@ import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';
 import { AlertController } from '@ionic/angular'; 
 
 import { GlobalService, Poll, Option } from "../global.service";
+import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 
 export function is_in_future(control: AbstractControl): ValidationErrors | null {
   if (control && control.value) {
@@ -38,6 +39,7 @@ export class DraftpollPage implements OnInit {
   n_options: number;
 
   @ViewChild(IonSelect) type_select: IonSelect;
+  @ViewChild(SelectServerComponent) select_server: SelectServerComponent;
   @ViewChild(IonToggle) detailstoggle: IonToggle;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
@@ -45,25 +47,26 @@ export class DraftpollPage implements OnInit {
     public formBuilder: FormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
-    public g: GlobalService,
+    public G: GlobalService,
   ) { }
   
   ngOnInit() {
-    let p = this.g.openpoll; 
+    this.G.D.setpage(this);
+    let p = this.G.openpoll; 
     if (!p) {
-      p = this.p = this.g.openpoll = new Poll(this.g, {title:'', desc:'', uri:''});
-      this.g.polls[p.pid] = p;
+      p = this.p = this.G.openpoll = new Poll(this.G, {title:'', desc:'', uri:''});
+      this.G.polls[p.pid] = p;
     } else {
-      p = this.p = this.g.openpoll;
+      p = this.p = this.G.openpoll;
     }
     console.log(p);
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
       poll_title: new FormControl(p.title, Validators.required),
       poll_desc: new FormControl(p.desc),
-      poll_url: new FormControl(p.uri, Validators.pattern(this.g.urlRegex)),
-      poll_closing_datetime_type: new FormControl(p.due_type, Validators.required),
-      poll_closing_datetime: new FormControl(p.due, is_in_future),
+      poll_url: new FormControl(p.uri, Validators.pattern(this.G.urlRegex)),
+      poll_due_type: new FormControl(p.due_type, Validators.required),
+      poll_due: new FormControl(p.due, is_in_future),
     });
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
@@ -82,21 +85,26 @@ export class DraftpollPage implements OnInit {
     }
   }
 
+  data_changed() {
+    // called whenever data stored in database has changed
+    console.log("data changed while on settings page");
+    // TODO!
+  }
+
 //  @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
     // this seems to be called properly. TODO: perform cleanup! maybe move this to central app place?
     this.ionViewWillLeave();
-    this.p.title="Hoho!";
 //    return false;
   }
   ionViewWillLeave() {
-    console.log("!");
-    window.alert("!");
+    // this seems to be called properly. TODO: perform cleanup! maybe move this to central app place?
   }
   
   now() { return new Date(); }
 
   ionViewDidEnter() {
+    this.select_server.setParent(this);
     this.ionSelects.map((select) => select.value = select.value);
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
@@ -167,7 +175,7 @@ export class DraftpollPage implements OnInit {
     this.oids.push(o.oid);
     this.formGroup.addControl('option_name'+i, new FormControl(o.name, Validators.required));
     this.formGroup.addControl('option_descr'+i, new FormControl(o.desc));
-    this.formGroup.addControl('option_url'+i, new FormControl(o.uri, Validators.pattern(this.g.urlRegex)));
+    this.formGroup.addControl('option_url'+i, new FormControl(o.uri, Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
     this.n_options++;
   }
@@ -270,4 +278,23 @@ export class DraftpollPage implements OnInit {
     }
     reader.readAsText(file);
   }
+
+  // data change handlers:
+
+  set_db(value: string) {
+    //this.G.S.db = value;
+  }
+  set_db_from_pid(value: string) {
+    //this.G.S.db_from_pid = value;
+  }
+  set_db_url(value: string) {
+    //this.G.S.db_url = value;
+  }
+  set_db_username(value: string) {
+    //this.G.S.db_username = value;
+  }
+  set_db_password(value: string) {
+    //this.G.S.db_password = value;
+  }
+
 }

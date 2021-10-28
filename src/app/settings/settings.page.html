@@ -100,7 +100,7 @@
     <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
     <ion-label><small>&nbsp;&nbsp;&nbsp;{{'draftpoll.advanced-settings'|translate}}</small></ion-label>
   </ion-item>
-  <app-select-server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'"></app-select-server>
+  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'"></app-select-server>
 
   <form [formGroup]="formGroup">
     <ion-item color="primary">
