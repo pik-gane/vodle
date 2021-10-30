@@ -20,7 +20,9 @@
       <ion-button (click)="delegate()" shape="round" fill="solid" color="primary" size="large">
         Delegate&nbsp;<ion-icon name="people-outline"></ion-icon>
       </ion-button>
-<!--      <ion-button routerLink="/help" fill="clear">
+      <!--TODO: if delegation is on, show a menu instead with: revoke delegation, change delegate-->
+<!-- If we want a help button: 
+      <ion-button routerLink="/help" fill="clear">
         <ion-icon name="help" slot="icon-only"></ion-icon>
       </ion-button>-->
     </ion-buttons>
@@ -70,16 +72,25 @@
           </ion-row>
         </ion-grid>
       </ion-item>
+      <ion-item color="light">
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;padding-bottom:6px;">
+            <ion-col class="ion-no-margin ion-padding-right">
+              <small>3 voters have delegated some of their ratings to you and will therefore use your ratings.</small>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
       <ion-item color="warning"> <!--light-->
         <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;padding-bottom:5px;">
+          <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;">
             <ion-col class="ion-no-margin ion-padding-right">
 <!--              <small>Please rate these options or add more options:</small>-->
-              <small>Some ratings are controlled by&nbsp;your&nbsp;delegate</small><br/>
-              dcd@posteo.de.
+              <small>Some of your ratings are controlled&nbsp;by&nbsp;your&nbsp;delegate</small><br/>
+              dcd@posteo.de&nbsp;<ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;"><ion-icon name="trash-outline"></ion-icon></ion-button>
             </ion-col>
             <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right">
-              <small>You can select here which ratings&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>control yourself&nbsp;&#8595;<!--<ion-icon name="arrow-down-outline"></ion-icon>-->
+              <small>You can select here which ratings&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>control yourself&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon><!--&#8595;-->
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -212,7 +223,7 @@
                   <i>{{p.options[oidsorted[i]].desc}}</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].uri!=null?'inline':'none'">
-                  <small>&nbsp;(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
+                  <small>&nbsp;&nbsp;(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
                 </span>
 <!--                <ng-template [ngIf]="p.options[oidsorted[i]].uri!=null">
                   <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].uri)" fill="clear" item-end no-padding padding-left no-margin>
