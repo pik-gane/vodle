@@ -20,8 +20,8 @@
       </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
     <ion-buttons slot="end">
-      <ion-button (click)="pauseRefresh()" fill="clear" color="primary">
-        Delegate&nbsp;<ion-icon name="people-outline" size="large"></ion-icon>
+      <ion-button (click)="delegate()" shape="round" fill="solid" color="primary" size="large">
+        Delegate&nbsp;<ion-icon name="people-outline"></ion-icon>
       </ion-button>
       <ion-button routerLink="/help" fill="clear">
         <ion-icon name="help" slot="icon-only"></ion-icon>
@@ -48,14 +48,28 @@
 </ion-header>
 
 <ion-content>
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button size="small" (click)="addOption()" fill="clear" color="primary">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
   <ng-template [ngIf]="p!=null">
     <ion-list lines="full">
-      <ion-item>
+      <ion-item color="primary">
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
+              <h3><b><i>{{p.title}}</i></b></h3>
+              <i>{{p.desc}}</i>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
+      <ion-item color="light">
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin">
-              <h3><b><i>{{p.title}}</i></b></h3>
-              <i>{{p.desc}}</i>
+              <small>Please rate these options or add more options:</small>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -178,8 +192,9 @@
 <!--                <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" no-padding>
                   <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
                 </ion-button>-->
+                <span [style.display]="(p.options[oidsorted[i]].desc!=null||p.options[oidsorted[i]].uri!=null)?'inline':'none'"><br/></span>
                 <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
-                  <br/><i>{{p.options[oidsorted[i]].desc}}</i>
+                  <i>{{p.options[oidsorted[i]].desc}}</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].uri!=null?'inline':'none'">
                   <small>&nbsp;(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
