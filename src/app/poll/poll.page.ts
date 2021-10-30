@@ -1,5 +1,5 @@
-import { Component, OnInit, NgZone } from '@angular/core';
-import { NavController, LoadingController } from '@ionic/angular';
+import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
+import { NavController, LoadingController, IonContent } from '@ionic/angular';
 import { GlobalService, Poll } from "../global.service";
 
 @Component({
@@ -8,6 +8,8 @@ import { GlobalService, Poll } from "../global.service";
   styleUrls: ['./poll.page.scss'],
 })
 export class PollPage implements OnInit {
+
+  @ViewChild(IonContent, { static: false }) content: IonContent;
 
   public Array = Array;
 
@@ -36,6 +38,8 @@ export class PollPage implements OnInit {
   public refresh_paused = false;
   public needs_refresh = false;
   private update_interval = 2e3; //20e3; // ms to wait before getting next update
+
+  public scroll_position = 0;
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
@@ -80,6 +84,26 @@ export class PollPage implements OnInit {
     if (this.submit_triggered) {
       this.doSubmit();
     }
+  }
+  async onScroll(ev) {
+    const elem = this.content; //  document.getElementById("ion-content-id");
+  
+    // the ion content has its own associated scrollElement
+    const scrollElement = await ( elem as any).getScrollElement();
+  
+    const scrollPosition = ev.detail.scrollTop;
+    const totalContentHeight = scrollElement.scrollHeight;
+    const viewportHeight = scrollElement.offsetHeight;
+  
+    this.scroll_position = scrollPosition / (totalContentHeight - viewportHeight);
+    
+  }
+  scrollToBottom() {
+    this.content.scrollToBottom(1000);
+  }
+
+  scrollToTop() {
+    this.content.scrollToTop(1000);
   }
 
   showStats() { // update pies and bars, but not order!
