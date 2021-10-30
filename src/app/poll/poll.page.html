@@ -1,3 +1,14 @@
+<!--
+  delegation: 
+  <ion-icon name="people-outline"></ion-icon>
+  <ion-icon name="arrow-redo-outline"></ion-icon>
+  <ion-icon name="navigate-outline"></ion-icon>
+  <ion-icon name="open-outline"></ion-icon>
+  control self:
+  <ion-icon name="hand-right-outline"></ion-icon>
+  <ion-icon name="pencil-outline"></ion-icon>
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -5,12 +16,19 @@
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
       <ion-title>
-        <ng-template [ngIf]="g.username=='glinda'">
-          <ion-button (click)="closePoll()" no-padding no-margin>close</ion-button>
-        </ng-template>
-        {{p.title}}
+        Running poll – your ratings
       </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
+    <ion-buttons slot="end">
+      <ion-button (click)="pauseRefresh()" fill="clear" color="primary">
+        Delegate&nbsp;<ion-icon name="people-outline" size="large"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/help" fill="clear">
+        <ion-icon name="help" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
+<!--
     <ng-template [ngIf]="!refresh_paused">
       <ion-button slot="end" (click)="pauseRefresh()" fill="clear" no-margin>
         <ion-icon name="refresh" size="large"></ion-icon>
@@ -25,7 +43,7 @@
       <ion-button slot="end" (click)="refreshOnce()" fill="clear" no-margin>
         <ion-icon src="/assets/icon/md-needsrefresh.svg" size="large"></ion-icon>
       </ion-button>
-    </ng-template>
+    </ng-template>-->
   </ion-toolbar>
 </ion-header>
 
@@ -33,18 +51,28 @@
   <ng-template [ngIf]="p!=null">
     <ion-list lines="full">
       <ion-item>
-        <ion-grid no-padding no-margin>
-          <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin>
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <h3><b><i>{{p.title}}</i></b></h3>
+              <i>{{p.desc}}</i>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
+<!--      <ion-item>
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin">
               <ng-template [ngIf]="expanded=='poll'">
                 <ng-template [ngIf]="p.uri!=null">
-                  <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" float-right no-padding padding-left no-margin>
+                  <ion-button (click)="g.showinbrowser(p.uri)" fill="clear" 
+                    class="ion-no-padding ion-no-margin ion-float-right ion-padding-left">
                     <ion-icon name="open" slot="icon-only"></ion-icon>
                   </ion-button>
                 </ng-template>
                 <h4>{{p.desc}}</h4>
                 <small><b><span style="color:#9abcbd">created by Jobst</span></b></small><br/>&nbsp;<br/>
-                <!--TODO: creator, personal priority, no. of abstentions-->
               </ng-template>
               <b>
                 <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
@@ -53,19 +81,19 @@
                 <small>It's a good idea to give one option 100, all better-than-average options something larger than 0,
                 and all worse-than-average options zero.<br/>&nbsp;
                 </small></span>
-                <!-- – poll closes {{p.due.toLocaleDateString('en-US', g.dateformatoptions)}}-->
               </b>
             </ion-col>
-            <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
-              <ion-button (click)="expand('poll')" float-right no-padding no-margin fill="clear">
+            <ion-col size="1" class="ion-no-padding ion-no-margin">
+              <ion-button (click)="expand('poll')" class="ion-float-right ion-no-padding ion-no-margin" 
+                  fill="clear">
                 <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
               </ion-button>
             </ion-col>
           </ion-row>
           <app-expandable [expanded]="expanded=='poll'">
-            <ion-row no-padding no-margin>
-              <ion-col no-padding no-margin>
-                <ion-button float-right no-padding routerLink="/pollstats">
+            <ion-row class="ion-no-padding ion-no-margin">
+              <ion-col class="ion-no-padding ion-no-margin">
+                <ion-button class="ion-float-right ion-no-padding" routerLink="/pollstats">
                   <ion-icon name="pulse" size="small"></ion-icon>
                 </ion-button>
                 <b>
@@ -85,33 +113,40 @@
             </ion-row>
           </app-expandable>
         </ion-grid>
-      </ion-item>
+      </ion-item>-->
   
       <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index"><!-- Array(p.oids.length).fill(0).map(i => i) | sortoptions: {opos: opos}-->
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none"/>
           <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
         </svg>
-        <ion-grid no-padding no-margin>
-          <ion-row no-padding padding-top no-margin>
-            <ion-col no-padding no-margin>
-              <b>{{p.options[oidsorted[i]].name}}</b>
-            </ion-col>
-            <ion-col size="1" no-padding no-margin><!--TODO: improve placement-->
-              <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" float-right no-padding no-margin>
-                <ion-icon [name]="(expanded=='oid_'+oidsorted[i])?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-padding-top ion-no-margin">
+              <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" 
+                  class="ion-no-padding ion-no-margin">
+                <ion-icon color="black" size="small" class="ion-no-padding ion-no-margin" 
+                  [name]="(expanded=='oid_'+oidsorted[i])?'chevron-down-outline':'chevron-forward-outline'" 
+                  slot="icon-only"></ion-icon><!--FIXME: improve placement-->
               </ion-button>
+              <ion-label class="ion-no-padding ion-no-margin"><b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b></ion-label>
+            <ion-col size="1" class="ion-no-padding ion-no-margin">
             </ion-col>
           </ion-row>
-          <ion-row no-padding no-margin>
-            <ion-col no-padding no-margin><!--[color]="slidercolor[oidsorted[i]]"-->
-              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" [value]="p.getRating(oidsorted[i], p.myvid)" 
-                          (ionFocus)="ratingChangeBegins(oidsorted[i])" (ionChange)="ratingChanges(oidsorted[i])" (ionBlur)="ratingChangeEnded(oidsorted[i])" 
-                          pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px" no-padding no-margin>
-                <ion-label slot="end" no-padding no-margin style="padding-right:11px;">
+          <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin"><!--[color]="slidercolor[oidsorted[i]]"-->
+              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
+                  [color]="slidercolor[oidsorted[i]]"
+                  [value]="p.getRating(oidsorted[i], p.myvid)" 
+                  (ionFocus)="ratingChangeBegins(oidsorted[i])" 
+                  (ionChange)="ratingChanges(oidsorted[i])" 
+                  (ionBlur)="ratingChangeEnded(oidsorted[i])" 
+                  pin="true" min="0" max="100" style="--bar-height:7px;--knob-size:25px;--bar-background:rgba(0,0,0,0);" 
+                  class="ion-no-padding ion-no-margin">
+                <ion-label slot="end" class="ion-no-padding ion-no-margin" style="padding-right:11px;">
                   <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
-                      <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" fill="#bce4e5" stroke="none"/>
+                      <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
+                        fill="#bce4e5" stroke="none"/>
                             <!--TODO: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
                       <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
                       <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
@@ -122,8 +157,8 @@
             </ion-col>  
           </ion-row>
           <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
-            <ion-row no-padding padding-bottom no-margin>
-              <ion-col no-padding no-margin>
+            <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
+              <ion-col class="ion-no-padding ion-no-margin">
                 <b><span style="color:#9abcbd"><small>currently </small>
                   <ng-template [ngIf]="p.type=='winner'">
                     <span style="color:#769596"> {{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
@@ -132,15 +167,19 @@
                     <span style="color:#769596">getting&nbsp;{{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
                   </ng-template>
                   <small><span style="color:#4c822e" [style.display]="(votedfor==oidsorted[i])?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
-                  approved&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oidsorted[i]]*1000)/10}}%</span>
-                  <span style="color:#62a73b" [style.display]="approved[oidsorted[i]]?'inline':'none'"><small>&nbsp;(including&nbsp;you)</small></span>
-                  <span style="color:#9abcbd"><small>&nbsp;<b>(<a [href]="'/explainoptionresult/'+oidsorted[i]">explain</a>)</b></small></span>
+                    approved&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oidsorted[i]]*1000)/10}}%</span>
+                  <span style="color:#62a73b" [style.display]="approved[oidsorted[i]]?'inline':'none'">
+                    <small>&nbsp;(including&nbsp;you)</small>
+                  </span>
+                  <span style="color:#9abcbd">
+                    <small>&nbsp;<b>(<a [href]="'/explainoptionresult/'+oidsorted[i]">explain</a>)</b></small>
+                  </span>
                 </b>
 <!--                <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" no-padding>
                   <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
                 </ion-button>-->
                 <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
-                  <br/>{{p.options[oidsorted[i]].desc}}
+                  <br/><i>{{p.options[oidsorted[i]].desc}}</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].uri!=null?'inline':'none'">
                   <small>&nbsp;(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>

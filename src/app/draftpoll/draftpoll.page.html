@@ -76,17 +76,17 @@
         <ion-label position="floating" color="primary">
           <span [class]="stage==2?'current-field':''">{{'draftpoll.desc-label'|translate}}</span>
         </ion-label>
-        <ion-textarea autofocus tabindex="2" rows="1" auto-grow type="text" formControlName="poll_descr" 
+        <ion-textarea autofocus tabindex="2" rows="1" auto-grow type="text" formControlName="poll_desc" 
           inputmode="text" [placeholder]="'draftpoll.desc-placeholder'|translate"
           style="font-style: italic;"
-          (ionBlur)="stage=max(stage,formGroup.get('poll_descr').valid?3:0)"></ion-textarea>
-        <ion-button tabindex="-1" *ngIf="stage==2 && formGroup.get('poll_descr').value==''" 
+          (ionBlur)="stage=max(stage,formGroup.get('poll_desc').valid?3:0)"></ion-textarea>
+        <ion-button tabindex="-1" *ngIf="stage==2 && formGroup.get('poll_desc').value==''" 
           color="primary" slot="end" class="skip-button">{{'skip'|translate}}</ion-button>
       </ion-item>
       <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.poll_descr">
-          <div class="error-message" *ngIf="formGroup.get('poll_descr').hasError(validation.type) 
-              && (formGroup.get('poll_descr').dirty || formGroup.get('poll_descr').touched)">
+        <ng-container *ngFor="let validation of validation_messages.poll_desc">
+          <div class="error-message" *ngIf="formGroup.get('poll_desc').hasError(validation.type) 
+              && (formGroup.get('poll_desc').dirty || formGroup.get('poll_desc').touched)">
             {{ validation.message|translate }}
           </div>
         </ng-container>
@@ -120,7 +120,8 @@
     <ng-container *ngIf="stage>3">
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
         <ion-label class="labelautowidth" color="primary">
-          <span [class]="stage==4?'current-field':''">{{'draftpoll.closing-type-label'|translate}}&nbsp;</span>
+          <span [class]="stage==4?'current-field':''">        
+            <!--<ion-icon name="time-outline"></ion-icon>&nbsp;-->{{'draftpoll.closing-type-label'|translate}}&nbsp;</span>
         </ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
         <ion-select #ionSelects interface="popover" class="selectfullwidth" tabindex="4" 
@@ -207,17 +208,17 @@
             <ion-label position="floating" color="primary"><span [class]="option_stage==1?'current-field':''">
               {{'draftpoll.option-desc-label'|translate}}
             </span></ion-label>
-            <ion-textarea rows="1" auto-grow type="text" [formControlName]="'option_descr'+i" 
+            <ion-textarea rows="1" auto-grow type="text" [formControlName]="'option_desc'+i" 
               [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
               style="font-style: italic;"
-              (ionBlur)="option_stage=max(option_stage,formGroup.get('option_descr'+i).valid?2:0)"></ion-textarea>
-            <ion-button *ngIf="option_stage==1 && i == n_options-1 && formGroup.get('option_descr'+i).value==''" 
+              (ionBlur)="option_stage=max(option_stage,formGroup.get('option_desc'+i).valid?2:0)"></ion-textarea>
+            <ion-button *ngIf="option_stage==1 && i == n_options-1 && formGroup.get('option_desc'+i).value==''" 
               color="primary" slot="end" class="skip-button">Skip</ion-button>
           </ion-item>
           <div class="validation-errors">
-            <ng-container *ngFor="let validation of validation_messages.option_descr">
-              <div class="error-message" *ngIf="formGroup.get('option_descr'+i).hasError(validation.type) 
-                  && (formGroup.get('option_descr'+i).dirty || formGroup.get('option_descr'+i).touched)">
+            <ng-container *ngFor="let validation of validation_messages.option_desc">
+              <div class="error-message" *ngIf="formGroup.get('option_desc'+i).hasError(validation.type) 
+                  && (formGroup.get('option_desc'+i).dirty || formGroup.get('option_desc'+i).touched)">
                 {{ validation.message|translate }}
               </div>
             </ng-container>

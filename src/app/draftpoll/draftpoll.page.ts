@@ -141,7 +141,7 @@ export class DraftpollPage implements OnInit {
       for (let j=i+1; j<this.n_options; j++) {
         this.oids[j-1] = this.oids[j];
         this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
-        this.formGroup.get('option_descr'+(j-1)).setValue(this.formGroup.get('option_descr'+j).value); 
+        this.formGroup.get('option_desc'+(j-1)).setValue(this.formGroup.get('option_desc'+j).value); 
         this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
       }
       this.n_options--;
@@ -160,7 +160,7 @@ export class DraftpollPage implements OnInit {
   remove_last_controls() {
     this.oids = this.oids.slice(0, this.n_options);
     this.formGroup.removeControl('option_name'+this.n_options);
-    this.formGroup.removeControl('option_descr'+this.n_options);
+    this.formGroup.removeControl('option_desc'+this.n_options);
     this.formGroup.removeControl('option_url'+this.n_options);
   }
 
@@ -174,7 +174,7 @@ export class DraftpollPage implements OnInit {
     let i = this.n_options;
     this.oids.push(o.oid);
     this.formGroup.addControl('option_name'+i, new FormControl(o.name, Validators.required));
-    this.formGroup.addControl('option_descr'+i, new FormControl(o.desc));
+    this.formGroup.addControl('option_desc'+i, new FormControl(o.desc));
     this.formGroup.addControl('option_url'+i, new FormControl(o.uri, Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
     this.n_options++;

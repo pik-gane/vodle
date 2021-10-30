@@ -107,7 +107,9 @@
       {{'settings.appearance'|translate}}
     </ion-item>
     <ion-item>
-      <ion-label position="floating" color="primary"><ion-icon name="language-outline"></ion-icon>&nbsp;{{'language'|translate}}</ion-label>
+      <ion-label position="floating" color="primary">
+        <ion-icon name="language-outline"></ion-icon>&nbsp;{{'language'|translate}}
+      </ion-label>
       <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
         <ion-select-option value="de">Deutsch</ion-select-option>
         <ion-select-option value="en">English</ion-select-option>

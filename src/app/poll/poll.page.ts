@@ -136,7 +136,7 @@ export class PollPage implements OnInit {
       (value == 0) ? 'vodlered' : 
       (value + this.p.apprs[oid]*100 <= 100) ? 'vodleblue' : 
       (this.votedfor != oid) ? 'vodlegreen' : 
-      'vodledarkgreen'; // FIXME: although the condition is met, this does not show as darkgreen!
+      'vodledarkgreen';
   }
 
   // controls:
