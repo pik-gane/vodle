@@ -190,11 +190,11 @@ export class DraftpollPage implements OnInit {
     'poll_url': [
       { type: 'pattern', message: 'validation.poll-url-valid' },
     ],
-    'poll_closing_datetime_type': [
-      { type: 'required', message: 'validation.poll-closing-datetime-type-required' },
+    'poll_due_datetime_type': [
+      { type: 'required', message: 'validation.poll-due-datetime-type-required' },
     ],
-    'poll_closing_datetime': [
-      { message: 'validation.poll-closing-datetime-future' },
+    'poll_due_datetime': [
+      { message: 'validation.poll-due-datetime-future' },
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },

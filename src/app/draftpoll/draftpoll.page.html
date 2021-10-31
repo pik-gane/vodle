@@ -121,26 +121,28 @@
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
         <ion-label class="labelautowidth" color="primary">
           <span [class]="stage==4?'current-field':''">        
-            <!--<ion-icon name="time-outline"></ion-icon>&nbsp;-->{{'draftpoll.closing-type-label'|translate}}&nbsp;</span>
+            <!--<ion-icon name="time-outline"></ion-icon>&nbsp;-->{{'draftpoll.due-type-label'|translate}}&nbsp;</span>
         </ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
         <ion-select #ionSelects interface="popover" class="selectfullwidth" tabindex="4" 
             formControlName="poll_due_type" required [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
             (ionChange)="stage=max(stage,formGroup.get('poll_due_type').value=='custom'?5:6)">
-          <ion-select-option value="custom">{{'draftpoll.closing-type-custom'|translate}}</ion-select-option>
-          <ion-select-option value="midnight">{{'draftpoll.closing-type-midnight'|translate}}</ion-select-option>
-          <ion-select-option value="tomorrow-noon">{{'draftpoll.closing-type-tomorrow-noon'|translate}}</ion-select-option>
-          <ion-select-option value="tomorrow-night">{{'draftpoll.closing-type-tomorrow-night'|translate}}</ion-select-option>
-          <ion-select-option value="sunday-night">{{'draftpoll.closing-type-sunday-night'|translate}}</ion-select-option>
-          <ion-select-option value="week">{{'draftpoll.closing-type-week'|translate}}</ion-select-option>
-          <ion-select-option value="two-weeks">{{'draftpoll.closing-type-two-weeks'|translate}}</ion-select-option>
-          <ion-select-option value="month">{{'draftpoll.closing-type-month'|translate}}</ion-select-option>
+          <ion-select-option value="custom">{{'draftpoll.due-type-custom'|translate}}</ion-select-option>
+          <ion-select-option value="10min">{{'draftpoll.due-type-10min'|translate}}</ion-select-option>
+          <ion-select-option value="hour">{{'draftpoll.due-type-hour'|translate}}</ion-select-option>
+          <ion-select-option value="midnight">{{'draftpoll.due-type-midnight'|translate}}</ion-select-option>
+          <ion-select-option value="tomorrow-noon">{{'draftpoll.due-type-tomorrow-noon'|translate}}</ion-select-option>
+          <ion-select-option value="tomorrow-night">{{'draftpoll.due-type-tomorrow-night'|translate}}</ion-select-option>
+          <ion-select-option value="sunday-night">{{'draftpoll.due-type-sunday-night'|translate}}</ion-select-option>
+          <ion-select-option value="week">{{'draftpoll.due-type-week'|translate}}</ion-select-option>
+          <ion-select-option value="two-weeks">{{'draftpoll.due-type-two-weeks'|translate}}</ion-select-option>
+          <ion-select-option value="month">{{'draftpoll.due-type-month'|translate}}</ion-select-option>
         </ion-select>
       </ion-item>
       <ng-container *ngIf="formGroup.get('poll_due_type').value=='custom'">
         <ion-item [color]="stage==5?'warning':''"><!--stage 5-->
           <ion-label position="floating" color="primary">
-            <span [class]="stage==5?'current-field':''">{{'draftpoll.closing-datetime-label'|translate}}</span>
+            <span [class]="stage==5?'current-field':''">{{'draftpoll.due-datetime-label'|translate}}</span>
           </ion-label>
           <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
           <!--TODO: translation-->
@@ -253,9 +255,13 @@
         </ng-container>    
       </div>
 
-      <ion-item lines="none" *ngIf="option_stage==10 && formGroup.get('option_url'+(n_options-1)).valid">
-        <ion-button shape="round" (click)="add_option()">
-          <ion-icon slot="icon-only" name="add"></ion-icon>
+      <ion-item lines="none" *ngIf="option_stage==10 && formGroup.get('option_url'+(n_options-1)).valid"
+          class="ion-no-padding" style="padding-left: 5px; padding-top: 5px;">
+        <ion-fab-button size="small" (click)="add_option()" fill="clear" color="primary">
+          <ion-icon name="add"></ion-icon>
+        </ion-fab-button>
+        <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
+          {{(formGroup.get('poll_type').value=='winner' ? 'add-option' : 'add-target')|translate}}
         </ion-button>
       </ion-item>
       <ion-item lines="none">
