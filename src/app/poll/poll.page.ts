@@ -40,6 +40,8 @@ export class PollPage implements OnInit {
   private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
   public scroll_position = 0;
+  public slidersAllowEvents = true; // TODO! false;
+  public rate_yourself_toggle: Record<string, boolean> = {};
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
@@ -101,9 +103,23 @@ export class PollPage implements OnInit {
   scrollToBottom() {
     this.content.scrollToBottom(1000);
   }
-
   scrollToTop() {
     this.content.scrollToTop(1000);
+  }
+
+  onRangePointerdown(ev: PointerEvent) {
+    this.slidersAllowEvents = true;
+    let ev2 = new PointerEvent('pointerdown', {screenX:ev.screenX, screenY:ev.screenY});
+    let id = (ev.target as HTMLElement).id;
+    let id2 = id.slice(1);
+    document.getElementById(id2).dispatchEvent(ev2);
+  }
+  onRangePointerup(ev: Event) {
+//    this.slidersAllowEvents = false;
+  }
+  _onRangePointerdown(ev: PointerEvent) {
+    let p = window.getComputedStyle(ev.target as HTMLElement).getPropertyValue('pointerEvents');
+    window.alert(p);
   }
 
   showStats() { // update pies and bars, but not order!

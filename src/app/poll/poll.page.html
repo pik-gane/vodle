@@ -90,7 +90,7 @@
               dcd@posteo.de&nbsp;<ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;"><ion-icon name="trash-outline"></ion-icon></ion-button>
             </ion-col>
             <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right">
-              <small>You can select here which ratings&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>control yourself&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon><!--&#8595;-->
+              <small>You can select here which ratings&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>rate yourself&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon><!--&#8595;-->
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -157,33 +157,48 @@
         </svg>
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;"><!--ion-padding-top -->
+            <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" 
                   class="ion-no-padding ion-no-margin">
-                <ion-icon size="small" class="ion-no-padding ion-no-margin" style="color:black; position: relative; left: -5px;"
+                <ion-icon size="small" class="ion-no-padding ion-no-margin" 
+                  style="color:black; position: relative; left: -5px;"
                   [name]="(expanded=='oid_'+oidsorted[i])?'chevron-down-outline':'chevron-forward-outline'" 
                   slot="icon-only"></ion-icon><!--FIXME: improve placement-->
               </ion-button>
-              <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;"><b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b></ion-label>
-            <ion-col size="1" class="ion-no-padding ion-no-margin">
+            </ion-col>
+            <ion-col class="ion-no-padding ion-no-margin">
+              <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;">
+                <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
+              </ion-label>
+            </ion-col>
+            <ion-col size="auto" class="ion-no-padding ion-no-margin">
+              <ion-label class="ion-no-padding ion-no-margin ion-text-right" style="padding-top: 4px;"
+                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'rate yourself':'<small>delegated</small>'">
+              </ion-label>
             </ion-col>
           </ion-row>
           <ion-row class="ion-no-padding ion-no-margin">
-            <ion-col class="ion-no-padding ion-no-margin"><!--[color]="slidercolor[oidsorted[i]]"-->
-              <ion-range [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
+            <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
+            ><!--(pointerdown)="onRangePointerdown($event)" (pointerup)="onRangePointerup($event)" [color]="slidercolor[oidsorted[i]]"-->
+              <ion-range 
+                  [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                   [color]="slidercolor[oidsorted[i]]"
                   [value]="p.getRating(oidsorted[i], p.myvid)" 
                   (ionFocus)="ratingChangeBegins(oidsorted[i])" 
                   (ionChange)="ratingChanges(oidsorted[i])" 
                   (ionBlur)="ratingChangeEnded(oidsorted[i])" 
                   pin="true" min="0" max="100"
-                  style="pointer-events:none; --bar-height:7px;--knob-size:11px;--bar-background:rgba(0,0,0,0);" 
+                  [style]="'--bar-background:rgba(0,0,0,0);'
+                    +(rate_yourself_toggle[oidsorted[i]]
+                    ?'pointer-events:;--bar-height:7px;--knob-size:35px'
+                    :'pointer-events:none;--bar-height:5px;--knob-size:17px')" 
                   class="ion-no-padding ion-no-margin"><!--35px-->
                 <ion-label slot="end" class="ion-no-padding ion-no-margin" style="padding-right:12px;">
                   <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
                       <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
                         fill="#bce4e5" stroke="none"/>
-                            <!--TODO: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
+                            <!--TODO?: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
                       <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
                       <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
                     </svg>
@@ -192,8 +207,8 @@
               </ion-range>
             </ion-col>
             <ion-col class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
-              <ion-toggle class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                style="position:relative; top: -2px;" [checked]="false"></ion-toggle>
+              <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
+                style="position:relative; top: -2px;" [(ngModel)]="rate_yourself_toggle[oidsorted[i]]"></ion-toggle>
             </ion-col>  
           </ion-row>
           <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
@@ -220,10 +235,10 @@
                 </ion-button>-->
                 <span [style.display]="(p.options[oidsorted[i]].desc!=null||p.options[oidsorted[i]].uri!=null)?'inline':'none'"><br/></span>
                 <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
-                  <i>{{p.options[oidsorted[i]].desc}}</i>
+                  <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].uri!=null?'inline':'none'">
-                  <small>&nbsp;&nbsp;(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
+                  <small>(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
                 </span>
 <!--                <ng-template [ngIf]="p.options[oidsorted[i]].uri!=null">
                   <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].uri)" fill="clear" item-end no-padding padding-left no-margin>
