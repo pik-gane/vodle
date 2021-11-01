@@ -13,7 +13,7 @@
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
       <ion-title>
-        Running poll – your ratings
+        Running poll<!-- – your ratings-->
       </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
     </ng-template>
     <ion-buttons slot="end">
@@ -101,10 +101,13 @@
                 <ion-icon name="trash-outline"></ion-icon>
               </ion-button>
             </ion-col>
-            <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right">
-              <small>If&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>
+            <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" style="padding-bottom:3px;">
+<!--              <small>If&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>
               rate&nbsp;some&nbsp;options&nbsp;yourself,<br/>
               <small>choose&nbsp;them&nbsp;here</small>&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
+-->
+              <small>Choose<br/>whose ratings<br/>to use&nbsp;</small>
+              <ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -172,10 +175,10 @@
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;"><!--ion-padding-top -->
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
-              <ion-button (click)="expand(oidsorted[i])" fill="clear" 
+              <ion-button (click)="expand(oidsorted[i])" fill="clear" style="position:relative; left:-5px; z-index:10;"
                   class="ion-no-padding ion-no-margin">
                 <ion-icon size="small" class="ion-no-padding ion-no-margin" 
-                  style="color:black; position: relative; left: -5px;"
+                  style="color:black; z-index:10;"
                   [name]="(expanded[oidsorted[i]])?'chevron-down-outline':'chevron-forward-outline'" 
                   slot="icon-only"></ion-icon><!--FIXME: improve placement-->
               </ion-button>
@@ -185,11 +188,14 @@
                 <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
               </ion-label>
             </ion-col>
-            <ion-col size="auto" class="ion-no-padding ion-no-margin">
+<!--            <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <ion-label class="ion-no-padding ion-no-margin ion-text-right" style="padding-top: 4px;"
-                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'you rate this':'<small>delegated</small>'">
-              </ion-label>
+                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'you rate this':'<small>delegated</small>'"></ion-label>
+              <ion-label class="ion-no-padding ion-no-margin ion-text-right" 
+                style="padding-top: 4px; position:relative; z-index: 10; top: 20px;"
+                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'<small>my own</small>':'<small>delegate\'s</small>'"></ion-label>
             </ion-col>
+-->
           </ion-row>
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
@@ -224,9 +230,11 @@
               <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
                 (ionChange)="onDelegateToggleChange()"
                 class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                style="position:relative; top: -2px;" 
+                style="position:relative; top:-8px;" 
                 [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
               </ion-toggle>
+              <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;"
+              [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'<small>my own</small>':'<small>delegate\'s</small>'"></div>
             </ion-col>  
           </ion-row>
           <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded[oidsorted[i]]">
