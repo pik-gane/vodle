@@ -78,7 +78,7 @@
         "option-url-placeholder": "Eine Webseite mit mehr Details zu ‚{{name}}‘",
         "please-list-options-explanation": "Bitte gib mindestens zwei Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "please-list-targets-explanation": "Bitte gib mindestens zwei mögliche Ziele an. Kümmere Dich nicht um die Reihenfolge. Weitere Ziele können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
-        "draft-saved": "(Entwurf gespeichert unter ‚Meine Abstimmungen‘)",
+        "draft-saved": "(Entwurf gespeichert unter ‚Meine&nbsp;Abstimmungen‘)",
         "send-for-review": "zum Korrekturlesen teilen",
         "import-options-from-file": "Optionen aus Datei importieren"
    },
@@ -96,8 +96,8 @@
         "poll-type-required": "Bitte wähle aus.",
         "poll-title-required": "Eine Überschrift wird benötigt.",
         "poll-url-valid": "Bitte gib eine gültige URL ein.",
-        "poll-due-datetime-type-required": "Bitte wähle aus.",
-        "poll-due-datetime-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
+        "poll-due-type-required": "Bitte wähle aus.",
+        "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
         "option-name-required": "Ein Name wird benötigt.",
         "option-url-valid": "Bitte gib eine gültige URL ein."
     },

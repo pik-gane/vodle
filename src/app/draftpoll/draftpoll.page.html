@@ -12,9 +12,10 @@
         <ion-icon ios="ellipsis-horizontal" md="ellipsis-vertical" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-thumbnail slot="end">
+<!--    <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
+-->
   </ion-toolbar>
 </ion-header>
 
@@ -30,13 +31,17 @@
       </ion-button>
     </ion-item>
     <ion-item [color]="stage==0?'warning':''"><!--stage 0-->
-      <ion-label class="labelautowidth" color="primary" position="floating">
+      <ion-label color="primary" position="floating">
+        <span *ngIf="formGroup.get('poll_type').valid" [class]="stage==0?'current-field':''" style="position:relative;top:3px;z-index:10;">
+          <ion-icon
+            style="color:black" 
+            [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'">
+          </ion-icon>&nbsp;
+        </span>
         <span [class]="stage==0?'current-field':''">
-          {{'draftpoll.type-label'|translate}}&nbsp;<ion-icon 
-            *ngIf="formGroup.get('poll_type').valid" style="color:black" 
-            [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'"></ion-icon>&nbsp;
-          </span>
-        </ion-label>
+          {{'draftpoll.type-label'|translate}}
+        </span>
+      </ion-label>
       <ion-select text-wrap interface="popover" class="selectfullwidth" 
           #ionSelects #type_select autofocus tabindex="0" 
           formControlName="poll_type" cancelText="Cancel" okText="OK" 
@@ -120,9 +125,9 @@
     </ng-container>    
     <ng-container *ngIf="stage>3">
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
-        <ion-label class="labelautowidth" color="primary">
+        <ion-label color="primary" position="floating">
           <span [class]="stage==4?'current-field':''">        
-            <!--<ion-icon name="time-outline"></ion-icon>&nbsp;-->{{'draftpoll.due-type-label'|translate}}&nbsp;</span>
+            {{'draftpoll.due-type-label'|translate}}&nbsp;</span>
         </ion-label>
         <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
         <ion-select #ionSelects interface="popover" class="selectfullwidth" tabindex="4" 
@@ -271,8 +276,8 @@
     </ng-container>
 
     <ion-item lines="none">
-      <ion-label class="ion-text-end" *ngIf="formGroup.get('poll_title').valid">
-        <small>{{'draftpoll.draft-saved'|translate}}</small>
+      <ion-label class="ion-text-end" *ngIf="formGroup.get('poll_title').valid" text-wrap>
+        <small [innerHtml]="'draftpoll.draft-saved'|translate"></small>
       </ion-label>
       <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" 
           shape="round"
