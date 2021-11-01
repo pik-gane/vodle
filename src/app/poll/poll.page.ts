@@ -295,9 +295,16 @@ export class PollPage implements OnInit {
   }
 
   async delegate_dialog() { 
-    const confirm = await this.alertCtrl.create({ 
+    const dialog = await this.alertCtrl.create({ 
       header: 'Delegate to some other voter', 
-      message: 'You can name some other voter as your delegate. The delegate will then Please specify the email address of a voter who you want to control your ratings you would like to', 
+      message: 'You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.<br/><br/><b>Please enter the email address of the voter you want to ask to be your delegate:</b>', 
+      inputs: [
+        {
+          name: 'email',
+          placeholder: 'Delegate\'s email',
+          type: "email"
+        }
+      ],
       buttons: [
         { 
           text: 'Cancel', 
@@ -307,15 +314,15 @@ export class PollPage implements OnInit {
           } 
         },
         { 
-          text: 'Choose file',
+          text: 'Request delegation',
           role: 'Ok', 
           handler: () => {
-            document.getElementById("choosefile").click();
+            // TODO: generate delegation id and open mailto link using email as sender
           } 
         } 
       ] 
     }); 
-    await confirm.present(); 
+    await dialog.present(); 
   } 
 
 }
