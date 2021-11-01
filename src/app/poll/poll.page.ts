@@ -22,7 +22,7 @@ export class PollPage implements OnInit {
 
   public approved = {}; // whether option is approved by me
   public votedfor = null; // oid my prob. share goes to
-  public expanded = null;
+  public expanded = {};
 
   public Math = Math;
 
@@ -70,9 +70,9 @@ export class PollPage implements OnInit {
     this.p.tally();
 //    this.opos = this.p.opos;
     this.oidsorted = [...this.p.oidsorted];
-    this.expanded = null;
     this.updateOrder();
     for (let oid of this.oidsorted) {
+      this.expanded[oid] = false;
       this.rate_yourself_toggle[oid] = false;
     }
     this.onDelegateToggleChange()
@@ -208,9 +208,8 @@ export class PollPage implements OnInit {
     this.updateOrder(true);
   }
 
-  expand(what) {
-    GlobalService.log("expanding "+what)
-    this.expanded = (this.expanded == what) ? null : what;
+  expand(oid) {
+    this.expanded[oid] = !this.expanded[oid];
   }
   getSlider(oid) {
     return <HTMLInputElement>document.getElementById('slider_'+oid+"_"+this.sortingcounter);
@@ -295,10 +294,10 @@ export class PollPage implements OnInit {
     }
   }
 
-  async import_csv_dialog() { 
+  async delegate_dialog() { 
     const confirm = await this.alertCtrl.create({ 
-      header: 'Import options from file', 
-      message: 'The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;"Name"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description", "URL"', 
+      header: 'Delegate to some other voter', 
+      message: 'You can name some other voter as your delegate. The delegate will then Please specify the email address of a voter who you want to control your ratings you would like to', 
       buttons: [
         { 
           text: 'Cancel', 

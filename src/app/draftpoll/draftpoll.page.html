@@ -23,25 +23,26 @@
 
     <ion-item color="primary">{{'draftpoll.general-information'|translate}}
       <ion-button slot="end" fill="clear" (click)="detailstoggle.checked=!detailstoggle.checked">
-        <span style="color: white">Details</span>
+        <span style="color: white">{{'details'|translate}}</span>
         <ion-toggle #detailstoggle name="detail-toggle" 
           (click)="detailstoggle.checked=!detailstoggle.checked" 
           color="light" style="--handle-background: black; padding-right: 0;"></ion-toggle>
       </ion-button>
     </ion-item>
     <ion-item [color]="stage==0?'warning':''"><!--stage 0-->
-      <ion-label class="labelautowidth" color="primary">
+      <ion-label class="labelautowidth" color="primary" position="floating">
         <span [class]="stage==0?'current-field':''">
           {{'draftpoll.type-label'|translate}}&nbsp;<ion-icon 
             *ngIf="formGroup.get('poll_type').valid" style="color:black" 
             [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'"></ion-icon>&nbsp;
           </span>
         </ion-label>
-      <ion-select interface="popover" class="selectfullwidth" #ionSelects #type_select autofocus tabindex="0" 
+      <ion-select text-wrap interface="popover" class="selectfullwidth" 
+          #ionSelects #type_select autofocus tabindex="0" 
           formControlName="poll_type" cancelText="Cancel" okText="OK" 
           (ionChange)="stage=max(stage,formGroup.get('poll_type').valid?1:0)">
-        <ion-select-option value="winner">{{'draftpoll.type-winner'|translate}}</ion-select-option>
-        <ion-select-option value="share">{{'draftpoll.type-share'|translate}}</ion-select-option>
+        <ion-select-option text-wrap value="winner">{{'draftpoll.type-winner'|translate}}</ion-select-option>
+        <ion-select-option text-wrap value="share">{{'draftpoll.type-share'|translate}}</ion-select-option>
       </ion-select>
     </ion-item>
     <div class="validation-errors">

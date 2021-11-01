@@ -67,7 +67,9 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
               <h3><b><i>{{p.title}}</i></b></h3>
-              <i>{{p.desc}}</i>
+              <i>{{p.desc}}</i><br/>
+              <small>Closes {{p.due}}</small>
+              <!--.toLocalDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })-->
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -76,7 +78,7 @@
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;padding-bottom:6px;">
             <ion-col class="ion-no-margin ion-padding-right">
-              <small>3 voters have delegated some of their ratings to you and will therefore use your ratings.</small>
+              <small>The ratings below are also used for 3 other voters, who have delegated to you.</small>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -91,7 +93,13 @@
                   2*n_delegated > oidsorted.length ? 'Most of your' : (
                     n_delegated > 0 ? 'Some of your' : 'Currently none of your'))}} 
                 ratings are controlled&nbsp;by&nbsp;your&nbsp;delegate</small><br/>
-              dcd@posteo.de&nbsp;<ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;"><ion-icon name="trash-outline"></ion-icon></ion-button>
+              dcd@posteo.de&nbsp;
+              <ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;">
+                <ion-icon name="pencil-outline"></ion-icon>
+              </ion-button>&nbsp;
+              <ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;">
+                <ion-icon name="trash-outline"></ion-icon>
+              </ion-button>
             </ion-col>
             <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right">
               <small>If&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>
@@ -164,11 +172,11 @@
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;"><!--ion-padding-top -->
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
-              <ion-button (click)="expand('oid_'+oidsorted[i])" fill="clear" 
+              <ion-button (click)="expand(oidsorted[i])" fill="clear" 
                   class="ion-no-padding ion-no-margin">
                 <ion-icon size="small" class="ion-no-padding ion-no-margin" 
                   style="color:black; position: relative; left: -5px;"
-                  [name]="(expanded=='oid_'+oidsorted[i])?'chevron-down-outline':'chevron-forward-outline'" 
+                  [name]="(expanded[oidsorted[i]])?'chevron-down-outline':'chevron-forward-outline'" 
                   slot="icon-only"></ion-icon><!--FIXME: improve placement-->
               </ion-button>
             </ion-col>
@@ -221,7 +229,7 @@
               </ion-toggle>
             </ion-col>  
           </ion-row>
-          <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">
+          <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded[oidsorted[i]]">
             <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
               <ion-col class="ion-no-padding ion-no-margin">
                 <b><span style="color:#9abcbd"><small>currently </small>
