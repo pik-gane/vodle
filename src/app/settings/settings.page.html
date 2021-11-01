@@ -27,6 +27,9 @@
               inputmode="email"
               [placeholder]="'settings.email-placeholder'|translate"
               [readonly]="!editing_email"
+              [style]="editing_email
+                    ?'pointer-events:;'
+                    :'pointer-events:none;font-size:smaller;'"
               (keydown.enter)="editing_email=!formGroup.get('email').valid"
               (keydown.tab)="editing_email=!formGroup.get('email').valid"
               (ionChange)="set_email()"></ion-input>
@@ -55,6 +58,9 @@
             <ion-item>
               <ion-label position="floating" color="primary">{{'password'|translate}}</ion-label>
               <ion-input [type]="showing_password?'text':'password'" formControlName="password" required 
+                [style]="editing_password
+                      ?'pointer-events:;'
+                      :'pointer-events:none;font-size:smaller;'"
                 [readonly]="!editing_password"
                 (ionChange)="set_password()"></ion-input><!--TODO: add show/hide toggle-->
             </ion-item>
@@ -80,6 +86,9 @@
           <ion-label position="floating" color="primary">{{'retype-password'|translate}}</ion-label>
           <ion-input #retype_password [type]="showing_password?'text':'password'" formControlName="confirm_password" required 
             [disabled]="!editing_password"
+            [style]="editing_password
+              ?'pointer-events:;'
+              :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
             (ionChange)="set_password()"></ion-input>

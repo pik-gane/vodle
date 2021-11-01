@@ -86,11 +86,17 @@
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;">
             <ion-col class="ion-no-margin ion-padding-right">
 <!--              <small>Please rate these options or add more options:</small>-->
-              <small>Some of your ratings are controlled&nbsp;by&nbsp;your&nbsp;delegate</small><br/>
+              <small>{{
+                n_delegated == oidsorted.length ? 'All of your' : (
+                  2*n_delegated > oidsorted.length ? 'Most of your' : (
+                    n_delegated > 0 ? 'Some of your' : 'Currently none of your'))}} 
+                ratings are controlled&nbsp;by&nbsp;your&nbsp;delegate</small><br/>
               dcd@posteo.de&nbsp;<ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;"><ion-icon name="trash-outline"></ion-icon></ion-button>
             </ion-col>
             <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right">
-              <small>You can select here which ratings&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>rate yourself&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon><!--&#8595;-->
+              <small>If&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>
+              rate&nbsp;some&nbsp;options&nbsp;yourself,<br/>
+              <small>choose&nbsp;them&nbsp;here</small>&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -173,7 +179,7 @@
             </ion-col>
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <ion-label class="ion-no-padding ion-no-margin ion-text-right" style="padding-top: 4px;"
-                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'rate yourself':'<small>delegated</small>'">
+                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'you rate this':'<small>delegated</small>'">
               </ion-label>
             </ion-col>
           </ion-row>
@@ -207,8 +213,12 @@
               </ion-range>
             </ion-col>
             <ion-col class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
-              <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                style="position:relative; top: -2px;" [(ngModel)]="rate_yourself_toggle[oidsorted[i]]"></ion-toggle>
+              <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
+                (ionChange)="onDelegateToggleChange()"
+                class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
+                style="position:relative; top: -2px;" 
+                [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
+              </ion-toggle>
             </ion-col>  
           </ion-row>
           <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded=='oid_'+oidsorted[i]">

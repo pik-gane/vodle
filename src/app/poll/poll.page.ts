@@ -1,5 +1,7 @@
 import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
 import { NavController, LoadingController, IonContent } from '@ionic/angular';
+import { AlertController } from '@ionic/angular'; 
+
 import { GlobalService, Poll } from "../global.service";
 
 @Component({
@@ -42,10 +44,11 @@ export class PollPage implements OnInit {
   public scroll_position = 0;
   public slidersAllowEvents = true; // TODO! false;
   public rate_yourself_toggle: Record<string, boolean> = {};
+  public n_delegated = 0;
 
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
-              // public events: Events,
+              public alertCtrl: AlertController,
               private zone: NgZone,
               public g: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
@@ -69,6 +72,10 @@ export class PollPage implements OnInit {
     this.oidsorted = [...this.p.oidsorted];
     this.expanded = null;
     this.updateOrder();
+    for (let oid of this.oidsorted) {
+      this.rate_yourself_toggle[oid] = false;
+    }
+    this.onDelegateToggleChange()
   }
   ionViewWillEnter() {
     if (this.g.username=='') {
@@ -120,6 +127,15 @@ export class PollPage implements OnInit {
   _onRangePointerdown(ev: PointerEvent) {
     let p = window.getComputedStyle(ev.target as HTMLElement).getPropertyValue('pointerEvents');
     window.alert(p);
+  }
+  
+  onDelegateToggleChange() {
+    let sum = 0;
+    for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
+      if (!b) sum++;
+      console.log(oid, b, sum, this.oidsorted.length);
+    }
+    this.n_delegated = sum;
   }
 
   showStats() { // update pies and bars, but not order!
@@ -278,4 +294,29 @@ export class PollPage implements OnInit {
       this.navCtrl.navigateForward("/closedpoll");
     }
   }
+
+  async import_csv_dialog() { 
+    const confirm = await this.alertCtrl.create({ 
+      header: 'Import options from file', 
+      message: 'The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;"Name"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description", "URL"', 
+      buttons: [
+        { 
+          text: 'Cancel', 
+          role: 'Cancel',
+          handler: () => { 
+            console.log('Confirm Cancel.');  
+          } 
+        },
+        { 
+          text: 'Choose file',
+          role: 'Ok', 
+          handler: () => {
+            document.getElementById("choosefile").click();
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  } 
+
 }
