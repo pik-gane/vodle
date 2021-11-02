@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
+import { TranslateService } from '@ngx-translate/core';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 import { AlertController } from '@ionic/angular'; 
@@ -42,6 +43,7 @@ export class DraftpollPage implements OnInit {
     private popover: PopoverController,
     public alertCtrl: AlertController,
     public G: GlobalService,
+    public translate: TranslateService,
   ) { 
     console.log("DRAFTPOLL PAGE CONSTRUCTOR");
   }
@@ -149,9 +151,35 @@ export class DraftpollPage implements OnInit {
     this.add_option();
   }
 
+  async del_option_dialog(i: number) { 
+    const confirm = await this.alertCtrl.create({ 
+      message: this.translate.instant(
+        this.formGroup.get('poll_type').value == 'choice' 
+          ? "draftpoll.del-option-confirm-question" 
+          : "draftpoll.del-target-confirm-question", 
+        { name: this.formGroup.get('option_name'+i).value }), 
+      buttons: [
+        { 
+          text: this.translate.instant('cancel'), 
+          role: 'Cancel',
+          handler: () => { 
+            console.log('Confirm Cancel.');  
+          } 
+        },
+        { 
+          text: this.translate.instant('OK'),
+          role: 'Ok', 
+          handler: () => {
+            this.del_option(i);
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  } 
+
   del_option(i: number) {
-    if (confirm("Delete " + (this.formGroup.get('poll_type').value=='choice' ? 'option' : 'target') 
-          + " ‘" + this.formGroup.get('option_name'+i).value + "’")) {
+    if (true) { //(confirm("Delete " + (this.formGroup.get('poll_type').value=='choice' ? 'option' : 'target') + " ‘" + this.formGroup.get('option_name'+i).value + "’")) {
       this.p.remove_option(this.options[i].oid);
       // move metadata of options i+1,i+2,... back one slot to i,i+1,..., then decrease n_options:
       for (let j=i+1; j<this.n_options; j++) {
@@ -181,7 +209,8 @@ export class DraftpollPage implements OnInit {
   }
 
   add_option(oid:string=null, name:string="", desc:string="", url:string="") {
-    let o = new Option(this.G, this.p, oid);
+    console.log("add_option "+oid+" "+name+" "+desc+" "+url);
+    let o = new Option(this.G, this.p, oid, name, desc, url);
     this.p._add_option(o);
     this.add_controls(o);
   }
@@ -241,20 +270,21 @@ export class DraftpollPage implements OnInit {
 
   async import_csv_dialog() { 
     const confirm = await this.alertCtrl.create({ 
-      header: 'Import options from file', 
-      message: 'The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;"Name"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description"<br/>or<br/>&nbsp;&nbsp;&nbsp;"Name", "Description", "URL"', 
+      header: this.translate.instant('draftpoll.import-options-header'), 
+      message: this.translate.instant("draftpoll.import-options-msg"), 
       buttons: [
         { 
-          text: 'Cancel', 
+          text: this.translate.instant('cancel'), 
           role: 'Cancel',
           handler: () => { 
             console.log('Confirm Cancel.');  
           } 
         },
         { 
-          text: 'Choose file',
+          text: this.translate.instant('choose-file'),
           role: 'Ok', 
           handler: () => {
+            // open the file chooser by simulating a click to the hidden form field:
             document.getElementById("choosefile").click();
           } 
         } 
@@ -326,6 +356,14 @@ export class DraftpollPage implements OnInit {
     let c = this.formGroup.get('option_name'+i);
     if (c.valid) this.options[i].name = c.value;
   }
+  set_option_desc(i: number) {
+    let c = this.formGroup.get('option_desc'+i);
+    if (c.valid) this.options[i].desc = c.value;
+  }
+  set_option_url(i: number) {
+    let c = this.formGroup.get('option_url'+i);
+    if (c.valid) this.options[i].url = c.value;
+  }
 
   // these will be called by selectServer component:
   set_db(value: string) {
@@ -345,10 +383,3 @@ export class DraftpollPage implements OnInit {
   }
 
 }
-/*
-  set_theme() {
-    let c = this.formGroup.get('theme');
-    if (c.valid) this.G.S.theme = c.value;
-  }
-
-*/

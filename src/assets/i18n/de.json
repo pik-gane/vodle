@@ -1,6 +1,8 @@
 {
     "add-option": "Option hinzufügen",
     "add-target": "Ziel hinzufügen",
+    "cancel": "Abbrechen",
+    "choose-file": "Datei auswählen",
     "data-storage": "Persönliche Daten",
     "daynames-sunday-to-saturday": "Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag",
     "db-url": "Datenbank-URL",
@@ -76,11 +78,15 @@
         "option-desc-placeholder": "Etwas mehr Informationen über ‚{{name}}‘",
         "option-url-label": "„Mehr lesen“-Link",
         "option-url-placeholder": "Eine Webseite mit mehr Details zu ‚{{name}}‘",
+        "del-option-confirm-question": "Option<br/><b><i>{{name}}</i></b><br/>löschen?",
+        "del-target-confirm-question": "Ziel<br/><b><i>{{name}}</i></b><br/>löschen?",
         "please-list-options-explanation": "Bitte gib mindestens zwei Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "please-list-targets-explanation": "Bitte gib mindestens zwei mögliche Ziele an. Kümmere Dich nicht um die Reihenfolge. Weitere Ziele können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "draft-saved": "Entwurf gespeichert unter<br/>‚Meine Abstimmungen‘",
         "send-for-review": "Zum Korrekturlesen teilen",
-        "import-options-from-file": "Optionen aus Datei importieren"
+        "import-options-from-file": "Optionen aus Datei importieren",
+        "import-options-header": "Optionen aus Datei importieren",
+        "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>"
    },
     "validation": {
         "db-pw-required": "Ein Datenbank-Password wird benötigt.",

@@ -1,6 +1,8 @@
 {
     "add-option": "Add option",
     "add-target": "Add target",
+    "cancel": "Cancel",
+    "choose-file": "Choose file",
     "data-storage": "Personal data",
     "daynames-sunday-to-saturday": "Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
     "db-url": "Database URL",
@@ -76,11 +78,15 @@
         "option-desc-placeholder": "Some more information about ‘{{name}}’",
         "option-url-label": "“Read more” link",
         "option-url-placeholder": "A link to some webpage containing more details about ‘{{name}}’",
+        "del-option-confirm-question": "Delete option<br/><b><i>{{name}}</i></b>?",
+        "del-target-confirm-question": "Delete target<br/><b><i>{{name}}</i></b>?",
         "please-list-options-explanation": "Please list at least two options. Don't bother about their ordering. Further options can always be added later by the voters as long as the poll is running.",
         "please-list-targets-explanation": "Please list at least two possible targets. Don't bother about their ordering. Further targets can always be added later by the voters as long as the poll is running.",
         "draft-saved": "Draft saved under<br/>‘My polls’",
         "send-for-review": "Send for review",
-        "import-options-from-file": "Import options from file"
+        "import-options-from-file": "Import options from file",
+        "import-options-header": "Import options from file",
+        "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>"
     },
     "validation": {
         "db-pw-required": "Database password is required.",
