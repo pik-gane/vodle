@@ -12,8 +12,10 @@ import { GlobalService } from "../global.service";
 })
 export class HomePage {
 
-  // lifecycle:
+  // LIFECYCLE:
 
+  private ready = false;  
+  
   constructor(
       public router: Router,
       public loadingController: LoadingController,
@@ -32,16 +34,17 @@ export class HomePage {
 
   ionViewDidEnter() {
     this.G.L.entry("HomePage.ionViewDidEnter");
+    this.ready = this.G.D.ready;
+    this.G.L.debug("HomePage.ready:", this.ready);
   }
 
-  private ready = false;  
-  
   onDataReady() {
+    // called when DataService initialization was slower than view initialization
     this.G.L.entry("HomePage.onDataReady");
     this.ready = true;
   }
 
-  // other:
+  // OTHER:
 
   new_poll(type:string) {
     this.G.L.entry("HomePage.new_poll");
