@@ -31,7 +31,7 @@ export class GlobalService {
   public dbheaders: HttpHeaders = null;
 
   public polls: {} = {}; // dict of Polls by pid
-  public openpoll: Poll = null; // currently open poll
+  public openpoll =  null; //: Poll = null; // currently open poll
   
   // data to be persisted in storage:
   public state_attributes = ["openpid", "username", "cloudant_up", "pollstates"];

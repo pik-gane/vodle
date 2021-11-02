@@ -5,7 +5,9 @@ import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 import { AlertController } from '@ionic/angular'; 
 
-import { GlobalService, Poll, Option } from "../global.service";
+import { GlobalService } from "../global.service";
+import { Poll, Option } from "../poll.service";
+
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 
 export function is_in_future(control: AbstractControl): ValidationErrors | null {
@@ -30,7 +32,7 @@ export class DraftpollPage implements OnInit {
   max = Math.max;
 
   p: Poll;
-  oids: Array<string>;
+  options: Array<Option>;
   formGroup: FormGroup;
   stage: number
   option_stage: number;
@@ -54,7 +56,7 @@ export class DraftpollPage implements OnInit {
     this.G.D.setpage(this);
     let p = this.G.openpoll; 
     if (!p) {
-      p = this.p = this.G.openpoll = new Poll(this.G, {title:'', desc:'', uri:''});
+      p = this.p = this.G.openpoll = new Poll(this.G);
       this.G.polls[p.pid] = p;
     } else {
       p = this.p = this.G.openpoll;
@@ -71,7 +73,7 @@ export class DraftpollPage implements OnInit {
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
     this.n_options = p.oids.length;
-    this.oids = [];
+    this.options = [];
     this.stage = p.type?1:0;
     for (let oid of p.oids) {
       let o = p.options[oid];
@@ -136,10 +138,10 @@ export class DraftpollPage implements OnInit {
   del_option(i: number) {
     if (confirm("Delete " + (this.formGroup.get('poll_type').value=='choice' ? 'option' : 'target') 
           + " ‘" + this.formGroup.get('option_name'+i).value + "’")) {
-      this.p.deregisterOption(this.oids[i]);
+      this.p.remove_option(this.options[i].oid);
       // move metadata of options i+1,i+2,... back one slot to i,i+1,..., then decrease n_options:
       for (let j=i+1; j<this.n_options; j++) {
-        this.oids[j-1] = this.oids[j];
+        this.options[j-1] = this.options[j];
         this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
         this.formGroup.get('option_desc'+(j-1)).setValue(this.formGroup.get('option_desc'+j).value); 
         this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
@@ -158,24 +160,24 @@ export class DraftpollPage implements OnInit {
   }
 
   remove_last_controls() {
-    this.oids = this.oids.slice(0, this.n_options);
+    this.options = this.options.slice(0, this.n_options);
     this.formGroup.removeControl('option_name'+this.n_options);
     this.formGroup.removeControl('option_desc'+this.n_options);
     this.formGroup.removeControl('option_url'+this.n_options);
   }
 
-  add_option(oid:string="", name:string="", desc:string="", url:string="") {
-    if (oid=="") { oid = '' + Math.random(); }
-    this.p.registerOption({oid:oid, name:name, desc:desc, uri:url});
-    this.add_controls(this.p.options[oid]);
+  add_option(oid:string=null, name:string="", desc:string="", url:string="") {
+    let o = new Option(this.G, this.p, oid);
+    this.p._add_option(o);
+    this.add_controls(o);
   }
 
   add_controls(o: Option) {
     let i = this.n_options;
-    this.oids.push(o.oid);
+    this.options.push(o);
     this.formGroup.addControl('option_name'+i, new FormControl(o.name, Validators.required));
     this.formGroup.addControl('option_desc'+i, new FormControl(o.desc));
-    this.formGroup.addControl('option_url'+i, new FormControl(o.uri, Validators.pattern(this.G.urlRegex)));
+    this.formGroup.addControl('option_url'+i, new FormControl(o.url, Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
     this.n_options++;
   }
@@ -262,12 +264,12 @@ export class DraftpollPage implements OnInit {
           if (cols[0] != "") {
             page.no_more();
             if (cols.length==1) { 
-              page.add_option("", cols[0]);
+              page.add_option(null, cols[0]);
             } else if (cols.length==2) { 
-              page.add_option("", cols[0], cols[1]);
+              page.add_option(null, cols[0], cols[1]);
               page.detailstoggle.checked = true;
             } else { 
-              page.add_option("", cols[0], cols[1], cols[2]); 
+              page.add_option(null, cols[0], cols[1], cols[2]); 
               page.detailstoggle.checked = true;
             }
             page.stage = 10;
@@ -281,20 +283,57 @@ export class DraftpollPage implements OnInit {
 
   // data change handlers:
 
+  set_poll_type() {
+    let c = this.formGroup.get('poll_type');
+    if (c.valid) this.p.type = c.value;
+  }
+  set_poll_title() {
+    let c = this.formGroup.get('poll_title');
+    if (c.valid) this.p.title = c.value;
+  }
+  set_poll_desc() {
+    let c = this.formGroup.get('poll_desc');
+    if (c.valid) this.p.desc = c.value;
+  }
+  set_poll_url() {
+    let c = this.formGroup.get('poll_url');
+    if (c.valid) this.p.url = c.value;
+  }
+  set_poll_due_type() {
+    let c = this.formGroup.get('poll_due_type');
+    if (c.valid) this.p.due_type = c.value;
+  }
+  set_poll_due() {
+    let c = this.formGroup.get('poll_due');
+    if (c.valid) this.p.due = new Date(c.value);
+  }
+  set_option_name(i: number) {
+    let c = this.formGroup.get('option_name'+i);
+    if (c.valid) this.options[i].name = c.value;
+  }
+
+  // these will be called by selectServer component:
   set_db(value: string) {
-    //this.G.S.db = value;
+    this.p.db = value;
   }
   set_db_from_pid(value: string) {
-    //this.G.S.db_from_pid = value;
+    this.p.db_from_pid = value;
   }
   set_db_url(value: string) {
-    //this.G.S.db_url = value;
+    this.p.db_url = value;
   }
   set_db_username(value: string) {
-    //this.G.S.db_username = value;
+    this.p.db_username = value;
   }
   set_db_password(value: string) {
-    //this.G.S.db_password = value;
+    this.p.db_password = value;
   }
 
 }
+/*
+  set_theme() {
+    let c = this.formGroup.get('theme');
+    if (c.valid) this.G.S.theme = c.value;
+  }
+
+*/

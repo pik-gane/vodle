@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { GlobalService } from './global.service';
+import { Poll } from "./poll.service";
 
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
@@ -64,16 +65,33 @@ export class DataService {
   public setG(G:GlobalService) { this.G = G; }
   public setpage(page) { this.page = page; }
 
+  private ensure_poll_cache(pid:string) {
+    if (!this.poll_caches[pid]) {
+      this.poll_caches[pid] = {};
+    }
+  }
+
   public getu(key:string):string {
     // get user data item
-    let value = this.user_cache[key];
+    let value = this.user_cache[key] || null;
     console.log("getu "+key+": "+value);
     return value;
   }
-  public getp(pid:string, key:string):string {
+  public getp(p:Poll, key:string):string {
     // get poll data item
-    let value = this.poll_caches[pid][key];
-    console.log("getp "+pid+"/"+key+": "+value);
+    let pid = p.pid;
+    var value = null;
+    if (p.state == 'draft') {
+      // draft polls' data is stored in user's database:
+      let ukey = "p/"+pid+"/"+key;
+      value = this.user_cache[ukey] || null;
+      console.log("getu p/"+pid+"/"+key+": "+value);
+    } else {
+      // other polls' data is stored in poll's own database:
+      this.ensure_poll_cache(pid);
+      value = this.poll_caches[pid][key] || null;
+      console.log("getp "+pid+"/"+key+": "+value);
+    }
     return value;
   }
 
@@ -96,11 +114,22 @@ export class DataService {
     }
     return this.store_user_data(key, value);
   }
-  public setp(pid:string, key:string, value:string) {
+  public setp(p:Poll, key:string, value:string) {
     // set poll data item
-    this.poll_caches[pid][key] = value;
-    console.log("setp "+pid+"/"+key+": "+value);
-    return this.store_poll_data(pid, key, value);
+    let pid = p.pid;
+    if (p.state == 'draft') {
+      // draft polls' data is stored in user's database:
+      let ukey = "p/"+pid+"/"+key;
+      this.user_cache[ukey] = value;
+      console.log("setu p/"+pid+"/"+key+": "+value);
+      return this.store_user_data(ukey, value);
+    } else {
+      // other polls' data is stored in poll's own database:
+      this.ensure_poll_cache(pid);
+      this.poll_caches[pid][key] = value;
+      console.log("setp "+pid+"/"+key+": "+value);
+      return this.store_poll_data(pid, key, value);
+    }
   }
 
   private start_initialization() {
@@ -251,9 +280,10 @@ export class DataService {
       });
     } else {
       // store encrypted and marked with email as owner: //, device and timestamp:
-      let email = this.user_cache['email'], pw = this.user_cache['password'];
+//      let email = this.user_cache['email'], pw = this.user_cache['password'];
+      let email = this.getu('email'), pw = this.getu('password');
       if ((email=='')||(!email) || (pw=='')||(!pw)) {
-        console.log("WARNING: couldn't set "+key+" in local_synced_used_DB since email or password are missing!");
+        console.log("WARNING: couldn't set "+key+" in local_synced_user_DB since email or password are missing!");
         return false;
       }
       let enc_email = encrypt_deterministically(email, pw), _id = enc_email+'/'+key, val = encrypt(value, pw);
