@@ -10,18 +10,6 @@ import { Poll, Option } from "../poll.service";
 
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 
-export function is_in_future(control: AbstractControl): ValidationErrors | null {
-  if (control && control.value) {
-    let currentDateTime = new Date();
-    let controlValue = new Date(control.value);
-    if (currentDateTime >= controlValue)
-    {
-        return {past: true};
-    }
-    return null;
-  }
-}
-
 @Component({
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
@@ -40,19 +28,26 @@ export class DraftpollPage implements OnInit {
   advanced_expanded: boolean;
   n_options: number;
 
+  ref_date: Date;
+
   @ViewChild(IonSelect) type_select: IonSelect;
   @ViewChild(SelectServerComponent) select_server: SelectServerComponent;
   @ViewChild(IonToggle) detailstoggle: IonToggle;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
+
+  // lifecycle:
 
   constructor(
     public formBuilder: FormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
     public G: GlobalService,
-  ) { }
+  ) { 
+    console.log("DRAFTPOLL PAGE CONSTRUCTOR");
+  }
   
   ngOnInit() {
+    console.log("DRAFTPOLL PAGE ngOnInit");
     this.G.D.setpage(this);
     let p = this.G.openpoll; 
     if (!p) {
@@ -61,14 +56,14 @@ export class DraftpollPage implements OnInit {
     } else {
       p = this.p = this.G.openpoll;
     }
-    console.log(p);
+    this.update_ref_date();
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
       poll_title: new FormControl(p.title, Validators.required),
       poll_desc: new FormControl(p.desc),
       poll_url: new FormControl(p.uri, Validators.pattern(this.G.urlRegex)),
       poll_due_type: new FormControl(p.due_type, Validators.required),
-      poll_due: new FormControl(p.due, is_in_future),
+      poll_due: new FormControl(p.due, this.is_in_future.bind(this)),
     });
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
@@ -87,29 +82,49 @@ export class DraftpollPage implements OnInit {
     }
   }
 
-  data_changed() {
-    // called whenever data stored in database has changed
-    console.log("data changed while on settings page");
-    // TODO!
-  }
-
 //  @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
+    console.log("DRAFTPOLL PAGE onBeforeUnload");
     // this seems to be called properly. TODO: perform cleanup! maybe move this to central app place?
     this.ionViewWillLeave();
 //    return false;
   }
   ionViewWillLeave() {
+    console.log("DRAFTPOLL PAGE ionViewWillLeave");
     // this seems to be called properly. TODO: perform cleanup! maybe move this to central app place?
   }
   
-  now() { return new Date(); }
-
   ionViewDidEnter() {
+    console.log("DRAFTPOLL PAGE ionViewDidEnter");
     this.select_server.setParent(this);
     this.ionSelects.map((select) => select.value = select.value);
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
+  
+  // other:
+
+  data_changed() {
+    // called whenever data stored in database has changed
+    console.log("data changed while on draftpoll page");
+    // TODO!
+//    this.update_ref_date();
+  }
+
+  update_ref_date() {
+    this.ref_date = this.now();
+  }
+  now() { return new Date(); }
+  is_in_future(control: AbstractControl): ValidationErrors | null {
+    if (control && control.value) {
+      let controlValue = new Date(control.value);
+      if (this.ref_date >= controlValue)
+      {
+          return {past: true};
+      }
+      return null;
+    }
+  }
+  
   
   test_url(url: string) {
     if (!url.startsWith("http")) url = "http://" + url; // TODO: improve this logic
@@ -304,6 +319,7 @@ export class DraftpollPage implements OnInit {
     if (c.valid) this.p.due_type = c.value;
   }
   set_poll_due() {
+    this.update_ref_date();
     let c = this.formGroup.get('poll_due');
     if (c.valid) this.p.due = new Date(c.value);
   }

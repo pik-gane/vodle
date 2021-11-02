@@ -17,7 +17,9 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
-  constructor() { }
+  constructor() { 
+    console.log("POLL SERVICE CONSTRUCTOR");
+  }
   public setG(G:GlobalService) { this.G = G; }
 
 }
@@ -77,7 +79,7 @@ export class Poll {
   public set state(value: string) {
     var old_state = this.state;
     if ({
-          null: ['draft'], 
+          '': ['draft'], 
           'draft':['running'], 
           'running':['closed']
         }[old_state].includes(value)) {
@@ -159,9 +161,9 @@ export class Option {
     if (!oid) {
       oid = this._oid = CryptoJS.lib.WordArray.random(16).toString();
       this.G.D.setp(poll, 'o/'+oid+'/oid', oid);
-      this.G.D.setp(this.p, 'o/'+this._oid+'/name', name);
-      this.G.D.setp(this.p, 'o/'+this._oid+'/desc', desc);
-      this.G.D.setp(this.p, 'o/'+this._oid+'/url', url);
+      this.G.D.setp(poll, 'o/'+oid+'/name', name);
+      this.G.D.setp(poll, 'o/'+oid+'/desc', desc);
+      this.G.D.setp(poll, 'o/'+oid+'/url', url);
       console.log("new option with pid,oid "+poll.pid+","+this._oid);
     }
   }

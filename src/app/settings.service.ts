@@ -8,7 +8,9 @@ export class SettingsService {
 
   private G: GlobalService;
 
-  constructor() { }
+  constructor() { 
+    console.log("SETTINGS SERVICE CONSTRUCTOR");
+  }
   public setG(G:GlobalService) { this.G = G; }
 
   public get email(): string { return this.G.D.getu('email'); }

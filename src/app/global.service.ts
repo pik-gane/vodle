@@ -47,6 +47,7 @@ export class GlobalService {
       public P: PollService,
       public S: SettingsService,
       ) {
+    console.log("GLOBAL SERVICE CONSTRUCTOR");
     // make this service available to the other services:
     D.setG(this); 
     P.setG(this); 
@@ -107,7 +108,7 @@ export class GlobalService {
 
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
-    console.log("onBeforeUnload...");
+    console.log("DATA onBeforeUnload");
     //event.preventDefault();
     //return false;
   }
@@ -366,7 +367,7 @@ export class Poll {
       this[a] = s[a];
 //      GlobalService.log("  " + a + ":" + JSON.stringify(this[a]));
     }
-    this.tally();
+//    this.tally();  // TODO: reactivate this line!
     GlobalService.log("  done.");
   }
 

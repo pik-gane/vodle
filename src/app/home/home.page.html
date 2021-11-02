@@ -14,12 +14,12 @@
   <ion-list lines="full" no-padding no-margin>
     <!--
     <ion-item>
-      <ion-button routerLink="/openpoll" [disabled]="g.username==''">
+      <ion-button routerLink="/openpoll" [disabled]="G.username==''">
         <ion-icon name="git-commit" slot="start"></ion-icon>
         Last used
       </ion-button>
       &nbsp;
-      <ion-button routerLink="/mypolls" [disabled]="g.username==''">
+      <ion-button routerLink="/mypolls" [disabled]="G.username==''">
         <ion-icon name="list" slot="start"></ion-icon>
         My polls
       </ion-button>
@@ -36,7 +36,7 @@
     </ion-item>
     <ion-item>
       <ion-text slot="start">Username:</ion-text>
-      <ion-input [value]="g.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
+      <ion-input [value]="G.username" placeholder="Enter the user name given on paper" required="true" autofocus="true" id="username" (ionBlur)="changeUsername()" [disabled]="!editing"></ion-input>
     </ion-item>
     <ion-item>
       <ng-template [ngIf]="!editing" slot="end">
@@ -83,9 +83,9 @@
         </ion-col></ion-row>
       </ion-grid>
     </ion-item>
-    <ng-template [ngIf]="g.username=='glinda'">
+    <ng-template [ngIf]="G.username=='glinda'">
       <ion-item>
-        <ion-button (click)="g.storage.clear()">clear storage</ion-button>
+        <ion-button (click)="G.storage.clear()">clear storage</ion-button>
       </ion-item>
     </ng-template>
   </ion-list>

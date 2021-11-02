@@ -44,12 +44,17 @@ export class SettingsPage implements OnInit {
   showing_password: Boolean;
   advanced_expanded: Boolean;
 
+  // lifecycle:
+
   constructor(
-    public formBuilder: FormBuilder,
-    public translate: TranslateService,
-    public G: GlobalService) { }
+      public formBuilder: FormBuilder,
+      public translate: TranslateService,
+      public G: GlobalService) { 
+    console.log("SETTINGS PAGE CONSTRUCTOR");
+  }
 
   ngOnInit() {
+    console.log("SETTINGS PAGE ngOnInit");
     this.G.D.setpage(this);
     this.editing_email = false;
     this.editing_password = false;
@@ -73,11 +78,14 @@ export class SettingsPage implements OnInit {
   }
   
   ionViewDidEnter() {
+    console.log("SETTINGS PAGE ionViewDidEnter");
     this.select_server.parent = this;
     this.fill_form();
 //    this.ionSelects.map((select) => select.value = select.value);
   }
 
+  // other:
+  
   data_changed() {
     // called whenever data stored in database has changed
     console.log("data changed while on settings page");

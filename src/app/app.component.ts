@@ -42,6 +42,7 @@ export class AppComponent {
 
 
   constructor(translate: TranslateService) {
+    console.log("APP CONSTRUCTOR");
     translate.addLangs(['de','en']);
 
     // this language will be used as a fallback when a translation isn't found in the current language

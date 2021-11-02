@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { GlobalService, Poll } from "../global.service";
+import { GlobalService } from "../global.service";
 
 @Component({
   selector: 'app-home',
@@ -11,32 +11,45 @@ import { GlobalService, Poll } from "../global.service";
 export class HomePage {
 
   public editing: boolean = false;
+  
+  // lifecycle:
 
   constructor(
-    public router: Router,
-    public g: GlobalService) {}
+      public router: Router,
+      public G: GlobalService) {
+    console.log("HOME PAGE CONSTRUCTOR");
+  }
+
+
+  ngOnInit() {
+    console.log("HOME PAGE ngOnInit");
+    this.G.D.setpage(this);
+  }
+
+  // other:
 
   changeUsername() {
     this.editing = false;
-    let u = this.g.username = (document.getElementById('username') as HTMLInputElement).value;
-    for (let pid of Object.keys(this.g.polls)) {
-      let p = this.g.polls[pid]
+    let u = this.G.username = (document.getElementById('username') as HTMLInputElement).value;
+    for (let pid of Object.keys(this.G.polls)) {
+      let p = this.G.polls[pid]
       if (u!=p.myvid) {
         p.deregisterVoter(p.myvid);
         p.myvid = u;
         p.registerVoter(u);
       }
     }
-    this.g.save_state();
+    this.G.save_state();
   }
   showUsername() {
   }
   ionViewWillEnter() {
-    this.editing = (this.g.username == null);
+    console.log("HOME PAGE ionViewWillEnter");
+    this.editing = (this.G.username == null);
   }
 
   new_poll(type:string) {
-    this.g.openpoll = new Poll(this.g, {type:type, title:'', desc:'', uri:''});
+    this.G.openpoll = null; // new Poll(this.g, {type:type, title:'', desc:'', uri:''});
     this.router.navigate(['/draftpoll']);
   }
 }

@@ -7,7 +7,7 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 
 import * as CryptoJS from 'crypto-js';
 const crypto_algorithm = 'des-ede3';
-const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but constant value
+const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
 // some keys are only stored locally and not synced to a remote CouchDB:
 const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
@@ -19,13 +19,15 @@ function encrypt_deterministically(value, password:string) {
   return result;
 }
 
-function encrypt(value, password:string) {
+function encrypt(value, password:string): string {
   const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
   return result;
 }
 
-function decrypt(value:string, password:string) {
-  const result = CryptoJS.AES.decrypt(value, password).toString(CryptoJS.enc.Utf8);
+function decrypt(value:string, password:string): string {
+  const temp = CryptoJS.AES.decrypt(value, password);
+  // FIXME: sometimes we get a malformed UTF-8 error on toString when using CryptoJS.enc.Utf8: 
+  const result = temp.toString(); // CryptoJS.enc.Utf8 ?
   return result;
 }
 
@@ -50,6 +52,7 @@ export class DataService {
   constructor(
     public translate: TranslateService,
   ){
+    console.log("DATA SERVICE CONSTRUCTOR");
     this.user_cache = {};
     this.local_only_user_DB = new PouchDB('local_only_user');
 //    this.local_only_user_DB.destroy();
@@ -73,7 +76,7 @@ export class DataService {
 
   public getu(key:string):string {
     // get user data item
-    let value = this.user_cache[key] || null;
+    let value = this.user_cache[key] || '';
     console.log("getu "+key+": "+value);
     return value;
   }
@@ -84,12 +87,12 @@ export class DataService {
     if (p.state == 'draft') {
       // draft polls' data is stored in user's database:
       let ukey = "p/"+pid+"/"+key;
-      value = this.user_cache[ukey] || null;
+      value = this.user_cache[ukey] || '';
       console.log("getu p/"+pid+"/"+key+": "+value);
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][key] || null;
+      value = this.poll_caches[pid][key] || '';
       console.log("getp "+pid+"/"+key+": "+value);
     }
     return value;
@@ -97,6 +100,7 @@ export class DataService {
 
   public setu(key:string, value:string) {
     // set user data item
+    value = value || '';
     if (key=='language') {
       this.translate.use(value);      
     }
@@ -116,6 +120,7 @@ export class DataService {
   }
   public setp(p:Poll, key:string, value:string) {
     // set poll data item
+    value = value || '';
     let pid = p.pid;
     if (p.state == 'draft') {
       // draft polls' data is stored in user's database:
@@ -188,7 +193,7 @@ export class DataService {
     for (let row of result.rows) {
       this.doc2user_cache(row.doc);
     }
-    this.page.data_changed();
+    if (this.page.data_changed) this.page.data_changed();
   }
 
   private start_user_sync() {
@@ -280,8 +285,8 @@ export class DataService {
       });
     } else {
       // store encrypted and marked with email as owner: //, device and timestamp:
-//      let email = this.user_cache['email'], pw = this.user_cache['password'];
-      let email = this.getu('email'), pw = this.getu('password');
+      let email = this.user_cache['email'], pw = this.user_cache['password'];
+//      let email = this.getu('email'), pw = this.getu('password');
       if ((email=='')||(!email) || (pw=='')||(!pw)) {
         console.log("WARNING: couldn't set "+key+" in local_synced_user_DB since email or password are missing!");
         return false;

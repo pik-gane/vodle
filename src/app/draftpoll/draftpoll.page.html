@@ -243,10 +243,10 @@
             (ionChange)="set_option_name(i)"
             (ionBlur)="blur_option_name(i, detailstoggle.checked)">
           </ion-input>      
-          <ion-button *ngIf="i == n_options-1 && i > 1 && formGroup.get('option_name'+i).value==''" 
+          <ion-button *ngIf="i == n_options-1 && i > 1 && [null,''].includes(formGroup.get('option_name'+i).value)" 
             color="primary" slot="end" class="skip-button"
             (click)="no_more()">{{'draftpoll.no-more-button'|translate}}</ion-button>
-          <ion-button *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && formGroup.get('option_name'+i).value=='')" 
+          <ion-button *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && [null,''].includes(formGroup.get('option_name'+i).value))" 
             fill="clear" color="primary" slot="end" class="skip-button"
             (click)="del_option(i)"><ion-icon slot="icon-only" name="trash-outline"></ion-icon></ion-button>
           </ion-item>
