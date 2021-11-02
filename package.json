@@ -36,6 +36,7 @@
     "buffer": "^6.0.3",
     "crypto-js": "^4.1.1",
     "globalthis": "^1.0.2",
+    "ionic-logging-service": "^13.0.0",
     "openpgp": "^5.0.0",
     "pouchdb": "^7.2.2",
     "rxjs": "~6.6.0",

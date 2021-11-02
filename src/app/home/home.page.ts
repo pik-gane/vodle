@@ -18,32 +18,33 @@ export class HomePage {
       public router: Router,
       public loadingController: LoadingController,
       public G: GlobalService) {
-    console.log("HOME PAGE CONSTRUCTOR");
+    this.G.L.entry("HomePage.constructor");
   }
 
   ngOnInit() {
-    console.log("HOME PAGE ngOnInit");
+    this.G.L.entry("HomePage.ngOnInit");
   }
 
   ionViewWillEnter() {
-    console.log("HOME PAGE ionViewWillEnter");
-    this.G.D.setpage(this);
+    this.G.L.entry("HomePage.ionViewWillEnter");
+    this.G.D.page = this;
   }
 
   ionViewDidEnter() {
-    console.log("HOME PAGE ionViewDidEnter");
+    this.G.L.entry("HomePage.ionViewDidEnter");
   }
 
   private ready = false;  
   
   onDataReady() {
-    console.log("HOME PAGE onDataReady");
+    this.G.L.entry("HomePage.onDataReady");
     this.ready = true;
   }
 
   // other:
 
   new_poll(type:string) {
+    this.G.L.entry("HomePage.new_poll");
     this.G.openpoll = null; // new Poll(this.g, {type:type, title:'', desc:'', uri:''});
     this.router.navigate(['/draftpoll']);
   }

@@ -86,7 +86,7 @@ export class PollPage implements OnInit {
     }
   }
   ionViewDidEnter() {
-    this.G.D.setpage(this);
+    this.G.D.page = this;
     this.showStats();
   }
   ionViewWillLeave() {

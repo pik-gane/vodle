@@ -113,7 +113,7 @@ export class DraftpollPage implements OnInit {
   
   ionViewDidEnter() {
     console.log("DRAFTPOLL PAGE ionViewDidEnter");
-    this.G.D.setpage(this);
+    this.G.D.page = this;
     this.select_server.setParent(this);
     this.ionSelects.map((select) => select.value = select.value);
     if (!this.formGroup.get('poll_type').value) this.type_select.open();

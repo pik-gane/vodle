@@ -1,3 +1,11 @@
 export const environment = {
-  production: true
+  production: true,
+  logging: {
+    logLevels: [
+      {
+        loggerName: "root",
+        logLevel: "WARN"
+      },
+    ]  
+  }
 };

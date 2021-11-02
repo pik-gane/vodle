@@ -1,8 +1,11 @@
+import { finalize } from 'rxjs/operators'; // TODO: what for??
+
 import { Injectable, HostListener, SkipSelf } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { finalize } from 'rxjs/operators';
+
 // TODO: replace Storage by PouchCouch:
 import { Storage } from '@ionic/storage-angular';
+import { Logger, LoggingService } from "ionic-logging-service";
 
 import { DataService } from './data.service';
 import { SettingsService } from './settings.service';
@@ -12,6 +15,8 @@ import { PollService } from './poll.service';
   providedIn: 'root'
 })
 export class GlobalService {
+
+  public L: Logger;
 
   // constants or session-specific data:
 
@@ -41,17 +46,19 @@ export class GlobalService {
   public pollstates: {} = {};
 
   constructor(
+      loggingService: LoggingService,
       public http: HttpClient, 
       public storage: Storage,
       public D: DataService,
       public P: PollService,
       public S: SettingsService,
       ) {
-    console.log("GLOBAL SERVICE CONSTRUCTOR");
+    this.L = loggingService.getLogger("VODLE");
+    this.L.entry("GlobalService.constructor");
     // make this service available to the other services:
-    D.setG(this); 
-    P.setG(this); 
-    S.setG(this);
+    D.init(this); 
+    P.init(this); 
+    S.init(this);
 
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
@@ -81,7 +88,9 @@ export class GlobalService {
       (error) => {
         GlobalService.log('getting state from storage failed with error ' + error);
         this.init();
-      });
+      }
+    );
+    this.L.exit("GlobalService.constructor");
   }
 
   init() { // called after state restoration finished

@@ -8,10 +8,11 @@ export class SettingsService {
 
   private G: GlobalService;
 
-  constructor() { 
-    console.log("SETTINGS SERVICE CONSTRUCTOR");
+  constructor() { }
+
+  init(G:GlobalService) { 
+    this.G = G; 
   }
-  public setG(G:GlobalService) { this.G = G; }
 
   public get email(): string { return this.G.D.getu('email'); }
   public set email(value: string) { this.G.D.setu('email', value); }

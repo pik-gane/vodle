@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
 
@@ -8,22 +8,29 @@ import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
-import { AppComponent } from './app.component';
-import { AppRoutingModule } from './app-routing.module';
-
+import { LoggingServiceModule, LoggingService, LoggingServiceConfiguration } from 'ionic-logging-service';
 import { IonicStorageModule } from '@ionic/storage-angular';
 
+import { environment } from '../environments/environment';
+import { AppComponent } from './app.component';
+import { AppRoutingModule } from './app-routing.module';
 import { GlobalService } from './global.service';
-//import { DataService } from './data.service';
 
 export function createTranslateLoader(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
+export function configureLogging(loggingService: LoggingService): () => void {
+  return () => {
+    console.log("VODLE configuring logger with "+JSON.stringify(environment.logging));
+    loggingService.configure(environment.logging as LoggingServiceConfiguration);
+  }
 }
 
 @NgModule({
   declarations: [AppComponent],
   entryComponents: [],
   imports: [
+    LoggingServiceModule,
     BrowserModule, 
     IonicModule.forRoot(), 
     IonicStorageModule.forRoot(),
@@ -41,7 +48,12 @@ export function createTranslateLoader(http: HttpClient) {
   providers: [
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     GlobalService,
-//    DataService
+    {
+      deps: [LoggingService],
+      multi: true,
+      provide: APP_INITIALIZER,
+      useFactory: configureLogging
+    }
   ],
   bootstrap: [AppComponent],
 })

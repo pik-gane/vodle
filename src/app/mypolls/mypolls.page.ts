@@ -16,6 +16,6 @@ export class MypollsPage implements OnInit {
   }
 
   ionViewDidEnter() {
-    this.G.D.setpage(this);
+    this.G.D.page = this;
   }
 }

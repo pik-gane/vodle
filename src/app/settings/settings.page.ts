@@ -78,7 +78,7 @@ export class SettingsPage implements OnInit {
   
   ionViewDidEnter() {
     console.log("SETTINGS PAGE ionViewDidEnter");
-    this.G.D.setpage(this);
+    this.G.D.page = this;
     this.select_server.parent = this;
     this.fill_form();
 //    this.ionSelects.map((select) => select.value = select.value);

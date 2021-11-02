@@ -17,10 +17,11 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
-  constructor() { 
-    console.log("POLL SERVICE CONSTRUCTOR");
+  constructor() { }
+  
+  init(G:GlobalService) { 
+    this.G = G; 
   }
-  public setG(G:GlobalService) { this.G = G; }
 
 }
 
