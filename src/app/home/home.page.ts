@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
+import { LoadingController } from '@ionic/angular';
+
 import { GlobalService } from "../global.service";
 
 @Component({
@@ -10,43 +12,36 @@ import { GlobalService } from "../global.service";
 })
 export class HomePage {
 
-  public editing: boolean = false;
-  
   // lifecycle:
 
   constructor(
       public router: Router,
+      public loadingController: LoadingController,
       public G: GlobalService) {
     console.log("HOME PAGE CONSTRUCTOR");
   }
 
-
   ngOnInit() {
     console.log("HOME PAGE ngOnInit");
+  }
+
+  ionViewWillEnter() {
+    console.log("HOME PAGE ionViewWillEnter");
     this.G.D.setpage(this);
   }
 
-  // other:
+  ionViewDidEnter() {
+    console.log("HOME PAGE ionViewDidEnter");
+  }
 
-  changeUsername() {
-    this.editing = false;
-    let u = this.G.username = (document.getElementById('username') as HTMLInputElement).value;
-    for (let pid of Object.keys(this.G.polls)) {
-      let p = this.G.polls[pid]
-      if (u!=p.myvid) {
-        p.deregisterVoter(p.myvid);
-        p.myvid = u;
-        p.registerVoter(u);
-      }
-    }
-    this.G.save_state();
+  private ready = false;  
+  
+  onDataReady() {
+    console.log("HOME PAGE onDataReady");
+    this.ready = true;
   }
-  showUsername() {
-  }
-  ionViewWillEnter() {
-    console.log("HOME PAGE ionViewWillEnter");
-    this.editing = (this.G.username == null);
-  }
+
+  // other:
 
   new_poll(type:string) {
     this.G.openpoll = null; // new Poll(this.g, {type:type, title:'', desc:'', uri:''});

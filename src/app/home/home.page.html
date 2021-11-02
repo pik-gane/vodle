@@ -10,7 +10,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding" [fullscreen]="false">
+<ion-content *ngIf="ready" class="ion-padding" [fullscreen]="false">
   <ion-list lines="full" no-padding no-margin>
     <!--
     <ion-item>

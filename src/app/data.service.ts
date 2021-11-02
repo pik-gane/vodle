@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+
+import { LoadingController } from '@ionic/angular';
+
 import { GlobalService } from './global.service';
 import { Poll } from "./poll.service";
 
@@ -44,14 +47,23 @@ export class DataService {
   private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
   private remote_user_DB: PouchDB.Database; // persistent remote copy of synced user data
 
-  private pids: Set<string>; // list of pids 
+  private _pids: Set<string>; // list of pids 
+  public get pids() { return this._pids; }
+
   private poll_caches: {}; // temporary storage of poll data
   private local_poll_DBs: {}; // persistent local copies of this user's part of the poll data
   private remote_poll_DBs: {}; // persistent remote copies of complete poll data
 
+  private loadingElement: HTMLIonLoadingElement;
+
+  private _ready: boolean = false;
+  public get ready() { return this._ready; }
+
   constructor(
+    public loadingController: LoadingController,
     public translate: TranslateService,
   ){
+    this.show_loading();
     console.log("DATA SERVICE CONSTRUCTOR");
     this.user_cache = {};
     this.local_only_user_DB = new PouchDB('local_only_user');
@@ -59,15 +71,29 @@ export class DataService {
     this.local_synced_user_DB = new PouchDB('local_synced_user');
 //    this.local_synced_user_DB.destroy();
     this.start_initialization();
-    for (let pid of this.pids) {
+    for (let pid of this._pids) {
       this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
 //      this.start_poll_sync(pid);
       this.fill_poll_cache(pid);
     }
   }
+
+  private async show_loading() {
+    // start displaying a loading animation which will be dismissed when initialization is finished
+    this.loadingElement = await this.loadingController.create({
+      message: 'Test',
+      spinner: 'crescent',  
+//      duration: 1000,
+    });
+    // only present the animation, if data not yet ready:
+    if (!this._ready) {
+      await this.loadingElement.present();     
+    }
+  }
+
   public setG(G:GlobalService) { this.G = G; }
   public setpage(page) { this.page = page; }
-
+  
   private ensure_poll_cache(pid:string) {
     if (!this.poll_caches[pid]) {
       this.poll_caches[pid] = {};
@@ -139,7 +165,7 @@ export class DataService {
 
   private start_initialization() {
     // fills temporary cache with values from persistent DBs.
-    this.pids = new Set();
+    this._pids = new Set();
     this.poll_caches = {};
     this.local_poll_DBs = {};
     this.remote_poll_DBs = {};
@@ -193,7 +219,13 @@ export class DataService {
     for (let row of result.rows) {
       this.doc2user_cache(row.doc);
     }
-    if (this.page.data_changed) this.page.data_changed();
+    // TODO: now process all poll data as well...
+    this.after_changes();
+
+    // mark as ready, dismiss loading animation, and notify page:
+    this._ready = true;
+    if (this.loadingElement) this.loadingElement.dismiss();
+    if (this.page && this.page.onDataReady) this.page.onDataReady();
   }
 
   private start_user_sync() {
@@ -236,7 +268,19 @@ export class DataService {
         local_changes = this.doc2user_cache(doc);
       }
     }
-    if (local_changes) this.page.data_changed();
+    if (local_changes) {
+      this.after_changes();
+      if (this.page.onDataChange) this.page.onDataChange();
+    }
+  }
+
+  private after_changes() {
+    for (let pid of this._pids) {
+      if (!(pid in this.G.P.polls)) {
+        // poll object does not exist yet, so create it:
+        let p = new Poll(this.G, pid);
+      }
+    }
   }
 
   private fill_poll_cache(pid:string) {
@@ -341,7 +385,7 @@ export class DataService {
   }
 
   private doc2user_cache(doc): boolean {
-    // returns whether the value actually changed.
+    // populate user cache with key, value from doc
     let value_changed = false;
     var key = doc['key'];
     if (!local_only_keys.includes(key)) {
@@ -355,12 +399,13 @@ export class DataService {
         console.log("doc2user_cache "+key+": "+value);
         if (key.startsWith('p/') && key.endsWith('/pid')) {
           let pid = value;
-          this.pids.add(pid);
+          this._pids.add(pid);
         }
       } else {
         console.log("WARNING: corrupt doc "+JSON.stringify(doc));
       }
     }
+    // returns whether the value actually changed.
     return value_changed;
   }
   private doc2poll_cache(pid, doc) {

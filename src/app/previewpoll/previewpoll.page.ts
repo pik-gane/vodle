@@ -12,4 +12,7 @@ export class PreviewpollPage implements OnInit {
   ngOnInit() {
   }
 
+  ionViewDidEnter() {
+//    this.G.D.setpage(this);
+  }
 }

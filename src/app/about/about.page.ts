@@ -12,4 +12,8 @@ export class AboutPage implements OnInit {
   ngOnInit() {
   }
 
+  ionViewDidEnter() {
+//    this.G.D.setpage(this);
+  }
+
 }

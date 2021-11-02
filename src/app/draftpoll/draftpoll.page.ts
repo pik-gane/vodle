@@ -1,6 +1,9 @@
 import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import {ActivatedRoute} from "@angular/router";
+
 import { PopoverController, IonSelect, IonToggle } from '@ionic/angular';
+
 import { TranslateService } from '@ngx-translate/core';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
@@ -20,6 +23,7 @@ export class DraftpollPage implements OnInit {
 
   max = Math.max;
 
+  pid: string;
   p: Poll;
   options: Array<Option>;
   formGroup: FormGroup;
@@ -39,6 +43,7 @@ export class DraftpollPage implements OnInit {
   // lifecycle:
 
   constructor(
+    private route: ActivatedRoute,
     public formBuilder: FormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
@@ -46,24 +51,34 @@ export class DraftpollPage implements OnInit {
     public translate: TranslateService,
   ) { 
     console.log("DRAFTPOLL PAGE CONSTRUCTOR");
+    this.route.params.subscribe( params => { 
+      this.pid = params['pid'] 
+    } );
   }
   
   ngOnInit() {
     console.log("DRAFTPOLL PAGE ngOnInit");
-    this.G.D.setpage(this);
-    let p = this.G.openpoll; 
-    if (!p) {
-      p = this.p = this.G.openpoll = new Poll(this.G);
+    var p: Poll;
+    if (!this.pid) {
+      // no pid was passed in the call, so create a new one:
+      p = this.p = new Poll(this.G);
       this.G.polls[p.pid] = p;
+      this.pid = p.pid;
+      console.log("CREATING A NEW POLL " + this.pid);
+    } else if (this.pid in this.G.P.polls) {
+      // the pid of a known poll was passed in the call:
+      let p = this.p = this.G.P.polls[this.pid]; 
+      console.log("EDIT KNOWN POLL " + this.pid);
     } else {
-      p = this.p = this.G.openpoll;
+      // a pid was passed but the poll is not known:
+      window.alert("OOPS! unknown pid...");
     }
     this.update_ref_date();
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl(p.type, Validators.required),
       poll_title: new FormControl(p.title, Validators.required),
       poll_desc: new FormControl(p.desc),
-      poll_url: new FormControl(p.uri, Validators.pattern(this.G.urlRegex)),
+      poll_url: new FormControl(p.url, Validators.pattern(this.G.urlRegex)),
       poll_due_type: new FormControl(p.due_type, Validators.required),
       poll_due: new FormControl(p.due, this.is_in_future.bind(this)),
     });
@@ -98,6 +113,7 @@ export class DraftpollPage implements OnInit {
   
   ionViewDidEnter() {
     console.log("DRAFTPOLL PAGE ionViewDidEnter");
+    this.G.D.setpage(this);
     this.select_server.setParent(this);
     this.ionSelects.map((select) => select.value = select.value);
     if (!this.formGroup.get('poll_type').value) this.type_select.open();

@@ -161,4 +161,7 @@ so C wins in that case, even though A has a larger total rating (but is not appr
   ngOnInit() {
   }
 
+  ionViewDidEnter() {
+//    this.G.D.setpage(this);
+  }
 }

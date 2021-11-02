@@ -50,7 +50,7 @@ export class PollPage implements OnInit {
               public loadingController: LoadingController,
               public alertCtrl: AlertController,
               private zone: NgZone,
-              public g: GlobalService) {
+              public G: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
       this.zone.run(() => {
         console.log('force update the screen');
@@ -60,7 +60,7 @@ export class PollPage implements OnInit {
 
   // lifecycle events:
   ngOnInit() {
-    let p = this.p = this.g.openpoll;
+    let p = this.p = this.G.openpoll;
     if (!this.p) {
       this.navCtrl.navigateRoot("/");
       return;
@@ -78,7 +78,7 @@ export class PollPage implements OnInit {
     this.onDelegateToggleChange()
   }
   ionViewWillEnter() {
-    if (this.g.username=='') {
+    if (this.G.username=='') {
       alert("Please enter a your username first!");
       this.navCtrl.navigateBack('/home');
     } else { 
@@ -86,6 +86,7 @@ export class PollPage implements OnInit {
     }
   }
   ionViewDidEnter() {
+    this.G.D.setpage(this);
     this.showStats();
   }
   ionViewWillLeave() {
@@ -227,7 +228,7 @@ export class PollPage implements OnInit {
     this.p.setMyRating(oid, r);
     // TODO: broadcast rating
     this.p.tally();
-    this.g.save_state();
+    this.G.save_state();
     this.showStats();
   }
   ratingChangeBegins(oid) {
@@ -266,7 +267,7 @@ export class PollPage implements OnInit {
       // wait until no further changes happened within 
       // the last submit_interval
       this.submit_hold = false;
-      await this.g.sleep(this.submit_interval);
+      await this.G.sleep(this.submit_interval);
     }
     this.updateOrder();
     this.doSubmit();
@@ -283,7 +284,7 @@ export class PollPage implements OnInit {
       this.p.getCompleteState();
       this.updateOrder();
       this.showStats();
-      await this.g.sleep(this.update_interval);
+      await this.G.sleep(this.update_interval);
     }
   }
 

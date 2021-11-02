@@ -55,7 +55,6 @@ export class SettingsPage implements OnInit {
 
   ngOnInit() {
     console.log("SETTINGS PAGE ngOnInit");
-    this.G.D.setpage(this);
     this.editing_email = false;
     this.editing_password = false;
     this.showing_password = false;
@@ -79,6 +78,7 @@ export class SettingsPage implements OnInit {
   
   ionViewDidEnter() {
     console.log("SETTINGS PAGE ionViewDidEnter");
+    this.G.D.setpage(this);
     this.select_server.parent = this;
     this.fill_form();
 //    this.ionSelects.map((select) => select.value = select.value);

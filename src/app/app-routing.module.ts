@@ -36,6 +36,10 @@ const routes: Routes = [
     loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
   },
   {
+    path: 'draftpoll/:pid',
+    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
+  },
+  {
     path: 'publishpoll',
     loadChildren: () => import('./publishpoll/publishpoll.module').then( m => m.PublishpollPageModule)
   },

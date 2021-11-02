@@ -10,9 +10,12 @@ export class MypollsPage implements OnInit {
 
   public Object = Object;
 
-  constructor(public g: GlobalService) { }
+  constructor(public G: GlobalService) { }
 
   ngOnInit() {
   }
 
+  ionViewDidEnter() {
+    this.G.D.setpage(this);
+  }
 }

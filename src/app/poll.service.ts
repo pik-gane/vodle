@@ -30,14 +30,15 @@ export class Poll {
 
   constructor (G: GlobalService, pid?: string) { 
     this.G = G;
-//    G._add_poll(this);
     if (!pid) {
       // generate a new draft poll
       pid = this._pid = CryptoJS.lib.WordArray.random(16).toString();
       this.state = 'draft';
       this.G.D.setu('p/'+pid+'/pid', pid);
-      console.log("new draft poll with pid "+this._pid);
+      console.log("generated a new pid "+this._pid);
     }
+    console.log("POLL CONSTRUCTOR for " + pid);
+    this.G.P.polls[pid] = this;
   }
 
   private _pid: string;
