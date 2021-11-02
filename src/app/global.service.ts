@@ -150,6 +150,19 @@ export class GlobalService {
     });
   }
 
+  open_url_in_new_tab(url: string) {
+    /* 
+      instead of window.open(url,'_blank');
+      we do this workaround to prevent the opened page from access to the current session:
+    */ 
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
   public demodata = {
     'president' : [
       ["President of the world",

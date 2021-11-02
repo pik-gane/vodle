@@ -125,10 +125,9 @@ export class DraftpollPage implements OnInit {
     }
   }
   
-  
   test_url(url: string) {
     if (!url.startsWith("http")) url = "http://" + url; // TODO: improve this logic
-    window.open(url,'_blank');
+    this.G.open_url_in_new_tab(url);
   }
 
   blur_option_name(i: number, d: boolean) {
