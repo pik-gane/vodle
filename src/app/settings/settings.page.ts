@@ -1,7 +1,8 @@
 import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { IonInput, IonSelect } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
+
+import { IonInput, IonSelect } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
@@ -11,7 +12,7 @@ TODO:
 - when changing password or server, alert that user needs to update password or server on other devices as well
 */
 
-// custom validator to check that two fields match
+// custom validator to check that the passwords match:
 export function passwords_match(control: AbstractControl): ValidationErrors | null {
   if (control) {
     const password = control.get('password');
@@ -26,6 +27,8 @@ export function passwords_match(control: AbstractControl): ValidationErrors | nu
   return null;
 }
 
+// PAGE:
+
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.page.html',
@@ -33,32 +36,35 @@ export function passwords_match(control: AbstractControl): ValidationErrors | nu
 })
 export class SettingsPage implements OnInit {
 
+  // ATTRIBUTES:
+
+  // template components:
+
   @ViewChild(IonInput) retype_password: IonInput;
   @ViewChild(SelectServerComponent) select_server: SelectServerComponent;
-
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
-  formGroup: FormGroup;
-  editing_email: Boolean;
-  editing_password: Boolean;
-  showing_password: Boolean;
-  advanced_expanded: Boolean;
+  // form:
 
-  // lifecycle:
+  private formGroup: FormGroup;
+  private editing_email: Boolean;
+  private editing_password: Boolean;
+  private showing_password: Boolean;
+  private advanced_expanded: Boolean;
+
+  // LIFECYCLE:
+
+  private ready = false;  
 
   constructor(
       public formBuilder: FormBuilder,
       public translate: TranslateService,
       public G: GlobalService) { 
-    console.log("SETTINGS PAGE CONSTRUCTOR");
+    this.G.L.entry("SettingsPage.constructor");
   }
 
   ngOnInit() {
-    console.log("SETTINGS PAGE ngOnInit");
-    this.editing_email = false;
-    this.editing_password = false;
-    this.showing_password = false;
-    this.advanced_expanded = false;
+    this.G.L.entry("SettingsPage.ngOnInit");
     this.formGroup = this.formBuilder.group({
       email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
       pw: this.formBuilder.group({
@@ -76,23 +82,76 @@ export class SettingsPage implements OnInit {
     });
   }
   
+  ionViewWillEnter() {
+    this.G.L.entry("SettingsPage.ionViewWillEnter");
+    this.G.D.page = this.select_server.parent = this;
+    this.editing_email = false;
+    this.editing_password = false;
+    this.showing_password = false;
+    this.advanced_expanded = false;
+  }
+
   ionViewDidEnter() {
-    console.log("SETTINGS PAGE ionViewDidEnter");
-    this.G.D.page = this;
-    this.select_server.parent = this;
-    this.fill_form();
-//    this.ionSelects.map((select) => select.value = select.value);
+    this.G.L.entry("SettingsPage.ionViewDidEnter");
+    if (this.G.D.ready && !this.ready) this.onDataReady();
   }
 
-  // other:
+  onDataReady() {
+    // called when DataService initialization was slower than view initialization
+    this.G.L.entry("SettingsPage.onDataReady");
+    this.fill_form();
+    this.ready = true;
+  }
+
+  // OTHER HOOKS:
   
-  data_changed() {
+  onDataChange() {
     // called whenever data stored in database has changed
-    console.log("data changed while on settings page");
+    this.G.L.entry("SettingsPage.onDataChange");
     this.fill_form();
   }
 
-  fill_form() {
+  // form actions:
+
+  private set_email() {
+    let c = this.formGroup.get('email');
+    if (c.valid) this.G.S.email = c.value; // will trigger data move
+  }
+  private set_password() {
+    let fg = this.formGroup.get('pw');
+    if (fg.valid) this.G.S.password = fg.get('password').value; // will trigger data move
+  }
+  private set_language() {
+    let c = this.formGroup.get('language');
+    if (c.valid) this.G.S.language = c.value;
+  }
+  private set_theme() {
+    let c = this.formGroup.get('theme');
+    if (c.valid) this.G.S.theme = c.value;
+  }
+
+  // select-server component hooks:
+
+  set_db(value: string) {
+    this.G.S.db = value;
+  }
+  set_db_from_pid(value: string) {
+    this.G.S.db_from_pid = value;
+  }
+  set_db_url(value: string) {
+    this.G.S.db_url = value;
+  }
+  set_db_username(value: string) {
+    this.G.S.db_username = value;
+  }
+  set_db_password(value: string) {
+    this.G.S.db_password = value;
+  }
+
+  // OTHER METHODS:
+
+  private fill_form() {
+    this.G.L.entry("SettingsPage.fill_form");
     // fill form fields with values from data or defaults
     this.formGroup.setValue({
       email: this.G.S.email||'',
@@ -112,7 +171,9 @@ export class SettingsPage implements OnInit {
     });
   }
 
-  validation_messages = {
+  // OTHER CONSTANTS:
+
+  private validation_messages = {
     'email': [
       { type: 'required', message: 'validation.email-required' },
       { type: 'email', message: 'validation.email-valid' }
@@ -127,36 +188,4 @@ export class SettingsPage implements OnInit {
     ],
   }
   
-  set_email() {
-    let c = this.formGroup.get('email');
-    if (c.valid) this.G.S.email = c.value; // will trigger data move
-  }
-  set_password() {
-    let fg = this.formGroup.get('pw');
-    if (fg.valid) this.G.S.password = fg.get('password').value; // will trigger data move
-  }
-  set_db(value: string) {
-    this.G.S.db = value;
-  }
-  set_db_from_pid(value: string) {
-    this.G.S.db_from_pid = value;
-  }
-  set_db_url(value: string) {
-    this.G.S.db_url = value;
-  }
-  set_db_username(value: string) {
-    this.G.S.db_username = value;
-  }
-  set_db_password(value: string) {
-    this.G.S.db_password = value;
-  }
-  set_language() {
-    let c = this.formGroup.get('language');
-    if (c.valid) this.G.S.language = c.value;
-  }
-  set_theme() {
-    let c = this.formGroup.get('theme');
-    if (c.valid) this.G.S.theme = c.value;
-  }
-
 }

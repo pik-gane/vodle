@@ -12,8 +12,10 @@ export class SelectServerComponent implements OnInit {
 
   public Object = Object;
 
-  public parent; // the page object using this component
-  @Input() page: string;
+  private _parent; // the page object using this component
+  public set parent(parent) { this._parent = parent; }
+
+  @Input() page: string; // the name of that page provided in its template
 
   selectServerFormGroup: FormGroup;
 
@@ -32,7 +34,6 @@ export class SelectServerComponent implements OnInit {
     });
   }
 
-  public setParent(parent) { this.parent = parent; }
   
   validation_messages = {
     'db_url': [
@@ -54,24 +55,24 @@ export class SelectServerComponent implements OnInit {
   set_db() {
     let c = this.selectServerFormGroup.get('db');
     if (c.valid && (c.value!='') && c.value) {
-      this.parent.set_db(c.value);
+      this._parent.set_db(c.value);
     }
   }
   set_db_from_pid() {
     let c = this.selectServerFormGroup.get('db_from_pid');
-    if (c.valid) this.parent.set_db_from_pid(c.value);
+    if (c.valid) this._parent.set_db_from_pid(c.value);
   }
   set_db_url() {
     let c = this.selectServerFormGroup.get('db_url');
-    if (c.valid) this.parent.set_db_url(c.value);
+    if (c.valid) this._parent.set_db_url(c.value);
   }
   set_db_username() {
     let c = this.selectServerFormGroup.get('db_username');
-    if (c.valid) this.parent.set_db_username(c.value);
+    if (c.valid) this._parent.set_db_username(c.value);
   }
   set_db_password() {
     let c = this.selectServerFormGroup.get('db_password');
-    if (c.valid) this.parent.set_db_password(c.value);
+    if (c.valid) this._parent.set_db_password(c.value);
   }
 
 }

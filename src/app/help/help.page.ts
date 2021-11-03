@@ -153,15 +153,23 @@ so C wins in that case, even though A has a larger total rating (but is not appr
 /*
 ["", `
 `],
+["why anonymous?", `minority protection, vote trading
+`],
+["when and how to delegate?", `trust, better informed, similar preferences
+`],
+["why control some ratings yourself when delegating?", `
+`],
+["why not anonymous when delegated?", `
+`],
+["why delegation chains?", `
+`],
+["why sometimes reduce rating again?", `
+`],
 */
 ];
 
   constructor(public translate: TranslateService) { }
 
-  ngOnInit() {
-  }
+  ngOnInit() { }
 
-  ionViewDidEnter() {
-//    this.G.D.setpage(this);
-  }
 }

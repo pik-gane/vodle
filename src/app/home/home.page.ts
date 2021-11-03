@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-
-import { LoadingController } from '@ionic/angular';
+import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";
 
@@ -18,7 +17,7 @@ export class HomePage {
   
   constructor(
       public router: Router,
-      public loadingController: LoadingController,
+      public translate: TranslateService,
       public G: GlobalService) {
     this.G.L.entry("HomePage.constructor");
   }

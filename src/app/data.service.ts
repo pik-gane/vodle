@@ -16,7 +16,7 @@ const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
 
-// encryption:
+// ENCRYPTION:
 
 function encrypt_deterministically(value, password:string) {
   var aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
@@ -48,6 +48,10 @@ export class DataService {
   private _page; // current page, used for notifying of changes via its pc_changed() method
   public set page(page) { this._page = page; }
 
+  private loadingElement: HTMLIonLoadingElement;
+
+  // DATA:
+
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
@@ -60,7 +64,7 @@ export class DataService {
   private local_poll_DBs: {}; // persistent local copies of this user's part of the poll data
   private remote_poll_DBs: {}; // persistent remote copies of complete poll data
 
-  private loadingElement: HTMLIonLoadingElement;
+  // LYFECYCLE:
 
   private _ready: boolean = false;
   public get ready() { return this._ready; }
@@ -68,7 +72,7 @@ export class DataService {
   constructor(
     public loadingController: LoadingController,
     public translate: TranslateService,
-  ) {  }
+  ) { }
 
   init(G: GlobalService) {
     G.L.entry("DataService.init");
@@ -88,6 +92,8 @@ export class DataService {
     G.L.exit("DataService.init");
   }
 
+  // INITIALIZATION:
+
   private async show_loading() {
     this.G.L.entry("DataService.show_loading");
     // start displaying a loading animation which will be dismissed when initialization is finished
@@ -103,75 +109,6 @@ export class DataService {
     this.G.L.exit("DataService.show_loading");
   }
   
-  private ensure_poll_cache(pid:string) {
-    if (!this.poll_caches[pid]) {
-      this.poll_caches[pid] = {};
-    }
-  }
-
-  public getu(key:string):string {
-    // get user data item
-    let value = this.user_cache[key] || '';
-    this.G.L.debug("getu "+key+": "+value);
-    return value;
-  }
-  public getp(p:Poll, key:string):string {
-    // get poll data item
-    let pid = p.pid;
-    var value = null;
-    if (p.state == 'draft') {
-      // draft polls' data is stored in user's database:
-      let ukey = "p/"+pid+"/"+key;
-      value = this.user_cache[ukey] || '';
-      this.G.L.debug("getu p/"+pid+"/"+key+": "+value);
-    } else {
-      // other polls' data is stored in poll's own database:
-      this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][key] || '';
-      this.G.L.debug("getp "+pid+"/"+key+": "+value);
-    }
-    return value;
-  }
-
-  public setu(key:string, value:string) {
-    // set user data item
-    value = value || '';
-    if (key=='language') {
-      this.translate.use(value);      
-    }
-    var old_values = {};
-    if (keys_triggering_data_move.includes(key)) {
-      // remember old credentials:
-      for (let k of keys_triggering_data_move) {
-        old_values[k] = this.user_cache[k];
-      }
-    }
-    this.user_cache[key] = value;
-    this.G.L.debug("setu "+key+": "+value);
-    if (keys_triggering_data_move.includes(key)) {
-      this.move_user_data(old_values);
-    }
-    return this.store_user_data(key, value);
-  }
-  public setp(p:Poll, key:string, value:string) {
-    // set poll data item
-    value = value || '';
-    let pid = p.pid;
-    if (p.state == 'draft') {
-      // draft polls' data is stored in user's database:
-      let ukey = "p/"+pid+"/"+key;
-      this.user_cache[ukey] = value;
-      this.G.L.debug("setu p/"+pid+"/"+key+": "+value);
-      return this.store_user_data(ukey, value);
-    } else {
-      // other polls' data is stored in poll's own database:
-      this.ensure_poll_cache(pid);
-      this.poll_caches[pid][key] = value;
-      this.G.L.debug("setp "+pid+"/"+key+": "+value);
-      return this.store_poll_data(pid, key, value);
-    }
-  }
-
   private start_initialization() {
     this.G.L.entry("DataService.start_initialization");
     // fills temporary cache with values from persistent DBs.
@@ -194,7 +131,7 @@ export class DataService {
     for (let row of result.rows) {
       let doc = row.doc, key = doc['_id'], value = doc['val'];
       this.user_cache[key] = value;
-      this.G.L.debug("fill_cache "+key+": "+value);
+      this.G.L.trace("DataService filled user cache "+key+": "+value);
       if (key=='language') {
         this.translate.use(value);      
       }
@@ -228,6 +165,7 @@ export class DataService {
     });
     this.G.L.exit("DataService.process_local_only_user_docs");
   }
+
   private process_synced_user_docs(result) {
     this.G.L.entry("DataService.process_synced_user_docs");
     // decrypt and process all synced docs:
@@ -238,13 +176,17 @@ export class DataService {
     this.after_changes();
 
     // mark as ready, dismiss loading animation, and notify page:
+    this.G.L.info("DataService READY");
     this._ready = true;
     if (this.loadingElement) this.loadingElement.dismiss();
     if (this._page && this._page.onDataReady) this._page.onDataReady();
     this.G.L.exit("DataService.process_synced_user_docs");
   }
 
-  private start_user_sync() {
+  private start_user_sync(): boolean {
+    // try starting user data local <--> remote syncing:
+    this.G.L.entry("DataService.start_user_sync");
+    var result: boolean;
     if (this.remote_user_DB) { 
       this.local_synced_user_DB.sync(this.remote_user_DB, {
         live: true,
@@ -253,34 +195,108 @@ export class DataService {
       }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', info => {
         // replication was paused, usually because of a lost connection
-        this.G.L.info("pausing user data syncing: "+info);
+        this.G.L.info("DataService pausing user data syncing", info);
       }).on('active', info => {
         // replication was resumed
-        this.G.L.info("resuming user data syncing: "+JSON.stringify(info));
+        this.G.L.info("DataService resuming user data syncing", info);
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
         this.G.L.error("denied, "+err);
       }).on('complete', info => {
         // handle complete
-        this.G.L.info("completed user data syncing: "+JSON.stringify(info));
+        this.G.L.info("DataService completed user data syncing", info);
       }).on('error', err => {
         // totally unhandled error (shouldn't happen)
-        this.G.L.error(""+err);
+        this.G.L.error("DataService", err);
       });
-      return true;
-    } else return false;
+      result =  true;
+    } else result = false;
+    this.G.L.exit("DataService.start_user_sync", result);
+    return result;
   }
+
+  // PUBLIC DATA ACCESS METHODS:
+
+  public getu(key:string):string {
+    // get user data item
+    let value = this.user_cache[key] || '';
+    this.G.L.trace("DataService.getu "+key+": "+value);
+    return value;
+  }
+
+  public getp(p:Poll, key:string):string {
+    // get poll data item
+    let pid = p.pid;
+    var value = null;
+    if (p.state == 'draft') {
+      // draft polls' data is stored in user's database:
+      let ukey = "p/"+pid+"/"+key;
+      value = this.user_cache[ukey] || '';
+      this.G.L.trace("DataService.getu p/"+pid+"/"+key+": "+value);
+    } else {
+      // other polls' data is stored in poll's own database:
+      this.ensure_poll_cache(pid);
+      value = this.poll_caches[pid][key] || '';
+      this.G.L.trace("DataService.getp "+pid+"/"+key+": "+value);
+    }
+    return value;
+  }
+
+  public setu(key:string, value:string) {
+    // set user data item
+    value = value || '';
+    if (key=='language') {
+      this.translate.use(value);      
+    }
+    var old_values = {};
+    if (keys_triggering_data_move.includes(key)) {
+      // remember old credentials:
+      for (let k of keys_triggering_data_move) {
+        old_values[k] = this.user_cache[k];
+      }
+    }
+    this.user_cache[key] = value;
+    this.G.L.trace("DataService.setu "+key+": "+value);
+    if (keys_triggering_data_move.includes(key)) {
+      this.move_user_data(old_values);
+    }
+    return this.store_user_data(key, value);
+  }
+
+  public setp(p:Poll, key:string, value:string) {
+    // set poll data item
+    value = value || '';
+    let pid = p.pid;
+    if (p.state == 'draft') {
+      // draft polls' data is stored in user's database:
+      let ukey = "p/"+pid+"/"+key;
+      this.user_cache[ukey] = value;
+      this.G.L.trace("DataService.setu p/"+pid+"/"+key+": "+value);
+      return this.store_user_data(ukey, value);
+    } else {
+      // other polls' data is stored in poll's own database:
+      this.ensure_poll_cache(pid);
+      this.poll_caches[pid][key] = value;
+      this.G.L.trace("DataService.setp "+pid+"/"+key+": "+value);
+      return this.store_poll_data(pid, key, value);
+    }
+  }
+
+  // OTHER METHODS:
+
+  // DBs --> caches:
+
   private handle_user_db_change(change) {
-    this.G.L.debug("handle_user_db_change: "+JSON.stringify(change.doc));
+    this.G.L.trace("DataService.handle_user_db_change", change.doc);
     let local_changes = false;
     if (change.deleted){
       var key = change.doc['key'];
       delete this.user_cache[key];
       local_changes = true;
     } else if (change.direction=='pull') {
-      this.G.L.debug(JSON.stringify(change));
+      this.G.L.trace(JSON.stringify(change));
       for (let doc of change.change.docs) {
-        this.G.L.debug(JSON.stringify(doc));
+        this.G.L.trace(JSON.stringify(doc));
         local_changes = this.doc2user_cache(doc);
       }
     }
@@ -299,6 +315,12 @@ export class DataService {
     }
   }
 
+  private ensure_poll_cache(pid:string) {
+    if (!this.poll_caches[pid]) {
+      this.poll_caches[pid] = {};
+    }
+  }
+
   private fill_poll_cache(pid:string) {
     // fills temporary cache with values from persistent DBs.
     // read and decrypt all synced docs:
@@ -308,12 +330,46 @@ export class DataService {
       this.G.L.error(err);
     });
   }
+
   private process_poll_docs(pid) { return result => {
     for (let row of result.rows) {
       this.doc2poll_cache(pid, row.doc);
     }
-    this.G.L.info("fetched data for poll "+pid);
+    this.G.L.info("DataService fetched data for poll", pid);
   }}
+
+  private doc2user_cache(doc): boolean {
+    // populate user cache with key, value from doc
+    let value_changed = false;
+    var key = doc['key'];
+    if (!local_only_keys.includes(key)) {
+      var cyphertext = doc['val'];
+        if (cyphertext) {
+        var value = decrypt(cyphertext, this.user_cache['password']);
+        if (this.user_cache[key] != value) {
+          this.user_cache[key] = value;
+          value_changed = true;
+        }
+        this.G.L.trace("DataService.doc2user_cache "+key+": "+value);
+        if (key.startsWith('p/') && key.endsWith('/pid')) {
+          let pid = value;
+          this._pids.add(pid);
+        }
+      } else {
+        this.G.L.warn("DataService.doc2user_cache corrupt doc "+JSON.stringify(doc));
+      }
+    }
+    // returns whether the value actually changed.
+    return value_changed;
+  }
+  
+  private doc2poll_cache(pid, doc) {
+    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["p/"+pid+'/password']);
+    this.poll_caches[pid][key] = value;
+    this.G.L.trace("DataService.doc2poll_cache "+pid+"/"+key+": "+value);
+  }
+
+  // caches --> DBs:
 
   private store_all_userdata() {
     // stores user_cache in suitable DBs. 
@@ -321,6 +377,7 @@ export class DataService {
       this.store_user_data(key, value as string);
     }
   }
+
   private store_all_polldata(pid:string) {
     // stores poll_cache[pid] in suitable DBs. 
     for (let [key, value] of Object.entries(this.poll_caches[pid])) {
@@ -337,7 +394,7 @@ export class DataService {
         if (doc.val != value) {
           doc.val = value;
           this.local_only_user_DB.put(doc);
-          this.G.L.debug("local only user DB put "+key+": "+value)
+          this.G.L.trace("local only user DB put "+key+": "+value)
         }
       }).catch(err => {
         doc = {_id:key, val:value};
@@ -358,7 +415,7 @@ export class DataService {
   //        doc.dev = encrypt('TODO:device_ID', pw),
   //        doc.ts = encrypt(new Date(), pw),
           this.local_synced_user_DB.put(doc);
-          this.G.L.debug("local synced user DB put "+key+": "+value)
+          this.G.L.trace("local synced user DB put "+key+": "+value)
         }
       }).catch(err => {
         doc = {
@@ -374,13 +431,14 @@ export class DataService {
     }
     return true;
   }
+
   private store_poll_data(pid:string, key:string, value:string) {
     // stores key and value in suitable DB. 
     var doc;
     // store encrypted and marked with voter id as owner: //, device and timestamp:
     let db = this.local_poll_DBs[pid], pw = this.user_cache["pid."+pid+'.password'], vid = this.user_cache["pid."+pid+'.voter_id'];
     if ((db=='')||(!db) || (pw=='')||(!pw) || (vid=='')||(!vid)) {
-      this.G.L.warn("couldn't set "+key+" in local_poll_DB since db or poll password or voter id are missing!");
+      this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since db or poll password or voter id are missing!");
       return false;
     }
     doc = {
@@ -396,38 +454,11 @@ export class DataService {
     return true;
   }
 
-  private move_user_data(old_values) {
-    // TODO!
-  }
+  // DBs --> DBs:
 
-  private doc2user_cache(doc): boolean {
-    // populate user cache with key, value from doc
-    let value_changed = false;
-    var key = doc['key'];
-    if (!local_only_keys.includes(key)) {
-      var cyphertext = doc['val'];
-        if (cyphertext) {
-        var value = decrypt(cyphertext, this.user_cache['password']);
-        if (this.user_cache[key] != value) {
-          this.user_cache[key] = value;
-          value_changed = true;
-        }
-        this.G.L.debug("doc2user_cache "+key+": "+value);
-        if (key.startsWith('p/') && key.endsWith('/pid')) {
-          let pid = value;
-          this._pids.add(pid);
-        }
-      } else {
-        this.G.L.warn("corrupt doc "+JSON.stringify(doc));
-      }
-    }
-    // returns whether the value actually changed.
-    return value_changed;
-  }
-  private doc2poll_cache(pid, doc) {
-    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["p/"+pid+'/password']);
-    this.poll_caches[pid][key] = value;
-    this.G.L.debug("doc2poll_cache "+pid+"/"+key+": "+value);
+  private move_user_data(old_values) {
+    this.G.L.entry("DataService.move_user_data");
+    // TODO!
   }
 
 }
