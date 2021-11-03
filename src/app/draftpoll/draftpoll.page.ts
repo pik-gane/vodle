@@ -90,6 +90,11 @@ export class DraftpollPage implements OnInit {
     this.G.L.entry("DraftpollPage.onDataReady");
     var p: Poll;
     if (!this.pid) {
+
+
+      // TODO: only create or update Poll object in onViewWillLeave and store data in flat object until then!
+
+
       // no pid was passed in the call, so create a new one:
       p = this.p = new Poll(this.G);
       this.G.polls[p.pid] = p;
@@ -132,6 +137,13 @@ export class DraftpollPage implements OnInit {
     this.ionSelects.map((select) => select.value = select.value);
     // open the type selector?:
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
+  }
+
+  ionViewDidLeave() {
+    if ([null,undefined,''].includes(this.p.title)) {
+      // let next draft reuse the pid:
+      this.G.P.next_free_pid = this.pid;
+    }
   }
 
   // OTHER HOOKS:

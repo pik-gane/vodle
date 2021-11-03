@@ -26,14 +26,20 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
+  public next_free_pid: string;
+
   constructor() { }
   
   init(G:GlobalService) { 
     // called by GlobalService
     G.L.entry("PollService.init");
     this.G = G; 
+    this.next_free_pid = this.generate_pid();
   }
 
+  generate_pid(): string {
+    return CryptoJS.lib.WordArray.random(6).toString();
+  }
 }
 
 // ENTITY CLASSES:
@@ -46,12 +52,12 @@ export class Poll {
     this.G = G;
     if (!pid) {
       // generate a new draft poll
-      pid = this._pid = CryptoJS.lib.WordArray.random(6).toString();
+      pid = this._pid = this.G.P.next_free_pid;
+      this.G.P.next_free_pid = this.G.P.generate_pid();
       this.state = 'draft';
       this.G.D.setu('p/'+pid+'/pid', pid);
-      console.log("generated a new pid "+this._pid);
     }
-    console.log("POLL CONSTRUCTOR for " + pid);
+    G.L.entry("Poll.constructor "+pid);
     this.G.P.polls[pid] = this;
   }
 

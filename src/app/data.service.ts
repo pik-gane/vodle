@@ -31,8 +31,8 @@ function encrypt(value, password:string): string {
 
 function decrypt(value:string, password:string): string {
   const temp = CryptoJS.AES.decrypt(value, password);
-  // FIXME: sometimes we get a malformed UTF-8 error on toString when using CryptoJS.enc.Utf8: 
-  const result = temp.toString(); // CryptoJS.enc.Utf8 ?
+  // FIXME: sometimes we get a malformed UTF-8 error on toString: 
+  const result = temp.toString(CryptoJS.enc.Utf8);
   return result;
 }
 
@@ -69,6 +69,8 @@ export class DataService {
   private _ready: boolean = false;
   public get ready() { return this._ready; }
 
+  private uninitialized_pids: Set<string>;
+
   constructor(
     public loadingController: LoadingController,
     public translate: TranslateService,
@@ -87,20 +89,13 @@ export class DataService {
     }).catch(err => {
       this.G.L.info("DataService local_only_user_DB error", err);
     });
-//    this.local_only_user_DB.destroy();
     this.local_synced_user_DB = new PouchDB('local_synced_user');
     this.local_synced_user_DB.info().then(doc => { 
       this.G.L.info("DataService local_synced_user_DB info", doc);
     }).catch(err => {
       this.G.L.info("DataService local_synced_user_DB error", err);
     });
-//    this.local_synced_user_DB.destroy();
     this.start_initialization();
-    for (let pid of this._pids) {
-      this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
-//      this.start_poll_sync(pid);
-      this.fill_poll_cache(pid);
-    }
     G.L.exit("DataService.init");
   }
 
@@ -110,11 +105,9 @@ export class DataService {
     this.G.L.entry("DataService.show_loading");
     // start displaying a loading animation which will be dismissed when initialization is finished
     this.loadingElement = await this.loadingController.create({
-      message: 'Test',
-      spinner: 'crescent',  
-//      duration: 1000,
+      spinner: 'crescent'
     });
-    // only present the animation, if data not yet ready:
+    // only present the animation if data not yet ready:
     if (!this._ready) {
       await this.loadingElement.present();     
     }
@@ -125,9 +118,6 @@ export class DataService {
     this.G.L.entry("DataService.start_initialization");
     // fills temporary cache with values from persistent DBs.
     this._pids = new Set();
-    this.poll_caches = {};
-    this.local_poll_DBs = {};
-    this.remote_poll_DBs = {};
     // fetch all local-only docs:
     this.local_only_user_DB.allDocs({
       include_docs: true
@@ -191,16 +181,59 @@ export class DataService {
     for (let row of result.rows) {
       this.doc2user_cache(row.doc);
     }
-    // TODO: now process all poll data as well...
-    this.after_changes();
+    this.uninitialized_pids = new Set(this._pids);
+    if (this.uninitialized_pids.size == 0) {
+      this.all_docs_processed();
+    } else {
+      this.start_poll_initialization();
+    }
+    this.G.L.exit("DataService.process_synced_user_docs");
+  }
 
+  private start_poll_initialization() {
+    this.G.L.entry("DataService.start_poll_initialization");
+    this.poll_caches = {};
+    this.local_poll_DBs = {};
+    this.remote_poll_DBs = {};
+    for (let pid of this._pids) {
+      this.ensure_poll_cache(pid);
+      this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
+      // TODO: connect to remote and start syncing!
+      // fetch all docs:
+      this.local_poll_DBs[pid].allDocs({
+        include_docs: true
+      }).then(result => this.process_poll_docs.bind(this)(pid, result)).catch(err => {
+        this.G.L.error(err);
+      });
+    }
+    this.G.L.exit("DataService.start_poll_initialization");
+  }
+
+  private process_poll_docs(pid:string, result) {
+    this.G.L.entry("DataService.process_poll_docs "+pid);
+    // decrypt and process all synced docs:
+    for (let row of result.rows) {
+      this.doc2poll_cache(pid, row.doc);
+    }
+    this.uninitialized_pids.delete(pid);
+    if (this.uninitialized_pids.size == 0) {
+      this.all_docs_processed();
+    }
+    this.G.L.exit("DataService.process_poll_docs "+pid);
+  }
+
+  private all_docs_processed() {
+    this.G.L.entry("DataService.all_docs_processed");
+    this.after_changes();
     // mark as ready, dismiss loading animation, and notify page:
     this.G.L.info("DataService READY");
     this._ready = true;
     if (this.loadingElement) this.loadingElement.dismiss();
     if (this._page && this._page.onDataReady) this._page.onDataReady();
-    this.G.L.exit("DataService.process_synced_user_docs");
+    this.G.L.exit("DataService.all_docs_processed");
   }
+
+  // synchronisation:
 
   private start_user_sync(): boolean {
     // try starting user data local <--> remote syncing:
@@ -372,31 +405,13 @@ export class DataService {
     }
   }
 
-  private fill_poll_cache(pid:string) {
-    // fills temporary cache with values from persistent DBs.
-    // read and decrypt all synced docs:
-    this.local_poll_DBs[pid].allDocs({
-      include_docs: true
-    }).then(this.process_poll_docs(pid).bind(this)).catch(err => {
-      this.G.L.error(err);
-    });
-  }
-
-  private process_poll_docs(pid) { return result => {
-    for (let row of result.rows) {
-      this.doc2poll_cache(pid, row.doc);
-    }
-    this.G.L.info("DataService fetched data for poll", pid);
-  }}
-
   private doc2user_cache(doc): boolean {
     // populate user cache with key, value from doc
-    let value_changed = false;
-    var key = doc['key'];
-    if (!local_only_keys.includes(key)) {
-      var cyphertext = doc['val'];
-        if (cyphertext) {
-        var value = decrypt(cyphertext, this.user_cache['password']);
+    let value_changed = false, key = doc['key'];
+    if (key) {
+      let cyphertext = doc['val'];
+      if (cyphertext) {
+        let value = decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
@@ -415,7 +430,7 @@ export class DataService {
   }
   
   private doc2poll_cache(pid, doc) {
-    var key = doc['key'], value = decrypt(doc['val'], this.user_cache["p/"+pid+'/password']);
+    let key = doc['key'], value = decrypt(doc['val'], this.user_cache["p/"+pid+'/password']);
     this.poll_caches[pid][key] = value;
     this.G.L.trace("DataService.doc2poll_cache "+pid+"/"+key+": "+value);
   }
@@ -492,10 +507,15 @@ export class DataService {
     // stores key and value in suitable DB. 
     var doc;
     // store encrypted and marked with voter id as owner: //, device and timestamp:
-    let db = this.local_poll_DBs[pid], pw = this.user_cache["pid."+pid+'.password'], vid = this.user_cache["pid."+pid+'.voter_id'];
-    if ((db=='')||(!db) || (pw=='')||(!pw) || (vid=='')||(!vid)) {
+    let pw = this.user_cache["pid."+pid+'.password'], vid = this.user_cache["pid."+pid+'.voter_id'];
+    if ((pw=='')||(!pw) || (vid=='')||(!vid)) {
       this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since db or poll password or voter id are missing!");
       return false;
+    }
+    let db = this.local_poll_DBs[pid];
+    if (!db) {
+      db = this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
+      this.G.L.info("DataService.store_poll_data new local poll DB", pid);
     }
     doc = {
       '_id': pid+'/'+key,

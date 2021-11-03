@@ -95,12 +95,6 @@ export class GlobalService {
 
   init() { // called after state restoration finished
     GlobalService.log('initializing...');
-    if (!this.cloudant_up) {
-      this.cloudant_up = '';
-      if (!this.cloudant_up) {
-        this.cloudant_up = prompt("cloudant user:password"); // FIXME: how to store credentials in the app but not in the open source git repo?
-     }
-    } 
     this.dbheaders = new HttpHeaders({
       'content-type': 'application/json',
       'accept': 'application/json'
