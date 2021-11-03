@@ -241,52 +241,28 @@ export class DataService {
     var result: boolean;
     if (this.remote_user_DB) { 
       let enc_email = this.enc_email();
-      let filter_doc_id = "_design/"+enc_email;
-      let filter_doc = {
-        _id: filter_doc_id,
-        filters: {
-          this_user: 'function(doc, req) { return doc.em == "'+enc_email+'"; }',
-        }
-      };
-      this.local_synced_user_DB.get(filter_doc_id).then(doc => { 
-        filter_doc['_rev'] = doc._rev;
-        this.G.L.debug("DataService.start_user_sync revising existing local design doc", doc);
-      }).finally(() => {
-        this.G.L.debug("DataService.start_user_sync putting local design doc", filter_doc);
-        this.local_synced_user_DB.put(filter_doc).then(() => {  
-          delete filter_doc['_rev'];
-          this.remote_user_DB.get(filter_doc_id).then(doc => { 
-            filter_doc['_rev'] = doc._rev;
-            this.G.L.debug("DataService.start_user_sync revising existing remote design doc", doc);
-          }).finally(() => {
-            this.G.L.debug("DataService.start_user_sync putting remote design doc", filter_doc);
-            this.remote_user_DB.put(filter_doc).then(() => {  
-              this.G.L.debug("DataService.start_user_sync starting filtered sync");
-              this.local_synced_user_DB.sync(this.remote_user_DB, {
-                live: true,
-                retry: true,
-                include_docs: true,
-                filter: this.enc_email() + "/this_user",
-              }).on('change', this.handle_user_db_change.bind(this)
-              ).on('paused', info => {
-                // replication was paused, usually because of a lost connection
-                this.G.L.info("DataService pausing user data syncing", info);
-              }).on('active', info => {
-                // replication was resumed
-                this.G.L.info("DataService resuming user data syncing", info);
-              }).on('denied', err => {
-                // a document failed to replicate (e.g. due to permissions)
-                this.G.L.error("denied, "+err);
-              }).on('complete', info => {
-                // handle complete
-                this.G.L.info("DataService completed user data syncing", info);
-              }).on('error', err => {
-                // totally unhandled error (shouldn't happen)
-                this.G.L.error("DataService", err);
-              });
-            });
-          });
-        });
+      this.G.L.debug("DataService.start_user_sync starting filtered sync");
+      this.local_synced_user_DB.sync(this.remote_user_DB, {
+        live: true,
+        retry: true,
+        include_docs: true,
+        filter: (doc, req) => (enc_email+'/' <= doc._id && doc._id < enc_email+'0'),
+      }).on('change', this.handle_user_db_change.bind(this)
+      ).on('paused', info => {
+        // replication was paused, usually because of a lost connection
+        this.G.L.info("DataService pausing user data syncing", info);
+      }).on('active', info => {
+        // replication was resumed
+        this.G.L.info("DataService resuming user data syncing", info);
+      }).on('denied', err => {
+        // a document failed to replicate (e.g. due to permissions)
+        this.G.L.error("denied, "+err);
+      }).on('complete', info => {
+        // handle complete
+        this.G.L.info("DataService completed user data syncing", info);
+      }).on('error', err => {
+        // totally unhandled error (shouldn't happen)
+        this.G.L.error("DataService", err);
       });
       result =  true;
     } else result = false;
@@ -477,19 +453,14 @@ export class DataService {
       this.local_synced_user_DB.get(_id).then(doc => {
         if (decrypt(doc.val, pw) != value) {
           doc.val = val;
-  //        doc.dev = encrypt('TODO:device_ID', pw),
-  //        doc.ts = encrypt(new Date(), pw),
           this.local_synced_user_DB.put(doc);
           this.G.L.trace("local synced user DB put "+key+": "+value)
         }
       }).catch(err => {
         doc = {
           '_id': _id, 
-          'em': enc_email,  // will be used to filter what is synced!
           'key': key,
           'val': val,
-  //        'dev': encrypt('TODO:device_ID', pw),
-  //        'ts': encrypt(new Date(), pw),
         };
         this.local_synced_user_DB.put(doc);  
       })
@@ -519,12 +490,8 @@ export class DataService {
     }
     doc = {
       '_id': pid+'/'+key,
-      'pid': pid,  // will be used to filter what is synced! 
-      'vid': vid,  // will be used to filter what is synced!
       'key': key,
       'val': encrypt(value, pw),
-//      'dev': encrypt('TODO:device_ID', pw),
-//      'ts': encrypt(new Date(), pw),
     };
     db.put(doc);
     return true;
