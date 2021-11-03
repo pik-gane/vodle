@@ -163,7 +163,7 @@ export class DataService {
       db_password = this.user_cache['db_password'];
     }
     if (db_url) {
-      if (!db_url.startsWith("http://")) { db_url = "http://" + db_url; }
+      db_url = this.fix_url(db_url);
       this.G.L.info("DataService trying to connect to remote_user_DB "+db_url+" as "+db_username+" with password "+db_password);
       this.remote_user_DB = new PouchDB(db_url, {auth:{username:db_username, password:db_password}});
       // get some statistics about remote DB:
@@ -329,6 +329,11 @@ export class DataService {
   }
 
   // OTHER METHODS:
+
+  fix_url(url:string): string {
+    // make sure remote db urls start with http:// or https://
+    return (url.startsWith("http://")||url.startsWith("https://")) ? url : "http://" + url;
+  }
 
   // DBs --> caches:
 
