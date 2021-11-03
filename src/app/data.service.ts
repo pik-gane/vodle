@@ -75,13 +75,25 @@ export class DataService {
   ) { }
 
   init(G: GlobalService) {
+    // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
     this.show_loading();
     this.user_cache = {};
     this.local_only_user_DB = new PouchDB('local_only_user');
+    // get some statistics about this DB:
+    this.local_only_user_DB.info().then(doc => { 
+      this.G.L.info("DataService local_only_user_DB info", doc);
+    }).catch(err => {
+      this.G.L.info("DataService local_only_user_DB error", err);
+    });
 //    this.local_only_user_DB.destroy();
     this.local_synced_user_DB = new PouchDB('local_synced_user');
+    this.local_synced_user_DB.info().then(doc => { 
+      this.G.L.info("DataService local_synced_user_DB info", doc);
+    }).catch(err => {
+      this.G.L.info("DataService local_synced_user_DB error", err);
+    });
 //    this.local_synced_user_DB.destroy();
     this.start_initialization();
     for (let pid of this._pids) {
@@ -151,8 +163,15 @@ export class DataService {
       db_password = this.user_cache['db_password'];
     }
     if (db_url) {
-      this.G.L.info("trying to connect to "+db_url+" as "+db_username+" with password "+db_password);
+      if (!db_url.startsWith("http://")) { db_url = "http://" + db_url; }
+      this.G.L.info("DataService trying to connect to remote_user_DB "+db_url+" as "+db_username+" with password "+db_password);
       this.remote_user_DB = new PouchDB(db_url, {auth:{username:db_username, password:db_password}});
+      // get some statistics about remote DB:
+      this.remote_user_DB.info().then(doc => { 
+        this.G.L.info("DataService remote_user_DB info", doc);
+      }).catch(err => {
+        this.G.L.info("DataService remote_user_DB error", err);
+      });
     }
     // start synchronisation asynchronously:
     this.start_user_sync();
@@ -188,26 +207,53 @@ export class DataService {
     this.G.L.entry("DataService.start_user_sync");
     var result: boolean;
     if (this.remote_user_DB) { 
-      this.local_synced_user_DB.sync(this.remote_user_DB, {
-        live: true,
-        retry: true,
-        include_docs: true
-      }).on('change', this.handle_user_db_change.bind(this)
-      ).on('paused', info => {
-        // replication was paused, usually because of a lost connection
-        this.G.L.info("DataService pausing user data syncing", info);
-      }).on('active', info => {
-        // replication was resumed
-        this.G.L.info("DataService resuming user data syncing", info);
-      }).on('denied', err => {
-        // a document failed to replicate (e.g. due to permissions)
-        this.G.L.error("denied, "+err);
-      }).on('complete', info => {
-        // handle complete
-        this.G.L.info("DataService completed user data syncing", info);
-      }).on('error', err => {
-        // totally unhandled error (shouldn't happen)
-        this.G.L.error("DataService", err);
+      let enc_email = this.enc_email();
+      let filter_doc_id = "_design/"+enc_email;
+      let filter_doc = {
+        _id: filter_doc_id,
+        filters: {
+          this_user: 'function(doc, req) { return doc.em == "'+enc_email+'"; }',
+        }
+      };
+      this.local_synced_user_DB.get(filter_doc_id).then(doc => { 
+        filter_doc['_rev'] = doc._rev;
+        this.G.L.debug("DataService.start_user_sync revising existing local design doc", doc);
+      }).finally(() => {
+        this.G.L.debug("DataService.start_user_sync putting local design doc", filter_doc);
+        this.local_synced_user_DB.put(filter_doc).then(() => {  
+          delete filter_doc['_rev'];
+          this.remote_user_DB.get(filter_doc_id).then(doc => { 
+            filter_doc['_rev'] = doc._rev;
+            this.G.L.debug("DataService.start_user_sync revising existing remote design doc", doc);
+          }).finally(() => {
+            this.G.L.debug("DataService.start_user_sync putting remote design doc", filter_doc);
+            this.remote_user_DB.put(filter_doc).then(() => {  
+              this.G.L.debug("DataService.start_user_sync starting filtered sync");
+              this.local_synced_user_DB.sync(this.remote_user_DB, {
+                live: true,
+                retry: true,
+                include_docs: true,
+                filter: this.enc_email() + "/this_user",
+              }).on('change', this.handle_user_db_change.bind(this)
+              ).on('paused', info => {
+                // replication was paused, usually because of a lost connection
+                this.G.L.info("DataService pausing user data syncing", info);
+              }).on('active', info => {
+                // replication was resumed
+                this.G.L.info("DataService resuming user data syncing", info);
+              }).on('denied', err => {
+                // a document failed to replicate (e.g. due to permissions)
+                this.G.L.error("denied, "+err);
+              }).on('complete', info => {
+                // handle complete
+                this.G.L.info("DataService completed user data syncing", info);
+              }).on('error', err => {
+                // totally unhandled error (shouldn't happen)
+                this.G.L.error("DataService", err);
+              });
+            });
+          });
+        });
       });
       result =  true;
     } else result = false;
@@ -287,7 +333,7 @@ export class DataService {
   // DBs --> caches:
 
   private handle_user_db_change(change) {
-    this.G.L.trace("DataService.handle_user_db_change", change.doc);
+    this.G.L.trace("DataService.handle_user_db_change", change);
     let local_changes = false;
     if (change.deleted){
       var key = change.doc['key'];
@@ -402,13 +448,12 @@ export class DataService {
       });
     } else {
       // store encrypted and marked with email as owner: //, device and timestamp:
-      let email = this.user_cache['email'], pw = this.user_cache['password'];
-//      let email = this.getu('email'), pw = this.getu('password');
-      if ((email=='')||(!email) || (pw=='')||(!pw)) {
+      let enc_email = this.enc_email();
+      if (!enc_email) {
         this.G.L.warn("couldn't set "+key+" in local_synced_user_DB since email or password are missing!");
         return false;
       }
-      let enc_email = encrypt_deterministically(email, pw), _id = enc_email+'/'+key, val = encrypt(value, pw);
+      let _id = enc_email+'/'+key, pw = this.user_cache['password'], val = encrypt(value, pw);
       this.local_synced_user_DB.get(_id).then(doc => {
         if (decrypt(doc.val, pw) != value) {
           doc.val = val;
@@ -430,6 +475,12 @@ export class DataService {
       })
     }
     return true;
+  }
+
+  private enc_email() {
+    let email = this.user_cache['email'], pw = this.user_cache['password'];
+    if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
+    return encrypt_deterministically(email, pw);
   }
 
   private store_poll_data(pid:string, key:string, value:string) {

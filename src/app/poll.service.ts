@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+
 import * as CryptoJS from 'crypto-js';
 
 import { GlobalService } from './global.service';
@@ -7,6 +8,14 @@ import { GlobalService } from './global.service';
 - add state, allow only certain state transitions, allow attribute change only in draft state
 */
 
+// TYPES:
+
+type poll_state_t = ""|"draft"|"running"|"closed";
+type poll_type_t = "winner"|"share";
+type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"tomorrow-noon"|"tomorrow-night"
+                        |"sunday-night"|"week"|"two-weeks"|"month";
+
+// SERVICE:
 
 @Injectable({
   providedIn: 'root'
@@ -20,20 +29,24 @@ export class PollService {
   constructor() { }
   
   init(G:GlobalService) { 
+    // called by GlobalService
+    G.L.entry("PollService.init");
     this.G = G; 
   }
 
 }
 
+// ENTITY CLASSES:
+
 export class Poll {
 
   private G: GlobalService;
 
-  constructor (G: GlobalService, pid?: string) { 
+  constructor (G:GlobalService, pid?:string) { 
     this.G = G;
     if (!pid) {
       // generate a new draft poll
-      pid = this._pid = CryptoJS.lib.WordArray.random(16).toString();
+      pid = this._pid = CryptoJS.lib.WordArray.random(6).toString();
       this.state = 'draft';
       this.G.D.setu('p/'+pid+'/pid', pid);
       console.log("generated a new pid "+this._pid);
@@ -77,8 +90,8 @@ export class Poll {
 
   // state is stored both in user's and in poll's (if not draft) database:
 
-  public get state(): string { return this.G.D.getu('p/'+this._pid+'/state'); }
-  public set state(value: string) {
+  public get state(): poll_state_t { return this.G.D.getu('p/'+this._pid+'/state') as poll_state_t; }
+  public set state(value: poll_state_t) {
     var old_state = this.state;
     if ({
           '': ['draft'], 
@@ -97,8 +110,8 @@ export class Poll {
   // all other attributes are stored in the poll's database.
   // some of these may only be changed in state 'draft'.
 
-  public get type(): string { return this.G.D.getp(this, 'type'); }
-  public set type(value: string) { this.G.D.setp(this, 'type', value); }
+  public get type(): poll_type_t { return this.G.D.getp(this, 'type') as poll_type_t; }
+  public set type(value: poll_type_t) { this.G.D.setp(this, 'type', value); }
 
   public get title(): string { return this.G.D.getp(this, 'title'); }
   public set title(value: string) { 
@@ -115,8 +128,8 @@ export class Poll {
     if (this.state=='draft') this.G.D.setp(this, 'url', value); 
   }
 
-  public get due_type(): string { return this.G.D.getp(this, 'due_type'); }
-  public set due_type(value: string) { 
+  public get due_type(): poll_due_type_p { return this.G.D.getp(this, 'due_type') as poll_due_type_p; }
+  public set due_type(value: poll_due_type_p) { 
     if (this.state=='draft') this.G.D.setp(this, 'due_type', value); 
   }
 
@@ -161,7 +174,7 @@ export class Option {
     this.p = poll;
     poll._add_option(this);
     if (!oid) {
-      oid = this._oid = CryptoJS.lib.WordArray.random(16).toString();
+      oid = this._oid = CryptoJS.lib.WordArray.random(3).toString();
       this.G.D.setp(poll, 'o/'+oid+'/oid', oid);
       this.G.D.setp(poll, 'o/'+oid+'/name', name);
       this.G.D.setp(poll, 'o/'+oid+'/desc', desc);
