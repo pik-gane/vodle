@@ -17,17 +17,34 @@
 -->
 <ion-content *ngIf="ready">
   <ion-list lines="full">
-    <ion-item color="primary">
-      <ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
+
+    <!--DRAFTS:-->
+
+    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded">
+      <ion-icon size="small" [name]="drafts_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
+      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
     </ion-item>
-    <ng-container *ngFor="let p of Object.values(G.P.polls)">
-      <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
-        <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-        <i>{{p.title}}</i>
-      </ion-item>
+    <ng-container *ngIf="drafts_expanded">
+      <ng-container *ngFor="let p of Object.values(G.P.polls)">
+        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
+          <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <i>{{p.title}}</i>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="light" slot="end">Draft</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Closing soon</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Abstaining</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="red" slot="end">Closing soon</ion-badge><!--and abstaining-->
+          <ion-button slot="end" fill="clear">
+            <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </ng-container>
     </ng-container>
+
+    <!--RUNNING-->
+
     <ion-item color="primary">
-      <ion-label [innerHtml]="'mypolls.running'|translate"></ion-label>
+      <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
     <ng-container *ngFor="let p of Object.values(G.P.polls)">
       <ion-item *ngIf="p.state=='running'" [routerLink]="'/poll/'+p.pid">
@@ -35,7 +52,38 @@
         <b><i>{{p.title}}</i></b>
       </ion-item>
     </ng-container>
+
+    <!--RECENTLY CLOSED:-->
+
+    <ion-item color="primary">
+      <ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
+    </ion-item>
+    <ng-container *ngFor="let p of Object.values(G.P.polls)">
+      <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid">
+        <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+        <i>{{p.title}}</i>
+      </ion-item>
+    </ng-container>
+
+    <!--OLDER-->
+
+    <ion-item color="light" (click)="older_expanded=!older_expanded">
+      <ion-icon size="small" [name]="older_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
+      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.older'|translate"></ion-label>
+    </ion-item>
+    <ng-container *ngIf="older_expanded">
+      <ng-container *ngFor="let p of Object.values(G.P.polls)">
+        <ion-item *ngIf="p.state=='closed'" [routerLink]="'/draftpoll/'+p.pid"><!--TODO: only if seen!-->
+          <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <small><i>{{p.title}}</i></small>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
+        </ion-item>
+      </ng-container>
+    </ng-container>
+
   </ion-list>
+
+
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button routerLink="newpoll">
       <ion-icon name="add"></ion-icon>

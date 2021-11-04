@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-
 import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";
@@ -14,6 +13,8 @@ export class MypollsPage implements OnInit {
 
   Object = Object;
 
+  private drafts_expanded = false;
+  
   // LIFECYCLE:
 
   private ready = false;  

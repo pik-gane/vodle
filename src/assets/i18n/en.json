@@ -3,7 +3,6 @@
     "add-target": "Add target",
     "cancel": "Cancel",
     "choose-file": "Choose file",
-    "data-storage": "Personal data",
     "daynames-sunday-to-saturday": "Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
     "db-url": "Database URL",
     "db-user": "Database username",
@@ -109,7 +108,8 @@
         "-page-title": "My polls",
         "drafts": "Drafts",
         "running": "Running",
-        "closed": "Closed"
+        "recently-closed": "Closed",
+        "older": "Older"
     },
 
     "select-server": {
@@ -125,11 +125,13 @@
 
     "settings": {
         "-page-title": "Settings",
+        "data-storage": "Personal data",
         "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
         "email-placeholder": "Please specify the email address you want to use with vodle",
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",
-        "appearance": "Appearance"
+        "appearance": "Appearance",
+        "notifications": "Notifications"
     },
 
     "validation": {

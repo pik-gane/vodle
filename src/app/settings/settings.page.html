@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>{{'settings.-page-title'|translate}}</ion-title>
+    <ion-title [innerHtml]="'settings.-page-title'|translate"></ion-title>
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
@@ -12,20 +12,23 @@
 
 <ion-content>
   <form [formGroup]="formGroup">
-    <ion-item color="primary">
-      {{'data-storage'|translate}} 
+
+    <!--DATA STORAGE:-->
+
+    <ion-item color="primary" [innerHtml]="'settings.data-storage'|translate"> 
     </ion-item>
     <ion-item>
-      <small>{{'settings.data-storage-msg'|translate}} </small>
+      <small [innerHtml]="'settings.data-storage-msg'|translate"></small>
     </ion-item>
     <ion-grid class="ion-no-padding">
       <ion-row class="ion-no-padding">
         <ion-col class="ion-no-padding">
           <ion-item>
-            <ion-label position="floating" color="primary">{{'email'|translate}}</ion-label>
-            <ion-input formControlName="email" 
-              type="text" inputmode="email" required
+            <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
+            <ion-input 
+              formControlName="email" 
               [placeholder]="'settings.email-placeholder'|translate"
+              type="text" inputmode="email" required
               [readonly]="!editing_email"
               [style]="editing_email
                     ?'pointer-events:;'
@@ -36,17 +39,22 @@
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
-        <ion-button tabindex="-1" style="padding-top: 10px;" color="primary" (click)="editing_email=!editing_email" [disabled]="editing_email && !formGroup.get('email').valid">
+        <ion-button 
+            tabindex="-1" style="padding-top: 10px;" color="primary" 
+            [disabled]="editing_email && !formGroup.get('email').valid"
+            (click)="editing_email=!editing_email">
           <!--TODO: give focus to field-->
-          <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_email?'OK':'settings.edit')|translate}}
-        </ion-button>      
+          <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>
+          <span [innerHtml]="(editing_email?'OK':'settings.edit')|translate"></span>
+        </ion-button>
       </ion-row>
     </ion-grid>
     <div class="validation-errors">
     <ng-container *ngFor="let validation of validation_messages.email">
-      <div class="error-message" *ngIf="formGroup.get('email').hasError(validation.type) 
-          && (formGroup.get('email').dirty || formGroup.get('email').touched)">
-        {{ validation.message|translate }}
+      <div class="error-message" 
+          *ngIf="formGroup.get('email').hasError(validation.type) 
+                  && (formGroup.get('email').dirty || formGroup.get('email').touched)"
+          [innerHtml]="validation.message|translate">
       </div>
     </ng-container>
     </div>
@@ -56,48 +64,64 @@
         <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
             <ion-item>
-              <ion-label position="floating" color="primary">{{'password'|translate}}</ion-label>
-              <ion-input [type]="showing_password?'text':'password'" formControlName="password" required 
+              <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
+              <ion-input 
+                formControlName="password"
+                [readonly]="!editing_password"
+                [type]="showing_password?'text':'password'" required 
                 [style]="editing_password
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
-                [readonly]="!editing_password"
-                (ionChange)="set_password()"></ion-input><!--TODO: add show/hide toggle-->
+                (ionChange)="set_password()">
+              </ion-input>
             </ion-item>
           </ion-col>
-          <ion-button tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" (click)="showing_password=!showing_password">
-            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{(showing_password?'hide':'show')|translate}}
+          <ion-button 
+              tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
+              (click)="showing_password=!showing_password">
+            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
+            <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
           </ion-button>
-          <ion-button tabindex="-1" style="padding-top: 10px;" color="primary" (click)="editing_password=!editing_password" [disabled]="editing_password && !formGroup.get('pw').valid">
-            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>{{(editing_password?'OK':'settings.edit')|translate}}
+          <ion-button 
+              tabindex="-1" style="padding-top: 10px;" color="primary" 
+              (click)="editing_password=!editing_password" 
+              [disabled]="editing_password && !formGroup.get('pw').valid">
+            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
+            <span [innerHtml]="(editing_password?'OK':'settings.edit')|translate"></span>
           </ion-button>
         </ion-row>
       </ion-grid>
       <div class="validation-errors">
       <ng-container *ngFor="let validation of validation_messages.password">
-        <div class="error-message" *ngIf="formGroup.get('pw.password').hasError(validation.type) 
-            && (formGroup.get('pw.password').dirty || formGroup.get('pw.password').touched)">
-          {{ validation.message|translate }}
+        <div class="error-message" 
+            *ngIf="formGroup.get('pw.password').hasError(validation.type) 
+                    && (formGroup.get('pw.password').dirty || formGroup.get('pw.password').touched)"
+            [innerHtml]="validation.message|translate">
         </div>
       </ng-container>
       </div>
       <ng-container *ngIf="editing_password">
         <ion-item>
-          <ion-label position="floating" color="primary">{{'retype-password'|translate}}</ion-label>
-          <ion-input #retype_password [type]="showing_password?'text':'password'" formControlName="confirm_password" required 
+          <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
+          <ion-input 
+            formControlName="confirm_password" 
+            #retype_password 
             [disabled]="!editing_password"
+            [type]="showing_password?'text':'password'"required 
             [style]="editing_password
               ?'pointer-events:;'
               :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
-            (ionChange)="set_password()"></ion-input>
+            (ionChange)="set_password()">
+          </ion-input>
         </ion-item>
         <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.passwords_match">
-          <div class="error-message" *ngIf="formGroup.get('pw').hasError('must_match') 
-              && (formGroup.get('pw.confirm_password').dirty || formGroup.get('pw.confirm_password').touched)">
-            {{ validation.message|translate }}
+          <div class="error-message" 
+              *ngIf="formGroup.get('pw').hasError('must_match') 
+                      && (formGroup.get('pw.confirm_password').dirty || formGroup.get('pw.confirm_password').touched)"
+              [innerHtml]="validation.message|translate">
           </div>
         </ng-container>
         </div>
@@ -107,21 +131,26 @@
 
   <ion-item color="light" (click)="advanced_expanded=!advanced_expanded">
     <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
-    <ion-label><small>&nbsp;&nbsp;&nbsp;{{'draftpoll.advanced-settings'|translate}}</small></ion-label>
+    <ion-label>
+      <small [innerHtml]="'&nbsp;&nbsp;&nbsp;'+('draftpoll.advanced-settings'|translate)"></small>
+    </ion-label>
   </ion-item>
-  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'"></app-select-server>
+  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'">
+  </app-select-server>
+
+  <!--APPEARANCE-->
 
   <form [formGroup]="formGroup">
-    <ion-item color="primary">
-      {{'settings.appearance'|translate}}
+    <ion-item color="primary" [innerHtml]="'settings.appearance'|translate">
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary">
-        <ion-icon name="language-outline"></ion-icon>&nbsp;{{'language'|translate}}
+        <ion-icon name="language-outline"></ion-icon>&nbsp;
+        <span [innerHtml]="'language'|translate"></span>
       </ion-label>
       <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
-        <ion-select-option value="de">Deutsch</ion-select-option>
-        <ion-select-option value="en">English</ion-select-option>
+        <ion-select-option value="de" [innerHtml]="'Deutsch'"></ion-select-option>
+        <ion-select-option value="en" [innerHtml]="'English'"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>
@@ -131,5 +160,22 @@
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>
     </ion-item>-->
+
+    <!--TODO: NOTIFICATIONS-->
+
+    <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
+    </ion-item>
+    <ion-item>
+      <ion-checkbox slot="start"></ion-checkbox><ion-label>When a poll is closing soon</ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-checkbox slot="start"></ion-checkbox><ion-label>When a poll has closed</ion-label>
+    </ion-item>
+    <!--and:
+    when my voting weight changes
+    when my delegate's weight changes
+    when my delegate delegates my ratings further
+    when my delegate changed their ratings
+    -->
   </form>
 </ion-content>

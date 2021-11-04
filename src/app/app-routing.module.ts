@@ -3,13 +3,13 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
   {
-    path: 'home',
-    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
+    path: '',
+    redirectTo: 'mypolls',
+    pathMatch: 'full'
   },
   {
-    path: '',
-    redirectTo: 'home',
-    pathMatch: 'full'
+    path: 'home',
+    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
   },
   {
     path: 'about',
@@ -24,7 +24,11 @@ const routes: Routes = [
     loadChildren: () => import('./mypolls/mypolls.module').then( m => m.MypollsPageModule)
   },
   {
-    path: 'poll',
+    path: 'poll/:pid',
+    loadChildren: () => import('./poll/poll.module').then( m => m.PollPageModule)
+  },
+  {
+    path: 'p/:pid',
     loadChildren: () => import('./poll/poll.module').then( m => m.PollPageModule)
   },
   {
