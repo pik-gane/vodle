@@ -105,13 +105,15 @@ export class SettingsPage implements OnInit {
 
   // OTHER HOOKS:
   
+  // for DataService:
+
   onDataChange() {
     // called whenever data stored in database has changed
     this.G.L.entry("SettingsPage.onDataChange");
     this.fill_form();
   }
 
-  // form actions:
+  // for form actions:
 
   private set_email() {
     let c = this.formGroup.get('email');
@@ -130,7 +132,7 @@ export class SettingsPage implements OnInit {
     if (c.valid) this.G.S.theme = c.value;
   }
 
-  // select-server component hooks:
+  // selectServer component hooks:
 
   set_db(value: string) {
     this.G.S.db = value;
@@ -159,7 +161,7 @@ export class SettingsPage implements OnInit {
         password: this.G.S.password||'',
         confirm_password: this.G.S.password||'',
       },
-      language: this.G.S.language||'en',
+      language: this.G.S.language||navigator.languages[0].slice(0,2),
       theme: this.G.S.theme||'light',
     });
     this.select_server.selectServerFormGroup.setValue({

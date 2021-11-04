@@ -26,7 +26,7 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
-  public next_free_pid: string;
+  private unused_pids: string[] = [];
 
   constructor() { }
   
@@ -34,11 +34,10 @@ export class PollService {
     // called by GlobalService
     G.L.entry("PollService.init");
     this.G = G; 
-    this.next_free_pid = this.generate_pid();
   }
 
   generate_pid(): string {
-    return CryptoJS.lib.WordArray.random(6).toString();
+    return this.unused_pids.pop() || CryptoJS.lib.WordArray.random(6).toString();
   }
 }
 
@@ -52,8 +51,7 @@ export class Poll {
     this.G = G;
     if (!pid) {
       // generate a new draft poll
-      pid = this._pid = this.G.P.next_free_pid;
-      this.G.P.next_free_pid = this.G.P.generate_pid();
+      pid = this._pid = this.G.P.generate_pid();
       this.state = 'draft';
       this.G.D.setu('p/'+pid+'/pid', pid);
     }

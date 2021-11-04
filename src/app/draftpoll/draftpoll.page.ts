@@ -11,6 +11,8 @@ import { GlobalService } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 
+type option_data_t = { oid?, name?, desc?, url? };
+
 @Component({
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
@@ -27,19 +29,25 @@ export class DraftpollPage implements OnInit {
 
   // form:
 
-  formGroup: FormGroup;
-  stage: number
-  option_stage: number;
-  expanded: Array<boolean>;
-  advanced_expanded: boolean;
-  n_options: number;
-  ref_date: Date;
+  private formGroup: FormGroup;
+  private stage: number
+  private option_stage: number;
+  private expanded: Array<boolean>;
+  private advanced_expanded: boolean;
+  private ref_date: Date;
+
+  // poll data:
+
+  private pd: { 
+    pid?,
+    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_username?, db_password?,
+    options?: option_data_t[] 
+  };
+  private get n_options() { return this.pd.options.length || 0; }
 
   // objects:
 
   pid: string;
-  p: Poll;
-  options: Array<Option>;
 
   // other:
 
@@ -59,25 +67,19 @@ export class DraftpollPage implements OnInit {
   ) { 
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
-      this.pid = params['pid'] 
+      this.pid = params['pid'];
     } );
   }
   
   ngOnInit() {
     this.G.L.entry("DraftpollPage.ngOnInit");
-    this.formGroup = this.formBuilder.group({
-      poll_type: new FormControl('', Validators.required),
-      poll_title: new FormControl('', Validators.required),
-      poll_desc: new FormControl(''),
-      poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
-      poll_due_type: new FormControl('', Validators.required),
-      poll_due: new FormControl('', this.is_in_future.bind(this)),
-    });
+    this.reset();
   }
 
   ionViewWillEnter() {
     this.G.L.entry("DraftpollPage.ionViewWillEnter");
     this.G.D.page = this.select_server.parent = this;
+    this.reset();
   }
 
   ionViewDidEnter() {
@@ -88,48 +90,52 @@ export class DraftpollPage implements OnInit {
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("DraftpollPage.onDataReady");
-    var p: Poll;
     if (!this.pid) {
-
-
-      // TODO: only create or update Poll object in onViewWillLeave and store data in flat object until then!
-
-
-      // no pid was passed in the call, so create a new one:
-      p = this.p = new Poll(this.G);
-      this.G.polls[p.pid] = p;
-      this.pid = p.pid;
-      console.log("CREATING A NEW POLL " + this.pid);
+      this.G.L.info("DraftpollPage editing new draft");
     } else if (this.pid in this.G.P.polls) {
-      // the pid of a known poll was passed in the call:
-      let p = this.p = this.G.P.polls[this.pid]; 
-      console.log("EDIT KNOWN POLL " + this.pid);
+      if (this.G.P.polls[this.pid].state == 'draft') {
+        this.G.L.info("DraftpollPage editing existing draft", this.pid);
+        // read data:
+        let p = this.G.P.polls[this.pid];
+        this.pd = { 
+          pid:p.pid,
+          type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due:p.due, 
+          db:p.db, db_from_pid:p.db_from_pid, db_url:p.db_url, db_username:p.db_username, db_password:p.db_password,
+          options: [] 
+        };
+        for (let [oid, o] of Object.entries(p.options)) {
+          this.pd.options.push({ oid:oid, name:o.name, desc:o.desc, url:o.url });
+          this.stage = 5;
+          this.option_stage = 10;
+        }
+      } else {
+        this.G.L.warn("DraftpollPage non-draft pid ignored, generating new draft");
+      }
     } else {
-      // a pid was passed but the poll is not known:
-      window.alert("OOPS! unknown pid...");
+      this.G.L.warn("DraftpollPage unknown pid ignored, generating new draft");
     }
-    this.update_ref_date();
-    this.formGroup.setValue({ 
-      poll_type: p.type,
-      poll_title: p.title, 
-      poll_desc: p.desc,
-      poll_url: p.url, 
-      poll_due_type: p.due_type, 
-      poll_due: p.due
-    });
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
-    this.n_options = p.oids.length;
-    this.options = [];
-    this.stage = p.type?1:0;
-    for (let oid of p.oids) {
-      let o = p.options[oid];
-      this.add_controls(o);
-      this.stage = 5;
-      this.option_stage = 10;
+    this.stage = this.pd.type?1:0;
+    // fill form:
+    if (this.pd) {
+      this.formGroup.setValue({ 
+        poll_type: this.pd.type,
+        poll_title: this.pd.title, 
+        poll_desc: this.pd.desc,
+        poll_url: this.pd.url, 
+        poll_due_type: this.pd.due_type, 
+        poll_due: this.pd.due,
+      });
+      for (let [i, od] of this.pd.options.entries()) {
+        this.add_option_inputs(i);
+        this.formGroup.get('option_name'+i).setValue(od.name); 
+        this.formGroup.get('option_desc'+i).setValue(od.desc); 
+        this.formGroup.get('option_url'+i).setValue(od.url); 
+      }
     }
     if (this.n_options==0) {
-      this.add_option();
+      this.add_option({});
       this.option_stage = 0;
     }
     this.ready = true;
@@ -139,10 +145,29 @@ export class DraftpollPage implements OnInit {
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
 
-  ionViewDidLeave() {
-    if ([null,undefined,''].includes(this.p.title)) {
-      // let next draft reuse the pid:
-      this.G.P.next_free_pid = this.pid;
+  ionViewWillLeave() {
+    this.G.L.entry("DraftpollPage.ionViewWillLeave");
+    // TODO: save in poll object if title not empty
+    if (['',null,undefined].includes(this.pd.title)) {
+      // TODO: notify of deleted draft
+    } else if (this.pid && this.pid in this.G.P.polls) {
+      // update poll object:
+      let p = this.G.P.polls[this.pid];
+      p.state = 'draft';
+      p.type = this.pd.type;
+      p.title = this.pd.title;
+      p.desc = this.pd.desc;
+      p.url = this.pd.url;
+      p.due_type = this.pd.due_type;
+      p.due = this.pd.due;
+      p.db = this.pd.db;
+      p.db_from_pid = this.pd.db_from_pid;
+      p.db_url = this.pd.db_url;
+      p.db_username = this.pd.db_username;
+      p.db_password = this.pd.db_password;
+      // TODO: options!
+    } else {
+      // add poll object to G:
     }
   }
 
@@ -160,58 +185,58 @@ export class DraftpollPage implements OnInit {
 
   private set_poll_type() {
     let c = this.formGroup.get('poll_type');
-    if (c.valid) this.p.type = c.value;
+    if (c.valid) this.pd.type = c.value;
   }
   private set_poll_title() {
     let c = this.formGroup.get('poll_title');
-    if (c.valid) this.p.title = c.value;
+    if (c.valid) this.pd.title = c.value;
   }
   private set_poll_desc() {
     let c = this.formGroup.get('poll_desc');
-    if (c.valid) this.p.desc = c.value;
+    if (c.valid) this.pd.desc = c.value;
   }
   private set_poll_url() {
     let c = this.formGroup.get('poll_url');
-    if (c.valid) this.p.url = c.value;
+    if (c.valid) this.pd.url = c.value;
   }
   private set_poll_due_type() {
     let c = this.formGroup.get('poll_due_type');
-    if (c.valid) this.p.due_type = c.value;
+    if (c.valid) this.pd.due_type = c.value;
   }
   private set_poll_due() {
     this.update_ref_date();
     let c = this.formGroup.get('poll_due');
-    if (c.valid) this.p.due = new Date(c.value);
+    if (c.valid) this.pd.due = new Date(c.value);
   }
   private set_option_name(i: number) {
     let c = this.formGroup.get('option_name'+i);
-    if (c.valid) this.options[i].name = c.value;
+    if (c.valid) this.pd.options[i].name = c.value;
   }
   private set_option_desc(i: number) {
     let c = this.formGroup.get('option_desc'+i);
-    if (c.valid) this.options[i].desc = c.value;
+    if (c.valid) this.pd.options[i].desc = c.value;
   }
   private set_option_url(i: number) {
     let c = this.formGroup.get('option_url'+i);
-    if (c.valid) this.options[i].url = c.value;
+    if (c.valid) this.pd.options[i].url = c.value;
   }
 
   // selectServer component hooks:
 
   set_db(value: string) {
-    this.p.db = value;
+    this.pd.db = value;
   }
   set_db_from_pid(value: string) {
-    this.p.db_from_pid = value;
+    this.pd.db_from_pid = value;
   }
   set_db_url(value: string) {
-    this.p.db_url = value;
+    this.pd.db_url = value;
   }
   set_db_username(value: string) {
-    this.p.db_username = value;
+    this.pd.db_username = value;
   }
   set_db_password(value: string) {
-    this.p.db_password = value;
+    this.pd.db_password = value;
   }
   
   private test_url(url: string) {
@@ -224,20 +249,20 @@ export class DraftpollPage implements OnInit {
       this.option_stage = this.max(this.option_stage, this.formGroup.get('option_name'+i).valid?1:0);
       this.expanded[i] = true;
     } else if (this.formGroup.get('option_name'+i).valid && i==this.n_options-1) {
-      this.next_option(i)
+      this.next_option(i);
     }
   }
 
   private blur_option_url(i: number) {
     if (this.formGroup.get('option_url'+i).valid && i==this.n_options-1) {
-      this.next_option(i)
+      this.next_option(i);
     }
   }
   
   private next_option(i: number) {
     this.option_stage = this.max(this.option_stage, 3);
-    this.expanded[i] = false
-    this.add_option();
+    this.expanded[i] = false;
+    this.add_option({});
   }
 
   private async del_option_dialog(i: number) { 
@@ -270,13 +295,11 @@ export class DraftpollPage implements OnInit {
   private no_more() {
     if (this.formGroup.get('option_name'+(this.n_options-1)).value=='') {
       this.option_stage = 10;
-      this.n_options--;
-      this.remove_last_controls();
+      this.del_option(this.n_options-1);
     }
   }
 
-  private showkebap(event: Event)
-  {
+  private showkebap(event: Event) {
     this.popover.create({
         event, 
         component: DraftpollKebapPage, 
@@ -318,10 +341,88 @@ export class DraftpollPage implements OnInit {
   } 
 
   send4review() { 
-    console.log("2"); 
+    this.G.L.warn("DraftpollPage.send4review not yet implemented!");
   }
 
   // OTHER METHODS:
+
+  private reset() {
+    this.formGroup = this.formBuilder.group({
+      poll_type: new FormControl('', Validators.required),
+      poll_title: new FormControl('', Validators.required),
+      poll_desc: new FormControl(''),
+      poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
+      poll_due_type: new FormControl('', Validators.required),
+      poll_due: new FormControl('', this.is_in_future.bind(this)),
+    });
+    this.pd = {};
+    this.update_ref_date();
+  }
+
+  import_csv(event: Event) {
+    const file = (event.target as HTMLInputElement).files[0];
+    const reader = new FileReader();
+    const page = this;
+    reader.onload = function (event) {
+      const content = event.target.result as string;
+      for (var row of content.split("\n")) {
+        // TODO: improve csv parser!
+        var cols = row.split(/\s*"\s*,\s*"\s*/);
+        if (cols.length>0) {
+          cols[0] = cols[0].slice(cols[0].indexOf('"')+1);
+          cols[cols.length-1] = cols[cols.length-1].slice(0, cols[cols.length-1].indexOf('"'));
+          cols = cols.map(c => c.trim());
+          if (cols[0] != "") {
+            page.no_more();
+            if (cols.length==1) { 
+              page.add_option({ name:cols[0] });
+            } else if (cols.length==2) { 
+              page.add_option({ name:cols[0], desc:cols[1] });
+              page.detailstoggle.checked = true;
+            } else { 
+              page.add_option({ name:cols[0], desc:cols[1], url:cols[2]}); 
+              page.detailstoggle.checked = true;
+            }
+            page.stage = 10;
+            page.option_stage = 10;
+          }
+        }
+      }
+    }
+    reader.readAsText(file);
+  }
+
+  private add_option(od: option_data_t) {
+    let i = this.n_options;
+    this.pd.options.push(od);
+    this.add_option_inputs(i);
+    this.formGroup.get('option_name'+i).setValue(od.name); 
+    this.formGroup.get('option_desc'+i).setValue(od.desc); 
+    this.formGroup.get('option_url'+i).setValue(od.url); 
+  }
+
+  private add_option_inputs(i:number) {
+    this.formGroup.addControl('option_name'+i, new FormControl("", Validators.required));
+    this.formGroup.addControl('option_desc'+i, new FormControl(""));
+    this.formGroup.addControl('option_url'+i, new FormControl("", Validators.pattern(this.G.urlRegex)));
+    this.option_stage = 0;
+  }
+  
+  private del_option(i: number) {
+    // move metadata of options i+1,i+2,... back one slot to i,i+1,...:
+    for (let j=i+1; j<this.n_options; j++) {
+      this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
+      this.formGroup.get('option_desc'+(j-1)).setValue(this.formGroup.get('option_desc'+j).value); 
+      this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
+      this.pd.options[j-1] = this.pd.options[j];
+    }
+    // remove last:
+    let j = this.n_options-1;
+    this.formGroup.removeControl('option_name'+j);
+    this.formGroup.removeControl('option_desc'+j);
+    this.formGroup.removeControl('option_url'+j);
+    this.pd.options.pop();
+  }
 
   private update_ref_date() {
     this.ref_date = this.now();
@@ -338,45 +439,6 @@ export class DraftpollPage implements OnInit {
       }
       return null;
     }
-  }
-  
-  private del_option(i: number) {
-    if (true) { //(confirm("Delete " + (this.formGroup.get('poll_type').value=='choice' ? 'option' : 'target') + " ‘" + this.formGroup.get('option_name'+i).value + "’")) {
-      this.p.remove_option(this.options[i].oid);
-      // move metadata of options i+1,i+2,... back one slot to i,i+1,..., then decrease n_options:
-      for (let j=i+1; j<this.n_options; j++) {
-        this.options[j-1] = this.options[j];
-        this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
-        this.formGroup.get('option_desc'+(j-1)).setValue(this.formGroup.get('option_desc'+j).value); 
-        this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
-      }
-      this.n_options--;
-      this.remove_last_controls();
-    }
-  }
-
-  private remove_last_controls() {
-    this.options = this.options.slice(0, this.n_options);
-    this.formGroup.removeControl('option_name'+this.n_options);
-    this.formGroup.removeControl('option_desc'+this.n_options);
-    this.formGroup.removeControl('option_url'+this.n_options);
-  }
-
-  private add_option(oid:string=null, name:string="", desc:string="", url:string="") {
-    console.log("add_option "+oid+" "+name+" "+desc+" "+url);
-    let o = new Option(this.G, this.p, oid, name, desc, url);
-    this.p._add_option(o);
-    this.add_controls(o);
-  }
-
-  private add_controls(o: Option) {
-    let i = this.n_options;
-    this.options.push(o);
-    this.formGroup.addControl('option_name'+i, new FormControl(o.name, Validators.required));
-    this.formGroup.addControl('option_desc'+i, new FormControl(o.desc));
-    this.formGroup.addControl('option_url'+i, new FormControl(o.url, Validators.pattern(this.G.urlRegex)));
-    this.option_stage = 0;
-    this.n_options++;
   }
 
   // CONSTANTS:
@@ -404,37 +466,5 @@ export class DraftpollPage implements OnInit {
       { type: 'pattern', message: 'validation.option-url-valid' },
     ],
   }
-
-  import_csv(event: Event) {
-    const file = (event.target as HTMLInputElement).files[0];
-    const reader = new FileReader();
-    const page = this;
-    reader.onload = function (event) {
-      const content = event.target.result as string;
-      for (var row of content.split("\n")) {
-        var cols = row.split(/\s*"\s*,\s*"\s*/);
-        if (cols.length>0) {
-          cols[0] = cols[0].slice(cols[0].indexOf('"')+1);
-          cols[cols.length-1] = cols[cols.length-1].slice(0, cols[cols.length-1].indexOf('"'));
-          cols = cols.map(c => c.trim());
-          if (cols[0] != "") {
-            page.no_more();
-            if (cols.length==1) { 
-              page.add_option(null, cols[0]);
-            } else if (cols.length==2) { 
-              page.add_option(null, cols[0], cols[1]);
-              page.detailstoggle.checked = true;
-            } else { 
-              page.add_option(null, cols[0], cols[1], cols[2]); 
-              page.detailstoggle.checked = true;
-            }
-            page.stage = 10;
-            page.option_stage = 10;
-          }
-        }
-      }
-    }
-    reader.readAsText(file);
-  }
-
+  
 }
