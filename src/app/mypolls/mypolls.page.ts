@@ -13,14 +13,14 @@ import { Poll } from "../poll.service";
 export class MypollsPage implements OnInit {
 
   Object = Object;
-  
+
   // LIFECYCLE:
 
   private ready = false;  
 
   constructor(
     public G: GlobalService,
-    public translate: TranslateService,
+    public translate: TranslateService
   ) { 
     this.G.L.entry("MypollsPage.constructor");
   }

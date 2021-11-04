@@ -25,26 +25,12 @@
     "show": "Anzeigen",
     "test": "Testen",
 
-    "select-server": {
-        "same-as-personal": "wie für meine persönlichen Daten (siehe ‘Einstellungen’)",
-        "central": "in der vodle-Cloud",
-        "same-as-some-poll": "wie für eine meiner Abstimmungen",
-        "same-as-other-poll": "wie für eine andere Abstimmung",
-        "other": "in einer bestimmten CouchDB-Datenbank",
-        "which-poll": "Den Speicherort von welcher Abstimmung möchtest Du auch für Deine persönlichen Daten verwenden?",
-        "which-other-poll": "Den Speicherort von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
-        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password der CouchDB-Datenbank ein:"
+    "about": {
+        "-page-title": "Über vodle"
     },
-    "settings": {
-        "-page-title": "Einstellungen",
-        "data-storage-msg": "Um Deine Daten speichern und darauf sicher von verschiedenen Geräten zugreifen zu können, gib bitte eine Emailadresse an und lege ein Passwort fest.",
-        "email-placeholder": "Bitte gib die Emailadresse an, die Du für vodle verwenden möchtest.",
-        "edit": "Ändern",
-        "db-label": "Wo soll vodle Deine Daten verschlüsselt ablegen?",
-        "appearance": "Aussehen"
-    },
+    
     "draftpoll": {
-        "-page-title": "Abstimmung bearbeiten",
+        "-page-title": "Abstimmungs-Entwurf bearbeiten",
         "general-information": "Allgemeine Daten",
         "type-label": "In dieser Abstimmung wird die Gruppe...",
         "type-winner": "eine von mehreren Optionen auswählen",
@@ -87,27 +73,10 @@
         "import-options-from-file": "Optionen aus Datei importieren",
         "import-options-header": "Optionen aus Datei importieren",
         "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>"
-   },
-    "validation": {
-        "db-pw-required": "Ein Datenbank-Password wird benötigt.",
-        "db-url-required": "Eine Datenbank-URL wird benötigt.",
-        "db-url-pattern": "Bitte gib eine gültige URL ein.",
-        "db-user-required": "Ein Datenbank-Benutzername wird benötigt.",
-        "email-required": "Emailadresse wird benötigt.",
-        "email-valid": "Bitte gib eine gültige Emailadresse ein.",
-        "password-length": "Das Passwort muss mindestens 8 Zeichen lang sein.",
-        "password-pattern": "Das Password muss einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten.",
-        "password-required": "Ein Passwort wird benötigt.",
-        "passwords-match": "Die Passwörter stimmen nicht überein.",
-        "poll-type-required": "Bitte wähle aus.",
-        "poll-title-required": "Eine Überschrift wird benötigt.",
-        "poll-url-valid": "Bitte gib eine gültige URL ein.",
-        "poll-due-type-required": "Bitte wähle aus.",
-        "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
-        "option-name-required": "Ein Name wird benötigt.",
-        "option-url-valid": "Bitte gib eine gültige URL ein."
     },
+    
     "help": {
+        "-page-title": "Hilfe",
         "h1": "Wie stimmt man ab? – kurze Version",
         "p11a": "Wähle eine Abstimmung aus", 
         "p11b": "Meine Abstimmungen",
@@ -134,5 +103,52 @@
         "p25": "Wenn keine Option 100% Zustimmung hat, aber bei der Abstimmung eine einzelne Option gewählt werden soll, dann geschieht dies wie folgt. Erst wird ein:e Wähler:in per Los gezogen. Von den Optionen, der dieser Person zugestimmt hat, gewinnt diejenige mit der größten Gesamt-Zustimmung. Das Tortenstück links von jeder Option zeigt, mit welcher Wahrscheinlichkeit dabei diese Option gewinnen würde.",
         "p26": "Wenn hingegen bei der Abstimmung ein Budget verteilt werden soll, dann wird der Anteil des Budgets für jedes mögliche Ziel auf genau die gleiche Weise berechnet. Der Anteil für ein Ziel entspricht der Anzahl an Wähler:innen, die (i) diesem Ziel zugestimmt haben, aber (ii) keinem anderen Ziel zugestimmt haben, das insgesamt mehr Zustimmung hat.",
         "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
+    },
+
+    "mypolls": {
+        "-page-title": "Meine Abstimmungen",
+        "drafts": "Entwürfe",
+        "running": "Laufende",
+        "closed": "Abgeschlossen"
+    },
+
+    "select-server": {
+        "same-as-personal": "wie für meine persönlichen Daten (siehe ‘Einstellungen’)",
+        "central": "in der vodle-Cloud",
+        "same-as-some-poll": "wie für eine meiner Abstimmungen",
+        "same-as-other-poll": "wie für eine andere Abstimmung",
+        "other": "in einer bestimmten CouchDB-Datenbank",
+        "which-poll": "Den Speicherort von welcher Abstimmung möchtest Du auch für Deine persönlichen Daten verwenden?",
+        "which-other-poll": "Den Speicherort von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
+        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password der CouchDB-Datenbank ein:"
+    },
+
+    "settings": {
+        "-page-title": "Einstellungen",
+        "data-storage-msg": "Um Deine Daten speichern und darauf sicher von verschiedenen Geräten zugreifen zu können, gib bitte eine Emailadresse an und lege ein Passwort fest.",
+        "email-placeholder": "Bitte gib die Emailadresse an, die Du für vodle verwenden möchtest.",
+        "edit": "Ändern",
+        "db-label": "Wo soll vodle Deine Daten verschlüsselt ablegen?",
+        "appearance": "Aussehen"
+    },
+    
+    "validation": {
+        "db-pw-required": "Ein Datenbank-Password wird benötigt.",
+        "db-url-required": "Eine Datenbank-URL wird benötigt.",
+        "db-url-pattern": "Bitte gib eine gültige URL ein.",
+        "db-user-required": "Ein Datenbank-Benutzername wird benötigt.",
+        "email-required": "Emailadresse wird benötigt.",
+        "email-valid": "Bitte gib eine gültige Emailadresse ein.",
+        "password-length": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+        "password-pattern": "Das Password muss einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten.",
+        "password-required": "Ein Passwort wird benötigt.",
+        "passwords-match": "Die Passwörter stimmen nicht überein.",
+        "poll-type-required": "Bitte wähle aus.",
+        "poll-title-required": "Eine Überschrift wird benötigt.",
+        "poll-url-valid": "Bitte gib eine gültige URL ein.",
+        "poll-due-type-required": "Bitte wähle aus.",
+        "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
+        "option-name-required": "Ein Name wird benötigt.",
+        "option-url-valid": "Bitte gib eine gültige URL ein."
     }
 }

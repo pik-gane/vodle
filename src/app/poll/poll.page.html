@@ -12,9 +12,7 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
-      <ion-title>
-        Running poll<!-- – your ratings-->
-      </ion-title><!--TODO: decide whether to name poll in title or just have the poll question as the topmost list element-->
+      <ion-title [innerHtml]="'poll.-page-title-running'|translate"></ion-title>
     </ng-template>
     <ion-buttons slot="end">
       <ion-button (click)="delegate_dialog()" shape="round" fill="solid" color="primary" size="large">

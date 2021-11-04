@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title>My polls</ion-title>
+    <ion-title [innerHtml]="'mypolls.-page-title'|translate"></ion-title>
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
@@ -17,10 +17,22 @@
 -->
 <ion-content *ngIf="ready">
   <ion-list lines="full">
+    <ion-item color="primary">
+      <ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
+    </ion-item>
     <ng-container *ngFor="let p of Object.values(G.P.polls)">
       <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
+        <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+        <i>{{p.title}}</i>
+      </ion-item>
+    </ng-container>
+    <ion-item color="primary">
+      <ion-label [innerHtml]="'mypolls.running'|translate"></ion-label>
+    </ion-item>
+    <ng-container *ngFor="let p of Object.values(G.P.polls)">
+      <ion-item *ngIf="p.state=='running'" [routerLink]="'/poll/'+p.pid">
         <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-        {{p.title}}
+        <b><i>{{p.title}}</i></b>
       </ion-item>
     </ng-container>
   </ion-list>

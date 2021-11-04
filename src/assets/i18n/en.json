@@ -25,26 +25,12 @@
     "show": "Show",
     "test": "Test",
 
-    "select-server": {
-        "same-as-personal": "like my personal data (see ‘Settings’)",
-        "central": "in the vodle cloud",
-        "same-as-some-poll": "like for one of my polls",
-        "same-as-other-poll": "like for some other poll",
-        "other": "in a certain CouchDB database",
-        "which-poll": "Which poll's data location do you want to use for your personal data?",
-        "which-other-poll": "Which other poll's data location do you want to use for this poll as well?",
-        "please-enter-couchdb": "Please enter the URL, username and password for that CouchDB database."
+    "about": {
+        "-page-title": "About vodle"
     },
-    "settings": {
-        "-page-title": "Settings",
-        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
-        "email-placeholder": "Please specify the email address you want to use with vodle",
-        "edit": "Edit",
-        "db-label": "Where shall vodle store your encrypted data?",
-        "appearance": "Appearance"
-    },
+
     "draftpoll": {
-        "-page-title": "Edit poll",
+        "-page-title": "Edit draft poll",
         "general-information": "General information",
         "type-label": "In this poll, the group will...",
         "type-winner": "select one of several options",
@@ -88,26 +74,9 @@
         "import-options-header": "Import options from file",
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>"
     },
-    "validation": {
-        "db-pw-required": "Database password is required.",
-        "db-url-required": "Database URL is required.",
-        "db-url-pattern": "Please enter a valid URL.",
-        "db-user-required": "Database username is required.",
-        "email-required": "Email address is required.",
-        "email-valid": "Please enter a valid email address.",
-        "password-length": "Password must be at least 8 characters long.",
-        "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
-        "password-required": "Password is required.",
-        "passwords-match": "Passwords do not match.",
-        "poll-type-required": "Please select.",
-        "poll-title-required": "Poll title is required.",
-        "poll-url-valid": "Please enter a valid URL.",
-        "poll-due-type-required": "Please select.",
-        "poll-due-future": "This date and time is in the past.",
-        "option-name-required": "A name is required.",
-        "option-url-valid": "Please enter a valid URL."
-    },
+
     "help": {
+        "-page-title": "Help",
         "h1": "How to vote – short version",
         "p11a": "Select a poll from", 
         "p11b": "My polls",
@@ -134,5 +103,52 @@
         "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One voter is determined by lot, everyone having the same chance of being that voter. Among the options that this voter approves, the one with the largest overall approval is the winner. The pie piece to the left of each option shows the resulting probability that this option wins.",
         "p26": "If the poll is about allocating a budget, the size of each option's shares is calculated the same way: the share is proportional to the number of voters that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your “willingness to approve” ratings?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a rating of 100. Give all options which are better than average some rating larger than zero, scaling your ratings according to relative preference. Finally, give all options which are worse than average a rating of zero.</b>"
+    },
+
+    "mypolls": {
+        "-page-title": "My polls",
+        "drafts": "Drafts",
+        "running": "Running",
+        "closed": "Closed"
+    },
+
+    "select-server": {
+        "same-as-personal": "like my personal data (see ‘Settings’)",
+        "central": "in the vodle cloud",
+        "same-as-some-poll": "like for one of my polls",
+        "same-as-other-poll": "like for some other poll",
+        "other": "in a certain CouchDB database",
+        "which-poll": "Which poll's data location do you want to use for your personal data?",
+        "which-other-poll": "Which other poll's data location do you want to use for this poll as well?",
+        "please-enter-couchdb": "Please enter the URL, username and password for that CouchDB database."
+    },
+
+    "settings": {
+        "-page-title": "Settings",
+        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
+        "email-placeholder": "Please specify the email address you want to use with vodle",
+        "edit": "Edit",
+        "db-label": "Where shall vodle store your encrypted data?",
+        "appearance": "Appearance"
+    },
+
+    "validation": {
+        "db-pw-required": "Database password is required.",
+        "db-url-required": "Database URL is required.",
+        "db-url-pattern": "Please enter a valid URL.",
+        "db-user-required": "Database username is required.",
+        "email-required": "Email address is required.",
+        "email-valid": "Please enter a valid email address.",
+        "password-length": "Password must be at least 8 characters long.",
+        "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
+        "password-required": "Password is required.",
+        "passwords-match": "Passwords do not match.",
+        "poll-type-required": "Please select.",
+        "poll-title-required": "Poll title is required.",
+        "poll-url-valid": "Please enter a valid URL.",
+        "poll-due-type-required": "Please select.",
+        "poll-due-future": "This date and time is in the past.",
+        "option-name-required": "A name is required.",
+        "option-url-valid": "Please enter a valid URL."
     }
 }
