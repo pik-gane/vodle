@@ -15,7 +15,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content *ngIf="ready">
   <form [formGroup]="formGroup">
 
     <!-- A hidden input needed to enable file upload from the kebap: -->

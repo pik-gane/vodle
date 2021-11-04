@@ -26,7 +26,9 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
+  // TODO: store these two in D!
   private unused_pids: string[] = [];
+  private unused_oids: string[][] = [];
 
   constructor() { }
   
@@ -38,6 +40,10 @@ export class PollService {
 
   generate_pid(): string {
     return this.unused_pids.pop() || CryptoJS.lib.WordArray.random(6).toString();
+  }
+  generate_oid(pid:string): string {
+    if (!(pid in this.unused_oids)) this.unused_oids[pid] = [];
+    return this.unused_oids[pid].pop() || CryptoJS.lib.WordArray.random(6).toString();
   }
 }
 
@@ -51,10 +57,11 @@ export class Poll {
     this.G = G;
     if (!pid) {
       // generate a new draft poll
-      pid = this._pid = this.G.P.generate_pid();
+      pid = this.G.P.generate_pid();
       this.state = 'draft';
       this.G.D.setu('p/'+pid+'/pid', pid);
     }
+    this._pid = pid;
     G.L.entry("Poll.constructor "+pid);
     this.G.P.polls[pid] = this;
   }
@@ -107,7 +114,7 @@ export class Poll {
         this.G.D.setp(this, 'state', value); 
       }
     } else {
-      console.log("ERROR: invalid state transition from "+old_state+" to "+value);
+      this.G.L.error("Poll invalid state transition from "+old_state+" to "+value);
     }
   }
 
@@ -140,7 +147,7 @@ export class Poll {
   // Date objects are stored as ISO strings:
   public get due(): Date { return new Date(this.G.D.getp(this, 'due')); }
   public set due(value: Date) { 
-    if (this.state=='draft') this.G.D.setp(this, 'due', value.toISOString()); 
+    if (this.state=='draft') this.G.D.setp(this, 'due', value?value.toISOString():''); 
   }
 
   private _options: Record<string, Option> = {};
@@ -176,15 +183,16 @@ export class Option {
                name:string="", desc:string="", url:string="") { 
     this.G = G;
     this.p = poll;
-    poll._add_option(this);
     if (!oid) {
-      oid = this._oid = CryptoJS.lib.WordArray.random(3).toString();
+      oid = CryptoJS.lib.WordArray.random(3).toString();
       this.G.D.setp(poll, 'o/'+oid+'/oid', oid);
       this.G.D.setp(poll, 'o/'+oid+'/name', name);
       this.G.D.setp(poll, 'o/'+oid+'/desc', desc);
       this.G.D.setp(poll, 'o/'+oid+'/url', url);
-      console.log("new option with pid,oid "+poll.pid+","+this._oid);
+      console.log("new option with pid,oid "+poll.pid+","+oid);
     }
+    this._oid = oid;
+    poll._add_option(this);
   }
 
   private _oid: string;

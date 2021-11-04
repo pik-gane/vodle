@@ -15,17 +15,14 @@
   <ion-icon name="star-half-outline"></ion-icon>
   <ion-icon name="star"></ion-icon>
 -->
-<ion-content>
-  <ion-list lines="full"><!--TODO: allow filtering and sorting by state(open/closed/drafts)/deadline/title/creator/priority, allow setting personal priority-->
-    <ion-item *ngFor="let pid of Object.keys(g.polls)" [id]="'poll_'+pid" (click)="g.openpoll = g.polls[pid]" [routerLink]="'/poll'" >
-      <ion-icon [name]="(g.polls[pid].type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-        {{g.polls[pid].title}}
-    </ion-item>
-    <ion-item>
-      <ion-button no-margin routerLink="newpoll" fill="clear">
-        <ion-icon name="add-circle" slot="start"></ion-icon> new poll
-      </ion-button>
-    </ion-item>      
+<ion-content *ngIf="ready">
+  <ion-list lines="full">
+    <ng-container *ngFor="let p of Object.values(G.P.polls)">
+      <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
+        <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+        {{p.title}}
+      </ion-item>
+    </ng-container>
   </ion-list>
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button routerLink="newpoll">

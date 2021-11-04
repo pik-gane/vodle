@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
@@ -22,9 +22,9 @@ export class DraftpollPage implements OnInit {
 
   // page template elements:
   
-  @ViewChild(IonSelect) type_select: IonSelect;
-  @ViewChild(SelectServerComponent) select_server: SelectServerComponent;
-  @ViewChild(IonToggle) detailstoggle: IonToggle;
+  @ViewChild(IonSelect, { static: false }) type_select: IonSelect;
+  @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
+  @ViewChild(IonToggle, { static: false }) detailstoggle: IonToggle;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
   // form:
@@ -43,7 +43,7 @@ export class DraftpollPage implements OnInit {
     type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_username?, db_password?,
     options?: option_data_t[] 
   };
-  private get n_options() { return this.pd.options.length || 0; }
+  private get n_options() { return (this.pd.options||[]).length; }
 
   // objects:
 
@@ -64,6 +64,7 @@ export class DraftpollPage implements OnInit {
     public alertCtrl: AlertController,
     public G: GlobalService,
     public translate: TranslateService,
+    private ref: ChangeDetectorRef,
   ) { 
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
@@ -78,7 +79,7 @@ export class DraftpollPage implements OnInit {
 
   ionViewWillEnter() {
     this.G.L.entry("DraftpollPage.ionViewWillEnter");
-    this.G.D.page = this.select_server.parent = this;
+    this.G.D.page = this;
     this.reset();
   }
 
@@ -120,13 +121,14 @@ export class DraftpollPage implements OnInit {
     // fill form:
     if (this.pd) {
       this.formGroup.setValue({ 
-        poll_type: this.pd.type,
-        poll_title: this.pd.title, 
-        poll_desc: this.pd.desc,
-        poll_url: this.pd.url, 
-        poll_due_type: this.pd.due_type, 
-        poll_due: this.pd.due,
+        poll_type: this.pd.type||'',
+        poll_title: this.pd.title||'', 
+        poll_desc: this.pd.desc||'',
+        poll_url: this.pd.url||'', 
+        poll_due_type: this.pd.due_type||'', 
+        poll_due: this.pd.due||null,
       });
+      if (!this.pd.options) this.pd.options = [];
       for (let [i, od] of this.pd.options.entries()) {
         this.add_option_inputs(i);
         this.formGroup.get('option_name'+i).setValue(od.name); 
@@ -138,7 +140,11 @@ export class DraftpollPage implements OnInit {
       this.add_option({});
       this.option_stage = 0;
     }
+    // show the page:
     this.ready = true;
+    // find select-server component and register us with it:
+    this.ref.detectChanges();
+    this.select_server.parent = this;
     // make sure select-element values are translated properly:
     this.ionSelects.map((select) => select.value = select.value);
     // open the type selector?:
@@ -147,12 +153,20 @@ export class DraftpollPage implements OnInit {
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
-    // TODO: save in poll object if title not empty
     if (['',null,undefined].includes(this.pd.title)) {
+      this.G.L.info("DraftpollPage not saving empty title draft");
       // TODO: notify of deleted draft
-    } else if (this.pid && this.pid in this.G.P.polls) {
-      // update poll object:
-      let p = this.G.P.polls[this.pid];
+    } else {
+      var p;
+      if (!this.pid) {
+        this.pid = this.G.P.generate_pid();
+      }
+      if (!(this.pid in this.G.P.polls)) {
+        // generate new poll object:
+        p = new Poll(this.G, this.pid);
+      } else {
+        p = this.G.P.polls[this.pid];
+      }
       p.state = 'draft';
       p.type = this.pd.type;
       p.title = this.pd.title;
@@ -165,9 +179,31 @@ export class DraftpollPage implements OnInit {
       p.db_url = this.pd.db_url;
       p.db_username = this.pd.db_username;
       p.db_password = this.pd.db_password;
-      // TODO: options!
-    } else {
-      // add poll object to G:
+      let oids = [];
+      for (let od of this.pd.options) {
+        if (!['',null,undefined].includes(od.name)) {
+          var o;
+          if (!od.oid) {
+            od.oid = this.G.P.generate_oid(this.pid);
+          }
+          if (!(od.oid in p.options)) {
+            // generate new options object:
+            o = new Option(this.G, p, od.oid);
+          } else {
+            o = p.options[od.oid];
+          }
+          o.name = od.name;
+          o.desc = od.desc;
+          o.url = od.url;
+          oids.push(od.oid);
+        }
+      }
+      // remove deleted options from p:
+      for (let [oid, o] of Object.entries(p.options)) {
+        if (!(oid in oids)) {
+          p.remove_option(oid);
+        }
+      }
     }
   }
 
