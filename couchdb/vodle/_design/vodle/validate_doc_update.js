@@ -4,7 +4,7 @@ function(newDoc, savedDoc, userCtx) {
     if ((_id[0] == '~') && (pos != -1)) {
         // let only that user update it:
         let username = _id.slice(1, pos);
-        if (username != userCtx.name) {
+        if (userCtx.roles.username != username) {
             throw ({unauthorized: 'Only the owner of this document may update it.'}) // or forbidden to avoid popups?
         }
         // check whether it's an existing poll doc:

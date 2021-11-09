@@ -1,0 +1,7 @@
+{
+    "_id": "org.couchdb.user:vodle.samplepid.template",
+    "name": "vodle.samplepid.template",
+    "roles": [],
+    "type": "user",
+    "_comment": "This is a template for a shared poll db user who can generate poll and option documents."
+}

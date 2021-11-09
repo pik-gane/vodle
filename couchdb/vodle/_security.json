@@ -1,0 +1,11 @@
+{
+  "admins": {
+    "names": [],
+    "roles": []
+  },
+  "members": {
+    "names": [],
+    "roles": []
+  },
+  "_comment": "Because of require_valid_user, all valid users can read. Because of validate_doc_update, only owners can update documents."
+}

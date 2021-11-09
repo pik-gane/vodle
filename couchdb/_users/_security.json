@@ -1,0 +1,11 @@
+{
+  "admins": {
+    "names": [],
+    "roles": []
+  },
+  "members": {
+    "names": ["vodle"],
+    "roles": []
+  },
+  "_comment": "TODO: verify that this user can create but not update users!"
+}

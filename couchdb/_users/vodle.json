@@ -1,0 +1,7 @@
+{
+    "_id": "org.couchdb.user:vodle",
+    "name": "vodle",
+    "roles": [],
+    "type": "user",
+    "_comment": "This shared db user can be used by any person authorized for this vodle db server instance to self-register and to generate shared poll db users."
+}
