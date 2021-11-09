@@ -12,6 +12,7 @@ log.txt
 .vscode/
 npm-debug.log*
 
+.angular/
 .idea/
 .ionic/
 .sourcemaps/
@@ -34,4 +35,5 @@ Thumbs.db
 UserInterfaceState.xcuserstate
 
 secret*
+nohup.out
 
