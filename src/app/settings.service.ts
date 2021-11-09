@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { ValidationErrors, AbstractControl } from '@angular/forms';
+
 import { GlobalService } from './global.service';
 
 @Injectable({
@@ -40,6 +42,45 @@ export class SettingsService {
 
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
+
+  public password_regexp = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$';
+
+  public passwords_match(control: AbstractControl): ValidationErrors | null {
+    // password validation function to be used in forms
+    if (control) {
+      const password = control.get('password');
+      const confirm_password = control.get('confirm_password');
+      if (password.errors) {
+        return (password.errors);
+      }
+      if (confirm_password.value !== password.value) {
+        return ({must_match: true});
+      }
+    }
+    return null;
+  }
+  
+  // OTHER CONSTANTS:
+
+  private language_names = {
+    de: 'Deutsch',
+    en: 'English'
+  };
+
+  private validation_messages = {
+    email: [
+      { type: 'required', message: 'validation.email-required' },
+      { type: 'email', message: 'validation.email-valid' }
+    ],
+    password: [
+      { type: 'required', message: 'validation.password-required' },
+      { type: 'minlength', message: 'validation.password-length' },
+      { type: 'pattern', message: 'validation.password-pattern' }
+    ],
+    passwords_match: [
+      { message: 'validation.passwords-match' }
+    ],
+  };
 
 }
 

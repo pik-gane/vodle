@@ -14,7 +14,8 @@ export class MypollsPage implements OnInit {
   Object = Object;
 
   private drafts_expanded = false;
-  
+  private older_expanded = false;
+
   // LIFECYCLE:
 
   private ready = false;  

@@ -12,20 +12,6 @@ TODO:
 - when changing password or server, alert that user needs to update password or server on other devices as well
 */
 
-// custom validator to check that the passwords match:
-export function passwords_match(control: AbstractControl): ValidationErrors | null {
-  if (control) {
-    const password = control.get('password');
-    const confirm_password = control.get('confirm_password');
-    if (password.errors) {
-      return (password.errors);
-    }
-    if (confirm_password.value !== password.value) {
-      return ({must_match: true});
-    }
-  }
-  return null;
-}
 
 // PAGE:
 
@@ -40,17 +26,17 @@ export class SettingsPage implements OnInit {
 
   // template components:
 
-  @ViewChild(IonInput) retype_password: IonInput;
-  @ViewChild(SelectServerComponent) select_server: SelectServerComponent;
+  @ViewChild(IonInput, { static: false }) retype_password: IonInput;
+  @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 
   // form:
 
   private formGroup: FormGroup;
-  private editing_email: Boolean;
-  private editing_password: Boolean;
-  private showing_password: Boolean;
-  private advanced_expanded: Boolean;
+  private editing_email: boolean;
+  private editing_password: boolean;
+  private showing_password: boolean;
+  private advanced_expanded: boolean;
 
   // LIFECYCLE:
 
@@ -71,11 +57,11 @@ export class SettingsPage implements OnInit {
         password: new FormControl('', Validators.compose([
           Validators.required,
           Validators.minLength(8),
-          Validators.pattern('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$') //this is for the letters (both uppercase and lowercase) and numbers validation
+          Validators.pattern(this.G.S.password_regexp)
         ])),
         confirm_password: new FormControl('', Validators.required),
       }, {
-        validators: [passwords_match]
+        validators: [this.G.S.passwords_match]
       }),
       language: new FormControl('', Validators.required),
       theme: new FormControl('', Validators.required),
@@ -172,22 +158,4 @@ export class SettingsPage implements OnInit {
       db_password: this.G.S.db_password||'',
     });
   }
-
-  // OTHER CONSTANTS:
-
-  private validation_messages = {
-    'email': [
-      { type: 'required', message: 'validation.email-required' },
-      { type: 'email', message: 'validation.email-valid' }
-    ],
-    'password': [
-      { type: 'required', message: 'validation.password-required' },
-      { type: 'minlength', message: 'validation.password-length' },
-      { type: 'pattern', message: 'validation.password-pattern' }  // verify that this is really what the validator tests
-    ],
-    'passwords_match': [
-      { message: 'validation.passwords-match' }
-    ],
-  }
-  
 }

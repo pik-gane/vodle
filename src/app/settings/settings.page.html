@@ -10,7 +10,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content *ngIf="ready">
   <form [formGroup]="formGroup">
 
     <!--DATA STORAGE:-->
@@ -20,6 +20,7 @@
     <ion-item>
       <small [innerHtml]="'settings.data-storage-msg'|translate"></small>
     </ion-item>
+
     <ion-grid class="ion-no-padding">
       <ion-row class="ion-no-padding">
         <ion-col class="ion-no-padding">
@@ -50,7 +51,7 @@
       </ion-row>
     </ion-grid>
     <div class="validation-errors">
-    <ng-container *ngFor="let validation of validation_messages.email">
+    <ng-container *ngFor="let validation of G.S.validation_messages.email">
       <div class="error-message" 
           *ngIf="formGroup.get('email').hasError(validation.type) 
                   && (formGroup.get('email').dirty || formGroup.get('email').touched)"
@@ -92,7 +93,7 @@
         </ion-row>
       </ion-grid>
       <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.password">
+      <ng-container *ngFor="let validation of G.S.validation_messages.password">
         <div class="error-message" 
             *ngIf="formGroup.get('pw.password').hasError(validation.type) 
                     && (formGroup.get('pw.password').dirty || formGroup.get('pw.password').touched)"
@@ -117,7 +118,7 @@
           </ion-input>
         </ion-item>
         <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.passwords_match">
+        <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
           <div class="error-message" 
               *ngIf="formGroup.get('pw').hasError('must_match') 
                       && (formGroup.get('pw.confirm_password').dirty || formGroup.get('pw.confirm_password').touched)"
@@ -149,8 +150,7 @@
         <span [innerHtml]="'language'|translate"></span>
       </ion-label>
       <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
-        <ion-select-option value="de" [innerHtml]="'Deutsch'"></ion-select-option>
-        <ion-select-option value="en" [innerHtml]="'English'"></ion-select-option>
+        <ion-select-option *ngFor="let lang of translate.langs" value="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>
