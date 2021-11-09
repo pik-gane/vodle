@@ -1,7 +1,8 @@
 {
     "_id": "org.couchdb.user:vodle",
     "name": "vodle",
+    "password": "none",
     "roles": [],
     "type": "user",
-    "_comment": "This shared db user can be used by any person authorized for this vodle db server instance to self-register and to generate shared poll db users."
+    "comment": "This shared db user can be used by any person authorized for this vodle db server instance to self-register and to generate shared poll db users. She can only create new users with prefix 'vodle.'. She cannot list users or delete or update any users, not even her own."
 }

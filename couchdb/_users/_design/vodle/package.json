@@ -1,0 +1,4 @@
+{
+    "name": "vodle",
+    "description": "vodle CouchDB logics: contains a validation function to restrict permissions in _user database"
+}
