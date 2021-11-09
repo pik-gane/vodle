@@ -1,0 +1,4 @@
+{
+    "name": "vodle",
+    "description": "vodle CouchDB logics: contains validation functions for hashed-passwords-based authorization"
+}

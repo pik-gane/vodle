@@ -12,6 +12,28 @@ import * as CryptoJS from 'crypto-js';
 const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
+
+/*
+- if no conn. info in local db:
+  - apparently user new on this device. ask if has used vodle before
+    - if no: ask for new conn. info, try to connect as public user
+      - if success, look for private user doc. 
+        - if exists, notify that conn. info already in use (used vodle before after all?), try connecting as private user and updating user doc.
+          - if success, done
+          - otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+        - otherwise, try generating user
+          - if success, try connecting as private user and generating user doc.
+            - if success, done
+            - otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+          - if not, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+      - otherwise, notify error, ask to verify conn. info, return to form 
+    - if yes: ask for old conn. info or recovery file,
+
+
+*/
+
+
+
 // some keys are only stored locally and not synced to a remote CouchDB:
 const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
@@ -36,6 +58,11 @@ function decrypt(value:string, password:string): string {
   return result;
 }
 
+function myhash(what):string {
+  // TODO!!
+  return what.toString(); 
+}
+
 // SERVICE:
 
 @Injectable({
@@ -55,7 +82,7 @@ export class DataService {
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
-  private remote_user_DB: PouchDB.Database; // persistent remote copy of synced user data
+  private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
 
   private _pids: Set<string>; // list of pids 
   public get pids() { return this._pids; }
@@ -144,7 +171,7 @@ export class DataService {
     if (db=='central') {
       db_url = "http://localhost:5984/vodle_cloud"; // replace by actual vodle could url later
       db_username = "public";
-      db_password = "none";
+      db_password = "nono";
     } else if (db=="poll") {
       // TODO!
     } else if (db=="other") {
@@ -154,17 +181,19 @@ export class DataService {
     }
     if (db_url) {
       db_url = this.fix_url(db_url);
-      this.G.L.info("DataService trying to connect to remote_user_DB "+db_url+" as "+db_username+" with password "+db_password);
-      this.remote_user_DB = new PouchDB(db_url, {auth:{username:db_username, password:db_password}});
-      // get some statistics about remote DB:
-      this.remote_user_DB.info().then(doc => { 
-        this.G.L.info("DataService remote_user_DB info", doc);
-      }).catch(err => {
-        this.G.L.info("DataService remote_user_DB error", err);
+      var db_private_username = "vodle_" + myhash(this.user_cache['email']+':'+this.user_cache['password']); // TODO: store in user_cache
+      var db_private_password = this.user_cache['password'];
+      this.get_remote_connection(db_url, db_username, db_password, db_private_username, db_private_password).then(db => { 
+        this.remote_user_db = db;
+        db.info().then(doc => { 
+          this.G.L.info("DataService remote_user_db info", doc);
+          // start synchronisation:
+          this.start_user_sync();
+        }).catch(err => {
+          this.G.L.info("DataService remote_user_db error", err);
+        });
       });
     }
-    // start synchronisation asynchronously:
-    this.start_user_sync();
     // don't wait (might take too long) but meanwhile fetch all current local versions of synced docs:
     let pw = this.user_cache['password'];
     this.local_synced_user_DB.allDocs({
@@ -173,6 +202,58 @@ export class DataService {
       this.G.L.error(err);
     });
     this.G.L.exit("DataService.process_local_only_user_docs");
+  }
+
+  get_couchdb(url:string, username:string, password:string) {
+    return new PouchDB(url, {
+      auth:{username:username, password:password},
+      skipSetup:true
+    });
+    // TODO: prevent Browser popup on 401
+  }
+
+  get_remote_connection(url:string, public_username:string, public_password:string,
+                        private_username:string, private_password:string): Promise<PouchDB> {
+    this.G.L.entry("DataService.get_remote_connection");
+    return new Promise((resolve, reject) => {
+      // connect with private credentials:
+      let db = this.get_couchdb(url, private_username, private_password);
+      // try to get info to see if credentials are valid:
+      this.G.L.debug("DataService trying to get info for "+url+" as "+private_username);
+      db.info().then(doc => { 
+        this.G.L.info("DataService logged into ", doc);
+        resolve(db);
+      }).catch(err => {
+        this.G.L.debug("DataService got error", err);
+        // TODO: if it is a different error than wrong credentials, return that error.
+        // connect with public credentials to corresponding _users database and generate the user document:
+        let users_db_url = url.slice(0, url.lastIndexOf("/")) + "/_users";
+        let users_db = this.get_couchdb(users_db_url, public_username, public_password);
+        // try to generate new user:
+        this.G.L.debug("DataService trying to generate user "+private_username+" in "+users_db_url);
+        users_db.put({ 
+          _id:"org.couchdb.user:"+private_username,
+          name:private_username, 
+          password:private_password,
+          roles:[]
+        }).then(response => {
+          this.G.L.info("DataService generated user "+private_username);
+          // connect again with private credentials:
+          db = this.get_couchdb(url, private_username, private_password);
+          // try to get info to see if now the credentials are valid:
+          this.G.L.debug("DataService again trying to get info for "+url+" as "+private_username);
+          db.info().then(doc => { 
+            this.G.L.info("DataService logged into ", doc);
+            resolve(db);
+          }).catch(err => { 
+            this.G.L.error("DataService could still not log into "+url, err);
+            reject(err);
+          });
+        }).catch(err => {
+          this.G.L.error("DataService could not generate user "+private_username, err);
+        });
+      });
+    });
   }
 
   private process_synced_user_docs(result) {
@@ -239,10 +320,10 @@ export class DataService {
     // try starting user data local <--> remote syncing:
     this.G.L.entry("DataService.start_user_sync");
     var result: boolean;
-    if (this.remote_user_DB) { 
+    if (this.remote_user_db) { 
       let enc_email = this.enc_email();
       this.G.L.debug("DataService.start_user_sync starting filtered sync");
-      this.local_synced_user_DB.sync(this.remote_user_DB, {
+      this.local_synced_user_DB.sync(this.remote_user_db, {
         live: true,
         retry: true,
         include_docs: true,

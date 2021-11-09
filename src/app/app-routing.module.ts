@@ -59,6 +59,14 @@ const routes: Routes = [
     path: 'sharepoll',
     loadChildren: () => import('./sharepoll/sharepoll.module').then( m => m.SharepollPageModule)
   },
+  {
+    path: 'login',
+    loadChildren: () => import('./login/login.module').then( m => m.LoginPageModule)
+  },
+  {
+    path: 'configure-server',
+    loadChildren: () => import('./configure-server/configure-server.module').then( m => m.ConfigureServerPageModule)
+  },
 ];
 
 @NgModule({
