@@ -1,3 +1,6 @@
+/*
+UNFORTUNATELY THE FOLLOWING DOES NOT WORK since the output of an update function is passed through validate_doc_update.
+
 function(doc, request) {
     // check whether doc contains a due date:
     let _id = doc._id, pos = _id.indexOf('/');
@@ -30,3 +33,4 @@ function(doc, request) {
         }
     }
 }
+*/

@@ -1,6 +1,6 @@
 {
   "admins": {
-    "names": ["vodle"],
+    "names": ["admin", "vodle"],
     "roles": []
   },
   "members": {
