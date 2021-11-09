@@ -1,3 +1,4 @@
+
 # Development of a group decision / voting app "vodle"
 
 Current goal: complete a "minimal viable product" (MVP) that runs as a web-app only and provides base functionality (setting up polls, voting, seeing and understanding results)
