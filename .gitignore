@@ -19,6 +19,8 @@ npm-debug.log*
 .sass-cache/
 .tmp/
 .versions/
+.gradle/
+.idea/
 coverage/
 www/
 node_modules/
