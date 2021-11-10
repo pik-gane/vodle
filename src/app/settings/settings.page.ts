@@ -32,15 +32,15 @@ export class SettingsPage implements OnInit {
 
   // form:
 
-  private formGroup: FormGroup;
-  private editing_email: boolean;
-  private editing_password: boolean;
-  private showing_password: boolean;
-  private advanced_expanded: boolean;
+  formGroup: FormGroup;
+  editing_email: boolean;
+  editing_password: boolean;
+  showing_password: boolean;
+  advanced_expanded: boolean;
 
   // LIFECYCLE:
 
-  private ready = false;  
+  ready = false;  
 
   constructor(
       public formBuilder: FormBuilder,
@@ -101,19 +101,19 @@ export class SettingsPage implements OnInit {
 
   // for form actions:
 
-  private set_email() {
+  set_email() {
     let c = this.formGroup.get('email');
     if (c.valid) this.G.S.email = c.value; // will trigger data move
   }
-  private set_password() {
+  set_password() {
     let fg = this.formGroup.get('pw');
     if (fg.valid) this.G.S.password = fg.get('password').value; // will trigger data move
   }
-  private set_language() {
+  set_language() {
     let c = this.formGroup.get('language');
     if (c.valid) this.G.S.language = c.value;
   }
-  private set_theme() {
+  set_theme() {
     let c = this.formGroup.get('theme');
     if (c.valid) this.G.S.theme = c.value;
   }

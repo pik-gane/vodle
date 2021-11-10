@@ -12,6 +12,8 @@ export class SelectServerComponent implements OnInit {
 
   public Object = Object;
 
+  showing_db_password: boolean;
+
   private _parent; // the page object using this component
   public set parent(parent) { this._parent = parent; }
 
@@ -32,6 +34,7 @@ export class SelectServerComponent implements OnInit {
       db_username: new FormControl('', Validators.required), // TODO: validator
       db_password: new FormControl('', Validators.required), // TODO: validator
     });
+    this.showing_db_password = false;
   }
 
   

@@ -48,8 +48,8 @@
     <ion-button (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate"></ion-button>
   </ng-container>
 
-  <ng-container *ngIf="(step=='fresh_email')||(step=='old_email)'">
-    <ion-label [innerHtml]="(step=='fresh_email')?'login.ask-fresh-email':'login.ask-old-email')|translate"></ion-label>
+  <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
+    <ion-label [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></ion-label>
     <form [formGroup]="emailFormGroup">
       <ion-grid class="ion-no-padding">
         <ion-row class="ion-no-padding">
@@ -66,7 +66,7 @@
           </ion-col>
           <ion-button 
               tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
-              [disabled]="!formGroup.get('email').valid"
+              [disabled]="!emailFormGroup.get('email').valid"
               (click)="submit_email()">
             <ion-icon name="checkmark-outline"></ion-icon>
             <span [innerHtml]="'OK'|translate"></span>
@@ -85,8 +85,8 @@
     </form>    
   </ng-container>
 
-  <ng-container *ngIf="(step=='fresh_password')||(step=='old_password)'">
-    <ion-label [innerHtml]="(step=='fresh_password')?'login.ask-fresh-password':'login.ask-old-password')|translate"></ion-label>
+  <ng-container *ngIf="(step=='fresh_password')||(step=='old_password')">
+    <ion-label [innerHtml]="(step=='fresh_password'?'login.ask-fresh-password':'login.ask-old-password')|translate"></ion-label>
     <form [formGroup]="passwordFormGroup">
       <ion-grid class="ion-no-padding">
         <ion-row class="ion-no-padding">

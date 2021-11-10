@@ -13,7 +13,7 @@ export class HomePage {
 
   // LIFECYCLE:
 
-  private ready = false;  
+  ready = false;  
   
   constructor(
       public router: Router,

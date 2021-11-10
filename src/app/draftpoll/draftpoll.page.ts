@@ -29,21 +29,21 @@ export class DraftpollPage implements OnInit {
 
   // form:
 
-  private formGroup: FormGroup;
-  private stage: number
-  private option_stage: number;
-  private expanded: Array<boolean>;
-  private advanced_expanded: boolean;
+  formGroup: FormGroup;
+  stage: number
+  option_stage: number;
+  expanded: Array<boolean>;
+  advanced_expanded: boolean;
   private ref_date: Date;
 
   // poll data:
 
-  private pd: { 
+  pd: { 
     pid?,
     type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_username?, db_password?,
     options?: option_data_t[] 
   };
-  private get n_options() { return (this.pd.options||[]).length; }
+  get n_options() { return (this.pd.options||[]).length; }
 
   // objects:
 
@@ -55,7 +55,7 @@ export class DraftpollPage implements OnInit {
 
   // LIFECYCLE:
 
-  private ready = false;  
+  ready = false;  
 
   constructor(
     private route: ActivatedRoute,
@@ -219,40 +219,40 @@ export class DraftpollPage implements OnInit {
 
   // for form actions:
 
-  private set_poll_type() {
+  set_poll_type() {
     let c = this.formGroup.get('poll_type');
     if (c.valid) this.pd.type = c.value;
   }
-  private set_poll_title() {
+  set_poll_title() {
     let c = this.formGroup.get('poll_title');
     if (c.valid) this.pd.title = c.value;
   }
-  private set_poll_desc() {
+  set_poll_desc() {
     let c = this.formGroup.get('poll_desc');
     if (c.valid) this.pd.desc = c.value;
   }
-  private set_poll_url() {
+  set_poll_url() {
     let c = this.formGroup.get('poll_url');
     if (c.valid) this.pd.url = c.value;
   }
-  private set_poll_due_type() {
+  set_poll_due_type() {
     let c = this.formGroup.get('poll_due_type');
     if (c.valid) this.pd.due_type = c.value;
   }
-  private set_poll_due() {
+  set_poll_due() {
     this.update_ref_date();
     let c = this.formGroup.get('poll_due');
     if (c.valid) this.pd.due = new Date(c.value);
   }
-  private set_option_name(i: number) {
+  set_option_name(i: number) {
     let c = this.formGroup.get('option_name'+i);
     if (c.valid) this.pd.options[i].name = c.value;
   }
-  private set_option_desc(i: number) {
+  set_option_desc(i: number) {
     let c = this.formGroup.get('option_desc'+i);
     if (c.valid) this.pd.options[i].desc = c.value;
   }
-  private set_option_url(i: number) {
+  set_option_url(i: number) {
     let c = this.formGroup.get('option_url'+i);
     if (c.valid) this.pd.options[i].url = c.value;
   }
@@ -275,12 +275,12 @@ export class DraftpollPage implements OnInit {
     this.pd.db_password = value;
   }
   
-  private test_url(url: string) {
+  test_url(url: string) {
     if (!url.startsWith("http")) url = "http://" + url; // TODO: improve this logic
     this.G.open_url_in_new_tab(url);
   }
 
-  private blur_option_name(i: number, d: boolean) {
+  blur_option_name(i: number, d: boolean) {
     if (d) {
       this.option_stage = this.max(this.option_stage, this.formGroup.get('option_name'+i).valid?1:0);
       this.expanded[i] = true;
@@ -289,19 +289,19 @@ export class DraftpollPage implements OnInit {
     }
   }
 
-  private blur_option_url(i: number) {
+  blur_option_url(i: number) {
     if (this.formGroup.get('option_url'+i).valid && i==this.n_options-1) {
       this.next_option(i);
     }
   }
   
-  private next_option(i: number) {
+  next_option(i: number) {
     this.option_stage = this.max(this.option_stage, 3);
     this.expanded[i] = false;
     this.add_option({});
   }
 
-  private async del_option_dialog(i: number) { 
+  async del_option_dialog(i: number) { 
     const confirm = await this.alertCtrl.create({ 
       message: this.translate.instant(
         this.formGroup.get('poll_type').value == 'choice' 
@@ -328,14 +328,18 @@ export class DraftpollPage implements OnInit {
     await confirm.present(); 
   } 
 
-  private no_more() {
+  no_more() {
     if (this.formGroup.get('option_name'+(this.n_options-1)).value=='') {
       this.option_stage = 10;
       this.del_option(this.n_options-1);
     }
   }
 
-  private showkebap(event: Event) {
+  new_option() {
+    // TODO!
+  }
+  
+  showkebap(event: Event) {
     this.popover.create({
         event, 
         component: DraftpollKebapPage, 
@@ -464,7 +468,7 @@ export class DraftpollPage implements OnInit {
     this.ref_date = this.now();
   }
 
-  private now() { return new Date(); }
+  now() { return new Date(); }
 
   private is_in_future(control: AbstractControl): ValidationErrors | null {
     if (control && control.value) {
@@ -479,12 +483,14 @@ export class DraftpollPage implements OnInit {
 
   // CONSTANTS:
 
-  private validation_messages = {
+  validation_messages = {
     'poll_type': [
       { type: 'required', message: 'validation.poll-type-required' },
     ],
     'poll_title': [
       { type: 'required', message: 'validation.poll-title-required' },
+    ],
+    'poll_desc': [
     ],
     'poll_url': [
       { type: 'pattern', message: 'validation.poll-url-valid' },
@@ -497,6 +503,8 @@ export class DraftpollPage implements OnInit {
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+    ],
+    'option_desc': [
     ],
     'option_url': [
       { type: 'pattern', message: 'validation.option-url-valid' },

@@ -13,12 +13,12 @@ export class MypollsPage implements OnInit {
 
   Object = Object;
 
-  private drafts_expanded = false;
-  private older_expanded = false;
+  drafts_expanded = false;
+  older_expanded = false;
 
   // LIFECYCLE:
 
-  private ready = false;  
+  ready = false;  
 
   constructor(
     public G: GlobalService,

@@ -1,4 +1,5 @@
 import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { NavController, LoadingController, IonContent } from '@ionic/angular';
 import { AlertController } from '@ionic/angular'; 
 
@@ -28,7 +29,7 @@ export class PollPage implements OnInit {
 
   private pieradius = 20;
   private twopi = 2*Math.PI; 
-  private slidercolor = {};
+  slidercolor = {};
 
   private submit_interval = 1000; // ms to wait before submitting updates
   private submit_hold = false;
@@ -49,6 +50,7 @@ export class PollPage implements OnInit {
   constructor(public navCtrl: NavController, 
               public loadingController: LoadingController,
               public alertCtrl: AlertController,
+              public translate: TranslateService,
               private zone: NgZone,
               public G: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
@@ -326,4 +328,7 @@ export class PollPage implements OnInit {
     await dialog.present(); 
   } 
 
+  addOption() {
+    // TODO
+  }
 }

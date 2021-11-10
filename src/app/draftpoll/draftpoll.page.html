@@ -365,12 +365,12 @@
 
       <ion-item lines="none" *ngIf="option_stage==10 && formGroup.get('option_url'+(n_options-1)).valid"
           class="ion-no-padding" style="padding-left: 5px; padding-top: 5px;">
-        <ion-fab-button size="small" (click)="add_option()" fill="clear" color="primary">
+        <ion-fab-button size="small" (click)="new_option()" fill="clear" color="primary">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>
         <ion-button 
           [innerHtml]="(formGroup.get('poll_type').value=='winner' ? 'add-option' : 'add-target')|translate"
-          class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
+          class="ion-no-padding ion-no-margin" fill="clear" (click)="new_option()"> 
         </ion-button>
       </ion-item>
       <ion-item lines="none">

@@ -1,6 +1,8 @@
 {
   "name": "vodle",
-  "integrations": {},
+  "integrations": {
+    "capacitor": {}
+  },
   "type": "angular",
   "id": "7c16bdbd"
 }

@@ -34,18 +34,18 @@ export class LoginPage implements OnInit {
 
   // ATTRIBUTES:
 
-  private languageFormGroup: FormGroup;
-  private emailFormGroup: FormGroup;
-  private passwordFormGroup: FormGroup;
+  languageFormGroup: FormGroup;
+  emailFormGroup: FormGroup;
+  passwordFormGroup: FormGroup;
 
-  private step: string;
+  step: string;
 
-  private showing_password: boolean;
-  private advanced_expanded: boolean;
+  showing_password: boolean;
+  advanced_expanded: boolean;
 
   // LIFECYCLE:
 
-  private ready = false;  
+  ready = false;  
 
   constructor(      
       public navCtrl: NavController, 
@@ -109,32 +109,32 @@ export class LoginPage implements OnInit {
 
   // for form actions:
 
-  private set_language() {
+  set_language() {
     let c = this.languageFormGroup.get('language');
     if (c.valid) this.G.S.language = c.value;
   }
-  private set_email() {
+  set_email() {
     let c = this.emailFormGroup.get('email');
     if (c.valid) this.G.S.email = c.value; 
   }
-  private set_password() {
+  set_password() {
     let fg = this.passwordFormGroup.get('pw');
     if (fg.valid) this.G.S.password = fg.get('password').value; 
   }
 
-  private submit_language() {
+  submit_language() {
     this.navCtrl.navigateForward('/login/used_before');
   }
 
-  private ask_used_before_no() {
+  ask_used_before_no() {
     this.navCtrl.navigateForward('/login/fresh_email');
   }
 
-  private ask_used_before_yes() {
+  ask_used_before_yes() {
     this.navCtrl.navigateForward('/login/old_email');
   }
 
-  private submit_email() {
+  submit_email() {
     if (this.step == 'fresh_email') {
       this.navCtrl.navigateForward('/login/fresh_password');
     } else {
@@ -142,7 +142,7 @@ export class LoginPage implements OnInit {
     }
   }
 
-  private submit_password() {
+  submit_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
   }
 

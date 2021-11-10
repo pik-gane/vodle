@@ -62,12 +62,12 @@ export class SettingsService {
   
   // OTHER CONSTANTS:
 
-  private language_names = {
+  language_names = {
     de: 'Deutsch',
     en: 'English'
   };
 
-  private validation_messages = {
+  validation_messages = {
     email: [
       { type: 'required', message: 'validation.email-required' },
       { type: 'email', message: 'validation.email-valid' }
