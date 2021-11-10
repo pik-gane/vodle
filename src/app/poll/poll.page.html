@@ -262,7 +262,7 @@
                   <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].uri!=null?'inline':'none'">
-                  <small>(<a [href]="p.options[oidsorted[i]].uri" target="_blank">read more</a>)</small>
+                  <small>(<a [href]="p.options[oidsorted[i]].uri" target="_blank" rel=“noopener noreferrer“>read more</a>)</small>
                 </span>
 <!--                <ng-template [ngIf]="p.options[oidsorted[i]].uri!=null">
                   <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].uri)" fill="clear" item-end no-padding padding-left no-margin>
