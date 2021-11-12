@@ -12,14 +12,24 @@ import * as CryptoJS from 'crypto-js';
 const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
+
+/*
+TODO:
+- ignore vids that have not provided a valid signature document
+- if voter keys are individualized (not at first), ignore vids that use a signature some other vid uses as well
+- at poll creation, write a pubkey document for each valid voter key, giving each key a random key id
+- a valid signature document has _id ~vodle.voter.<vid>.signature-<key id> and value signed(key id)
+*/
+
+
 const user_doc_id_prefix = "~vodle.user.", poll_doc_id_prefix = "~vodle.poll.", voter_doc_id_prefix = "~vodle.voter.";
 
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 // curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
 
 // some keys are only stored locally and not synced to a remote CouchDB:
-const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
-const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_url', 'db_username', 'db_password'];
+const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_server_url', 'db_password'];
+const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_server_url','db_password'];
 
 // ENCRYPTION:
 
@@ -136,6 +146,23 @@ export class DataService {
     });
     this.G.L.exit("DataService.start_initialization");
   }
+
+  // TODO: split the parts of the following into individual methods like 
+  // connect_user_db() register_user() login_as_user() 
+  // connect_poll_db() register_poll() login_as_poll() register_voter() login_as_voter() etc.
+
+  connect_user_db() {
+    // TODO: connect as user "vodle" with db_password, validate it's a vodle db, get info, return conn object
+  }
+  register_user(conn_as_vodle: PouchDB) {
+    // TODO: write a _users/ doc for username "vodle:user:<encemail>"
+  }
+  login_as_user() {
+    // TODO: connect as user "vodle:user:<encemail>", return conn object
+  }
+
+  //
+
 
   private process_local_only_user_docs(result) {
     this.G.L.entry("DataService.process_local_only_user_docs");

@@ -4,7 +4,7 @@
     "cancel": "Abbrechen",
     "choose-file": "Datei auswählen",
     "daynames-sunday-to-saturday": "Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag",
-    "db-url": "Datenbank-URL",
+    "db-server-url": "Datenserver-URL",
     "db-user": "Datenbank-Nutzername",
     "db-pw": "Datenbank-Passwort",
     "edit": "Bearbeiten",
@@ -117,10 +117,10 @@
         "central": "in der vodle-Cloud",
         "same-as-some-poll": "wie für eine meiner Abstimmungen",
         "same-as-other-poll": "wie für eine andere Abstimmung",
-        "other": "in einer bestimmten CouchDB-Datenbank",
+        "other": "auf einem bestimmten CouchDB-Datenserver",
         "which-poll": "Den Speicherort von welcher Abstimmung möchtest Du auch für Deine persönlichen Daten verwenden?",
         "which-other-poll": "Den Speicherort von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
-        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password der CouchDB-Datenbank ein:"
+        "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password des CouchDB-Datenservers ein:"
     },
 
     "settings": {

@@ -28,11 +28,11 @@ export class SettingsService {
   public get db_from_pid(): string { return this.G.D.getu('db_from_pid'); }
   public set db_from_pid(value: string) { this.G.D.setu('db_from_pid', value); }
 
-  public get db_url(): string { return this.G.D.getu('db_url'); }
-  public set db_url(value: string) { this.G.D.setu('db_url', value); }
+  public get db_server_url(): string { return this.G.D.getu('db_url'); }
+  public set db_server_url(value: string) { this.G.D.setu('db_url', value); }
 
-  public get db_username(): string { return this.G.D.getu('db_username'); }
-  public set db_username(value: string) { this.G.D.setu('db_username', value); }
+//  public get db_username(): string { return this.G.D.getu('db_username'); }
+//  public set db_username(value: string) { this.G.D.setu('db_username', value); }
 
   public get db_password(): string { return this.G.D.getu('db_password'); }
   public set db_password(value: string) { this.G.D.setu('db_password', value); }

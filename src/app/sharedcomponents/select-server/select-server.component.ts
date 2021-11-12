@@ -30,8 +30,8 @@ export class SelectServerComponent implements OnInit {
     this.selectServerFormGroup = this.formBuilder.group({
       db: new FormControl(this.page=='settings'?'central':'default', Validators.required),
       db_from_pid: new FormControl('TODO', Validators.required),
-      db_url: new FormControl('', Validators.pattern(this.g.urlRegex)), // TODO: validator
-      db_username: new FormControl('', Validators.required), // TODO: validator
+      db_server_url: new FormControl('', Validators.pattern(this.g.urlRegex)), // TODO: validator
+//      db_username: new FormControl('', Validators.required), // TODO: validator
       db_password: new FormControl('', Validators.required), // TODO: validator
     });
     this.showing_db_password = false;
@@ -39,13 +39,15 @@ export class SelectServerComponent implements OnInit {
 
   
   validation_messages = {
-    'db_url': [
-      { type: 'required', message: 'validation.db-url-required' },
-      { type: 'pattern', message: 'validation.db-url-pattern' }
+    'db_server_url': [
+      { type: 'required', message: 'validation.db-server-url-required' },
+      { type: 'pattern', message: 'validation.db-server-url-pattern' }
     ],
+/*
     'db_username': [
       { type: 'required', message: 'validation.db-user-required' }
     ],
+*/
     'db_password': [
       { type: 'required', message: 'validation.db-pw-required' }
     ],
@@ -65,14 +67,16 @@ export class SelectServerComponent implements OnInit {
     let c = this.selectServerFormGroup.get('db_from_pid');
     if (c.valid) this._parent.set_db_from_pid(c.value);
   }
-  set_db_url() {
-    let c = this.selectServerFormGroup.get('db_url');
-    if (c.valid) this._parent.set_db_url(c.value);
+  set_db_server_url() {
+    let c = this.selectServerFormGroup.get('db_server_url');
+    if (c.valid) this._parent.set_db_server_url(c.value);
   }
+/*
   set_db_username() {
     let c = this.selectServerFormGroup.get('db_username');
     if (c.valid) this._parent.set_db_username(c.value);
   }
+*/
   set_db_password() {
     let c = this.selectServerFormGroup.get('db_password');
     if (c.valid) this._parent.set_db_password(c.value);

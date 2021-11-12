@@ -27,18 +27,19 @@
       <small>{{'select-server.please-enter-couchdb'|translate}}</small>
     </ion-item>
     <ion-item>
-      <ion-label position="floating" color="primary">{{'db-url'|translate}}</ion-label>
-      <ion-input style="font-size: smaller;" type="text" formControlName="db_url" required
-        (ionChange)="set_db_url()"></ion-input>
+      <ion-label position="floating" color="primary">{{'db-server-url'|translate}}</ion-label>
+      <ion-input style="font-size: smaller;" type="text" formControlName="db_server_url" required
+        (ionChange)="set_db_server_url()"></ion-input>
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_url">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_url').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_url').dirty || selectServerFormGroup.get('db_url').touched)">
+      <ng-container *ngFor="let validation of validation_messages.db_server_url">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_server_url').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_server_url').dirty || selectServerFormGroup.get('db_server_url').touched)">
           {{ validation.message|translate }}
         </div>
       </ng-container>
     </div>
+<!--
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-user'|translate}}</ion-label>
       <ion-input style="font-size: smaller;" type="text" formControlName="db_username" required
@@ -52,6 +53,7 @@
         </div>
       </ng-container>
     </div>
+-->
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-pw'|translate}}</ion-label>
       <ion-input style="font-size: smaller;" [type]="showing_db_password?'text':'password'" 
