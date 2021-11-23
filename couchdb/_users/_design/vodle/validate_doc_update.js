@@ -30,9 +30,13 @@ function(newDoc, savedDoc, userCtx) {
             if (!(newDoc._id == "org.couchdb.user:"+userCtx.name)) {
                 throw ({forbidden: 'Users may only delete or update their own user document.'});
             }
-            // Make sure special user "vodle" can NOT update their own document:
+            // Make sure special user "vodle" can NOT update their own user document:
             if (userCtx.name == "vodle") {
                 throw ({forbidden: 'User "vodle" may not delete or update any user document.'});
+            }
+            // Make sure poll users "vodle.poll.XXX" can NOT update their own user documents either:
+            if (userCtx.name.beginsWith("vodle.poll.") && !userCtx.name.includes(".voter.")) {
+                throw ({forbidden: 'Poll users "vodle.poll.XXX" may not delete or update any user document.'});
             }
         }
     }
