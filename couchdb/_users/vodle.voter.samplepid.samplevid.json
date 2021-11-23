@@ -1,6 +1,6 @@
 {
-    "_id": "org.couchdb.user:vodle.samplepid.samplevid.template",
-    "name": "vodle.samplepid.samplevid.template",
+    "_id": "org.couchdb.user:vodle.voter.samplepid.samplevid.template",
+    "name": "vodle.voter.samplepid.samplevid.template",
     "roles": [],
     "type": "user",
     "comment": "This is a template for a personal poll voter db user who can update a poll voter's documents."

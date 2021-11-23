@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-
 import { LoadingController } from '@ionic/angular';
 
 import { environment } from '../environments/environment';
@@ -14,16 +13,13 @@ const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
 
-/*
-TODO:
+/** TODO:
 - ignore vids that have not provided a valid signature document
 - if voter keys are individualized (not at first), ignore vids that use a signature some other vid uses as well
 - at poll creation, write a pubkey document for each valid voter key, giving each key a random key id
 - a valid signature document has _id ~vodle.voter.<vid>.signature-<key id> and value signed(key id)
 */
 
-
-const user_doc_id_prefix = "~vodle.user.", poll_doc_id_prefix = "~vodle.poll.", voter_doc_id_prefix = "~vodle.voter.";
 
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 // curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
@@ -39,20 +35,17 @@ function encrypt_deterministically(value, password:string) {
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
   return result;
 }
-
 function encrypt(value, password:string): string {
   const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
   return result;
 }
-
 function decrypt(value:string, password:string): string {
   const temp = CryptoJS.AES.decrypt(value, password);
   // FIXME: sometimes we get a malformed UTF-8 error on toString: 
   const result = temp.toString(CryptoJS.enc.Utf8);
   return result;
 }
-
-function myhash(what):string {
+function myhash(what): string {
   // TODO!!
   return what.toString(); 
 }
@@ -75,7 +68,7 @@ export class DataService {
 
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
-  private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
+  private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
 
   private user_db_server_url: string;
   private user_db_password: string;
@@ -84,16 +77,18 @@ export class DataService {
   private _pids: Set<string>; // list of pids known to the user
   public get pids() { return this._pids; }
 
-  private poll_caches: {}; // temporary storage of poll data
-  private local_poll_DBs: {}; // persistent local copies of this user's part of the poll data
-  private remote_poll_DBs: {}; // persistent remote copies of complete poll data
+  private poll_caches: Record<string, {}>; // temporary storage of poll data
+  private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
+
+  private poll_db_server_urls: Record<string, string>;
+  private poll_db_passwords: Record<string, string>;
+  private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
   // LYFECYCLE:
 
+  private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
   private _ready: boolean = false;
   public get ready() { return this._ready; }
-
-  private uninitialized_pids: Set<string>;
 
   constructor(
     public loadingController: LoadingController,
@@ -106,6 +101,55 @@ export class DataService {
     this.G = G;
     // if necessary, show a loading animation:
     this.show_loading();
+    // now start the complicated and partially asynchronous data initialization procedure (see overview in comment below):
+    this.start_initialization();
+    G.L.exit("DataService.init");
+  }
+
+  // INITIALIZATION
+
+  /** Initialization process overview
+      -------------------------------
+
+  start_initialization()
+  `– asynchronously: 
+     process_local_only_user_docs()
+     |– if necessary, first redirect to email and password prompt on login page 
+     `– email_and_password_exist()
+        |
+        |– asynchronously: 
+        |  local_user_docs2cache()
+        |  |– doc2user_cache() for each doc
+        |  |  `– for each new poll id:
+        |  |     |
+        |  |     |– asynchronously:
+        |  |     |  start_poll_initialization()
+        |  |     |  `– local_poll_docs2cache()
+        |  |     |     `– doc2user_cache() for each doc
+        |  |     |
+        |  |     `– meanwhile:
+        |  |        connect_to_remote_poll_db()
+        |  |        |– get_remote_connection()
+        |  |        `– start_poll_sync()
+        |  |           `– handle_poll_db_change() whenever local or remote db has changed
+        |  |
+        |  `– once all polls are initialized:
+        |     local_docs2cache_finished() 
+        |     |– after_changes()
+        |     `– notify page that we are ready via <page>.onDataReady()
+        |
+        `– meanwhile: 
+           |– if necessary, first redirect to db credentials prompt on login page 
+           `– connect_to_remote_user_db()
+              |– get_remote_connection()
+              `– start_user_sync()
+                 `– handle_user_db_change() whenever local or remote db has changed
+  */
+
+  // User data initialization:
+
+  private start_initialization() {
+    this.G.L.entry("DataService.start_initialization");
     // initialize cache that only lives during current session:
     this.user_cache = {};
     // access locally stored data and get some statistics about it:
@@ -115,39 +159,20 @@ export class DataService {
     }).catch(err => {
       this.G.L.info("DataService local_only_user_DB error", err);
     });
-    this.local_synced_user_DB = new PouchDB('local_synced_user');
-    this.local_synced_user_DB.info().then(doc => { 
+    this.local_synced_user_db = new PouchDB('local_synced_user');
+    this.local_synced_user_db.info().then(doc => { 
       this.G.L.info("DataService local_synced_user_DB info", doc);
     }).catch(err => {
       this.G.L.info("DataService local_synced_user_DB error", err);
     });
-    // now start filling the cache from local data and syncing with remote data.
-    // because of PouchDB, this must be done asynchronously:
-    this.start_initialization();
-    G.L.exit("DataService.init");
-  }
-
-  // INITIALIZATION:
-
-  private async show_loading() {
-    this.G.L.entry("DataService.show_loading");
-    // start showing a loading animation which will be dismissed when initialization is finished
-    this.loadingElement = await this.loadingController.create({
-      spinner: 'crescent'
-    });
-    // since the previous operation might take some time,
-    // only actually present the animation if data is not yet ready:
-    if (!this._ready) {
-      await this.loadingElement.present();     
-    }
-    this.G.L.exit("DataService.show_loading");
-  }
-  
-  private start_initialization() {
-    this.G.L.entry("DataService.start_initialization");
-    // fill temporary cache with values from persistent local data.
     this._pids = new Set();
-    // fetch all local-only docs:
+    this.uninitialized_pids = new Set();
+    this.poll_caches = {};
+    this.local_poll_dbs = {};
+    this.remote_poll_dbs = {};
+    // Now start filling the temporary session cache with the persistent local data and syncing with remote data.
+    // Because of PouchDB, this must be done asynchronously.
+    // First, we fetch all local-only docs:
     this.local_only_user_DB.allDocs({
       include_docs: true
     }).then(
@@ -158,7 +183,6 @@ export class DataService {
     });
     this.G.L.exit("DataService.start_initialization");
   }
-
   private process_local_only_user_docs(result) {
     this.G.L.entry("DataService.process_local_only_user_docs");
     // copy data from local-only docs to cache:
@@ -180,9 +204,21 @@ export class DataService {
     }
   }
   private email_and_password_exist() {
+    // while remote synchronisation is happening (potentially slow, to be started below), 
+    // already fetch all current local versions of synced docs:
+    this.local_synced_user_db.allDocs({
+      include_docs:true
+    }).then(result => {
+      this.local_user_docs2cache.bind(this)(result);
+    }).catch(err => {
+      this.G.L.error("DataService could not read local_synced_user_DB", err);
+    });
     // check if db credentials are set:
     if (this.extract_user_db_credentials()) {
-      this.connect_to_user_db();
+      // connect to remote and start sync:
+      this.connect_to_remote_user_db().catch(err => {
+        // TODO: show login page at database prompt
+      });
     } else {
       // TODO: show login page at database prompt
     }
@@ -203,37 +239,118 @@ export class DataService {
     this.user_db_server_url = this.fix_url(this.user_db_server_url);
     return ![null, ""].includes(this.user_db_server_url) && ![null, ""].includes(this.user_db_password);
   }
-  private connect_to_user_db() {
+  private local_user_docs2cache(result) {
+    // called whenever a connection to a remote user db was established
+    this.G.L.entry("DataService.local_user_docs2cache");
+    // decrypt and process all synced docs:
+    var initializing_polls = false;
+    for (let row of result.rows) {
+      let [dummy, initializing_poll] = this.doc2user_cache(row.doc);
+      initializing_polls = initializing_polls || initializing_poll;
+    }
+    if (!initializing_polls) {
+      this.local_docs2cache_finished();
+    } // else that will only be called after poll initialization has finished.
+    this.G.L.exit("DataService.local_user_docs2cache");
+  }
+  private connect_to_remote_user_db() {
     // called at initialization and whenever db credentials were changed
-    var user_password = this.user_cache['password'];
-    var user_db_private_username = "vodle." + myhash(this.user_cache['email']+':'+user_password);
-    this.get_remote_connection(
-        this.user_db_server_url, this.user_db_password, 
+    let user_password = this.user_cache['password'];
+    let user_db_private_username = "vodle." + myhash(this.user_cache['email'] + ':' + user_password);
+    return new Promise((resolve, reject) => {
+      this.get_remote_connection(
+        this.user_db_server_url, this.user_db_password,
         user_db_private_username, user_password
-    ).then(db => { 
-      this.remote_user_db = db;
-      db.info().then(doc => { 
-        this.G.L.info("DataService remote_user_db info", doc);
+      ).then(db => { 
+        this.remote_user_db = db;
         // start synchronisation asynchronously:
         this.start_user_sync();
-        // don't wait for it (it might take too long) but meanwhile fetch all current local versions of synced docs:
-        let pw = this.user_cache['password'];
-        this.local_synced_user_DB.allDocs({
-          include_docs: true
-        }).then(
-          this.process_synced_user_docs.bind(this)
-        ).catch(err => {
-          this.G.L.error(err);
-        });
-        this.G.L.exit("DataService.process_local_only_user_docs");
+        resolve(true);
       }).catch(err => {
-        this.G.L.warn("DataService remote_user_db error", err);
+        this.G.L.warn("DataService connect_to_user_db failed", err);
         // TODO: if no network, notify and try again when network available. if wrong url or password, ask again for credentialy. if wrong permissions, notify to contact db admin. also set 'ready' to false?
+        reject(err);
       });
     });
   }
 
-  get_remote_connection(server_url:string, public_password:string,
+  // Poll data initialization:
+
+  private start_poll_initialization(pid:string) {
+    this.G.L.entry("DataService.start_poll_initialization "+pid);
+    this._ready = false;
+    this.uninitialized_pids.add(pid);
+    this.ensure_poll_cache(pid);
+    this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid);
+    // fetch all docs:
+    this.local_poll_dbs[pid].allDocs({
+      include_docs: true
+    }).then(result => {
+      this.local_poll_docs2cache.bind(this)(pid, result)
+    }).catch(err => {
+      this.G.L.error(err);
+    });
+    // check if db credentials are set:
+    if (this.extract_poll_db_credentials) {
+      // connect to remote and start sync:
+      this.connect_to_remote_poll_db(pid).catch(err => {
+        // TODO
+      });
+    } else {
+      // TODO
+    }
+    this.G.L.exit("DataService.start_poll_initialization "+pid);
+  }
+  private local_poll_docs2cache(pid:string, result) {
+    this.G.L.entry("DataService.local_poll_docs2cache "+pid);
+    // decrypt and process all synced docs:
+    for (let row of result.rows) {
+      this.doc2poll_cache(pid, row.doc);
+    }
+    this._pids.add(pid);
+    this.uninitialized_pids.delete(pid);
+    if (this.uninitialized_pids.size == 0) {
+      this.local_docs2cache_finished();
+    }
+    this.G.L.exit("DataService.local_poll_docs2cache "+pid);
+  }
+  private connect_to_remote_poll_db(pid:string) {
+    // called at poll initialization
+    let poll_db_private_username = "vodle." + pid;
+    let poll_password = this.poll_caches[pid]['password'];
+    return new Promise((resolve, reject) => {
+      this.get_remote_connection(
+        this.poll_db_server_urls[pid], this.poll_db_passwords[pid],
+        poll_db_private_username, poll_password
+      ).then(db => { 
+        this.remote_poll_dbs[pid] = db;
+        // start synchronisation asynchronously:
+        this.start_poll_sync(pid);
+        resolve(true);
+      }).catch(err => {
+        this.G.L.warn("DataService connect_to_remote_poll_db failed", err);
+        reject(err);
+      });
+    });
+  }
+
+  // End of initialization:
+
+  private local_docs2cache_finished() {
+    // called whenever content of local docs has fully been copied to cache
+    this.G.L.entry("DataService.local_user_docs2cache_finished");
+    this.after_changes();
+    // mark as ready, dismiss loading animation, and notify page:
+    this.G.L.info("DataService READY");
+    this._ready = true;
+    if (this.loadingElement) this.loadingElement.dismiss();
+    if (this._page && this._page.onDataReady) this._page.onDataReady();
+    this.G.L.exit("DataService.local_user_docs2cache_finished");
+  }
+
+  // REMOTE CONNECTION METHODS:
+
+  private get_remote_connection(server_url:string, public_password:string,
                         private_username:string, private_password:string
                         ): Promise<PouchDB> {
     // TODO: check network reachability!
@@ -312,81 +429,37 @@ export class DataService {
       });
     });
   }
-
-  get_couchdb(url:string, username:string, password:string) {
+  private get_couchdb(url:string, username:string, password:string) {
     return new PouchDB(url, {
       auth: {username: username, password: password},
       skipSetup: true
     });
     // TODO: prevent Browser popup on 401?
   }
-
   private test_remote_connection(conn:PouchDB, private_username:string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       // TODO: try creating or updating a timestamp document
-      resolve(true);
+      let _id = "~"+private_username+":timestamp", value = (new Date()).toISOString();
+      conn.get(_id).then(doc => {
+        // doc exists, try updating with current time:
+        doc.value = value;
+        conn.put(doc).then(response => {
+          resolve(true);
+        }).catch(err => {
+          reject(err);
+        });
+      }).catch(err => {
+        // try generating new doc:
+        this.local_only_user_DB.put({_id:_id, val:value}).then(response => {
+          resolve(true);
+        }).catch(err => {
+          reject(err);
+        });
+      });
     });
   }
 
-  private process_synced_user_docs(result) {
-    this.G.L.entry("DataService.process_synced_user_docs");
-    // decrypt and process all synced docs:
-    for (let row of result.rows) {
-      this.doc2user_cache(row.doc);
-    }
-    this.uninitialized_pids = new Set(this._pids);
-    if (this.uninitialized_pids.size == 0) {
-      this.all_docs_processed();
-    } else {
-      this.start_poll_initialization();
-    }
-    this.G.L.exit("DataService.process_synced_user_docs");
-  }
-
-  private start_poll_initialization() {
-    this.G.L.entry("DataService.start_poll_initialization");
-    this.poll_caches = {};
-    this.local_poll_DBs = {};
-    this.remote_poll_DBs = {};
-    for (let pid of this._pids) {
-      this.ensure_poll_cache(pid);
-      this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
-      // TODO: connect to remote and start syncing!
-      // fetch all docs:
-      this.local_poll_DBs[pid].allDocs({
-        include_docs: true
-      }).then(result => this.process_poll_docs.bind(this)(pid, result)).catch(err => {
-        this.G.L.error(err);
-      });
-    }
-    this.G.L.exit("DataService.start_poll_initialization");
-  }
-
-  private process_poll_docs(pid:string, result) {
-    this.G.L.entry("DataService.process_poll_docs "+pid);
-    // decrypt and process all synced docs:
-    for (let row of result.rows) {
-      this.doc2poll_cache(pid, row.doc);
-    }
-    this.uninitialized_pids.delete(pid);
-    if (this.uninitialized_pids.size == 0) {
-      this.all_docs_processed();
-    }
-    this.G.L.exit("DataService.process_poll_docs "+pid);
-  }
-
-  private all_docs_processed() {
-    this.G.L.entry("DataService.all_docs_processed");
-    this.after_changes();
-    // mark as ready, dismiss loading animation, and notify page:
-    this.G.L.info("DataService READY");
-    this._ready = true;
-    if (this.loadingElement) this.loadingElement.dismiss();
-    if (this._page && this._page.onDataReady) this._page.onDataReady();
-    this.G.L.exit("DataService.all_docs_processed");
-  }
-
-  // synchronisation:
+  // SYNCHRONISATION:
 
   private start_user_sync(): boolean {
     // try starting user data local <--> remote syncing:
@@ -395,7 +468,7 @@ export class DataService {
     if (this.remote_user_db) { 
       let enc_email = this.enc_email();
       this.G.L.debug("DataService.start_user_sync starting filtered sync");
-      this.local_synced_user_DB.sync(this.remote_user_db, {
+      this.local_synced_user_db.sync(this.remote_user_db, {
         live: true,
         retry: true,
         include_docs: true,
@@ -431,7 +504,6 @@ export class DataService {
     this.G.L.trace("DataService.getu "+key+": "+value);
     return value;
   }
-
   public getp(p:Poll, key:string):string {
     // get poll data item
     let pid = p.pid;
@@ -449,7 +521,6 @@ export class DataService {
     }
     return value;
   }
-
   public setu(key:string, value:string) {
     // set user data item
     value = value || '';
@@ -470,7 +541,6 @@ export class DataService {
     }
     return this.store_user_data(key, value);
   }
-
   public setp(p:Poll, key:string, value:string) {
     // set poll data item
     value = value || '';
@@ -502,6 +572,7 @@ export class DataService {
   private handle_user_db_change(change) {
     this.G.L.trace("DataService.handle_user_db_change", change);
     let local_changes = false;
+    var dummy;
     if (change.deleted){
       var key = change.doc['key'];
       delete this.user_cache[key];
@@ -510,7 +581,7 @@ export class DataService {
       this.G.L.trace(JSON.stringify(change));
       for (let doc of change.change.docs) {
         this.G.L.trace(JSON.stringify(doc));
-        local_changes = this.doc2user_cache(doc);
+        [local_changes, dummy] = this.doc2user_cache(doc);
       }
     }
     if (local_changes) {
@@ -534,7 +605,7 @@ export class DataService {
     }
   }
 
-  private doc2user_cache(doc): boolean {
+  private doc2user_cache(doc): [boolean, boolean] {
     // populate user cache with key, value from doc
     let _id = doc._id;
     var key;
@@ -542,10 +613,9 @@ export class DataService {
       key = _id.slice(user_doc_id_prefix.length, _id.length);
     } else {
       this.G.L.error("DataService.doc2user_cache got corrupt doc _id"+_id);
-      return false;
+      return [false, false];
     }
-    let value_changed = false;
-    let cyphertext = doc['value'];
+    let value_changed = true, initializing_poll = false, cyphertext = doc['value'];
     if (cyphertext) {
       let value = decrypt(cyphertext, this.user_cache['password']);
       if (this.user_cache[key] != value) {
@@ -555,13 +625,16 @@ export class DataService {
       this.G.L.trace("DataService.doc2user_cache "+key+": "+value);
       if (key.startsWith('p:') && key.endsWith(':pid')) {
         let pid = value;
-        this._pids.add(pid);
+        if (!this._pids.has(pid)) {
+          this.start_poll_initialization(pid);
+          initializing_poll = true;
+        }
       }
     } else {
       this.G.L.warn("DataService.doc2user_cache corrupt doc "+JSON.stringify(doc));
     }
     // returns whether the value actually changed.
-    return value_changed;
+    return [value_changed, initializing_poll];
   }
   
   private doc2poll_cache(pid, doc) {
@@ -621,10 +694,10 @@ export class DataService {
       let _id = user_doc_id_prefix + enc_email + ':' + key, 
           user_pw = this.user_cache['password'], 
           val = encrypt(value, user_pw);
-      this.local_synced_user_DB.get(_id).then(doc => {
+      this.local_synced_user_db.get(_id).then(doc => {
         if (decrypt(doc.value, user_pw) != value) {
           doc.value = val;
-          this.local_synced_user_DB.put(doc);
+          this.local_synced_user_db.put(doc);
           this.G.L.trace("local synced user DB put "+key+": "+value)
         }
       }).catch(err => {
@@ -632,7 +705,7 @@ export class DataService {
           '_id': _id, 
           'value': val,
         };
-        this.local_synced_user_DB.put(doc);  
+        this.local_synced_user_db.put(doc);  
       });
     }
     return true;
@@ -651,10 +724,10 @@ export class DataService {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
         return false;
       }
-      let db = this.local_poll_DBs[pid];
+      let db = this.local_poll_dbs[pid];
       if (!db) {
         // TODO: move this into helper function
-        db = this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
+        db = this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid);
         this.G.L.info("DataService.store_poll_data new local poll DB", pid);
       }
       db.get(_id).then(doc => {
@@ -688,16 +761,16 @@ export class DataService {
         this.G.L.warn("DataService.store_voter_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
         return false;
       }
-      let db = this.local_poll_DBs[pid];
+      let db = this.local_poll_dbs[pid];
       if (!db) {
         // TODO: move this into helper function
-        db = this.local_poll_DBs[pid] = new PouchDB('local_poll_'+pid);
+        db = this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid);
         this.G.L.info("DataService.store_voter_data new local poll DB", pid);
       }
       db.get(_id).then(doc => {
         if (decrypt(doc.value, poll_pw) != value) {
           doc.value = value;
-          this.local_synced_user_DB.put(doc);
+          this.local_synced_user_db.put(doc);
           this.G.L.trace("local synced voter DB put "+key+": "+value);
       }
       }).catch(err => {
@@ -724,5 +797,21 @@ export class DataService {
     this.G.L.entry("DataService.move_user_data");
     // TODO!
   }
+
+
+  private async show_loading() {
+    this.G.L.entry("DataService.show_loading");
+    // start showing a loading animation which will be dismissed when initialization is finished
+    this.loadingElement = await this.loadingController.create({
+      spinner: 'crescent'
+    });
+    // since the previous operation might take some time,
+    // only actually present the animation if data is not yet ready:
+    if (!this._ready) {
+      await this.loadingElement.present();     
+    }
+    this.G.L.exit("DataService.show_loading");
+  }
+  
 
 }
