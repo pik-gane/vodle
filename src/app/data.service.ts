@@ -135,7 +135,7 @@ function decrypt(value:string, password:string): string {
 }
 function myhash(what): string {
   // TODO!!
-  return what.toString(); 
+  return encrypt_deterministically(what.toString(), what.toString()); 
 }
 
 // SERVICE:
@@ -481,14 +481,14 @@ export class DataService {
       // try to get info to see if credentials are valid:
       this.G.L.debug("DataService trying to get info for "+server_url+"/_users as user vodle");
       conn_as_public.info().then(doc => { 
-        this.G.L.debug("DataService logged into "+server_url+" as user 'vodle'. Info:", doc);
+        this.G.L.debug("DataService logged into "+server_url+"/_users as user 'vodle'. Info:", doc);
         // then connect to database "vodle" with private credentials:
         let conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
         // try to get info to see if credentials are valid:
-        this.G.L.debug("DataService trying to get info for "+server_url+"/vodle as actual user");
+        this.G.L.debug("DataService trying to get info for "+server_url+"/vodle as actual user "+private_username);
         conn_as_private.info().then(doc => { 
           this.G.L.info("DataService logged into "+server_url+" as actual user. Info:", doc);
-          this.test_remote_connection(conn_as_private, private_username).then(success => {
+          this.test_remote_connection(conn_as_private, private_username, private_password).then(success => {
             resolve(conn_as_private);
           }).catch(err => {
             // Since we could log in but not write, the db must be configured wrong:
@@ -515,7 +515,7 @@ export class DataService {
             this.G.L.debug("DataService trying to get info for "+server_url+"/vodle as actual user");
             conn_as_private.info().then(doc => { 
               this.G.L.info("DataService logged into "+server_url+" as new actual user. Info:", doc);
-              this.test_remote_connection(conn_as_private, private_username).then(success => {
+              this.test_remote_connection(conn_as_private, private_username, private_password).then(success => {
                 resolve(conn_as_private);
               }).catch(err => {
                 // Since we could log in but not write, the db must be configured wrong, so notify user of this:
@@ -544,10 +544,10 @@ export class DataService {
     });
     // TODO: prevent Browser popup on 401?
   }
-  private test_remote_connection(conn:PouchDB, private_username:string): Promise<boolean> {
+  private test_remote_connection(conn:PouchDB, private_username:string, private_password:string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       // TODO: try creating or updating a timestamp document
-      let _id = "~"+private_username+":timestamp", value = (new Date()).toISOString();
+      let _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
       conn.get(_id).then(doc => {
         // doc exists, try updating with current time:
         doc.value = value;
@@ -558,7 +558,7 @@ export class DataService {
         });
       }).catch(err => {
         // try generating new doc:
-        this.local_only_user_DB.put({_id:_id, val:value}).then(response => {
+        conn.put({_id:_id, val:value}).then(response => {
           resolve(true);
         }).catch(err => {
           reject(err);
@@ -720,6 +720,7 @@ export class DataService {
 
   fix_url(url:string): string {
     // make sure remote db urls start with http:// or https://
+    if (!url) return null;
     return (url.startsWith("http://")||url.startsWith("https://")) ? url : "http://" + url;
   }
 
@@ -747,6 +748,7 @@ export class DataService {
   }
 
   private after_changes() {
+    this.translate.use(this.getu('language'));
     for (let pid of this._pids) {
       if (!(pid in this.G.P.polls)) {
         // poll object does not exist yet, so create it:
@@ -787,7 +789,7 @@ export class DataService {
         }
       }
     } else {
-      this.G.L.warn("DataService.doc2user_cache corrupt doc "+JSON.stringify(doc));
+      this.G.L.warn("DataService.doc2user_cache got corrupt doc "+JSON.stringify(doc));
     }
     // returns whether the value actually changed.
     return [value_changed, initializing_poll];

@@ -144,12 +144,17 @@ export class DraftpollPage implements OnInit {
     this.ready = true;
     // find select-server component and register us with it:
     this.ref.detectChanges();
-    this.select_server.parent = this;
     // make sure select-element values are translated properly:
     this.ionSelects.map((select) => select.value = select.value);
     // open the type selector?:
     if (!this.formGroup.get('poll_type').value) this.type_select.open();
   }
+
+  onSelectServerReady(select_server:SelectServerComponent) {
+    // called by SelectServerComponent is ready
+    this.select_server = select_server;
+  }
+
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");

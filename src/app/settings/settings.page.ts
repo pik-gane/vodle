@@ -70,7 +70,7 @@ export class SettingsPage implements OnInit {
   
   ionViewWillEnter() {
     this.G.L.entry("SettingsPage.ionViewWillEnter");
-    this.G.D.page = this.select_server.parent = this;
+    this.G.D.page = this;
     this.editing_email = false;
     this.editing_password = false;
     this.showing_password = false;
@@ -85,8 +85,13 @@ export class SettingsPage implements OnInit {
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("SettingsPage.onDataReady");
-    this.fill_form();
     this.ready = true;
+  }
+
+  onSelectServerReady(select_server:SelectServerComponent) {
+    // called by SelectServerComponent is ready
+    this.select_server = select_server;
+    this.fill_form();
   }
 
   // OTHER HOOKS:

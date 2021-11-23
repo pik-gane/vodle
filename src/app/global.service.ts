@@ -62,6 +62,7 @@ export class GlobalService {
 
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
+    return;
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:

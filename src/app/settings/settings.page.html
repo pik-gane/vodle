@@ -136,7 +136,7 @@
       <small [innerHtml]="'&nbsp;&nbsp;&nbsp;'+('draftpoll.advanced-settings'|translate)"></small>
     </ion-label>
   </ion-item>
-  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'">
+  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'" [page_object]="this">
   </app-select-server>
 
   <!--APPEARANCE-->
@@ -150,7 +150,7 @@
         <span [innerHtml]="'language'|translate"></span>
       </ion-label>
       <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
-        <ion-select-option *ngFor="let lang of translate.langs" value="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
+        <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>

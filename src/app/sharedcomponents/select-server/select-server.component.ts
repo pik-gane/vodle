@@ -14,29 +14,30 @@ export class SelectServerComponent implements OnInit {
 
   showing_db_password: boolean;
 
-  private _parent; // the page object using this component
-  public set parent(parent) { this._parent = parent; }
-
   @Input() page: string; // the name of that page provided in its template
+  @Input() page_object; // the name of that page provided in its template
 
   selectServerFormGroup: FormGroup;
 
   constructor(
     public formBuilder: FormBuilder,
-    public g: GlobalService,
+    public G: GlobalService,
   ) { }
 
   ngOnInit() {
+    this.G.L.entry("SelectServerComponent.ngOnInit");
     this.selectServerFormGroup = this.formBuilder.group({
       db: new FormControl(this.page=='settings'?'central':'default', Validators.required),
       db_from_pid: new FormControl('TODO', Validators.required),
-      db_other_server_url: new FormControl('', Validators.pattern(this.g.urlRegex)),
+      db_other_server_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
       db_other_password: new FormControl('', Validators.required), // TODO: validator?
     });
     this.showing_db_password = false;
+    if (this.page_object) {
+      this.page_object.onSelectServerReady(this);
+    }
   }
 
-  
   validation_messages = {
     'db_other_server_url': [
       { type: 'required', message: 'validation.db-server-url-required' },
@@ -54,20 +55,20 @@ export class SelectServerComponent implements OnInit {
   set_db() {
     let c = this.selectServerFormGroup.get('db');
     if (c.valid && (c.value!='') && c.value) {
-      this._parent.set_db(c.value);
+      this.page_object.set_db(c.value);
     }
   }
   set_db_from_pid() {
     let c = this.selectServerFormGroup.get('db_from_pid');
-    if (c.valid) this._parent.set_db_from_pid(c.value);
+    if (c.valid) this.page_object.set_db_from_pid(c.value);
   }
   set_db_other_server_url() {
     let c = this.selectServerFormGroup.get('db_other_server_url');
-    if (c.valid) this._parent.set_db_other_server_url(c.value);
+    if (c.valid) this.page_object.set_db_other_server_url(c.value);
   }
   set_db_other_password() {
     let c = this.selectServerFormGroup.get('db_other_password');
-    if (c.valid) this._parent.set_db_other_password(c.value);
+    if (c.valid) this.page_object.set_db_other_password(c.value);
   }
 
 }
