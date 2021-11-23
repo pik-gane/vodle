@@ -126,16 +126,11 @@ export class SettingsPage implements OnInit {
   set_db_from_pid(value: string) {
     this.G.S.db_from_pid = value;
   }
-  set_db_server_url(value: string) {
-    this.G.S.db_server_url = value;
+  set_db_other_server_url(value: string) {
+    this.G.S.db_other_server_url = value;
   }
-/*
-  set_db_username(value: string) {
-    this.G.S.db_username = value;
-  }
-*/
-  set_db_password(value: string) {
-    this.G.S.db_password = value;
+  set_db_other_password(value: string) {
+    this.G.S.db_other_password = value;
   }
 
   // OTHER METHODS:
@@ -155,9 +150,8 @@ export class SettingsPage implements OnInit {
     this.select_server.selectServerFormGroup.setValue({
       db: this.G.S.db||'',
       db_from_pid: this.G.S.db_from_pid||'',
-      db_server_url: this.G.S.db_server_url||'',
-//      db_username: this.G.S.db_username||'',
-      db_password: this.G.S.db_password||'',
+      db_other_server_url: this.G.S.db_other_server_url||'',
+      db_other_password: this.G.S.db_other_password||'',
     });
   }
 }

@@ -39,25 +39,10 @@
         </div>
       </ng-container>
     </div>
-<!--
-    <ion-item>
-      <ion-label position="floating" color="primary">{{'db-user'|translate}}</ion-label>
-      <ion-input style="font-size: smaller;" type="text" formControlName="db_username" required
-        (ionChange)="set_db_username()"></ion-input>
-    </ion-item>
-    <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_username">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_username').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_username').dirty || selectServerFormGroup.get('db_username').touched)">
-          {{ validation.message|translate }}
-        </div>
-      </ng-container>
-    </div>
--->
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-pw'|translate}}</ion-label>
       <ion-input style="font-size: smaller;" [type]="showing_db_password?'text':'password'" 
-        formControlName="db_password" required
+        formControlName="db_other_password" required
         (keydown.enter)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
         (keydown.tab)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
         (ionChange)="set_db_password()"></ion-input>
@@ -66,9 +51,9 @@
       </ion-button>      
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_password">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_password').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_password').dirty || selectServerFormGroup.get('db_password').touched)">
+      <ng-container *ngFor="let validation of validation_messages.db_other_password">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_other_password').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_other_password').dirty || selectServerFormGroup.get('db_other_password').touched)">
           {{ validation.message|translate }}
         </div>
       </ng-container>

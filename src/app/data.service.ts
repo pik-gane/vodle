@@ -3,6 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { LoadingController } from '@ionic/angular';
 
+import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { Poll } from "./poll.service";
 
@@ -75,9 +76,12 @@ export class DataService {
   private user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_DB: PouchDB.Database; // persistent local copy of synced user data
+
+  private user_db_server_url: string;
+  private user_db_password: string;
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
 
-  private _pids: Set<string>; // list of pids 
+  private _pids: Set<string>; // list of pids known to the user
   public get pids() { return this._pids; }
 
   private poll_caches: {}; // temporary storage of poll data
@@ -100,10 +104,12 @@ export class DataService {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
+    // if necessary, show a loading animation:
     this.show_loading();
+    // initialize cache that only lives during current session:
     this.user_cache = {};
+    // access locally stored data and get some statistics about it:
     this.local_only_user_DB = new PouchDB('local_only_user');
-    // get some statistics about this DB:
     this.local_only_user_DB.info().then(doc => { 
       this.G.L.info("DataService local_only_user_DB info", doc);
     }).catch(err => {
@@ -115,6 +121,8 @@ export class DataService {
     }).catch(err => {
       this.G.L.info("DataService local_synced_user_DB error", err);
     });
+    // now start filling the cache from local data and syncing with remote data.
+    // because of PouchDB, this must be done asynchronously:
     this.start_initialization();
     G.L.exit("DataService.init");
   }
@@ -123,11 +131,12 @@ export class DataService {
 
   private async show_loading() {
     this.G.L.entry("DataService.show_loading");
-    // start displaying a loading animation which will be dismissed when initialization is finished
+    // start showing a loading animation which will be dismissed when initialization is finished
     this.loadingElement = await this.loadingController.create({
       spinner: 'crescent'
     });
-    // only present the animation if data not yet ready:
+    // since the previous operation might take some time,
+    // only actually present the animation if data is not yet ready:
     if (!this._ready) {
       await this.loadingElement.present();     
     }
@@ -136,133 +145,186 @@ export class DataService {
   
   private start_initialization() {
     this.G.L.entry("DataService.start_initialization");
-    // fills temporary cache with values from persistent DBs.
+    // fill temporary cache with values from persistent local data.
     this._pids = new Set();
     // fetch all local-only docs:
     this.local_only_user_DB.allDocs({
       include_docs: true
-    }).then(this.process_local_only_user_docs.bind(this)).catch(err => {
+    }).then(
+      // process them:
+      this.process_local_only_user_docs.bind(this)
+    ).catch(err => {
       this.G.L.error(err);
     });
     this.G.L.exit("DataService.start_initialization");
   }
 
-  // TODO: split the parts of the following into individual methods like 
-  // connect_user_db() register_user() login_as_user() 
-  // connect_poll_db() register_poll() login_as_poll() register_voter() login_as_voter() etc.
-
-  connect_user_db() {
-    // TODO: connect as user "vodle" with db_password, validate it's a vodle db, get info, return conn object
-  }
-  register_user(conn_as_vodle: PouchDB) {
-    // TODO: write a _users/ doc for username "vodle:user:<encemail>"
-  }
-  login_as_user() {
-    // TODO: connect as user "vodle:user:<encemail>", return conn object
-  }
-
-  //
-
-
   private process_local_only_user_docs(result) {
     this.G.L.entry("DataService.process_local_only_user_docs");
-    // process all local-only docs:
+    // copy data from local-only docs to cache:
     for (let row of result.rows) {
       let doc = row.doc, key = doc['_id'], value = doc['value'];
       this.user_cache[key] = value;
       this.G.L.trace("DataService filled user cache "+key+": "+value);
       if (key=='language') {
-        this.translate.use(value);      
+        // adjust app language:
+        this.translate.use(value);
       }
     }
-    // connect to remote_user_DB:
+    // check if email and password are set:
+    if ([null, ""].includes(this.user_cache['email'])
+        || [null, ""].includes(this.user_cache['password'])) {
+      // TODO: show login page at email and password prompt
+    } else {
+      this.email_and_password_exist();
+    }
+  }
+  private email_and_password_exist() {
+    // check if db credentials are set:
+    if (this.extract_user_db_credentials()) {
+      this.connect_to_user_db();
+    } else {
+      // TODO: show login page at database prompt
+    }
+  }
+  private extract_user_db_credentials() {
+    // extract actual credentials from settings and return whether they are nonempty:
     let db = this.user_cache['db'];
-    var db_url, db_username, db_password;
     if (db=='central') {
-      db_url = "http://localhost:5984/vodle_cloud"; // replace by actual vodle could url later
-      db_username = "public";
-      db_password = "nono";
-    } else if (db=="poll") {
-      // TODO!
-    } else if (db=="other") {
-      db_url = this.user_cache['db_url'];
-      db_username = this.user_cache['db_username'];
-      db_password = this.user_cache['db_password'];
+      this.user_db_server_url = environment.data_service.central_db_server_url; 
+      this.user_db_password = environment.data_service.central_db_password;
+    } else if (db=='poll') {
+      this.user_db_server_url = this.user_cache['db_from_pid_server_url'];
+      this.user_db_password = this.user_cache['db_from_pid_password'];
+    } else if (db=='other') {
+      this.user_db_server_url = this.user_cache['db_other_server_url'];
+      this.user_db_password = this.user_cache['db_other_password'];
     }
-    if (db_url) {
-      db_url = this.fix_url(db_url);
-      var db_private_username = "vodle_" + myhash(this.user_cache['email']+':'+this.user_cache['password']); // TODO: store in user_cache
-      var db_private_password = this.user_cache['password'];
-      this.get_remote_connection(db_url, db_username, db_password, db_private_username, db_private_password).then(db => { 
-        this.remote_user_db = db;
-        db.info().then(doc => { 
-          this.G.L.info("DataService remote_user_db info", doc);
-          // start synchronisation:
-          this.start_user_sync();
-        }).catch(err => {
-          this.G.L.info("DataService remote_user_db error", err);
+    this.user_db_server_url = this.fix_url(this.user_db_server_url);
+    return ![null, ""].includes(this.user_db_server_url) && ![null, ""].includes(this.user_db_password);
+  }
+  private connect_to_user_db() {
+    // called at initialization and whenever db credentials were changed
+    var user_password = this.user_cache['password'];
+    var user_db_private_username = "vodle." + myhash(this.user_cache['email']+':'+user_password);
+    this.get_remote_connection(
+        this.user_db_server_url, this.user_db_password, 
+        user_db_private_username, user_password
+    ).then(db => { 
+      this.remote_user_db = db;
+      db.info().then(doc => { 
+        this.G.L.info("DataService remote_user_db info", doc);
+        // start synchronisation asynchronously:
+        this.start_user_sync();
+        // don't wait for it (it might take too long) but meanwhile fetch all current local versions of synced docs:
+        let pw = this.user_cache['password'];
+        this.local_synced_user_DB.allDocs({
+          include_docs: true
+        }).then(
+          this.process_synced_user_docs.bind(this)
+        ).catch(err => {
+          this.G.L.error(err);
         });
+        this.G.L.exit("DataService.process_local_only_user_docs");
+      }).catch(err => {
+        this.G.L.warn("DataService remote_user_db error", err);
+        // TODO: if no network, notify and try again when network available. if wrong url or password, ask again for credentialy. if wrong permissions, notify to contact db admin. also set 'ready' to false?
       });
-    }
-    // don't wait (might take too long) but meanwhile fetch all current local versions of synced docs:
-    let pw = this.user_cache['password'];
-    this.local_synced_user_DB.allDocs({
-      include_docs: true
-    }).then(this.process_synced_user_docs.bind(this)).catch(err => {
-      this.G.L.error(err);
     });
-    this.G.L.exit("DataService.process_local_only_user_docs");
+  }
+
+  get_remote_connection(server_url:string, public_password:string,
+                        private_username:string, private_password:string
+                        ): Promise<PouchDB> {
+    // TODO: check network reachability!
+    /* 
+    Get a remote connection to a couchdb for storing user, poll, or voter data.
+    For this, first connect as public user 'vodle', 
+    check whether private user exist as db user,
+    if necessary, generate it in the db, then connect again as this user,
+    finally try creating/updating a timestamp file.
+    */ 
+    this.G.L.entry("DataService.get_remote_connection");
+    // since all this may take some time,
+    // make clear we are working:
+    this._ready = false;
+    this.show_loading();
+    // and return a promise while starting the process:
+    return new Promise((resolve, reject) => {
+      // first connect to database "_users" with public credentials:
+      let conn_as_public = this.get_couchdb(server_url+"/_users", "vodle", public_password);
+      // try to get info to see if credentials are valid:
+      this.G.L.debug("DataService trying to get info for "+server_url+"/_users as user vodle");
+      conn_as_public.info().then(doc => { 
+        this.G.L.debug("DataService logged into "+server_url+" as user 'vodle'. Info:", doc);
+        // then connect to database "vodle" with private credentials:
+        let conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
+        // try to get info to see if credentials are valid:
+        this.G.L.debug("DataService trying to get info for "+server_url+"/vodle as actual user");
+        conn_as_private.info().then(doc => { 
+          this.G.L.info("DataService logged into "+server_url+" as actual user. Info:", doc);
+          this.test_remote_connection(conn_as_private, private_username).then(success => {
+            resolve(conn_as_private);
+          }).catch(err => {
+            // Since we could log in but not write, the db must be configured wrong:
+            this.G.L.error("DataService could not write in database "+server_url+"/vodle as user "+private_username+ ". Please contact the database server admin!", err);
+            reject(["write failed", err]);
+          }) 
+        }).catch(err => {
+          this.G.L.debug("DataService could not log into "+server_url+"/vodle as actual user:", err);
+          this.G.L.info("DataService: logging in for the first time as this user? Trying to register user in database...");
+          // try to generate new user:
+          this.G.L.debug("DataService trying to generate user "+private_username);
+          conn_as_public.put({ 
+            _id: "org.couchdb.user:"+private_username,
+            name: private_username, 
+            password: private_password,
+            type: "user",
+            roles: [],
+            comment: "user generated by vodle"
+          }).then(response => {
+            this.G.L.debug("DataService generated user "+private_username);
+            // connect again with private credentials:
+            let conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
+            // try to get info to see if credentials are valid:
+            this.G.L.debug("DataService trying to get info for "+server_url+"/vodle as actual user");
+            conn_as_private.info().then(doc => { 
+              this.G.L.info("DataService logged into "+server_url+" as new actual user. Info:", doc);
+              this.test_remote_connection(conn_as_private, private_username).then(success => {
+                resolve(conn_as_private);
+              }).catch(err => {
+                // Since we could log in but not write, the db must be configured wrong, so notify user of this:
+                this.G.L.error("DataService could not write in database "+server_url+"/vodle as new user "+private_username+ ". Please contact the database server admin!", err);
+                reject(["write failed", err]);
+              }) 
+            }).catch(err => {
+              this.G.L.debug("DataService could not log into "+server_url+"/vodle as newly generated user:", err);
+              reject(["private login failed", err]);
+            });
+          }).catch(err => {
+            this.G.L.error("DataService could not generate user "+private_username, err);
+            reject(["generate user failed", err]);
+          });
+        });
+      }).catch(err => {
+        this.G.L.error("DataService could not log into "+server_url+"/_users as user 'vodle':", err);
+        reject(["public login failed", err]);
+      });
+    });
   }
 
   get_couchdb(url:string, username:string, password:string) {
     return new PouchDB(url, {
-      auth:{username:username, password:password},
-      skipSetup:true
+      auth: {username: username, password: password},
+      skipSetup: true
     });
-    // TODO: prevent Browser popup on 401
+    // TODO: prevent Browser popup on 401?
   }
 
-  get_remote_connection(url:string, public_username:string, public_password:string,
-                        private_username:string, private_password:string): Promise<PouchDB> {
-    this.G.L.entry("DataService.get_remote_connection");
+  private test_remote_connection(conn:PouchDB, private_username:string): Promise<boolean> {
     return new Promise((resolve, reject) => {
-      // connect with private credentials:
-      let db = this.get_couchdb(url, private_username, private_password);
-      // try to get info to see if credentials are valid:
-      this.G.L.debug("DataService trying to get info for "+url+" as "+private_username);
-      db.info().then(doc => { 
-        this.G.L.info("DataService logged into ", doc);
-        resolve(db);
-      }).catch(err => {
-        this.G.L.debug("DataService got error", err);
-        // TODO: if it is a different error than wrong credentials, return that error.
-        // connect with public credentials to corresponding _users database and generate the user document:
-        let users_db_url = url.slice(0, url.lastIndexOf("/")) + "/_users";
-        let users_db = this.get_couchdb(users_db_url, public_username, public_password);
-        // try to generate new user:
-        this.G.L.debug("DataService trying to generate user "+private_username+" in "+users_db_url);
-        users_db.put({ 
-          _id:"org.couchdb.user:"+private_username,
-          name:private_username, 
-          password:private_password,
-          roles:[]
-        }).then(response => {
-          this.G.L.info("DataService generated user "+private_username);
-          // connect again with private credentials:
-          db = this.get_couchdb(url, private_username, private_password);
-          // try to get info to see if now the credentials are valid:
-          this.G.L.debug("DataService again trying to get info for "+url+" as "+private_username);
-          db.info().then(doc => { 
-            this.G.L.info("DataService logged into ", doc);
-            resolve(db);
-          }).catch(err => { 
-            this.G.L.error("DataService could still not log into "+url, err);
-            reject(err);
-          });
-        }).catch(err => {
-          this.G.L.error("DataService could not generate user "+private_username, err);
-        });
-      });
+      // TODO: try creating or updating a timestamp document
+      resolve(true);
     });
   }
 

@@ -11,6 +11,10 @@ export const environment = {
         logLevel: "DEBUG"
       },
     ]  
+  },
+  data_service: {
+    central_db_server_url: "http://localhost:5984/vodle",
+    central_db_password: "none"
   }
 };
 
