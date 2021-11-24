@@ -8,6 +8,8 @@ import { Poll } from "./poll.service";
 
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
+import BLAKE2s from 'blake2s-js';
+
 import * as CryptoJS from 'crypto-js';
 const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
@@ -134,9 +136,11 @@ function decrypt(value:string, password:string): string {
   return result;
 }
 function myhash(what): string {
-  // TODO!!
-  return encrypt_deterministically(what.toString(), what.toString()); 
+  const blake2s = new BLAKE2s(32);
+  blake2s.update(new Uint8Array(what.toString())); 
+  return blake2s.hexDigest()
 }
+
 
 // SERVICE:
 
