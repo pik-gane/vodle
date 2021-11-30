@@ -134,10 +134,10 @@ ion-icon {
 ion-grid {
     &.center-grid {
         position: absolute;
-        top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%) !important;
+        top: 40%;
+        transform: translate(-50%, -40%) !important;
         display: block !important;
-        /*width: 100%;*/
+        width: 80%;
     }
 }

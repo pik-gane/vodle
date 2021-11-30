@@ -117,7 +117,8 @@
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one.",
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
-        "ask-fresh-password": "Please set a password. This will be used to encrypt your data so that no-one else can read them.",
+        "ask-fresh-password": "Please set a password.",
+        "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them.",
         "ask-old-password": "Please enter your existing vodle password."
     },
 

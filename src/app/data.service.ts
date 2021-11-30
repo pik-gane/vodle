@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, NavController } from '@ionic/angular';
 
@@ -187,6 +188,7 @@ export class DataService {
   public get loading() { return this._loading; }
 
   constructor(
+    private router: Router,
     public navCtrl: NavController, 
     public loadingController: LoadingController,
     public translate: TranslateService,
@@ -295,7 +297,9 @@ export class DataService {
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
       this.G.L.trace("DataService found empty email or password, redirecting to login page.");
-      this.navCtrl.navigateForward((this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before');
+      if (!this.router.url.includes('/login')) {
+        this.navCtrl.navigateForward((this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before');
+      }
       this.hide_loading();
     } else {
       this.email_and_password_exist();
@@ -746,7 +750,7 @@ export class DataService {
     // since the previous operation might take some time,
     // only actually present the animation if data is not yet ready:
     if (this._loading && !this._ready) {
-      await this.loadingElement.present();     
+      // await this.loadingElement.present();     
     }
     if (!this._loading) this.hide_loading();
     this.G.L.exit("DataService.show_loading");

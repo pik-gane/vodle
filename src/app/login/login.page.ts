@@ -37,6 +37,7 @@ export class LoginPage implements OnInit {
   languageFormGroup: FormGroup;
   emailFormGroup: FormGroup;
   passwordFormGroup: FormGroup;
+  oldPasswordFormGroup: FormGroup;
 
   step: string;
 
@@ -81,6 +82,15 @@ export class LoginPage implements OnInit {
         confirm_password: new FormControl('', Validators.required),
       }, {
         validators: [this.G.S.passwords_match]
+      }),
+    });
+    this.oldPasswordFormGroup = this.formBuilder.group({
+      pw: this.formBuilder.group({
+        password: new FormControl('', Validators.compose([
+          Validators.required,
+          Validators.minLength(8),
+          Validators.pattern(this.G.S.password_regexp)
+        ])),
       }),
     });
   }
@@ -145,7 +155,11 @@ export class LoginPage implements OnInit {
     }
   }
 
-  submit_password() {
+  submit_new_password() {
+    // TODO: test connection to vodle central. if fails, ask for different server or correct password?
+  }
+
+  submit_old_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
   }
 
