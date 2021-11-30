@@ -136,6 +136,7 @@ function decrypt(value:string, password:string): string {
   return result;
 }
 function myhash(what): string {
+  // we use Blake2s since it is fast and more reliable than MD5
   const blake2s = new BLAKE2s(32);
   blake2s.update(new Uint8Array(what.toString())); 
   return blake2s.hexDigest()
@@ -151,7 +152,8 @@ export class DataService {
 
   private G: GlobalService;
   
-  private _page; // current page, used for notifying of changes via its pc_changed() method
+  // current page, used for notifying of changes method:
+  private _page; 
   public set page(page) { this._page = page; }
 
   private loadingElement: HTMLIonLoadingElement;
@@ -284,12 +286,13 @@ export class DataService {
       this.G.L.trace("DataService filled user cache "+key+": "+value);
       if (key=='language') {
         // adjust app language:
-        this.translate.use(value);
+        this.translate.use(value||''!=''?value:'en');
       }
     }
     // check if email and password are set:
-    if ([null, ""].includes(this.user_cache['email'])
-        || [null, ""].includes(this.user_cache['password'])) {
+    if (this.user_cache['email']||''=='' || this.user_cache['password']||''=='') {
+      this.G.L.trace("DataService found empty email or password, redirecting to login page.");
+      window.alert("please set email and password");
       // TODO: show login page at email and password prompt
     } else {
       this.email_and_password_exist();
@@ -298,6 +301,7 @@ export class DataService {
   private email_and_password_exist() {
     // while remote synchronisation is happening (potentially slow, to be started below), 
     // already fetch all current local versions of synced docs:
+    this.G.L.trace("DataService found email and password", this.user_cache['email'], this.user_cache['password']);
     this.local_synced_user_db.allDocs({
       include_docs:true
     }).then(result => {
@@ -309,9 +313,11 @@ export class DataService {
     if (this.extract_user_db_credentials()) {
       // connect to remote and start sync:
       this.connect_to_remote_user_db().catch(err => {
+        this.G.L.trace("DataService could not connect to remote user db, redirecting to login page.");
         // TODO: show login page at database prompt
       });
     } else {
+      this.G.L.trace("DataService found insufficient db credentials, redirecting to login page.");
       // TODO: show login page at database prompt
     }
   }
@@ -329,7 +335,7 @@ export class DataService {
       this.user_db_password = this.user_cache['db_other_password'];
     }
     this.user_db_server_url = this.fix_url(this.user_db_server_url);
-    return ![null, ""].includes(this.user_db_server_url) && ![null, ""].includes(this.user_db_password);
+    return this.user_db_server_url||''!='' && this.user_db_password||''!='';
   }
   private local_user_docs2cache(result) {
     // called whenever a connection to a remote user db was established
@@ -410,7 +416,7 @@ export class DataService {
       this.poll_db_passwords[pid] = this.user_db_password;
     } 
     this.poll_db_server_urls[pid] = this.fix_url(this.poll_db_server_urls[pid]);
-    return ![null, ""].includes(this.poll_db_server_urls[pid]) && ![null, ""].includes(this.poll_db_passwords[pid]);
+    return this.poll_db_server_urls[pid]||''!='' && this.poll_db_passwords[pid]||''!='';
   }
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache "+pid);
@@ -685,7 +691,7 @@ export class DataService {
     // set user data item
     value = value || '';
     if (key=='language') {
-      this.translate.use(value);      
+      this.translate.use(value!=''?value:'en');
     }
     var old_values = {};
     if (keys_triggering_data_move.includes(key)) {
@@ -752,7 +758,8 @@ export class DataService {
   }
 
   private after_changes() {
-    this.translate.use(this.getu('language'));
+    var lang = this.getu('language');
+    this.translate.use(lang!=''?lang:'en');
     for (let pid of this._pids) {
       if (!(pid in this.G.P.polls)) {
         // poll object does not exist yet, so create it:
