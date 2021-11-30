@@ -26,137 +26,158 @@
     - if yes: ask for old conn. info or recovery file, ...
 -->
 <ion-content *ngIf="ready">
+  <ion-grid class="center-grid">
 
-  <ng-container *ngIf="step=='language'||step=='start'">
-    <ion-grid class="center-grid">
-      <ion-item lines="none">
-        <ion-label class="ion-text-center"><h1 [innerHtml]="'login.welcome'|translate"></h1></ion-label>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-img src="/assets/topleft_icon.png"></ion-img>
-      </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/></p>
-      </ion-item>
-      <ion-item>
-        <ion-label class="ion-text-center"><h1 [innerHtml]="'login.ask-language'|translate"></h1></ion-label>
-      </ion-item>
-      <form [formGroup]="languageFormGroup">
-        <ion-item>
-          <ion-label position="floating" color="primary">
-            <ion-icon name="language-outline"></ion-icon>&nbsp;
-            <span [innerHtml]="'language'|translate"></span>
-          </ion-label>
-          <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
-            <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
-          </ion-select>
+    <ng-container *ngIf="step=='language'||step=='start'">
+        <ion-item lines="none">
+          <ion-label class="ion-text-center"><h1 [innerHtml]="'login.welcome'|translate"></h1></ion-label>
         </ion-item>
-      </form>    
-    </ion-grid>
-  </ng-container>
-
-  <ng-container *ngIf="step=='used_before'">
-    <ion-label [innerHtml]="'login.ask-used-before'|translate"></ion-label>
-    <ion-button (click)="ask_used_before_no()" [innerHtml]="'no'|translate"></ion-button>
-    <ion-button (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate"></ion-button>
-  </ng-container>
-
-  <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
-    <ion-label [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></ion-label>
-    <form [formGroup]="emailFormGroup">
-      <ion-grid class="ion-no-padding">
-        <ion-row class="ion-no-padding">
-          <ion-col class="ion-no-padding">
-            <ion-item>
-              <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
-              <ion-input 
-                formControlName="email" 
-                [placeholder]="'settings.email-placeholder'|translate"
-                type="text" inputmode="email" required
-                (ionChange)="set_email()">
-              </ion-input>
-            </ion-item>
-          </ion-col>
-          <ion-button 
-              tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
-              [disabled]="!emailFormGroup.get('email').valid"
-              (click)="submit_email()">
-            <ion-icon name="checkmark-outline"></ion-icon>
-            <span [innerHtml]="'OK'|translate"></span>
-          </ion-button>
-        </ion-row>
-      </ion-grid>
-      <div class="validation-errors">
-      <ng-container *ngFor="let validation of G.S.validation_messages.email">
-        <div class="error-message" 
-            *ngIf="emailFormGroup.get('email').hasError(validation.type) 
-                    && (emailFormGroup.get('email').dirty || emailFormGroup.get('email').touched)"
-            [innerHtml]="validation.message|translate">
-        </div>
-      </ng-container>
-      </div>  
-    </form>    
-  </ng-container>
-
-  <ng-container *ngIf="(step=='fresh_password')||(step=='old_password')">
-    <ion-label [innerHtml]="(step=='fresh_password'?'login.ask-fresh-password':'login.ask-old-password')|translate"></ion-label>
-    <form [formGroup]="passwordFormGroup">
-      <ion-grid class="ion-no-padding">
-        <ion-row class="ion-no-padding">
-          <ion-col class="ion-no-padding">
-            <ion-item>
-              <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-              <ion-input 
-                formControlName="password"
-                [type]="showing_password?'text':'password'" required
-                (ionChange)="set_password()">
-              </ion-input>
-            </ion-item>
-          </ion-col>
-          <ion-button 
-              tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
-              (click)="showing_password=!showing_password">
-            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
-            <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
-          </ion-button>
-          <ion-button 
-              tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
-              [disabled]="!passwordFormGroup.get('pw').valid"
-              (click)="submit_password()">
-            <ion-icon name="checkmark-outline"></ion-icon>
-            <span [innerHtml]="'OK'|translate"></span>
-          </ion-button>
-        </ion-row>
-      </ion-grid>
-      <div class="validation-errors">
-      <ng-container *ngFor="let validation of G.S.validation_messages.password">
-        <div class="error-message" 
-            *ngIf="passwordFormGroup.get('pw.password').hasError(validation.type) 
-                    && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)"
-            [innerHtml]="validation.message|translate">
-        </div>
-      </ng-container>
-      </div>
-      <ng-container>
-        <ion-item>
-          <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
-          <ion-input 
-            formControlName="confirm_password" 
-            #retype_password 
-            [type]="showing_password?'text':'password'"required>
-          </ion-input>
+        <ion-item lines="none">
+          <ion-img src="/assets/topleft_icon.png" style="width: 459px;"></ion-img>
         </ion-item>
+        <ion-item lines="none">
+          <p><br/><br/><br/></p>
+        </ion-item>
+        <ion-item class="item-text-wrap">
+          <h1 class="ion-text-center" [innerHtml]="'login.ask-language'|translate"></h1>
+        </ion-item>
+        <form [formGroup]="languageFormGroup">
+          <ion-item>
+            <ion-label position="floating" color="primary">
+              <ion-icon name="language-outline"></ion-icon>&nbsp;
+              <span [innerHtml]="'language'|translate"></span>
+            </ion-label>
+            <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
+              <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
+            </ion-select>
+          </ion-item>
+        </form>    
+        <ion-item lines="none">
+          <p><br/><br/><br/></p>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-button size="larger" color="primary" slot="end" [disabled]="!languageFormGroup.valid" 
+              shape="round"
+              (click)="submit_language()">
+            <span [innerHtml]="'next'|translate"></span>
+            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+    </ng-container>
+
+    <ng-container *ngIf="step=='used_before'">
+      <ion-item class="item-text-wrap" lines="none">
+        <h1 class="ion-text-center" [innerHtml]="'login.ask-used-before'|translate"></h1>
+      </ion-item>
+      <ion-item lines="none" class="center ion-text-center">
+        <ion-button size="large" color="primary" shape="round" 
+          (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
+        </ion-button>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-button size="large" color="primary" shape="round" 
+          (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
+        </ion-button>
+      </ion-item>
+    </ng-container>
+
+    <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
+      <ion-label [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></ion-label>
+      <form [formGroup]="emailFormGroup">
+        <ion-grid class="ion-no-padding">
+          <ion-row class="ion-no-padding">
+            <ion-col class="ion-no-padding">
+              <ion-item>
+                <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
+                <ion-input 
+                  formControlName="email" 
+                  [placeholder]="'settings.email-placeholder'|translate"
+                  type="text" inputmode="email" required
+                  (ionChange)="set_email()">
+                </ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-button 
+                tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
+                [disabled]="!emailFormGroup.get('email').valid"
+                (click)="submit_email()">
+              <ion-icon name="checkmark-outline"></ion-icon>
+              <span [innerHtml]="'OK'|translate"></span>
+            </ion-button>
+          </ion-row>
+        </ion-grid>
         <div class="validation-errors">
-        <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
+        <ng-container *ngFor="let validation of G.S.validation_messages.email">
           <div class="error-message" 
-              *ngIf="passwordFormGroup.get('pw').hasError('must_match') 
-                      && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)"
+              *ngIf="emailFormGroup.get('email').hasError(validation.type) 
+                      && (emailFormGroup.get('email').dirty || emailFormGroup.get('email').touched)"
+              [innerHtml]="validation.message|translate">
+          </div>
+        </ng-container>
+        </div>  
+      </form>    
+    </ng-container>
+
+    <ng-container *ngIf="(step=='fresh_password')||(step=='old_password')">
+      <ion-label [innerHtml]="(step=='fresh_password'?'login.ask-fresh-password':'login.ask-old-password')|translate"></ion-label>
+      <form [formGroup]="passwordFormGroup">
+        <ion-grid class="ion-no-padding">
+          <ion-row class="ion-no-padding">
+            <ion-col class="ion-no-padding">
+              <ion-item>
+                <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
+                <ion-input 
+                  formControlName="password"
+                  [type]="showing_password?'text':'password'" required
+                  (ionChange)="set_password()">
+                </ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-button 
+                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
+                (click)="showing_password=!showing_password">
+              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
+              <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
+            </ion-button>
+            <ion-button 
+                tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
+                [disabled]="!passwordFormGroup.get('pw').valid"
+                (click)="submit_password()">
+              <ion-icon name="checkmark-outline"></ion-icon>
+              <span [innerHtml]="'OK'|translate"></span>
+            </ion-button>
+          </ion-row>
+        </ion-grid>
+        <div class="validation-errors">
+        <ng-container *ngFor="let validation of G.S.validation_messages.password">
+          <div class="error-message" 
+              *ngIf="passwordFormGroup.get('pw.password').hasError(validation.type) 
+                      && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)"
               [innerHtml]="validation.message|translate">
           </div>
         </ng-container>
         </div>
-      </ng-container>
-    </form>    
-  </ng-container>
+        <ng-container>
+          <ion-item>
+            <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
+            <ion-input 
+              formControlName="confirm_password" 
+              #retype_password 
+              [type]="showing_password?'text':'password'"required>
+            </ion-input>
+          </ion-item>
+          <div class="validation-errors">
+          <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
+            <div class="error-message" 
+                *ngIf="passwordFormGroup.get('pw').hasError('must_match') 
+                        && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)"
+                [innerHtml]="validation.message|translate">
+            </div>
+          </ng-container>
+          </div>
+        </ng-container>
+      </form>    
+    </ng-container>
 
+  </ion-grid>
 </ion-content>

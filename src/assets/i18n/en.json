@@ -3,6 +3,7 @@
     "add-target": "Add target",
     "cancel": "Cancel",
     "choose-file": "Choose file",
+    "continue": "Continue",
     "daynames-sunday-to-saturday": "Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
     "db-server-url": "Data server URL",
     "db-user": "Database username",
@@ -12,6 +13,8 @@
     "hide": "Hide",
     "language": "Language",
     "monthnames": "January, February, March, April, May, June, July, August, September, October, November, December",
+    "next": "Next",
+    "no": "No",
     "OK": "OK",
     "options": "Options",
     "password": "Password",
@@ -23,6 +26,7 @@
     "skip": "Skip",
     "show": "Show",
     "test": "Test",
+    "yes": "Yes",
 
     "about": {
         "-page-title": "About vodle"
@@ -107,7 +111,7 @@
     "login": {
         "-page-title": "Login",
         "welcome": "Welcome to",
-        "ask-language": "Which language do you prefer?",
+        "ask-language": "Which language do you want to use?",
         "ask-used-before": "Have you used vodle before on any device?",
         "ask-fresh-password": "Please set a password. This will be used to encrypt your data so that no-one else can read them.",
         "ask-old-password": "Please enter your existing vodle password."

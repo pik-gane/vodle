@@ -3,6 +3,7 @@
     "add-target": "Ziel hinzufügen",
     "cancel": "Abbrechen",
     "choose-file": "Datei auswählen",
+    "continue": "Weiter",
     "daynames-sunday-to-saturday": "Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag",
     "db-server-url": "Datenserver-URL",
     "db-user": "Datenbank-Nutzername",
@@ -12,6 +13,8 @@
     "hide": "Verbergen",
     "language": "Sprache",
     "monthnames": "Januar, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember",
+    "next": "Weiter",
+    "no": "Nein",
     "OK": "OK",
     "options": "Optionen",
     "password": "Passwort",
@@ -23,6 +26,7 @@
     "skip": "Überspringen",
     "show": "Anzeigen",
     "test": "Testen",
+    "yes": "Ja",
 
     "about": {
         "-page-title": "Über vodle"
@@ -102,6 +106,15 @@
         "p25": "Wenn keine Option 100% Zustimmung hat, aber bei der Abstimmung eine einzelne Option gewählt werden soll, dann geschieht dies wie folgt. Erst wird ein:e Wähler:in per Los gezogen. Von den Optionen, der dieser Person zugestimmt hat, gewinnt diejenige mit der größten Gesamt-Zustimmung. Das Tortenstück links von jeder Option zeigt, mit welcher Wahrscheinlichkeit dabei diese Option gewinnen würde.",
         "p26": "Wenn hingegen bei der Abstimmung ein Budget verteilt werden soll, dann wird der Anteil des Budgets für jedes mögliche Ziel auf genau die gleiche Weise berechnet. Der Anteil für ein Ziel entspricht der Anzahl an Wähler:innen, die (i) diesem Ziel zugestimmt haben, aber (ii) keinem anderen Ziel zugestimmt haben, das insgesamt mehr Zustimmung hat.",
         "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
+    },
+
+    "login": {
+        "-page-title": "Login",
+        "welcome": "Willkommen bei",
+        "ask-language": "Welche Sprache möchtest Du verwenden?",
+        "ask-used-before": "Hast Du vodle schon einmal auf irgend einem Gerät verwendet?",
+        "ask-fresh-password": "Bitte vergib ein Passwort. Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann.",
+        "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein."
     },
 
     "mypolls": {

@@ -57,7 +57,7 @@ export class LoginPage implements OnInit {
     this.route.params.subscribe(params => { 
       var step = this.step = params['step'] || 'start';
       this.G.L.info("LoginPage going to step", step);
-      if (step=='start') {
+      if (['start','language','used_before','fresh_email','old_email','fresh_password','old_password'].includes(step)) {
         this.ready = true;  // here we do not need to wait for DataService since we need no data. 
       }
     });

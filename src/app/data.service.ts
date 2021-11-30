@@ -115,7 +115,7 @@ const user_doc_id_prefix = "~vodle.user.", poll_doc_id_prefix = "~vodle.poll.";
 // curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
 
 // some keys are only stored locally and not synced to a remote CouchDB:
-const local_only_keys = ['email', 'password', 'db', 'db_from_pid', 'db_server_url', 'db_password'];
+const local_only_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_server_url', 'db_password'];
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_server_url','db_password'];
 
 // ENCRYPTION:
@@ -287,15 +287,15 @@ export class DataService {
       let doc = row.doc, key = doc['_id'], value = doc['value'];
       this.user_cache[key] = value;
       this.G.L.trace("DataService filled user cache "+key+": "+value);
-      if (key=='language') {
+      if (key=='local_language') {
         // adjust app language:
-        this.translate.use(value||''!=''?value:'en');
+        this.translate.use((value||'')!=''?value:'en');
       }
     }
     // check if email and password are set:
-    if (this.user_cache['email']||''=='' || this.user_cache['password']||''=='') {
+    if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
       this.G.L.trace("DataService found empty email or password, redirecting to login page.");
-      this.navCtrl.navigateForward('/login/start');
+      this.navCtrl.navigateForward((this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before');
       this.hide_loading();
     } else {
       this.email_and_password_exist();
@@ -338,7 +338,7 @@ export class DataService {
       this.user_db_password = this.user_cache['db_other_password'];
     }
     this.user_db_server_url = this.fix_url(this.user_db_server_url);
-    return this.user_db_server_url||''!='' && this.user_db_password||''!='';
+    return (this.user_db_server_url||'')!='' && (this.user_db_password||'')!='';
   }
   private local_user_docs2cache(result) {
     // called whenever a connection to a remote user db was established
@@ -419,7 +419,7 @@ export class DataService {
       this.poll_db_passwords[pid] = this.user_db_password;
     } 
     this.poll_db_server_urls[pid] = this.fix_url(this.poll_db_server_urls[pid]);
-    return this.poll_db_server_urls[pid]||''!='' && this.poll_db_passwords[pid]||''!='';
+    return (this.poll_db_server_urls[pid]||'')!='' && (this.poll_db_passwords[pid]||'')!='';
   }
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache "+pid);
@@ -670,6 +670,9 @@ export class DataService {
   public getu(key:string):string {
     // get user data item
     let value = this.user_cache[key] || '';
+    if (!value && key=='language') {
+      value = this.getu('local_language');
+    }
     this.G.L.trace("DataService.getu "+key+": "+value);
     return value;
   }
@@ -694,7 +697,9 @@ export class DataService {
     // set user data item
     value = value || '';
     if (key=='language') {
-      this.translate.use(value!=''?value:'en');
+      this.setu('local_language', value);
+    } else if (key=='local_language') {
+        this.translate.use(value!=''?value:'en');
     }
     var old_values = {};
     if (keys_triggering_data_move.includes(key)) {
@@ -865,6 +870,7 @@ export class DataService {
 
   private store_user_data(key:string, value:string) {
     // stores key and value in user database. 
+    this.G.L.trace("DataService.store_user_data", key, value);
     var doc;
     if (local_only_keys.includes(key)) {
       // simply use key as doc id and don't encrypt:
@@ -872,11 +878,13 @@ export class DataService {
         if (doc.value != value) {
           doc.value = value;
           this.local_only_user_DB.put(doc);
-          this.G.L.trace("local only user DB put "+key+": "+value)
+          this.G.L.trace("local only user DB update "+key+": "+value)
         }
+        this.G.L.trace("local only user DB no need to update "+key+": "+value)
       }).catch(err => {
         doc = {_id:key, val:value};
         this.local_only_user_DB.put(doc);  
+        this.G.L.trace("local only user DB new "+key+": "+value)
       });
     } else {
       // store encrypted with suitable owner prefix in doc id:
