@@ -54,9 +54,13 @@ export class LoginPage implements OnInit {
       public translate: TranslateService,
       public G: GlobalService) { 
     this.G.L.entry("LoginPage.constructor");
-    this.route.params.subscribe( params => { 
-      this.step = params['step'] || 'language';
-    } );
+    this.route.params.subscribe(params => { 
+      var step = this.step = params['step'] || 'start';
+      this.G.L.info("LoginPage going to step", step);
+      if (step=='start') {
+        this.ready = true;  // here we do not need to wait for DataService since we need no data. 
+      }
+    });
   }
 
   ngOnInit() {
@@ -84,7 +88,6 @@ export class LoginPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("LoginPage.ionViewWillEnter");
     this.G.D.page = this;
-    this.step = '';
   }
 
   ionViewDidEnter() {

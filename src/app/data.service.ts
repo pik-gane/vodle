@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController } from '@ionic/angular';
+import { LoadingController, NavController } from '@ionic/angular';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
@@ -183,8 +183,11 @@ export class DataService {
   private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
   private _ready: boolean = false;
   public get ready() { return this._ready; }
+  private _loading: boolean = false;
+  public get loading() { return this._loading; }
 
   constructor(
+    public navCtrl: NavController, 
     public loadingController: LoadingController,
     public translate: TranslateService,
   ) { }
@@ -292,8 +295,8 @@ export class DataService {
     // check if email and password are set:
     if (this.user_cache['email']||''=='' || this.user_cache['password']||''=='') {
       this.G.L.trace("DataService found empty email or password, redirecting to login page.");
-      window.alert("please set email and password");
-      // TODO: show login page at email and password prompt
+      this.navCtrl.navigateForward('/login/start');
+      this.hide_loading();
     } else {
       this.email_and_password_exist();
     }
@@ -461,7 +464,7 @@ export class DataService {
     // mark as ready, dismiss loading animation, and notify page:
     this.G.L.info("DataService READY");
     this._ready = true;
-    if (this.loadingElement) this.loadingElement.dismiss();
+    this.hide_loading();
     if (this._page && this._page.onDataReady) this._page.onDataReady();
     this.G.L.exit("DataService.local_user_docs2cache_finished");
   }
@@ -728,6 +731,27 @@ export class DataService {
 
   // OTHER METHODS:
 
+  private async show_loading() {
+    this.G.L.entry("DataService.show_loading");
+    this._loading = true;
+    // start showing a loading animation which will be dismissed when initialization is finished
+    this.loadingElement = await this.loadingController.create({
+      spinner: 'crescent'
+    });
+    // since the previous operation might take some time,
+    // only actually present the animation if data is not yet ready:
+    if (this._loading && !this._ready) {
+      await this.loadingElement.present();     
+    }
+    if (!this._loading) this.hide_loading();
+    this.G.L.exit("DataService.show_loading");
+  }
+
+  private hide_loading() {
+    if (this.loadingElement) this.loadingElement.dismiss();
+    this._loading = false;
+  }
+  
   fix_url(url:string): string {
     // make sure remote db urls start with http:// or https://
     if (!url) return null;
@@ -966,19 +990,6 @@ export class DataService {
   }
 
 
-  private async show_loading() {
-    this.G.L.entry("DataService.show_loading");
-    // start showing a loading animation which will be dismissed when initialization is finished
-    this.loadingElement = await this.loadingController.create({
-      spinner: 'crescent'
-    });
-    // since the previous operation might take some time,
-    // only actually present the animation if data is not yet ready:
-    if (!this._ready) {
-      await this.loadingElement.present();     
-    }
-    this.G.L.exit("DataService.show_loading");
-  }
   
 
 }

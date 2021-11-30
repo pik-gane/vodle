@@ -130,3 +130,14 @@ ion-select {
 ion-icon {
     pointer-events: none;
 }
+
+ion-grid {
+    &.center-grid {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) !important;
+        display: block !important;
+        /*width: 100%;*/
+    }
+}

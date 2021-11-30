@@ -27,19 +27,32 @@
 -->
 <ion-content *ngIf="ready">
 
-  <ng-container *ngIf="step=='language'">
-    <ion-label [innerHtml]="'login.ask-language'|translate"></ion-label>
-    <form [formGroup]="languageFormGroup">
-      <ion-item>
-        <ion-label position="floating" color="primary">
-          <ion-icon name="language-outline"></ion-icon>&nbsp;
-          <span [innerHtml]="'language'|translate"></span>
-        </ion-label>
-        <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
-          <ion-select-option *ngFor="let lang of translate.langs" value="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
-        </ion-select>
+  <ng-container *ngIf="step=='language'||step=='start'">
+    <ion-grid class="center-grid">
+      <ion-item lines="none">
+        <ion-label class="ion-text-center"><h1 [innerHtml]="'login.welcome'|translate"></h1></ion-label>
       </ion-item>
-    </form>    
+      <ion-item lines="none">
+        <ion-img src="/assets/topleft_icon.png"></ion-img>
+      </ion-item>
+      <ion-item lines="none">
+        <p><br/><br/><br/></p>
+      </ion-item>
+      <ion-item>
+        <ion-label class="ion-text-center"><h1 [innerHtml]="'login.ask-language'|translate"></h1></ion-label>
+      </ion-item>
+      <form [formGroup]="languageFormGroup">
+        <ion-item>
+          <ion-label position="floating" color="primary">
+            <ion-icon name="language-outline"></ion-icon>&nbsp;
+            <span [innerHtml]="'language'|translate"></span>
+          </ion-label>
+          <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
+            <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
+          </ion-select>
+        </ion-item>
+      </form>    
+    </ion-grid>
   </ng-container>
 
   <ng-container *ngIf="step=='used_before'">

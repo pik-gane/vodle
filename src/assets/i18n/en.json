@@ -104,6 +104,15 @@
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your “willingness to approve” ratings?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a rating of 100. Give all options which are better than average some rating larger than zero, scaling your ratings according to relative preference. Finally, give all options which are worse than average a rating of zero.</b>"
     },
 
+    "login": {
+        "-page-title": "Login",
+        "welcome": "Welcome to",
+        "ask-language": "Which language do you prefer?",
+        "ask-used-before": "Have you used vodle before on any device?",
+        "ask-fresh-password": "Please set a password. This will be used to encrypt your data so that no-one else can read them.",
+        "ask-old-password": "Please enter your existing vodle password."
+    },
+
     "mypolls": {
         "-page-title": "My polls",
         "drafts": "Drafts",
