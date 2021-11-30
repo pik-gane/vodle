@@ -66,23 +66,28 @@
     </ng-container>
 
     <ng-container *ngIf="step=='used_before'">
-      <ion-item class="item-text-wrap" lines="none">
+      <ion-item class="item-text-wrap">
         <h1 class="ion-text-center" [innerHtml]="'login.ask-used-before'|translate"></h1>
       </ion-item>
-      <ion-item lines="none" class="center ion-text-center">
-        <ion-button size="large" color="primary" shape="round" 
+      <ion-item lines="none">
+        <ion-button slot="end" size="large" color="primary" shape="round" 
           (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
         </ion-button>
       </ion-item>
       <ion-item lines="none">
-        <ion-button size="large" color="primary" shape="round" 
+        <ion-button slot="end" size="large" color="primary" shape="round" 
           (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
         </ion-button>
       </ion-item>
     </ng-container>
 
     <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
-      <ion-label [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></ion-label>
+      <ion-item class="item-text-wrap" lines="none">
+        <h1 class="ion-text-center" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></h1>
+      </ion-item>
+      <ion-item class="item-text-wrap">
+          <p class="ion-text-center" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email-2':'login.ask-old-email-2')|translate"></p>
+      </ion-item>
       <form [formGroup]="emailFormGroup">
         <ion-grid class="ion-no-padding">
           <ion-row class="ion-no-padding">
@@ -91,19 +96,11 @@
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input 
                   formControlName="email" 
-                  [placeholder]="'settings.email-placeholder'|translate"
                   type="text" inputmode="email" required
                   (ionChange)="set_email()">
                 </ion-input>
               </ion-item>
             </ion-col>
-            <ion-button 
-                tabindex="-1" style="padding-top: 10px;" color="primary" type="submit"
-                [disabled]="!emailFormGroup.get('email').valid"
-                (click)="submit_email()">
-              <ion-icon name="checkmark-outline"></ion-icon>
-              <span [innerHtml]="'OK'|translate"></span>
-            </ion-button>
           </ion-row>
         </ion-grid>
         <div class="validation-errors">
@@ -116,12 +113,85 @@
         </ng-container>
         </div>  
       </form>    
+      <ion-item lines="none">
+        <p><br/><br/><br/></p>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-button size="larger" color="primary" slot="end" [disabled]="!emailFormGroup.valid" 
+            shape="round"
+            (click)="submit_email()">
+          <span [innerHtml]="'next'|translate"></span>
+          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
     </ng-container>
 
-    <ng-container *ngIf="(step=='fresh_password')||(step=='old_password')">
-      <ion-label [innerHtml]="(step=='fresh_password'?'login.ask-fresh-password':'login.ask-old-password')|translate"></ion-label>
+    <ng-container *ngIf="step=='fresh_password'">
+      <ion-label [innerHtml]="'login.ask-fresh-password'|translate"></ion-label>
       <form [formGroup]="passwordFormGroup">
-        <ion-grid class="ion-no-padding">
+        <div formGroupName="pw">
+          <ion-row class="ion-no-padding">
+            <ion-col class="ion-no-padding">
+              <ion-item>
+                <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
+                <ion-input 
+                  formControlName="password"
+                  [type]="showing_password?'text':'password'" required
+                  (ionChange)="set_password()">
+                </ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-button 
+                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
+                (click)="showing_password=!showing_password">
+              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
+              <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
+            </ion-button>
+          </ion-row>
+          <div class="validation-errors">
+            <ng-container *ngFor="let validation of G.S.validation_messages.password">
+              <div class="error-message" 
+                  *ngIf="passwordFormGroup.get('pw.password').hasError(validation.type) 
+                          && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)"
+                  [innerHtml]="validation.message|translate">
+              </div>
+            </ng-container>
+          </div>
+          <ng-container>
+            <ion-item>
+              <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
+              <ion-input 
+                formControlName="confirm_password" 
+                #retype_password 
+                [type]="showing_password?'text':'password'" required>
+              </ion-input>
+            </ion-item>
+            <div class="validation-errors">
+              <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
+                <div class="error-message" 
+                    *ngIf="passwordFormGroup.get('pw').hasError('must_match') 
+                            && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)"
+                    [innerHtml]="validation.message|translate">
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+        </div>
+      </form>    
+      <ion-item lines="none">
+        <ion-button size="larger" color="primary" slot="end" [disabled]="!passwordFormGroup.get('pw').valid" 
+            shape="round"
+            (click)="submit_new_password()">
+          <span [innerHtml]="'next'|translate"></span>
+          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ng-container>
+
+    <ng-container *ngIf="step=='old_password'">
+      <ion-label [innerHtml]="'login.ask-old-password'|translate"></ion-label>
+      <form [formGroup]="oldPasswordFormGroup">
+        <div formGroupName="pw">
           <ion-row class="ion-no-padding">
             <ion-col class="ion-no-padding">
               <ion-item>
@@ -147,35 +217,16 @@
               <span [innerHtml]="'OK'|translate"></span>
             </ion-button>
           </ion-row>
-        </ion-grid>
-        <div class="validation-errors">
-        <ng-container *ngFor="let validation of G.S.validation_messages.password">
-          <div class="error-message" 
-              *ngIf="passwordFormGroup.get('pw.password').hasError(validation.type) 
-                      && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)"
-              [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-        </div>
-        <ng-container>
-          <ion-item>
-            <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
-            <ion-input 
-              formControlName="confirm_password" 
-              #retype_password 
-              [type]="showing_password?'text':'password'"required>
-            </ion-input>
-          </ion-item>
           <div class="validation-errors">
-          <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
-            <div class="error-message" 
-                *ngIf="passwordFormGroup.get('pw').hasError('must_match') 
-                        && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)"
-                [innerHtml]="validation.message|translate">
-            </div>
-          </ng-container>
+            <ng-container *ngFor="let validation of G.S.validation_messages.password">
+              <div class="error-message" 
+                  *ngIf="oldPasswordFormGroup.get('pw.password').hasError(validation.type) 
+                          && (oldPasswordFormGroup.get('pw.password').dirty || oldPasswordFormGroup.get('pw.password').touched)"
+                  [innerHtml]="validation.message|translate">
+              </div>
+            </ng-container>
           </div>
-        </ng-container>
+        </div>
       </form>    
     </ng-container>
 

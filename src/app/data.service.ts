@@ -878,13 +878,14 @@ export class DataService {
         if (doc.value != value) {
           doc.value = value;
           this.local_only_user_DB.put(doc);
-          this.G.L.trace("local only user DB update "+key+": "+value)
+          this.G.L.trace("DataService local only user DB update "+key+": "+value)
+        } else {
+          this.G.L.trace("DataService local only user DB no need to update "+key+": "+value)
         }
-        this.G.L.trace("local only user DB no need to update "+key+": "+value)
       }).catch(err => {
         doc = {_id:key, val:value};
         this.local_only_user_DB.put(doc);  
-        this.G.L.trace("local only user DB new "+key+": "+value)
+        this.G.L.trace("DataService local only user DB new "+key+": "+value)
       });
     } else {
       // store encrypted with suitable owner prefix in doc id:
@@ -900,7 +901,9 @@ export class DataService {
         if (decrypt(doc.value, user_pw) != value) {
           doc.value = val;
           this.local_synced_user_db.put(doc);
-          this.G.L.trace("local synced user DB put "+key+": "+value)
+          this.G.L.trace("DataService local synced user DB update "+key+": "+value)
+        } else {
+          this.G.L.trace("DataService local synced user DB no need to update "+key+": "+value)
         }
       }).catch(err => {
         doc = {
@@ -908,12 +911,14 @@ export class DataService {
           'value': val,
         };
         this.local_synced_user_db.put(doc);  
+        this.G.L.trace("DataService local synced user DB new "+key+": "+value)
       });
     }
     return true;
   }
   private store_poll_data(pid:string, key:string, value:string) {
     // stores key and value in poll database. 
+    this.G.L.trace("DataService.store_poll_data", key, value);
     var doc;
     if (key.indexOf(":") == -1) {
       // it's not a voter doc:
@@ -933,7 +938,7 @@ export class DataService {
       db.get(_id).then(doc => {
         if (decrypt(doc.value, poll_pw) != value) {
           // this is not allowed for poll docs!
-          this.G.L.error("Tried changing an existing poll data item "+key+": "+value);
+          this.G.L.error("DataService tried changing an existing poll data item "+key+": "+value);
           return false;
         }
       }).catch(err => {
@@ -942,6 +947,7 @@ export class DataService {
           'value': enc_value,
         };
         db.put(doc);  
+        this.G.L.trace("DataService poll DB new "+key+": "+value);
       });
       return true;
     } else {
@@ -950,7 +956,7 @@ export class DataService {
           vid = this.user_cache["poll." + pid + '.voter_id'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
-          this.G.L.error("Tried changing another voter's data item "+key+": "+value);
+          this.G.L.error("DataService tried changing another voter's data item "+key+": "+value);
           return false;
       }
       // store encrypted and with proper prefix:
@@ -970,7 +976,9 @@ export class DataService {
         if (decrypt(doc.value, poll_pw) != value) {
           doc.value = value;
           this.local_synced_user_db.put(doc);
-          this.G.L.trace("local synced voter DB put "+key+": "+value);
+          this.G.L.trace("DataService poll DB update "+key+": "+value);
+      } else {
+        this.G.L.trace("DataService poll DB no need to update "+key+": "+value)
       }
       }).catch(err => {
         doc = {
@@ -978,6 +986,7 @@ export class DataService {
           'value': enc_value,
         };
         db.put(doc);  
+        this.G.L.trace("DataService poll DB new "+key+": "+value);
       });
       return true;
     }
