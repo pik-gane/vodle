@@ -4,17 +4,17 @@ function (newDoc, savedDoc, userCtx) {
         let _id = newDoc._id;
         if (_id.startsWith(userprefix)) {
             // let only the owner create, update, or delete it:
-            if (!_id.startsWith(userprefix + userCtx.name)) {
+            if (!_id.startsWith("~" + userCtx.name +":")) {
                 throw ({forbidden: 'Only the owner of a user document _id may update it.'});
             }
         } else if (_id.startsWith(voterprefix)) {
             // let only the owner create, update, or delete it:
-            if (!_id.startsWith(voterprefix + userCtx.name)) {
+            if (!_id.startsWith("~" + userCtx.name +":")) {
                 throw ({forbidden: 'Only the owner of a voter document _id may update it.'});
             }
         } else if (_id.startsWith(pollprefix)) {
             // let only the owner create it:
-            if (!_id.startsWith(pollprefix + userCtx.name)) {
+            if (!_id.startsWith("~" + userCtx.name +":")) {
                 throw ({forbidden: 'Only the owner of a poll document _id may create it.'});
             }
             // if it already exists, let noone update or delete it:

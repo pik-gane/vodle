@@ -297,10 +297,10 @@ export class DataService {
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
       this.G.L.trace("DataService found empty email or password, redirecting to login page.");
+      this.hide_loading();
       if (!this.router.url.includes('/login')) {
         this.navCtrl.navigateForward((this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before');
       }
-      this.hide_loading();
     } else {
       this.email_and_password_exist();
     }
@@ -319,7 +319,11 @@ export class DataService {
     // check if db credentials are set:
     if (this.extract_user_db_credentials()) {
       // connect to remote and start sync:
-      this.connect_to_remote_user_db().catch(err => {
+      this.connect_to_remote_user_db().then(success => {
+        if (this.router.url.includes('/login')) {
+          this.navCtrl.navigateForward('/login/connected');
+        }  
+      }).catch(err => {
         this.G.L.trace("DataService could not connect to remote user db, redirecting to login page.");
         // TODO: show login page at database prompt
       });
@@ -473,6 +477,17 @@ export class DataService {
     this.G.L.exit("DataService.local_user_docs2cache_finished");
   }
 
+  // HOOKS FOR PAGES:
+
+  public login_submitted() {
+    // called by login page when all necessary login information was submitted on the login page
+    this.show_loading();
+    if ((this.user_cache['db']||'')=='') {
+      this.G.S.db = 'central';
+    }
+    this.email_and_password_exist();
+  }
+
   // REMOTE CONNECTION METHODS:
 
   private get_remote_connection(server_url:string, public_password:string,
@@ -575,7 +590,7 @@ export class DataService {
         });
       }).catch(err => {
         // try generating new doc:
-        conn.put({_id:_id, val:value}).then(response => {
+        conn.put({_id:_id, value:value}).then(response => {
           resolve(true);
         }).catch(err => {
           reject(err);
@@ -750,6 +765,7 @@ export class DataService {
     // since the previous operation might take some time,
     // only actually present the animation if data is not yet ready:
     if (this._loading && !this._ready) {
+      // FIXME: why is the loadingElement not always dismissed?
       // await this.loadingElement.present();     
     }
     if (!this._loading) this.hide_loading();

@@ -23,8 +23,9 @@
     "retype-password": "Retype password",
     "select-cancel": "Cancel",
     "server": "Server",
-    "skip": "Skip",
     "show": "Show",
+    "skip": "Skip",
+    "start": "Start",
     "test": "Test",
     "yes": "Yes",
 
@@ -119,7 +120,8 @@
         "ask-old-email-2": "This way you can access your existing data.",
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them.",
-        "ask-old-password": "Please enter your existing vodle password."
+        "ask-old-password": "Please enter your existing vodle password.",
+        "ready-to-start": "OK, have fun with vodle!"
     },
 
     "mypolls": {

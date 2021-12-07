@@ -10,6 +10,12 @@
   </ion-toolbar>
 </ion-header>
 <!--
+
+TODO:
+  - hitting enter should submit
+  - centralize logo
+
+
 - if no conn. info in local db:
   - apparently user new on this device. ask if has used vodle before
     - if no: ask for new conn. info, try to connect as public user
@@ -172,7 +178,8 @@
               <ion-input 
                 formControlName="confirm_password" 
                 #retype_password 
-                [type]="showing_password?'text':'password'" required>
+                [type]="showing_password?'text':'password'" required
+                (ionChange)="set_password()">
               </ion-input>
             </ion-item>
             <div class="validation-errors">
@@ -213,7 +220,7 @@
                 <ion-input 
                   formControlName="password"
                   [type]="showing_password?'text':'password'" required
-                  (ionChange)="set_password()">
+                  (ionChange)="set_old_password()">
                 </ion-input>
               </ion-item>
             </ion-col>
@@ -243,6 +250,23 @@
             shape="round"
             (click)="submit_old_password()">
           <span [innerHtml]="'next'|translate"></span>
+          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ng-container>
+
+    <ng-container *ngIf="step=='connected'">
+      <ion-item class="item-text-wrap" lines="none">
+        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
+      </ion-item>
+      <ion-item lines="none">
+        <p><br/><br/><br/></p>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-button size="larger" color="primary" slot="end"
+            shape="round"
+            (click)="connected_dismissed()">
+          <span [innerHtml]="'start'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>

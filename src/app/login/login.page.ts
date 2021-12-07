@@ -58,7 +58,9 @@ export class LoginPage implements OnInit {
     this.route.params.subscribe(params => { 
       var step = this.step = params['step'] || 'start';
       this.G.L.info("LoginPage going to step", step);
-      if (['start','language','used_before','fresh_email','old_email','fresh_password','old_password'].includes(step)) {
+      if (['start','language','used_before',
+           'fresh_email','old_email','fresh_password','old_password',
+           'connected'].includes(step)) {
         this.ready = true;  // here we do not need to wait for DataService since we need no data. 
       }
     });
@@ -102,6 +104,11 @@ export class LoginPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("LoginPage.ionViewDidEnter");
+    // browser might have prefilled fields, so check this:
+    this.set_language();
+    this.set_email();
+    this.set_password();
+    this.set_old_password();
     if (this.G.D.ready && !this.ready) this.onDataReady();
   }
 
@@ -134,6 +141,11 @@ export class LoginPage implements OnInit {
     let fg = this.passwordFormGroup.get('pw');
     if (fg.valid) this.G.S.password = fg.get('password').value; 
   }
+  set_old_password() {
+    let fg = this.oldPasswordFormGroup.get('pw');
+    if (fg.valid) this.G.S.password = fg.get('password').value; 
+  }
+
 
   submit_language() {
     this.navCtrl.navigateForward('/login/used_before');
@@ -157,10 +169,17 @@ export class LoginPage implements OnInit {
 
   submit_new_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
+    this.G.D.login_submitted();
   }
 
   submit_old_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
+    this.G.D.login_submitted();
+  }
+
+  connected_dismissed() {
+    // TODO: redirect to page we came from, or mypolls:
+    this.navCtrl.navigateForward('/mypolls');
   }
 
 }

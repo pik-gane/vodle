@@ -16,8 +16,8 @@
       <ion-select interface="popover" formControlName="db_from_pid" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
           style="font-size: smaller;"
           (ionChange)="set_db_from_pid()">
-        <ng-container *ngFor="let pid of Object.keys(g.polls)">
-          <ion-select-option *ngIf="pid!=g.openpoll.pid" [value]="pid">{{g.polls[pid].title}}</ion-select-option>
+        <ng-container *ngFor="let pid of Object.keys(G.polls)">
+          <ion-select-option *ngIf="pid!=G.openpoll.pid" [value]="pid">{{G.polls[pid].title}}</ion-select-option>
         </ng-container>
       </ion-select>
     </ion-item>
@@ -28,26 +28,26 @@
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-server-url'|translate}}</ion-label>
-      <ion-input style="font-size: smaller;" type="text" formControlName="db_server_url" required
-        (ionChange)="set_db_server_url()"></ion-input>
+      <ion-input style="font-size: smaller;" type="text" formControlName="db_other_server_url" required
+        (ionChange)="set_db_other_server_url()"></ion-input>
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_server_url">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_server_url').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_server_url').dirty || selectServerFormGroup.get('db_server_url').touched)">
+      <ng-container *ngFor="let validation of validation_messages.db_other_server_url">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_other_server_url').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_other_server_url').dirty || selectServerFormGroup.get('db_other_server_url').touched)">
           {{ validation.message|translate }}
         </div>
       </ng-container>
     </div>
     <ion-item>
       <ion-label position="floating" color="primary">{{'db-pw'|translate}}</ion-label>
-      <ion-input style="font-size: smaller;" [type]="showing_db_password?'text':'password'" 
+      <ion-input style="font-size: smaller;" [type]="showing_db_other_password?'text':'password'" 
         formControlName="db_other_password" required
-        (keydown.enter)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
-        (keydown.tab)="showing_db_password=selectServerFormGroup.get('db_password').valid?false:showing_db_password;blur()"
-        (ionChange)="set_db_password()"></ion-input>
-      <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_password=!showing_db_password">
-        <ion-icon tabindex="-1" [name]="showing_db_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{(showing_db_password?'hide':'show')|translate}}
+        (keydown.enter)="showing_db_other_password=selectServerFormGroup.get('db_other_password').valid?false:showing_db_other_password;blur()"
+        (keydown.tab)="showing_db_other_password=selectServerFormGroup.get('db_other_password').valid?false:showing_db_other_password;blur()"
+        (ionChange)="set_db_other_password()"></ion-input>
+      <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_other_password=!showing_db_other_password">
+        <ion-icon tabindex="-1" [name]="showing_db_other_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;{{(showing_db_other_password?'hide':'show')|translate}}
       </ion-button>      
     </ion-item>
     <div class="validation-errors">

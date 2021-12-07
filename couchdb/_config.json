@@ -1,7 +1,7 @@
 {
   "httpd": {
     "enable_cors": true,
-    "WWW-Authenticate": "Other realm=\"app\""
+    "WWW-Authenticate": "Basic realm=\"app\"", "-comment": "Basic or Other"
   },
   "chttpd": {
     "require_valid_user": true

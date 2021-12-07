@@ -12,7 +12,7 @@ export class SelectServerComponent implements OnInit {
 
   public Object = Object;
 
-  showing_db_password: boolean;
+  showing_db_other_password: boolean;
 
   @Input() page: string; // the name of that page provided in its template
   @Input() page_object; // the name of that page provided in its template
@@ -32,7 +32,7 @@ export class SelectServerComponent implements OnInit {
       db_other_server_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
       db_other_password: new FormControl('', Validators.required), // TODO: validator?
     });
-    this.showing_db_password = false;
+    this.showing_db_other_password = false;
     if (this.page_object) {
       this.page_object.onSelectServerReady(this);
     }

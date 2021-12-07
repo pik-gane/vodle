@@ -23,8 +23,9 @@
     "retype-password": "Passwort wiederholen",
     "select-cancel": "Abbrechen",
     "server": "Server",
-    "skip": "Überspringen",
     "show": "Anzeigen",
+    "skip": "Überspringen",
+    "start": "Los",
     "test": "Testen",
     "yes": "Ja",
 
@@ -119,7 +120,8 @@
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann.",
-        "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein."
+        "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
+        "ready-to-start": "OK, viel Spaß mit vodle!"
     },
 
     "mypolls": {
