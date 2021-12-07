@@ -138,7 +138,7 @@ function decrypt(value:string, password:string): string {
 }
 function myhash(what): string {
   // we use Blake2s since it is fast and more reliable than MD5
-  const blake2s = new BLAKE2s(32);
+  const blake2s = new BLAKE2s(environment.data_service.hash_n_bytes); // 16? 32?
   blake2s.update(new Uint8Array(what.toString())); 
   return blake2s.hexDigest()
 }
@@ -609,6 +609,7 @@ export class DataService {
       let email_and_pw_hash = this.email_and_pw_hash();
       this.G.L.debug("DataService.start_user_sync starting filtered sync");
       this.local_synced_user_db.sync(this.remote_user_db, {
+        since: 0,
         live: true,
         retry: true,
         include_docs: true,
@@ -617,12 +618,12 @@ export class DataService {
           && doc._id < user_doc_id_prefix + email_and_pw_hash + ';'   // ';' is the ASCII character after ':'
         ),
       }).on('change', this.handle_user_db_change.bind(this)
-      ).on('paused', info => {
+      ).on('paused', () => {
         // replication was paused, usually because of a lost connection
-        this.G.L.info("DataService pausing user data syncing", info);
-      }).on('active', info => {
+        this.G.L.info("DataService pausing user data syncing");
+      }).on('active', () => {
         // replication was resumed
-        this.G.L.info("DataService resuming user data syncing", info);
+        this.G.L.info("DataService resuming user data syncing");
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
         this.G.L.error("denied, "+err);
@@ -648,6 +649,7 @@ export class DataService {
       let email_and_pw_hash = this.email_and_pw_hash();
       this.G.L.debug("DataService.start_poll_sync starting filtered sync");
       this.local_poll_dbs[pid].sync(this.remote_poll_dbs[pid], {
+        since: 0,
         live: true,
         retry: true,
         include_docs: true,
@@ -695,23 +697,6 @@ export class DataService {
     this.G.L.trace("DataService.getu "+key+": "+value);
     return value;
   }
-  public getp(p:Poll, key:string):string {
-    // get poll data item
-    let pid = p.pid;
-    var value = null;
-    if (p.state == 'draft') {
-      // draft polls' data is stored in user's database:
-      let ukey = "poll." + pid + '.' + key;
-      value = this.user_cache[ukey] || '';
-      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
-    } else {
-      // other polls' data is stored in poll's own database:
-      this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][key] || '';
-      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
-    }
-    return value;
-  }
   public setu(key:string, value:string) {
     // set user data item
     value = value || '';
@@ -734,22 +719,38 @@ export class DataService {
     }
     return this.store_user_data(key, value);
   }
-  public setp(p:Poll, key:string, value:string) {
-    // set poll data item
-    value = value || '';
+
+  private pid_is_draft(pid):boolean {
+    return this.user_cache['poll.'+pid+'.state'] == 'draft';
+  } 
+  public getp(p:Poll, key:string):string {
+    // get poll data item
     let pid = p.pid;
-    if (p.state == 'draft') {
+    var value = null;
+    if (this.pid_is_draft(pid)) {
       // draft polls' data is stored in user's database:
       let ukey = "poll." + pid + '.' + key;
-      this.user_cache[ukey] = value;
-      this.G.L.trace("DataService.setu p."+pid+'.'+key+": "+value);
-      return this.store_user_data(ukey, value);
+      value = this.user_cache[ukey] || '';
+      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
-      this.poll_caches[pid][key] = value;
-      this.G.L.trace("DataService.setp "+pid+':'+key+": "+value);
-      return this.store_poll_data(pid, key, value);
+      value = this.poll_caches[pid][key] || '';
+      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
+    }
+    return value;
+  }
+  public setp(p:Poll, key:string, value:string) {
+    // set poll data item
+    let pid = p.pid;
+    if (this.pid_is_draft(pid)) {
+      value = value || '';
+      let ukey = "poll." + pid + '.' + key;
+      this.user_cache[ukey] = value;
+      this.G.L.trace("DataService.setu poll."+pid+'.'+key+": "+value);
+      return this.store_user_data(ukey, value);
+    } else {
+      this.G.L.error("DataService.setp attempted for non-draft poll "+p.pid+'.'+key+": "+value);
     }
   }
 

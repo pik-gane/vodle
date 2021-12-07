@@ -36,11 +36,11 @@ export class DraftpollPage implements OnInit {
   advanced_expanded: boolean;
   private ref_date: Date;
 
-  // poll data:
+  // draft poll data:
 
   pd: { 
     pid?,
-    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_username?, db_password?,
+    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_password?,
     options?: option_data_t[] 
   };
   get n_options() { return (this.pd.options||[]).length; }
@@ -101,7 +101,7 @@ export class DraftpollPage implements OnInit {
         this.pd = { 
           pid:p.pid,
           type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due:p.due, 
-          db:p.db, db_from_pid:p.db_from_pid, db_url:p.db_url, db_username:p.db_username, db_password:p.db_password,
+          db:p.db, db_from_pid:p.db_from_pid, db_url:p.db_url, db_password:p.db_password,
           options: [] 
         };
         for (let [oid, o] of Object.entries(p.options)) {
@@ -158,7 +158,7 @@ export class DraftpollPage implements OnInit {
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
-    if (['',null,undefined].includes(this.pd.title)) {
+    if ((this.pd.title||'')=='') {
       this.G.L.info("DraftpollPage not saving empty title draft");
       // TODO: notify of deleted draft
     } else {
@@ -182,12 +182,11 @@ export class DraftpollPage implements OnInit {
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
       p.db_url = this.pd.db_url;
-      p.db_username = this.pd.db_username;
       p.db_password = this.pd.db_password;
       let oids = [];
       for (let od of this.pd.options) {
-        if (!['',null,undefined].includes(od.name)) {
-          var o;
+        if ((od.name||'')!='') {
+          var o: Option;
           if (!od.oid) {
             od.oid = this.G.P.generate_oid(this.pid);
           }
@@ -272,9 +271,6 @@ export class DraftpollPage implements OnInit {
   }
   set_db_url(value: string) {
     this.pd.db_url = value;
-  }
-  set_db_username(value: string) {
-    this.pd.db_username = value;
   }
   set_db_password(value: string) {
     this.pd.db_password = value;

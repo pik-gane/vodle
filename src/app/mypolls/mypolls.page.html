@@ -23,8 +23,8 @@
     <ion-item color="primary">
       <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
-    <ng-container *ngFor="let p of Object.values(G.P.running_polls)">
-      <ion-item [routerLink]="'/poll/'+p.pid">
+    <ng-container *ngFor="let p of Object.values(G.P.polls)">
+      <ion-item *ngIf="p.state=='running'" [routerLink]="'/poll/'+p.pid">
         <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
         <b><i>{{p.title}}</i></b>
       </ion-item>
@@ -38,8 +38,8 @@
     <ion-item color="primary">
       <ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
     </ion-item>
-    <ng-container *ngFor="let p of Object.values(G.P.closed_polls)">
-      <ion-item [routerLink]="'/poll/'+p.pid">
+    <ng-container *ngFor="let p of Object.values(G.P.polls)">
+      <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid">
         <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
         <i>{{p.title}}</i>
       </ion-item>
@@ -72,8 +72,8 @@
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="drafts_expanded">
-      <ng-container *ngFor="let p of Object.values(G.P.draft_polls)">
-        <ion-item [routerLink]="'/draftpoll/'+p.pid">
+      <ng-container *ngFor="let p of Object.values(G.P.polls)">
+        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
           <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i>{{p.title}}</i>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="light" slot="end">Draft</ion-badge>

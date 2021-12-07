@@ -14,7 +14,8 @@ export const environment = {
   },
   data_service: {
     central_db_server_url: "http://localhost:5984/",
-    central_db_password: "none"
+    central_db_password: "none",
+    hash_n_bytes: 8
   }
 };
 
