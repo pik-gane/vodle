@@ -126,10 +126,13 @@
 
     "mypolls": {
         "-page-title": "My polls",
-        "drafts": "Drafts",
         "running": "Running",
+        "no-running-polls": "Currently, vodle knows of no running polls that you can vote in.<br/><small>If you have received an invitation to a poll, please click the link in the invitation!</small>",
         "recently-closed": "Closed",
-        "older": "Older"
+        "no-recently-closed-polls": "Vodle knows of no closed polls that you have voted in.<br/><small>If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.</small>",
+        "older": "Older",
+        "drafts": "Drafts",
+        "no-draft-polls": "Currently, you have no polls drafted.<br/><small>To start or draft a new poll, click the '+' button below!</small>"
     },
 
     "select-server": {

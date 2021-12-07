@@ -126,10 +126,13 @@
 
     "mypolls": {
         "-page-title": "Meine Abstimmungen",
-        "drafts": "Entwürfe",
         "running": "Noch offen",
-        "recently-closed": "Kürzlich abgeschlossen",
-        "older": "Älter"
+        "no-running-polls": "Momentan kennt vodle keine offenen Abstimmungen, in denen Du teilnehmen kannst.<br/><small>Wenn Du eine Einladung zu einer Abstimmung erhalten hast, klick bitte auf den Link in der Einladung!</small>",
+        "recently-closed": "Abgeschlossen",
+        "no-recently-closed-polls": "Vodle kennt keine abgeschlossenen Abstimmungen, in denen Du teilgenommen hast.<br/><small>Wenn Du eine alte Einladung zu einer bereits abgeschlossenen Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.</small>",
+        "older": "Älter",
+        "drafts": "Entwürfe",
+        "no-draft-polls": "Momentan hast Du keine Abstimmungen entworfen.<br/><small>Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!</small>"
     },
 
     "select-server": {

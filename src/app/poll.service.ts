@@ -26,6 +26,39 @@ export class PollService {
 
   public polls: Record<string, Poll> = {};
 
+  public get running_polls() {
+    let res: Record<string, Poll> = {};
+    for (let pid in this.polls) {
+      let p = this.polls[pid];
+      if (p.state=='running') {
+        res[p.pid] = p;
+      }
+    }
+    return res;
+  }
+
+  public get closed_polls() {
+    let res: Record<string, Poll> = {};
+    for (let pid in this.polls) {
+      let p = this.polls[pid];
+      if (p.state=='closed') {
+        res[p.pid] = p;
+      }
+    }
+    return res;
+  }
+
+  public get draft_polls() {
+    let res: Record<string, Poll> = {};
+    for (let pid in this.polls) {
+      let p = this.polls[pid];
+      if (p.state=='draft') {
+        res[p.pid] = p;
+      }
+    }
+    return res;
+  }
+
   // TODO: store these two in D!
   private unused_pids: string[] = [];
   private unused_oids: string[][] = [];
