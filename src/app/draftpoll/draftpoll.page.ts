@@ -89,10 +89,10 @@ export class DraftpollPage implements OnInit {
   }
 
   onDataReady() {
-    // called when DataService initialization was slower than view initialization
     this.G.L.entry("DraftpollPage.onDataReady");
     if (!this.pid) {
       this.G.L.info("DraftpollPage editing new draft");
+      this.stage = 0;
     } else if (this.pid in this.G.P.polls) {
       if (this.G.P.polls[this.pid].state == 'draft') {
         this.G.L.info("DraftpollPage editing existing draft", this.pid);
@@ -104,9 +104,10 @@ export class DraftpollPage implements OnInit {
           db:p.db, db_from_pid:p.db_from_pid, db_url:p.db_url, db_password:p.db_password,
           options: [] 
         };
+        this.stage = !(!!p.due)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
         for (let [oid, o] of Object.entries(p.options)) {
           this.pd.options.push({ oid:oid, name:o.name, desc:o.desc, url:o.url });
-          this.stage = 5;
+          this.stage = 6;
           this.option_stage = 10;
         }
       } else {
@@ -117,7 +118,6 @@ export class DraftpollPage implements OnInit {
     }
     this.expanded = Array<boolean>(this.n_options);
     this.advanced_expanded = false;
-    this.stage = this.pd.type?1:0;
     // fill form:
     if (this.pd) {
       this.formGroup.setValue({ 
@@ -154,7 +154,6 @@ export class DraftpollPage implements OnInit {
     // called by SelectServerComponent is ready
     this.select_server = select_server;
   }
-
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
@@ -209,6 +208,7 @@ export class DraftpollPage implements OnInit {
         }
       }
     }
+    this.G.L.exit("DraftpollPage.ionViewWillLeave");
   }
 
   // OTHER HOOKS:

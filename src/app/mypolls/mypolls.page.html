@@ -76,11 +76,11 @@
         <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
           <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i>{{p.title}}</i>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="light" slot="end">Draft</ion-badge>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="light" slot="end" [innerHtml]="'badges.draft'|translate"></ion-badge>
+<!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Closing soon</ion-badge>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Abstaining</ion-badge>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="red" slot="end">Closing soon</ion-badge><!--and abstaining-->
+          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="red" slot="end">Closing soon</ion-badge>-->
           <ion-button slot="end" fill="clear">
             <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
           </ion-button>

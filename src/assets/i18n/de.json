@@ -33,6 +33,14 @@
         "-page-title": "Über vodle"
     },
     
+    "badges": {
+        "abstaining": "Enthaltung",
+        "closing-soon": "schließt bald",
+        "delegated": "delegiert",
+        "draft": "Entwurf",
+        "new": "Neu"
+    },
+
     "draftpoll": {
         "-page-title": "Abstimmungs-Entwurf bearbeiten",
         "general-information": "Allgemeine Daten",

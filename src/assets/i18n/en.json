@@ -33,6 +33,14 @@
         "-page-title": "About vodle"
     },
 
+    "badges": {
+        "abstaining": "Abstaining",
+        "closing-soon": "Closing soon",
+        "delegated": "Delegated",
+        "draft": "Draft",
+        "new": "New"
+    },
+
     "draftpoll": {
         "-page-title": "Edit draft poll",
         "general-information": "General information",

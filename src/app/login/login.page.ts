@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from "@angular/router";
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { NavController } from '@ionic/angular';
+import { NavController, IonInput } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 
@@ -43,6 +43,11 @@ export class LoginPage implements OnInit {
 
   showing_password: boolean;
   advanced_expanded: boolean;
+
+  @ViewChild('input_email', { static: false }) input_email: IonInput;
+  @ViewChild('input_new_password', { static: false }) input_new_password: IonInput;
+  @ViewChild('input_retype_password', { static: false }) retype_password: IonInput;
+  @ViewChild('input_old_password', { static: false }) input_old_password: IonInput;
 
   // LIFECYCLE:
 
@@ -100,6 +105,7 @@ export class LoginPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("LoginPage.ionViewWillEnter");
     this.G.D.page = this;
+    setTimeout(() => (this.input_email||this.input_new_password||this.input_old_password).setFocus(), 300);
   }
 
   ionViewDidEnter() {
@@ -160,21 +166,27 @@ export class LoginPage implements OnInit {
   }
 
   submit_email() {
-    if (this.step == 'fresh_email') {
-      this.navCtrl.navigateForward('/login/fresh_password');
-    } else {
-      this.navCtrl.navigateForward('/login/old_password');
+    if (this.emailFormGroup.get('email').valid) {
+      if (this.step == 'fresh_email') {
+        this.navCtrl.navigateForward('/login/fresh_password');
+      } else {
+        this.navCtrl.navigateForward('/login/old_password');
+      }
     }
   }
 
   submit_new_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
-    this.G.D.login_submitted();
+    if (this.passwordFormGroup.get('pw').valid) {
+      this.G.D.login_submitted();
+    }
   }
 
   submit_old_password() {
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
-    this.G.D.login_submitted();
+    if (this.oldPasswordFormGroup.get('pw').valid) {
+      this.G.D.login_submitted();
+    }
   }
 
   connected_dismissed() {

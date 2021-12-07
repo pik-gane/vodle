@@ -842,11 +842,15 @@ export class DataService {
         value_changed = true;
       }
       this.G.L.trace("DataService.doc2user_cache "+key+": "+value);
-      if (key.startsWith('poll.') && key.endsWith('.poll_id')) {
-        let pid = value;
+      if (key.startsWith('poll.') && key.endsWith('.state')) {
+        let pid = key.slice('poll.'.length, key.length - '.state'.length), state = value;
         if (!this._pids.has(pid)) {
-          this.start_poll_initialization(pid);
-          initializing_poll = true;
+          if (state == 'draft') {
+            this._pids.add(pid);
+          } else {
+            this.start_poll_initialization(pid);
+            initializing_poll = true;
+          }
         }
       }
     } else {

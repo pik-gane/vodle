@@ -104,10 +104,11 @@ TODO:
             <ion-col class="ion-no-padding">
               <ion-item>
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
-                <ion-input 
+                <ion-input #input_email
                   formControlName="email" 
-                  type="text" inputmode="email" required
-                  (ionChange)="set_email()">
+                  type="text" inputmode="email" required autofocus="true"
+                  (ionChange)="set_email()"
+                  (keydown.enter)="submit_email()">
                 </ion-input>
               </ion-item>
             </ion-col>
@@ -149,9 +150,9 @@ TODO:
             <ion-col class="ion-no-padding">
               <ion-item>
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-                <ion-input 
+                <ion-input #input_new_password
                   formControlName="password"
-                  [type]="showing_password?'text':'password'" required
+                  [type]="showing_password?'text':'password'" required autofocus="true"
                   (ionChange)="set_password()">
                 </ion-input>
               </ion-item>
@@ -179,7 +180,8 @@ TODO:
                 formControlName="confirm_password" 
                 #retype_password 
                 [type]="showing_password?'text':'password'" required
-                (ionChange)="set_password()">
+                (ionChange)="set_password()"
+                (keydown.enter)="submit_new_password()">
               </ion-input>
             </ion-item>
             <div class="validation-errors">
@@ -217,10 +219,11 @@ TODO:
             <ion-col class="ion-no-padding">
               <ion-item>
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-                <ion-input 
+                <ion-input #input_old_password
                   formControlName="password"
-                  [type]="showing_password?'text':'password'" required
-                  (ionChange)="set_old_password()">
+                  [type]="showing_password?'text':'password'" required autofocus="true"
+                  (ionChange)="set_old_password()"
+                  (keydown.enter)="submit_old_password()">
                 </ion-input>
               </ion-item>
             </ion-col>
