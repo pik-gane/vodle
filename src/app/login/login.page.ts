@@ -105,11 +105,19 @@ export class LoginPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("LoginPage.ionViewWillEnter");
     this.G.D.page = this;
-    setTimeout(() => (this.input_email||this.input_new_password||this.input_old_password).setFocus(), 300);
+    setTimeout(() => {
+      var el = this.input_email||this.input_new_password||this.input_old_password;
+      if (el) {
+        el.setFocus();
+      }
+    }, 300);
   }
 
   ionViewDidEnter() {
     this.G.L.entry("LoginPage.ionViewDidEnter");
+    var default_lang = navigator.language.slice(0,2);
+    this.languageFormGroup.get('language').setValue(
+      this.G.S.language||((this.translate.langs.includes(default_lang))?default_lang:''));
     // browser might have prefilled fields, so check this:
     this.set_language();
     this.set_email();
