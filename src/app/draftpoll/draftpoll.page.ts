@@ -220,6 +220,10 @@ export class DraftpollPage implements OnInit {
     this.G.L.exit("DraftpollPage.ionViewWillLeave");
   }
 
+  ionViewDidLeave() {
+    this.ready = false; // so that when returning, onDataReady will again be triggered
+  }
+
   // OTHER HOOKS:
 
   // for DataService:
