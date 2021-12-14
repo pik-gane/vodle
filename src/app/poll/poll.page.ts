@@ -1,6 +1,7 @@
 import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
+import { Router } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { NavController, LoadingController, IonContent } from '@ionic/angular';
+import { LoadingController, IonContent } from '@ionic/angular';
 import { AlertController } from '@ionic/angular'; 
 
 import { GlobalService, Poll } from "../global.service";
@@ -47,12 +48,13 @@ export class PollPage implements OnInit {
   public rate_yourself_toggle: Record<string, boolean> = {};
   public n_delegated = 0;
 
-  constructor(public navCtrl: NavController, 
-              public loadingController: LoadingController,
-              public alertCtrl: AlertController,
-              public translate: TranslateService,
-              private zone: NgZone,
-              public G: GlobalService) {
+  constructor(
+      private router: Router,
+      public loadingController: LoadingController,
+      public alertCtrl: AlertController,
+      public translate: TranslateService,
+      private zone: NgZone,
+      public G: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
       this.zone.run(() => {
         console.log('force update the screen');
@@ -64,9 +66,11 @@ export class PollPage implements OnInit {
   ngOnInit() {
     let p = this.p = this.G.openpoll;
     if (!this.p) {
-      this.navCtrl.navigateRoot("/");
+      this.router.navigate(["/"]);
       return;
     }
+  }
+  ionViewWillEnter() {
     this.do_updates = true;
     this.loopUpdate();
     this.p.tally();
@@ -78,14 +82,6 @@ export class PollPage implements OnInit {
       this.rate_yourself_toggle[oid] = false;
     }
     this.onDelegateToggleChange()
-  }
-  ionViewWillEnter() {
-    if (this.G.username=='') {
-      alert("Please enter a your username first!");
-      this.navCtrl.navigateBack('/home');
-    } else { 
-      this.ngOnInit();
-    }
   }
   ionViewDidEnter() {
     this.G.D.page = this;
@@ -293,7 +289,7 @@ export class PollPage implements OnInit {
   closePoll() {
     if (confirm("really close the poll?")) {
       this.p.close();
-      this.navCtrl.navigateForward("/closedpoll");
+      this.router.navigate(["/closedpoll"]);
     }
   }
 

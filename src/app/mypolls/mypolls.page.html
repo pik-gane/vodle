@@ -27,6 +27,12 @@
       <ion-item *ngIf="p.state=='running'" [routerLink]="'/poll/'+p.pid">
         <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
         <b><i>{{p.title}}</i></b>
+        <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end" [innerHtml]="'badges.new'|translate"></ion-badge>
+        <ion-buttons *ngIf="can_invite(p)" slot="end">
+          <ion-button fill="clear" (click)="invite(p)">
+            <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-item>
     </ng-container>
     <ng-container *ngIf="Object.keys(G.P.running_polls).length==0">

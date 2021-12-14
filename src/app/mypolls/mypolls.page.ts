@@ -47,4 +47,15 @@ export class MypollsPage implements OnInit {
     this.ready = true;
   }
 
+  // user actions:
+
+  can_invite(p: Poll) {
+    // TODO: only author can invite? 
+    return true; 
+  }
+
+  invite(p: Poll) {
+    // TODO: go to invite page
+  }
+
 }

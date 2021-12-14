@@ -1,8 +1,8 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute } from "@angular/router";
+import { Router, ActivatedRoute } from "@angular/router";
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { NavController, IonInput } from '@ionic/angular';
+import { IonInput } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 
@@ -54,7 +54,7 @@ export class LoginPage implements OnInit {
   ready = false;  
 
   constructor(      
-      public navCtrl: NavController, 
+      private router: Router,
       public route: ActivatedRoute,
       public formBuilder: FormBuilder,
       public translate: TranslateService,
@@ -162,23 +162,23 @@ export class LoginPage implements OnInit {
 
 
   submit_language() {
-    this.navCtrl.navigateForward('/login/used_before');
+    this.router.navigate(['/login/used_before']);
   }
 
   ask_used_before_no() {
-    this.navCtrl.navigateForward('/login/fresh_email');
+    this.router.navigate(['/login/fresh_email']);
   }
 
   ask_used_before_yes() {
-    this.navCtrl.navigateForward('/login/old_email');
+    this.router.navigate(['/login/old_email']);
   }
 
   submit_email() {
     if (this.emailFormGroup.get('email').valid) {
       if (this.step == 'fresh_email') {
-        this.navCtrl.navigateForward('/login/fresh_password');
+        this.router.navigate(['/login/fresh_password']);
       } else {
-        this.navCtrl.navigateForward('/login/old_password');
+        this.router.navigate(['/login/old_password']);
       }
     }
   }
@@ -198,8 +198,8 @@ export class LoginPage implements OnInit {
   }
 
   connected_dismissed() {
-    // TODO: redirect to page we came from, or mypolls:
-    this.navCtrl.navigateForward('/mypolls');
+    // TODO: redirect to page we came from, or mypolls, and (?) remove login pages from router history? 
+    this.router.navigate(["/"]);
   }
 
 }

@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { ActivatedRoute } from "@angular/router";
+import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
 import { PopoverController, IonSelect, IonToggle, AlertController } from '@ionic/angular';
@@ -58,6 +58,7 @@ export class DraftpollPage implements OnInit {
   ready = false;  
 
   constructor(
+    private router: Router,
     private route: ActivatedRoute,
     public formBuilder: FormBuilder, 
     private popover: PopoverController,
@@ -337,7 +338,7 @@ export class DraftpollPage implements OnInit {
   }
 
   new_option() {
-    // TODO!
+    // TODO! (really?)
   }
   
   showkebap(event: Event) {
@@ -383,6 +384,15 @@ export class DraftpollPage implements OnInit {
 
   send4review() { 
     this.G.L.warn("DraftpollPage.send4review not yet implemented!");
+  }
+
+  // ready button:
+
+  ready_button_clicked() {
+    this.formGroup.get('poll_due').updateValueAndValidity();
+    if (this.formGroup.valid) {
+      this.router.navigate(['/previewpoll/'+this.pid]);
+    }
   }
 
   // OTHER METHODS:

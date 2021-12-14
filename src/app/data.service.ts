@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, NavController } from '@ionic/angular';
+import { LoadingController } from '@ionic/angular';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
@@ -189,7 +189,6 @@ export class DataService {
 
   constructor(
     private router: Router,
-    public navCtrl: NavController, 
     public loadingController: LoadingController,
     public translate: TranslateService,
   ) { }
@@ -299,7 +298,7 @@ export class DataService {
       this.G.L.trace("DataService found empty email or password, redirecting to login page.");
       this.hide_loading();
       if (!this.router.url.includes('/login')) {
-        this.navCtrl.navigateForward((this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before');
+        this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before']);
       }
     } else {
       this.email_and_password_exist();
@@ -321,7 +320,7 @@ export class DataService {
       // connect to remote and start sync:
       this.connect_to_remote_user_db().then(success => {
         if (this.router.url.includes('/login')) {
-          this.navCtrl.navigateForward('/login/connected');
+          this.router.navigate(['/login/connected']);
         }  
       }).catch(err => {
         this.G.L.trace("DataService could not connect to remote user db, redirecting to login page.");

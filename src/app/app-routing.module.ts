@@ -52,7 +52,7 @@ const routes: Routes = [
     loadChildren: () => import('./draftpoll-kebap/draftpoll-kebap.module').then( m => m.DraftpollKebapPageModule)
   },
   {
-    path: 'previewpoll',
+    path: 'previewpoll/:pid',
     loadChildren: () => import('./previewpoll/previewpoll.module').then( m => m.PreviewpollPageModule)
   },
   {
