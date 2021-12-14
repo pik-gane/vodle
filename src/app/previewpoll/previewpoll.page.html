@@ -25,7 +25,7 @@
         <p>
           <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>
           <ion-text *ngIf="(p.url||'')!=''">
-            (<a [href]="p.url" target="_blank" rel="noopener noreferrer">
+            &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
                 <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
               </a>)
           </ion-text>            
@@ -36,13 +36,13 @@
     </ion-item>
     <ion-item *ngFor="let o of Object.values(p.options)">
       <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b><i [innerHtml]="o.name"></i></b></h4>
+        <ion-text color="primary"><h4><b><i [innerHtml]="o.name"></i></b></h4></ion-text>
         <p>
           <ion-text *ngIf="(o.desc||'')!=''" color="primary"><i [innerHtml]="o.desc"></i></ion-text>
           <ion-text *ngIf="(o.url||'')!=''">
-            <small>(<a [href]="o.url" target="_blank" rel="noopener noreferrer">
+            &nbsp;(<a [href]="G.D.fix_url(o.url)" target="_blank" rel="noopener noreferrer">
               <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-            </a>)</small>
+            </a>)
           </ion-text>            
         </p>
       </ion-col>
