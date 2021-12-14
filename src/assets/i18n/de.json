@@ -19,7 +19,6 @@
     "options": "Optionen",
     "password": "Passwort",
     "possible-targets": "Mögliche Ziele",
-    "publish": "Abstimmung jetzt starten",
     "read-more": "mehr lesen",
     "ready": "Bereit",
     "retype-password": "Passwort wiederholen",
@@ -147,7 +146,11 @@
 
     "previewpoll": {
         "-page-title": "Bitte prüfen",
-        "closes": "Schließt"
+        "caution1": "Sobald die Abstimmung startet, kannst Du die obigen Angaben nicht mehr ändern. Allerdings können Du und die anderen Teilnehmer:innen jederzeit weitere Optionen hinzufügen.",
+        "caution2": "Die Teilnehmer:innen können bis zur festgelegten Schlusszeit abstimmen und Optionen hinzufügen, aber keine löschen. Dann wird die Abstimmung automatisch geschlossen. Einmal gestartet, kannst Du sie nicht mehr verkürzen oder verlängern.",
+        "closes": "Schließt",
+        "publish": "Abstimmung jetzt starten",
+        "type-label": "In dieser Abstimmung wird die Gruppe"
     },
 
     "publishpoll": {

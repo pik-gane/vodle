@@ -34,7 +34,7 @@ export class DraftpollPage implements OnInit {
   option_stage: number;
   expanded: Array<boolean>;
   advanced_expanded: boolean;
-  private ref_date: Date;
+  ref_date: Date;
 
   // draft poll data:
 
@@ -299,6 +299,7 @@ export class DraftpollPage implements OnInit {
     } else if (this.formGroup.get('option_name'+i).valid && i==this.n_options-1) {
       this.next_option(i);
     }
+    this.G.L.trace("blur_option_name", d, this.option_stage);
   }
 
   blur_option_url(i: number) {
@@ -341,14 +342,15 @@ export class DraftpollPage implements OnInit {
   } 
 
   no_more() {
-    if (this.formGroup.get('option_name'+(this.n_options-1)).value=='') {
+    if ((this.formGroup.get('option_name'+(this.n_options-1)).value||'')=='') {
       this.option_stage = 10;
       this.del_option(this.n_options-1);
     }
   }
 
   new_option() {
-    // TODO! (really?)
+    this.option_stage = 0;
+    this.add_option({});
   }
   
   showkebap(event: Event) {

@@ -10,26 +10,52 @@
 <ion-content *ngIf="ready && (p!=null)">
   <ion-list lines="full">
     <ion-item>
-      <ion-grid class="ion-no-padding ion-no-margin">
-        <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
-            <h3><b><i [innerHtml]="p.title"></i></b></h3>
-            <p>
-              <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>
-              <span *ngIf="(p.url||'')!=''">
-                <small>(<a [href]="p.url" target="_blank" rel="noopener noreferrer"
-                        [innerHtml]="'read-more'|translate"></a>)</small>
-              </span>            
-              <br *ngIf="((p.desc||'')!='')||((p.url||'')!='')"/>
-              <small>
-                <span [innerHtml]="'previewpoll.closes'|translate"></span>&nbsp;<span 
-                  [innerHtml]="(p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due)"></span>
-              </small>
-            </p>
-            <!--.toLocalDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })-->
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p>
+          <span style="position:relative;top:3px;z-index:10;">
+            <ion-icon 
+              [name]="p.type=='winner'?'trophy':'cut'"
+              style="color:black">
+            </ion-icon>&nbsp;
+          </span>
+          <ion-text [innerHtml]="'previewpoll.type-label'|translate"></ion-text>&nbsp;<ion-text color="primary"
+            [innerHtml]="'draftpoll.type-'+p.type|translate"></ion-text>
+        </p>
+        <ion-text color="primary"><h3><b><i [innerHtml]="p.title"></i></b></h3></ion-text>
+        <p>
+          <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>
+          <ion-text *ngIf="(p.url||'')!=''">
+            (<a [href]="p.url" target="_blank" rel="noopener noreferrer">
+                <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
+              </a>)
+          </ion-text>            
+          <br *ngIf="((p.desc||'')!='')||((p.url||'')!='')"/>
+          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="(p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due)"></ion-text>
+        </p>
+      </ion-col>
+    </ion-item>
+    <ion-item *ngFor="let o of Object.values(p.options)">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b><i [innerHtml]="o.name"></i></b></h4>
+        <p>
+          <ion-text *ngIf="(o.desc||'')!=''" color="primary"><i [innerHtml]="o.desc"></i></ion-text>
+          <ion-text *ngIf="(o.url||'')!=''">
+            <small>(<a [href]="o.url" target="_blank" rel="noopener noreferrer">
+              <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
+            </a>)</small>
+          </ion-text>            
+        </p>
+      </ion-col>
+    </ion-item>
+    <!--
+      TODO:
+      caution that no changes can be made or stopped once published
+    -->
+    <ion-item lines="none">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'previewpoll.caution1'|translate"></p> 
+        <p><small [innerHtml]="'previewpoll.caution2'|translate"></small></p> 
+      </ion-col>      
     </ion-item>
     <ion-item 
         lines="none" class="ion-text-end" text-wrap>
@@ -37,7 +63,7 @@
       <ion-button size="large" color="primary" slot="end" [disabled]="true" 
           shape="round"
           (click)="publish_button_clicked()">
-        <span [innerHtml]="'publish'|translate"></span>&nbsp;
+        <span [innerHtml]="'previewpoll.publish'|translate"></span>&nbsp;
         <ion-icon name="paper-plane"></ion-icon> <!--or name"send"?-->
       </ion-button>
     </ion-item>

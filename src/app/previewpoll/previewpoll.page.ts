@@ -12,6 +12,8 @@ import { Poll } from '../poll.service';
 })
 export class PreviewpollPage implements OnInit {
 
+  Object = Object;
+
   pid: string;
   p: Poll;
 

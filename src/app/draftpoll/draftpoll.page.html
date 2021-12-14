@@ -198,7 +198,8 @@
             tabindex="5" 
             pickerFormat="DD MMMM YYYY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
-            [min]="now().toISOString()"
+            [min]="ref_date.toISOString()"
+            (ionClick)="update_ref_date();"
             (ionChange)="set_poll_due();stage=max(stage,formGroup.get('poll_due').valid?6:0)"
             [dayNames]="'daynames-sunday-to-saturday'|translate"
             [monthNames]="'monthnames'|translate">
@@ -269,13 +270,13 @@
             (ionBlur)="blur_option_name(i, detailstoggle.checked)">
           </ion-input>      
           <ion-button 
-            *ngIf="i == n_options-1 && i > 1 && [null,''].includes(formGroup.get('option_name'+i).value)" 
+            *ngIf="i == n_options-1 && i > 1 && (formGroup.get('option_name'+i).value||'')==''" 
             [innerHtml]="'draftpoll.no-more-button'|translate"
             color="primary" slot="end" class="skip-button"
             (click)="no_more()">
           </ion-button>
           <ion-button 
-              *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && [null,''].includes(formGroup.get('option_name'+i).value))" 
+              *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && (formGroup.get('option_name'+i).value||'')=='')" 
               fill="clear" color="primary" slot="end" class="skip-button"
               (click)="del_option_dialog(i)">
             <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
