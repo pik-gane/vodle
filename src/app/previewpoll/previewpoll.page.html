@@ -1,9 +1,45 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-title>previewpoll</ion-title>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title [innerHtml]="'previewpoll.-page-title'|translate"></ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <ion-icon name="play-circle-outline"></ion-icon>
+<ion-content *ngIf="ready && (p!=null)">
+  <ion-list lines="full">
+    <ion-item>
+      <ion-grid class="ion-no-padding ion-no-margin">
+        <ion-row class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
+            <h3><b><i [innerHtml]="p.title"></i></b></h3>
+            <p>
+              <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>
+              <span *ngIf="(p.url||'')!=''">
+                <small>(<a [href]="p.url" target="_blank" rel="noopener noreferrer"
+                        [innerHtml]="'read-more'|translate"></a>)</small>
+              </span>            
+              <br *ngIf="((p.desc||'')!='')||((p.url||'')!='')"/>
+              <small>
+                <span [innerHtml]="'previewpoll.closes'|translate"></span>&nbsp;<span 
+                  [innerHtml]="(p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due)"></span>
+              </small>
+            </p>
+            <!--.toLocalDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })-->
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+    <ion-item 
+        lines="none" class="ion-text-end" text-wrap>
+      <!--TODO: disable if due is in the past by now-->
+      <ion-button size="large" color="primary" slot="end" [disabled]="true" 
+          shape="round"
+          (click)="publish_button_clicked()">
+        <span [innerHtml]="'publish'|translate"></span>&nbsp;
+        <ion-icon name="paper-plane"></ion-icon> <!--or name"send"?-->
+      </ion-button>
+    </ion-item>
+  </ion-list>
 </ion-content>

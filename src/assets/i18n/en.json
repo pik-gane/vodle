@@ -19,6 +19,8 @@
     "options": "Options",
     "password": "Password",
     "possible-targets": "Possible targets",
+    "publish": "Start the poll now",
+    "read-more": "read more",
     "ready": "Ready",
     "retype-password": "Retype password",
     "select-cancel": "Cancel",
@@ -141,6 +143,15 @@
         "older": "Older",
         "drafts": "Drafts",
         "no-draft-polls": "Currently, you have no polls drafted.<br/><small>To start or draft a new poll, click the '+' button below!</small>"
+    },
+
+    "previewpoll": {
+        "-page-title": "Please check",
+        "closes": "Closes"
+    },
+
+    "publishpoll": {
+        "-page-title": "Start the poll now?"
     },
 
     "select-server": {

@@ -132,6 +132,7 @@ export class Poll {
   public get state(): poll_state_t { return this.G.D.getu('poll.'+this._pid+'.state') as poll_state_t; }
   public set state(value: poll_state_t) {
     var old_state = this.state;
+    if (old_state==value) return;
     if ({
           '': ['draft'], 
           'draft':['running'], 
@@ -167,7 +168,11 @@ export class Poll {
 
   // Date objects are stored as ISO strings:
   public get due(): Date { return new Date(this.G.D.getp(this, 'due')); }
-  public set due(value: Date) { this.G.D.setp(this, 'due', value?value.toISOString():''); }
+  public set due(value: Date) { 
+    this.G.D.setp(this, 'due', 
+      // TODO: improve validity check already in form field!
+      ((value||'')!='') && (value.getTime() === value.getTime()) ? value.toISOString() : ''); 
+  }
 
   private _options: Record<string, Option> = {};
   public _add_option(o: Option) {

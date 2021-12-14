@@ -19,6 +19,8 @@
     "options": "Optionen",
     "password": "Passwort",
     "possible-targets": "Mögliche Ziele",
+    "publish": "Abstimmung jetzt starten",
+    "read-more": "mehr lesen",
     "ready": "Bereit",
     "retype-password": "Passwort wiederholen",
     "select-cancel": "Abbrechen",
@@ -141,6 +143,15 @@
         "older": "Älter",
         "drafts": "Entwürfe",
         "no-draft-polls": "Momentan hast Du keine Abstimmungen entworfen.<br/><small>Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!</small>"
+    },
+
+    "previewpoll": {
+        "-page-title": "Bitte prüfen",
+        "closes": "Schließt"
+    },
+
+    "publishpoll": {
+        "-page-title": "Abstimmung jetzt starten?"
     },
 
     "select-server": {

@@ -693,7 +693,9 @@ export class DataService {
     if (!value && key=='language') {
       value = this.getu('local_language');
     }
-    this.G.L.trace("DataService.getu "+key+": "+value);
+    if (!key.endsWith('.state')) {
+      this.G.L.trace("DataService.getu "+key+": "+value);
+    }
     return value;
   }
   public setu(key:string, value:string) {
@@ -1030,7 +1032,10 @@ export class DataService {
     // TODO!
   }
 
+  // OTHER:
 
-  
+  format_date(date: string) {
+    return new Date(date).toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+  }
 
 }

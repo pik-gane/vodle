@@ -3,6 +3,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";
+import { Poll } from '../poll.service';
 
 @Component({
   selector: 'app-previewpoll',
@@ -12,6 +13,7 @@ import { GlobalService } from "../global.service";
 export class PreviewpollPage implements OnInit {
 
   pid: string;
+  p: Poll;
 
   // LIFECYCLE:
 
@@ -39,7 +41,9 @@ export class PreviewpollPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("PreviewpollPage.ionViewDidEnter");
-    this.ready = this.G.D.ready;
+    if (this.G.D.ready) {
+      this.onDataReady();
+    }
     this.G.L.debug("PreviewpollPage.ready:", this.ready);
   }
 
@@ -47,7 +51,8 @@ export class PreviewpollPage implements OnInit {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("PreviewpollPage.onDataReady");
     if (this.pid in this.G.P.polls) {
-      if (this.G.P.polls[this.pid].state == 'draft') {
+      this.p = this.G.P.polls[this.pid];
+      if (this.p.state == 'draft') {
         this.G.L.info("PreviewpollPage showing existing draft", this.pid);
       } else {
         this.G.L.warn("DraftpollPage non-draft pid ignored, redirecting to mypolls page");
@@ -59,6 +64,14 @@ export class PreviewpollPage implements OnInit {
     }
     this.ready = true;
   }
+
+  // HOOKS:
+
+  publish_button_clicked() {
+    // TODO: again check that due is in future!
+    this.router.navigate(['/publishpoll/'+this.pid]);
+  }
+
 
   // OTHER:
 }

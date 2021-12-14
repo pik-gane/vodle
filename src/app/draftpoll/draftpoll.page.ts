@@ -158,6 +158,7 @@ export class DraftpollPage implements OnInit {
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
+    // TODO: close/dismiss this.type_select, which can be either a popover or an alert
     if ((this.pd.title||'')=='') {
       this.G.L.info("DraftpollPage not saving empty title draft");
       // TODO: notify of deleted draft
@@ -185,16 +186,21 @@ export class DraftpollPage implements OnInit {
       p.db_password = this.pd.db_password;
       let oids = [];
       for (let od of this.pd.options) {
+        this.G.L.trace(" storing option data", od);
         if ((od.name||'')!='') {
           var o: Option;
           if (!od.oid) {
             od.oid = this.G.P.generate_oid(this.pid);
+            this.G.L.trace("  generated new oid", od.oid);
           }
           if (!(od.oid in p.options)) {
             // generate new options object:
+            this.G.L.trace("  creating new Option object");
             o = new Option(this.G, p, od.oid);
+            this.G.L.trace("   ...", o);
           } else {
             o = p.options[od.oid];
+            this.G.L.trace("  reusing Option object", o);
           }
           o.name = od.name;
           o.desc = od.desc;
@@ -202,9 +208,11 @@ export class DraftpollPage implements OnInit {
           oids.push(od.oid);
         }
       }
+      this.G.L.trace(" oids now", oids);
       // remove deleted options from p:
       for (let [oid, o] of Object.entries(p.options)) {
-        if (!(oid in oids)) {
+        if (!oids.includes(oid)) {
+          this.G.L.trace(" removing old option", oid);
           p.remove_option(oid);
         }
       }
@@ -251,7 +259,9 @@ export class DraftpollPage implements OnInit {
   }
   set_option_name(i: number) {
     let c = this.formGroup.get('option_name'+i);
+    this.G.L.trace("set_option_name",i,c.value);
     if (c.valid) this.pd.options[i].name = c.value;
+    this.G.L.trace("set_option_name result",this.pd.options,this.pd.options[i]);
   }
   set_option_desc(i: number) {
     let c = this.formGroup.get('option_desc'+i);

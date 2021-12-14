@@ -392,7 +392,7 @@
       </ion-label>
       <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" 
           shape="round"
-          (click)="formGroup.get('poll_due').updateValueAndValidity()">
+          (click)="ready_button_clicked()">
         <ion-icon name="checkmark"></ion-icon>&nbsp;
         <span [innerHtml]="'ready'|translate"></span>
       </ion-button>
