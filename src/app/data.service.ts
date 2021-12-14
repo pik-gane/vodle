@@ -5,7 +5,7 @@ import { LoadingController } from '@ionic/angular';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
-import { Poll } from "./poll.service";
+import { Poll, Option } from "./poll.service";
 
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
@@ -171,6 +171,7 @@ export class DataService {
 
   private _pids: Set<string>; // list of pids known to the user
   public get pids() { return this._pids; }
+  private _pid_oids: Set<[string, string]>;
 
   private poll_caches: Record<string, {}>; // temporary storage of poll data
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
@@ -264,6 +265,7 @@ export class DataService {
       this.G.L.info("DataService local_synced_user_DB error", err);
     });
     this._pids = new Set();
+    this._pid_oids = new Set();
     this.uninitialized_pids = new Set();
     this.poll_caches = {};
     this.local_poll_dbs = {};
@@ -693,9 +695,10 @@ export class DataService {
     if (!value && key=='language') {
       value = this.getu('local_language');
     }
-    if (!key.endsWith('.state')) {
+/*    if (!key.endsWith('.state')) {
       this.G.L.trace("DataService.getu "+key+": "+value);
     }
+*/
     return value;
   }
   public setu(key:string, value:string) {
@@ -732,12 +735,12 @@ export class DataService {
       // draft polls' data is stored in user's database:
       let ukey = "poll." + pid + '.' + key;
       value = this.user_cache[ukey] || '';
-      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
+//      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][key] || '';
-      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
+//      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
     }
     return value;
   }
@@ -817,6 +820,15 @@ export class DataService {
         let p = new Poll(this.G, pid);
       }
     }
+    for (let [pid, oid] of this._pid_oids) {
+      let p = this.G.P.polls[pid];
+      this.G.L.trace("after_changes processing option",pid,oid);
+      if (!(oid in p)) {
+        // option object does not exist yet, so create it:
+        let o = new Option(this.G, p, oid);
+        this.G.L.trace(" ...new",o);
+      }
+    }
   }
 
   private ensure_poll_cache(pid:string) {
@@ -844,7 +856,7 @@ export class DataService {
       }
       this.G.L.trace("DataService.doc2user_cache "+key+": "+value);
       if (key.startsWith('poll.') && key.endsWith('.state')) {
-        let pid = key.slice('poll.'.length, key.length - '.state'.length), state = value;
+        let pid = key.slice('poll.'.length, key.indexOf('.state')), state = value;
         if (!this._pids.has(pid)) {
           if (state == 'draft') {
             this._pids.add(pid);
@@ -852,6 +864,12 @@ export class DataService {
             this.start_poll_initialization(pid);
             initializing_poll = true;
           }
+        }
+      } else if (key.startsWith('poll.') && key.includes('.option.') && key.endsWith('.oid')) {
+        let pid = key.slice('poll.'.length, key.indexOf('.option.')), oid = value;
+        if (!this._pid_oids.has([pid, oid])) {
+          this.G.L.trace("DataService.doc2user_cache found new option", oid);
+          this._pid_oids.add([pid, oid]);
         }
       }
     } else {
@@ -865,15 +883,22 @@ export class DataService {
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
     var key;
+    let value = decrypt(doc['value'], this.user_cache["poll." + pid + '.password']);
     if (_id.startsWith(poll_doc_prefix)) {
       key = _id.slice(poll_doc_prefix.length, _id.length);
+      if (key.startsWith('option.') && key.endsWith('.oid')) {
+        let oid = value;
+        if (!this._pid_oids.has([pid, oid])) {
+          this.G.L.trace("DataService.doc2poll_cache found new option",oid);
+          this._pid_oids.add([pid, oid]);
+        }
+      }
     } else if (_id.startsWith(voter_doc_prefix)) {
       key = _id.slice(voter_doc_prefix.length, _id.length);
     } else {
       this.G.L.error("DataService.doc2poll_cache got corrupt doc _id"+_id);
       return;
     }
-    let value = decrypt(doc['value'], this.user_cache["poll." + pid + '.password']);
     this.poll_caches[pid][key] = value;
     this.G.L.trace("DataService.doc2poll_cache "+pid+':'+key+": "+value);
   }

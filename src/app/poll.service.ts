@@ -76,7 +76,7 @@ export class PollService {
   }
   generate_oid(pid:string): string {
     if (!(pid in this.unused_oids)) this.unused_oids[pid] = [];
-    return this.unused_oids[pid].pop() || CryptoJS.lib.WordArray.random(6).toString();
+    return this.unused_oids[pid].pop() || CryptoJS.lib.WordArray.random(4).toString();
   }
 }
 
@@ -176,6 +176,7 @@ export class Poll {
 
   private _options: Record<string, Option> = {};
   public _add_option(o: Option) {
+    this.G.L.entry("Poll._add_option");
     // will only be called by the option itself to self-register in its poll!
     if (o.oid in this._options) {
       return false;
@@ -204,18 +205,19 @@ export class Option {
   private p: Poll;
 
   constructor (G:GlobalService, poll:Poll, oid:string=null, 
-               name:string="", desc:string="", url:string="") { 
+               name:string=null, desc:string=null, url:string=null) { 
     this.G = G;
+    this.G.L.entry("Option constructor");
     this.p = poll;
     if (!oid) {
-      oid = CryptoJS.lib.WordArray.random(3).toString();
-      this.G.D.setp(poll, 'option.'+oid+'.oid', oid);
-      this.G.D.setp(poll, 'option.'+oid+'.name', name);
-      this.G.D.setp(poll, 'option.'+oid+'.desc', desc);
-      this.G.D.setp(poll, 'option.'+oid+'.url', url);
-      console.log("new option with pid,oid "+poll.pid+","+oid);
+      oid = this.G.P.generate_oid(poll.pid);
+      this.G.L.trace("...new option", poll.pid, oid);
     }
     this._oid = oid;
+    this.G.D.setp(poll, 'option.'+oid+'.oid', oid);
+    if ((name||'')!='') this.G.D.setp(poll, 'option.'+oid+'.name', name);
+    if ((desc||'')!='') this.G.D.setp(poll, 'option.'+oid+'.desc', desc);
+    if ((url||'')!='') this.G.D.setp(poll, 'option.'+oid+'.url', url);
     poll._add_option(this);
   }
 

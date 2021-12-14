@@ -19,7 +19,7 @@
             </ion-icon>&nbsp;
           </span>
           <ion-text [innerHtml]="'previewpoll.type-label'|translate"></ion-text>&nbsp;<ion-text color="primary"
-            [innerHtml]="'draftpoll.type-'+p.type|translate"></ion-text>
+            [innerHtml]="('draftpoll.type-'+p.type|translate)+'.'"></ion-text>
         </p>
         <ion-text color="primary"><h3><b><i [innerHtml]="p.title"></i></b></h3></ion-text>
         <p>
@@ -30,7 +30,7 @@
               </a>)
           </ion-text>            
           <br *ngIf="((p.desc||'')!='')||((p.url||'')!='')"/>
-          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="(p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due)"></ion-text>
+          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))+'.'"></ion-text>
         </p>
       </ion-col>
     </ion-item>

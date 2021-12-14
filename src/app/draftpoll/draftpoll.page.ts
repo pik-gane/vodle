@@ -127,7 +127,7 @@ export class DraftpollPage implements OnInit {
         poll_desc: this.pd.desc||'',
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
-        poll_due: this.pd.due||null,
+        poll_due: new Date(this.pd.due).toISOString()||null,
       });
       if (!this.pd.options) this.pd.options = [];
       for (let [i, od] of this.pd.options.entries()) {
@@ -196,15 +196,15 @@ export class DraftpollPage implements OnInit {
           if (!(od.oid in p.options)) {
             // generate new options object:
             this.G.L.trace("  creating new Option object");
-            o = new Option(this.G, p, od.oid);
+            o = new Option(this.G, p, od.oid, od.name, od.desc, od.url);
             this.G.L.trace("   ...", o);
           } else {
             o = p.options[od.oid];
             this.G.L.trace("  reusing Option object", o);
+            o.name = od.name;
+            o.desc = od.desc;
+            o.url = od.url;
           }
-          o.name = od.name;
-          o.desc = od.desc;
-          o.url = od.url;
           oids.push(od.oid);
         }
       }
