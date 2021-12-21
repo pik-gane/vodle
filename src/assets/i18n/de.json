@@ -44,6 +44,7 @@
 
     "draftpoll": {
         "-page-title": "Abstimmungs-Entwurf bearbeiten",
+        "del-poll-confirm-question": "Entwurf endgültig löschen?<br/>(Das kann nicht rückgängig gemacht werden!)",
         "general-information": "Allgemeine Daten",
         "type-label": "In dieser Abstimmung wird die Gruppe...",
         "type-winner": "eine von mehreren Optionen auswählen",
@@ -153,8 +154,8 @@
         "type-label": "In dieser Abstimmung wird die Gruppe"
     },
 
-    "publishpoll": {
-        "-page-title": "Abstimmung jetzt starten?"
+    "inviteto": {
+        "-page-title": "Teilnehmer:innen einladen"
     },
 
     "select-server": {

@@ -5,7 +5,7 @@
     </ion-buttons>
     <ion-title [innerHtml]="'draftpoll.-page-title'|translate"></ion-title>
     <ion-buttons slot="end">
-      <ion-button fill="clear">
+      <ion-button fill="clear" (click)="del_poll_dialog()">
         <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
       </ion-button>
       <ion-button fill="clear" (click)="showkebap($event)">
@@ -229,9 +229,9 @@
         <small [innerHtml]="'&nbsp;&nbsp;&nbsp'+('draftpoll.advanced-settings'|translate)"></small>
       </ion-label>
     </ion-item>
-    <app-select-server 
+    <app-select-server #select_server [page_object]="this"
       [page]="'draftpoll'"
-      #select_server [style.display]="(stage>5) && advanced_expanded?'block':'none'">
+      [style.display]="(stage>5) && advanced_expanded?'block':'none'">
     </app-select-server><!--stage 7-->
   
     <!-- OPTIONS: -->

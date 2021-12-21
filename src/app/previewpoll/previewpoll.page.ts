@@ -57,11 +57,11 @@ export class PreviewpollPage implements OnInit {
       if (this.p.state == 'draft') {
         this.G.L.info("PreviewpollPage showing existing draft", this.pid);
       } else {
-        this.G.L.warn("DraftpollPage non-draft pid ignored, redirecting to mypolls page");
+        this.G.L.warn("DraftpollPage non-draft pid ignored, redirecting to mypolls page", this.pid);
         this.router.navigate(["/mypolls"]);
       }
     } else {
-      this.G.L.warn("PreviewpollPage unknown pid ignored, redirecting to mypolls page");
+      this.G.L.warn("PreviewpollPage unknown pid ignored, redirecting to mypolls page", this.pid, this.G.P.polls);
       this.router.navigate(["/mypolls"]);
     }
     this.ready = true;
@@ -71,7 +71,14 @@ export class PreviewpollPage implements OnInit {
 
   publish_button_clicked() {
     // TODO: again check that due is in future!
-    this.router.navigate(['/publishpoll/'+this.pid]);
+    // generate a random poll password:
+    this.p.set_password();
+    // set state to running, which will cause the poll data to be stored in the designated server:
+    this.p.state = 'running';
+    // register the user herself as a voter in the poll:
+    this.p.init_voter_data();
+    // go to invitation page:
+    this.router.navigate(['/inviteto/'+this.pid]);
   }
 
 

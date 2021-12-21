@@ -40,7 +40,7 @@ export class DraftpollPage implements OnInit {
 
   pd: { 
     pid?,
-    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_url?, db_password?,
+    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_other_server_url?, db_other_password?,
     options?: option_data_t[] 
   };
   get n_options() { return (this.pd.options||[]).length; }
@@ -94,6 +94,7 @@ export class DraftpollPage implements OnInit {
     if (!this.pid) {
       this.G.L.info("DraftpollPage editing new draft");
       this.stage = 0;
+      this.pd = { db:'default' };
     } else if (this.pid in this.G.P.polls) {
       if (this.G.P.polls[this.pid].state == 'draft') {
         this.G.L.info("DraftpollPage editing existing draft", this.pid);
@@ -102,7 +103,7 @@ export class DraftpollPage implements OnInit {
         this.pd = { 
           pid:p.pid,
           type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due:p.due, 
-          db:p.db, db_from_pid:p.db_from_pid, db_url:p.db_url, db_password:p.db_password,
+          db:p.db, db_from_pid:p.db_from_pid, db_other_server_url:p.db_other_server_url, db_other_password:p.db_other_password,
           options: [] 
         };
         this.stage = !(!!p.due)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
@@ -121,13 +122,14 @@ export class DraftpollPage implements OnInit {
     this.advanced_expanded = false;
     // fill form:
     if (this.pd) {
+      this.G.L.trace("due", this.pd.due, !this.pd.due, !!!this.pd.due);
       this.formGroup.setValue({ 
         poll_type: this.pd.type||'',
         poll_title: this.pd.title||'', 
         poll_desc: this.pd.desc||'',
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
-        poll_due: new Date(this.pd.due).toISOString()||null,
+        poll_due: (!this.pd.due)?'':this.pd.due.toISOString(),
       });
       if (!this.pd.options) this.pd.options = [];
       for (let [i, od] of this.pd.options.entries()) {
@@ -154,6 +156,14 @@ export class DraftpollPage implements OnInit {
   onSelectServerReady(select_server:SelectServerComponent) {
     // called by SelectServerComponent is ready
     this.select_server = select_server;
+    if (this.pd) {
+      this.select_server.selectServerFormGroup.setValue({
+        db: this.pd.db||'',
+        db_from_pid: this.pd.db_from_pid||'',
+        db_other_server_url: this.pd.db_other_server_url||'',
+        db_other_password: this.pd.db_other_password||'',
+      });
+    }
   }
 
   ionViewWillLeave() {
@@ -182,8 +192,8 @@ export class DraftpollPage implements OnInit {
       p.due = this.pd.due;
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
-      p.db_url = this.pd.db_url;
-      p.db_password = this.pd.db_password;
+      p.db_other_server_url = this.pd.db_other_server_url;
+      p.db_other_password = this.pd.db_other_password;
       let oids = [];
       for (let od of this.pd.options) {
         this.G.L.trace(" storing option data", od);
@@ -284,11 +294,11 @@ export class DraftpollPage implements OnInit {
   set_db_from_pid(value: string) {
     this.pd.db_from_pid = value;
   }
-  set_db_url(value: string) {
-    this.pd.db_url = value;
+  set_db_other_server_url(value: string) {
+    this.pd.db_other_server_url = value;
   }
-  set_db_password(value: string) {
-    this.pd.db_password = value;
+  set_db_other_password(value: string) {
+    this.pd.db_other_password = value;
   }
   
   test_url(url: string) {
@@ -317,6 +327,30 @@ export class DraftpollPage implements OnInit {
     this.expanded[i] = false;
     this.add_option({});
   }
+
+  async del_poll_dialog(i: number) { 
+    const confirm = await this.alertCtrl.create({ 
+      message: this.translate.instant(
+        "draftpoll.del-poll-confirm-question"), 
+      buttons: [
+        { 
+          text: this.translate.instant('cancel'), 
+          role: 'Cancel',
+          handler: () => { 
+            console.log('Confirm Cancel.');  
+          } 
+        },
+        { 
+          text: this.translate.instant('OK'),
+          role: 'Ok', 
+          handler: () => {
+            this.del_draft();
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  } 
 
   async del_option_dialog(i: number) { 
     const confirm = await this.alertCtrl.create({ 
@@ -407,6 +441,9 @@ export class DraftpollPage implements OnInit {
   ready_button_clicked() {
     this.formGroup.get('poll_due').updateValueAndValidity();
     if (this.formGroup.valid) {
+      if (!this.pid) {
+        this.pid = this.G.P.generate_pid();
+      }
       this.router.navigate(['/previewpoll/'+this.pid]);
     }
   }
@@ -424,6 +461,10 @@ export class DraftpollPage implements OnInit {
     });
     this.pd = {};
     this.update_ref_date();
+  }
+
+  private del_draft() {
+    // TODO!
   }
 
   import_csv(event: Event) {

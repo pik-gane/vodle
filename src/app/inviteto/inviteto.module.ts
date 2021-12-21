@@ -4,17 +4,17 @@ import { FormsModule } from '@angular/forms';
 
 import { IonicModule } from '@ionic/angular';
 
-import { PublishpollPageRoutingModule } from './publishpoll-routing.module';
+import { InvitetoPageRoutingModule } from './inviteto-routing.module';
 
-import { PublishpollPage } from './publishpoll.page';
+import { InvitetoPage } from './inviteto.page';
 
 @NgModule({
   imports: [
     CommonModule,
     FormsModule,
     IonicModule,
-    PublishpollPageRoutingModule
+    InvitetoPageRoutingModule
   ],
-  declarations: [PublishpollPage]
+  declarations: [InvitetoPage]
 })
-export class PublishpollPageModule {}
+export class InvitetoPageModule {}

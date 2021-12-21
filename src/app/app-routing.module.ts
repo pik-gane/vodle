@@ -44,8 +44,8 @@ const routes: Routes = [
     loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
   },
   {
-    path: 'publishpoll',
-    loadChildren: () => import('./publishpoll/publishpoll.module').then( m => m.PublishpollPageModule)
+    path: 'inviteto/:pid',
+    loadChildren: () => import('./inviteto/inviteto.module').then( m => m.InvitetoPageModule)
   },
   {
     path: 'draftpoll-kebap',
