@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ValidationErrors, AbstractControl } from '@angular/forms';
 
+import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 
 @Injectable({
@@ -23,19 +24,40 @@ export class SettingsService {
   public set password(value: string) { this.G.D.setu('password', value); }
 
   public get db(): string { return this.G.D.getu('db'); }
-  public set db(value: string) { this.G.D.setu('db', value); }
+  public set db(value: string) { 
+    this.G.D.setu('db', value); 
+    this.set_db_credentials();
+  }
 
   public get db_from_pid(): string { return this.G.D.getu('db_from_pid'); }
   public set db_from_pid(value: string) { 
     this.G.D.setu('db_from_pid', value); 
-    // TODO: set db_from_pid_server_urĺ|password
+    this.set_db_credentials();
   }
 
   public get db_other_server_url(): string { return this.G.D.getu('db_other_server_url'); }
-  public set db_other_server_url(value: string) { this.G.D.setu('db_other_server_url', value); }
+  public set db_other_server_url(value: string) { 
+    this.G.D.setu('db_other_server_url', value); 
+    this.set_db_credentials();
+  }
 
   public get db_other_password(): string { return this.G.D.getu('db_other_password'); }
-  public set db_other_password(value: string) { this.G.D.setu('db_other_password', value); }
+  public set db_other_password(value: string) { 
+    this.G.D.setu('db_other_password', value); 
+    this.set_db_credentials();
+  }
+
+  public get db_server_url(): string { return this.G.D.getu('db_server_url'); }
+  private set db_server_url(value: string) { 
+    // will be set automatically 
+    this.G.D.setu('db_server_url', value); 
+  }
+
+  public get db_password(): string { return this.G.D.getu('db_password'); }
+  private set db_password(value: string) { 
+    // will be set automatically 
+    this.G.D.setu('db_password', value); 
+  }
 
   public get language(): string { return this.G.D.getu('language'); }
   public set language(value: string) { this.G.D.setu('language', value); }
@@ -60,6 +82,23 @@ export class SettingsService {
     return null;
   }
   
+  // OTHER METHODS:
+
+  private set_db_credentials() {
+    // set db credentials according to this.db... settings:
+    if (this.db=='central') {
+      this.db_server_url = environment.data_service.central_db_server_url; 
+      this.db_password = environment.data_service.central_db_password;
+    } else if (this.db=='poll') {
+      this.db_server_url = this.G.P.polls[this.db_from_pid].db_server_url;
+      this.db_password = this.G.P.polls[this.db_from_pid].db_password;
+    } else if (this.db=='other') {
+      this.db_server_url = this.db_other_server_url;
+      this.db_password = this.db_other_password;
+    }
+    this.db_server_url = this.G.D.fix_url(this.db_server_url);
+  }
+
   // OTHER CONSTANTS:
 
   language_names = {

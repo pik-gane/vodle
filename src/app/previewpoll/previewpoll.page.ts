@@ -71,6 +71,8 @@ export class PreviewpollPage implements OnInit {
 
   publish_button_clicked() {
     // TODO: again check that due is in future!
+    // fix db credentials:
+    this.p.set_db_credentials();
     // generate a random poll password:
     this.p.set_password();
     // set state to running, which will cause the poll data to be stored in the designated server:

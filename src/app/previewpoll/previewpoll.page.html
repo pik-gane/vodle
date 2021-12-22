@@ -22,16 +22,22 @@
             [innerHtml]="('draftpoll.type-'+p.type|translate)+'.'"></ion-text>
         </p>
         <ion-text color="primary"><h3><b><i [innerHtml]="p.title"></i></b></h3></ion-text>
-        <p>
-          <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>
+        <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
+          <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [innerHtml]="p.desc"></i></ion-text>
           <ion-text *ngIf="(p.url||'')!=''">
             &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
                 <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
               </a>)
-          </ion-text>            
-          <br *ngIf="((p.desc||'')!='')||((p.url||'')!='')"/>
+          </ion-text>
+        </p>
+        <p>
           <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))+'.'"></ion-text>
         </p>
+      </ion-col>
+    </ion-item>
+    <ion-item>
+      <ion-col class="ion-no-padding ion-no-margin">
+        <small><ion-text [innerHtml]="(p.type.value=='winner' ? 'options' : 'possible-targets')|translate"></ion-text>:</small>
       </ion-col>
     </ion-item>
     <ion-item *ngFor="let o of Object.values(p.options)">

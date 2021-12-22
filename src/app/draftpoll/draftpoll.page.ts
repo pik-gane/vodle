@@ -1,3 +1,9 @@
+/*
+TODO:
+- fix wrong option_stage when returning, make "skip" button work properly
+- make tab key autofocus work properly
+*/
+
 import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from "@angular/router";

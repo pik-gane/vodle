@@ -1,3 +1,8 @@
+/*
+TODO:
+- make db_from_pid_server_url and password work (set in draftpoll page!)
+*/
+
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -112,13 +117,17 @@ const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 const user_doc_id_prefix = "~vodle.user.", poll_doc_id_prefix = "~vodle.poll.";
 
+function get_poll_key_prefix(pid:string) {
+  return 'poll.' + pid + '.';
+}
+
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 // curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
 
 // some keys are only stored locally and not synced to a remote CouchDB:
-const local_only_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password'];
-const local_only_poll_keys = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'password', 'vid'];
-const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_server_url','db_password'];
+const local_only_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password'];
+const local_only_poll_keys = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'vid'];
+const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_pther_server_url','db_other_password'];
 
 // ENCRYPTION:
 
@@ -162,12 +171,10 @@ export class DataService {
 
   // DATA:
 
-  private user_cache: {}; // temporary storage of user data
+  public user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
 
-  private user_db_server_url: string;
-  private user_db_password: string;
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
 
   private _pids: Set<string>; // list of pids known to the user
@@ -177,8 +184,6 @@ export class DataService {
   private poll_caches: Record<string, {}>; // temporary storage of poll data
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
 
-  private poll_db_server_urls: Record<string, string>;
-  private poll_db_passwords: Record<string, string>;
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
   // LYFECYCLE:
@@ -271,8 +276,6 @@ export class DataService {
     this.poll_caches = {};
     this.local_poll_dbs = {};
     this.remote_poll_dbs = {};
-    this.poll_db_server_urls = {};
-    this.poll_db_passwords = {};
     // Now start filling the temporary session cache with the persistent local data and syncing with remote data.
     // Because of PouchDB, this must be done asynchronously.
     // First, we fetch all local-only docs:
@@ -321,7 +324,7 @@ export class DataService {
       this.G.L.error("DataService could not read local_synced_user_DB", err);
     });
     // check if db credentials are set:
-    if (this.extract_user_db_credentials()) {
+    if (this.has_user_db_credentials()) {
       // connect to remote and start sync:
       this.connect_to_remote_user_db().then(success => {
         if (this.router.url.includes('/login')) {
@@ -336,21 +339,9 @@ export class DataService {
       // TODO: show login page at database prompt
     }
   }
-  private extract_user_db_credentials() {
-    // extract actual credentials from settings and return whether they are nonempty:
-    let db = this.user_cache['db'];
-    if (db=='central') {
-      this.user_db_server_url = environment.data_service.central_db_server_url; 
-      this.user_db_password = environment.data_service.central_db_password;
-    } else if (db=='poll') {
-      this.user_db_server_url = this.user_cache['db_from_pid_server_url'];
-      this.user_db_password = this.user_cache['db_from_pid_password'];
-    } else if (db=='other') {
-      this.user_db_server_url = this.user_cache['db_other_server_url'];
-      this.user_db_password = this.user_cache['db_other_password'];
-    }
-    this.user_db_server_url = this.fix_url(this.user_db_server_url);
-    return (this.user_db_server_url||'')!='' && (this.user_db_password||'')!='';
+  private has_user_db_credentials() {
+    // return whether poll db credentials are nonempty:
+    return this.getu('db_server_url')!='' && this.getu('db_password')!='' && !!this.email_and_pw_hash();
   }
   private local_user_docs2cache(result) {
     // called whenever a connection to a remote user db was established
@@ -372,7 +363,7 @@ export class DataService {
     let user_db_private_username = "vodle.user." + this.email_and_pw_hash();
     return new Promise((resolve, reject) => {
       this.get_remote_connection(
-        this.user_db_server_url, this.user_db_password,
+        this.getu('db_server_url'), this.getu('db_password'),
         user_db_private_username, user_password
       ).then(db => { 
         this.remote_user_db = db;
@@ -409,35 +400,24 @@ export class DataService {
     }).catch(err => {
       this.G.L.error(err);
     });
+    // FIXME: do the following only after all USER data has been loaded, otherwise credentials will not exist:
     // check if db credentials are set:
-    if (this.extract_poll_db_credentials(pid)) {
+    if (this.poll_has_db_credentials(pid)) {
+      this.G.L.trace("DataService.start_poll_initialization found remote poll db credentials");
       // connect to remote and start sync:
       this.connect_to_remote_poll_db(pid).catch(err => {
-        // TODO
+        this.G.L.warn("DataService.start_poll_initialization couldn't start poll db syncing for", pid);
+        // TODO: react somehow?
       });
     } else {
-      // TODO
+      this.G.L.warn("DataService.start_poll_initialization couldn't find remote poll db credentials for", pid);
+      // TODO: react somehow?
     }
     this.G.L.exit("DataService.start_poll_initialization "+pid);
   }
-  private extract_poll_db_credentials(pid) {
-    // extract actual credentials from settings and return whether they are nonempty:
-    let db = this.poll_caches[pid]['db'];
-    if (db=='central') {
-      this.poll_db_server_urls[pid] = environment.data_service.central_db_server_url; 
-      this.poll_db_passwords[pid] = environment.data_service.central_db_password;
-    } else if (db=='poll') {
-      this.poll_db_server_urls[pid] = this.poll_caches[pid]['db_from_pid_server_url'];
-      this.poll_db_passwords[pid] = this.poll_caches[pid]['db_from_pid_password'];
-    } else if (db=='other') {
-      this.poll_db_server_urls[pid] = this.poll_caches[pid]['db_other_server_url'];
-      this.poll_db_passwords[pid] = this.poll_caches[pid]['db_other_password'];
-    } else if (db=='default') {
-      this.poll_db_server_urls[pid] = this.user_db_server_url;
-      this.poll_db_passwords[pid] = this.user_db_password;
-    } 
-    this.poll_db_server_urls[pid] = this.fix_url(this.poll_db_server_urls[pid]);
-    return (this.poll_db_server_urls[pid]||'')!='' && (this.poll_db_passwords[pid]||'')!='';
+  private poll_has_db_credentials(pid:string) {
+    // return whether poll db credentials are nonempty:
+    return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'vid')!='';
   }
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache "+pid);
@@ -454,13 +434,13 @@ export class DataService {
   }
   private connect_to_remote_poll_db(pid:string) {
     // called at poll initialization
-    // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!):
-    let poll_db_private_username = "vodle.poll." + pid + ".voter." + this.user_cache['poll.' + pid + '.vid'];
-    let poll_password = this.user_cache['poll.' + pid + '.voter_password'];
+    // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
+    // who has the same password as the overall user:
+    let poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'vid');
     return new Promise((resolve, reject) => {
       this.get_remote_connection(
-        this.poll_db_server_urls[pid], this.poll_db_passwords[pid],
-        poll_db_private_username, poll_password
+        this.getp(pid, 'db_server_url'), this.getp(pid, 'db_password'),
+        poll_db_private_username, this.G.S.password
       ).then(db => { 
         this.remote_poll_dbs[pid] = db;
         // start synchronisation asynchronously:
@@ -487,12 +467,12 @@ export class DataService {
     this.G.L.exit("DataService.local_user_docs2cache_finished");
   }
 
-  // HOOKS FOR OTHER SERVICESS:
+  // HOOKS FOR OTHER SERVICES:
 
   public change_poll_state(p:Poll, new_state:string) {
     // called by PollService when changing state
     this.G.L.entry("DataService.change_poll_state");
-    let pid = p.pid, pd = {}, prefix = 'poll.' + pid + '.';
+    let pid = p.pid, pd = {}, prefix = get_poll_key_prefix(pid);
     let old_state = this.user_cache[prefix + 'state'];
     if (old_state=='draft') {
       // copy data from local user db to poll db.
@@ -506,12 +486,15 @@ export class DataService {
       }
       // finally, start synching with remote poll db:
       // check if db credentials are set:
-      if (this.extract_poll_db_credentials(pid)) {
+      if (this.poll_has_db_credentials(pid)) {
+        this.G.L.trace("DataService.change_poll_state found remote poll db credentials");
         // connect to remote and start sync:
         this.connect_to_remote_poll_db(pid).catch(err => {
+          this.G.L.warn("DataService.change_poll_state couldn't start remote poll db syncing for", pid);
           // TODO
         });
       } else {
+        this.G.L.warn("DataService.change_poll_state couldn't find remote poll db credential for", pid);
         // TODO
       }
     }
@@ -765,49 +748,50 @@ export class DataService {
   }
 
   private pid_is_draft(pid):boolean {
-    return this.user_cache['poll.'+pid+'.state'] == 'draft';
+    return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
-  public getp(p:Poll, key:string):string {
+  public getp(pid:string, key:string):string {
     // get poll data item
-    let pid = p.pid;
     var value = null;
-    if (this.pid_is_draft(pid)) {
+    if (this.pid_is_draft(pid) || local_only_poll_keys.includes(key)) {
       // draft polls' data is stored in user's database:
-      let ukey = "poll." + pid + '.' + key;
+      let ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
-//      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
+      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][key] || '';
-//      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
+      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
     }
     return value;
   }
-  public setp(p:Poll, key:string, value:string) {
+  public setp(pid:string, key:string, value:string) {
     // set poll data item
-    let pid = p.pid;
     if (this.pid_is_draft(pid)) {
       return this._setp_in_userdb(pid, key, value);
     } else {
-      this.G.L.error("DataService.setp attempted for non-draft poll "+p.pid+'.'+key+": "+value);
+      this.G.L.error("DataService.setp attempted for non-draft poll "+pid+'.'+key+": "+value);
     }
   }
   
   // OTHER METHODS:
 
+  private get_poll_key_prefix(pid:string) {
+    return 'poll.' + pid + '.';
+  }
   private _setp_in_userdb(pid:string, key:string, value:string) {
     value = value || '';
-    let ukey = "poll." + pid + '.' + key;
+    let ukey = get_poll_key_prefix(pid) + key;
     this.user_cache[ukey] = value;
-    this.G.L.trace("DataService.setu poll."+pid+'.'+key+": "+value);
+    this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     return this.store_user_data(ukey, value);
   }
   private _setp_in_polldb(pid:string, key:string, value:string) {
     value = value || '';
     this.ensure_poll_cache(pid);
     this.poll_caches[pid][key] = value;
-    this.G.L.trace("DataService.setp poll."+pid+'.'+key+": "+value);
+    this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
     return this.store_poll_data(pid, key, value);
   }
 
@@ -913,6 +897,7 @@ export class DataService {
           if (state == 'draft') {
             this._pids.add(pid);
           } else {
+            // FIXME: call start_poll_initialization only AFTER all user data has loaded, otherwise credentials are missing....
             this.start_poll_initialization(pid);
             initializing_poll = true;
           }
@@ -935,7 +920,7 @@ export class DataService {
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
     var key;
-    let value = decrypt(doc['value'], this.user_cache["poll." + pid + '.password']);
+    let value = decrypt(doc['value'], this.user_cache[get_poll_key_prefix(pid) + 'password']);
     if (_id.startsWith(poll_doc_prefix)) {
       key = _id.slice(poll_doc_prefix.length, _id.length);
       if (key.startsWith('option.') && key.endsWith('.oid')) {
@@ -1003,7 +988,7 @@ export class DataService {
       this.local_synced_user_db.get(_id).then(doc => {
         if (decrypt(doc.value, user_pw) != value) {
           doc.value = val;
-          this.local_synced_user_db.put(doc);
+          this.local_synced_user_db.put(doc); // FIXME: this rarely gives a document update conflict -- why?
           this.G.L.trace("DataService local synced user DB update "+key+": "+value)
         } else {
           this.G.L.trace("DataService local synced user DB no need to update "+key+": "+value)
@@ -1027,7 +1012,7 @@ export class DataService {
       // it's not a voter doc:
       // store encrypted and with correct prefix:
       let _id = poll_doc_id_prefix + pid + ':' + key,
-          poll_pw = this.user_cache["poll." + pid + '.password'],
+          poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'],
           enc_value = encrypt(value, poll_pw);
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
@@ -1052,7 +1037,7 @@ export class DataService {
     } else {
       // it's a voter doc.
       let vid_prefix = key.slice(0, key.indexOf(':')),
-          vid = this.user_cache["poll." + pid + '.vid'];
+          vid = this.user_cache[get_poll_key_prefix(pid) + 'vid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService tried changing another voter's data item "+key+": "+value);
@@ -1060,7 +1045,7 @@ export class DataService {
       }
       // store encrypted and with proper prefix:
       let _id = poll_doc_id_prefix + pid + '.' + key,
-          poll_pw = this.user_cache["poll." + pid + '.password'],
+          poll_pw = this.user_cache[get_poll_key_prefix(pid) +  + 'password'],
           enc_value = encrypt(value, poll_pw);
       if ((poll_pw=='')||(!poll_pw) || (vid=='')||(!vid)) {
         this.G.L.warn("DataService.store_voter_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");

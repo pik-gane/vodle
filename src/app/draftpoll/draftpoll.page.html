@@ -220,7 +220,7 @@
     <!-- ADVANCED OPTIONS: -->
 
     <!--stage 6-->
-    <ion-item *ngIf="stage>5" color="light" (click)="advanced_expanded=!advanced_expanded">
+    <ion-item *ngIf="stage>5" [color]="advanced_expanded?'light':''" (click)="advanced_expanded=!advanced_expanded">
       <ion-icon 
         [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" 
         size="small" color="primary">
