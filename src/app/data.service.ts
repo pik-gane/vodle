@@ -108,6 +108,7 @@ const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
  */
 
 /** TODO:
+- verify that we DO NOT need a db user vodle.poll.PPP after all!
 - ignore vids that have not provided a valid signature document
 - if voter keys are individualized (not at first), ignore vids that use a signature some other vid uses as well
 - at poll creation, write a pubkey document for each valid voter key, giving each key a random key id
@@ -400,24 +401,7 @@ export class DataService {
     }).catch(err => {
       this.G.L.error(err);
     });
-    // FIXME: do the following only after all USER data has been loaded, otherwise credentials will not exist:
-    // check if db credentials are set:
-    if (this.poll_has_db_credentials(pid)) {
-      this.G.L.trace("DataService.start_poll_initialization found remote poll db credentials");
-      // connect to remote and start sync:
-      this.connect_to_remote_poll_db(pid).catch(err => {
-        this.G.L.warn("DataService.start_poll_initialization couldn't start poll db syncing for", pid);
-        // TODO: react somehow?
-      });
-    } else {
-      this.G.L.warn("DataService.start_poll_initialization couldn't find remote poll db credentials for", pid);
-      // TODO: react somehow?
-    }
     this.G.L.exit("DataService.start_poll_initialization "+pid);
-  }
-  private poll_has_db_credentials(pid:string) {
-    // return whether poll db credentials are nonempty:
-    return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'vid')!='';
   }
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache "+pid);
@@ -689,7 +673,7 @@ export class DataService {
           || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
               && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
         ),
-      }).on('change', this.handle_user_db_change.bind(this)
+      }).on('change', this.handle_poll_db_change.bind(this)
       ).on('paused', info => {
         // replication was paused, usually because of a lost connection
         this.G.L.info("DataService pausing poll data syncing", info);
@@ -698,7 +682,7 @@ export class DataService {
         this.G.L.info("DataService resuming poll data syncing", info);
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
-        this.G.L.error("denied, "+err);
+        this.G.L.error("denied", err);
       }).on('complete', info => {
         // handle complete
         this.G.L.info("DataService completed poll data syncing", info);
@@ -757,12 +741,12 @@ export class DataService {
       // draft polls' data is stored in user's database:
       let ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
-      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
+//      this.G.L.trace("DataService.getu poll."+pid+'.'+key+": "+value);
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][key] || '';
-      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
+//      this.G.L.trace("DataService.getp "+pid+':'+key+": "+value);
     }
     return value;
   }
@@ -846,6 +830,26 @@ export class DataService {
       if (this._page.onDataChange) this._page.onDataChange();
     }
   }
+  private handle_poll_db_change(pid, change) {
+    this.G.L.trace("DataService.handle_poll_db_change", change);
+    let local_changes = false;
+    var dummy;
+    if (change.deleted){
+      var key = change.doc['key'];
+      delete this.poll_caches[pid][key];
+      local_changes = true;
+    } else if (change.direction=='pull') {
+      this.G.L.trace(JSON.stringify(change));
+      for (let doc of change.change.docs) {
+        this.G.L.trace(JSON.stringify(doc));
+        local_changes = this.doc2poll_cache(pid, doc);
+      }
+    }
+    if (local_changes) {
+      this.after_changes();
+      if (this._page.onDataChange) this._page.onDataChange();
+    }
+  }
 
   private after_changes() {
     var lang = this.getu('language');
@@ -854,6 +858,21 @@ export class DataService {
       if (!(pid in this.G.P.polls)) {
         // poll object does not exist yet, so create it:
         let p = new Poll(this.G, pid);
+      }
+      if (!(pid in this.remote_poll_dbs)) {
+        // try syncing with remote db:
+        // check if db credentials are set:
+        if (this.poll_has_db_credentials(pid)) {
+          this.G.L.trace("DataService.after_changes found remote poll db credentials");
+          // connect to remote and start sync:
+          this.connect_to_remote_poll_db(pid).catch(err => {
+            this.G.L.warn("DataService.after_changes couldn't start poll db syncing for", pid);
+            // TODO: react somehow?
+          });
+        } else {
+          this.G.L.warn("DataService.after_changes couldn't find remote poll db credentials for", pid);
+          // TODO: react somehow?
+        }
       }
     }
     for (let [pid, oid] of this._pid_oids) {
@@ -865,6 +884,10 @@ export class DataService {
         this.G.L.trace(" ...new",o);
       }
     }
+  }
+  private poll_has_db_credentials(pid:string) {
+    // return whether poll db credentials are nonempty:
+    return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'vid')!='';
   }
 
   private ensure_poll_cache(pid:string) {
@@ -880,10 +903,10 @@ export class DataService {
     if (_id.startsWith(prefix)) {
       key = _id.slice(prefix.length, _id.length);
     } else {
-      this.G.L.error("DataService.doc2user_cache got corrupt doc _id"+_id);
+      this.G.L.error("DataService.doc2user_cache got corrupt doc _id", _id);
       return [false, false];
     }
-    let value_changed = true, initializing_poll = false, cyphertext = doc['value'];
+    let value_changed = false, initializing_poll = false, cyphertext = doc['value'];
     if (cyphertext) {
       let value = decrypt(cyphertext, this.user_cache['password']);
       if (this.user_cache[key] != value) {
@@ -915,29 +938,39 @@ export class DataService {
     // returns whether the value actually changed.
     return [value_changed, initializing_poll];
   }
-  private doc2poll_cache(pid, doc) {
+  private doc2poll_cache(pid, doc): boolean {
     let _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
     var key;
-    let value = decrypt(doc['value'], this.user_cache[get_poll_key_prefix(pid) + 'password']);
-    if (_id.startsWith(poll_doc_prefix)) {
-      key = _id.slice(poll_doc_prefix.length, _id.length);
-      if (key.startsWith('option.') && key.endsWith('.oid')) {
-        let oid = value;
-        if (!this._pid_oids.has([pid, oid])) {
-          this.G.L.trace("DataService.doc2poll_cache found new option",oid);
-          this._pid_oids.add([pid, oid]);
+    let value_changed = false, cyphertext = doc['value'];
+    if (cyphertext) {
+      let value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+      if (_id.startsWith(poll_doc_prefix)) {
+        key = _id.slice(poll_doc_prefix.length, _id.length);
+        if (key.startsWith('option.') && key.endsWith('.oid')) {
+          let oid = value;
+          if (!this._pid_oids.has([pid, oid])) {
+            this.G.L.trace("DataService.doc2poll_cache found new option",oid);
+            this._pid_oids.add([pid, oid]);
+          }
         }
+      } else if (_id.startsWith(voter_doc_prefix)) {
+        key = _id.slice(voter_doc_prefix.length, _id.length);
+      } else {
+        this.G.L.error("DataService.doc2poll_cache got corrupt doc _id"+_id);
+        return false;
       }
-    } else if (_id.startsWith(voter_doc_prefix)) {
-      key = _id.slice(voter_doc_prefix.length, _id.length);
+      if (this.poll_caches[pid][key] != value) {
+        this.poll_caches[pid][key] = value;
+        value_changed = true;
+      }  
+      this.G.L.trace("DataService.doc2poll_cache "+pid+':'+key+": "+value);
     } else {
-      this.G.L.error("DataService.doc2poll_cache got corrupt doc _id"+_id);
-      return;
+      this.G.L.warn("DataService.doc2poll_cache got corrupt doc "+JSON.stringify(doc));
     }
-    this.poll_caches[pid][key] = value;
-    this.G.L.trace("DataService.doc2poll_cache "+pid+':'+key+": "+value);
+    // returns whether the value actually changed.
+    return value_changed;
   }
 
   // caches --> DBs:
