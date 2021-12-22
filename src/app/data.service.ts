@@ -138,14 +138,22 @@ function encrypt_deterministically(value, password:string) {
   return result;
 }
 function encrypt(value, password:string): string {
-  const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
-  return result;
+  try {
+    const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
+    return result;
+  } catch (error) {
+    return null;
+  }
 }
 function decrypt(value:string, password:string): string {
-  const temp = CryptoJS.AES.decrypt(value, password);
-  // FIXME: sometimes we get a malformed UTF-8 error on toString: 
-  const result = temp.toString(CryptoJS.enc.Utf8);
-  return result;
+  try {
+    const temp = CryptoJS.AES.decrypt(value, password);
+    // FIXME: sometimes we get a malformed UTF-8 error on toString: 
+    const result = temp.toString(CryptoJS.enc.Utf8);
+    return result;
+  } catch (error) {
+    return null;
+  }
 }
 function myhash(what): string {
   // we use Blake2s since it is fast and more reliable than MD5
@@ -342,7 +350,8 @@ export class DataService {
   }
   private has_user_db_credentials() {
     // return whether poll db credentials are nonempty:
-    return this.getu('db_server_url')!='' && this.getu('db_password')!='' && !!this.email_and_pw_hash();
+    this.G.S.set_db_credentials();
+    return this.getu('db_server_url')!='' && this.getu('db_password')!=''; // && !!this.email_and_pw_hash();
   }
   private local_user_docs2cache(result) {
     // called whenever a connection to a remote user db was established
@@ -400,6 +409,12 @@ export class DataService {
       this.local_poll_docs2cache.bind(this)(pid, result)
     }).catch(err => {
       this.G.L.error(err);
+    }).finally(() => {
+      this.uninitialized_pids.delete(pid);
+      this.G.L.trace("DataService.start_poll_initialization uninitialized_pids.size", this.uninitialized_pids.size);
+      if (this.uninitialized_pids.size == 0) {
+        this.local_docs2cache_finished();
+      }  
     });
     this.G.L.exit("DataService.start_poll_initialization "+pid);
   }
@@ -409,11 +424,8 @@ export class DataService {
     for (let row of result.rows) {
       this.doc2poll_cache(pid, row.doc);
     }
+    this.G.L.trace("DataService.local_poll_docs2cache Hey", pid);
     this._pids.add(pid);
-    this.uninitialized_pids.delete(pid);
-    if (this.uninitialized_pids.size == 0) {
-      this.local_docs2cache_finished();
-    }
     this.G.L.exit("DataService.local_poll_docs2cache "+pid);
   }
   private connect_to_remote_poll_db(pid:string) {
@@ -819,9 +831,9 @@ export class DataService {
       delete this.user_cache[key];
       local_changes = true;
     } else if (change.direction=='pull') {
-      this.G.L.trace(JSON.stringify(change));
+//      this.G.L.trace(JSON.stringify(change));
       for (let doc of change.change.docs) {
-        this.G.L.trace(JSON.stringify(doc));
+//        this.G.L.trace(JSON.stringify(doc));
         [local_changes, dummy] = this.doc2user_cache(doc);
       }
     }
@@ -839,9 +851,9 @@ export class DataService {
       delete this.poll_caches[pid][key];
       local_changes = true;
     } else if (change.direction=='pull') {
-      this.G.L.trace(JSON.stringify(change));
+//      this.G.L.trace(JSON.stringify(change));
       for (let doc of change.change.docs) {
-        this.G.L.trace(JSON.stringify(doc));
+//        this.G.L.trace(JSON.stringify(doc));
         local_changes = this.doc2poll_cache(pid, doc);
       }
     }
@@ -852,11 +864,14 @@ export class DataService {
   }
 
   private after_changes() {
+    this.G.L.entry("DataService.after_changes");
     var lang = this.getu('language');
     this.translate.use(lang!=''?lang:'en');
     for (let pid of this._pids) {
+      this.G.L.trace("after_changes processing poll",pid);
       if (!(pid in this.G.P.polls)) {
         // poll object does not exist yet, so create it:
+        this.G.L.trace("after_changes creating poll object for",pid);
         let p = new Poll(this.G, pid);
       }
       if (!(pid in this.remote_poll_dbs)) {
@@ -877,13 +892,14 @@ export class DataService {
     }
     for (let [pid, oid] of this._pid_oids) {
       let p = this.G.P.polls[pid];
-      this.G.L.trace("after_changes processing option",pid,oid);
-      if (!(oid in p)) {
+      this.G.L.trace("after_changes processing option",pid,oid,p);
+      if (!p.oids.includes(oid)) {
         // option object does not exist yet, so create it:
         let o = new Option(this.G, p, oid);
-        this.G.L.trace(" ...new",o);
+        this.G.L.trace("DataService.after_changes created new Option object");
       }
     }
+    this.G.L.exit("DataService.after_changes");
   }
   private poll_has_db_credentials(pid:string) {
     // return whether poll db credentials are nonempty:
@@ -939,13 +955,16 @@ export class DataService {
     return [value_changed, initializing_poll];
   }
   private doc2poll_cache(pid, doc): boolean {
+    this.G.L.entry("DataService.doc2poll_cache ", pid);
     let _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
     var key;
     let value_changed = false, cyphertext = doc['value'];
+    this.G.L.trace("DataService.doc2poll_cache ", cyphertext);
     if (cyphertext) {
       let value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+      this.G.L.trace("DataService.doc2poll_cache ", value);
       if (_id.startsWith(poll_doc_prefix)) {
         key = _id.slice(poll_doc_prefix.length, _id.length);
         if (key.startsWith('option.') && key.endsWith('.oid')) {
@@ -959,6 +978,7 @@ export class DataService {
         key = _id.slice(voter_doc_prefix.length, _id.length);
       } else {
         this.G.L.error("DataService.doc2poll_cache got corrupt doc _id"+_id);
+        this.G.L.exit("DataService.doc2poll_cache false");
         return false;
       }
       if (this.poll_caches[pid][key] != value) {
@@ -970,6 +990,7 @@ export class DataService {
       this.G.L.warn("DataService.doc2poll_cache got corrupt doc "+JSON.stringify(doc));
     }
     // returns whether the value actually changed.
+    this.G.L.exit("DataService.doc2poll_cache value_changed", value_changed);
     return value_changed;
   }
 

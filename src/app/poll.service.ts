@@ -108,6 +108,7 @@ export class Poll {
     this._pid = pid;
     G.L.entry("Poll.constructor "+pid);
     this.G.P.polls[pid] = this;
+    G.L.exit("Poll constructor");
   }
 
   private _pid: string;
@@ -228,7 +229,12 @@ export class Poll {
       return false;
     }
   }
-  public get oids() { return Object.keys(this._options); }
+  public get oids() { 
+    this.G.L.entry("Poll.oids");
+    let res = Object.keys(this._options); 
+    this.G.L.exit("Poll.oids");
+    return res;
+  }
   public get n_options() { return this.oids.length; }
 
   // OTHER HOOKS:
@@ -286,6 +292,7 @@ export class Option {
     if ((desc||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.desc', desc);
     if ((url||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.url', url);
     poll._add_option(this);
+    this.G.L.exit("Option constructor");
   }
 
   private _oid: string;

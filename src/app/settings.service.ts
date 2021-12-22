@@ -84,7 +84,7 @@ export class SettingsService {
   
   // OTHER METHODS:
 
-  private set_db_credentials() {
+  public set_db_credentials() {
     // set db credentials according to this.db... settings:
     if (this.db=='central') {
       this.db_server_url = environment.data_service.central_db_server_url; 
