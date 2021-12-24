@@ -130,6 +130,16 @@
         "copy-link": "Link kopieren"
     },
 
+    "invite-email": {
+        "subject": "Einladung zur Abstimmung (schließt {{due}})",
+        "body-greeting": "Liebe:r Teilmehmer:in,",
+        "body-before-title": "ich lade Dich ein, an einer interaktiven Abstimmung teilzunehmen unter der Überschrift",
+        "body-closes": "Die Abstimmung schließt am {{due}}.",
+        "body-before-link": "Um teilzunehmen, verwende bitte diesen Link:",
+        "body-dont-share": "Bitte gib den Link an niemanden weiter.",
+        "body-regards": "Mit besten Grüßen"
+    },
+
     "login": {
         "-page-title": "Login",
         "welcome": "Willkommen bei",

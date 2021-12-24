@@ -130,6 +130,16 @@
         "copy-link": "Copy link"
     },
 
+    "invite-email": {
+        "subject": "Invitation to poll (closing {{due}})",
+        "body-greeting": "Dear participant,",
+        "body-before-title": "I'm inviting you to take part in a new interactive poll titled",
+        "body-closes": "The poll closes on {{due}}.",
+        "body-before-link": "To participate, please use the following link:",
+        "body-dont-share": "Please do not share this link with anyone else.",
+        "body-regards": "Best regards"
+    },
+
     "login": {
         "-page-title": "Login",
         "welcome": "Welcome to",
