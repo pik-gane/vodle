@@ -16,7 +16,8 @@ export const environment = {
     central_db_server_url: "http://localhost:5984/",
     central_db_password: "none",
     hash_n_bytes: 8
-  }
+  },
+  magic_link_base_url: "http://localhost:8100/"
 };
 
 /*

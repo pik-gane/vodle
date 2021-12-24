@@ -1,9 +1,84 @@
 <ion-header>
-  <ion-toolbar>
-    <ion-title>inviteto</ion-title>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title [innerHtml]="'inviteto.-page-title'|translate"></ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content *ngIf="ready && (p!=null)">
+  <ion-list lines="full">
+    <ion-item>
+      <ion-col class="ion-no-padding ion-no-margin" [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></ion-col>
+    </ion-item>
+    <ion-item (click)="details_expanded=!details_expanded">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <span style="position:relative;top:3px;z-index:10;">
+          <ion-icon 
+            [name]="p.type=='winner'?'trophy':'cut'"
+            style="color:black">
+          </ion-icon>&nbsp;
+        </span>
+        <i [innerHtml]="p.title"></i>
+        <ion-container *ngIf="details_expanded">
+          <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
+            <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="p.desc"></small></i>
+            <small *ngIf="(p.url||'')!=''">
+              &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
+                  <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
+                </a>)
+            </small>
+          </p>
+          <p>
+            <small [innerHtml]="'previewpoll.closes'|translate"></small>&nbsp;<small color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))+'.'"></small>
+          </p>
+        </ion-container>
+      </ion-col>
+      <ion-buttons slot="end">
+        <ion-icon 
+          [name]="details_expanded?'caret-down-outline':'caret-back-outline'" 
+          size="small" color="primary">
+        </ion-icon>
+      </ion-buttons>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'inviteto.caution1'|translate"></p> 
+        <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p> 
+      </ion-col>      
+    </ion-item>
+    <ion-item 
+        lines="none" class="ion-text-end" text-wrap>
+      <!--TODO: disable if due is in the past by now-->
+      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
+          shape="round"
+          (click)="share_button_clicked()">
+        <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
+        <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+      </ion-button>
+    </ion-item>
+    <ion-item 
+        lines="none" class="ion-text-end" text-wrap>
+      <!--TODO: disable if due is in the past by now-->
+      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
+            shape="round">
+        <a [href]="email_href" target="_top" style="color:inherit;text-decoration:inherit">
+          <span [innerHtml]="'inviteto.compose-email'|translate"></span>&nbsp;
+          <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
+        </a>
+      </ion-button>
+    </ion-item>
+    <ion-item 
+        lines="none" class="ion-text-end" text-wrap>
+      <!--TODO: disable if due is in the past by now-->
+      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
+          shape="round"
+          (click)="copy_button_clicked()">
+        <span [innerHtml]="'inviteto.copy-link'|translate"></span>&nbsp;
+        <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
+      </ion-button>
+    </ion-item>
+  </ion-list>
 
 </ion-content>

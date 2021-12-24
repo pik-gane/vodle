@@ -54,8 +54,4 @@ export class MypollsPage implements OnInit {
     return true; 
   }
 
-  invite(p: Poll) {
-    // TODO: go to invite page
-  }
-
 }

@@ -24,12 +24,14 @@
       <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
     <ng-container *ngFor="let p of Object.values(G.P.polls)">
-      <ion-item *ngIf="p.state=='running'" [routerLink]="'/poll/'+p.pid">
-        <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-        <b><i>{{p.title}}</i></b>
+      <ion-item *ngIf="p.state=='running'">
+        <ion-label [routerLink]="'/poll/'+p.pid">
+          <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <b><i>{{p.title}}</i></b>
+        </ion-label>
         <ion-buttons *ngIf="can_invite(p)" slot="end">
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          <ion-button fill="clear" (click)="invite(p)">
+          <ion-button fill="clear" [routerLink]="'/inviteto/'+p.pid">
             <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>
