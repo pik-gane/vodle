@@ -17,6 +17,7 @@ export const environment = {
     central_db_password: "none",
     hash_n_bytes: 8
   },
+  default_lang: "en",
   magic_link_base_url: "http://localhost:8100/"
 };
 

@@ -105,10 +105,10 @@ export class Poll {
       // copy state from db into cache:
       this._state = this.G.D.getp(pid, 'state') as poll_state_t;
     }
+    G.L.entry("Poll.constructor", pid, this._state);
     this._pid = pid;
-    G.L.entry("Poll.constructor "+pid);
     this.G.P.polls[pid] = this;
-    G.L.exit("Poll constructor");
+    G.L.exit("Poll constructor", pid);
   }
 
   private _pid: string;
