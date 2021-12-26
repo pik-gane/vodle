@@ -9,7 +9,7 @@
 
 <ion-content *ngIf="ready && (p!=null)">
   <ion-list lines="full">
-    <ion-item>
+    <ion-item color="warning">
       <ion-col class="ion-no-padding ion-no-margin" [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></ion-col>
     </ion-item>
     <ion-item (click)="details_expanded=!details_expanded">
@@ -21,7 +21,7 @@
           </ion-icon>&nbsp;
         </span>
         <i [innerHtml]="p.title"></i>
-        <ion-container *ngIf="details_expanded">
+        <ng-container *ngIf="details_expanded">
           <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
             <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="p.desc"></small></i>
             <small *ngIf="(p.url||'')!=''">
@@ -33,7 +33,7 @@
           <p>
             <small [innerHtml]="'previewpoll.closes'|translate"></small>&nbsp;<small color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))+'.'"></small>
           </p>
-        </ion-container>
+        </ng-container>
       </ion-col>
       <ion-buttons slot="end">
         <ion-icon 

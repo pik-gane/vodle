@@ -8,16 +8,36 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'home',
-    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
-  },
-  {
     path: 'about',
     loadChildren: () => import('./about/about.module').then( m => m.AboutPageModule)
   },
   {
+    path: 'draftpoll',
+    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
+  },
+  {
+    path: 'draftpoll/:pid',
+    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
+  },
+  {
+    path: 'draftpoll-kebap',
+    loadChildren: () => import('./draftpoll-kebap/draftpoll-kebap.module').then( m => m.DraftpollKebapPageModule)
+  },
+  {
     path: 'help',
     loadChildren: () => import('./help/help.module').then( m => m.HelpPageModule)
+  },
+  {
+    path: 'home',
+    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
+  },
+  {
+    path: 'inviteto/:pid',
+    loadChildren: () => import('./inviteto/inviteto.module').then( m => m.InvitetoPageModule)
+  },
+  {
+    path: 'joinpoll/:db_server_url/:db_password/:pid/:poll_password',
+    loadChildren: () => import('./joinpoll/joinpoll.module').then( m => m.JoinpollPageModule)
   },
   {
     path: 'mypolls',
@@ -34,22 +54,6 @@ const routes: Routes = [
   {
     path: 'settings',
     loadChildren: () => import('./settings/settings.module').then( m => m.SettingsPageModule)
-  },
-  {
-    path: 'draftpoll',
-    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
-  },
-  {
-    path: 'draftpoll/:pid',
-    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
-  },
-  {
-    path: 'inviteto/:pid',
-    loadChildren: () => import('./inviteto/inviteto.module').then( m => m.InvitetoPageModule)
-  },
-  {
-    path: 'draftpoll-kebap',
-    loadChildren: () => import('./draftpoll-kebap/draftpoll-kebap.module').then( m => m.DraftpollKebapPageModule)
   },
   {
     path: 'previewpoll/:pid',

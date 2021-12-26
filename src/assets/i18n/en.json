@@ -140,6 +140,10 @@
         "body-regards": "Best regards"
     },
 
+    "joinpoll": {
+        "-page-title": "Join a poll"
+    },
+
     "login": {
         "-page-title": "Login",
         "welcome": "Welcome to",

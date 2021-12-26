@@ -1,0 +1,48 @@
+<ion-header>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title [innerHtml]="'joinpoll.-page-title'|translate"></ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content *ngIf="ready && (p!=null)">
+  <ion-item>
+    Welcome to the interactive poll
+    {{p.title}}
+    This poll is about deciding between a number of options. 
+    In the end, your group will pick exactly one option. 
+  </ion-item>
+  <ion-item>
+    Some options have already been suggested, 
+    but any participant in the poll can suggest further options at any time, 
+    until the poll closes. 
+  </ion-item>
+  <ion-item>
+    You can express your opinion about the suggested options by <i>rating</i> them.
+    You can give each option a rating between 0 (don't approve) and 100 (approve for sure).
+  </ion-item>
+  <ion-item>
+    If you are unsure about some option, you can also <i>delegate</i> that rating to someone you trust. 
+    In that case, that person's rating of the option counts for you as well.
+    If you don't have the time for thinking about the option, you can also delegate all of your ratings to someone else.
+  </ion-item>
+  <ion-item>
+    You can change your ratings or delegations at any time until the poll closes, which is on {{p.due}}.
+    In fact, it often makes sense to follow how the poll results develop between now and then,
+    and adjust your ratings to what you see, rate additional options that might get suggested, or add one yourself. 
+    That way, you can together find a good compromise or reach consensus.
+  </ion-item>
+  <ion-item>
+    <ion-button size="large" color="primary" slot="end" [disabled]="false" 
+        shape="round"
+        (click)="go_button_clicked()">
+      <span [innerHtml]="'OK, let\'s go'"></span>&nbsp;
+      <ion-icon name="arrow-forward-outline"></ion-icon>
+    </ion-button>
+  </ion-item>
+  <ion-item>
+    <small>If you want to know how the ratings are used by vodle to determine the results, see here.</small>
+  </ion-item>
+</ion-content>

@@ -69,7 +69,7 @@ export class InvitetoPage implements OnInit {
       this.router.navigate(["/mypolls"]);
     }
     this.invite_link = (
-      environment.magic_link_base_url + "join/" 
+      environment.magic_link_base_url + "joinpoll/" 
       + encodeURIComponent(this.p.db_server_url) + "/" 
       + encodeURIComponent(this.p.db_password) + "/" 
       + this.pid + "/" 

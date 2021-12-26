@@ -132,6 +132,8 @@ const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db
 
 // ENCRYPTION:
 
+let textEncoder = new TextEncoder();
+
 function encrypt_deterministically(value, password:string) {
   var aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
@@ -158,8 +160,8 @@ function decrypt(value:string, password:string): string {
 function myhash(what): string {
   // we use Blake2s since it is fast and more reliable than MD5
   const blake2s = new BLAKE2s(environment.data_service.hash_n_bytes); // 16? 32?
-  blake2s.update(new Uint8Array(what.toString())); 
-  return blake2s.hexDigest()
+  blake2s.update(textEncoder.encode(what.toString())); 
+  return blake2s.hexDigest();
 }
 
 
@@ -235,18 +237,18 @@ export class DataService {
         |  local_user_docs2cache()
         |  |– doc2user_cache() for each doc
         |  |  `– for each new poll id:
-        |  |     |
-        |  |     |– asynchronously:
-        |  |     |  start_poll_initialization()
-        |  |     |  `– local_poll_docs2cache()
-        |  |     |     `– doc2user_cache() for each doc
-        |  |     |
-        |  |     `– meanwhile:
-        |  |        connect_to_remote_poll_db()
-        |  |        |– get_remote_connection()
-        |  |        `– start_poll_sync()
-        |  |           `– handle_poll_db_change() whenever local or remote db has changed
+        |  |     asynchronously:
+        |  |     start_poll_initialization()
+        |  |     `– local_poll_docs2cache()
+        |  |        `– doc2user_cache() for each doc
         |  |
+        |  |– once all user docs are processed:
+        |  |  for each new poll id:
+        |  |  connect_to_remote_poll_db()
+        |  |  |– get_remote_connection()
+        |  |  `– start_poll_sync()
+        |  |     `– handle_poll_db_change() whenever local or remote db has changed
+        |  |  
         |  `– once all polls are initialized:
         |     local_docs2cache_finished() 
         |     |– after_changes()
@@ -428,7 +430,7 @@ export class DataService {
     this._pids.add(pid);
     this.G.L.exit("DataService.local_poll_docs2cache "+pid);
   }
-  private connect_to_remote_poll_db(pid:string) {
+  public connect_to_remote_poll_db(pid:string) {
     // called at poll initialization
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
@@ -601,6 +603,8 @@ export class DataService {
     // TODO: prevent Browser popup on 401?
   }
   private test_remote_connection(conn:PouchDB, private_username:string, private_password:string): Promise<boolean> {
+    // FIXME: sometimes this gives an
+    // ERROR Error: Uncaught (in promise): {"status":409,"name":"conflict","message":"Document update conflict"}
     return new Promise((resolve, reject) => {
       // TODO: try creating or updating a timestamp document
       let _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
@@ -712,7 +716,7 @@ export class DataService {
 
   // PUBLIC DATA ACCESS METHODS:
 
-  public getu(key:string):string {
+  public getu(key:string): string {
     // get user data item
     let value = this.user_cache[key] || '';
     if (!value && key=='language') {
@@ -720,7 +724,7 @@ export class DataService {
     }
     return value;
   }
-  public setu(key:string, value:string) {
+  public setu(key:string, value:string): boolean {
     // set user data item
     value = value || '';
     if (key=='language') {
@@ -743,10 +747,10 @@ export class DataService {
     return this.store_user_data(key, value);
   }
 
-  private pid_is_draft(pid):boolean {
+  private pid_is_draft(pid): boolean {
     return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
-  public getp(pid:string, key:string):string {
+  public getp(pid:string, key:string): string {
     // get poll data item
     var value = null;
     if (this.pid_is_draft(pid) || local_only_poll_keys.includes(key)) {
@@ -762,28 +766,36 @@ export class DataService {
     }
     return value;
   }
-  public setp(pid:string, key:string, value:string) {
+  public setp(pid:string, key:string, value:string): boolean {
     // set poll data item
     if (this.pid_is_draft(pid)) {
       return this._setp_in_userdb(pid, key, value);
     } else {
-      this.G.L.error("DataService.setp attempted for non-draft poll "+pid+'.'+key+": "+value);
+      if (key.startsWith('option.')) {
+        if (!(key in this.poll_caches[pid])) {
+          return this._setp_in_polldb(pid, key, value);
+        } else {
+          this.G.L.error("DataService.setp change option attempted for existing entry "+pid+'.'+key+": "+value);
+        }
+      } else {
+        this.G.L.error("DataService.setp attempted for non-draft poll "+pid+'.'+key+": "+value);
+      }
     }
   }
   
   // OTHER METHODS:
 
-  private get_poll_key_prefix(pid:string) {
+  private get_poll_key_prefix(pid:string):string {
     return 'poll.' + pid + '.';
   }
-  private _setp_in_userdb(pid:string, key:string, value:string) {
+  private _setp_in_userdb(pid:string, key:string, value:string): boolean {
     value = value || '';
     let ukey = get_poll_key_prefix(pid) + key;
     this.user_cache[ukey] = value;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     return this.store_user_data(ukey, value);
   }
-  private _setp_in_polldb(pid:string, key:string, value:string) {
+  private _setp_in_polldb(pid:string, key:string, value:string): boolean {
     value = value || '';
     this.ensure_poll_cache(pid);
     this.poll_caches[pid][key] = value;
@@ -891,12 +903,16 @@ export class DataService {
       }
     }
     for (let [pid, oid] of this._pid_oids) {
-      let p = this.G.P.polls[pid];
-      this.G.L.trace("after_changes processing option",pid,oid,p);
-      if (!p.oids.includes(oid)) {
-        // option object does not exist yet, so create it:
-        let o = new Option(this.G, p, oid);
-        this.G.L.trace("DataService.after_changes created new Option object");
+      if (pid in this.G.P.polls) {
+        let p = this.G.P.polls[pid];
+        this.G.L.trace("after_changes processing option",pid,oid,p);
+        if (!p.oids.includes(oid)) {
+          // option object does not exist yet, so create it:
+          let o = new Option(this.G, p, oid);
+          this.G.L.trace("DataService.after_changes created new Option object");
+        }  
+      } else {
+        this.G.L.warn("DataService.after_changes found option for unknown poll...", pid, oid);
       }
     }
     this.G.L.exit("DataService.after_changes");
@@ -936,7 +952,6 @@ export class DataService {
           if (state == 'draft') {
             this._pids.add(pid);
           } else {
-            // FIXME: call start_poll_initialization only AFTER all user data has loaded, otherwise credentials are missing....
             this.start_poll_initialization(pid);
             initializing_poll = true;
           }
@@ -944,7 +959,7 @@ export class DataService {
       } else if (key.startsWith('poll.') && key.includes('.option.') && key.endsWith('.oid')) {
         let pid = key.slice('poll.'.length, key.indexOf('.option.')), oid = value;
         if (!this._pid_oids.has([pid, oid])) {
-          this.G.L.trace("DataService.doc2user_cache found new option", oid);
+          this.G.L.trace("DataService.doc2user_cache found new option", pid, oid);
           this._pid_oids.add([pid, oid]);
         }
       }
@@ -981,10 +996,18 @@ export class DataService {
         this.G.L.exit("DataService.doc2poll_cache false");
         return false;
       }
+      this.G.L.trace("DataService.doc2poll_cache A", pid);
+      this.ensure_poll_cache(pid);
+      this.G.L.trace("DataService.doc2poll_cache B", pid);
       if (this.poll_caches[pid][key] != value) {
         this.poll_caches[pid][key] = value;
+        if (key == "state" && pid in this.G.P.polls) {
+          // update poll's internal cache:
+          this.G.P.polls[pid]._state = value;
+        }
         value_changed = true;
       }  
+      this.G.L.trace("DataService.doc2poll_cache C", pid);
       this.G.L.trace("DataService.doc2poll_cache "+pid+':'+key+": "+value);
     } else {
       this.G.L.warn("DataService.doc2poll_cache got corrupt doc "+JSON.stringify(doc));
@@ -1133,7 +1156,9 @@ export class DataService {
   private email_and_pw_hash() {
     let email = this.user_cache['email'], pw = this.user_cache['password'];
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
-    return myhash(email + ':' + pw);
+    let hash = myhash(email + ':' + pw);
+//    this.G.L.trace("email_and_pw_hash:", email, pw, hash);
+    return hash;
   }
 
 
