@@ -272,11 +272,7 @@ export class Poll {
   }
 
   public init_vid() {
-    if (this.state=='running') {
-      this.vid = this.G.P.generate_vid();
-    } else {
-      this.G.L.error("Attempted to init_vid() when poll not running.");
-    }
+    this.vid = this.G.P.generate_vid();
   }
 
   public init_ballot() {

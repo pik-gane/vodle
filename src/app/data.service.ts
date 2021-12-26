@@ -676,7 +676,7 @@ export class DataService {
     if (this.remote_poll_dbs[pid]) { 
       let email_and_pw_hash = this.email_and_pw_hash();
       this.G.L.debug("DataService.start_poll_sync starting filtered sync");
-      this.local_poll_dbs[pid].sync(this.remote_poll_dbs[pid], {
+      this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
         since: 0,
         live: true,
         retry: true,
@@ -777,8 +777,10 @@ export class DataService {
         } else {
           this.G.L.error("DataService.setp change option attempted for existing entry "+pid+'.'+key+": "+value);
         }
+      } else if (local_only_poll_keys.includes(key)) { 
+        return this._setp_in_userdb(pid, key, value);
       } else {
-        this.G.L.error("DataService.setp attempted for non-draft poll "+pid+'.'+key+": "+value);
+        this.G.L.error("DataService.setp non-local attempted for non-draft poll "+pid+'.'+key+": "+value);
       }
     }
   }
@@ -1128,7 +1130,7 @@ export class DataService {
         this.G.L.warn("DataService.store_voter_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
         return false;
       }
-      let db = this.local_poll_dbs[pid];
+      let db = this.get_local_poll_db(pid);
       if (!db) {
         // TODO: move this into helper function
         throw "OOps, local poll db missing for "+pid;
