@@ -31,7 +31,23 @@
     "yes": "Ja",
 
     "about": {
-        "-page-title": "Über vodle"
+        "-page-title": "Über vodle",
+
+        "h1": "Was ist vodle?",
+        "p11": "vodle hilft Gruppen, faire und gute Entscheidungen zu treffen. Es findet den <i>größten Teilkonsens</i> in einer Menge von Optionen. In echt demokratischer Weise gibt es jeder Person den selben effektiven Einfluß.",
+        "p12": "Es zeigt Dir für jede Option die momentane Zustimmung als hellen Balken auf der rechten Seite, und erlaubt Dir, Deine Bewertungen mit Hilfe von Schiebereglern in Echtzeit anzupassen. Wenn Dein Schieberegler den Zustimmungs-Balken berührt, wird er grün, um anzuzeigen, dass Du dieser Option ebenfalls zustimmst. Auf diese Weise kann die Gruppe zu einem vollen oder teilweisen Konsens finden, der so breit wie möglich ist.",
+        "p13": "Wenn die Abstimmung endet, wird die Gewinner-Option durch einen fairen und einfachen Algorithmus bestimmt, der jeder Person den selben Einfluß gibt, nicht nur denen, die zu einer Mehrheit gehören.",
+        "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option will be the sure winner. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, it must sometimes also use a certain amount of chance, similar to a greencard lottery.",
+        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval and one voter is picked by lot. The top-most option for which that voter's slider is green is declared the winner.",
+        "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other options' winning probabilities are at most as large as their approval scores (in percent of all voters who do not abstain).",
+        "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several targets or recipients), the procedure is similar: If one target is approved by all, you have full consensus, so this target will get the full budget. Otherwise vodle allocates the largest share of the budget to the target with the broadest approval, and smaller shares to the other targets.",
+        "p18": "Exact procedure: Targets are sorted by descending approval. Then each target's share is proportional to the number of voters who approve this target but no higher-up target.",
+
+        "h2": "Who's behind it?",
+        "p21": "vodle's algorithm (called “maximum partial consensus”) was developed and optimizied for fairness by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons, inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Contributors: Marius Amrhein, Adrian Lison.",
+
+        "h3": "Support vodle!",
+        "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
     },
     
     "badges": {

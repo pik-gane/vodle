@@ -10,68 +10,70 @@
   </ion-toolbar>
 </ion-header>
 
+<!--
+zh:
+
+什么是vodle？
+
+vodle帮助团体做出公平和良好的决定。它能在任何一组选项中找到最大的部分共识。真正的民主，它给予每个人相同的有效影响。
+
+对于每个选项，它都会在右边的灯条上显示出当前的认可度，并允许你使用滑块实时调整你的评分。当你的滑块触及批准栏时，它就会变成绿色，表示你也批准该选项。这样一来，小组往往会趋向于达成尽可能广泛的全部或部分共识。
+
+当投票结束时，获胜的选项是由一个公平但简单的算法决定的，该算法给予每个投票者同样的影响，而不仅仅是那些碰巧处于多数的投票者。
+
+  在选择投票中（你的小组要选择一个选项），决定是这样做出的。如果有一个选项被所有人认可，这个完全一致的选项将是肯定的赢家。否则，vodle最有可能宣布获得最广泛认可的选项为赢家。但为了实现公平，它有时也必须使用一定的机会，类似于绿卡抽签。
+
+vodle用于确定获胜选项的确切程序是这样的。投票结束后，选项按支持率降序排序，并通过抽签选出一名选民。该选民的滑块为绿色的最上面的选项被宣布为获胜者。
+
+这样一来，支持率最高的选项将有极大的获胜概率。其他选项的获胜概率最多就是它们的支持率（在所有不弃权的选民中的百分比）那么大。
+
+  在分配投票中（你的小组将一些预算或资源分成若干目标或接受者的份额），程序是类似的：如果一个目标被所有的人批准，你有充分的共识，所以这个目标将得到全部的预算。否则，vodle会将预算的最大份额分配给得到最广泛认可的目标，而将较小的份额分配给其他目标。
+
+具体程序。目标按批准度降序排列。然后，每个目标的份额与支持该目标但不支持更高目标的选民人数成正比。
+
+谁在背后支持？
+
+vodle的算法（称为 "最大部分共识"）是由数学家Jobst Heitzig和Forest W. Simmons合作开发的，并对公平性进行了优化，灵感来自于著名社会学家Mark Granovetter的 "门槛模型"。这个应用程序是开源的，代码托管在github上。主要开发者。约伯斯特-海茨格。贡献者。Marius Amrhein, Adrian Lison.
+
+支持vodle!
+
+由于我们致力于使vodle对每个人都是免费的，我们仍然需要进一步的帮助。如果你是一个书呆子、创意人、有影响力的人、科学家、慈善家、活动家、政治家、友好的外星人......相信公平和有效的共识的未来，并希望以任何微小的方式作出贡献，我们有一些想法，你可以支持我们
+
+-->
 <ion-content class="ion-padding">
   <!--TODO: have this as an expandable list of topics, with the first one expanded by default-->
-  <h3>What is vodle?</h3>
+  <h3 [innerHtml]="'about.h1'|translate"></h3>
   <p>
-    <b>vodle helps a group make fair and good decisions. 
-      It finds the <i>maximal partial consensus</i> among any set of options.
-      Truly democratic, it gives everyone the same effective influence.
+    <b [innerHtml]="'about.p11'|translate">
     </b>
   </p>
-  <p>
-    For each option, it shows you the current approval as a light bar on the right, 
-    and allows you to adjust your ratings in realtime using sliders.
-    When your slider touches the approval bar, it turns green to indicate that you approve that option as well.
-    This way, the group tends to converge to a full or partial consensus as broad as possible. 
+  <p [innerHtml]="'about.p12'|translate">
   </p>
-  <p>
-    When the poll closes, 
-    the winning option is determined by a fair but simple algorithm that gives every voter the same influence,
-    not just those voters who happen to be in a majority.
+  <p [innerHtml]="'about.p13'|translate">
   </p>
   <p>
     <ion-icon name="trophy" float-left></ion-icon>&nbsp;
-    In <b>choice polls</b> (where your group is selecting a <i>single option</i>), 
-    the decision is made as follows.
-    If one option is approved by all, this full consensus option will be the sure winner.
-    Otherwise vodle most likely declares the option with the broadest approval the winner.
-    But to achieve fairness, it must sometimes also use a certain amount of chance,
-    similar to a greencard lottery.
+    <span [innerHtml]="'about.p14'|translate">
+    </span>
   </p>
   <small>
-    <p>
-      The exact procedure that vodle uses for determining the winning option is this:
-      After the poll has closed, options are sorted by descending approval and one voter is picked by lot.
-      The top-most option for which that voter's slider is green is declared the winner. 
+    <p [innerHtml]="'about.p15'|translate">
     </p>
-    <p>
-      This way, the most-approved option will have the vastly largest probability of winning.
-      Other options' winning probabilities are at most as large as their approval scores (in percent of all voters who do not abstain).
+    <p [innerHtml]="'about.p16'|translate">
     </p>
   </small>
   <p>
       <ion-icon name="cut" float-left></ion-icon>&nbsp;
-      In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several targets or recipients), 
-      the procedure is similar:
-      If one target is approved by all, you have full consensus, so this target will get the full budget.
-      Otherwise vodle allocates the largest share of the budget to the target with the broadest approval,
-      and smaller shares to the other targets.
+      <span [innerHtml]="'about.p17'|translate">
+      </span>
   </p>
   <small>
-    <p>
-      Exact procedure: Targets are sorted by descending approval. 
-      Then each target's share is proportional to the number of voters 
-      who approve this target but no higher-up target. 
+    <p [innerHtml]="'about.p18'|translate">
     </p>
   </small>
-  <h3>Who's behind it?</h3>
-    <p>
-      vodle's algorithm was developed and optimizied for fairness by the mathematician Jobst Heitzig,
-      inspired by the "threshold model" of famous sociologist Mark Granovetter, in collaboration with Forest W. Simmons.
-      This app is open-source, code hosted on <a href="https://github.com/pik-gane/vodle" target="_blank">github</a>. 
-      Main developer: Jobst Heitzig. Contributors: Marius Amrhein.
+  <h3 [innerHtml]="'about.h2'|translate"></h3>
+    <p [innerHtml]="'about.p21'|translate:{github_url:environment.github_url}">
     </p>
-  <h3>Support vodle!</h3>
-    <p>As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href="https://sandstorm.pik-potsdam.de/assets/landing-page/index.html#support">how you might support us!</a></p>
+  <h3 [innerHtml]="'about.h3'|translate"></h3>
+    <p [innerHtml]="'about.p31'|translate:{support_vodle_url:environment.support_vodle_url}"></p>
 </ion-content>

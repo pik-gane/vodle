@@ -15,7 +15,7 @@
 
     <ion-item button (click)="e_short = !e_short" no-padding color="primary">
       <ion-icon [name]="e_short?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
-      <ion-label><b>{{'help.h1'|translate}}</b></ion-label>
+      <ion-label><b [innerHtml]="'help.h1'|translate"></b></ion-label>
     </ion-item>
     <ng-template [ngIf]="e_short">
       <ion-item>

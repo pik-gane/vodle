@@ -14,5 +14,7 @@ export const environment = {
     hash_n_bytes: 32
   },
   default_lang: "en",
-  magic_link_base_url: "http://vodle.it/"
+  github_url: "https://github.com/pik-gane/vodle",
+  magic_link_base_url: "http://vodle.it/",
+  support_vodle_url: "http://vodle.it/#support"
 };

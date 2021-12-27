@@ -103,7 +103,8 @@ export class SettingsService {
 
   language_names = {
     de: 'Deutsch',
-    en: 'English'
+    en: 'English',
+    zh: '中文'
   };
 
   validation_messages = {
