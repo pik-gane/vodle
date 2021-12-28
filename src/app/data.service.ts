@@ -565,12 +565,17 @@ export class DataService {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so copying data from user to poll db and then starting sync", pid, new_state);
 
-      // copy data from local user db to poll db.
+      // move data from local user db to poll db.
       for (let [ukey, value] of Object.entries(this.user_cache)) {
         if (ukey.startsWith(prefix)) {
+          // used db entry belongs to this poll.
           let key = ukey.substring(prefix.length);
           if ((key != 'state') && !poll_keys_in_user_db.includes(key)) {
-            this.G.D._setp_in_polldb(pid, key, value as string);
+            if (this._setp_in_polldb(pid, key, value as string)) {
+              this.delu(ukey);
+            } else {
+              this.G.L.warn("DataService.change_poll_state couldn't move", pid, ukey, key);
+            }
           }
         }
       }
@@ -591,7 +596,7 @@ export class DataService {
     }
 
     if (new_state != 'draft') {
-      this.G.D._setp_in_polldb(pid, 'state', new_state); 
+      this._setp_in_polldb(pid, 'state', new_state); 
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
@@ -933,6 +938,14 @@ export class DataService {
       this.move_user_data(old_values);
     }
     return this.store_user_data(key, this.user_cache, key);
+  }
+  public delu(key:string) {
+    // delete a user data item
+    if (!(key in this.user_cache)) {
+      return;
+    }
+    delete this.user_cache[key];
+    this.delete_user_data(key);
   }
 
   private pid_is_draft(pid): boolean {
@@ -1642,6 +1655,53 @@ export class DataService {
       // RETURN:
       return true;
     }
+  }
+
+  private delete_user_data(key:string) {
+    // deletes a key from the user database. 
+    this.G.L.trace("DataService.delete_user_data", key);
+    var db, _id;
+
+    if (local_only_user_keys.includes(key)) {
+      db = this.local_only_user_DB;
+      // simply use key as doc id:
+      _id = key;
+    } else {
+      db = this.local_synced_user_db;
+      // compose id:
+      let email_and_pw_hash = this.email_and_pw_hash();
+      if (!email_and_pw_hash) {
+        this.G.L.warn("DataService.delete_user_data couldn't delete "+key+" since email or password are missing!");
+
+        // RETURN:
+        return false;
+      }
+      _id = user_doc_id_prefix + email_and_pw_hash + ':' + key;
+    }
+
+    // ASYNC:
+    db.get(_id)
+    .then(doc => {
+      // key existed in db, so update:
+
+      db.remove(doc)
+      .then(() => {
+        this.G.L.trace("DataService.delete_user_data local-only delete", key);
+      })
+      .catch(err => {
+        this.G.L.warn("DataService.delete_user_data couldn't delete, will try again soon", key, doc, err);
+        window.setTimeout(this.delete_user_data.bind(this), environment.db_put_retry_delay_ms, key);
+      });
+
+    }).catch(err => {
+
+      // key did not exist in db:
+      this.G.L.warn("DataService.delete_user_data no need to delete nonexistent key", key, err);
+
+    });
+
+    // RETURN:
+    return true;
   }
 
   private email_and_pw_hash() {
