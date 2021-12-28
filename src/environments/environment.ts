@@ -17,6 +17,7 @@ export const environment = {
     central_db_password: "none",
     hash_n_bytes: 8
   },
+  db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
   magic_link_base_url: "http://localhost:8100/",

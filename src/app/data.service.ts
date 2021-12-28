@@ -931,7 +931,7 @@ export class DataService {
     if (keys_triggering_data_move.includes(key)) {
       this.move_user_data(old_values);
     }
-    return this.store_user_data(key, value);
+    return this.store_user_data(key, this.user_cache, key);
   }
 
   private pid_is_draft(pid): boolean {
@@ -1002,7 +1002,7 @@ export class DataService {
       let ukey = get_poll_key_prefix(pid) + key;
       this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
       this.user_cache[ukey] = value;
-      return this.store_user_data(ukey, value);
+      return this.store_user_data(ukey, this.user_cache, ukey);
     } else if (this.pid_is_draft(pid)) {
       return this._setv_in_userdb(pid, key, value);
     } else {
@@ -1019,7 +1019,7 @@ export class DataService {
     let ukey = get_poll_key_prefix(pid) + key;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
-    return this.store_user_data(ukey, value);
+    return this.store_user_data(ukey, this.user_cache, ukey);
   }
   private _setp_in_polldb(pid:string, key:string, value:string): boolean {
     // set poll data item in poll db:
@@ -1027,7 +1027,7 @@ export class DataService {
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
     this.poll_caches[pid][key] = value;
-    return this.store_poll_data(pid, key, value);
+    return this.store_poll_data(pid, key, this.poll_caches[pid], key);
   }
   private _setv_in_userdb(pid:string, key:string, value:string): boolean {
     // set voter data item in user db:
@@ -1036,7 +1036,7 @@ export class DataService {
     let ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
     this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
-    return this.store_user_data(ukey, value);
+    return this.store_user_data(ukey, this.user_cache, ukey);
   }
   private _setv_in_polldb(pid:string, key:string, value:string): boolean {
     // set voter data item in poll db:
@@ -1046,7 +1046,7 @@ export class DataService {
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
-    return this.store_poll_data(pid, pkey, value);
+    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey);
   }
 
   private async show_loading() {
@@ -1246,10 +1246,11 @@ export class DataService {
             }
           }
 
-        } else if (key.startsWith('poll.') && key.includes('.option.') && key.endsWith('.oid')) {
+        } else if (key.startsWith('poll.') && key.includes('.option.') && key.endsWith('.name')) {
 
           // it's an option's oid entry, so check whether we know this option:
-          let pid = key.slice('poll.'.length, key.indexOf('.option.')), oid = value;
+          let pid = key.slice('poll.'.length, key.indexOf('.option.')), 
+              oid = key.slice(key.indexOf('.option.') + '.option.'.length, key.indexOf('.name'));
           if (!this._pid_oids.has([pid, oid])) {
             this.G.L.trace("DataService.doc2user_cache found new option", pid, oid);
             this._pid_oids.add([pid, oid]);
@@ -1377,21 +1378,21 @@ export class DataService {
 
   private store_all_userdata() {
     // stores user_cache in suitable DBs. 
-    for (let [key, value] of Object.entries(this.user_cache)) {
-      this.store_user_data(key, value as string);
+    for (let [ukey, value] of Object.entries(this.user_cache)) {
+      this.store_user_data(ukey, this.user_cache, ukey);
     }
   }
 
   private store_all_polldata(pid:string) {
     // stores poll_cache[pid] in suitable DBs. 
     for (let [key, value] of Object.entries(this.poll_caches[pid])) {
-      this.store_poll_data(pid, key, value as string);
+      this.store_poll_data(pid, key, this.poll_caches[pid], key);
     }
   }
 
-  private store_user_data(key:string, value:string): boolean {
-    // stores key and value in user database. 
-    this.G.L.trace("DataService.store_user_data", key, value);
+  private store_user_data(key:string, dict, dict_key:string): boolean {
+    // stores key and value = dict[dict_key] in user database. 
+    this.G.L.trace("DataService.store_user_data", key, dict[dict_key]);
     var doc;
 
     if (local_only_user_keys.includes(key)) {
@@ -1400,8 +1401,9 @@ export class DataService {
       // simply use key as doc id and don't encrypt:
       this.local_only_user_DB.get(key)
       .then(doc => {
-
         // key existed in db, so update:
+
+        let value = dict[dict_key];
         if (doc.value != value) {
           doc.value = value;
           this.local_only_user_DB.put(doc)
@@ -1409,10 +1411,8 @@ export class DataService {
             this.G.L.trace("DataService.store_user_data local-only update", key, value);
           })
           .catch(err => {
-            this.G.L.error("DataService.store_user_data couldn't local-only update", key, value, doc);
-
-            // RETURN:
-            return false;
+            this.G.L.warn("DataService.store_user_data couldn't local-only update, will try again soon", key, value, doc);
+            window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
           this.G.L.trace("DataService.store_user_data local-only no need to update", key, value);
@@ -1421,17 +1421,16 @@ export class DataService {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        doc = {_id:key, val:value};
+        let value = dict[dict_key];
+        doc = {_id: key, value: value};
         this.local_only_user_DB.put(doc)
-        .then(() => {
+        .then(response => {
           this.G.L.trace("DataService.store_user_data local-only new", key, value);
         })
         .catch(err => {
-          this.G.L.error("DataService.store_user_data couldn't local-only new", key, value, doc);
+          this.G.L.warn("DataService.store_user_data couldn't local-only new, will try again soon", key, value, doc);
           // FIXME: why does this sometimes fail? Apparently the same item gets set twice in very close sequence. Why? 
-
-          // RETURN:
-          return false;
+          window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
         });
 
       });
@@ -1447,25 +1446,23 @@ export class DataService {
         return false;
       }
       let _id = user_doc_id_prefix + email_and_pw_hash + ':' + key, 
-          user_pw = this.user_cache['password'], 
-          val = encrypt(value, user_pw);
+          user_pw = this.user_cache['password'];
 
       // ASYNC:
       this.local_synced_user_db.get(_id)
       .then(doc => {
 
         // key existed in db, so update:
+        let value = dict[dict_key], enc_value = encrypt(value, user_pw);
         if (decrypt(doc.value, user_pw) != value) {
-          doc.value = val;
+          doc.value = enc_value;
           this.local_synced_user_db.put(doc)
-          .then(() => {
+          .then(response => {
             this.G.L.trace("DataService.store_user_data synced update", key, value);
           })
           .catch(err => {
-            this.G.L.error("DataService.store_user_data couldn't synced update", key, value);
-
-            // RETURN:
-            return false;
+            this.G.L.warn("DataService.store_user_data couldn't synced update, will try again soon", key, value);
+            window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
           this.G.L.trace("DataService.store_user_data synced no need to update", key, value);
@@ -1474,19 +1471,18 @@ export class DataService {
       }).catch(err => {
 
         // key did not exist in db, so add:
+        let value = dict[dict_key], enc_value = encrypt(value, user_pw);
         doc = {
           '_id': _id, 
-          'value': val,
+          'value': enc_value,
         };
         this.local_synced_user_db.put(doc)
-        .then(() => {
+        .then(response => {
           this.G.L.trace("DataService.store_user_data synced new", key, value);
         })
         .catch(err => {
-          this.G.L.error("DataService.store_user_data couldn't synced new", key, value);
-
-          // RETURN:
-          return false;
+          this.G.L.warn("DataService.store_user_data couldn't synced new, will try again soon", key, value);
+          window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
         });  
 
       });
@@ -1495,9 +1491,9 @@ export class DataService {
     // RETURN:
     return true;
   }
-  private store_poll_data(pid:string, key:string, value:string) {
+  private store_poll_data(pid:string, key:string, dict, dict_key:string) {
     // stores key and value in poll database. 
-    this.G.L.trace("DataService.store_poll_data", key, value);
+    this.G.L.trace("DataService.store_poll_data", key, dict[dict_key]);
     var doc;
 
     // see what type of entry it is:
@@ -1515,7 +1511,6 @@ export class DataService {
         let doc_value_key = 'value';
       }
       let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
-      let enc_value = encrypt(value, poll_pw);
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
 
@@ -1529,32 +1524,26 @@ export class DataService {
       .then(doc => {
 
         // key existed in poll db, check whether update is allowed.
-        if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
+        let value = dict[dict_key];
+        let enc_value = encrypt(value, poll_pw);
+          if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", key, value);
-
-          // RETURN:
-          return false;
         } else if ((doc_value_key == 'due') && (decrypt(doc.due, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing due time", key, value);
-
-          // RETURN:
-          return false;
         } // TODO: also check state change against due time!
 
         // now update:
         if (decrypt(doc[doc_value_key], poll_pw) != value) {
           doc[doc_value_key] = enc_value;
           db.put(doc)
-          .then(() => {
+          .then(response => {
             this.G.L.trace("DataService.store_poll_data update", key, value);
           })
           .catch(err => {
-            this.G.L.error("DataService.store_poll_data couldn't update", key, value);
-
-            // RETURN:
-            return false;
+            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value);
+            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {
           this.G.L.trace("DataService.store_poll_data no need to update", key, value);
@@ -1565,16 +1554,16 @@ export class DataService {
         doc = {
           '_id': _id,
         };
+        let value = dict[dict_key];
+        let enc_value = encrypt(value, poll_pw);
         doc[doc_value_key] = enc_value;
         db.put(doc)
-        .then(() => {
+        .then(response => {
           this.G.L.trace("DataService.store_poll_data new", key, value);
         })
         .catch(err => {
-          this.G.L.error("DataService.store_poll_data couldn't new", key, value);
-
-          // RETURN:
-          return false;
+          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value);
+          window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
         });  
 
       });
@@ -1591,7 +1580,7 @@ export class DataService {
           vid = this.user_cache[get_poll_key_prefix(pid) + 'vid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
-          this.G.L.error("DataService.store_poll_data tried changing another voter's data item", key, value);
+          this.G.L.error("DataService.store_poll_data tried changing another voter's data item", key);
 
           // RETURN: 
           return false;
@@ -1608,6 +1597,7 @@ export class DataService {
 
       // ASYNC:
       // try storing encrypted and with proper prefix:
+      let value = dict[dict_key];
       let enc_value = encrypt(value, poll_pw);
       let db = this.get_local_poll_db(pid);
       db.get(_id)
@@ -1617,14 +1607,12 @@ export class DataService {
         if (decrypt(doc.value, poll_pw) != value) {
           doc.value = value;
           this.local_synced_user_db.put(doc)
-          .then(() => {
+          .then(response => {
             this.G.L.trace("DataService.store_poll_data update", key, value);
           })
           .catch(err => {
-            this.G.L.error("DataService.store_poll_data couldn't update", key, value);
-
-            // RETURN:
-            return false;
+            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value);
+            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {
           this.G.L.trace("DataService.store_poll_data no need to update", key, value);
@@ -1633,19 +1621,19 @@ export class DataService {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        doc = {
+        let value = dict[dict_key];
+        let enc_value = encrypt(value, poll_pw);
+          doc = {
           '_id': _id,
           'value': enc_value,
         };
         db.put(doc)
-        .then(() => {
+        .then(response => {
           this.G.L.trace("DataService.store_poll_data new", key, value);
         })
         .catch(err => {
-          this.G.L.error("DataService.store_poll_data couldn't new", key, value);
-
-          // RETURN:
-          return false;
+          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value);
+          window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
         });  
 
       });
