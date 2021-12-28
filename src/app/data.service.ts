@@ -563,7 +563,7 @@ export class DataService {
 
     if (old_state=='draft') {
 
-      this.G.L.debug("DataService.change_poll_state old state was draft, so copying data from user to poll db and then starting sync", pid, new_state);
+      this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
       // move data from local user db to poll db.
       for (let [ukey, value] of Object.entries(this.user_cache)) {
@@ -875,8 +875,9 @@ export class DataService {
           || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
               && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
         ),
-      }).on('change', this.handle_poll_db_change.bind(this)
-      ).on('paused', info => {
+      }).on('change', change => {
+        this.handle_poll_db_change.bind(this)(pid, change);
+      }).on('paused', info => {
         // replication was paused, usually because of a lost connection
         this.G.L.info("DataService pausing poll data sync", pid, info);
       }).on('active', info => {
@@ -1312,8 +1313,10 @@ export class DataService {
       }  
       if (this.poll_caches[pid]['state'] != state) {
         this.poll_caches[pid]['state'] = state;
+        // also set state in user db:
+        this.setu(get_poll_key_prefix(pid) + 'state', state);
         if (pid in this.G.P.polls) {
-          // update poll's internal state cache:
+          // also update poll's internal state cache:
           this.G.P.polls[pid]._state = state;
         }
         value_changed = true;
