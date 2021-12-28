@@ -125,10 +125,14 @@ function get_poll_key_prefix(pid:string) {
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 // curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
 
-// some keys are only stored locally and not synced to a remote CouchDB:
-const local_only_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password'];
-const local_only_poll_keys = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'vid'];
-const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_pther_server_url','db_other_password'];
+// some user data keys are only stored locally and not synced to a remote CouchDB:
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password'];
+// some of these trigger a move from one remote user dvb to another when changed:
+const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
+
+// some poll and voter data keys are stored in the user db rather than in the poll db:
+const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password'];
+const voter_keys_in_user_db = ['vid', 'have_opened', 'have_rated', 'have_seen_results'];
 
 // ENCRYPTION:
 
@@ -564,7 +568,7 @@ export class DataService {
       for (let [ukey, value] of Object.entries(this.user_cache)) {
         if (ukey.startsWith(prefix)) {
           let key = ukey.substring(prefix.length);
-          if ((key != 'state') && !local_only_poll_keys.includes(key)) {
+          if ((key != 'state') && !poll_keys_in_user_db.includes(key)) {
             this.G.D._setp_in_polldb(pid, key, value as string);
           }
         }
@@ -764,7 +768,8 @@ export class DataService {
 
         // doc exists, try updating with current time:
         doc.value = value;
-        conn.put(doc).then(response => {
+        conn.put(doc)
+        .then(response => {
 
           resolve(true);
 
@@ -904,6 +909,9 @@ export class DataService {
     return value;
   }
   public setu(key:string, value:string): boolean {
+    if (this.getu(key) == value) {
+      return true;
+    }
     // set user data item
     value = value || '';
     if (key=='language') {
@@ -932,7 +940,7 @@ export class DataService {
   public getp(pid:string, key:string): string {
     // get poll data item
     var value = null;
-    if (this.pid_is_draft(pid) || local_only_poll_keys.includes(key)) {
+    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       // draft polls' data is stored in user's database:
       let ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
@@ -944,39 +952,101 @@ export class DataService {
     return value;
   }
   public setp(pid:string, key:string, value:string): boolean {
+    if (this.getp(pid, key) == value) {
+      return true;
+    }
     // set poll data item
-    if (this.pid_is_draft(pid)) {
+    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       return this._setp_in_userdb(pid, key, value);
-    } else {
-      if (key.startsWith('option.')) {
-        if (!(key in this.poll_caches[pid])) {
-          return this._setp_in_polldb(pid, key, value);
-        } else {
-          this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
-        }
-      } else if (local_only_poll_keys.includes(key)) { 
-        return this._setp_in_userdb(pid, key, value);
+    } else if (key.startsWith('option.')) {
+      if (!(key in this.poll_caches[pid])) {
+        return this._setp_in_polldb(pid, key, value);
       } else {
-        this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
+        this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
       }
+    } else {
+      this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
+    }
+  }
+
+  public getv(pid:string, key:string): string {
+    // get voter data item
+    var value = null;
+    if (voter_keys_in_user_db.includes(key)) {
+      // construct key for user db:
+      let ukey = get_poll_key_prefix(pid) + key;
+      value = this.user_cache[ukey] || '';
+    } else if (this.pid_is_draft(pid)) {
+      // draft polls' data is stored in user's database.
+      // construct key for user db:
+      let ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+      value = this.user_cache[ukey] || '';
+    } else {
+      // other polls' data is stored in poll's own database.
+      // construct key for poll db:
+      let pkey = this.get_voter_key_prefix(pid) + key;
+      this.ensure_poll_cache(pid);
+      value = this.poll_caches[pid][pkey] || '';
+    }
+    return value;
+  }
+  public setv(pid:string, key:string, value:string): boolean {
+    if (this.getv(pid, key) == value) {
+      return true;
+    }
+    // set voter data item
+    if (voter_keys_in_user_db.includes(key)) {
+      // set voter data item in user db.
+      value = value || '';
+      // construct key for user db:
+      let ukey = get_poll_key_prefix(pid) + key;
+      this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
+      this.user_cache[ukey] = value;
+      return this.store_user_data(ukey, value);
+    } else if (this.pid_is_draft(pid)) {
+      return this._setv_in_userdb(pid, key, value);
+    } else {
+      return this._setv_in_polldb(pid, key, value);
     }
   }
   
   // OTHER METHODS:
 
   private _setp_in_userdb(pid:string, key:string, value:string): boolean {
+    // set poll data item in user db:
     value = value || '';
+    // construct key for user db:
     let ukey = get_poll_key_prefix(pid) + key;
-    this.user_cache[ukey] = value;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
+    this.user_cache[ukey] = value;
     return this.store_user_data(ukey, value);
   }
   private _setp_in_polldb(pid:string, key:string, value:string): boolean {
+    // set poll data item in poll db:
     value = value || '';
     this.ensure_poll_cache(pid);
-    this.poll_caches[pid][key] = value;
     this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
+    this.poll_caches[pid][key] = value;
     return this.store_poll_data(pid, key, value);
+  }
+  private _setv_in_userdb(pid:string, key:string, value:string): boolean {
+    // set voter data item in user db:
+    value = value || '';
+    // construct key for user db:
+    let ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+    this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
+    this.user_cache[ukey] = value;
+    return this.store_user_data(ukey, value);
+  }
+  private _setv_in_polldb(pid:string, key:string, value:string): boolean {
+    // set voter data item in poll db:
+    value = value || '';
+    // construct key for poll db:
+    let pkey = this.get_voter_key_prefix(pid) + key;
+    this.ensure_poll_cache(pid);
+    this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
+    this.poll_caches[pid][pkey] = value;
+    return this.store_poll_data(pid, pkey, value);
   }
 
   private async show_loading() {
@@ -1013,14 +1083,15 @@ export class DataService {
     this.G.L.trace("DataService.handle_user_db_change", change);
     let local_changes = false;
     if (change.deleted){
-      var key = change.doc['key'];
-      this.G.L.trace("DataService.handle_user_db_change deleting", key);
-      delete this.user_cache[key];
-      local_changes = true;
+      local_changes = this.handle_deleted_user_doc(change.doc);
     } else if (change.direction=='pull') {
       for (let doc of change.change.docs) {
-        var dummy;
-        [local_changes, dummy] = this.doc2user_cache(doc);
+        if (doc._deleted) {
+          local_changes = this.handle_deleted_user_doc(doc);
+        } else {
+          var dummy;
+          [local_changes, dummy] = this.doc2user_cache(doc);
+        }
       }
     }
     if (local_changes) {
@@ -1033,13 +1104,14 @@ export class DataService {
     this.G.L.trace("DataService.handle_poll_db_change", pid, change);
     let local_changes = false;
     if (change.deleted){
-      var key = change.doc['key'];
-      this.G.L.trace("DataService.handle_poll_db_change deleting", key);
-      delete this.poll_caches[pid][key];
-      local_changes = true;
+      local_changes = this.handle_deleted_poll_doc(pid, change.doc);
     } else if (change.direction=='pull') {
       for (let doc of change.change.docs) {
-        local_changes = this.doc2poll_cache(pid, doc);
+        if (doc._deleted) {
+          local_changes = this.handle_deleted_poll_doc(pid, doc);
+        } else {
+          local_changes = this.doc2poll_cache(pid, doc);
+        }
       }
     }
     if (local_changes) {
@@ -1047,6 +1119,33 @@ export class DataService {
       if (this._page.onDataChange) this._page.onDataChange();
     }
   }
+  private handle_deleted_user_doc(doc): boolean {
+    var _id = doc._id;
+    if (_id.includes(':')) {
+      var key = _id.slice(_id.indexOf(':') + 1);
+      if (key in this.user_cache) {
+        this.G.L.trace("DataService.handle_user_db_change deleting", key);
+        delete this.user_cache[key];
+        return true;    
+      }  
+    }
+    return false;
+  }
+  private handle_deleted_poll_doc(pid:string, doc): boolean {
+    if (!(pid in this.poll_caches)) {
+      return false;
+    }
+    var _id = doc._id;
+    if (_id.includes(pid)) {
+      var key = _id.slice(_id.indexOf(pid) + pid.length + 1);
+      if (key in this.poll_caches[pid]) {
+        this.G.L.trace("DataService.handle_poll_db_change deleting", key);
+        delete this.poll_caches[pid][key];
+        return true;    
+      }  
+    }
+    return false;
+}
 
   private after_changes() {
     this.G.L.entry("DataService.after_changes");
@@ -1180,64 +1279,93 @@ export class DataService {
     let _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
-    var key;
-    let value_changed = false, cyphertext = doc['value'];
-    this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
+    var key, value_changed;
 
-    if (cyphertext) {
+    if (_id.includes('due_and_state')) {
+      // it's the combined due and state doc, so extract both:
 
-      // extract value:
-      let value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
-
-      // extract key depending on doc type:
-      if (_id.startsWith(poll_doc_prefix)) {
-
-        // it's a non-voter poll doc.
-        key = _id.slice(poll_doc_prefix.length, _id.length);
-        if (key.startsWith('option.') && key.endsWith('.oid')) {
-
-          // it's an option's oid entry, so check whether we know this option:
-          let oid = value;
-          if (!this._pid_oids.has([pid, oid])) {
-            this.G.L.trace("DataService.doc2poll_cache found new option",oid);
-            this._pid_oids.add([pid, oid]);
-          }
-
-        }
-
-      } else if (_id.startsWith(voter_doc_prefix)) {
-
-        // it's a voter doc.
-        key = _id.slice(voter_doc_prefix.length, _id.length);
-
-      } else {
-
-        // it's neither.
-        this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", _id);
-        this.G.L.exit("DataService.doc2poll_cache false");
-
-        // RETURN:
-        return false;
-
-      }
-      this.G.L.trace("DataService.doc2poll_cache key, value", key, value);
+      let prefix = get_poll_key_prefix(pid);
+      let due = decrypt(doc['due'], this.user_cache[prefix + 'password']);
+      let state = decrypt(doc['state'], this.user_cache[prefix + 'password']);
+      value_changed = false;
 
       // store in cache if changed:
       this.ensure_poll_cache(pid);
-      if (this.poll_caches[pid][key] != value) {
-        this.poll_caches[pid][key] = value;
-        if (key == "state" && pid in this.G.P.polls) {
+      if (this.poll_caches[pid]['due'] != due) {
+        this.poll_caches[pid]['due'] = due;
+        value_changed = true;
+      }  
+      if (this.poll_caches[pid]['state'] != state) {
+        this.poll_caches[pid]['state'] = state;
+        if (pid in this.G.P.polls) {
           // update poll's internal state cache:
-          this.G.P.polls[pid]._state = value;
+          this.G.P.polls[pid]._state = state;
         }
         value_changed = true;
       }  
 
     } else {
 
-      this.G.L.warn("DataService.doc2poll_cache got corrupt doc", JSON.stringify(doc));
+      value_changed = false;
+      let cyphertext = doc['value'];
+      this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
 
+      if (cyphertext) {
+
+        // extract value:
+        let value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+
+        // extract key depending on doc type:
+        if (_id.startsWith(poll_doc_prefix)) {
+
+          // it's a non-voter poll doc.
+          key = _id.slice(poll_doc_prefix.length, _id.length);
+          if (key.startsWith('option.') && key.endsWith('.oid')) {
+
+            // it's an option's oid entry, so check whether we know this option:
+            let oid = value;
+            if (!this._pid_oids.has([pid, oid])) {
+              this.G.L.trace("DataService.doc2poll_cache found new option",oid);
+              this._pid_oids.add([pid, oid]);
+            }
+
+          }
+
+        } else if (_id.startsWith(voter_doc_prefix)) {
+
+          // it's a voter doc.
+          key = _id.slice(voter_doc_prefix.length, _id.length);
+
+        } else {
+
+          // it's neither.
+          this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", _id);
+          this.G.L.exit("DataService.doc2poll_cache false");
+
+          // RETURN:
+          return false;
+
+        }
+        this.G.L.trace("DataService.doc2poll_cache key, value", key, value);
+
+        // store in cache if changed:
+        this.ensure_poll_cache(pid);
+        if (this.poll_caches[pid][key] != value) {
+          this.poll_caches[pid][key] = value;
+          if (key == "state" && pid in this.G.P.polls) {
+            // update poll's internal state cache:
+            this.G.P.polls[pid]._state = value;
+          }
+          value_changed = true;
+        }  
+
+      } else {
+
+        this.G.L.warn("DataService.doc2poll_cache got corrupt doc", JSON.stringify(doc));
+
+      }
     }
+
     // returns whether the value actually changed.
     this.G.L.exit("DataService.doc2poll_cache value_changed", value_changed);
 
@@ -1266,7 +1394,7 @@ export class DataService {
     this.G.L.trace("DataService.store_user_data", key, value);
     var doc;
 
-    if (local_only_keys.includes(key)) {
+    if (local_only_user_keys.includes(key)) {
 
       // ASYNC:
       // simply use key as doc id and don't encrypt:
@@ -1276,8 +1404,16 @@ export class DataService {
         // key existed in db, so update:
         if (doc.value != value) {
           doc.value = value;
-          this.local_only_user_DB.put(doc);
-          this.G.L.trace("DataService.store_user_data local-only update", key, value);
+          this.local_only_user_DB.put(doc)
+          .then(() => {
+            this.G.L.trace("DataService.store_user_data local-only update", key, value);
+          })
+          .catch(err => {
+            this.G.L.error("DataService.store_user_data couldn't local-only update", key, value, doc);
+
+            // RETURN:
+            return false;
+          });
         } else {
           this.G.L.trace("DataService.store_user_data local-only no need to update", key, value);
         }
@@ -1286,8 +1422,17 @@ export class DataService {
 
         // key did not exist in db, so add:
         doc = {_id:key, val:value};
-        this.local_only_user_DB.put(doc);  
-        this.G.L.trace("DataService.store_user_data local-only new", key, value);
+        this.local_only_user_DB.put(doc)
+        .then(() => {
+          this.G.L.trace("DataService.store_user_data local-only new", key, value);
+        })
+        .catch(err => {
+          this.G.L.error("DataService.store_user_data couldn't local-only new", key, value, doc);
+          // FIXME: why does this sometimes fail? Apparently the same item gets set twice in very close sequence. Why? 
+
+          // RETURN:
+          return false;
+        });
 
       });
 
@@ -1296,7 +1441,7 @@ export class DataService {
       // store encrypted with suitable owner prefix in doc id:
       let email_and_pw_hash = this.email_and_pw_hash();
       if (!email_and_pw_hash) {
-        this.G.L.warn("DataService.store_user_data couldn't set "+key+" in since email or password are missing!");
+        this.G.L.warn("DataService.store_user_data couldn't set "+key+" since email or password are missing!");
 
         // RETURN:
         return false;
@@ -1312,8 +1457,16 @@ export class DataService {
         // key existed in db, so update:
         if (decrypt(doc.value, user_pw) != value) {
           doc.value = val;
-          this.local_synced_user_db.put(doc); // FIXME: this rarely gives a document update conflict -- why?
-          this.G.L.trace("DataService.store_user_data synced update", key, value);
+          this.local_synced_user_db.put(doc)
+          .then(() => {
+            this.G.L.trace("DataService.store_user_data synced update", key, value);
+          })
+          .catch(err => {
+            this.G.L.error("DataService.store_user_data couldn't synced update", key, value);
+
+            // RETURN:
+            return false;
+          });
         } else {
           this.G.L.trace("DataService.store_user_data synced no need to update", key, value);
         }
@@ -1325,8 +1478,16 @@ export class DataService {
           '_id': _id, 
           'value': val,
         };
-        this.local_synced_user_db.put(doc);  
-        this.G.L.trace("DataService.store_user_data synced new", key, value);
+        this.local_synced_user_db.put(doc)
+        .then(() => {
+          this.G.L.trace("DataService.store_user_data synced new", key, value);
+        })
+        .catch(err => {
+          this.G.L.error("DataService.store_user_data couldn't synced new", key, value);
+
+          // RETURN:
+          return false;
+        });  
 
       });
     }
@@ -1345,9 +1506,16 @@ export class DataService {
       // it's a non-voter data item.
 
       // store encrypted and with correct prefix:
-      let _id = poll_doc_id_prefix + pid + ':' + key,
-          poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'],
-          enc_value = encrypt(value, poll_pw);
+      var _id, doc_value_key;
+      if ((key == 'due') || (key == 'state')) {
+        let _id = poll_doc_id_prefix + pid + ':due_and_state';
+        let doc_value_key = key;
+      } else {
+        let _id = poll_doc_id_prefix + pid + ':' + key;
+        let doc_value_key = 'value';
+      }
+      let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+      let enc_value = encrypt(value, poll_pw);
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
 
@@ -1360,25 +1528,54 @@ export class DataService {
       db.get(_id)
       .then(doc => {
 
-        // key existed in poll db, so this is an attempt to update it.
-        if (decrypt(doc.value, poll_pw) != value) {
+        // key existed in poll db, check whether update is allowed.
+        if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", key, value);
 
           // RETURN:
           return false;
+        } else if ((doc_value_key == 'due') && (decrypt(doc.due, poll_pw) != value)) {
+          // this is not allowed for poll docs!
+          this.G.L.error("DataService.store_poll_data tried changing due time", key, value);
 
-          // TODO: what about poll.state? should this be modifiable from running to closed or rather not stored in remote db at all?   
+          // RETURN:
+          return false;
+        } // TODO: also check state change against due time!
+
+        // now update:
+        if (decrypt(doc[doc_value_key], poll_pw) != value) {
+          doc[doc_value_key] = enc_value;
+          db.put(doc)
+          .then(() => {
+            this.G.L.trace("DataService.store_poll_data update", key, value);
+          })
+          .catch(err => {
+            this.G.L.error("DataService.store_poll_data couldn't update", key, value);
+
+            // RETURN:
+            return false;
+          });
+        } else {
+          this.G.L.trace("DataService.store_poll_data no need to update", key, value);
         }
-
+        
       }).catch(err => {
 
         doc = {
           '_id': _id,
-          'value': enc_value,
         };
-        db.put(doc);  
-        this.G.L.trace("DataService.store_poll_data new", key, value);
+        doc[doc_value_key] = enc_value;
+        db.put(doc)
+        .then(() => {
+          this.G.L.trace("DataService.store_poll_data new", key, value);
+        })
+        .catch(err => {
+          this.G.L.error("DataService.store_poll_data couldn't new", key, value);
+
+          // RETURN:
+          return false;
+        });  
 
       });
 
@@ -1403,7 +1600,7 @@ export class DataService {
       let _id = poll_doc_id_prefix + pid + '.' + key,
           poll_pw = this.user_cache[get_poll_key_prefix(pid) +  + 'password'];
       if ((poll_pw=='')||(!poll_pw) || (vid=='')||(!vid)) {
-        this.G.L.warn("DataService.store_voter_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
+        this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
 
         // RETURN:
         return false;
@@ -1419,10 +1616,18 @@ export class DataService {
         // key existed in db, so update:
         if (decrypt(doc.value, poll_pw) != value) {
           doc.value = value;
-          this.local_synced_user_db.put(doc);
-          this.G.L.trace("DataService.store_voter_data update", key, value);
+          this.local_synced_user_db.put(doc)
+          .then(() => {
+            this.G.L.trace("DataService.store_poll_data update", key, value);
+          })
+          .catch(err => {
+            this.G.L.error("DataService.store_poll_data couldn't update", key, value);
+
+            // RETURN:
+            return false;
+          });
         } else {
-          this.G.L.trace("DataService.store_voter_data no need to update", key, value);
+          this.G.L.trace("DataService.store_poll_data no need to update", key, value);
         }
 
       }).catch(err => {
@@ -1432,8 +1637,16 @@ export class DataService {
           '_id': _id,
           'value': enc_value,
         };
-        db.put(doc);  
-        this.G.L.trace("DataService poll DB new "+key+": "+value);
+        db.put(doc)
+        .then(() => {
+          this.G.L.trace("DataService.store_poll_data new", key, value);
+        })
+        .catch(err => {
+          this.G.L.error("DataService.store_poll_data couldn't new", key, value);
+
+          // RETURN:
+          return false;
+        });  
 
       });
 
@@ -1460,6 +1673,10 @@ export class DataService {
 
   // OTHER:
 
+  get_voter_key_prefix(pid:string) {
+    return 'voter.' + this.getv(pid, 'vid') + '.';
+  }
+  
   format_date(date: string) {
     return new Date(date).toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
   }

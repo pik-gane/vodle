@@ -156,9 +156,9 @@ export class Poll {
     this.G.D.setp(this._pid, 'password', value);
   }
 
-  public get vid(): string { return this.G.D.getp(this._pid, 'vid'); }
+  public get vid(): string { return this.G.D.getv(this._pid, 'vid'); }
   public set vid(value: string) {
-    this.G.D.setp(this._pid, 'vid', value);
+    this.G.D.setv(this._pid, 'vid', value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:
@@ -266,6 +266,7 @@ export class Poll {
     // generate and store a random poll password:
     if ((this.password||'')=='') {
       this.password = this.G.P.generate_password(); 
+      this.G.L.info("PollService.init_password", this.password);
     } else {
       this.G.L.error("Attempted to init_password() when password already existed.");
     }
@@ -273,6 +274,7 @@ export class Poll {
 
   public init_vid() {
     this.vid = this.G.P.generate_vid();
+    this.G.L.info("PollService.init_vid", this.vid);
   }
 
   public init_ballot() {

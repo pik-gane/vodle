@@ -86,17 +86,18 @@ export class SettingsService {
 
   public compute_db_credentials() {
     // set db credentials according to this.db... settings:
+    var url;
     if (this.db=='central') {
-      this.db_server_url = environment.data_service.central_db_server_url; 
+      url = environment.data_service.central_db_server_url; 
       this.db_password = environment.data_service.central_db_password;
     } else if (this.db=='poll') {
-      this.db_server_url = this.G.P.polls[this.db_from_pid].db_server_url;
+      url = this.G.P.polls[this.db_from_pid].db_server_url;
       this.db_password = this.G.P.polls[this.db_from_pid].db_password;
     } else if (this.db=='other') {
-      this.db_server_url = this.db_other_server_url;
+      url = this.db_other_server_url;
       this.db_password = this.db_other_password;
     }
-    this.db_server_url = this.G.D.fix_url(this.db_server_url);
+    this.db_server_url = this.G.D.fix_url(url);
   }
 
   // OTHER CONSTANTS:

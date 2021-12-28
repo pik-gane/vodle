@@ -37,7 +37,7 @@
     </ion-item>
     <ion-item>
       <ion-col class="ion-no-padding ion-no-margin">
-        <small><ion-text [innerHtml]="(p.type.value=='winner' ? 'options' : 'possible-targets')|translate"></ion-text>:</small>
+        <small><ion-text [innerHtml]="(p.type=='winner' ? 'options' : 'possible-targets')|translate"></ion-text>:</small>
       </ion-col>
     </ion-item>
     <ion-item *ngFor="let o of Object.values(p.options)">
