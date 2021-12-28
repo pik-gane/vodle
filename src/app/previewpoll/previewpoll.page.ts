@@ -70,6 +70,7 @@ export class PreviewpollPage implements OnInit {
   // HOOKS:
 
   publish_button_clicked() {
+    this.G.L.entry("PreviewpollPage.publish_button_clicked");
     // TODO: again check that due is in future!
     // fix db credentials:
     this.p.set_db_credentials();
@@ -83,6 +84,7 @@ export class PreviewpollPage implements OnInit {
     this.p.init_ballot();
     // go to invitation page:
     this.router.navigate(['/inviteto/'+this.pid]);
+    this.G.L.exit("PreviewpollPage.publish_button_clicked");
   }
 
 

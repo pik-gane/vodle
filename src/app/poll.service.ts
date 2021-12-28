@@ -156,9 +156,9 @@ export class Poll {
     this.G.D.setp(this._pid, 'password', value);
   }
 
-  public get vid(): string { return this.G.D.getv(this._pid, 'vid'); }
+  public get vid(): string { return this.G.D.getp(this._pid, 'vid'); }
   public set vid(value: string) {
-    this.G.D.setv(this._pid, 'vid', value);
+    this.G.D.setp(this._pid, 'vid', value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:

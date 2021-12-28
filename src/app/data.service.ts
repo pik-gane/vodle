@@ -131,8 +131,8 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password'];
-const voter_keys_in_user_db = ['vid', 'have_opened', 'have_rated', 'have_seen_results'];
+const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'vid'];
+const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
 
 // ENCRYPTION:
 
@@ -458,6 +458,7 @@ export class DataService {
   private get_local_poll_db(pid:string) {
     if (!(pid in this.local_poll_dbs)) {
       this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid);
+      this.G.L.info("DataService.get_local_poll_db new poll db", pid, this.local_poll_dbs[pid]);
     } 
     return this.local_poll_dbs[pid];
   }
@@ -580,7 +581,7 @@ export class DataService {
         this.G.L.trace("DataService.change_poll_state found remote poll db credentials");
         // connect to remote and start sync:
         this.connect_to_remote_poll_db(pid).catch(err => {
-          this.G.L.warn("DataService.change_poll_state couldn't start remote poll db syncing for", pid);
+          this.G.L.warn("DataService.change_poll_state couldn't start remote poll db syncing for", pid, err);
           // TODO
         });
       } else {
@@ -1171,7 +1172,7 @@ export class DataService {
           this.connect_to_remote_poll_db(pid)
           .catch(err => {
 
-            this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid);
+            this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);
             // TODO: react somehow?
 
           });
@@ -1411,7 +1412,7 @@ export class DataService {
             this.G.L.trace("DataService.store_user_data local-only update", key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_user_data couldn't local-only update, will try again soon", key, value, doc);
+            this.G.L.warn("DataService.store_user_data couldn't local-only update, will try again soon", key, value, doc, err);
             window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
@@ -1428,7 +1429,7 @@ export class DataService {
           this.G.L.trace("DataService.store_user_data local-only new", key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_user_data couldn't local-only new, will try again soon", key, value, doc);
+          this.G.L.warn("DataService.store_user_data couldn't local-only new, will try again soon", key, value, doc, err);
           // FIXME: why does this sometimes fail? Apparently the same item gets set twice in very close sequence. Why? 
           window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
         });
@@ -1461,7 +1462,7 @@ export class DataService {
             this.G.L.trace("DataService.store_user_data synced update", key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_user_data couldn't synced update, will try again soon", key, value);
+            this.G.L.warn("DataService.store_user_data couldn't synced update, will try again soon", key, value, err);
             window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
@@ -1481,7 +1482,7 @@ export class DataService {
           this.G.L.trace("DataService.store_user_data synced new", key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_user_data couldn't synced new, will try again soon", key, value);
+          this.G.L.warn("DataService.store_user_data couldn't synced new, will try again soon", key, value, err);
           window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
         });  
 
@@ -1504,11 +1505,11 @@ export class DataService {
       // store encrypted and with correct prefix:
       var _id, doc_value_key;
       if ((key == 'due') || (key == 'state')) {
-        let _id = poll_doc_id_prefix + pid + ':due_and_state';
-        let doc_value_key = key;
+        _id = poll_doc_id_prefix + pid + ':due_and_state';
+        doc_value_key = key;
       } else {
-        let _id = poll_doc_id_prefix + pid + ':' + key;
-        let doc_value_key = 'value';
+        _id = poll_doc_id_prefix + pid + ':' + key;
+        doc_value_key = 'value';
       }
       let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='')||(!poll_pw)) {
@@ -1542,7 +1543,7 @@ export class DataService {
             this.G.L.trace("DataService.store_poll_data update", key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value);
+            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value, doc, err);
             window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {
@@ -1562,7 +1563,7 @@ export class DataService {
           this.G.L.trace("DataService.store_poll_data new", key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value);
+          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value, doc, err);
           window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
         });  
 
@@ -1611,7 +1612,7 @@ export class DataService {
             this.G.L.trace("DataService.store_poll_data update", key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value);
+            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value, doc, err);
             window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {
@@ -1632,7 +1633,7 @@ export class DataService {
           this.G.L.trace("DataService.store_poll_data new", key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value);
+          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value, doc, err);
           window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
         });  
 
