@@ -93,10 +93,22 @@ export class InvitetoPage implements OnInit {
 
   share_button_clicked() {
     this.G.L.entry("InvitetoPage.share_button_clicked");
+    let title = this.translate.instant('invite-email.subject', {due: this.p.due});
+    try {
+      navigator.share({ title: title, url: this.invite_link })
+      .then(() => {
+        console.log("Data was shared successfully");
+      }).catch(err => {
+      console.error("Share failed:", err);
+      });
+    } catch (err) {
+      console.error("Share not invoked:", err);
+    }
   }
 
   copy_button_clicked() {
     this.G.L.entry("InvitetoPage.copy_button_clicked");
+    window.navigator.clipboard.writeText(this.invite_link);
+    this.G.L.exit("InvitetoPage.copy_button_clicked");
   }
-
 }
