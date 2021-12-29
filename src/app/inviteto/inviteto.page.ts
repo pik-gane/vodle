@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
 
@@ -19,6 +22,8 @@ export class InvitetoPage implements OnInit {
   came_from_preview: boolean;
   details_expanded: boolean;
   invite_link: string;
+  message_title: string;
+  message_body: string;
   email_href: string;
   can_use_web_share: boolean;
   can_share: boolean;
@@ -47,7 +52,8 @@ export class InvitetoPage implements OnInit {
     this.G.D.page = this;
     this.came_from_preview = true; // TODO: set depending on url!
     this.details_expanded = false;
-    this.can_share = this.can_use_web_share = (typeof navigator.share === "function");
+    this.can_use_web_share = (typeof navigator.share === "function");
+    this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
   }
 
   ionViewDidEnter() {
@@ -79,8 +85,8 @@ export class InvitetoPage implements OnInit {
       + this.p.password);
     this.G.L.info("InvitetoPage invite link:", this.invite_link);
     // TODO: translate and make indentation in body work:
-    let subject = this.translate.instant('invite-email.subject', {due: this.p.due});
-    let body = (this.translate.instant('invite-email.body-greeting') + "\n\n" 
+    this.message_title = this.translate.instant('invite-email.subject', {due: this.p.due});
+    this.message_body = (this.translate.instant('invite-email.body-greeting') + "\n\n" 
                 + this.translate.instant('invite-email.body-before-title') + "\n\n"
                 + "    “" + this.p.title + "”.\n\n"
                 + this.translate.instant('invite-email.body-closes', {due: this.p.due}) + "\n\n"
@@ -88,7 +94,7 @@ export class InvitetoPage implements OnInit {
                 + "    " + this.invite_link + "\n\n"
                 + this.translate.instant('invite-email.body-dont-share') + "\n\n"
                 + this.translate.instant('invite-email.body-regards'));
-    this.email_href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    this.email_href = "mailto:?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body);
     this.ready = true;
   }
 
@@ -96,7 +102,17 @@ export class InvitetoPage implements OnInit {
 
   share_button_clicked() {
     this.G.L.entry("InvitetoPage.share_button_clicked");
-    let title = this.translate.instant('invite-email.subject', {due: this.p.due});
+    Share.share({
+      title: this.message_title,
+      text: this.message_body,
+      url: this.invite_link,
+      dialogTitle: 'Share vodle invite link',
+    }).then(res => {
+      this.G.L.info("InvitetoPage.share_button_clicked succeeded", res);
+    }).catch(err => {
+      this.G.L.error("InvitetoPage.share_button_clicked failed", err);
+    });
+/*
     try {
       navigator.share({ title: title, url: this.invite_link })
       .then(() => {
@@ -107,6 +123,7 @@ export class InvitetoPage implements OnInit {
     } catch (err) {
       console.error("Share not invoked:", err);
     }
+*/
   }
 
   copy_button_clicked() {
