@@ -20,6 +20,8 @@ export class InvitetoPage implements OnInit {
   details_expanded: boolean;
   invite_link: string;
   email_href: string;
+  can_use_web_share: boolean;
+  can_share: boolean;
 
   // LIFECYCLE:
 
@@ -45,6 +47,7 @@ export class InvitetoPage implements OnInit {
     this.G.D.page = this;
     this.came_from_preview = true; // TODO: set depending on url!
     this.details_expanded = false;
+    this.can_share = this.can_use_web_share = (typeof navigator.share === "function");
   }
 
   ionViewDidEnter() {

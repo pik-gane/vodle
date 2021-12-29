@@ -42,22 +42,31 @@
         </ion-icon>
       </ion-buttons>
     </ion-item>
-    <ion-item lines="none">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'inviteto.caution1'|translate"></p> 
-        <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p> 
-      </ion-col>      
-    </ion-item>
-    <ion-item 
-        lines="none" class="ion-text-end" text-wrap>
-      <!--TODO: disable if due is in the past by now-->
-      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-          shape="round"
-          (click)="share_button_clicked()">
-        <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
-        <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
-      </ion-button>
-    </ion-item>
+    <!--TODO: disable buttons and notify if due is in the past by now-->
+    <ng-container *ngIf="can_share">
+      <ion-item lines="none">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'inviteto.caution-with-share1'|translate"></p> 
+          <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p> 
+        </ion-col>      
+      </ion-item>
+      <ion-item lines="none" class="ion-text-end" text-wrap>
+        <ion-button size="large" color="primary" slot="end" [disabled]="false" 
+            shape="round"
+            (click)="share_button_clicked()">
+          <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
+          <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+        </ion-button>
+      </ion-item>
+    </ng-container>
+    <ng-container *ngIf="!can_share">
+      <ion-item lines="none">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'inviteto.caution-without-share1'|translate"></p> 
+          <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p> 
+        </ion-col>      
+      </ion-item>
+    </ng-container>
     <ion-item 
         lines="none" class="ion-text-end" text-wrap>
       <!--TODO: disable if due is in the past by now-->
