@@ -145,6 +145,8 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('option_name'+i).setValue(od.name); 
         this.formGroup.get('option_desc'+i).setValue(od.desc); 
         this.formGroup.get('option_url'+i).setValue(od.url); 
+        this.stage = 6;
+        this.option_stage = 10;
       }
     }
     if (this.n_options==0) {
@@ -178,7 +180,7 @@ export class DraftpollPage implements OnInit {
 
   ionViewWillLeave() {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
-    // TODO: close/dismiss this.type_select, which can be either a popover or an alert
+    // TODO: close/dismiss this.type_select, which is a popover
     if ((this.pd.title||'')=='') {
       this.G.L.info("DraftpollPage.ionViewWillLeave not saving empty title draft");
       // TODO: notify of deleted draft
@@ -237,9 +239,11 @@ export class DraftpollPage implements OnInit {
           p.remove_option(oid);
         }
       }
+      // send local notification:
+      // TODO: test this!
       LocalNotifications.schedule({
         notifications: [{
-          title: this.translate.instant("draftpoll.notification-saved-title");
+          title: this.translate.instant("draftpoll.notification-saved-title"),
           body: p.title,
           id: 1
         }]
