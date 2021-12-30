@@ -142,6 +142,12 @@ ion-grid {
     }
 }
 
-.sc-ion-label-md-h{
-     white-space: normal !important;
+// make select items wrap:
+.sc-ion-label-md-h {
+    white-space: normal !important;
+}
+
+// if we need to adjust date picker font size:
+.picker-opt {
+//    font-size: small;
 }
