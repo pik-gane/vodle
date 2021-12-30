@@ -80,6 +80,7 @@
         "due-type-10min": "nach 10 Minuten",
         "due-type-hour": "nach einer Stunde",
         "due-type-midnight": "um Mitternacht",
+        "due-type-24hr": "nach 24 Stunden",
         "due-type-tomorrow-noon": "morgen Mittag",
         "due-type-tomorrow-night": "morgen Nacht",
         "due-type-sunday-night": "Sonntag Nacht",

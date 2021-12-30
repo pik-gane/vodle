@@ -13,8 +13,11 @@ import { GlobalService } from './global.service';
 
 type poll_state_t = ""|"draft"|"running"|"closed";
 type poll_type_t = "winner"|"share";
-type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"tomorrow-noon"|"tomorrow-night"
+type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
                         |"sunday-night"|"week"|"two-weeks"|"month";
+
+// in the following, month index start at zero (!) while date index starts at one (!):
+var last_day_of_month = {0:31, 1:28, 2:31, 3:30, 4:31, 5:30, 6:31, 7:31, 8:30, 9:31, 10:30, 11:31};
 
 // SERVICE:
 
@@ -270,6 +273,74 @@ export class Poll {
       this.db_password = this.G.S.db_password;
     } 
     this.db_server_url = this.G.D.fix_url(this.db_server_url);
+  }
+
+  public set_due() {
+    // set due according to due_type, current date, and due_custom:
+    if (this.due_type=='custom') {
+      this.due = this.due_custom;
+    } else {
+      var due = new Date(), 
+          year = due.getFullYear(), 
+          month = due.getMonth(), // 0=January!
+          dayofmonth = due.getDate(), 
+          dayofweek = due.getDay(),
+          due_as_ms = due.getTime();
+      if (this.due_type=='midnight') {
+        due.setHours(23, 59, 59, 999); // almost midnight on the same day according to local time
+      } else if (this.due_type=='tomorrow-noon') {
+        if (dayofmonth < last_day_of_month[month]) {
+          due.setDate(dayofmonth + 1);
+        } else {
+          due.setDate(1);
+          if (month < 11) {
+            due.setMonth(month + 1);
+          } else {
+            due.setMonth(0);
+            due.setFullYear(year + 1);
+          }
+        }
+        due.setHours(12, 0, 0, 0);
+      } else if (this.due_type=='tomorrow-night') {
+        if (dayofmonth < last_day_of_month[month]) {
+          due.setDate(dayofmonth + 1);
+        } else {
+          due.setDate(1);
+          if (month < 11) {
+            due.setMonth(month + 1);
+          } else {
+            due.setMonth(0);
+            due.setFullYear(year + 1);
+          }
+        }
+        due.setHours(23, 59, 59, 999); 
+      } else if (this.due_type=='sunday-night') {
+        due = new Date(due_as_ms + (7-dayofweek)*24*60*60*1000);
+        due.setHours(23, 59, 59, 999); 
+      } else if (this.due_type=='10min') {
+        due = new Date(due_as_ms + 10*60*1000);
+      } else if (this.due_type=='hour')  {
+        due = new Date(due_as_ms + 60*60*1000);
+      } else if (this.due_type=='24hr')  {
+        due = new Date(due_as_ms + 24*60*60*1000);
+      } else if (this.due_type=='week')  {
+        due = new Date(due_as_ms + 7*24*60*60*1000);
+      } else if (this.due_type=='two-weeks')  {
+        due = new Date(due_as_ms + 2*7*24*60*60*1000);
+      } else if (this.due_type=='month') {
+        if (month < 11) {
+          if (dayofmonth > last_day_of_month[month + 1]) {
+            due.setDate(last_day_of_month[month + 1]);
+          }
+          due.setMonth(month + 1);
+        } else {
+          due.setMonth(0);
+          due.setFullYear(year + 1);
+        }
+      }
+      this.due = due;
+    }
+    this.G.L.info("PollService.set_due", due);
   }
 
   public init_password() {

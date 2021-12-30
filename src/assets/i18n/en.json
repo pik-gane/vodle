@@ -78,6 +78,7 @@
         "due-type-10min": "after 10 minutes",
         "due-type-hour": "after one hour",
         "due-type-midnight": "at midnight",
+        "due-type-24hr": "after 24 hours",
         "due-type-tomorrow-noon": "tomorrow at noon",
         "due-type-tomorrow-night": "tomorrow night",
         "due-type-sunday-night": "Sunday night",

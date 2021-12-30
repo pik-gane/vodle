@@ -202,6 +202,7 @@ export class DraftpollPage implements OnInit {
       p.url = this.pd.url;
       p.due_type = this.pd.due_type;
       p.due_custom = this.pd.due_custom;
+      p.set_due();
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
       p.db_other_server_url = this.pd.db_other_server_url;
