@@ -50,7 +50,7 @@
       </ion-label>
       <ion-select 
           formControlName="poll_type" 
-          text-wrap interface="popover" autofocus tabindex="0"
+          text-wrap interface="popover" autofocus tabindex="0" 
           class="selectfullwidth" #ionSelects #type_select  
           cancelText="Cancel" okText="OK" 
           (ionChange)="set_poll_type();stage=max(stage,formGroup.get('poll_type').valid?1:0)">
@@ -77,7 +77,7 @@
         <ion-input  
           formControlName="poll_title" 
           [placeholder]="'draftpoll.title-placeholder'|translate"
-          autofocus tabindex="1" type="text" required inputmode="text"
+          tabindex="0" type="text" required inputmode="text"
           style="font-weight: bold; font-style: italic; font-size: larger;"
           (ionChange)="set_poll_title();"
           (ionBlur)="stage=max(stage,formGroup.get('poll_title').valid?(detailstoggle.checked?2:4):0)">
@@ -103,7 +103,7 @@
         <ion-textarea 
           formControlName="poll_desc" 
           [placeholder]="'draftpoll.desc-placeholder'|translate"
-          autofocus tabindex="2" rows="1" auto-grow type="text" inputmode="text" 
+          autofocus tabindex="0" rows="1" auto-grow type="text" inputmode="text" 
           style="font-style: italic;"
           (ionChange)="set_poll_desc()"
           (ionBlur)="stage=max(stage,formGroup.get('poll_desc').valid?3:0)">
@@ -134,7 +134,7 @@
         <ion-input 
           formControlName="poll_url" 
           [placeholder]="'draftpoll.url-placeholder'|translate"
-          tabindex="3" type="text" inputmode="url" style="font-size:smaller;word-wrap:normal;"
+          tabindex="0" type="text" inputmode="url" style="font-size:smaller;word-wrap:normal;"
           (ionChange)="set_poll_url()"
           (ionBlur)="stage=max(stage,formGroup.get('poll_url').valid?4:0)">
         </ion-input>
@@ -171,7 +171,7 @@
         <ion-select 
             formControlName="poll_due_type" 
             [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-            #ionSelects interface="popover" class="selectfullwidth" tabindex="4" required 
+            #ionSelects interface="popover" class="selectfullwidth" tabindex="0" required 
             (ionChange)="set_poll_due_type();stage=max(stage,formGroup.get('poll_due_type').value=='custom'?5:6)">
           <ion-select-option value="custom" [innerHtml]="'draftpoll.due-type-custom'|translate"></ion-select-option>
           <ion-select-option value="10min" [innerHtml]="'draftpoll.due-type-10min'|translate"></ion-select-option>
@@ -195,7 +195,7 @@
           <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
           <ion-datetime 
             formControlName="poll_due" 
-            tabindex="5" 
+            tabindex="0" 
             pickerFormat="DD MMM YY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
             [min]="ref_date.toISOString()"
@@ -245,7 +245,7 @@
 
       <div *ngFor="let item of [].constructor(n_options); let i = index">
         <ion-item [color]="(i == n_options-1 && option_stage==0)?'warning':'light'"><!--option_stage 0-->
-          <ion-button 
+          <ion-button tabindex="-1" 
               *ngIf="detailstoggle.checked" 
               fill="clear" slot="start" class="field-expander"
               (click)="expanded[i]=!expanded[i]">
@@ -264,7 +264,7 @@
             [placeholder]="(formGroup.get('poll_type').value == 'winner' 
                             ? 'draftpoll.option-name-placeholder' 
                             : 'draftpoll.target-name-placeholder') | translate"
-            type="text" required 
+            type="text" required tabindex="0" 
             style="font-weight: bold; font-style: italic;"
             (ionChange)="set_option_name(i)"
             (ionBlur)="blur_option_name(i, detailstoggle.checked)">
@@ -272,12 +272,12 @@
           <ion-button 
             *ngIf="i == n_options-1 && i > 1 && (formGroup.get('option_name'+i).value||'')==''" 
             [innerHtml]="'draftpoll.no-more-button'|translate"
-            color="primary" slot="end" class="skip-button"
+            color="primary" slot="end" class="skip-button" tabindex="0" 
             (click)="no_more()">
           </ion-button>
           <ion-button 
               *ngIf="n_options>1 && !(i == n_options-1 && i > 1 && (formGroup.get('option_name'+i).value||'')=='')" 
-              fill="clear" color="primary" slot="end" class="skip-button"
+              fill="clear" color="primary" slot="end" class="skip-button" tabindex="-1" 
               (click)="del_option_dialog(i)">
             <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
           </ion-button>
@@ -299,7 +299,7 @@
               </span>
             </ion-label>
             <ion-textarea 
-              [formControlName]="'option_desc'+i" 
+              [formControlName]="'option_desc'+i" tabindex="0" 
               [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
               rows="1" auto-grow type="text" 
               style="font-style: italic;"
@@ -308,7 +308,7 @@
             </ion-textarea>
             <ion-button 
               *ngIf="option_stage==1 && i == n_options-1 && [null,''].includes(formGroup.get('option_desc'+i).value)" 
-              color="primary" slot="end" class="skip-button" 
+              color="primary" slot="end" class="skip-button" tabindex="-1" 
               [innerHtml]="'skip'|translate">
             </ion-button>
           </ion-item>
@@ -332,19 +332,19 @@
             <ion-input 
               [formControlName]="'option_url'+i" 
               [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
-              type="text" 
+              type="text"  tabindex="0" 
               style="font-size: smaller;"
               (ionChange)="set_option_url(i)"
               (ionBlur)="blur_option_url(i)">
             </ion-input>
             <ion-button 
               *ngIf="option_stage==2 && i == n_options-1 && [null,''].includes(formGroup.get('option_url'+i).value)" 
-              [innerHtml]="'skip'|translate"
+              [innerHtml]="'skip'|translate" tabindex="-1" 
               color="primary" slot="end" class="skip-button">
             </ion-button>
             <ion-button 
                 *ngIf="formGroup.get('option_url'+i).valid && ![null,''].includes(formGroup.get('option_url'+i).value)" 
-                fill="clear" slot="end" class="skip-button" 
+                fill="clear" slot="end" class="skip-button" tabindex="-1" 
                 (click)="test_url(formGroup.get('option_url'+i).value)">
               <ion-icon name="open-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'test'|translate"></span>
@@ -369,7 +369,7 @@
         <ion-fab-button size="small" (click)="new_option()" fill="clear" color="primary">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>
-        <ion-button 
+        <ion-button tabindex="-1" 
           [innerHtml]="(formGroup.get('poll_type').value=='winner' ? 'add-option' : 'add-target')|translate"
           class="ion-no-padding ion-no-margin" fill="clear" (click)="new_option()"> 
         </ion-button>
@@ -392,7 +392,7 @@
         <small [innerHtml]="'('+('draftpoll.draft-saved'|translate)+')'"></small>
       </ion-label>
       <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" 
-          shape="round"
+          shape="round" tabindex="0" 
           (click)="ready_button_clicked()">
         <ion-icon name="checkmark"></ion-icon>&nbsp;
         <span [innerHtml]="'ready'|translate"></span>
