@@ -355,7 +355,7 @@ export class DraftpollPage implements OnInit {
     this.add_option({});
   }
 
-  async del_poll_dialog(i: number) { 
+  async del_poll_dialog() { 
     const confirm = await this.alertCtrl.create({ 
       message: this.translate.instant(
         "draftpoll.del-poll-confirm-question"), 
@@ -559,7 +559,7 @@ export class DraftpollPage implements OnInit {
     this.pd.options.pop();
   }
 
-  private update_ref_date() {
+  update_ref_date() {
     this.ref_date = this.now();
   }
 

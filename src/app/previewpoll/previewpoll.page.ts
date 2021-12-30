@@ -19,7 +19,7 @@ export class PreviewpollPage implements OnInit {
 
   // LIFECYCLE:
 
-  private ready = false;  
+  public ready = false;  
   
   constructor(
       public router: Router,

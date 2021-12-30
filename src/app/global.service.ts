@@ -298,7 +298,7 @@ export class Poll {
   public type: string; // 'winner' or 'share'
   public title: string;
   public desc: string;
-  public uri: string; // weblink
+  public url: string; // weblink
   public due_type: string;
   public due: Date; // closing time
   public myvid: string = "";
@@ -412,7 +412,7 @@ export class Poll {
           n = 5;
       this.title = d[0][0];
       this.desc = d[0][1];
-      this.uri = d[0][2];
+      this.url = d[0][2];
       this.type = d[0][3];
       this.myvid = this.g.username; //"v" + Math.floor(Math.random() * n);
       this.vids = [this.myvid]; //Array.from(Array(n).keys()).map(i => "v" + i);

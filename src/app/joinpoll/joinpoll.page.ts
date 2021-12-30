@@ -20,7 +20,7 @@ export class JoinpollPage implements OnInit {
 
   // LIFECYCLE:
 
-  private ready = false;  
+  public ready = false;  
 
   constructor(
     public router: Router,
@@ -79,4 +79,7 @@ export class JoinpollPage implements OnInit {
     this.G.L.exit("JoinPage.onDataReady");
   }
 
+  go_button_clicked() {
+    // TODO!
+  }
 }

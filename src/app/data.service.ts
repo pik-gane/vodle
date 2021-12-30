@@ -1508,7 +1508,7 @@ export class DataService {
     // RETURN:
     return true;
   }
-  private store_poll_data(pid:string, key:string, dict, dict_key:string) {
+  private store_poll_data(pid:string, key:string, dict, dict_key:string): boolean {
     // stores key and value in poll database. 
     this.G.L.trace("DataService.store_poll_data", key, dict[dict_key]);
     var doc;
@@ -1660,7 +1660,7 @@ export class DataService {
     }
   }
 
-  private delete_user_data(key:string) {
+  private delete_user_data(key:string): boolean {
     // deletes a key from the user database. 
     this.G.L.trace("DataService.delete_user_data", key);
     var db, _id;
@@ -1707,7 +1707,7 @@ export class DataService {
     return true;
   }
 
-  private email_and_pw_hash() {
+  private email_and_pw_hash(): string {
     let email = this.user_cache['email'], pw = this.user_cache['password'];
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
     let hash = myhash(email + ':' + pw);
@@ -1725,12 +1725,12 @@ export class DataService {
 
   // OTHER:
 
-  get_voter_key_prefix(pid:string) {
+  get_voter_key_prefix(pid:string): string {
     return 'voter.' + this.getv(pid, 'vid') + '.';
   }
   
-  format_date(date: string) {
-    return new Date(date).toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+  format_date(date: Date): string {
+    return date.toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
   }
 
 }
