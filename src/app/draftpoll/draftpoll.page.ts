@@ -239,7 +239,7 @@ export class DraftpollPage implements OnInit {
       }
       LocalNotifications.schedule({
         notifications: [{
-          title: "draft poll saved",
+          title: this.translate.instant("draftpoll.notification-saved-title");
           body: p.title,
           id: 1
         }]

@@ -1,4 +1,6 @@
 {
+    "_KONVENTIONEN_": "Es wird mit : gegendert. Es werden korrekte Anführungszeichen „“ verwendet: ",
+
     "add-option": "Option hinzufügen",
     "add-target": "Ziel hinzufügen",
     "cancel": "Abbrechen",
@@ -37,17 +39,17 @@
         "p11": "vodle hilft Gruppen, faire und gute Entscheidungen zu treffen. Es findet den <i>größten Teilkonsens</i> in einer Menge von Optionen. In echt demokratischer Weise gibt es jeder Person den selben effektiven Einfluß.",
         "p12": "Es zeigt Dir für jede Option die momentane Zustimmung als hellen Balken auf der rechten Seite, und erlaubt Dir, Deine Bewertungen mit Hilfe von Schiebereglern in Echtzeit anzupassen. Wenn Dein Schieberegler den Zustimmungs-Balken berührt, wird er grün, um anzuzeigen, dass Du dieser Option ebenfalls zustimmst. Auf diese Weise kann die Gruppe zu einem vollen oder teilweisen Konsens finden, der so breit wie möglich ist.",
         "p13": "Wenn die Abstimmung endet, wird die Gewinner-Option durch einen fairen und einfachen Algorithmus bestimmt, der jeder Person den selben Einfluß gibt, nicht nur denen, die zu einer Mehrheit gehören.",
-        "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option will be the sure winner. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, it must sometimes also use a certain amount of chance, similar to a greencard lottery.",
-        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval and one voter is picked by lot. The top-most option for which that voter's slider is green is declared the winner.",
-        "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other options' winning probabilities are at most as large as their approval scores (in percent of all voters who do not abstain).",
-        "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several targets or recipients), the procedure is similar: If one target is approved by all, you have full consensus, so this target will get the full budget. Otherwise vodle allocates the largest share of the budget to the target with the broadest approval, and smaller shares to the other targets.",
-        "p18": "Exact procedure: Targets are sorted by descending approval. Then each target's share is proportional to the number of voters who approve this target but no higher-up target.",
+        "p14": "In <b>Auswahl-Abstimmungen</b> (bei denen die Gruppe eine <i>einzelne Option</i> auswählen muss), wird die Entscheidung wie folgt getroffen. Wenn eine Option Zustimmung von allen bekommt, gewinnt diese volle Konsens-Option. Andernfalls erklärt vodle in den meisten Fällen die Option mit der breitesten Zustimmung zur Gewinnerin. Aber um fair zu sein, muss vodle manchmal auch ein wenig Zufall walten lassen, ähnlich wie bei einer Lotterie.",
+        "p15": "vodle benutzt dabei folgendes Verfahren: Sobald die Abstimmung abgeschlossen ist, werden die Optionen nach absteigender Zustimmung sortiert, und es wird ein:e Teilnehmer:in zufällig ausgewählt. Die höchstplatzierte Option bei der der Schieberegler dieser Person grün ist, gewinnt.",
+        "p16": "Auf diese Weise hat die Option mit der meisten Zustimmung die bei Weitem größte Wahrscheinlichkeit, zu gewinnen. Die Gewinnwahrscheinlichkeiten der anderen Optionen sind höchstens so groß wie ihr Zustimmungswert (in Prozent aller Teilnehmer:innen, die sich nicht vollständig enthalten haben).",
+        "p17": "Bei <b>Verteilungs-Abstimmungen</b> (bei denen die Gruppe irgendein <i>Budget verteilen</i> in <i>Anteile</i> für verschiedene Ziele aufteilen muss), ist das Verfahren ähnlich: Wenn ein Ziel Zustimmung von allen bekommt, gibt es vollen Konsens, also bekommt dieses Ziel das ganze Budget. Anderenfalls teilt vodle den größten Anteil des Budgets dem Ziel mit der größten Zustimmung zu, und den anderen Zielen kleinere Anteile.",
+        "p18": "Genaue Prozedur: Die Ziele werden nach absteigender Zustimmung sortiert. Dann bekommt jedes Ziel einen Anteil proportional zur Anzahl Teilnehmer:innen, die diesem Ziel aber keinem höherplatzierten Ziel zugestimmt haben.",
 
-        "h2": "Who's behind it?",
-        "p21": "vodle's algorithm (called “maximum partial consensus”) was developed and optimizied for fairness by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons, inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Contributors: Marius Amrhein, Adrian Lison.",
+        "h2": "Wer steckt dahinter?",
+        "p21": "vodle's Algorithmus (genannt “maximaler Teil-Konsens”) wurde entwickelt und auf Fairness optimiert vom Mathematiker Jobst Heitzig in Zusammenarbeit mit Forest W. Simmons. Er ist inspiriert vom „Schwellwert-Modell“ des berühmten Soziologen Mark Granovetter. Diese App ist open-source, der Programmcode liegt auf <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Hauptentwickler: Jobst Heitzig. Beiträge von: Marius Amrhein, Adrian Lison.",
 
-        "h3": "Support vodle!",
-        "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
+        "h3": "Unterstütze vodle!",
+        "p31": "Da wir und verpflichtet haben, dass vodle frei nutzbar für alle bleibt, brauchen wir weiterhin Hilfe. Wenn Du Nerd, Kreative:r, Influencer:in, Wissenschaftler:in, Philantrop:in, Aktivist:in oder Politiker:in bist, an die Zukunft von fairen &amp; effizienten Konsens-Entscheidungen glaubst und ein wenig beitragen möchtest, dann haben wir ein paar Ideen, <a href=\"{{support_vodle_url}}\" target=\"_blank\">wie Du uns helfen kannst!</a>"
     },
     
     "badges": {
@@ -60,17 +62,19 @@
 
     "draftpoll": {
         "-page-title": "Abstimmungs-Entwurf bearbeiten",
+
         "del-poll-confirm-question": "Entwurf endgültig löschen?<br/>(Das kann nicht rückgängig gemacht werden!)",
         "general-information": "Allgemeine Daten",
         "type-label": "In dieser Abstimmung wird die Gruppe...",
         "type-winner": "eine von mehreren Optionen auswählen",
         "type-share": "eine Ressource auf verschiedene Ziele aufteilen",
         "title-label": "Abstimmungs-Überschrift",
-        "title-placeholder": "Eine kurze Überschrift, z.B. ‘Welchen Film sollen wir sehen?’",
+        "title-placeholder": "Eine kurze Überschrift, z.B. „Welchen Film sollen wir sehen?“",
         "desc-label": "Beschreibung",
         "desc-placeholder": "Etwas mehr Informationen zu dieser Abstimmung (optional)",
         "url-label": "„Mehr lesen“-Link",
         "url-placeholder": "Eine Webseite mit mehr Details, wenn die Wähler:in „mehr lesen“ anklickt (optional)",
+
         "due-type-label": "Die Abstimmung schließt...",
         "due-type-custom": "an einem bestimmten Datum und Uhrzeit",
         "due-type-10min": "nach 10 Minuten",
@@ -83,30 +87,36 @@
         "due-type-two-weeks": "nach zwei Wochen",
         "due-type-month": "nach einem Monat",
         "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung schließt",
+
         "advanced-settings": "Erweiterte Einstellungen",
         "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
+
         "option-name-label": "Name der Option",
         "target-name-label": "Name des Ziels",
         "option-name-placeholder": "Ein kurzer Name für diese Option",
         "target-name-placeholder": "Ein kurzer Name für dieses mögliche Ziel",
         "no-more-button": "Vorerst keine weiteren",
         "option-desc-label": "Beschreibung",
-        "option-desc-placeholder": "Etwas mehr Informationen über ‚{{name}}‘",
+        "option-desc-placeholder": "Etwas mehr Informationen über „{{name}}“",
         "option-url-label": "„Mehr lesen“-Link",
-        "option-url-placeholder": "Eine Webseite mit mehr Details zu ‚{{name}}‘",
+        "option-url-placeholder": "Eine Webseite mit mehr Details zu „{{name}}“",
         "del-option-confirm-question": "Option<br/><b><i>{{name}}</i></b><br/>löschen?",
         "del-target-confirm-question": "Ziel<br/><b><i>{{name}}</i></b><br/>löschen?",
+
         "please-list-options-explanation": "Bitte gib mindestens zwei Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "please-list-targets-explanation": "Bitte gib mindestens zwei mögliche Ziele an. Kümmere Dich nicht um die Reihenfolge. Weitere Ziele können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
-        "draft-saved": "Entwurf gespeichert unter<br/>‚Meine Abstimmungen‘",
+        "draft-saved": "Entwurf gespeichert unter<br/>„Meine Abstimmungen“",
         "send-for-review": "Zum Korrekturlesen teilen",
         "import-options-from-file": "Optionen aus Datei importieren",
         "import-options-header": "Optionen aus Datei importieren",
-        "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>"
+        "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>",
+
+        "notification-saved-title": "Entwurf gesprichert unter „Meine Abstimmungen“"
     },
     
     "help": {
         "-page-title": "Hilfe",
+
         "h1": "Wie stimmt man ab? – kurze Version",
         "p11a": "Wähle eine Abstimmung aus", 
         "p11b": "Meine Abstimmungen",
