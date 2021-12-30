@@ -86,10 +86,11 @@
         "due-type-24hr": "nach 24 Stunden",
         "due-type-tomorrow-noon": "morgen Mittag",
         "due-type-tomorrow-night": "morgen Nacht",
+        "due-type-friday-noon": "Freitag Mittag",
         "due-type-sunday-night": "Sonntag Nacht",
         "due-type-week": "nach einer Woche",
         "due-type-two-weeks": "nach zwei Wochen",
-        "due-type-month": "nach einem Monat",
+        "due-type-four-weeks": "nach vier Wochen",
         "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung schließt",
 
         "advanced-settings": "Erweiterte Einstellungen",

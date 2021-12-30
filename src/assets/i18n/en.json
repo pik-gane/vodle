@@ -81,10 +81,11 @@
         "due-type-24hr": "after 24 hours",
         "due-type-tomorrow-noon": "tomorrow at noon",
         "due-type-tomorrow-night": "tomorrow night",
+        "due-type-friday-noon": "Friday at noon",
         "due-type-sunday-night": "Sunday night",
         "due-type-week": "after one week",
         "due-type-two-weeks": "after two weeks",
-        "due-type-month": "after one month",
+        "due-type-four-weeks": "after four weeks",
         "due-datetime-label": "Closing date and time",
 
         "advanced-settings": "Advanced settings",

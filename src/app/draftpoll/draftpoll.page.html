@@ -180,10 +180,11 @@
           <ion-select-option value="midnight" [innerHtml]="'draftpoll.due-type-midnight'|translate"></ion-select-option>
           <ion-select-option value="tomorrow-noon" [innerHtml]="'draftpoll.due-type-tomorrow-noon'|translate"></ion-select-option>
           <ion-select-option value="tomorrow-night" [innerHtml]="'draftpoll.due-type-tomorrow-night'|translate"></ion-select-option>
+          <ion-select-option value="friday-noon" [innerHtml]="'draftpoll.due-type-friday-noon'|translate"></ion-select-option>
           <ion-select-option value="sunday-night" [innerHtml]="'draftpoll.due-type-sunday-night'|translate"></ion-select-option>
           <ion-select-option value="week" [innerHtml]="'draftpoll.due-type-week'|translate"></ion-select-option>
           <ion-select-option value="two-weeks" [innerHtml]="'draftpoll.due-type-two-weeks'|translate"></ion-select-option>
-          <ion-select-option value="month" [innerHtml]="'draftpoll.due-type-month'|translate"></ion-select-option>
+          <ion-select-option value="four-weeks" [innerHtml]="'draftpoll.due-type-four-weeks'|translate"></ion-select-option>
         </ion-select>
       </ion-item>
       <ng-container *ngIf="formGroup.get('poll_due_type').value=='custom'">
@@ -199,8 +200,8 @@
             tabindex="0" 
             pickerFormat="DD MMM YY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
-            [min]="ref_date.toISOString()"
-            (ionClick)="update_ref_date();"
+            [min]="G.P.ref_date.toISOString()"
+            (ionClick)="G.P.update_ref_date();"
             (ionChange)="set_poll_due_custom();stage=max(stage,formGroup.get('poll_due_custom').valid?6:0)"
             [dayNames]="'daynames-sunday-to-saturday'|translate"
             [monthNames]="'monthnames'|translate">

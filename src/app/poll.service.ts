@@ -14,7 +14,7 @@ import { GlobalService } from './global.service';
 type poll_state_t = ""|"draft"|"running"|"closed";
 type poll_type_t = "winner"|"share";
 type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
-                        |"sunday-night"|"week"|"two-weeks"|"month";
+                        |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
 
 // in the following, month index start at zero (!) while date index starts at one (!):
 var last_day_of_month = {0:31, 1:28, 2:31, 3:30, 4:31, 5:30, 6:31, 7:31, 8:30, 9:31, 10:30, 11:31};
@@ -29,6 +29,8 @@ export class PollService {
   private G: GlobalService;
 
   public polls: Record<string, Poll> = {};
+
+  ref_date: Date;
 
   public get running_polls() {
     let res: Record<string, Poll> = {};
@@ -88,6 +90,11 @@ export class PollService {
   generate_vid(): string {
     return CryptoJS.lib.WordArray.random(4).toString();
   }
+
+  update_ref_date() {
+    this.ref_date = new Date();
+  }
+
 }
 
 // ENTITY CLASSES:
@@ -288,55 +295,33 @@ export class Poll {
           due_as_ms = due.getTime();
       if (this.due_type=='midnight') {
         due.setHours(23, 59, 59, 999); // almost midnight on the same day according to local time
-      } else if (this.due_type=='tomorrow-noon') {
-        if (dayofmonth < last_day_of_month[month]) {
-          due.setDate(dayofmonth + 1);
-        } else {
-          due.setDate(1);
-          if (month < 11) {
-            due.setMonth(month + 1);
-          } else {
-            due.setMonth(0);
-            due.setFullYear(year + 1);
-          }
-        }
-        due.setHours(12, 0, 0, 0);
-      } else if (this.due_type=='tomorrow-night') {
-        if (dayofmonth < last_day_of_month[month]) {
-          due.setDate(dayofmonth + 1);
-        } else {
-          due.setDate(1);
-          if (month < 11) {
-            due.setMonth(month + 1);
-          } else {
-            due.setMonth(0);
-            due.setFullYear(year + 1);
-          }
-        }
-        due.setHours(23, 59, 59, 999); 
-      } else if (this.due_type=='sunday-night') {
-        due = new Date(due_as_ms + (7-dayofweek)*24*60*60*1000);
-        due.setHours(23, 59, 59, 999); 
       } else if (this.due_type=='10min') {
         due = new Date(due_as_ms + 10*60*1000);
       } else if (this.due_type=='hour')  {
         due = new Date(due_as_ms + 60*60*1000);
       } else if (this.due_type=='24hr')  {
         due = new Date(due_as_ms + 24*60*60*1000);
+      } else if (this.due_type=='tomorrow-noon') {
+        due = new Date(due_as_ms + 24*60*60*1000);
+        due.setHours(12, 0, 0, 0);
+      } else if (this.due_type=='tomorrow-night') {
+        due = new Date(due_as_ms + 24*60*60*1000);
+        due.setHours(23, 59, 59, 999); 
+      } else if (this.due_type=='friday-noon') {
+        due = new Date(due_as_ms + ((5-dayofweek)%7)*24*60*60*1000);
+        due.setHours(12, 0, 0, 0); 
+      } else if (this.due_type=='sunday-night') {
+        due = new Date(due_as_ms + ((7-dayofweek)%7)*24*60*60*1000);
+        due.setHours(23, 59, 59, 999); 
       } else if (this.due_type=='week')  {
         due = new Date(due_as_ms + 7*24*60*60*1000);
+        due.setHours(23, 59, 59, 999); 
       } else if (this.due_type=='two-weeks')  {
         due = new Date(due_as_ms + 2*7*24*60*60*1000);
-      } else if (this.due_type=='month') {
-        if (month < 11) {
-          if (dayofmonth > last_day_of_month[month + 1]) {
-            due.setDate(last_day_of_month[month + 1]);
-          }
-          due.setMonth(month + 1);
-        } else {
-          due.setMonth(0);
-          due.setFullYear(year + 1);
-        }
+        due.setHours(23, 59, 59, 999); 
+      } else if (this.due_type=='four-weeks') {
+        due = new Date(due_as_ms + 4*7*24*60*60*1000);
+        due.setHours(23, 59, 59, 999); 
       }
       this.due = due;
     }

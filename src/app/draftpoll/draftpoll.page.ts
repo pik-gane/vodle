@@ -42,7 +42,6 @@ export class DraftpollPage implements OnInit {
   option_stage: number;
   expanded: Array<boolean>;
   advanced_expanded: boolean;
-  ref_date: Date;
 
   // draft poll data:
 
@@ -294,7 +293,7 @@ export class DraftpollPage implements OnInit {
     if (c.valid) this.pd.due_type = c.value;
   }
   set_poll_due_custom() {
-    this.update_ref_date();
+    this.G.P.update_ref_date();
     let c = this.formGroup.get('poll_due_custom');
     if (c.valid) this.pd.due_custom = new Date(c.value);
   }
@@ -487,7 +486,7 @@ export class DraftpollPage implements OnInit {
       poll_due_custom: new FormControl('', this.is_in_future.bind(this)),
     });
     this.pd = {};
-    this.update_ref_date();
+    this.G.P.update_ref_date();
   }
 
   private del_draft() {
@@ -559,16 +558,12 @@ export class DraftpollPage implements OnInit {
     this.pd.options.pop();
   }
 
-  update_ref_date() {
-    this.ref_date = this.now();
-  }
-
   now() { return new Date(); }
 
   private is_in_future(control: AbstractControl): ValidationErrors | null {
     if (control && control.value) {
       let controlValue = new Date(control.value);
-      if (this.ref_date >= controlValue)
+      if (this.G.P.ref_date >= controlValue)
       {
           return {past: true};
       }

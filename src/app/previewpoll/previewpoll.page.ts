@@ -54,6 +54,8 @@ export class PreviewpollPage implements OnInit {
     this.G.L.entry("PreviewpollPage.onDataReady");
     if (this.pid in this.G.P.polls) {
       this.p = this.G.P.polls[this.pid];
+      this.p.set_due();
+      this.G.P.update_ref_date();
       if (this.p.state == 'draft') {
         this.G.L.info("PreviewpollPage showing existing draft", this.pid);
       } else {
