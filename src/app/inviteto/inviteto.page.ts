@@ -84,14 +84,14 @@ export class InvitetoPage implements OnInit {
       + this.pid + "/" 
       + this.p.password);
     this.G.L.info("InvitetoPage invite link:", this.invite_link);
-    // TODO: translate and make indentation in body work:
+    // TODO: make indentation in body work:
     this.message_title = this.translate.instant('invite-email.subject', {due: this.p.due});
     this.message_body = (this.translate.instant('invite-email.body-greeting') + "\n\n" 
                 + this.translate.instant('invite-email.body-before-title') + "\n\n"
-                + "    “" + this.p.title + "”.\n\n"
+                + "\t    “" + this.p.title + "”.\n\n"
                 + this.translate.instant('invite-email.body-closes', {due: this.p.due}) + "\n\n"
                 + this.translate.instant('invite-email.body-before-link') + "\n\n" 
-                + "    " + this.invite_link + "\n\n"
+                + "\t    " + this.invite_link + "\n\n"
                 + this.translate.instant('invite-email.body-dont-share') + "\n\n"
                 + this.translate.instant('invite-email.body-regards'));
     this.email_href = "mailto:?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body);

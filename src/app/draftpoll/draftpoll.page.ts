@@ -4,7 +4,7 @@ TODO:
 - make tab key autofocus work properly
 */
 
-import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, ElementRef, QueryList, ChangeDetectorRef } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
@@ -28,6 +28,7 @@ export class DraftpollPage implements OnInit {
 
   // page template elements:
   
+  @ViewChild(IonSelect, { static: false, read: ElementRef }) type_select_ref: ElementRef;
   @ViewChild(IonSelect, { static: false }) type_select: IonSelect;
   @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
   @ViewChild(IonToggle, { static: false }) detailstoggle: IonToggle;
@@ -156,7 +157,9 @@ export class DraftpollPage implements OnInit {
     // make sure select-element values are translated properly:
     this.ionSelects.map((select) => select.value = select.value);
     // open the type selector?:
-    if (!this.formGroup.get('poll_type').value) this.type_select.open();
+    if (!this.formGroup.get('poll_type').value) {
+      this.type_select.open(new MouseEvent("click"));
+    }
   }
 
   onSelectServerReady(select_server:SelectServerComponent) {
