@@ -194,22 +194,22 @@
           </ion-label>
           <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
           <ion-datetime 
-            formControlName="poll_due" 
+            formControlName="poll_due_custom" 
             tabindex="0" 
             pickerFormat="DD MMM YY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
             [min]="ref_date.toISOString()"
             (ionClick)="update_ref_date();"
-            (ionChange)="set_poll_due();stage=max(stage,formGroup.get('poll_due').valid?6:0)"
+            (ionChange)="set_poll_due_custom();stage=max(stage,formGroup.get('poll_due_custom').valid?6:0)"
             [dayNames]="'daynames-sunday-to-saturday'|translate"
             [monthNames]="'monthnames'|translate">
           </ion-datetime>
         </ion-item>
         <div class="validation-errors">
-          <ng-container *ngFor="let validation of validation_messages.poll_due">
+          <ng-container *ngFor="let validation of validation_messages.poll_due_custom">
             <div class="error-message" 
-                *ngIf="(!formGroup.get('poll_due').valid) 
-                        && (formGroup.get('poll_due').dirty || formGroup.get('poll_due').touched)"
+                *ngIf="(!formGroup.get('poll_due_custom').valid) 
+                        && (formGroup.get('poll_due_custom').dirty || formGroup.get('poll_due_custom').touched)"
                 [innerHtml]="validation.message|translate">
             </div>
           </ng-container>

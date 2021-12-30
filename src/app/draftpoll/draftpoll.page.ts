@@ -48,7 +48,7 @@ export class DraftpollPage implements OnInit {
 
   pd: { 
     pid?,
-    type?, title?, desc?, url?, due_type?, due?, db?, db_from_pid?, db_other_server_url?, db_other_password?,
+    type?, title?, desc?, url?, due_type?, due_custom?, db?, db_from_pid?, db_other_server_url?, db_other_password?,
     options?: option_data_t[] 
   };
   get n_options() { return (this.pd.options||[]).length; }
@@ -110,11 +110,11 @@ export class DraftpollPage implements OnInit {
         let p = this.G.P.polls[this.pid];
         this.pd = { 
           pid:p.pid,
-          type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due:p.due, 
+          type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due_custom:p.due_custom, 
           db:p.db, db_from_pid:p.db_from_pid, db_other_server_url:p.db_other_server_url, db_other_password:p.db_other_password,
           options: [] 
         };
-        this.stage = !(!!p.due)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
+        this.stage = !(!!p.due_custom)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
         for (let [oid, o] of Object.entries(p.options)) {
           this.pd.options.push({ oid:oid, name:o.name, desc:o.desc, url:o.url });
           this.stage = 6;
@@ -130,14 +130,13 @@ export class DraftpollPage implements OnInit {
     this.advanced_expanded = false;
     // fill form:
     if (this.pd) {
-      this.G.L.trace("due", this.pd.due, !this.pd.due, !!!this.pd.due);
       this.formGroup.setValue({ 
         poll_type: this.pd.type||'',
         poll_title: this.pd.title||'', 
         poll_desc: this.pd.desc||'',
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
-        poll_due: (!this.pd.due)?'':this.pd.due.toISOString(),
+        poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
       });
       if (!this.pd.options) this.pd.options = [];
       for (let [i, od] of this.pd.options.entries()) {
@@ -202,7 +201,7 @@ export class DraftpollPage implements OnInit {
       p.desc = this.pd.desc;
       p.url = this.pd.url;
       p.due_type = this.pd.due_type;
-      p.due = this.pd.due;
+      p.due_custom = this.pd.due_custom;
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
       p.db_other_server_url = this.pd.db_other_server_url;
@@ -293,10 +292,10 @@ export class DraftpollPage implements OnInit {
     let c = this.formGroup.get('poll_due_type');
     if (c.valid) this.pd.due_type = c.value;
   }
-  set_poll_due() {
+  set_poll_due_custom() {
     this.update_ref_date();
-    let c = this.formGroup.get('poll_due');
-    if (c.valid) this.pd.due = new Date(c.value);
+    let c = this.formGroup.get('poll_due_custom');
+    if (c.valid) this.pd.due_custom = new Date(c.value);
   }
   set_option_name(i: number) {
     let c = this.formGroup.get('option_name'+i);
@@ -466,7 +465,7 @@ export class DraftpollPage implements OnInit {
   // ready button:
 
   ready_button_clicked() {
-    this.formGroup.get('poll_due').updateValueAndValidity();
+    this.formGroup.get('poll_due_custom').updateValueAndValidity();
     if (this.formGroup.valid) {
       if (!this.pid) {
         this.pid = this.G.P.generate_pid();
@@ -484,7 +483,7 @@ export class DraftpollPage implements OnInit {
       poll_desc: new FormControl(''),
       poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
       poll_due_type: new FormControl('', Validators.required),
-      poll_due: new FormControl('', this.is_in_future.bind(this)),
+      poll_due_custom: new FormControl('', this.is_in_future.bind(this)),
     });
     this.pd = {};
     this.update_ref_date();
@@ -593,7 +592,7 @@ export class DraftpollPage implements OnInit {
     'poll_due_type': [
       { type: 'required', message: 'validation.poll-due-type-required' },
     ],
-    'poll_due': [
+    'poll_due_custom': [
       { message: 'validation.poll-due-future' },
     ],
     'option_name': [
