@@ -10,6 +10,7 @@ import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
 import { PopoverController, IonSelect, IonToggle, AlertController } from '@ionic/angular';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 
@@ -72,7 +73,7 @@ export class DraftpollPage implements OnInit {
     public alertCtrl: AlertController,
     public G: GlobalService,
     public translate: TranslateService,
-    private ref: ChangeDetectorRef,
+    private ref: ChangeDetectorRef
   ) { 
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
@@ -179,9 +180,10 @@ export class DraftpollPage implements OnInit {
     this.G.L.entry("DraftpollPage.ionViewWillLeave");
     // TODO: close/dismiss this.type_select, which can be either a popover or an alert
     if ((this.pd.title||'')=='') {
-      this.G.L.info("DraftpollPage not saving empty title draft");
+      this.G.L.info("DraftpollPage.ionViewWillLeave not saving empty title draft");
       // TODO: notify of deleted draft
     } else {
+      this.G.L.info("DraftpollPage.ionViewWillLeave saving draft");
       var p;
       if (!this.pid) {
         this.pid = this.G.P.generate_pid();
@@ -235,6 +237,18 @@ export class DraftpollPage implements OnInit {
           p.remove_option(oid);
         }
       }
+      LocalNotifications.schedule({
+        notifications: [{
+          title: "draft poll saved",
+          body: p.title,
+          id: 1
+        }]
+      })
+      .then(res => {
+        this.G.L.trace("DraftpollPage.ionViewWillLeave localNotifications.schedule succeeded:", res);
+      }).catch(err => {
+        this.G.L.warn("DraftpollPage.ionViewWillLeave localNotifications.schedule failed:", err);
+      });
     }
     this.G.L.exit("DraftpollPage.ionViewWillLeave");
   }

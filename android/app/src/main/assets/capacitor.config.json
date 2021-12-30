@@ -2,5 +2,12 @@
 	"appId": "io.ionic.starter",
 	"appName": "vodle",
 	"webDir": "www",
-	"bundledWebRuntime": false
+	"bundledWebRuntime": false,
+	"plugins": {
+		"LocalNotifications": {
+			"smallIcon": "assets/icon/favicon.ico",
+			"iconColor": "#488AFF",
+			"sound": "beep.wav"
+		}
+	}
 }
