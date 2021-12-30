@@ -1,5 +1,8 @@
 {
-    "_KONVENTIONEN_": "Es wird mit : gegendert. Es werden korrekte Anführungszeichen „“ verwendet: ",
+    "_KONVENTIONEN_": [
+        "Es wird alles mit : gegendert, z.B. 'Teilnehmer:innen'.",
+        "Es werden korrekte Anführungszeichen „“ verwendet"
+    ],
 
     "add-option": "Option hinzufügen",
     "add-target": "Ziel hinzufügen",
