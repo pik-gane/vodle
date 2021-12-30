@@ -81,6 +81,7 @@ export class PreviewpollPage implements OnInit {
     // register the user herself as a voter in the poll:
     this.p.init_vid();
     // set state to running, which will cause the poll data to be stored in the designated server:
+    this.p.start_date = new Date();
     this.p.state = 'running';
     // and initialize the ballot:
     this.p.init_ballot();

@@ -213,6 +213,16 @@ export class Poll {
   public set due_type(value: poll_due_type_p) { this.G.D.setp(this._pid, 'due_type', value); }
 
   // Date objects are stored as ISO strings:
+
+  public get start_date(): Date {
+    let str = this.G.D.getp(this._pid, 'start_date'); 
+    return str==''?null:new Date(str); 
+  }
+  public set start_date(value: Date) { 
+    this.G.D.setp(this._pid, 'start_date', 
+      ((value||'')!='') && (value.getTime() === value.getTime()) ? value.toISOString() : ''); 
+  }
+
   public get due_custom(): Date {
     let due_str = this.G.D.getp(this._pid, 'due_custom'); 
     return due_str==''?null:new Date(due_str); 
