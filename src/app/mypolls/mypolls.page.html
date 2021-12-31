@@ -43,19 +43,21 @@
 
     <!--RECENTLY CLOSED:-->
 
-    <ion-item color="primary">
-      <ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
+    <ion-item color="primary" (click)="closed_expanded=!closed_expanded">
+      <ion-icon size="small" [name]="closed_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
+      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
     </ion-item>
-    <ng-container *ngFor="let p of Object.values(G.P.polls)">
-      <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid">
-        <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-        <i>{{p.title}}</i>
-      </ion-item>
+    <ng-container *ngIf="closed_expanded">
+      <ng-container *ngFor="let p of Object.values(G.P.polls)">
+        <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid">
+          <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <i>{{p.title}}</i>
+        </ion-item>
+      </ng-container>
+      <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0">
+        <ion-item><p [innerHtml] ="'mypolls.no-recently-closed-polls'|translate"></p></ion-item>
+      </ng-container>
     </ng-container>
-    <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0">
-      <ion-item><p [innerHtml] ="'mypolls.no-recently-closed-polls'|translate"></p></ion-item>
-    </ng-container>
-
     <!--OLDER-->
     <!--
     <ion-item color="light" (click)="older_expanded=!older_expanded">
@@ -102,7 +104,7 @@
     </ng-container>
         
   </ion-list>
-
+  <ion-img src="assets/img/bg_hands.png"></ion-img>
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button routerLink="/draftpoll">
       <ion-icon name="add"></ion-icon>

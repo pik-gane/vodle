@@ -13,6 +13,7 @@ export class MypollsPage implements OnInit {
 
   Object = Object;
 
+  closed_expanded = false;
   drafts_expanded = false;
   older_expanded = false;
 
