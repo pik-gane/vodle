@@ -1,7 +1,9 @@
 
 # Development of a group decision / voting app "vodle"
 
-Current goal: complete a "minimal viable product" (MVP) that runs as a web-app only and provides base functionality (setting up polls, voting, seeing and understanding results)
+Current goal: complete a minimum viable product (MVP) that runs as a web-app only and provides base functionality (setting up polls, voting, seeing and understanding results).
+
+Current state: pre-alpha, ~ 80 percent complete. 
 
 (Later: extend functionality and deploy as android/ios app as well)
 
@@ -17,8 +19,7 @@ Current goal: complete a "minimal viable product" (MVP) that runs as a web-app o
 
 * App development framework: Ionic (typescript, angular)
 * GUI: html, svg
-* Communication: JSON, Email (later also messenger apps)
-* Deep links
+* Communication: JSON, Email (later also messenger apps), Deep links
 
 ## Very coarse overview of source code file tree
 
@@ -32,22 +33,13 @@ Current goal: complete a "minimal viable product" (MVP) that runs as a web-app o
 * starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
 * logging into container: sudo docker exec -it couch bash
 * sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
-```
-curl -X PUT http://localhost:5984/maxparc
-curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/file_compression -d '"snappy"'
-curl -X PUT http://localhost:5984/_node/_local/_config/couchdb/max_document_size -d '"1000000"'
-```
-* replicate db:
-```
-curl -H 'Content-Type: application/json' -X POST http://localhost:5984/_replicate -d ' {"source": "https://.....@08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc/", "target": "http://localhost:5984/maxparc/"}'
-```
 
 ## Ideas for publication
 
 ### channels
 
-* app shops
 * web app at vodle.it
+* app shops
 * promote "vodle" button to cinemas etc.
 * get startups to use it
 
