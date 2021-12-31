@@ -272,3 +272,19 @@ $font-family-wp-base: "Quicksand Medium";
     --ion-card-background: #1e1e1e;
   }
 }
+
+/* background images: */
+app-login {
+  background: url(../assets/img/bg_arms_outstretched.png) no-repeat;
+  background-position: bottom left;
+  background-size: auto 100%;
+  --ion-background-color: transparent;
+  ion-header {
+    ion-toolbar {
+      --background: transparent;
+    }
+  }
+  ion-content {
+    --background: transparent;
+  }
+}

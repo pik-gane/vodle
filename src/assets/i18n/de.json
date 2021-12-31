@@ -64,7 +64,7 @@
     },
 
     "draftpoll": {
-        "-page-title": "Abstimmungs-Entwurf bearbeiten",
+        "-page-title": "Abstimmung bearbeiten",
 
         "del-poll-confirm-question": "Entwurf endgültig löschen?<br/>(Das kann nicht rückgängig gemacht werden!)",
         "general-information": "Allgemeine Daten",

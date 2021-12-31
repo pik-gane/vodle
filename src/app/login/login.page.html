@@ -61,7 +61,7 @@ TODO:
           </ion-item>
         </form>    
         <ion-item lines="none">
-          <p><br/><br/></p>
+          <p><br/></p>
         </ion-item>
         <ion-item lines="none">
           <ion-button size="larger" color="primary" slot="end" [disabled]="!languageFormGroup.valid" 
@@ -70,6 +70,9 @@ TODO:
             <span [innerHtml]="'next'|translate"></span>
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
           </ion-button>
+        </ion-item>
+        <ion-item lines="none">
+          <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
         </ion-item>
     </ng-container>
 
@@ -91,7 +94,10 @@ TODO:
           (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
         </ion-button>
       </ion-item>
-    </ng-container>
+      <ion-item lines="none">
+        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
+      </ion-item>
+  </ng-container>
 
     <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
       <ion-item class="item-text-wrap" lines="none">
@@ -137,6 +143,9 @@ TODO:
           </ion-button>
         </ion-item>
       </form>    
+      <ion-item lines="none">
+        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
+      </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='fresh_password'">
@@ -209,6 +218,9 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
+      <ion-item lines="none">
+        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
+      </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='old_password'">
@@ -258,6 +270,9 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
+      <ion-item lines="none">
+        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
+      </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='connected'">
@@ -274,6 +289,9 @@ TODO:
           <span [innerHtml]="'start'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
+      </ion-item>
+      <ion-item lines="none">
+        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
       </ion-item>
     </ng-container>
 
