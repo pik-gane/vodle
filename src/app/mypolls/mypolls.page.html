@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title [innerHtml]="'mypolls.-page-title'|translate"></ion-title>
+    <ion-title [innerHtml]="'mypolls.-page-title'|translate" class="ion-no-padding ion-no-margin"></ion-title>
     <ion-thumbnail slot="end">
       <ion-img src="/assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
@@ -29,7 +29,7 @@
           <ion-icon [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <b><i>{{p.title}}</i></b>
         </ion-label>
-        <ion-buttons *ngIf="can_invite(p)" slot="end">
+        <ion-buttons *ngIf="can_invite(p)" slot="end" class="ion-no-padding ion-no-margin">
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
           <ion-button fill="clear" [routerLink]="'/inviteto/'+p.pid">
             <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
@@ -104,7 +104,7 @@
     </ng-container>
         
   </ion-list>
-  <ion-img src="assets/img/bg_hands.png"></ion-img>
+  <ion-img src="assets/img/bg_hands_closeup.png"></ion-img>
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button routerLink="/draftpoll">
       <ion-icon name="add"></ion-icon>

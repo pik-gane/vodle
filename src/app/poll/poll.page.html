@@ -12,7 +12,7 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ng-template [ngIf]="p!=null">
-      <ion-title [innerHtml]="'poll.-page-title-running'|translate"></ion-title>
+      <ion-title [innerHtml]="'poll.-page-title-running'|translate" class="ion-no-padding ion-no-margin"></ion-title>
     </ng-template>
     <ion-buttons slot="end">
       <ion-button (click)="delegate_dialog()" shape="round" fill="solid" color="primary" size="large">

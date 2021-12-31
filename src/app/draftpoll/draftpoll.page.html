@@ -3,12 +3,12 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title [innerHtml]="'draftpoll.-page-title'|translate"></ion-title>
-    <ion-buttons slot="end">
-      <ion-button fill="clear" (click)="del_poll_dialog()">
+    <ion-title [innerHtml]="'draftpoll.-page-title'|translate" class="ion-no-padding ion-no-margin"></ion-title>
+    <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
+      <ion-button fill="clear" (click)="del_poll_dialog()" class="ion-no-padding ion-no-margin">
         <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
       </ion-button>
-      <ion-button fill="clear" (click)="showkebap($event)">
+      <ion-button fill="clear" (click)="showkebap($event)" class="ion-no-padding ion-no-margin">
         <ion-icon ios="ellipsis-horizontal" md="ellipsis-vertical" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
