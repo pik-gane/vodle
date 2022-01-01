@@ -25,10 +25,6 @@ export class DraftpollKebapPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.examples = [
-      '{"title":"Test 1"}',
-      '{"title":"Test 2"}'
-    ];
   }
 
   ClosePopover()
@@ -47,11 +43,15 @@ export class DraftpollKebapPage implements OnInit {
   }
 
   open_select_example() {
+    // TODO: read from poll db!
+    this.examples = [
+      '{"title":"Test 1"}',
+      '{"title":"Test 2"}'
+    ];
     this.select_example.open(new MouseEvent("click"));
   }
-  
+
   use_example() { 
-    // TODO: insert chosen example:
     var doc = this.select_example.value;
     if ((doc||'-')!='-') {
       this.parent.fill_from_JSON(doc); 
