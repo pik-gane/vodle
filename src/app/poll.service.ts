@@ -200,6 +200,9 @@ export class Poll {
   public get type(): poll_type_t { return this.G.D.getp(this._pid, 'type') as poll_type_t; }
   public set type(value: poll_type_t) { this.G.D.setp(this._pid, 'type', value); }
 
+  public get language(): string { return this.G.D.getp(this._pid, 'language') as poll_type_t; }
+  public set language(value: string) { this.G.D.setp(this._pid, 'language', value); }
+
   public get title(): string { return this.G.D.getp(this._pid, 'title'); }
   public set title(value: string) { this.G.D.setp(this._pid, 'title', value); }
 
@@ -370,6 +373,7 @@ export class Option {
 
   constructor (G:GlobalService, poll:Poll, oid:string=null, 
                name:string=null, desc:string=null, url:string=null) { 
+    // TODO: ensure uniqueness of name within poll!
     this.G = G;
     this.G.L.entry("Option constructor");
     this.p = poll;

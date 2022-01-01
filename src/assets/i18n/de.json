@@ -111,10 +111,13 @@
         "please-list-options-explanation": "Bitte gib mindestens zwei Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "please-list-targets-explanation": "Bitte gib mindestens zwei mögliche Ziele an. Kümmere Dich nicht um die Reihenfolge. Weitere Ziele können später jederzeit durch die Wähler:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "draft-saved": "Entwurf gespeichert unter<br/>„Meine Abstimmungen“",
+
         "send-for-review": "Zum Korrekturlesen teilen",
         "import-options-from-file": "Optionen aus Datei importieren",
         "import-options-header": "Optionen aus Datei importieren",
         "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>",
+        "use-example-from-db": "Ein Beispiel verwenden:",
+        "use-example-from-db-none": "(Kein Beispiel verwenden)",
 
         "notification-saved-title": "Entwurf gesprichert unter „Meine Abstimmungen“"
     },

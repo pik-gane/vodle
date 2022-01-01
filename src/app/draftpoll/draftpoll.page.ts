@@ -47,7 +47,10 @@ export class DraftpollPage implements OnInit {
 
   pd: { 
     pid?,
-    type?, title?, desc?, url?, due_type?, due_custom?, db?, db_from_pid?, db_other_server_url?, db_other_password?,
+    type?, language?, 
+    title?, desc?, url?, 
+    due_type?, due_custom?, 
+    db?, db_from_pid?, db_other_server_url?, db_other_password?,
     options?: option_data_t[] 
   };
   get n_options() { return (this.pd.options||[]).length; }
@@ -109,7 +112,9 @@ export class DraftpollPage implements OnInit {
         let p = this.G.P.polls[this.pid];
         this.pd = { 
           pid:p.pid,
-          type:p.type, title:p.title, desc:p.desc, url:p.url, due_type:p.due_type, due_custom:p.due_custom, 
+          type:p.type, language:p.language,
+          title:p.title, desc:p.desc, url:p.url, 
+          due_type:p.due_type, due_custom:p.due_custom, 
           db:p.db, db_from_pid:p.db_from_pid, db_other_server_url:p.db_other_server_url, db_other_password:p.db_other_password,
           options: [] 
         };
@@ -131,6 +136,7 @@ export class DraftpollPage implements OnInit {
     if (this.pd) {
       this.formGroup.setValue({ 
         poll_type: this.pd.type||'',
+        poll_language: (this.pd.language||'')!=''?this.pd.language:this.G.S.language,
         poll_title: this.pd.title||'', 
         poll_desc: this.pd.desc||'',
         poll_url: this.pd.url||'', 
@@ -196,6 +202,7 @@ export class DraftpollPage implements OnInit {
       }
       p.state = 'draft';
       p.type = this.pd.type;
+      p.language = this.pd.language;
       p.title = this.pd.title;
       p.desc = this.pd.desc;
       p.url = this.pd.url;
@@ -275,6 +282,10 @@ export class DraftpollPage implements OnInit {
   set_poll_type() {
     let c = this.formGroup.get('poll_type');
     if (c.valid) this.pd.type = c.value;
+  }
+  set_poll_language() {
+    let c = this.formGroup.get('poll_language');
+    if (c.valid) this.pd.language = c.value;
   }
   set_poll_title() {
     let c = this.formGroup.get('poll_title');
@@ -433,6 +444,10 @@ export class DraftpollPage implements OnInit {
 
   // kebap:
 
+  send4review() { 
+    this.G.L.warn("DraftpollPage.send4review not yet implemented!");
+  }
+
   async import_csv_dialog() { 
     const confirm = await this.alertCtrl.create({ 
       header: this.translate.instant('draftpoll.import-options-header'), 
@@ -458,10 +473,6 @@ export class DraftpollPage implements OnInit {
     await confirm.present(); 
   } 
 
-  send4review() { 
-    this.G.L.warn("DraftpollPage.send4review not yet implemented!");
-  }
-
   // ready button:
 
   ready_button_clicked() {
@@ -479,6 +490,7 @@ export class DraftpollPage implements OnInit {
   private reset() {
     this.formGroup = this.formBuilder.group({
       poll_type: new FormControl('', Validators.required),
+      poll_language: new FormControl(''),
       poll_title: new FormControl('', Validators.required),
       poll_desc: new FormControl(''),
       poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
@@ -524,6 +536,11 @@ export class DraftpollPage implements OnInit {
       }
     }
     reader.readAsText(file);
+  }
+
+  fill_from_JSON(doc: string) {
+    // TODO: import data from doc
+    this.G.L.info("DraftpollPage.fill_from_JSON", doc);
   }
 
   private add_option(od: option_data_t) {
@@ -576,6 +593,8 @@ export class DraftpollPage implements OnInit {
   validation_messages = {
     'poll_type': [
       { type: 'required', message: 'validation.poll-type-required' },
+    ],
+    'poll_language': [
     ],
     'poll_title': [
       { type: 'required', message: 'validation.poll-title-required' },

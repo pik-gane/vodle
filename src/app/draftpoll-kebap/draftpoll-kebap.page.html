@@ -1,12 +1,24 @@
 <ion-content>
   <ion-item (click)="send4review()">
     <ion-button fill="clear" color="dark">
-      <ion-icon name="share-social"></ion-icon>&nbsp;&nbsp;{{'draftpoll.send-for-review'|translate}}
+      <ion-icon name="share-social"></ion-icon>&nbsp;&nbsp;<span [innerHtml]="'draftpoll.send-for-review'|translate"></span>
     </ion-button>
   </ion-item>
   <ion-item (click)="import()">
     <ion-button fill="clear" color="dark">
-      <ion-icon name="folder-open-outline"></ion-icon>&nbsp;&nbsp;{{'draftpoll.import-options-from-file'|translate}}
+      <ion-icon name="folder-open-outline"></ion-icon>&nbsp;&nbsp;<span [innerHtml]="'draftpoll.import-options-from-file'|translate"></span>
     </ion-button>
+  </ion-item>
+  <ion-item (click)="open_select_example()">
+    <ion-button fill="clear" color="dark">
+      <ion-icon name="cloud-download-outline"></ion-icon>&nbsp;&nbsp;
+      <span [innerHtml]="'draftpoll.use-example-from-db'|translate"></span>
+    </ion-button>
+    <!--the actual select item is hidden so that the appearance is that of a button:-->
+    <ion-select #ionSelects #select_example interface="popover" (ionChange)="use_example()" display="none"
+        style="font-size: smaller">
+      <ion-select-option value="-" [innerHtml]="'draftpoll.use-example-from-db-none'|translate"></ion-select-option>
+      <ion-select-option *ngFor="let doc of examples" [value]="doc" [innerHtml]="JSON.parse(doc)['title']"></ion-select-option>
+    </ion-select>
   </ion-item>
 </ion-content> 

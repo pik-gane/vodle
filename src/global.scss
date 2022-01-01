@@ -142,6 +142,15 @@ ion-grid {
     }
 }
 
+// FIXME: reduce the 32px margin right from the icons in the menu. The following does not help:
+ion-menu-toggle ion-icon {
+//    margin-right: 16 !important;
+}
+// FIXME: remove the 16px padding right from the items in mypolls. The following does not help, the item-inner div still gets 16px:
+.item-inner {
+//    padding-right: 0 !important;
+}
+
 // make select items and titles wrap:
 .sc-ion-label-md-h {
     white-space: normal !important;
@@ -151,6 +160,8 @@ ion-grid {
 }
 ion-title {
     white-space: normal !important;
+    padding: 10px;
+    margin: 0;
 }
 
 // if we need to adjust date picker font size:

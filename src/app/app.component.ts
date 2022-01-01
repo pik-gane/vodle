@@ -8,17 +8,7 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class AppComponent {
   public appPages = [
-/*    {
-      title: 'Home',
-      url: '/home',
-      icon: 'home'
-    },
     {
-      title: 'Last poll used',
-      url: '/openpoll',
-      icon: 'git-commit' // or list-box
-    },
-*/    {
       title: 'mypolls.-page-title',
       url: '/mypolls',
       icon: 'list'
