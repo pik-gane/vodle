@@ -944,6 +944,7 @@ export class DataService {
   public delu(key:string) {
     // delete a user data item
     if (!(key in this.user_cache)) {
+      this.G.L.trace("DataService.delp cannot delete unknown key", key);
       return;
     }
     delete this.user_cache[key];
@@ -986,11 +987,18 @@ export class DataService {
   }
   public delp(pid:string, key:string) {
     // delete a poll data item
-    if (!(pid in this.poll_caches) || !(key in this.poll_caches[pid])) {
-      return;
-    }
-    delete this.poll_caches[pid][key];
-    this.delete_poll_data(pid, key);
+    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
+      // construct key for user db:
+      let ukey = get_poll_key_prefix(pid) + key;
+      this.delu(ukey);
+    } else {
+      if (!(pid in this.poll_caches) || !(key in this.poll_caches[pid])) {
+        this.G.L.trace("DataService.delp cannot delete unknown combination", pid, key);
+        return;
+      }
+      delete this.poll_caches[pid][key];
+      this.delete_poll_data(pid, key);
+    }      
   }
 
   public getv(pid:string, key:string): string {

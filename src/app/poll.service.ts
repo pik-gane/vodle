@@ -124,7 +124,6 @@ export class Poll {
   delete() {
     this.G.L.entry("Poll.delete", this._pid);
     delete this.G.P.polls[this._pid];
-    this.G.D.delp(this._pid, 'state');
     this.G.D.delp(this._pid, 'type');
     this.G.D.delp(this._pid, 'title');
     this.G.D.delp(this._pid, 'desc');
@@ -141,6 +140,7 @@ export class Poll {
     }
     this.G.D.delp(this._pid, 'password');
     this.G.D.delp(this._pid, 'vid');
+    this.G.D.delp(this._pid, 'state');
     this.G.L.exit("Poll.delete", this._pid);
   }
 
