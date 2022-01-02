@@ -4,7 +4,9 @@
     "language": "en",
 
     "title": "What dish to serve at our next meeting",
+
     "desc": "This is an example poll for selecting a single option. Imagine you have to select a single dish that shall be served at your next meeting. The 57 options were taken from CNN's list of the world's 50 best foods interleaved with Tasteatlas' list of 10 best-rated vegan dishes (https://www.tasteatlas.com/best-rated-vegan-dishes-in-the-world).",
+    
     "url": "https://edition.cnn.com/travel/article/world-best-food-dishes/index.html",
 
     "due_type": "24hr",

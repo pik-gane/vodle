@@ -1,18 +1,20 @@
 {
-    "_COMMENT_": "Template for example polls",
+    ":COMMENT": "Template for example polls",
 
     "type": "Poll type: winner|share",
 
     "language": "Poll language (optional, defaults to creator's language setting)",
 
     "title": "Poll title",
+
     "desc": "Poll description (optional)",
+    
     "url": "Poll's 'read more' URL (optional)",
 
     "due_type": "Poll closing date relative to starting date: custom|10min|hour|midnight|24hr|tomorrow-noon|tomorrow-night|friday-noon|sunday-night|week|two-weeks|four-weeks",
     "due_custom": "If due_type==custom, fixed poll closing date in ISO format",
 
-    "_COMMENT2_": "If type==winner, specify a list of at least two options here:",
+    ":COMMENT2": "If type==winner, specify a list of at least two options here:",
     "options": [
         {
             "name": "Option 1 name (must be unique within the poll)",
@@ -26,7 +28,7 @@
         }
     ],
 
-    "_COMMENT3_": "If type==share, specify a list of at least two targets here:",
+    ":COMMENT3": "If type==share, specify a list of at least two targets here:",
     "targets": [
         {
             "name": "Target 1 name (must be unique within the poll)",
