@@ -42,6 +42,7 @@ export class DraftpollPage implements OnInit {
   option_stage: number;
   expanded: Array<boolean>;
   advanced_expanded: boolean;
+  deleted: boolean;
 
   // draft poll data:
 
@@ -81,7 +82,7 @@ export class DraftpollPage implements OnInit {
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
       this.pid = params['pid'];
-      this.pd = JSON.parse(decodeURIComponent(params['pd']));
+      this.pd = JSON.parse(decodeURIComponent(params['pd']||"{}"));
     } );
   }
   
@@ -103,6 +104,7 @@ export class DraftpollPage implements OnInit {
 
   onDataReady() {
     this.G.L.entry("DraftpollPage.onDataReady");
+    this.deleted = false;
     if (!this.pid) {
       this.stage = 0;
       if (!this.pd) {
@@ -151,7 +153,15 @@ export class DraftpollPage implements OnInit {
         poll_due_type: this.pd.due_type||'', 
         poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
       });
-      if (!this.pd.options) this.pd.options = [];
+      if (this.pd.language||this.pd.db_from_pid||this.pd.db_other_server_url) {
+        this.advanced_expanded = true;
+      }
+      if (this.pd.desc||this.pd.url) {
+        this.show_details = true;
+      }
+      if (!this.pd.options) {
+        this.pd.options = [];
+      }
       for (let [i, od] of this.pd.options.entries()) {
         this.add_option_inputs(i);
         this.formGroup.get('option_name'+i).setValue(od.name); 
@@ -159,7 +169,7 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('option_url'+i).setValue(od.url); 
         this.stage = 6;
         this.option_stage = 10;
-        if (od.desc) {
+        if (od.desc||od.url) {
           this.show_details = true;
         }
       }
@@ -199,7 +209,7 @@ export class DraftpollPage implements OnInit {
     if ((this.pd.title||'')=='') {
       this.G.L.info("DraftpollPage.ionViewWillLeave not saving empty title draft");
       // TODO: notify of deleted draft
-    } else {
+    } else if (!this.deleted) {
       this.G.L.info("DraftpollPage.ionViewWillLeave saving draft");
       var p;
       if (!this.pid) {
@@ -513,6 +523,11 @@ export class DraftpollPage implements OnInit {
 
   private del_draft() {
     // TODO!
+    if (this.pid) {
+      this.G.P.polls[this.pid].delete();
+    }
+    this.deleted = true;
+    this.router.navigate(["/mypolls"]);
   }
 
   import_csv(event: Event) {

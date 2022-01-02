@@ -121,6 +121,29 @@ export class Poll {
     G.L.exit("Poll constructor", pid);
   }
 
+  delete() {
+    this.G.L.entry("Poll.delete", this._pid);
+    delete this.G.P.polls[this._pid];
+    this.G.D.delp(this._pid, 'state');
+    this.G.D.delp(this._pid, 'type');
+    this.G.D.delp(this._pid, 'title');
+    this.G.D.delp(this._pid, 'desc');
+    this.G.D.delp(this._pid, 'url');
+    this.G.D.delp(this._pid, 'language');
+    this.G.D.delp(this._pid, 'db');
+    this.G.D.delp(this._pid, 'db_from_pid');
+    this.G.D.delp(this._pid, 'db_other_server_url');
+    this.G.D.delp(this._pid, 'db_other_password');
+    this.G.D.delp(this._pid, 'db_server_url');
+    this.G.D.delp(this._pid, 'db_password');
+    for (let oid of Object.keys(this._options)) {
+      this._options[oid].delete();
+    }
+    this.G.D.delp(this._pid, 'password');
+    this.G.D.delp(this._pid, 'vid');
+    this.G.L.exit("Poll.delete", this._pid);
+  }
+
   private _pid: string;
   public get pid(): string { return this._pid; }
   // pid is read-only, set at construction
@@ -260,7 +283,7 @@ export class Poll {
 
   public get options(): Record<string, Option> { return this._options; }
   public remove_option(oid: string) {
-    if (oid in this._options && this.state=='draft') {
+    if (oid in this._options) {
       delete this._options[oid];
       return true;
     } else {
@@ -388,6 +411,13 @@ export class Option {
     if ((url||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.url', url);
     poll._add_option(this);
     this.G.L.exit("Option constructor");
+  }
+
+  delete() {
+    this.p.remove_option(this.oid);
+    this.G.D.delp(this.p.pid, 'option.'+this.oid+'.name');
+    this.G.D.delp(this.p.pid, 'option.'+this.oid+'.desc');
+    this.G.D.delp(this.p.pid, 'option.'+this.oid+'.url');
   }
 
   private _oid: string;

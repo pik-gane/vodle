@@ -984,6 +984,14 @@ export class DataService {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
   }
+  public delp(pid:string, key:string) {
+    // delete a poll data item
+    if (!(pid in this.poll_caches) || !(key in this.poll_caches[pid])) {
+      return;
+    }
+    delete this.poll_caches[pid][key];
+    this.delete_poll_data(pid, key);
+  }
 
   public getv(pid:string, key:string): string {
     // get voter data item
@@ -1697,7 +1705,7 @@ export class DataService {
     // ASYNC:
     db.get(_id)
     .then(doc => {
-      // key existed in db, so update:
+      // key existed in db, so delete:
 
       db.remove(doc)
       .then(() => {
@@ -1717,6 +1725,83 @@ export class DataService {
 
     // RETURN:
     return true;
+  }
+
+  private delete_poll_data(pid:string, key:string): boolean {
+    // deletes a key from a poll database. 
+    this.G.L.trace("DataService.delete_poll_data", pid, key);
+
+    let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+    var _id;
+
+    // see what type of entry it is:
+    if (key.indexOf(":") == -1) {
+
+      // it's a non-voter data item.
+
+      // use correct prefix:
+      if ((key == 'due') || (key == 'state')) {
+        _id = poll_doc_id_prefix + pid + ':due_and_state';
+      } else {
+        _id = poll_doc_id_prefix + pid + ':' + key;
+      }
+      if ((poll_pw=='')||(!poll_pw)) {
+        this.G.L.warn("DataService.delete_poll_data couldn't delete "+key+" from local_poll_DB since poll password or voter id are missing!");
+
+        // RETURN:
+        return false;
+      }
+
+    } else {
+
+      // it's a voter data item.
+
+      // check which voter's data this is:
+      let vid_prefix = key.slice(0, key.indexOf(':')),
+          vid = this.user_cache[get_poll_key_prefix(pid) + 'vid'];
+      if (vid_prefix != 'voter.' + vid) {
+          // it is not allowed to alter other voters' data!
+          this.G.L.error("DataService.delete_poll_data tried deleting another voter's data item", key);
+
+          // RETURN: 
+          return false;
+      }
+
+      _id = poll_doc_id_prefix + pid + '.' + key;
+      if ((poll_pw=='')||(!poll_pw) || (vid=='')||(!vid)) {
+        this.G.L.warn("DataService.delete_poll_data couldn't delete "+key+" from local_poll_DB since poll password or voter id are missing!");
+
+        // RETURN:
+        return false;
+      }
+    }
+
+    let db = this.get_local_poll_db(pid);
+
+    // ASYNC:
+    db.get(_id)
+    .then(doc => {
+      // key existed in db, so delete:
+
+      db.remove(doc)
+      .then(() => {
+        this.G.L.trace("DataService.delete_poll_data local-only delete", pid, key);
+      })
+      .catch(err => {
+        this.G.L.warn("DataService.delete_poll_data couldn't delete, will try again soon", pid, key, doc, err);
+        window.setTimeout(this.delete_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key);
+      });
+
+    }).catch(err => {
+
+      // key did not exist in db:
+      this.G.L.warn("DataService.delete_poll_data no need to delete nonexistent key", pid, key, err);
+
+    });
+
+    // RETURN:
+    return true;
+
   }
 
   private email_and_pw_hash(): string {
