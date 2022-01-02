@@ -205,6 +205,7 @@
         "caution1": "After the poll has started, you cannot change any of the above. However, you and the other voters can always add further options.",
         "caution2": "Until the set due date, voters will be able to vote and add options, but cannot delete any. Then the poll will automatically be closed. Once started, you can neither shorten nor extend the this deadline.",
         "closes": "Closes",
+        "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will"
     },
