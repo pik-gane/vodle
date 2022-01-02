@@ -14,7 +14,6 @@
     "due_type": "Poll closing date relative to starting date: custom|10min|hour|midnight|24hr|tomorrow-noon|tomorrow-night|friday-noon|sunday-night|week|two-weeks|four-weeks",
     "due_custom": "If due_type==custom, fixed poll closing date in ISO format",
 
-    ":COMMENT2": "If type==winner, specify a list of at least two options here:",
     "options": [
         {
             "name": "Option 1 name (must be unique within the poll)",
@@ -26,19 +25,6 @@
             "desc": "Option k description (optional)",
             "url": "Option k 'read more' URL (optional)"
         }
-    ],
-
-    ":COMMENT3": "If type==share, specify a list of at least two targets here:",
-    "targets": [
-        {
-            "name": "Target 1 name (must be unique within the poll)",
-            "desc": "Target 1 description (optional)",
-            "url": "Target 1 'read more' URL (optional)"
-        },
-        {
-            "name": "Target k name (must be unique within the poll)",
-            "desc": "Target k description (optional)",
-            "url": "Target k 'read more' URL (optional)"
-        }
     ]
+
 }

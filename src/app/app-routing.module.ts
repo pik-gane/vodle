@@ -20,6 +20,10 @@ const routes: Routes = [
     loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
   },
   {
+    path: 'draftpoll/use/:pd',
+    loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
+  },
+  {
     path: 'draftpoll-kebap',
     loadChildren: () => import('./draftpoll-kebap/draftpoll-kebap.module').then( m => m.DraftpollKebapPageModule)
   },

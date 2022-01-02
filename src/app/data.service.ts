@@ -17,6 +17,7 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 import BLAKE2s from 'blake2s-js';
 
 import * as CryptoJS from 'crypto-js';
+import { promise } from 'protractor';
 const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
@@ -1024,7 +1025,18 @@ export class DataService {
       return this._setv_in_polldb(pid, key, value);
     }
   }
-  
+
+  get_example_docs(): Promise<any> {
+    let promise = this.remote_user_db.allDocs({
+      include_docs: true,
+      startkey: 'examples:;',
+      endkey: 'examples;',
+      inclusive_end: false,
+      limit: 50
+    });
+    return promise;
+  }
+
   // OTHER METHODS:
 
   private _setp_in_userdb(pid:string, key:string, value:string): boolean {

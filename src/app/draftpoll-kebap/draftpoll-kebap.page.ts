@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { PopoverController, IonSelect } from '@ionic/angular';
 import { DraftpollPage } from '../draftpoll/draftpoll.module';  
 
@@ -17,7 +17,10 @@ export class DraftpollKebapPage implements OnInit {
 
   JSON = JSON;
 
-  constructor(private popover: PopoverController) { 
+  constructor(
+    private popover: PopoverController,
+    private ref: ChangeDetectorRef
+  ) { 
     this.examples = [];
   }
 
@@ -42,19 +45,25 @@ export class DraftpollKebapPage implements OnInit {
     this.popover.dismiss();
   }
 
-  open_select_example() {
-    // TODO: read from poll db!
-    this.examples = [
-      '{"title":"Test 1"}',
-      '{"title":"Test 2"}'
-    ];
-    this.select_example.open(new MouseEvent("click"));
+  use_example_clicked() {
+    this.parent.G.D.get_example_docs().then(result => {
+      this.examples = [];
+      for (let row of result.rows) {
+        let doc = row.doc;
+        this.examples.push(JSON.stringify(doc));
+      }
+      // make sure the items appear in the select dialog:
+      this.ref.detectChanges();
+      this.select_example.open(new MouseEvent("click"));
+    }).catch(err => {
+      this.parent.G.L.error("DraftpollPage.use_example_clicked failed", err);
+    });
   }
 
   use_example() { 
-    var doc = this.select_example.value;
-    if ((doc||'-')!='-') {
-      this.parent.fill_from_JSON(doc); 
+    var spec = this.select_example.value;
+    if ((spec||'-')!='-') {
+      this.parent.restart_with_data(spec); 
       this.popover.dismiss();
     }
   }

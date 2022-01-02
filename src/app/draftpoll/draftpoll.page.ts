@@ -80,6 +80,8 @@ export class DraftpollPage implements OnInit {
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
       this.pid = params['pid'];
+      this.pd = JSON.parse(decodeURIComponent(params['pd']));
+      this.G.L.info("DraftpollPage.constructor pd", this.pd);
     } );
   }
   
@@ -102,9 +104,15 @@ export class DraftpollPage implements OnInit {
   onDataReady() {
     this.G.L.entry("DraftpollPage.onDataReady");
     if (!this.pid) {
-      this.G.L.info("DraftpollPage editing new draft");
       this.stage = 0;
-      this.pd = { db:'default' };
+      if (!this.pd) {
+        this.G.L.info("DraftpollPage editing new draft");
+        this.pd = { db:'default' };
+      } else {
+        this.G.L.info("DraftpollPage editing draft with data", this.pd);
+        this.pd.due_custom = (this.pd.due_custom||'')!=''?(new Date(this.pd.due_custom)):null;
+        this.pd.db = this.pd.db||'default';
+      }
     } else if (this.pid in this.G.P.polls) {
       if (this.G.P.polls[this.pid].state == 'draft') {
         this.G.L.info("DraftpollPage editing existing draft", this.pid);
@@ -497,7 +505,6 @@ export class DraftpollPage implements OnInit {
       poll_due_type: new FormControl('', Validators.required),
       poll_due_custom: new FormControl('', this.is_in_future.bind(this)),
     });
-    this.pd = {};
     this.G.P.update_ref_date();
   }
 
@@ -538,9 +545,9 @@ export class DraftpollPage implements OnInit {
     reader.readAsText(file);
   }
 
-  fill_from_JSON(doc: string) {
-    // TODO: import data from doc
-    this.G.L.info("DraftpollPage.fill_from_JSON", doc);
+  restart_with_data(spec: string) {
+    this.G.L.info("DraftpollPage.restart_with_data", spec);
+    this.router.navigate(['/draftpoll/use/'+encodeURIComponent(spec)]);
   }
 
   private add_option(od: option_data_t) {
