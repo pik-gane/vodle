@@ -172,3 +172,9 @@ ion-title {
 .popover-content.sc-ion-popover-ios {
     width: 90% !important;
 }
+
+ion-icon.poll-type {
+    position: relative;
+    top: 3px;
+    z-index: 10;
+}

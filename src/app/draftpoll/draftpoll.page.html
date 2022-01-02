@@ -37,8 +37,8 @@
       <ion-label color="primary" position="floating">
         <span *ngIf="formGroup.get('poll_type').valid" 
             [class]="stage==0?'current-field':''" 
-            style="position:relative;top:3px;z-index:10;">
-          <ion-icon 
+            ><!--style="position:relative;top:3px;z-index:10;" now in class=poll-type-->
+          <ion-icon class="poll-type"
             [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'"
             style="color:black">
           </ion-icon>&nbsp;
