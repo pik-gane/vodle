@@ -65,6 +65,7 @@ export class DraftpollPage implements OnInit {
 
   // LIFECYCLE:
 
+  show_details = false;
   ready = false;  
 
   constructor(
@@ -81,7 +82,6 @@ export class DraftpollPage implements OnInit {
     this.route.params.subscribe( params => { 
       this.pid = params['pid'];
       this.pd = JSON.parse(decodeURIComponent(params['pd']));
-      this.G.L.info("DraftpollPage.constructor pd", this.pd);
     } );
   }
   
@@ -159,6 +159,9 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('option_url'+i).setValue(od.url); 
         this.stage = 6;
         this.option_stage = 10;
+        if (od.desc) {
+          this.show_details = true;
+        }
       }
     }
     if (this.n_options==0) {

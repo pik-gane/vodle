@@ -3,7 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title [innerHtml]="'previewpoll.-page-title'|translate" class="ion-no-padding ion-no-margin"></ion-title>
+    <ion-title [innerHtml]="'previewpoll.-page-title'|translate"></ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -43,9 +43,9 @@
     </ion-item>
     <ion-item *ngFor="let o of Object.values(p.options)">
       <ion-col class="ion-no-padding ion-no-margin">
-        <ion-text color="primary"><h4><b><i [innerHtml]="o.name"></i></b></h4></ion-text>
         <p>
-          <ion-text *ngIf="(o.desc||'')!=''" color="primary"><i [innerHtml]="o.desc"></i></ion-text>
+          <ion-text color="primary"><b><i [innerHtml]="o.name"></i></b></ion-text>
+          <ion-text *ngIf="(o.desc||'')!=''" color="primary"><br/><i [innerHtml]="o.desc"></i></ion-text>
           <ion-text *ngIf="(o.url||'')!=''">
             &nbsp;(<a [href]="G.D.fix_url(o.url)" target="_blank" rel="noopener noreferrer">
               <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
