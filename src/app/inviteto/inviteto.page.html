@@ -14,12 +14,10 @@
     </ion-item>
     <ion-item (click)="details_expanded=!details_expanded">
       <ion-col class="ion-no-padding ion-no-margin">
-        <span style="position:relative;top:3px;z-index:10;">
-          <ion-icon 
-            [name]="p.type=='winner'?'trophy':'cut'"
-            style="color:black">
-          </ion-icon>&nbsp;
-        </span>
+        <ion-icon class="poll-type"
+          [name]="p.type=='winner'?'trophy':'cut'"
+          style="color:black">
+        </ion-icon>&nbsp;
         <i [innerHtml]="p.title"></i>
         <ng-container *ngIf="details_expanded">
           <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
