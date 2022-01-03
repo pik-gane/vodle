@@ -1189,7 +1189,7 @@ export class DataService {
       }  
     }
     return false;
-}
+  }
 
   private after_changes() {
     this.G.L.entry("DataService.after_changes");
@@ -1388,10 +1388,8 @@ export class DataService {
               subkey = keyfromvid.slice(vid.length + 1);
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
           if (subkey.startsWith("rating.")) {
-            let oid = subkey.slice("rating.".length);
-            if (pid in this.G.P.polls) {
-              this.G.P.polls[pid].update_rating(vid, oid, Number.parseInt(value));
-            }            
+            let oid = subkey.slice("rating.".length), r = Number.parseInt(value);
+            this.G.P.update_rating(pid, vid, oid, r);
           }
 
         } else {

@@ -28,7 +28,9 @@ export class PollService {
 
   private G: GlobalService;
 
-  public polls: Record<string, Poll> = {};
+  polls: Record<string, Poll> = {};
+  // for each pid, oid and vid, the rating (default: 0):
+  ratings: Map<string, Map<string, Map<string, number>>>;
 
   ref_date: Date;
 
@@ -75,6 +77,7 @@ export class PollService {
     // called by GlobalService
     G.L.entry("PollService.init");
     this.G = G; 
+    this.ratings = new Map();
   }
 
   generate_pid(): string {
@@ -93,6 +96,26 @@ export class PollService {
 
   update_ref_date() {
     this.ref_date = new Date();
+  }
+
+  update_rating(pid:string, vid:string, oid:string, r:number) {
+    let rp = this.G.P.ratings[pid];
+    if (!rp) {
+      rp = this.G.P.ratings[pid] = new Map();
+    }
+    let rpo = rp[oid];
+    if (!rpo) {
+      rpo = rp[oid] = new Map(); 
+    }
+    if (r != rpo[vid]) {
+      if (pid in this.polls) {
+        // let the poll object do the update:
+        this.polls[pid].update_rating(vid, oid, r);
+      } else {
+        // just store the new value:
+        rpo[vid] = r;
+      }
+    }
   }
 
 }
@@ -118,7 +141,7 @@ export class Poll {
     G.L.entry("Poll.constructor", pid, this._state);
     this._pid = pid;
     this.G.P.polls[pid] = this;
-    this.init_tally_data();      
+    this.tally_all();      
     G.L.exit("Poll constructor", pid);
   }
 
@@ -303,6 +326,11 @@ export class Poll {
   }
   public get n_options() { return this.oids.length; }
 
+  public set_myrating(oid:string, value:number) {
+    this.G.D.setv(this._pid, "rating." + oid, value.toString());
+    this.update_rating(this.myvid, oid, value);
+  }
+
   // OTHER HOOKS:
 
   public set_db_credentials() {
@@ -390,12 +418,12 @@ export class Poll {
   - For performance reasons, we use Maps instead of Records here
   */
 
+  // for each pid, oid and vid, the rating (default: 0):
+  ratings: Map<string, Map<string, number>>;
   // array of known vids:
   allvids: Set<string>;
   // number of voters known:
   n_voters: number;
-  // for each oid and vid, the rating (default: 0):
-  ratings: Map<string, Map<string, number>>;
   // for each oid, an array of ascending ratings: 
   ratings_ascending: Map<string, Array<number>>;
   // for each oid, the approval cutoff (rating at and above which option is approved):
@@ -417,10 +445,12 @@ export class Poll {
   // for each oid, the winning probability/share:
   shares: Map<string, number>;
 
-  private init_tally_data() {
+  tally_all() {
+    // Called after initialization.
+    // Tallies all. 
+    this.G.L.entry("Poll.tally_all", this._pid);
+
     this.allvids = new Set();
-    this.n_voters = 0;
-    this.ratings = new Map();
     this.ratings_ascending = new Map();
     this.cutoffs = new Map();
     this.approvals = new Map();
@@ -431,27 +461,38 @@ export class Poll {
     this.votes = new Map();
     this.n_votes = new Map();
     this.shares = new Map();
-  }
 
-  tally_all() {
-    // Called after recovery from database.
-    // Tallies all. 
-
-    this.init_tally_data();
-    // TODO: extract n_voters, ratings, total_ratings!
-
+    this.ratings = this.G.P.ratings[this._pid];
+    if (!this.ratings) {
+      this.ratings = this.G.P.ratings[this._pid] = new Map();
+    }
+    // extract voters and total_ratings:
+    for (let [oid, rs] of this.ratings) {
+      let t = 0;
+      for (let [vid, r] of rs) {
+        this.allvids.add(vid);
+        t += r;
+      }
+      this.total_ratings[oid] = t;
+    }
+    this.n_voters = this.allvids.size;
+    // calculate cutoffs, approvals, and scores of all options:
     let score_factor = this.n_voters * 128;
     for (let [oid, rs] of this.ratings) {
-      this.update_cutoff_and_approvals(oid, rs);
+      let rsasc = this.update_ratings_ascending(oid, rs);
+      this.update_cutoff_and_approvals(oid, rs, rsasc);
       let apsc = this.update_approval_score(oid, this.approvals[oid]);
       this.update_score(oid, apsc, this.total_ratings[oid], score_factor);
     }
+    // order and calculate votes and shares:
     this.update_ordering();
     let oidsdesc = this.oids_descending;
     for (let vid of this.allvids) {
       this.update_vote(vid, oidsdesc);
     }
     this.update_shares(oidsdesc);
+
+    this.G.L.exit("Poll.tally_all", this._pid, this.shares);
   }
 
   update_rating(vid:string, oid:string, value:number) {
@@ -482,7 +523,26 @@ export class Poll {
       }
       // update depending data:
 
-      let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, rs);
+      // update ratings_ascending faster than by resorting:
+      let rsasc = this.ratings_ascending[oid],
+          index = rsasc.indexOf(old_value);
+      // remove old value:
+      rsasc = rsasc.slice(0, index).concat(rsasc.slice(index + 1));
+      // insert new value at correct position:
+      for (let index=0; index<rsasc.length; index++) {
+        if (rsasc[index] >= value) {
+          rsasc = rsasc.slice(0, index).concat([value]).concat(rsasc.slice(index));    
+          break;
+        }
+      }
+      if (rsasc.length < this.n_voters) {
+        rsasc.push(value);
+      }
+      // store result back:
+      this.ratings_ascending[oid] = rsasc;
+
+      // cutoff, approvals:
+      let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, rs, rsasc);
 
       let vids_approvals_changed = false,
           aps = this.approvals[oid];
@@ -539,11 +599,15 @@ export class Poll {
     }
   }
 
-  update_cutoff_and_approvals(oid:string, rs:Map<string, number>): [number, boolean, boolean] {
+  update_ratings_ascending(oid:string, rs:Map<string, number>): Array<number> {
     // sort ratings ascending:
     let rsasc_non0 = Array.from(rs.values()).sort() as Array<number>;
     // make sure array is correct length by padding with zeros:
     let rsasc = this.ratings_ascending[oid] = Array(this.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
+    return rsasc;
+  }
+
+  update_cutoff_and_approvals(oid:string, rs:Map<string, number>, rsasc:Array<number>): [number, boolean, boolean] {
     // update approval cutoff:
     let cutoff = 100, cutoff_factor = 100 / this.n_voters;
     for (let index=0; index<this.n_voters; index++) {
