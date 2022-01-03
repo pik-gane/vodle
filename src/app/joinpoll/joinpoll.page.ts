@@ -73,7 +73,7 @@ export class JoinpollPage implements OnInit {
       this.p.db_server_url = this.db_server_url;
       this.p.db_password = this.db_password;
       this.p.password = this.poll_password;
-      this.p.init_vid();
+      this.p.init_myvid();
       this.G.D.connect_to_remote_poll_db(this.pid);
     }
     this.G.L.exit("JoinPage.onDataReady");

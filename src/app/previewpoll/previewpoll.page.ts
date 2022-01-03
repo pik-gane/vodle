@@ -79,10 +79,12 @@ export class PreviewpollPage implements OnInit {
     // generate a random poll password:
     this.p.init_password();
     // register the user herself as a voter in the poll:
-    this.p.init_vid();
+    this.p.init_myvid();
     // set state to running, which will cause the poll data to be stored in the designated server:
     this.p.start_date = new Date();
     this.p.state = 'running';
+    // set own ratings to zero:
+    this.p.init_myratings();
     // go to invitation page:
     this.router.navigate(['/inviteto/'+this.pid]);
     this.G.L.exit("PreviewpollPage.publish_button_clicked");

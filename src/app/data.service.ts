@@ -1384,7 +1384,7 @@ export class DataService {
           key = _id.slice(voter_doc_prefix.length, _id.length);
 
           let keyfromvid = key.slice('voter.'.length),
-              vid = keyfromvid.slice(0, keyfromvid.indexOf('.')),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
               subkey = keyfromvid.slice(vid.length + 1);
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
           if (subkey.startsWith("rating.")) {
@@ -1567,7 +1567,7 @@ export class DataService {
       }
       let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='')||(!poll_pw)) {
-        this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
+        this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password is missing!");
 
         // RETURN:
         return false;
@@ -1642,9 +1642,9 @@ export class DataService {
       }
 
       let _id = poll_doc_id_prefix + pid + '.' + key,
-          poll_pw = this.user_cache[get_poll_key_prefix(pid) +  + 'password'];
+          poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='')||(!poll_pw) || (vid=='')||(!vid)) {
-        this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password or voter id are missing!");
+        this.G.L.warn("DataService.store_poll_data couldn't set voter data "+key+" in local_poll_DB since poll password is missing!");
 
         // RETURN:
         return false;
@@ -1841,7 +1841,7 @@ export class DataService {
   // OTHER:
 
   get_voter_key_prefix(pid:string): string {
-    return 'voter.' + this.getv(pid, 'vid') + '.';
+    return 'voter.' + this.getp(pid, 'vid') + ':';
   }
   
   format_date(date: Date): string {

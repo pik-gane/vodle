@@ -79,7 +79,7 @@
     <ion-item 
         lines="none" class="ion-text-end" text-wrap>
       <ion-button size="large" color="primary" slot="end" [disabled]="p.due < G.P.ref_date" 
-          shape="round" [name]="'previewpoll.publish'|translate"
+          shape="round"
           (click)="publish_button_clicked()">
         <span [innerHtml]="'previewpoll.publish'|translate"></span>&nbsp;
         <ion-icon name="paper-plane"></ion-icon>

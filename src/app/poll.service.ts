@@ -215,7 +215,7 @@ export class Poll {
 
   public get myvid(): string { return this.G.D.getp(this._pid, 'vid'); }
   public set myvid(value: string) {
-    if (this.myvid in this.allvids) {
+    if (this.allvids.has(this.myvid)) {
       this.allvids.delete(this.myvid);
     }
     this.G.D.setp(this._pid, 'vid', value);
@@ -407,9 +407,15 @@ export class Poll {
     }
   }
 
-  public init_vid() {
+  public init_myvid() {
     this.myvid = this.G.P.generate_vid();
     this.G.L.info("PollService.init_vid", this.myvid);
+  }
+
+  public init_myratings() {
+    for (let oid in this.options) {
+      this.set_myrating(oid, 0);
+    }
   }
 
   // TALLYING:
@@ -492,7 +498,7 @@ export class Poll {
     }
     this.update_shares(oidsdesc);
 
-    this.G.L.exit("Poll.tally_all", this._pid, this.shares);
+    this.G.L.exit("Poll.tally_all", this._pid, this.ratings, this.shares);
   }
 
   update_rating(vid:string, oid:string, value:number) {
@@ -502,7 +508,7 @@ export class Poll {
 
     // if necessary, register voter:
     let n_changed = false;
-    if (!(vid in this.allvids)) {
+    if (!this.allvids.has(vid)) {
       this.allvids.add(vid);
       this.n_voters = this.allvids.size;
       n_changed = true;
