@@ -83,8 +83,6 @@ export class PreviewpollPage implements OnInit {
     // set state to running, which will cause the poll data to be stored in the designated server:
     this.p.start_date = new Date();
     this.p.state = 'running';
-    // and initialize the ballot:
-    this.p.init_ballot();
     // go to invitation page:
     this.router.navigate(['/inviteto/'+this.pid]);
     this.G.L.exit("PreviewpollPage.publish_button_clicked");

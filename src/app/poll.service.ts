@@ -118,6 +118,7 @@ export class Poll {
     G.L.entry("Poll.constructor", pid, this._state);
     this._pid = pid;
     this.G.P.polls[pid] = this;
+    this.init_tally_data();      
     G.L.exit("Poll constructor", pid);
   }
 
@@ -189,9 +190,13 @@ export class Poll {
     this.G.D.setp(this._pid, 'password', value);
   }
 
-  public get vid(): string { return this.G.D.getp(this._pid, 'vid'); }
-  public set vid(value: string) {
+  public get myvid(): string { return this.G.D.getp(this._pid, 'vid'); }
+  public set myvid(value: string) {
+    if (this.myvid in this.allvids) {
+      this.allvids.delete(this.myvid);
+    }
     this.G.D.setp(this._pid, 'vid', value);
+    this.allvids.add(value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:
@@ -375,17 +380,163 @@ export class Poll {
   }
 
   public init_vid() {
-    this.vid = this.G.P.generate_vid();
-    this.G.L.info("PollService.init_vid", this.vid);
+    this.myvid = this.G.P.generate_vid();
+    this.G.L.info("PollService.init_vid", this.myvid);
   }
 
-  public init_ballot() {
-    if (this.state=='running') {
-      // TODO: initialize ratings to zero!
-    } else {
-      this.G.L.error("Attempted to init_voter_data() when poll not running.");
+  // TALLYING:
+
+  /* Notes: 
+  - For performance reasons, we use Maps instead of Records here
+  */
+
+  // array of known vids:
+  allvids: Set<string>;
+  // number of voters known:
+  n_voters: number;
+  // for each oid and vid, the rating (default: 0):
+  ratings: Map<string, Map<string, number>>;
+  // for each oid, an array of ascending ratings: 
+  ratings_ascending: Map<string, Array<number>>;
+  // for each oid, the approval cutoff (rating at and above which option is approved):
+  cutoffs: Map<string, number>;
+  // for each oid and vid, the approval (default: false):
+  approvals: Map<string, Map<string, boolean>>;
+  // for each oid, the approval score:
+  approval_scores: Map<string, number>;
+  // for each oid, the total rating:
+  total_ratings: Map<string, number>;
+  // for each oid, the effective score:
+  scores: Map<string, number>;
+  // oids sorted by descending score:
+  oids_descending: Array<string>; 
+  // for each vid, the voted-for option (or null):
+  votes: Map<string, string>;
+
+  private init_tally_data() {
+    this.allvids = new Set();
+    this.n_voters = 0;
+    this.ratings = new Map();
+    this.ratings_ascending = new Map();
+    this.cutoffs = new Map();
+    this.approvals = new Map();
+    this.approval_scores = new Map();
+    this.total_ratings = new Map();
+    this.scores = new Map();
+    this.oids_descending = []; 
+    this.votes = new Map();
+  }
+
+  update_rating(vid:string, oid:string, value:number) {
+    // called whenever a rating is updated.
+    // if necessary, register voter:
+    if (!(vid in this.allvids)) {
+      this.allvids.add(vid);
+      this.n_voters = this.allvids.size;
+      // update all scores:
+      let factor = this.n_voters * 128;
+      for (let oid2 of this.scores.keys()) {
+        this.scores[oid2] = this.approval_scores[oid2] * factor + this.total_ratings[oid2]; 
+      }
+    }
+    // if changed, update rating:
+    if (!(oid in this.ratings)) {
+      this.ratings[oid] = new Map();
+    }
+    let rs = this.ratings[oid], old_value = rs.get(vid) || 0;
+    if (value != old_value) {
+      if (value != 0) {
+        rs[vid] = value;
+      } else {
+        delete rs[vid];
+      }
+      // update depending data:
+      let rsasc_non0 = Array.from(rs.values()).sort() as Array<number>;
+      // make sure array is correct length by padding with zeros:
+      let rsasc = this.ratings_ascending[oid] = Array(this.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
+      // update approval cutoff:
+      let cutoff = 100, factor = 100 / this.n_voters;
+      for (let index=0; index<this.n_voters; index++) {
+        let r = rsasc[index];
+        // check whether strictly less than r percent have a rating strictly less than r:
+        let pct_less_than_r = factor * index;
+        if (pct_less_than_r < r) {
+          cutoff = r;
+          break;
+        }
+      }
+      if (!(oid in this.approvals)) {
+        this.approvals[oid] = new Map();
+      }
+      // update approvals:
+      let approvals_changed = false,
+          aps = this.approvals[oid];
+      if (cutoff != this.cutoffs[oid]) {
+        // cutoff has changed, so update all approvals:
+        for (let [vid2, r2] of rs) {
+          let ap = (r2 >= cutoff);
+          if (ap != aps[vid2]) {
+            aps[vid2] = ap;
+            approvals_changed = true;  
+          }
+        }
+      } else {
+        // update only vid's approval:
+        let ap = (value >= cutoff);
+        if (ap != aps[vid]) {
+          aps[vid] = ap;
+          approvals_changed = true;
+        }
+      }
+      if (approvals_changed) {
+        // update approval score:
+        let apsc = aps.filter(x => x==true).length;
+        if (apsc != this.approval_scores[oid]) {
+          this.approval_scores[oid] = apsc;
+        }
+      }
+      // update total ratings and score:
+      let tr = this.total_ratings[oid] += value - old_value;
+      this.scores[oid] = this.approval_scores[oid] * this.n_voters * 128 + tr;
+      // update option ordering:
+      let oidsdesc = Array.from(this.scores.entries())
+            .sort(([oid1, sc1], [oid2, sc2]) => sc1 - sc2)
+            .map(([oid2, sc2]) => oid2);
+      // check whether ordering changed:
+      let ordering_changed = false;
+      for (let index=0; index<oidsdesc.length; index++) {
+        if (oidsdesc[index] != this.oids_descending[index]) {
+          ordering_changed = true;
+          break;
+        }  
+      }
+      let votes_changed = false;
+      if (ordering_changed) {
+        // TODO!
+      } else if (approvals_changed) {
+        // update vid's vote:
+        let vote = null;
+        for (let oid of oidsdesc) {
+          if (aps[oid]) {
+            vote = oid;
+            break;
+          }
+        }
+        if (vote != this.votes[vid]) {
+          this.votes[vid] = vote;
+          votes_changed = true;
+        }
+      } else {
+        // neither the ordering nor the approvals have changed, 
+        // so the votes and winning probabilities/shared don't change either
+      }
+      if (votes_changed) {
+        // update winning probabilities/shares:
+        // TODO!
+      }
     }
   }
+
 }
 
 

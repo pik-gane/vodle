@@ -1123,7 +1123,7 @@ export class DataService {
 
   private handle_user_db_change(change) {
     // called by PouchDB sync
-    this.G.L.trace("DataService.handle_user_db_change", change);
+    this.G.L.trace("DataService.handle_user_db_change");
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);
@@ -1144,7 +1144,7 @@ export class DataService {
   }
   private handle_poll_db_change(pid, change) {
     // called by PouchDB sync
-    this.G.L.trace("DataService.handle_poll_db_change", pid, change);
+    this.G.L.trace("DataService.handle_poll_db_change", pid);
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_poll_doc(pid, change.doc);
@@ -1175,6 +1175,7 @@ export class DataService {
     return false;
   }
   private handle_deleted_poll_doc(pid:string, doc): boolean {
+    // TODO: handle deleted rating (sets the rating to zero)
     if (!(pid in this.poll_caches)) {
       return false;
     }
@@ -1403,6 +1404,7 @@ export class DataService {
             this.G.P.polls[pid]._state = value;
           }
           value_changed = true;
+          // TODO: handle change in rating by calling poll's update_rating
         }  
 
       } else {
