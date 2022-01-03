@@ -433,9 +433,32 @@ export class Poll {
     this.shares = new Map();
   }
 
+  tally_all() {
+    // Called after recovery from database.
+    // Tallies all. 
+
+    this.init_tally_data();
+    // TODO: extract n_voters, ratings, total_ratings!
+
+    let score_factor = this.n_voters * 128;
+    for (let [oid, rs] of this.ratings) {
+      this.update_cutoff_and_approvals(oid, rs);
+      let apsc = this.update_approval_score(oid, this.approvals[oid]);
+      this.update_score(oid, apsc, this.total_ratings[oid], score_factor);
+    }
+    this.update_ordering();
+    let oidsdesc = this.oids_descending;
+    for (let vid of this.allvids) {
+      this.update_vote(vid, oidsdesc);
+    }
+    this.update_shares(oidsdesc);
+  }
+
   update_rating(vid:string, oid:string, value:number) {
     // Called whenever a rating is updated.
-    // updates a rating and all depending quantities up to the final shares:
+    // Updates a rating and all depending quantities up to the final shares.
+    // Tries to do this as efficiently as possible.
+
     // if necessary, register voter:
     let n_changed = false;
     if (!(vid in this.allvids)) {
@@ -458,39 +481,13 @@ export class Poll {
         delete rs[vid];
       }
       // update depending data:
-      let rsasc_non0 = Array.from(rs.values()).sort() as Array<number>;
-      // make sure array is correct length by padding with zeros:
-      let rsasc = this.ratings_ascending[oid] = Array(this.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
-      // update approval cutoff:
-      let cutoff = 100, cutoff_factor = 100 / this.n_voters;
-      for (let index=0; index<this.n_voters; index++) {
-        let r = rsasc[index];
-        // check whether strictly less than r percent have a rating strictly less than r:
-        let pct_less_than_r = cutoff_factor * index;
-        if (pct_less_than_r < r) {
-          cutoff = r;
-          break;
-        }
-      }
-      if (!(oid in this.approvals)) {
-        this.approvals[oid] = new Map();
-      }
-      // update approvals:
+
+      let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, rs);
+
       let vids_approvals_changed = false,
-          others_approvals_changed = false,
           aps = this.approvals[oid];
-      if (cutoff != this.cutoffs[oid]) {
-        // cutoff has changed, so update all approvals:
-        this.G.L.trace("Poll.update_rating cutoff has changed to", cutoff);
-        for (let [vid2, r2] of rs) {
-          let ap = (r2 >= cutoff);
-          if (ap != aps[vid2]) {
-            aps[vid2] = ap;
-            others_approvals_changed = true;  
-          }
-        }
-      } else {
-        // update only vid's approval:
+      if (!others_approvals_changed) {
+        // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
         let ap = (value >= cutoff);
         if (ap != aps[vid]) {
           aps[vid] = ap;
@@ -500,10 +497,7 @@ export class Poll {
       if (vids_approvals_changed || others_approvals_changed) {
         // update approval score:
         this.G.L.trace("Poll.update_rating approvals changed", vids_approvals_changed, others_approvals_changed);
-        let apsc = aps.filter(x => x==true).length;
-        if (apsc != this.approval_scores[oid]) {
-          this.approval_scores[oid] = apsc;
-        }
+        this.update_approval_score(oid, aps);
       }
       // update total ratings and score(s):
       let tr = this.total_ratings[oid] += value - old_value,
@@ -511,55 +505,25 @@ export class Poll {
       if (n_changed) {
         // update all scores:
         for (let oid2 of this.scores.keys()) {
-          this.scores[oid2] = this.approval_scores[oid2] * score_factor + this.total_ratings[oid2]; 
+          this.update_score(oid2, this.approval_scores[oid2], this.total_ratings[oid2], score_factor);
         }
       } else {
         // only update oid's score:
-        this.scores[oid] = this.approval_scores[oid] * score_factor + tr;
+        this.update_score(oid, this.approval_scores[oid], tr, score_factor);
       }
       // update option ordering:
-      let oidsdesc = Array.from(this.scores.entries())
-            .sort(([oid1, sc1], [oid2, sc2]) => sc1 - sc2)
-            .map(([oid2, sc2]) => oid2);
-      // check whether ordering changed:
-      let ordering_changed = false;
-      for (let index=0; index<oidsdesc.length; index++) {
-        if (oidsdesc[index] != this.oids_descending[index]) {
-          ordering_changed = true;
-          break;
-        }  
-      }
+      let [oidsdesc, ordering_changed] = this.update_ordering();
       let votes_changed = false;
       if (ordering_changed || others_approvals_changed) {
         // update everyone's votes:
         this.G.L.trace("Poll.update_rating updating everyone's votes", ordering_changed);
         for (let vid2 of this.allvids) {
-          let vote = "";
-          for (let oid2 of oidsdesc) {
-            if (this.approvals[oid2][vid2]) {
-              vote = oid2;
-              break;
-            }
-          }
-          if (vote != this.votes[vid2]) {
-            this.votes[vid2] = vote;
-            votes_changed = true;
-          }  
+          votes_changed ||= this.update_vote(vid2, oidsdesc);
         }
       } else if (vids_approvals_changed) {
         // update only vid's vote:
         this.G.L.trace("Poll.update_rating updating vid's vote");
-        let vote = "";
-        for (let oid2 of oidsdesc) {
-          if (this.approvals[oid2][vid]) {
-            vote = oid2;
-            break;
-          }
-        }
-        if (vote != this.votes[vid]) {
-          this.votes[vid] = vote;
-          votes_changed = true;
-        }
+        votes_changed = this.update_vote(vid, oidsdesc);
       } else {
         // neither the ordering nor the approvals have changed, 
         // so the votes and winning probabilities/shared don't change either
@@ -567,33 +531,133 @@ export class Poll {
       if (votes_changed || n_changed) {
         // update winning probabilities/shares:
         this.G.L.trace("Poll.update_rating updating shares", votes_changed);
-        let total_n_votes = this.n_votes[""] = 0;
-        for (let oid2 of oidsdesc) {
-          this.n_votes[oid2] = 0;
-        }
-        for (let vid2 of this.allvids) {
-          let vote = this.votes[vid2];
-          this.n_votes[vote]++;
-          if (vote != "") {
-            total_n_votes++;
-          }
-        }
-        if (total_n_votes > 0) {
-          // shares are proportional to votes received:
-          for (let oid2 of oidsdesc) {
-            this.shares[oid2] = this.n_votes[oid2] / total_n_votes;
-          }  
-        } else {
-          // all abstained, so shares are uniform:
-          let k = oidsdesc.length;
-          for (let oid2 of oidsdesc) {
-            this.shares[oid2] = 1 / k;
-          }  
+        let shares_changed = this.update_shares(oidsdesc);
+        if (shares_changed) {
+          // TODO: what?
         }
       }
     }
   }
+
+  update_cutoff_and_approvals(oid:string, rs:Map<string, number>): [number, boolean, boolean] {
+    // sort ratings ascending:
+    let rsasc_non0 = Array.from(rs.values()).sort() as Array<number>;
+    // make sure array is correct length by padding with zeros:
+    let rsasc = this.ratings_ascending[oid] = Array(this.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
+    // update approval cutoff:
+    let cutoff = 100, cutoff_factor = 100 / this.n_voters;
+    for (let index=0; index<this.n_voters; index++) {
+      let r = rsasc[index];
+      // check whether strictly less than r percent have a rating strictly less than r:
+      let pct_less_than_r = cutoff_factor * index;
+      if (pct_less_than_r < r) {
+        cutoff = r;
+        break;
+      }
+    }
+    if (!(oid in this.approvals)) {
+      this.approvals[oid] = new Map();
+    }
+    // update approvals:
+    let cutoff_changed = false,
+        approvals_changed = false,
+        aps = this.approvals[oid];
+    if (cutoff != this.cutoffs[oid]) {
+      // cutoff has changed, so update all approvals:
+      cutoff_changed = true;
+      this.G.L.trace("Poll.update_cutoff changed to", cutoff);
+      for (let [vid2, r2] of rs) {
+        let ap = (r2 >= cutoff);
+        if (ap != aps[vid2]) {
+          aps[vid2] = ap;
+          approvals_changed = true;  
+        }
+      }
+    }
+    return [cutoff, cutoff_changed, approvals_changed];
+  }
+
+  update_approval_score(oid:string, aps:Map<string, boolean>): number {
+    let apsc = Array.from(aps.values()).filter(x => x==true).length;
+    if (apsc != this.approval_scores[oid]) {
+      this.approval_scores[oid] = apsc;
+    }
+    return apsc;
+  }
+
+  update_score(oid:string, apsc:number, tr:number, score_factor:number) {
+    this.scores[oid] = apsc * score_factor + tr;
+  }
+
+  update_ordering(): [Array<string>, boolean] {
+    let oidsdesc = Array.from(this.scores.entries())
+          .sort(([oid1, sc1], [oid2, sc2]) => sc1 - sc2)
+          .map(([oid2, sc2]) => oid2);
+    // check whether ordering changed:
+    let ordering_changed = false;
+    for (let index=0; index<oidsdesc.length; index++) {
+      if (oidsdesc[index] != this.oids_descending[index]) {
+        ordering_changed = true;
+        break;
+      }  
+    }
+    return [oidsdesc, ordering_changed];
+  }
+
+  update_vote(vid:string, oidsdesc:Array<string>): boolean {
+    let vote = "", vote_changed = false;
+    for (let oid2 of oidsdesc) {
+      if (this.approvals[oid2][vid]) {
+        vote = oid2;
+        break;
+      }
+    }
+    if (vote != this.votes[vid]) {
+      this.votes[vid] = vote;
+      vote_changed = true;
+    }
+    return vote_changed;
+  }
+
+  update_shares(oidsdesc:Array<string>): boolean {
+    let total_n_votes = this.n_votes[""] = 0,
+        shares_changed = false;
+    for (let oid2 of oidsdesc) {
+      this.n_votes[oid2] = 0;
+    }
+    for (let vid2 of this.allvids) {
+      let vote = this.votes[vid2];
+      this.n_votes[vote]++;
+      if (vote != "") {
+        total_n_votes++;
+      }
+    }
+    if (total_n_votes > 0) {
+      // shares are proportional to votes received:
+      for (let oid2 of oidsdesc) {
+        let share = this.n_votes[oid2] / total_n_votes;
+        if (share != this.shares[oid2]) {
+          this.shares[oid2] = share;
+          shares_changed = true;
+        }
+      }  
+    } else {
+      // all abstained, so shares are uniform:
+      let k = oidsdesc.length;
+      for (let oid2 of oidsdesc) {
+        let share = 1 / k;
+        if (share != this.shares[oid2]) {
+          this.shares[oid2] = share;
+          shares_changed = true;
+        }
+      }  
+    }
+    return shares_changed;
+  }
+
 }
+
+
 
 
 export class Option {

@@ -1372,7 +1372,7 @@ export class DataService {
             // it's an option's oid entry, so check whether we know this option:
             let oid = value;
             if (!this._pid_oids.has([pid, oid])) {
-              this.G.L.trace("DataService.doc2poll_cache found new option",oid);
+              this.G.L.trace("DataService.doc2poll_cache found new option", pid, oid);
               this._pid_oids.add([pid, oid]);
             }
 
@@ -1383,17 +1383,28 @@ export class DataService {
           // it's a voter doc.
           key = _id.slice(voter_doc_prefix.length, _id.length);
 
+          let keyfromvid = key.slice('voter.'.length),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf('.')),
+              subkey = keyfromvid.slice(vid.length + 1);
+          this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
+          if (subkey.startsWith("rating.")) {
+            let oid = subkey.slice("rating.".length);
+            if (pid in this.G.P.polls) {
+              this.G.P.polls[pid].update_rating(vid, oid, Number.parseInt(value));
+            }            
+          }
+
         } else {
 
           // it's neither.
-          this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", _id);
+          this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", pid, _id);
           this.G.L.exit("DataService.doc2poll_cache false");
 
           // RETURN:
           return false;
 
         }
-        this.G.L.trace("DataService.doc2poll_cache key, value", key, value);
+        this.G.L.trace("DataService.doc2poll_cache key, value", pid, key, value);
 
         // store in cache if changed:
         this.ensure_poll_cache(pid);
@@ -1404,18 +1415,17 @@ export class DataService {
             this.G.P.polls[pid]._state = value;
           }
           value_changed = true;
-          // TODO: handle change in rating by calling poll's update_rating
         }  
 
       } else {
 
-        this.G.L.warn("DataService.doc2poll_cache got corrupt doc", JSON.stringify(doc));
+        this.G.L.warn("DataService.doc2poll_cache got corrupt doc", pid, JSON.stringify(doc));
 
       }
     }
 
     // returns whether the value actually changed.
-    this.G.L.exit("DataService.doc2poll_cache value_changed", value_changed);
+    this.G.L.exit("DataService.doc2poll_cache value_changed", pid, value_changed);
 
     // RETURN:
     return value_changed;
