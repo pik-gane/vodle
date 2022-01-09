@@ -42,6 +42,7 @@
     "crypto-js": "^4.1.1",
     "globalthis": "^1.0.2",
     "ionic-logging-service": "^13.0.0",
+    "libsodium-wrappers": "^0.7.9",
     "node-fetch": "^2.6.1",
     "openpgp": "^5.0.0",
     "pouchdb": "^7.2.2",

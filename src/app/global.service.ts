@@ -1,6 +1,6 @@
 import { finalize } from 'rxjs/operators'; // TODO: what for??
 
-import { Injectable, HostListener, SkipSelf } from '@angular/core';
+import { Injectable, HostListener, SkipSelf, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 // TODO: replace Storage by PouchCouch:
@@ -14,7 +14,7 @@ import { PollService } from './poll.service';
 @Injectable({
   providedIn: 'root'
 })
-export class GlobalService {
+export class GlobalService implements OnDestroy {
 
   public L: Logger;
 
@@ -110,11 +110,17 @@ export class GlobalService {
     this.openpoll = this.polls[this.openpid];
   }
 
+  ngOnDestroy() {
+    console.log("GlobalService.ngOnDestroy entry");
+    this.save_state();
+    console.log("GlobalService.ngOnDestroy exit");
+  }
+
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
-    console.log("DATA onBeforeUnload");
-    //event.preventDefault();
-    //return false;
+    console.log("DATA onBeforeUnload entry");
+//    this.D.save_state();
+    console.log("DATA onBeforeUnload exit");
   }
 
   save_state() {

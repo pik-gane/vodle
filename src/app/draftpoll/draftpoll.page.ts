@@ -272,7 +272,7 @@ export class DraftpollPage implements OnInit {
         notifications: [{
           title: this.translate.instant("draftpoll.notification-saved-title"),
           body: p.title,
-          id: 1
+          id: 1 // TODO: increment or leave out?
         }]
       })
       .then(res => {

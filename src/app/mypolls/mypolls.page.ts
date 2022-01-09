@@ -19,7 +19,7 @@ export class MypollsPage implements OnInit {
 
   // LIFECYCLE:
 
-  ready = false;  
+  ready: boolean;  
 
   constructor(
     public G: GlobalService,
@@ -30,6 +30,7 @@ export class MypollsPage implements OnInit {
   
   ngOnInit() {
     this.G.L.entry("MypollsPage.ngOnInit");
+    this.ready = false;
   }
 
   ionViewWillEnter() {
@@ -38,7 +39,7 @@ export class MypollsPage implements OnInit {
   }
 
   ionViewDidEnter() {
-    this.G.L.entry("MypollsPage.ionViewDidEnter");
+    this.G.L.entry("MypollsPage.ionViewDidEnter", this.G.D.ready, this.ready);
     if (this.G.D.ready && !this.ready) this.onDataReady();
   }
 
@@ -46,6 +47,12 @@ export class MypollsPage implements OnInit {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("MypollsPage.onDataReady");
     this.ready = true;
+  }
+
+  ionViewWillLeave() {
+    this.G.L.entry("MypollsPage.ionViewWillLeave");
+    this.G.D.save_state();
+    this.G.L.exit("MypollsPage.ionViewWillLeave");
   }
 
   // user actions:
