@@ -29,8 +29,6 @@ export class PollService {
   private G: GlobalService;
 
   polls: Record<string, Poll> = {};
-  // for each pid, oid and vid, the rating (default: 0):
-  ratings_map: Map<string, Map<string, Map<string, number>>>;
 
   ref_date: Date;
 
@@ -77,7 +75,6 @@ export class PollService {
     // called by GlobalService
     G.L.entry("PollService.init");
     this.G = G; 
-    this.ratings_map = new Map();
   }
 
   generate_pid(): string {
@@ -99,10 +96,9 @@ export class PollService {
   }
 
   update_rating(pid:string, vid:string, oid:string, r:number) {
-    let rp = this.G.P.ratings_map.get(pid);
+    let rp = this.G.D.ratings_map_caches[pid];
     if (!rp) {
-      rp = new Map();
-      this.G.P.ratings_map.set(pid, rp); 
+      this.G.D.ratings_map_caches[pid] = rp = new Map();
     }
     let rpo = rp.get(oid);
     if (!rpo) {
@@ -144,7 +140,9 @@ export class Poll {
     G.L.entry("Poll.constructor", pid, this._state);
     this._pid = pid;
     this.G.P.polls[pid] = this;
-    this.tally_all();      
+    if (!(this._pid in this.G.D.tally_caches)) {
+      this.tally_all();
+    }
     G.L.exit("Poll constructor", pid);
   }
 
@@ -429,9 +427,9 @@ export class Poll {
   - all Map type variables are named ..._map to make this unmistakable.
   */
 
+  // for each pid, oid and vid, the rating (default: 0):
+  ratings_map: Map<string, Map<string, number>>;
   T: { // T is short for "tally data"
-    // for each pid, oid and vid, the rating (default: 0):
-    ratings_map: Map<string, Map<string, number>>;
     // array of known vids:
     allvids_set: Set<string>;
     // number of voters known:
@@ -463,8 +461,11 @@ export class Poll {
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
+    this.ratings_map = this.G.D.ratings_map_caches[this._pid];
+    if (!this.ratings_map) {
+      this.G.D.ratings_map_caches[this._pid] = this.ratings_map = new Map();
+    }
     this.G.D.tally_caches[this._pid] = this.T = {
-      ratings_map: this.G.P.ratings_map.get(this._pid),
       allvids_set: new Set(),
       n_voters: 0,
       ratings_ascending_map: new Map(),
@@ -478,13 +479,9 @@ export class Poll {
       n_votes_map: new Map(),
       shares_map: new Map()
     }
-    if (!this.T.ratings_map) {
-      this.T.ratings_map = new Map();
-      this.G.P.ratings_map.set(this._pid, this.T.ratings_map);
-    }
-    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.T.ratings_map.entries()]);
+    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     // extract voters and total_ratings:
-    for (let [oid, rs_map] of this.T.ratings_map) {
+    for (let [oid, rs_map] of this.ratings_map) {
       console.log("Poll.tally_all rating HA");
       this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
       let t = 0;
@@ -499,7 +496,7 @@ export class Poll {
     this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
     // calculate cutoffs, approvals, and scores of all options:
     let score_factor = this.T.n_voters * 128;
-    for (let [oid, rs_map] of this.T.ratings_map) {
+    for (let [oid, rs_map] of this.ratings_map) {
       let rsasc = this.update_ratings_ascending(oid, rs_map);
       this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
       this.update_cutoff_and_approvals(oid, rs_map, rsasc);
@@ -536,11 +533,11 @@ export class Poll {
       this.G.L.trace("Poll.update_rating n_changed, first rating of voter", vid);
     }
     // if changed, update rating:
-    if (!(oid in this.T.ratings_map)) {
-      this.T.ratings_map.set(oid, new Map());
+    if (!(oid in this.ratings_map)) {
+      this.ratings_map.set(oid, new Map());
       this.G.L.trace("Poll.update_rating first rating for option", oid);
     }
-    let rs_map = this.T.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
+    let rs_map = this.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
     if (value != old_value) {
       this.G.L.trace("Poll.update_rating rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {

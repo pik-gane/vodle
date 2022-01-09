@@ -176,7 +176,7 @@ function myhash(what): string {
 // SERVICE:
 
 // attributes of DataService to be stored in storage:
-const state_attributes = ["user_cache", "_pids", "poll_caches", "tally_caches"];
+const state_attributes = ["user_cache", "_pids", "poll_caches", "ratings_map_caches", "tally_caches"];
 
 @Injectable({
   providedIn: 'root'
@@ -211,6 +211,7 @@ export class DataService implements OnDestroy {
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
+  public ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
   public tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
