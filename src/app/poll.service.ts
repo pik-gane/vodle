@@ -122,6 +122,7 @@ export class PollService {
 
 }
 
+
 // ENTITY CLASSES:
 
 export class Poll {
@@ -217,11 +218,11 @@ export class Poll {
 
   public get myvid(): string { return this.G.D.getp(this._pid, 'vid'); }
   public set myvid(value: string) {
-    if (this.allvids_set.has(this.myvid)) {
-      this.allvids_set.delete(this.myvid);
+    if (this.T.allvids_set.has(this.myvid)) {
+      this.T.allvids_set.delete(this.myvid);
     }
     this.G.D.setp(this._pid, 'vid', value);
-    this.allvids_set.add(value);
+    this.T.allvids_set.add(value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:
@@ -428,91 +429,95 @@ export class Poll {
   - all Map type variables are named ..._map to make this unmistakable.
   */
 
-  // for each pid, oid and vid, the rating (default: 0):
-  ratings_map: Map<string, Map<string, number>>;
-  // array of known vids:
-  allvids_set: Set<string>;
-  // number of voters known:
-  n_voters: number;
-  // for each oid, an array of ascending ratings: 
-  ratings_ascending_map: Map<string, Array<number>>;
-  // for each oid, the approval cutoff (rating at and above which option is approved):
-  cutoffs_map: Map<string, number>;
-  // for each oid and vid, the approval (default: false):
-  approvals_map: Map<string, Map<string, boolean>>;
-  // for each oid, the approval score:
-  approval_scores_map: Map<string, number>;
-  // for each oid, the total rating:
-  total_ratings_map: Map<string, number>;
-  // for each oid, the effective score:
-  scores_map: Map<string, number>;
-  // oids sorted by descending score:
-  oids_descending: Array<string>; 
-  // for each vid, the voted-for option (or "" for abstention):
-  votes_map: Map<string, string>;
-  // for each oid (and "" for abstaining), the number of votes:
-  n_votes_map: Map<string, number>;
-  // for each oid, the winning probability/share:
-  shares_map: Map<string, number>;
+  T: { // T is short for "tally data"
+    // for each pid, oid and vid, the rating (default: 0):
+    ratings_map: Map<string, Map<string, number>>;
+    // array of known vids:
+    allvids_set: Set<string>;
+    // number of voters known:
+    n_voters: number;
+    // for each oid, an array of ascending ratings: 
+    ratings_ascending_map: Map<string, Array<number>>;
+    // for each oid, the approval cutoff (rating at and above which option is approved):
+    cutoffs_map: Map<string, number>;
+    // for each oid and vid, the approval (default: false):
+    approvals_map: Map<string, Map<string, boolean>>;
+    // for each oid, the approval score:
+    approval_scores_map: Map<string, number>;
+    // for each oid, the total rating:
+    total_ratings_map: Map<string, number>;
+    // for each oid, the effective score:
+    scores_map: Map<string, number>;
+    // oids sorted by descending score:
+    oids_descending: Array<string>; 
+    // for each vid, the voted-for option (or "" for abstention):
+    votes_map: Map<string, string>;
+    // for each oid (and "" for abstaining), the number of votes:
+    n_votes_map: Map<string, number>;
+    // for each oid, the winning probability/share:
+    shares_map: Map<string, number>;
+  }
 
   tally_all() {
     // Called after initialization.
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-    this.allvids_set = new Set();
-    this.ratings_ascending_map = new Map();
-    this.cutoffs_map = new Map();
-    this.approvals_map = new Map();
-    this.approval_scores_map = new Map();
-    this.total_ratings_map = new Map();
-    this.scores_map = new Map();
-    this.oids_descending = []; 
-    this.votes_map = new Map();
-    this.n_votes_map = new Map();
-    this.shares_map = new Map();
-
-    this.ratings_map = this.G.P.ratings_map.get(this._pid);
-    if (!this.ratings_map) {
-      this.ratings_map = new Map();
-      this.G.P.ratings_map.set(this._pid, this.ratings_map);
+    this.G.D.tally_caches[this._pid] = this.T = {
+      ratings_map: this.G.P.ratings_map.get(this._pid),
+      allvids_set: new Set(),
+      n_voters: 0,
+      ratings_ascending_map: new Map(),
+      cutoffs_map: new Map(),
+      approvals_map: new Map(),
+      approval_scores_map: new Map(),
+      total_ratings_map: new Map(),
+      scores_map: new Map(),
+      oids_descending: [],
+      votes_map: new Map(),
+      n_votes_map: new Map(),
+      shares_map: new Map()
     }
-    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
+    if (!this.T.ratings_map) {
+      this.T.ratings_map = new Map();
+      this.G.P.ratings_map.set(this._pid, this.T.ratings_map);
+    }
+    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.T.ratings_map.entries()]);
     // extract voters and total_ratings:
-    for (let [oid, rs_map] of this.ratings_map) {
+    for (let [oid, rs_map] of this.T.ratings_map) {
       console.log("Poll.tally_all rating HA");
       this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
       let t = 0;
       for (let [vid, r] of rs_map) {
         this.G.L.trace("Poll.tally_all rating", this._pid, oid, vid, r);
-        this.allvids_set.add(vid);
+        this.T.allvids_set.add(vid);
         t += r;
       }
-      this.total_ratings_map.set(oid, t);
+      this.T.total_ratings_map.set(oid, t);
     }
-    this.n_voters = this.allvids_set.size;
-    this.G.L.trace("Poll.tally_all voters", this._pid, this.n_voters, [...this.allvids_set]);
+    this.T.n_voters = this.T.allvids_set.size;
+    this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
     // calculate cutoffs, approvals, and scores of all options:
-    let score_factor = this.n_voters * 128;
-    for (let [oid, rs_map] of this.ratings_map) {
+    let score_factor = this.T.n_voters * 128;
+    for (let [oid, rs_map] of this.T.ratings_map) {
       let rsasc = this.update_ratings_ascending(oid, rs_map);
       this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
       this.update_cutoff_and_approvals(oid, rs_map, rsasc);
-      let apsc = this.update_approval_score(oid, this.approvals_map.get(oid));
-      this.update_score(oid, apsc, this.total_ratings_map.get(oid), score_factor);
-      this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.approvals_map.get(oid), apsc, this.scores_map.get(oid));
+      let apsc = this.update_approval_score(oid, this.T.approvals_map.get(oid));
+      this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
+      this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
     }
-    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.scores_map]);
+    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
     // order and calculate votes and shares:
     this.update_ordering();
-    let oidsdesc = this.oids_descending;
+    let oidsdesc = this.T.oids_descending;
     this.G.L.trace("Poll.tally_all oidsdesc", this._pid, oidsdesc);
-    for (let vid of this.allvids_set) {
+    for (let vid of this.T.allvids_set) {
       this.update_vote(vid, oidsdesc);
     }
-    this.G.L.trace("Poll.tally_all votes", this._pid, this.votes_map);
+    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
     this.update_shares(oidsdesc);
-    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.n_votes_map], [...this.shares_map]);
+    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
 
     this.G.L.exit("Poll.tally_all", this._pid);
   }
@@ -524,18 +529,18 @@ export class Poll {
 
     // if necessary, register voter:
     let n_changed = false;
-    if (!this.allvids_set.has(vid)) {
-      this.allvids_set.add(vid);
-      this.n_voters = this.allvids_set.size;
+    if (!this.T.allvids_set.has(vid)) {
+      this.T.allvids_set.add(vid);
+      this.T.n_voters = this.T.allvids_set.size;
       n_changed = true;
       this.G.L.trace("Poll.update_rating n_changed, first rating of voter", vid);
     }
     // if changed, update rating:
-    if (!(oid in this.ratings_map)) {
-      this.ratings_map.set(oid, new Map());
+    if (!(oid in this.T.ratings_map)) {
+      this.T.ratings_map.set(oid, new Map());
       this.G.L.trace("Poll.update_rating first rating for option", oid);
     }
-    let rs_map = this.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
+    let rs_map = this.T.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
     if (value != old_value) {
       this.G.L.trace("Poll.update_rating rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {
@@ -546,7 +551,7 @@ export class Poll {
       // update depending data:
 
       // update ratings_ascending faster than by resorting:
-      let rsasc = this.ratings_ascending_map.get(oid),
+      let rsasc = this.T.ratings_ascending_map.get(oid),
           index = rsasc.indexOf(old_value);
       // remove old value:
       rsasc = rsasc.slice(0, index).concat(rsasc.slice(index + 1));
@@ -557,17 +562,17 @@ export class Poll {
           break;
         }
       }
-      if (rsasc.length < this.n_voters) {
+      if (rsasc.length < this.T.n_voters) {
         rsasc.push(value);
       }
       // store result back:
-      this.ratings_ascending_map.set(oid, rsasc);
+      this.T.ratings_ascending_map.set(oid, rsasc);
 
       // cutoff, approvals:
       let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, rs_map, rsasc);
 
       let vids_approvals_changed = false,
-          aps_map = this.approvals_map.get(oid);
+          aps_map = this.T.approvals_map.get(oid);
       if (!others_approvals_changed) {
         // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
         let ap = (value >= cutoff);
@@ -582,17 +587,17 @@ export class Poll {
         this.update_approval_score(oid, aps_map);
       }
       // update total ratings and score(s):
-      let tr = this.total_ratings_map.get(oid) + value - old_value,
-          score_factor = this.n_voters * 128;
-      this.total_ratings_map.set(oid, tr);
+      let tr = this.T.total_ratings_map.get(oid) + value - old_value,
+          score_factor = this.T.n_voters * 128;
+      this.T.total_ratings_map.set(oid, tr);
       if (n_changed) {
         // update all scores:
-        for (let oid2 of this.scores_map.keys()) {
-          this.update_score(oid2, this.approval_scores_map.get(oid2), this.total_ratings_map.get(oid2), score_factor);
+        for (let oid2 of this.T.scores_map.keys()) {
+          this.update_score(oid2, this.T.approval_scores_map.get(oid2), this.T.total_ratings_map.get(oid2), score_factor);
         }
       } else {
         // only update oid's score:
-        this.update_score(oid, this.approval_scores_map.get(oid), tr, score_factor);
+        this.update_score(oid, this.T.approval_scores_map.get(oid), tr, score_factor);
       }
       // update option ordering:
       let [oidsdesc, ordering_changed] = this.update_ordering();
@@ -600,7 +605,7 @@ export class Poll {
       if (ordering_changed || others_approvals_changed) {
         // update everyone's votes:
         this.G.L.trace("Poll.update_rating updating everyone's votes", ordering_changed);
-        for (let vid2 of this.allvids_set) {
+        for (let vid2 of this.T.allvids_set) {
           votes_changed ||= this.update_vote(vid2, oidsdesc);
         }
       } else if (vids_approvals_changed) {
@@ -626,15 +631,15 @@ export class Poll {
     // sort ratings ascending:
     let rsasc_non0 = Array.from(rs_map.values()).sort() as Array<number>;
     // make sure array is correct length by padding with zeros:
-    let rsasc = Array(this.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
-    this.ratings_ascending_map.set(oid, rsasc);
+    let rsasc = Array(this.T.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
+    this.T.ratings_ascending_map.set(oid, rsasc);
     return rsasc;
   }
 
   update_cutoff_and_approvals(oid:string, rs_map:Map<string, number>, rsasc:Array<number>): [number, boolean, boolean] {
     // update approval cutoff:
-    let cutoff = 100, cutoff_factor = 100 / this.n_voters;
-    for (let index=0; index<this.n_voters; index++) {
+    let cutoff = 100, cutoff_factor = 100 / this.T.n_voters;
+    for (let index=0; index<this.T.n_voters; index++) {
       let r = rsasc[index];
       // check whether strictly less than r percent have a rating strictly less than r:
       let pct_less_than_r = cutoff_factor * index;
@@ -643,14 +648,14 @@ export class Poll {
         break;
       }
     }
-    if (!(oid in this.approvals_map)) {
-      this.approvals_map.set(oid, new Map());
+    if (!(oid in this.T.approvals_map)) {
+      this.T.approvals_map.set(oid, new Map());
     }
     // update approvals:
     let cutoff_changed = false,
         approvals_changed = false,
-        aps_map = this.approvals_map.get(oid);
-    if (cutoff != this.cutoffs_map.get(oid)) {
+        aps_map = this.T.approvals_map.get(oid);
+    if (cutoff != this.T.cutoffs_map.get(oid)) {
       // cutoff has changed, so update all approvals:
       cutoff_changed = true;
       this.G.L.trace("Poll.update_cutoff changed to", cutoff);
@@ -667,26 +672,26 @@ export class Poll {
 
   update_approval_score(oid:string, aps_map:Map<string, boolean>): number {
     let apsc = Array.from(aps_map.values()).filter(x => x==true).length;
-    if (apsc != this.approval_scores_map.get(oid)) {
-      this.approval_scores_map.set(oid, apsc);
+    if (apsc != this.T.approval_scores_map.get(oid)) {
+      this.T.approval_scores_map.set(oid, apsc);
     }
     return apsc;
   }
 
   update_score(oid:string, apsc:number, tr:number, score_factor:number) {
-    this.scores_map.set(oid, apsc * score_factor + tr);
+    this.T.scores_map.set(oid, apsc * score_factor + tr);
   }
 
   update_ordering(): [Array<string>, boolean] {
-    let oidsdesc = [...this.scores_map]
+    let oidsdesc = [...this.T.scores_map]
           .sort(([oid1, sc1], [oid2, sc2]) => sc1 - sc2)
           .map(([oid2, sc2]) => oid2);
     // check whether ordering changed:
     let ordering_changed = false;
     for (let index=0; index<oidsdesc.length; index++) {
-      if (oidsdesc[index] != this.oids_descending[index]) {
+      if (oidsdesc[index] != this.T.oids_descending[index]) {
         ordering_changed = true;
-        this.oids_descending = oidsdesc;
+        this.T.oids_descending = oidsdesc;
         break;
       }  
     }
@@ -696,13 +701,13 @@ export class Poll {
   update_vote(vid:string, oidsdesc:Array<string>): boolean {
     let vote = "", vote_changed = false;
     for (let oid2 of oidsdesc) {
-      if (this.approvals_map.get(oid2).get(vid)) {
+      if (this.T.approvals_map.get(oid2).get(vid)) {
         vote = oid2;
         break;
       }
     }
-    if (vote != this.votes_map.get(vid)) {
-      this.votes_map.set(vid, vote);
+    if (vote != this.T.votes_map.get(vid)) {
+      this.T.votes_map.set(vid, vote);
       vote_changed = true;
     }
     return vote_changed;
@@ -711,13 +716,13 @@ export class Poll {
   update_shares(oidsdesc:Array<string>): boolean {
     let total_n_votes = 0,
         shares_changed = false;
-    this.n_votes_map.set("", 0); 
+    this.T.n_votes_map.set("", 0); 
     for (let oid2 of oidsdesc) {
-      this.n_votes_map.set(oid2, 0);
+      this.T.n_votes_map.set(oid2, 0);
     }
-    for (let vid2 of this.allvids_set) {
-      let vote = this.votes_map.get(vid2);
-      this.n_votes_map.set(vote, this.n_votes_map.get(vote) + 1);
+    for (let vid2 of this.T.allvids_set) {
+      let vote = this.T.votes_map.get(vid2);
+      this.T.n_votes_map.set(vote, this.T.n_votes_map.get(vote) + 1);
       if (vote != "") {
         total_n_votes++;
       }
@@ -725,9 +730,9 @@ export class Poll {
     if (total_n_votes > 0) {
       // shares are proportional to votes received:
       for (let oid2 of oidsdesc) {
-        let share = this.n_votes_map.get(oid2) / total_n_votes;
-        if (share != this.shares_map.get(oid2)) {
-          this.shares_map.set(oid2, share);
+        let share = this.T.n_votes_map.get(oid2) / total_n_votes;
+        if (share != this.T.shares_map.get(oid2)) {
+          this.T.shares_map.set(oid2, share);
           shares_changed = true;
         }
       }  
@@ -736,8 +741,8 @@ export class Poll {
       let k = oidsdesc.length;
       for (let oid2 of oidsdesc) {
         let share = 1 / k;
-        if (share != this.shares_map.get(oid2)) {
-          this.shares_map.set(oid2, share);
+        if (share != this.T.shares_map.get(oid2)) {
+          this.T.shares_map.set(oid2, share);
           shares_changed = true;
         }
       }  
@@ -746,7 +751,6 @@ export class Poll {
   }
 
 }
-
 
 
 

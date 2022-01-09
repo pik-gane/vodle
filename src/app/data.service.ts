@@ -1,6 +1,6 @@
 /*
 TODO:
-- make db_from_pid_server_url and password work (set in draftpoll page!)
+- profile in Chrome using ... more tools -> javascript profiler
 */
 
 import { Injectable, OnDestroy } from '@angular/core';
@@ -176,7 +176,7 @@ function myhash(what): string {
 // SERVICE:
 
 // attributes of DataService to be stored in storage:
-const state_attributes = ["user_cache", "_pids", "poll_caches"];
+const state_attributes = ["user_cache", "_pids", "poll_caches", "tally_caches"];
 
 @Injectable({
   providedIn: 'root'
@@ -210,6 +210,8 @@ export class DataService implements OnDestroy {
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
+
+  public tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
 
@@ -321,26 +323,27 @@ export class DataService implements OnDestroy {
     this.user_cache = {};
     this._pids = new Set();
     this.poll_caches = {};
+    this.tally_caches = {};
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
     this.storage.get('state')
     .then((state) => {
-        G.L.debug('DataService got state from storage');
-        for (let a of state_attributes) {
-          if (a in state) {
-            this[a] = state[a];
-            G.L.trace("DataService restored attribute", a, "from storage");
-          } else {
-            G.L.warn("DataService couldn't find attribute", a, "in storage");
-          }
+      G.L.debug('DataService got state from storage');
+      for (let a of state_attributes) {
+        if (a in state) {
+          this[a] = state[a];
+          G.L.trace("DataService restored attribute", a, "from storage");
+        } else {
+          G.L.warn("DataService couldn't find attribute", a, "in storage");
         }
-        if ('user_cache' in state) {
-          this.restored_user_cache = true;
-        }
-        if (('_pids' in state)&&('poll_caches' in state)) {
-          this.restored_poll_caches = true;
-        }
+      }
+      if ('user_cache' in state) {
+        this.restored_user_cache = true;
+      }
+      if (('_pids' in state)&&('poll_caches' in state)) {
+        this.restored_poll_caches = true;
+      }
     }).catch((error) => {
       G.L.warn('DataService could not get state from storage:', error);
     }).finally(() => {

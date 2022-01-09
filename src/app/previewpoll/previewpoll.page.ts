@@ -13,6 +13,7 @@ import { Poll } from '../poll.service';
 export class PreviewpollPage implements OnInit {
 
   Object = Object;
+  page = "previewpoll";
 
   pid: string;
   p: Poll;
