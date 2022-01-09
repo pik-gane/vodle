@@ -17,6 +17,8 @@ export class SettingsService {
     this.G = G; 
   }
 
+  // properties:
+
   public get email(): string { return this.G.D.getu('email'); }
   public set email(value: string) { this.G.D.setu('email', value); }
 
@@ -65,6 +67,10 @@ export class SettingsService {
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
+  closing_soon_fraction = 1/7; // TODO: turn into settings option
+
+  // other data:
+  
   public password_regexp = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$';
 
   public passwords_match(control: AbstractControl): ValidationErrors | null {

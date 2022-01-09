@@ -332,6 +332,25 @@ export class Poll {
     this.update_rating(this.myvid, oid, value);
   }
 
+  public get remaining_time_fraction(): number {
+    // the remaining running time as a fraction of the total running
+    if ((this._state == "running")&&(!!this.start_date)&&(this.due)) {
+      let t0 = this.start_date.getTime(),
+          t1 = (new Date()).getTime(),
+          t2 = this.due.getTime();
+      return (t2 - t1) / (t2 - t0);
+    } else {
+      return null;
+    }
+  }
+  public get is_closing_soon(): boolean {
+    if ((this._state == "running")&&(!!this.start_date)&&(this.due)) {
+      return this.remaining_time_fraction < this.G.S.closing_soon_fraction;
+    } else {
+      return false;
+    }
+  }
+
   // OTHER HOOKS:
 
   public set_db_credentials() {

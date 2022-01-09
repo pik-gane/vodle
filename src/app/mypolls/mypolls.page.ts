@@ -62,4 +62,12 @@ export class MypollsPage implements OnInit {
     return true; 
   }
 
+  // helper methods:
+
+  get running_polls(): Poll[] {
+    // return polls sorted by what part of their time is left:
+    return Object.values(this.G.P.polls)
+      .filter((p) => p.state=='running')
+      .sort((p1, p2) => p1.remaining_time_fraction - p2.remaining_time_fraction);
+  } 
 }
