@@ -25,7 +25,7 @@
     </ion-item>
     <ng-container *ngFor="let p of Object.values(G.P.polls)">
       <ion-item *ngIf="p.state=='running'">
-        <ion-label [routerLink]="'/poll/'+p.pid">
+        <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
           <ion-icon class="poll-type" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i [innerHtml]="p.title"></i>
         </ion-label>
@@ -47,13 +47,13 @@
 
     <!--RECENTLY CLOSED:-->
 
-    <ion-item color="primary" (click)="closed_expanded=!closed_expanded">
+    <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: pointer;">
       <ion-icon size="small" [name]="closed_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="closed_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
-        <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid">
+        <ion-item *ngIf="p.state=='closed'" [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
           <ion-label>
             <ion-icon class="poll-type" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [innerHtml]="p.title"></i>
@@ -83,13 +83,13 @@
 
     <!--DRAFTS:-->
 
-    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded">
+    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: pointer;">
       <ion-icon size="small" [name]="drafts_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="drafts_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
-        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid">
+        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: pointer;">
           <ion-label>
             <ion-icon class="poll-type" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [innerHtml]="p.title"></i>
