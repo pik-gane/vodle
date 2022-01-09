@@ -23,8 +23,6 @@
     <ion-item color="primary">
       <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
-<!--    <ng-container *ngFor="let p of Object.values(G.P.polls)">
-      <ion-item *ngIf="p.state=='running'">-->
     <ng-container *ngFor="let p of running_polls">
       <ion-item>
         <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
@@ -33,11 +31,10 @@
         </ion-label>
         <ion-buttons *ngIf="can_invite(p)" slot="end" class="ion-no-padding ion-no-margin">
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+          <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="red" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Closing soon</ion-badge>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Abstaining</ion-badge>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="red" slot="end">Closing soon</ion-badge>-->
+-->
           <ion-button fill="clear" [routerLink]="'/inviteto/'+p.pid">
             <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
           </ion-button>
