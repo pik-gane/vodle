@@ -473,7 +473,17 @@ export class Poll {
   */
 
   // for each oid and vid, the rating (default: 0):
-  ratings_map: Map<string, Map<string, number>>;
+  _ratings_map: Map<string, Map<string, number>>;
+  get ratings_map(): Map<string, Map<string, number>> {
+    if (!this._ratings_map) {
+      if (this._pid in this.G.D.ratings_map_caches) {
+        this._ratings_map = this.G.D.ratings_map_caches[this._pid];
+      } else {
+        this.G.D.ratings_map_caches[this._pid] = this._ratings_map = new Map();
+      }  
+    }
+    return this._ratings_map;
+  }
   T: tally_cache;
 
   tally_all() {
@@ -482,11 +492,6 @@ export class Poll {
     this.G.L.entry("Poll.tally_all", this._pid);
 
     this.G.L.trace("Poll.tally_all ratings_map_caches", this._pid, this.G.D.ratings_map_caches);
-    if (this._pid in this.G.D.ratings_map_caches) {
-      this.ratings_map = this.G.D.ratings_map_caches[this._pid];
-    } else {
-      this.G.D.ratings_map_caches[this._pid] = this.ratings_map = new Map();
-    }
     this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     this.G.D.tally_caches[this._pid] = this.T = {
       allvids_set: new Set(),
