@@ -325,6 +325,7 @@ export class DataService implements OnDestroy {
     this._pids = new Set();
     this.poll_caches = {};
     this.tally_caches = {};
+    this.ratings_map_caches = {};
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
@@ -332,7 +333,7 @@ export class DataService implements OnDestroy {
     .then((state) => {
       G.L.debug('DataService got state from storage');
       for (let a of state_attributes) {
-        if (a in state) {
+        if ((a in state) && (a != undefined)) {
           this[a] = state[a];
           G.L.trace("DataService restored attribute", a, "from storage");
         } else {
@@ -342,7 +343,7 @@ export class DataService implements OnDestroy {
       if ('user_cache' in state) {
         this.restored_user_cache = true;
       }
-      if (('_pids' in state)&&('poll_caches' in state)) {
+      if (('_pids' in state) && ('poll_caches' in state)) {
         this.restored_poll_caches = true;
       }
     }).catch((error) => {
@@ -356,7 +357,7 @@ export class DataService implements OnDestroy {
   // User data initialization:
 
   private init_databases() {
-    this.G.L.entry("DataService.start_initialization");
+    this.G.L.entry("DataService.init_databases");
 
     // access locally stored data and get some statistics about it:
     this.local_only_user_DB = new PouchDB('local_only_user');
@@ -417,7 +418,7 @@ export class DataService implements OnDestroy {
       });
     }
 
-    this.G.L.exit("DataService.start_initialization");
+    this.G.L.exit("DataService.init_databases");
   }
 
   private process_local_only_user_docs(result) {

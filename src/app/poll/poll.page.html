@@ -1,11 +1,10 @@
 <!--
-  TODO: show if different language
+  TODO: show if poll has different language
 
   <ion-icon name="people-outline"></ion-icon>
   <ion-icon name="arrow-redo-outline"></ion-icon>
   <ion-icon name="navigate-outline"></ion-icon>
   <ion-icon name="open-outline"></ion-icon>
-  control self:
 -->
 
 <ion-header>
@@ -13,12 +12,11 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ng-template [ngIf]="p!=null">
-      <ion-title [innerHtml]="'poll.-page-title-running'|translate" class="ion-no-padding ion-no-margin"></ion-title>
-    </ng-template>
+    <ion-title [innerHtml]="'poll.-page-title'|translate" class="ion-no-padding ion-no-margin"></ion-title>
     <ion-buttons slot="end">
+      <!-- TODO: consider moving the delegate button further down -->
       <ion-button (click)="delegate_dialog()" shape="round" fill="solid" color="primary" size="large">
-        Delegate&nbsp;<ion-icon name="people-outline"></ion-icon>
+        <span [innerHtml]="'poll.delegate-button'|translate"></span>&nbsp;<ion-icon name="people-outline"></ion-icon>
       </ion-button>
       <!--TODO: if delegation is on, show a menu instead with: revoke delegation, change delegate-->
 <!-- If we want a help button: 
@@ -27,7 +25,7 @@
       </ion-button>-->
     </ion-buttons>
 
-<!--
+<!-- TODO: get rid of this?
     <ng-template [ngIf]="!refresh_paused">
       <ion-button slot="end" (click)="pauseRefresh()" fill="clear" no-margin>
         <ion-icon name="refresh" size="large"></ion-icon>
@@ -42,11 +40,12 @@
       <ion-button slot="end" (click)="refreshOnce()" fill="clear" no-margin>
         <ion-icon src="/assets/icon/md-needsrefresh.svg" size="large"></ion-icon>
       </ion-button>
-    </ng-template>-->
+    </ng-template>
+-->
   </ion-toolbar>
 </ion-header>
 
-<!-- if we want scroll buttons:
+<!-- TODO: decide whether we want scroll buttons:
   <ion-content [scrollEvents]="true" (ionScroll)="onScroll($event)">
   <ion-fab size="small" *ngIf="scroll_position>0" vertical="top" horizontal="end" slot="fixed">
     <ion-fab-button size="small" (click)="scrollToTop()" fill="clear" color="primary">
@@ -59,8 +58,7 @@
     </ion-fab-button>
   </ion-fab>
 -->
-  <ion-content> <!--TODO: if ready!-->
-    <ng-template [ngIf]="p!=null">
+  <ion-content *ngIf="ready">
     <ion-list lines="full">
       <ion-item color="primary">
         <ion-grid class="ion-no-padding ion-no-margin">
@@ -68,12 +66,11 @@
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
               <h3><b><i>{{p.title}}</i></b></h3>
               <i>{{p.desc}}</i>
-              <span [style.display]="p.url!=null?'inline':'none'">
-                <small>(<a [href]="p.url" target="_blank" rel="noopener noreferrer">read more</a>)</small>
-              </span>            
+              <small *ngIf="(p.url||'')!=''">
+                &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)
+              </small>
               <br/>
-              <small>Closes {{p.due}}</small>
-              <!--.toLocalDateString(language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })-->
+              <small><span [innerHtml]="'poll.closes'|translate"></span>&nbsp;<span [innerHtml]="G.D.format_date(p.due)"></span></small>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -87,6 +84,9 @@
           </ion-row>
         </ion-grid>
       </ion-item>
+
+      <!-- Banner(s) with important messages: -->
+
       <ion-item color="warning"> <!--light-->
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;">
@@ -110,13 +110,15 @@
               rate&nbsp;some&nbsp;options&nbsp;yourself,<br/>
               <small>choose&nbsp;them&nbsp;here</small>&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
 -->
-              <small>Choose<br/>whose ratings<br/>to use&nbsp;</small>
-              <ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
+              <small><p>Choose<br/>whose ratings<br/>to use&nbsp;
+              <ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon></p></small>
             </ion-col>
           </ion-row>
         </ion-grid>
       </ion-item>
-<!--      <ion-item>
+
+<!-- TODO: what happens to this?
+      <ion-item>
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin">
@@ -171,7 +173,9 @@
         </ion-grid>
       </ion-item>-->
   
-      <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index"><!-- Array(p.oids.length).fill(0).map(i => i) | sortoptions: {opos: opos}-->
+      <!-- Options: -->
+
+      <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index">
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
           <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none"/>
           <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
@@ -192,7 +196,8 @@
                 <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
               </ion-label>
             </ion-col>
-<!--            <ion-col size="auto" class="ion-no-padding ion-no-margin">
+<!-- TODO: delete when it's clear that the version further down is used instead:
+            <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <ion-label class="ion-no-padding ion-no-margin ion-text-right" style="padding-top: 4px;"
                 [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'you rate this':'<small>delegated</small>'"></ion-label>
               <ion-label class="ion-no-padding ion-no-margin ion-text-right" 
@@ -202,15 +207,16 @@
 -->
           </ion-row>
           <ion-row class="ion-no-padding ion-no-margin">
+            <!-- TODO: make slider respond to click only when at knob: -->
             <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
             ><!--(pointerdown)="onRangePointerdown($event)" (pointerup)="onRangePointerup($event)" [color]="slidercolor[oidsorted[i]]"-->
               <ion-range 
                   [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                   [color]="slidercolor[oidsorted[i]]"
-                  [value]="p.getRating(oidsorted[i], p.myvid)" 
-                  (ionFocus)="ratingChangeBegins(oidsorted[i])" 
-                  (ionChange)="ratingChanges(oidsorted[i])" 
-                  (ionBlur)="ratingChangeEnded(oidsorted[i])" 
+                  [value]="p.ratings_map.get(oidsorted[i]).get(p.myvid)" 
+                  (ionFocus)="rating_change_begins(oidsorted[i])" 
+                  (ionChange)="rating_changes(oidsorted[i])" 
+                  (ionBlur)="rating_change_ended(oidsorted[i])" 
                   pin="true" min="0" max="100"
                   [style]="'--bar-background:rgba(0,0,0,0);'
                     +(rate_yourself_toggle[oidsorted[i]]
@@ -219,7 +225,7 @@
                   class="ion-no-padding ion-no-margin"><!--35px-->
                 <ion-label slot="end" class="ion-no-padding ion-no-margin" style="padding-right:12px;">
                   <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android, the bars are too narrow!-->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android (Chrome?), the bars are too narrow!-->
                       <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
                         fill="#bce4e5" stroke="none"/>
                             <!--TODO?: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
@@ -232,7 +238,7 @@
             </ion-col>
             <ion-col class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
               <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
-                (ionChange)="onDelegateToggleChange()"
+                (ionChange)="on_delegate_toggle_change()"
                 class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
                 style="position:relative; top:-8px;" 
                 [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
@@ -268,7 +274,7 @@
                   <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
                 </span>
                 <span [style.display]="p.options[oidsorted[i]].url!=null?'inline':'none'">
-                  <small>(<a [href]="p.options[oidsorted[i]].url" target="_blank" rel="noopener noreferrer">read more</a>)</small>
+                  <small>(<a [href]="p.options[oidsorted[i]].url" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)</small>
                 </span>
 <!--                <ng-template [ngIf]="p.options[oidsorted[i]].url!=null">
                   <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].url)" fill="clear" item-end no-padding padding-left no-margin>
@@ -284,14 +290,13 @@
         <ion-fab-button size="small" (click)="addOption()" fill="clear" color="primary">
           <ion-icon name="add"></ion-icon>
         </ion-fab-button>
-        <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="addOption()"> 
+        <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
           Add option
         </ion-button>
       </ion-item>
       <ion-item lines="none">
         <small>If you believe some important option is missing and is not covered by any of the listed options, 
-          you can add it. Once added, options cannot be removed again however.</small>
+          you can add it. Once added, options cannot be edited or removed again, however.</small>
       </ion-item>
     </ion-list>
-  </ng-template>
   </ion-content>

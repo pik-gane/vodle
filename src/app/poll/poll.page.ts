@@ -1,10 +1,11 @@
 import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
-import { Router } from "@angular/router";
+import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, IonContent } from '@ionic/angular';
 import { AlertController } from '@ionic/angular'; 
 
-import { GlobalService, Poll } from "../global.service";
+import { GlobalService } from "../global.service";
+import { Poll } from '../poll.service';
 
 @Component({
   selector: 'app-poll',
@@ -13,12 +14,19 @@ import { GlobalService, Poll } from "../global.service";
 })
 export class PollPage implements OnInit {
 
+  Object = Object;
+  Math = Math;
+
+  page = "previewpoll";
+
+  pid: string;
+  p: Poll;
+
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
   public Array = Array;
 
-  public p: Poll;
-  public opos = {};
+//  public opos = {};
   public oidsorted: string[] = [];
   public sortingcounter: number = 0;
 
@@ -26,10 +34,8 @@ export class PollPage implements OnInit {
   public votedfor = null; // oid my prob. share goes to
   public expanded = {};
 
-  public Math = Math;
-
   private pieradius = 20;
-  private twopi = 2*Math.PI; 
+  private two_pi = 2*Math.PI; 
   slidercolor = {};
 
   private submit_interval = 1000; // ms to wait before submitting updates
@@ -48,8 +54,13 @@ export class PollPage implements OnInit {
   public rate_yourself_toggle: Record<string, boolean> = {};
   public n_delegated = 0;
 
+  // LIFECYCLE:
+
+  public ready = false;  
+
   constructor(
       private router: Router,
+      private route: ActivatedRoute,
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
       public translate: TranslateService,
@@ -60,38 +71,63 @@ export class PollPage implements OnInit {
         console.log('force update the screen');
       });
     }); */
+    this.G.L.entry("PollsPage.constructor");
+    this.route.params.subscribe( params => { 
+      this.pid = params['pid'];
+    } );
   }
 
-  // lifecycle events:
   ngOnInit() {
-    let p = this.p = this.G.openpoll;
-    if (!this.p) {
-      this.router.navigate(["/"]);
+    this.G.L.entry("PollsPage.ngOnInit");
+  }
+
+  ionViewWillEnter() {
+    this.G.L.entry("PollPage.ionViewWillEnter");
+    this.G.D.page = this;
+  }
+
+  ionViewDidEnter() {
+    this.G.L.entry("PollPage.ionViewDidEnter");
+    if (this.G.D.ready) {
+      this.onDataReady();
+    }
+    this.G.L.debug("PollPage.ready:", this.ready);
+  }
+
+  onDataReady() {
+    // called when DataService initialization was slower than view initialization
+    this.G.L.entry("PreviewpollPage.onDataReady");
+    if (this.pid in this.G.P.polls) {
+      this.p = this.G.P.polls[this.pid];
+      if (this.p.state == 'draft') {
+        this.G.L.error("PollPage not showing draft poll, redirecting to mypolls page", this.pid);
+        this.router.navigate(["/mypolls"]);
+      } else {
+        this.G.L.info("PollPage showing poll", this.pid);
+      }
+      // TODO: check if running or closed!
+    } else {
+      this.G.L.warn("PollPage unknown pid ignored, redirecting to mypolls page", this.pid, this.G.P.polls);
+      this.router.navigate(["/mypolls"]);
       return;
     }
-  }
-  ionViewWillEnter() {
+    this.ready = true;
     this.do_updates = true;
-    this.loopUpdate();
-    this.p.tally();
-//    this.opos = this.p.opos;
-    this.oidsorted = [...this.p.oidsorted];
-    this.updateOrder();
+//    this.loopUpdate();
+    this.p.tally_all();
+    // TODO: optimize sorting performance:
+    this.oidsorted = this.p.T.oids_descending; //[...this.p.oidsorted];
+    this.update_order();
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
       this.rate_yourself_toggle[oid] = false;
     }
     this.onDelegateToggleChange()
+    this.show_stats();
   }
-  ionViewDidEnter() {
-    this.G.D.page = this;
-    this.showStats();
-  }
+
   ionViewWillLeave() {
     this.do_updates = false;
-    if (this.submit_triggered) {
-      this.doSubmit();
-    }
   }
   async onScroll(ev) {
     const elem = this.content; //  document.getElementById("ion-content-id");
@@ -113,6 +149,7 @@ export class PollPage implements OnInit {
     this.content.scrollToTop(1000);
   }
 
+  // TODO: work on the following:
   onRangePointerdown(ev: PointerEvent) {
     this.slidersAllowEvents = true;
     let ev2 = new PointerEvent('pointerdown', {screenX:ev.screenX, screenY:ev.screenY});
@@ -137,121 +174,126 @@ export class PollPage implements OnInit {
     this.n_delegated = sum;
   }
 
-  showStats() { // update pies and bars, but not order!
-    this.votedfor = this.p.vid2oid[this.p.myvid];
-    for (let oid of this.p.oids) {
-      let r = this.p.getRating(oid, this.p.myvid),
-          appr = this.p.apprs[oid],
-          prob = this.p.probs[oid],
+  show_stats() { 
+    // update pies and bars, but not order!
+    let p = this.p, T = p.T, myvid = p.myvid, 
+        ratings_map = p.ratings_map, approval_scores_map = T.approval_scores_map,
+        shares_map = T.shares_map, approvals_map = T.approvals_map;
+    this.votedfor = T.votes_map.get(this.p.myvid);
+    for (let oid of p.oids) {
+      let rating = ratings_map.get(oid).get(myvid),
+          approval_score = approval_scores_map.get(oid),
+          share = shares_map.get(oid),
           bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
           pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
           R = this.pieradius,
-          dx = R * Math.sin(this.twopi*prob),
-          dy = R * (1 - Math.cos(this.twopi*prob)),
-          flag = prob > 0.5 ? 1 : 0; 
-      bar.width.baseVal.valueAsString = (100*appr).toString()+'%';
-      bar.x.baseVal.valueAsString = (100*(1-appr)).toString()+'%';
-      if (prob < 1) {
-        pie.setAttribute('d', "M 21,25 l 0,-"+R+" a "+R+" "+R+" 0 "+flag+" 1 "+dx+" "+dy+" Z");
-      } else { // full circle
+          dx = R * Math.sin(this.two_pi * share),
+          dy = R * (1 - Math.cos(this.two_pi * share)),
+          more_than_180_degrees_flag = share > 0.5 ? 1 : 0; 
+      this.approved[oid] = approvals_map.get(oid).get(myvid);
+      bar.width.baseVal.valueAsString = (100 * approval_score).toString() + '%';
+      bar.x.baseVal.valueAsString = (100 * (1 - approval_score)).toString() + '%';
+      if (share < 1) {
+        pie.setAttribute('d', "M 21,25 l 0,-"+R+" a "+R+" "+R+" 0 "+more_than_180_degrees_flag+" 1 "+dx+" "+dy+" Z");
+      } else { // a full circle
         pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
       }
-      this.approved[oid] = (r + appr*100 > 100);
-      this.setSliderColor(oid, r);
+      this.set_slider_color(oid, rating);
     }
   }
-  async updateOrder(force=false) {
-    let changed = false;
+
+  async update_order(force=false) {
+    // TODO: rather have this triggered by tally function!
     for (let i in this.oidsorted) {
-      if (this.oidsorted[i] != this.p.oidsorted[i]) {
-        changed = true;
+      if (this.oidsorted[i] != this.p.T.oids_descending[i]) {
+        this.needs_refresh = true;
         break;
       }
-    }
-    if (changed) {
-      this.needs_refresh = true;
     }
     if (force || (this.needs_refresh && !(this.submit_triggered || this.refresh_paused))) {
       // link displayed sorting to poll's sorting:
       const loadingElement = await this.loadingController.create({
-        message: 'Sorting options by support\nuse sync button to toggle auto-sorting.',
+        message: this.translate.instant('poll.sorting'),
         spinner: 'crescent',
         duration: 1000
       });
       await loadingElement.present();
-      await loadingElement.onDidDismiss();  
-      this.oidsorted = [...this.p.oidsorted];
+      await loadingElement.onDidDismiss();
+      // now actually tell html to use the new ordering:
+      this.oidsorted = this.p.T.oids_descending;
       this.sortingcounter++;
       this.needs_refresh = false;
     } 
   }
 
-  setSliderColor(oid, value) {
+  set_slider_color(oid: string, value: number) {
     this.slidercolor[oid] = 
       (value == 0) ? 'vodlered' : 
-      (value + this.p.apprs[oid]*100 <= 100) ? 'vodleblue' : 
+      (value + this.p.T.approval_scores_map.get(oid) * 100 <= 100) ? 'vodleblue' : 
       (this.votedfor != oid) ? 'vodlegreen' : 
       'vodledarkgreen';
   }
 
   // controls:
 
-  pauseRefresh() {
+  // TODO: remove these?
+  pause_refresh() {
     this.refresh_paused = true;
   }
-  unpauseRefresh() {
+  unpause_refresh() {
     this.refresh_paused = false;
-    this.updateOrder(true);
+    this.update_order(true);
   }
-  refreshOnce() {
-    this.updateOrder(true);
+  refresh_once() {
+    this.update_order(true);
   }
 
-  expand(oid) {
+  expand(oid: string) {
     this.expanded[oid] = !this.expanded[oid];
   }
-  getSlider(oid) {
+  get_slider(oid: string) {
     return <HTMLInputElement>document.getElementById('slider_'+oid+"_"+this.sortingcounter);
   }
-  setSliderValues() {
+  set_slider_values() {
     for (let oid of this.p.oids) {
-      this.getSlider(oid).value = this.p.getRating(oid, this.p.myvid);
+      this.get_slider(oid).value = this.p.ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
-  getSliderValue(oid) {
-    return Number(this.getSlider(oid).value);
+  get_slider_value(oid: string) {
+    return Number(this.get_slider(oid).value);
   }
-  storeSlidersRating(oid) {
-    let r = Math.round(this.getSliderValue(oid));
-    this.p.setMyRating(oid, r);
-    // TODO: broadcast rating
-    this.p.tally();
-    this.G.save_state();
-    this.showStats();
+  store_sliders_rating(oid: string) {
+    let r = Math.round(this.get_slider_value(oid));
+    this.p.set_myrating(oid, r);
+//    this.G.save_state();
+    this.show_stats();
   }
-  ratingChangeBegins(oid) {
+  rating_change_begins(oid: string) {
     // freeze current sort order:
-    this.opos = {...this.p.opos};
+//    this.opos = {...this.p.opos};
   }
-  ratingChanges(oid) {
-    var slider = this.getSlider(oid),
+  rating_changes(oid: string) {
+    var slider = this.get_slider(oid),
         value = Number(slider.value);
-    this.setSliderColor(oid, value);
-    this.storeSlidersRating(oid);
+    this.set_slider_color(oid, value);
+    this.store_sliders_rating(oid);
+/*    
     this.submit_ratings[oid] = true;
     if (this.submit_triggered) {
-      this.holdSubmit();
+      this.hold_submit();
     } else {
       this.triggerSubmit();
     } 
+  */
   }
-  ratingChangeEnded(oid) {
+  rating_change_ended(oid: string) {
     // TODO: make sure this is really always called right after releasing the slider!
   }
 
+/*
   // submission:
 
-  holdSubmit() { // make submission hold for another submit_interval
+  hold_submit() { // make submission hold for another submit_interval
     GlobalService.log("holding submits");
     this.submit_hold = true;
   }
@@ -267,7 +309,7 @@ export class PollPage implements OnInit {
       this.submit_hold = false;
       await this.G.sleep(this.submit_interval);
     }
-    this.updateOrder();
+    this.update_order();
     this.doSubmit();
   }
   doSubmit() {
@@ -275,47 +317,51 @@ export class PollPage implements OnInit {
     this.p.submitRatings({...this.submit_ratings});
     this.submit_ratings = {};
   }
+*/
 
+  // TODO: do we really need this?
   async loopUpdate() {
     // every 20 sec, update full state
     while (this.do_updates) {
-      this.p.getCompleteState();
-      this.updateOrder();
-      this.showStats();
+//      this.p.getCompleteState();
+      this.update_order();
+      this.show_stats();
       await this.G.sleep(this.update_interval);
     }
   }
 
-  closePoll() {
+  // only here for debugging purposes:
+  close_poll() {
     if (confirm("really close the poll?")) {
-      this.p.close();
-      this.router.navigate(["/closedpoll"]);
+//      this.p.close();
+//      this.router.navigate(["/closedpoll"]);
     }
   }
 
   async delegate_dialog() { 
     const dialog = await this.alertCtrl.create({ 
-      header: 'Delegate to some other voter', 
-      message: 'You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.<br/><br/><b>Please enter the email address of the voter you want to ask to be your delegate:</b>', 
+      header: this.translate.instant('poll.delegate-header'), 
+      message: this.translate.instant('poll.delegate-intro1') + "<br/><br/><b>" + this.translate.instant('poll.delegate-intro2') + "</b>", 
       inputs: [
         {
           name: 'email',
-          placeholder: 'Delegate\'s email',
-          type: "email"
+          placeholder: this.translate.instant('poll.delegate-email'),
+          type: 'email'
         }
       ],
       buttons: [
         { 
-          text: 'Cancel', 
-          role: 'Cancel',
+          text: this.translate.instant('cancel'), 
+          role: 'cancel',
           handler: () => { 
-            console.log('Confirm Cancel.');  
+            this.G.L.debug('delegate_dialog cancelled.');
           } 
         },
         { 
-          text: 'Request delegation',
-          role: 'Ok', 
+          text: this.translate.instant('poll.request-delegation'),
+          role: 'ok', 
           handler: () => {
+            this.G.L.debug('delegate_dialog OK.');
             // TODO: generate delegation id and open mailto link using email as sender
           } 
         } 
@@ -324,7 +370,7 @@ export class PollPage implements OnInit {
     await dialog.present(); 
   } 
 
-  addOption() {
+  add_option() {
     // TODO
   }
 }

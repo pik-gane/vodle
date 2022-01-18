@@ -205,6 +205,12 @@
         "no-draft-polls": "Momentan hast Du keine Abstimmungen entworfen.<br/><small>Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!</small>"
     },
 
+    "poll": {
+        "-page-title": "Abstimmung",
+        "-page-title-running": "Laufende Abstimmung",
+        "sorting": "Optionen werden neu sortiert..."
+    },
+
     "previewpoll": {
         "-page-title": "Bitte prüfen",
         "caution1": "Sobald die Abstimmung startet, kannst Du die obigen Angaben nicht mehr ändern. Allerdings können Du und die anderen Teilnehmer:innen jederzeit weitere Optionen hinzufügen.",

@@ -186,3 +186,7 @@ ion-icon.poll-type-list {
     color: grey;
 }
 
+// make sure link color is the same as surrounding text:
+a, a:link, a:visited, a:hover, a:active {
+    color: inherit !important;
+}

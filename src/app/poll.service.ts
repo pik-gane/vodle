@@ -15,7 +15,33 @@ type poll_state_t = ""|"draft"|"running"|"closed";
 type poll_type_t = "winner"|"share";
 type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
                         |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
-
+type tally_cache = { // T is short for "tally data"
+  // array of known vids:
+  allvids_set: Set<string>;
+  // number of voters known:
+  n_voters: number;
+  // for each oid, an array of ascending ratings: 
+  ratings_ascending_map: Map<string, Array<number>>;
+  // for each oid, the approval cutoff (rating at and above which option is approved):
+  cutoffs_map: Map<string, number>;
+  // for each oid and vid, the approval (default: false):
+  approvals_map: Map<string, Map<string, boolean>>;
+  // for each oid, the approval score:
+  approval_scores_map: Map<string, number>;
+  // for each oid, the total rating:
+  total_ratings_map: Map<string, number>;
+  // for each oid, the effective score:
+  scores_map: Map<string, number>;
+  // oids sorted by descending score:
+  oids_descending: Array<string>; 
+  // for each vid, the voted-for option (or "" for abstention):
+  votes_map: Map<string, string>;
+  // for each oid (and "" for abstaining), the number of votes:
+  n_votes_map: Map<string, number>;
+  // for each oid, the winning probability/share:
+  shares_map: Map<string, number>;
+};
+                      
 // in the following, month index start at zero (!) while date index starts at one (!):
 var last_day_of_month = {0:31, 1:28, 2:31, 3:30, 4:31, 5:30, 6:31, 7:31, 8:30, 9:31, 10:30, 11:31};
 
@@ -80,13 +106,16 @@ export class PollService {
   generate_pid(): string {
     return this.unused_pids.pop() || CryptoJS.lib.WordArray.random(6).toString();
   }
+
   generate_oid(pid:string): string {
     if (!(pid in this.unused_oids)) this.unused_oids[pid] = [];
     return this.unused_oids[pid].pop() || CryptoJS.lib.WordArray.random(4).toString();
   }
+
   generate_password(): string {
     return CryptoJS.lib.WordArray.random(6).toString();
   }
+
   generate_vid(): string {
     return CryptoJS.lib.WordArray.random(4).toString();
   }
@@ -140,7 +169,9 @@ export class Poll {
     G.L.entry("Poll.constructor", pid, this._state);
     this._pid = pid;
     this.G.P.polls[pid] = this;
-    if (!(this._pid in this.G.D.tally_caches)) {
+    if (this._pid in this.G.D.tally_caches) { 
+      this.T = this.G.D.tally_caches[this._pid] as tally_cache;
+    } else {
       this.tally_all();
     }
     G.L.exit("Poll constructor", pid);
@@ -319,15 +350,10 @@ export class Poll {
       return false;
     }
   }
-  public get oids() { 
-    this.G.L.entry("Poll.oids");
-    let res = Object.keys(this._options); 
-    this.G.L.exit("Poll.oids");
-    return res;
-  }
+  public get oids() { return Object.keys(this._options); }
   public get n_options() { return this.oids.length; }
 
-  public set_myrating(oid:string, value:number) {
+  public set_myrating(oid: string, value: number) {
     this.G.D.setv(this._pid, "rating." + oid, value.toString());
     this.update_rating(this.myvid, oid, value);
   }
@@ -446,34 +472,9 @@ export class Poll {
   - all Map type variables are named ..._map to make this unmistakable.
   */
 
-  // for each pid, oid and vid, the rating (default: 0):
+  // for each oid and vid, the rating (default: 0):
   ratings_map: Map<string, Map<string, number>>;
-  T: { // T is short for "tally data"
-    // array of known vids:
-    allvids_set: Set<string>;
-    // number of voters known:
-    n_voters: number;
-    // for each oid, an array of ascending ratings: 
-    ratings_ascending_map: Map<string, Array<number>>;
-    // for each oid, the approval cutoff (rating at and above which option is approved):
-    cutoffs_map: Map<string, number>;
-    // for each oid and vid, the approval (default: false):
-    approvals_map: Map<string, Map<string, boolean>>;
-    // for each oid, the approval score:
-    approval_scores_map: Map<string, number>;
-    // for each oid, the total rating:
-    total_ratings_map: Map<string, number>;
-    // for each oid, the effective score:
-    scores_map: Map<string, number>;
-    // oids sorted by descending score:
-    oids_descending: Array<string>; 
-    // for each vid, the voted-for option (or "" for abstention):
-    votes_map: Map<string, string>;
-    // for each oid (and "" for abstaining), the number of votes:
-    n_votes_map: Map<string, number>;
-    // for each oid, the winning probability/share:
-    shares_map: Map<string, number>;
-  }
+  T: tally_cache;
 
   tally_all() {
     // Called after initialization.

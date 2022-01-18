@@ -62,10 +62,12 @@ export class PreviewpollPage implements OnInit {
       } else {
         this.G.L.warn("DraftpollPage non-draft pid ignored, redirecting to mypolls page", this.pid);
         this.router.navigate(["/mypolls"]);
+        return;
       }
     } else {
       this.G.L.warn("PreviewpollPage unknown pid ignored, redirecting to mypolls page", this.pid, this.G.P.polls);
       this.router.navigate(["/mypolls"]);
+      return;
     }
     this.ready = true;
   }
