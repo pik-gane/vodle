@@ -210,6 +210,7 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <!-- TODO: make slider respond to click only when at knob: -->
             <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
+              (click)="test($event)" (pointerdown)="test($event)" (pointerup)="test($event)" 
             ><!--(pointerdown)="onRangePointerdown($event)" (pointerup)="onRangePointerup($event)" [color]="slidercolor[oidsorted[i]]"-->
               <ion-range 
                   [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 

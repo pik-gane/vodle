@@ -290,6 +290,13 @@ export class PollPage implements OnInit {
     this.G.D.save_state();
   }
 
+  test(ev:Event) {
+    this.G.L.entry("TEST");
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.preventDefault();
+  }
+
 
   // only here for debugging purposes:
   close_poll() {
