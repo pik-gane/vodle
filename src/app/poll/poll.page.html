@@ -65,6 +65,8 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
               <h3><b><i>{{p.title}}</i></b></h3>
+              <p>{{oidsorted}}</p>
+              <p>{{p.T.oids_descending}}</p>
               <i>{{p.desc}}</i>
               <small *ngIf="(p.url||'')!=''">
                 &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)
@@ -183,6 +185,7 @@
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;"><!--ion-padding-top -->
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
+              <!--TODO: move expand button to right end of slider-->
               <ion-button (click)="expand(oidsorted[i])" fill="clear" style="position:relative; left:-5px; z-index:10;"
                   class="ion-no-padding ion-no-margin">
                 <ion-icon size="small" class="ion-no-padding ion-no-margin" 
@@ -265,6 +268,7 @@
                   <span style="color:#9abcbd">
                     <small>&nbsp;<b>(<a [href]="'/explainoptionresult/'+oidsorted[i]">explain</a>)</b></small>
                   </span>
+                  total score: {{p.T.scores_map.get(oidsorted[i])}}
                 </b>
 <!--                <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" no-padding>
                   <ion-icon name="help" size="small" slot="icon-only"></ion-icon>

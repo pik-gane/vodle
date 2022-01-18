@@ -13,7 +13,7 @@ import { GlobalService } from './global.service';
 
 type poll_state_t = ""|"draft"|"running"|"closed";
 type poll_type_t = "winner"|"share";
-type poll_due_type_p = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
+type poll_due_type_t = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
                         |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
 type tally_cache = { // T is short for "tally data"
   // array of known vids:
@@ -43,7 +43,8 @@ type tally_cache = { // T is short for "tally data"
 };
                       
 // in the following, month index start at zero (!) while date index starts at one (!):
-var last_day_of_month = {0:31, 1:28, 2:31, 3:30, 4:31, 5:30, 6:31, 7:31, 8:30, 9:31, 10:30, 11:31};
+const LAST_DAY_OF_MONTH = {0:31, 1:28, 2:31, 3:30, 4:31, 5:30, 6:31, 7:31, 8:30, 9:31, 10:30, 11:31};
+const VERIFY_TALLY = true;
 
 // SERVICE:
 
@@ -295,8 +296,8 @@ export class Poll {
   public get url(): string { return this.G.D.getp(this._pid, 'url'); }
   public set url(value: string) { this.G.D.setp(this._pid, 'url', value); }
 
-  public get due_type(): poll_due_type_p { return this.G.D.getp(this._pid, 'due_type') as poll_due_type_p; }
-  public set due_type(value: poll_due_type_p) { this.G.D.setp(this._pid, 'due_type', value); }
+  public get due_type(): poll_due_type_t { return this.G.D.getp(this._pid, 'due_type') as poll_due_type_t; }
+  public set due_type(value: poll_due_type_t) { this.G.D.setp(this._pid, 'due_type', value); }
 
   // Date objects are stored as ISO strings:
 
@@ -509,11 +510,10 @@ export class Poll {
     }
     // extract voters and total_ratings:
     for (let [oid, rs_map] of this.ratings_map) {
-      console.log("Poll.tally_all rating HA");
-      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
+//      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
       let t = 0;
       for (let [vid, r] of rs_map) {
-        this.G.L.trace("Poll.tally_all rating", this._pid, oid, vid, r);
+//        this.G.L.trace("Poll.tally_all rating", this._pid, oid, vid, r);
         this.T.allvids_set.add(vid);
         t += r;
       }
@@ -572,7 +572,7 @@ export class Poll {
       this.G.L.trace("Poll.update_rating n_changed, first rating of voter", vid);
     }
     // if changed, update rating:
-    if (!(oid in this.ratings_map)) {
+    if (!this.ratings_map.has(oid)) {
       this.ratings_map.set(oid, new Map());
       this.G.L.trace("Poll.update_rating first rating for option", oid);
     }
@@ -661,6 +661,17 @@ export class Poll {
         }
       }
     }
+    if (VERIFY_TALLY) {
+      const candidate = new Map(this.T.shares_map);
+      this.tally_all();
+      for (let oid of this.T.shares_map.keys()) {
+        if (this.T.shares_map.get(oid) != candidate.get(oid)) {
+          this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...candidate], [...this.T.shares_map]);
+          return;
+        }
+      }
+      this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
+    }
   }
 
   update_ratings_ascending(oid:string, rs_map:Map<string, number>): Array<number> {
@@ -684,7 +695,7 @@ export class Poll {
         break;
       }
     }
-    if (!(oid in this.T.approvals_map)) {
+    if (!(this.T.approvals_map.has(oid))) {
       this.T.approvals_map.set(oid, new Map());
     }
     // update approvals:
@@ -715,12 +726,15 @@ export class Poll {
   }
 
   update_score(oid:string, apsc:number, tr:number, score_factor:number) {
-    this.T.scores_map.set(oid, apsc * score_factor + tr);
+    // TODO: make the following tie-breaker faster by storing i permanently.
+    // calculate a tiebreaking value between 0 and 1 based on the hash of the option name:
+    let tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(this.options[oid].name), 16).toString());
+    this.T.scores_map.set(oid, apsc * score_factor + tr + tie_breaker);
   }
 
   update_ordering(): [Array<string>, boolean] {
     let oidsdesc = [...this.T.scores_map]
-          .sort(([oid1, sc1], [oid2, sc2]) => sc1 - sc2)
+          .sort(([oid1, sc1], [oid2, sc2]) => sc2 - sc1)
           .map(([oid2, sc2]) => oid2);
     // check whether ordering changed:
     let ordering_changed = false;

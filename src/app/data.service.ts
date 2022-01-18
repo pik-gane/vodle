@@ -2038,4 +2038,8 @@ export class DataService implements OnDestroy {
     return date.toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
   }
 
+  hash(what): string {
+    return myhash(what);
+  }
+
 }
