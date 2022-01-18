@@ -111,12 +111,12 @@ export class PollPage implements OnInit {
       this.router.navigate(["/mypolls"]);
       return;
     }
+    this.p.tally_all();
+    // TODO: optimize sorting performance:
+    this.oidsorted = [...this.p.T.oids_descending]; 
     this.ready = true;
     this.do_updates = true;
 //    this.loopUpdate();
-    this.p.tally_all();
-    // TODO: optimize sorting performance:
-    this.oidsorted = this.p.T.oids_descending; //[...this.p.oidsorted];
     this.update_order();
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
@@ -213,8 +213,9 @@ export class PollPage implements OnInit {
 
   async update_order(force=false) {
     // TODO: rather have this triggered by tally function!
-    for (let i in this.oidsorted) {
+    for (let i in this.oidsorted) { // loops over the indices
       if (this.oidsorted[i] != this.p.T.oids_descending[i]) {
+        this.G.L.trace("PollPage.update_order", this.oidsorted[i], this.p.T.oids_descending[i]);
         this.needs_refresh = true;
         break;
       }
@@ -224,12 +225,12 @@ export class PollPage implements OnInit {
       const loadingElement = await this.loadingController.create({
         message: this.translate.instant('poll.sorting'),
         spinner: 'crescent',
-        duration: 1000
+        duration: 100
       });
       await loadingElement.present();
       await loadingElement.onDidDismiss();
       // now actually tell html to use the new ordering:
-      this.oidsorted = this.p.T.oids_descending;
+      this.oidsorted = [...this.p.T.oids_descending];
       this.sortingcounter++;
       this.needs_refresh = false;
     } 
@@ -297,6 +298,8 @@ export class PollPage implements OnInit {
   }
   rating_change_ended(oid: string) {
     // TODO: make sure this is really always called right after releasing the slider!
+    this.G.L.trace("PollPage.rating_change_ended");
+    this.update_order();
   }
 
 /*

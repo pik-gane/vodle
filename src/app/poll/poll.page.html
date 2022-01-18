@@ -219,7 +219,7 @@
                   [value]="p.ratings_map.get(oidsorted[i]).get(p.myvid)" 
                   (ionFocus)="rating_change_begins(oidsorted[i])" 
                   (ionChange)="rating_changes(oidsorted[i])" 
-                  (ionBlur)="rating_change_ended(oidsorted[i])" 
+                  (pointerup)="rating_change_ended(oidsorted[i])" 
                   pin="true" min="0" max="100"
                   [style]="'--bar-background:rgba(0,0,0,0);'
                     +(rate_yourself_toggle[oidsorted[i]]
