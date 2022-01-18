@@ -7,7 +7,7 @@
   <ion-icon name="open-outline"></ion-icon>
 -->
 
-<ion-header>
+<ion-header (pointerup)="onBodyPointerup($event)">
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
@@ -58,7 +58,7 @@
     </ion-fab-button>
   </ion-fab>
 -->
-  <ion-content *ngIf="ready">
+  <ion-content *ngIf="ready" (pointerup)="onBodyPointerup($event)" >
     <ion-list lines="full">
       <ion-item color="primary">
         <ion-grid class="ion-no-padding ion-no-margin">
@@ -210,15 +210,14 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <!-- TODO: make slider respond to click only when at knob: -->
             <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
-              (click)="test($event)" (pointerdown)="test($event)" (pointerup)="test($event)" 
-            ><!--(pointerdown)="onRangePointerdown($event)" (pointerup)="onRangePointerup($event)" [color]="slidercolor[oidsorted[i]]"-->
+              (click)="onRangeClick(oidsorted[i], $event)" (pointerdown)="onRangePointerdown(oidsorted[i], $event)" (pointerup)="onRangePointerup(oidsorted[i], $event)" 
+            ><!--[color]="slidercolor[oidsorted[i]]"-->
               <ion-range 
                   [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                   [color]="slidercolor[oidsorted[i]]"
                   [value]="p.ratings_map.get(oidsorted[i]).get(p.myvid)" 
                   (ionFocus)="rating_change_begins(oidsorted[i])" 
                   (ionChange)="rating_changes(oidsorted[i])" 
-                  (pointerup)="rating_change_ended(oidsorted[i])" 
                   pin="true" min="0" max="100"
                   [style]="'--bar-background:rgba(0,0,0,0);'
                     +(rate_yourself_toggle[oidsorted[i]]

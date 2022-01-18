@@ -147,17 +147,17 @@ export class PollPage implements OnInit {
   }
 
   // TODO: work on the following:
-  onRangePointerdown(ev: PointerEvent) {
+  _onRangePointerdown(ev: PointerEvent) {
     this.slidersAllowEvents = true;
     let ev2 = new PointerEvent('pointerdown', {screenX:ev.screenX, screenY:ev.screenY});
     let id = (ev.target as HTMLElement).id;
     let id2 = id.slice(1);
     document.getElementById(id2).dispatchEvent(ev2);
   }
-  onRangePointerup(ev: Event) {
+  _onRangePointerup(ev: Event) {
 //    this.slidersAllowEvents = false;
   }
-  _onRangePointerdown(ev: PointerEvent) {
+  __onRangePointerdown(ev: PointerEvent) {
     let p = window.getComputedStyle(ev.target as HTMLElement).getPropertyValue('pointerEvents');
     window.alert(p);
   }
@@ -290,13 +290,59 @@ export class PollPage implements OnInit {
     this.G.D.save_state();
   }
 
-  test(ev:Event) {
-    this.G.L.entry("TEST");
-    ev.preventDefault();
+  dragged_oid: string = undefined;
+
+  // The following three handlers prevent the slider from responding when pointer is not on knob:
+  onRangePointerdown(oid:string, ev:PointerEvent) {
+    this.dragged_oid = oid;
+    const pos = this.get_knob_pos(oid), x = ev.screenX;
+    this.G.L.entry("onRangePointerdown", oid, x, pos);
+    if ((x < pos.left) || (x > pos.right)) {
+      this.swallow_event(ev);
+    }
+  }
+  onRangePointerup(oid:string, ev:PointerEvent) {
+    this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
+    if (oid != this.dragged_oid) {
+      this.swallow_event(ev);
+    } else {
+      this.rating_change_ended(oid);
+    }
+    this.dragged_oid = null;
+  }
+  onRangeClick(oid:string, ev:MouseEvent) {
+    const pos = this.get_knob_pos(oid), x = ev.screenX;
+    this.G.L.entry("onRangeClick", oid, x, pos);
+    if ((x < pos.left) || (x > pos.right)) {
+      this.swallow_event(ev);
+    }
+  }
+  onBodyPointerup(ev:PointerEvent) {
+    if (this.dragged_oid) {
+      this.G.L.entry("onBodyPointerup");
+      this.onRangePointerup(this.dragged_oid, ev);
+    }
+  }
+  get_knob_pos(oid: string){
+    const slider = this.get_slider(oid), 
+          slider_rect = this.get_screen_coords(slider),
+          value = this.get_slider_value(oid),
+          knob_center_x = slider_rect.left + (slider_rect.right - slider_rect.left) * value / 100;
+    return {left: knob_center_x - 20, right: knob_center_x + 20}
+  }
+  get_screen_coords(element: HTMLElement) {
+    let rect = element.getBoundingClientRect();
+    return {
+      left: window.screenX + rect.left,
+      right: window.screenX + rect.right,
+      top: window.screenY + rect.top,
+      bottom: window.screenY + rect.bottom,
+    }
+  }
+  swallow_event(ev) {
     ev.stopPropagation();
     ev.preventDefault();
   }
-
 
   // only here for debugging purposes:
   close_poll() {
