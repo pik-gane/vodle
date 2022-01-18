@@ -65,7 +65,6 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
               <h3><b><i>{{p.title}}</i></b></h3>
-              <p>OIDS: {{p.oids}}</p>
               <i>{{p.desc}}</i>
               <small *ngIf="(p.url||'')!=''">
                 &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)
@@ -229,7 +228,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android (Chrome?), the bars are too narrow!-->
                       <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
                         fill="#bce4e5" stroke="none"/>
-                            <!--TODO?: [attr.x]="''+(100*(1-p.apprs[oidsorted[i]]))+'%'" [attr.width]="''+(100*p.apprs[oidsorted[i]])+'%'"-->
+                            <!--TODO?: [attr.x]="''+(100*(1-p.T.approval_scores_map.get(oidsorted[i])))+'%'" [attr.width]="''+(100*p.T.approval_scores_map.get(oidsorted[i]))+'%'"-->
                       <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
                       <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
                     </svg>
@@ -253,13 +252,13 @@
               <ion-col class="ion-no-padding ion-no-margin">
                 <b><span style="color:#9abcbd"><small>currently </small>
                   <ng-template [ngIf]="p.type=='winner'">
-                    <span style="color:#769596"> {{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
+                    <span style="color:#769596"> {{Math.round(p.T.shares_map.get(oidsorted[i])*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
                   </ng-template>
                   <ng-template [ngIf]="p.type=='share'">
-                    <span style="color:#769596">getting&nbsp;{{Math.round(p.probs[oidsorted[i]]*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
+                    <span style="color:#769596">getting&nbsp;{{Math.round(p.T.shares_map.get(oidsorted[i])*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
                   </ng-template>
                   <small><span style="color:#4c822e" [style.display]="(votedfor==oidsorted[i])?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
-                    approved&nbsp;by&nbsp;</small>{{Math.round(p.apprs[oidsorted[i]]*1000)/10}}%</span>
+                    approved&nbsp;by&nbsp;</small>{{Math.round(p.T.approval_scores_map.get(oidsorted[i])*1000)/10}}%</span>
                   <span style="color:#62a73b" [style.display]="approved[oidsorted[i]]?'inline':'none'">
                     <small>&nbsp;(including&nbsp;you)</small>
                   </span>

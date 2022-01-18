@@ -1140,6 +1140,17 @@ export class DataService implements OnDestroy {
   }
   public delp(pid:string, key:string) {
     // delete a poll data item
+    // deregister pid, oid if necessary:
+    if (key == "title") {
+      this._pids.delete(pid);
+      delete this._pid_oids[pid];
+    }
+    if (key.startsWith('option.') && key.endsWith('name') && (pid in this._pid_oids)) {
+      this.G.L.trace("DataService.delp option key", pid, key);
+      let keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
+      this._pid_oids[pid].delete(oid);
+      this.G.L.trace("DataService.delp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
+    }
     if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       // construct key for user db:
       let ukey = get_poll_key_prefix(pid) + key;
@@ -1383,18 +1394,18 @@ export class DataService implements OnDestroy {
     }
 
     // process all known oids and, if necessary, generate Option objects:
-    this.G.L.trace("DataService.after_changes processing _pid_oids");
-    this.G.L.trace("DataService.after_changes _pid_oids", JSON.stringify(this._pid_oids));
-    for (let pid in this._pid_oids) {
-      this.G.L.trace("DataService.after_changes _pid_oids", pid, [...this._pid_oids[pid]]);
-    }
+//    this.G.L.trace("DataService.after_changes processing _pid_oids");
+//    this.G.L.trace("DataService.after_changes _pid_oids", JSON.stringify(this._pid_oids));
+//    for (let pid in this._pid_oids) {
+//      this.G.L.trace("DataService.after_changes _pid_oids", pid, [...this._pid_oids[pid]]);
+//    }
     for (let pid in this._pid_oids) {
       let oids = this._pid_oids[pid];
-      this.G.L.trace("DataService.after_changes processing options", pid, [...oids]);
+//      this.G.L.trace("DataService.after_changes processing options", pid, [...oids]);
       for (let oid of oids) {
         if (pid in this.G.P.polls) {
           let p = this.G.P.polls[pid];
-          this.G.L.trace("DataService.after_changes processing option", pid, oid);
+//          this.G.L.trace("DataService.after_changes processing option", pid, oid);
           if (!p.oids.includes(oid)) {
             // option object does not exist yet, so create it:
             this.G.L.trace("DataService.after_changes creating Option object", oid);
@@ -1724,6 +1735,7 @@ export class DataService implements OnDestroy {
     // RETURN:
     return true;
   }
+
   private store_poll_data(pid:string, key:string, dict, dict_key:string): boolean {
     // stores key and value in poll database. 
     this.G.L.trace("DataService.store_poll_data", key, dict[dict_key]);
@@ -1776,7 +1788,7 @@ export class DataService implements OnDestroy {
           })
           .catch(err => {
             this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value, doc, err);
-            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
+//            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {
           this.G.L.trace("DataService.store_poll_data no need to update", key, value);
@@ -1838,13 +1850,13 @@ export class DataService implements OnDestroy {
 
         // key existed in db, so update:
         if (decrypt(doc.value, poll_pw) != value) {
-          doc.value = value;
-          this.local_synced_user_db.put(doc)
+          doc['value'] = enc_value;
+          db.put(doc)
           .then(response => {
             this.G.L.trace("DataService.store_poll_data update", key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value, doc, err);
+            this.G.L.warn("DataService.store_poll_data couldn't update voter doc, will try again soon", key, value, doc, err);
             window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
           });
         } else {

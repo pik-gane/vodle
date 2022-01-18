@@ -122,7 +122,7 @@ export class PollPage implements OnInit {
       this.expanded[oid] = false;
       this.rate_yourself_toggle[oid] = false;
     }
-    this.onDelegateToggleChange()
+    this.on_delegate_toggle_change()
     this.show_stats();
   }
 
@@ -165,11 +165,11 @@ export class PollPage implements OnInit {
     window.alert(p);
   }
   
-  onDelegateToggleChange() {
+  on_delegate_toggle_change() {
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
       if (!b) sum++;
-      console.log(oid, b, sum, this.oidsorted.length);
+//      console.log(oid, b, sum, this.oidsorted.length);
     }
     this.n_delegated = sum;
   }
@@ -181,6 +181,7 @@ export class PollPage implements OnInit {
         shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (let oid of p.oids) {
+      // FIXME: bar and pie are sometimes null here, but not when running the getElementById in the console. why?
       let rating = ratings_map.get(oid).get(myvid),
           approval_score = approval_scores_map.get(oid),
           share = shares_map.get(oid),
@@ -191,12 +192,20 @@ export class PollPage implements OnInit {
           dy = R * (1 - Math.cos(this.two_pi * share)),
           more_than_180_degrees_flag = share > 0.5 ? 1 : 0; 
       this.approved[oid] = approvals_map.get(oid).get(myvid);
-      bar.width.baseVal.valueAsString = (100 * approval_score).toString() + '%';
-      bar.x.baseVal.valueAsString = (100 * (1 - approval_score)).toString() + '%';
-      if (share < 1) {
-        pie.setAttribute('d', "M 21,25 l 0,-"+R+" a "+R+" "+R+" 0 "+more_than_180_degrees_flag+" 1 "+dx+" "+dy+" Z");
-      } else { // a full circle
-        pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
+      if (bar) {
+        bar.width.baseVal.valueAsString = (100 * approval_score).toString() + '%';
+        bar.x.baseVal.valueAsString = (100 * (1 - approval_score)).toString() + '%';
+      } else {
+        this.G.L.warn("PollPage.show_stats couldn't change slider bar", oid);
+      }
+      if (pie) {
+        if (share < 1) {
+          pie.setAttribute('d', "M 21,25 l 0,-"+R+" a "+R+" "+R+" 0 "+more_than_180_degrees_flag+" 1 "+dx+" "+dy+" Z");
+        } else { // a full circle
+          pie.setAttribute('d', "M 21,25 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
+        }
+      } else {
+        this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, rating);
     }
