@@ -119,7 +119,11 @@ export class PollPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    this.G.save_state();
+    // make sure current slider values are really stored in database:
+    for (let oid of this.oidsorted) {
+      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+    }
+    this.G.D.save_state();
   }
 
   async onScroll(ev) {
@@ -267,7 +271,7 @@ export class PollPage implements OnInit {
   }
   apply_sliders_rating(oid: string) {
     this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
-//    this.G.save_state();
+//    this.G.D.save_state();
     this.show_stats();
   }
   rating_change_begins(oid: string) {
@@ -283,7 +287,7 @@ export class PollPage implements OnInit {
     this.G.L.trace("PollPage.rating_change_ended");
     this.update_order();
     this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
-    this.G.save_state();
+    this.G.D.save_state();
   }
 
 
