@@ -354,8 +354,10 @@ export class Poll {
   public get oids() { return Object.keys(this._options); }
   public get n_options() { return this.oids.length; }
 
-  public set_myrating(oid: string, value: number) {
-    this.G.D.setv(this._pid, "rating." + oid, value.toString());
+  public set_myrating(oid: string, value: number, store:boolean=true) {
+    if (store) {
+      this.G.D.setv(this._pid, "rating." + oid, value.toString());
+    }
     this.update_rating(this.myvid, oid, value);
   }
 
@@ -492,8 +494,8 @@ export class Poll {
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-    this.G.L.trace("Poll.tally_all ratings_map_caches", this._pid, this.G.D.ratings_map_caches);
-    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
+//    this.G.L.trace("Poll.tally_all ratings_map_caches", this._pid, this.G.D.ratings_map_caches);
+//    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     this.G.D.tally_caches[this._pid] = this.T = {
       allvids_set: new Set(),
       n_voters: 0,
@@ -520,20 +522,20 @@ export class Poll {
       this.T.total_ratings_map.set(oid, t);
     }
     this.T.n_voters = this.T.allvids_set.size;
-    this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
+//    this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
     // calculate cutoffs, approvals, and scores of all options:
     let score_factor = this.T.n_voters * 128;
-    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
+//    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
     for (let oid of this.oids) {
       let rs_map = this.ratings_map.get(oid);
-      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
+//      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
       if (rs_map) {
         let rsasc = this.update_ratings_ascending(oid, rs_map);
-        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
+//        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
         this.update_cutoff_and_approvals(oid, rs_map, rsasc);
         let apsc = this.update_approval_score(oid, this.T.approvals_map.get(oid));
         this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
-        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
+//        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
       } else {
         this.T.ratings_ascending_map.set(oid, []);
         this.T.cutoffs_map.set(oid, 100);
@@ -543,17 +545,17 @@ export class Poll {
         this.T.scores_map.set(oid, 0); 
       }
     }
-    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
+//    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
     // order and calculate votes and shares:
     this.update_ordering();
     let oidsdesc = this.T.oids_descending;
-    this.G.L.trace("Poll.tally_all oidsdesc", this._pid, oidsdesc);
+//    this.G.L.trace("Poll.tally_all oidsdesc", this._pid, oidsdesc);
     for (let vid of this.T.allvids_set) {
       this.update_vote(vid, oidsdesc);
     }
-    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
+//    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
     this.update_shares(oidsdesc);
-    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
+//    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
 
     this.G.L.exit("Poll.tally_all", this._pid);
   }
@@ -670,7 +672,7 @@ export class Poll {
           return;
         }
       }
-      this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
+//      this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
     }
   }
 
@@ -705,7 +707,7 @@ export class Poll {
     if (cutoff != this.T.cutoffs_map.get(oid)) {
       // cutoff has changed, so update all approvals:
       cutoff_changed = true;
-      this.G.L.trace("Poll.update_cutoff changed to", cutoff);
+//      this.G.L.trace("Poll.update_cutoff_and_approvals changed to", cutoff);
       for (let [vid2, r2] of rs_map) {
         let ap = (r2 >= cutoff);
         if (ap != aps_map.get(vid2)) {

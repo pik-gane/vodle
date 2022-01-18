@@ -38,16 +38,8 @@ export class PollPage implements OnInit {
   private two_pi = 2*Math.PI; 
   slidercolor = {};
 
-  private submit_interval = 1000; // ms to wait before submitting updates
-  private submit_hold = false;
-  private submit_count = 0;
-  private submit_triggered = false;
-  private submit_ratings = {};
-
-  private do_updates = false;
   public refresh_paused = false;
   public needs_refresh = false;
-  private update_interval = 2e3; //20e3; // ms to wait before getting next update
 
   public scroll_position = 0;
   public slidersAllowEvents = true; // TODO! false;
@@ -96,7 +88,7 @@ export class PollPage implements OnInit {
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
-    this.G.L.entry("PreviewpollPage.onDataReady");
+    this.G.L.entry("PollPage.onDataReady");
     if (this.pid in this.G.P.polls) {
       this.p = this.G.P.polls[this.pid];
       if (this.p.state == 'draft') {
@@ -115,7 +107,6 @@ export class PollPage implements OnInit {
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
     this.ready = true;
-    this.do_updates = true;
 //    this.loopUpdate();
     this.update_order();
     for (let oid of this.oidsorted) {
@@ -123,12 +114,14 @@ export class PollPage implements OnInit {
       this.rate_yourself_toggle[oid] = false;
     }
     this.on_delegate_toggle_change()
-    this.show_stats();
+    window.setTimeout(this.show_stats.bind(this), 100);
+    this.G.L.exit("PollPage.onDataReady");
   }
 
   ionViewWillLeave() {
-    this.do_updates = false;
+    this.G.save_state();
   }
+
   async onScroll(ev) {
     const elem = this.content; //  document.getElementById("ion-content-id");
   
@@ -215,12 +208,12 @@ export class PollPage implements OnInit {
     // TODO: rather have this triggered by tally function!
     for (let i in this.oidsorted) { // loops over the indices
       if (this.oidsorted[i] != this.p.T.oids_descending[i]) {
-        this.G.L.trace("PollPage.update_order", this.oidsorted[i], this.p.T.oids_descending[i]);
+//        this.G.L.trace("PollPage.update_order", this.oidsorted[i], this.p.T.oids_descending[i]);
         this.needs_refresh = true;
         break;
       }
     }
-    if (force || (this.needs_refresh && !(this.submit_triggered || this.refresh_paused))) {
+    if (force || (this.needs_refresh && !(this.refresh_paused))) {
       // link displayed sorting to poll's sorting:
       const loadingElement = await this.loadingController.create({
         message: this.translate.instant('poll.sorting'),
@@ -272,75 +265,27 @@ export class PollPage implements OnInit {
   get_slider_value(oid: string) {
     return Number(this.get_slider(oid).value);
   }
-  store_sliders_rating(oid: string) {
-    let r = Math.round(this.get_slider_value(oid));
-    this.p.set_myrating(oid, r);
+  apply_sliders_rating(oid: string) {
+    this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
 //    this.G.save_state();
     this.show_stats();
   }
   rating_change_begins(oid: string) {
-    // freeze current sort order:
-//    this.opos = {...this.p.opos};
   }
   rating_changes(oid: string) {
     var slider = this.get_slider(oid),
         value = Number(slider.value);
     this.set_slider_color(oid, value);
-    this.store_sliders_rating(oid);
-/*    
-    this.submit_ratings[oid] = true;
-    if (this.submit_triggered) {
-      this.hold_submit();
-    } else {
-      this.triggerSubmit();
-    } 
-  */
+    this.apply_sliders_rating(oid);
   }
   rating_change_ended(oid: string) {
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.trace("PollPage.rating_change_ended");
     this.update_order();
+    this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+    this.G.save_state();
   }
 
-/*
-  // submission:
-
-  hold_submit() { // make submission hold for another submit_interval
-    GlobalService.log("holding submits");
-    this.submit_hold = true;
-  }
-  async triggerSubmit() {
-    // trigger a submission that is 
-    // delayed by at least submit_interval after the last change:
-    let sc = this.submit_count++;
-    GlobalService.log("submit no. "+sc+" triggered.");
-    this.submit_triggered = this.submit_hold = true;
-    while (this.submit_hold) {
-      // wait until no further changes happened within 
-      // the last submit_interval
-      this.submit_hold = false;
-      await this.G.sleep(this.submit_interval);
-    }
-    this.update_order();
-    this.doSubmit();
-  }
-  doSubmit() {
-    this.submit_triggered = this.submit_hold = false;
-    this.p.submitRatings({...this.submit_ratings});
-    this.submit_ratings = {};
-  }
-*/
-
-  // TODO: do we really need this?
-  async loopUpdate() {
-    // every 20 sec, update full state
-    while (this.do_updates) {
-//      this.p.getCompleteState();
-      this.update_order();
-      this.show_stats();
-      await this.G.sleep(this.update_interval);
-    }
-  }
 
   // only here for debugging purposes:
   close_poll() {
