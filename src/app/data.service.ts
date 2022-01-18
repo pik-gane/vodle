@@ -134,7 +134,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'vid'];
+const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid'];
 const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
 
 // ENCRYPTION:
@@ -176,7 +176,7 @@ function myhash(what): string {
 // SERVICE:
 
 // attributes of DataService to be stored in storage:
-const state_attributes = ["user_cache", "_pids", "poll_caches", "ratings_map_caches", "tally_caches"];
+const state_attributes = ["user_cache", "_pids", "_pid_oids", "poll_caches", "ratings_map_caches", "tally_caches"];
 
 @Injectable({
   providedIn: 'root'
@@ -204,7 +204,7 @@ export class DataService implements OnDestroy {
 
   private _pids: Set<string>; // list of pids known to the user
   public get pids() { return this._pids; }
-  private _pid_oids: Set<[string, string]>;
+  private _pid_oids: Record<string, Set<string>>;
 
   private poll_caches: Record<string, {}>; // temporary storage of poll data
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
@@ -255,6 +255,10 @@ export class DataService implements OnDestroy {
 
   save_state() {
     this.G.L.entry("DataService.save_state");
+    this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
+    for (let pid in this._pid_oids) {
+      this.G.L.trace("DataService.save_state _pid_oids", pid, [...this._pid_oids[pid]]);
+    }
     let state = {};
     for (let a of state_attributes) {
       state[a] = this[a];
@@ -323,6 +327,7 @@ export class DataService implements OnDestroy {
     // initialize caches that only live during current session:
     this.user_cache = {};
     this._pids = new Set();
+    this._pid_oids = {};
     this.poll_caches = {};
     this.tally_caches = {};
     this.ratings_map_caches = {};
@@ -333,7 +338,7 @@ export class DataService implements OnDestroy {
     .then((state) => {
       G.L.debug('DataService got state from storage');
       for (let a of state_attributes) {
-        if ((a in state) && (a != undefined)) {
+        if ((a in state) && (state[a] != undefined)) {
           this[a] = state[a];
           G.L.trace("DataService restored attribute", a, "from storage");
         } else {
@@ -345,6 +350,10 @@ export class DataService implements OnDestroy {
       }
       if (('_pids' in state) && ('poll_caches' in state)) {
         this.restored_poll_caches = true;
+      }
+      this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
+      for (let pid in this._pid_oids) {
+        this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid  ]]);
       }
     }).catch((error) => {
       G.L.warn('DataService could not get state from storage:', error);
@@ -386,7 +395,6 @@ export class DataService implements OnDestroy {
 
     });
 
-    this._pid_oids = new Set();
     this.uninitialized_pids = new Set();
     this.local_poll_dbs = {};
     this.remote_poll_dbs = {};
@@ -643,7 +651,7 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
-    let poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'vid');
+    let poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
 
     let promise = new Promise((resolve, reject) => {
 
@@ -1102,10 +1110,22 @@ export class DataService implements OnDestroy {
     return value;
   }
   public setp(pid:string, key:string, value:string): boolean {
+    // set poll data item
+    // register pid, oid if necessary:
+    this._pids.add(pid);
     if (this.getp(pid, key) == value) {
       return true;
     }
-    // set poll data item
+    if (key.startsWith('option.')) {
+      this.G.L.trace("DataService.setp option key", pid, key, value);
+      if (!(pid in this._pid_oids)) {
+        this._pid_oids[pid] = new Set();
+      }
+      let keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
+      this._pid_oids[pid].add(oid);
+      this.G.L.trace("DataService.setp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
+    }
+    // decide where to store data:
     if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
@@ -1363,17 +1383,26 @@ export class DataService implements OnDestroy {
     }
 
     // process all known oids and, if necessary, generate Option objects:
-    for (let [pid, oid] of this._pid_oids) {
-      if (pid in this.G.P.polls) {
-        let p = this.G.P.polls[pid];
-        this.G.L.trace("DataService.after_changes processing option", pid, oid);
-        if (!p.oids.includes(oid)) {
-          // option object does not exist yet, so create it:
-          this.G.L.trace("DataService.after_changes creating Option object", oid);
-          let o = new Option(this.G, p, oid);
-        }  
-      } else {
-        this.G.L.error("DataService.after_changes found an option for an unknown poll", pid, oid);
+    this.G.L.trace("DataService.after_changes processing _pid_oids");
+    this.G.L.trace("DataService.after_changes _pid_oids", JSON.stringify(this._pid_oids));
+    for (let pid in this._pid_oids) {
+      this.G.L.trace("DataService.after_changes _pid_oids", pid, [...this._pid_oids[pid]]);
+    }
+    for (let pid in this._pid_oids) {
+      let oids = this._pid_oids[pid];
+      this.G.L.trace("DataService.after_changes processing options", pid, [...oids]);
+      for (let oid of oids) {
+        if (pid in this.G.P.polls) {
+          let p = this.G.P.polls[pid];
+          this.G.L.trace("DataService.after_changes processing option", pid, oid);
+          if (!p.oids.includes(oid)) {
+            // option object does not exist yet, so create it:
+            this.G.L.trace("DataService.after_changes creating Option object", oid);
+            let o = new Option(this.G, p, oid);
+          }  
+        } else {
+          this.G.L.error("DataService.after_changes found an option for an unknown poll", pid, oid);
+        }
       }
     }
 
@@ -1381,7 +1410,7 @@ export class DataService implements OnDestroy {
   }
   private poll_has_db_credentials(pid:string) {
     // return whether poll db credentials are nonempty:
-    return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'vid')!='';
+    return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'myvid')!='';
   }
 
   private ensure_poll_cache(pid:string) {
@@ -1453,9 +1482,12 @@ export class DataService implements OnDestroy {
       // it's an option's oid entry, so check whether we know this option:
       let pid = key.slice('poll.'.length, key.indexOf('.option.')), 
           oid = key.slice(key.indexOf('.option.') + '.option.'.length, key.indexOf('.name'));
-      if (!this._pid_oids.has([pid, oid])) {
+      if (!(pid in this._pid_oids)) {
+        this._pid_oids[pid] = new Set();
+      }
+      if (!this._pid_oids[pid].has(oid)) {
         this.G.L.trace("DataService found new option", pid, oid);
-        this._pid_oids.add([pid, oid]);
+        this._pid_oids[pid].add(oid);
       }
 
     }
@@ -1514,9 +1546,12 @@ export class DataService implements OnDestroy {
 
             // it's an option's oid entry, so check whether we know this option:
             let oid = value;
-            if (!this._pid_oids.has([pid, oid])) {
+            if (!(pid in this._pid_oids)) {
+              this._pid_oids[pid] = new Set();
+            }
+            if (!this._pid_oids[pid].has(oid)) {
               this.G.L.trace("DataService.doc2poll_cache found new option", pid, oid);
-              this._pid_oids.add([pid, oid]);
+              this._pid_oids[pid].add(oid);
             }
 
           }
@@ -1775,7 +1810,7 @@ export class DataService implements OnDestroy {
 
       // check which voter's data this is:
       let vid_prefix = key.slice(0, key.indexOf(':')),
-          vid = this.user_cache[get_poll_key_prefix(pid) + 'vid'];
+          vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.store_poll_data tried changing another voter's data item", key);
@@ -1919,7 +1954,7 @@ export class DataService implements OnDestroy {
 
       // check which voter's data this is:
       let vid_prefix = key.slice(0, key.indexOf(':')),
-          vid = this.user_cache[get_poll_key_prefix(pid) + 'vid'];
+          vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.delete_poll_data tried deleting another voter's data item", key);
@@ -1984,7 +2019,7 @@ export class DataService implements OnDestroy {
   // OTHER:
 
   get_voter_key_prefix(pid:string): string {
-    return 'voter.' + this.getp(pid, 'vid') + ':';
+    return 'voter.' + this.getp(pid, 'myvid') + ':';
   }
   
   format_date(date: Date): string {

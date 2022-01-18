@@ -65,6 +65,7 @@
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
               <h3><b><i>{{p.title}}</i></b></h3>
+              <p>OIDS: {{p.oids}}</p>
               <i>{{p.desc}}</i>
               <small *ngIf="(p.url||'')!=''">
                 &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)

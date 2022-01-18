@@ -174,7 +174,7 @@ export class Poll {
     } else {
       this.tally_all();
     }
-    G.L.exit("Poll constructor", pid);
+    G.L.exit("Poll.constructor", pid);
   }
 
   delete() {
@@ -245,12 +245,12 @@ export class Poll {
     this.G.D.setp(this._pid, 'password', value);
   }
 
-  public get myvid(): string { return this.G.D.getp(this._pid, 'vid'); }
+  public get myvid(): string { return this.G.D.getp(this._pid, 'myvid'); }
   public set myvid(value: string) {
     if (this.T.allvids_set.has(this.myvid)) {
       this.T.allvids_set.delete(this.myvid);
     }
-    this.G.D.setp(this._pid, 'vid', value);
+    this.G.D.setp(this._pid, 'myvid', value);
     this.T.allvids_set.add(value);
   }
 
@@ -481,10 +481,13 @@ export class Poll {
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-    this.ratings_map = this.G.D.ratings_map_caches[this._pid];
-    if (!this.ratings_map) {
+    this.G.L.trace("Poll.tally_all ratings_map_caches", this._pid, this.G.D.ratings_map_caches);
+    if (this._pid in this.G.D.ratings_map_caches) {
+      this.ratings_map = this.G.D.ratings_map_caches[this._pid];
+    } else {
       this.G.D.ratings_map_caches[this._pid] = this.ratings_map = new Map();
     }
+    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     this.G.D.tally_caches[this._pid] = this.T = {
       allvids_set: new Set(),
       n_voters: 0,
@@ -499,7 +502,6 @@ export class Poll {
       n_votes_map: new Map(),
       shares_map: new Map()
     }
-    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     // extract voters and total_ratings:
     for (let [oid, rs_map] of this.ratings_map) {
       console.log("Poll.tally_all rating HA");
@@ -516,13 +518,25 @@ export class Poll {
     this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
     // calculate cutoffs, approvals, and scores of all options:
     let score_factor = this.T.n_voters * 128;
-    for (let [oid, rs_map] of this.ratings_map) {
-      let rsasc = this.update_ratings_ascending(oid, rs_map);
-      this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
-      this.update_cutoff_and_approvals(oid, rs_map, rsasc);
-      let apsc = this.update_approval_score(oid, this.T.approvals_map.get(oid));
-      this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
-      this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
+    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
+    for (let oid of this.oids) {
+      let rs_map = this.ratings_map.get(oid);
+      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
+      if (rs_map) {
+        let rsasc = this.update_ratings_ascending(oid, rs_map);
+        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
+        this.update_cutoff_and_approvals(oid, rs_map, rsasc);
+        let apsc = this.update_approval_score(oid, this.T.approvals_map.get(oid));
+        this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
+        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
+      } else {
+        this.T.ratings_ascending_map.set(oid, []);
+        this.T.cutoffs_map.set(oid, 100);
+        this.T.approvals_map.set(oid, new Map());
+        this.T.approval_scores_map.set(oid, 0);
+        this.T.total_ratings_map.set(oid, 0);
+        this.T.scores_map.set(oid, 0); 
+      }
     }
     this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
     // order and calculate votes and shares:
