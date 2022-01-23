@@ -1,5 +1,5 @@
 {
-    ":COMMENT": "Template for example polls",
+    ":COMMENT": "Template for example polls. Duplicate file, remove one of the two colons ::, and rename it adequately to example:whatever.json",
 
     "type": "Poll type: winner|share",
 

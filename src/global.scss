@@ -190,3 +190,11 @@ ion-icon.poll-type-list {
 a, a:link, a:visited, a:hover, a:active {
     color: inherit !important;
 }
+
+.externallink {
+    cursor: pointer;
+    text-decoration-line: underline;
+//    text-decoration-color: grey;
+    text-decoration-style: dotted;
+    color: inherit !important;
+}

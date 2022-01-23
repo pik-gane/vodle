@@ -25,10 +25,11 @@
         </h3></ion-text>
         <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
           <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [innerHtml]="p.desc"></i></ion-text>
-          <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;">
-            &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
-                <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-              </a>)
+          <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
+            (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" [innerHtml]="'read-more'|translate"></ion-text>)
+            <!--(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
+              <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
+            </a>)-->
           </ion-text>
         </p>
         <p>
@@ -62,10 +63,11 @@
         <p>
           <ion-text color="primary"><b><i [innerHtml]="o.name"></i></b></ion-text>
           <ion-text *ngIf="(o.desc||'')!=''" color="primary"><br/><i [innerHtml]="o.desc"></i></ion-text>
-          <ion-text *ngIf="(o.url||'')!=''" style="font-size: smaller;">
-            &nbsp;(<a [href]="G.D.fix_url(o.url)" target="_blank" rel="noopener noreferrer">
+          <ion-text *ngIf="(o.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
+            (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))" [innerHtml]="'read-more'|translate"></ion-text>)
+            <!--(<a [href]="G.D.fix_url(o.url)" target="_blank" rel="noopener noreferrer">
               <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-            </a>)
+            </a>)-->
           </ion-text>            
         </p>
       </ion-col>
