@@ -20,7 +20,7 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 import BLAKE2s from 'blake2s-js'; // TODO: replace by sodium later
 
 import * as CryptoJS from 'crypto-js';
-const crypto_algorithm = 'des-ede3';
+//const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
 /** DATA STORAGE DESIGN
@@ -126,7 +126,6 @@ function get_poll_key_prefix(pid:string) {
 }
 
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
-// curl -u test -X PUT .../{db}/_design/{ddoc}/_update/{func}/{docid}
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
 const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password'];
@@ -176,7 +175,21 @@ function myhash(what): string {
 // SERVICE:
 
 // attributes of DataService to be stored in storage:
-const state_attributes = ["user_cache", "_pids", "_pid_oids", "poll_caches", "ratings_map_caches", "tally_caches"];
+const state_attributes = [
+  "user_cache", 
+  "_pids", 
+  "_pid_oids", 
+  "poll_caches", 
+  "own_ratings_map_caches", 
+  "effective_ratings_map_caches",
+  "direct_delegation_map_caches",
+  "inv_direct_delegation_map_caches",
+  "indirect_delegation_map_caches",
+  "inv_indirect_delegation_map_caches",
+  "effective_delegation_map_caches",
+  "inv_effective_delegation_map_caches",
+  "tally_caches"
+];
 
 @Injectable({
   providedIn: 'root'
