@@ -38,7 +38,7 @@
         </p>
         <p *ngIf="((p.language||'')!='') && (p.language!=G.S.language)">
           <small>
-            <ion-text [innerHtml]="'language'|translate"></ion-text>:&nbsp;<ion-text color="primary" [innerHtml]="G.S.language_names[p.language]"></ion-text>
+            <ion-text [innerHtml]="'draftpoll.language'|translate"></ion-text>:&nbsp;<ion-text color="primary" [innerHtml]="G.S.language_names[p.language]"></ion-text>
           </small>
         </p>
         <p *ngIf="p.db!='default'">

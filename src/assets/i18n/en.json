@@ -90,6 +90,7 @@
 
         "advanced-settings": "Advanced settings",
         "db-label": "Where shall vodle store the poll's encrypted data?",
+        "language": "Language of poll texts",
 
         "option-name-label": "Option name",
         "target-name-label": "Target name",

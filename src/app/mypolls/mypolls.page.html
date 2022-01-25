@@ -31,7 +31,7 @@
         </ion-label>
         <ion-buttons *ngIf="can_invite(p)" slot="end" class="ion-no-padding ion-no-margin">
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="red" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+          <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Abstaining</ion-badge>
 -->

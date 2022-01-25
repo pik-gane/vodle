@@ -95,6 +95,7 @@
 
         "advanced-settings": "Erweiterte Einstellungen",
         "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
+        "language": "Sprache der Abstimmungs-Texte",
 
         "option-name-label": "Name der Option",
         "target-name-label": "Name des Ziels",

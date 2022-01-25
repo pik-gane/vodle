@@ -163,7 +163,7 @@ export class PollPage implements OnInit {
   show_stats() { 
     // update pies and bars, but not order!
     let p = this.p, T = p.T, myvid = p.myvid, 
-        ratings_map = p.eff_ratings_map, approval_scores_map = T.approval_scores_map,
+        ratings_map = p.effective_ratings_map, approval_scores_map = T.approval_scores_map,
         shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (let oid of p.oids) {
@@ -252,7 +252,7 @@ export class PollPage implements OnInit {
   }
   set_slider_values() {
     for (let oid of this.p.oids) {
-      this.get_slider(oid).value = this.p.eff_ratings_map.get(oid).get(this.p.myvid).toString();
+      this.get_slider(oid).value = this.p.effective_ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
   get_slider_value(oid: string) {

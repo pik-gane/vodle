@@ -234,7 +234,7 @@
     <ion-item [style.display]="(stage>5) && advanced_expanded?'block':'none'">
       <ion-label position="floating" color="primary">
         <ion-icon name="language-outline"></ion-icon>&nbsp;
-        <span [innerHtml]="'language'|translate"></span>
+        <span [innerHtml]="'draftpoll.language'|translate"></span>
       </ion-label>
       <ion-select #ionSelects interface="popover" formControlName="poll_language" (ionChange)="set_poll_language()"
           style="font-size: smaller">

@@ -211,12 +211,14 @@ export class DataService implements OnDestroy {
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
-  public ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
-  public eff_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
-  public delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of delegation data, not stored in database
-  public inv_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse delegation data, not stored in database
-  public eff_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
-  public inv_eff_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
+  public own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
+  public effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
+  public direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
+  public inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
+  public indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of indirect delegation data, not stored in database
+  public inv_indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse indirect delegation data, not stored in database
+  public effective_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
+  public inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
   public tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
@@ -336,12 +338,14 @@ export class DataService implements OnDestroy {
     this._pid_oids = {};
     this.poll_caches = {};
     this.tally_caches = {};
-    this.ratings_map_caches = {};
-    this.eff_ratings_map_caches = {};
-    this.delegation_map_caches = {};
-    this.inv_delegation_map_caches = {};
-    this.eff_delegation_map_caches = {};
-    this.inv_eff_delegation_map_caches = {};
+    this.own_ratings_map_caches = {};
+    this.effective_ratings_map_caches = {};
+    this.direct_delegation_map_caches = {};
+    this.inv_direct_delegation_map_caches = {};
+    this.indirect_delegation_map_caches = {};
+    this.inv_indirect_delegation_map_caches = {};
+    this.effective_delegation_map_caches = {};
+    this.inv_effective_delegation_map_caches = {};
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
@@ -1597,7 +1601,7 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
           if (subkey.startsWith("rating.")) {
             let oid = subkey.slice("rating.".length), r = Number.parseInt(value);
-            this.G.P.update_rating(pid, vid, oid, r);
+            this.G.P.update_own_rating(pid, vid, oid, r);
           }
 
         } else {
