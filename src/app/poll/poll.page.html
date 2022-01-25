@@ -225,9 +225,10 @@
                     ?'pointer-events:;--bar-height:7px;--knob-size:35px'
                     :'pointer-events:none;--bar-height:5px;--knob-size:17px')" 
                   class="ion-no-padding ion-no-margin"><!--35px-->
-                <ion-label slot="end" class="ion-no-padding ion-no-margin" style="padding-right:12px;">
-                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px"><!--FIXME: in landscape mode on Android (Chrome?), the bars are too narrow!-->
+                <ion-label slot="end" class="ion-no-padding ion-no-margin" style="margin-right:12px;">
+                  <!--don't do width:100% in ion-label since otherwise the slider is not working properly-->
+                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;width:100%;padding-left:11px">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
                       <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
                         fill="#bce4e5" stroke="none"/>
                             <!--TODO?: [attr.x]="''+(100*(1-p.T.approval_scores_map.get(oidsorted[i])))+'%'" [attr.width]="''+(100*p.T.approval_scores_map.get(oidsorted[i]))+'%'"-->

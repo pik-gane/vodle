@@ -318,7 +318,7 @@ export class PollPage implements OnInit {
           slider_rect = this.get_screen_coords(slider),
           value = this.get_slider_value(oid),
           knob_center_x = slider_rect.left + (slider_rect.right - slider_rect.left) * value / 100;
-    this.G.L.trace("Pointer get_knob_pos", slider_rect);
+    this.G.L.trace("pointer slider value", value);
     return {left: knob_center_x - 20, right: knob_center_x + 20}
   }
   get_screen_coords(element: HTMLElement) {
