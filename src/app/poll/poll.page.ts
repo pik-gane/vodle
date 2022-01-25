@@ -163,13 +163,12 @@ export class PollPage implements OnInit {
   show_stats() { 
     // update pies and bars, but not order!
     let p = this.p, T = p.T, myvid = p.myvid, 
-        ratings_map = p.effective_ratings_map, approval_scores_map = T.approval_scores_map,
+        approval_scores_map = T.approval_scores_map,
         shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (let oid of p.oids) {
       // FIXME: bar and pie are sometimes null here, but not when running the getElementById in the console. why?
-      let rating = ratings_map.get(oid).get(myvid),
-          approval_score = approval_scores_map.get(oid),
+      let approval_score = approval_scores_map.get(oid),
           share = shares_map.get(oid),
           bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
           pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
@@ -193,7 +192,7 @@ export class PollPage implements OnInit {
       } else {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
-      this.set_slider_color(oid, rating);
+      this.set_slider_color(oid, p.get_myrating(oid));
     }
   }
 

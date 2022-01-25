@@ -216,7 +216,7 @@
               <ion-range 
                   [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                   [color]="slidercolor[oidsorted[i]]"
-                  [value]="p.ratings_map.get(oidsorted[i]).get(p.myvid)" 
+                  [value]="p.get_myrating(oidsorted[i])" 
                   (ionFocus)="rating_change_begins(oidsorted[i])" 
                   (ionChange)="rating_changes(oidsorted[i])" 
                   pin="true" min="0" max="100"
