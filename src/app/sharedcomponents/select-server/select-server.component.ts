@@ -10,7 +10,7 @@ import { GlobalService } from "../../global.service";
 })
 export class SelectServerComponent implements OnInit {
 
-  public Object = Object;
+  Object = Object;
 
   showing_db_other_password: boolean;
 

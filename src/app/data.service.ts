@@ -139,10 +139,10 @@ const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results']
 
 // ENCRYPTION:
 
-let textEncoder = new TextEncoder();
+const textEncoder = new TextEncoder();
 
 function encrypt_deterministically(value, password:string) {
-  var aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
+  const aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
   return result;
 }
@@ -190,20 +190,20 @@ export class DataService implements OnDestroy {
 
   // current page, used for notifying of changes method:
   private _page; 
-  public set page(page) { this._page = page; }
+  set page(page) { this._page = page; }
 
   private loadingElement: HTMLIonLoadingElement;
 
   // DATA:
 
-  public user_cache: {}; // temporary storage of user data
+  user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
   private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
 
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
 
   private _pids: Set<string>; // list of pids known to the user
-  public get pids() { return this._pids; }
+  get pids() { return this._pids; }
   private _pid_oids: Record<string, Set<string>>;
 
   private poll_caches: Record<string, {}>; // temporary storage of poll data
@@ -211,23 +211,23 @@ export class DataService implements OnDestroy {
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
-  public own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
-  public effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
-  public direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
-  public inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
-  public indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of indirect delegation data, not stored in database
-  public inv_indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse indirect delegation data, not stored in database
-  public effective_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
-  public inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
-  public tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
+  own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
+  effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
+  direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
+  inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
+  indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of indirect delegation data, not stored in database
+  inv_indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse indirect delegation data, not stored in database
+  effective_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
+  inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
+  tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
 
   private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
   private _ready: boolean = false;
-  public get ready() { return this._ready; }
+  get ready() { return this._ready; }
   private _loading: boolean = false;
-  public get loading() { return this._loading; }
+  get loading() { return this._loading; }
 
   constructor(
       private router: Router,
@@ -264,11 +264,11 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.save_state");
     this.G.L.trace("DataService.save_state _pids", [...this._pids]);
     this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
-    for (let pid in this._pid_oids) {
+    for (const pid in this._pid_oids) {
       this.G.L.trace("DataService.save_state _pid_oids", pid, [...this._pid_oids[pid]]);
     }
-    let state = {};
-    for (let a of state_attributes) {
+    const state = {};
+    for (const a of state_attributes) {
       state[a] = this[a];
     }
     this.storage.set('state', state)
@@ -352,7 +352,7 @@ export class DataService implements OnDestroy {
     this.storage.get('state')
     .then((state) => {
       G.L.debug('DataService got state from storage');
-      for (let a of state_attributes) {
+      for (const a of state_attributes) {
         if ((a in state) && (state[a] != undefined)) {
           this[a] = state[a];
           G.L.trace("DataService restored attribute", a, "from storage");
@@ -368,7 +368,7 @@ export class DataService implements OnDestroy {
       }
       this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
       this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
-      for (let pid in this._pid_oids) {
+      for (const pid in this._pid_oids) {
         this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid  ]]);
       }
     }).catch((error) => {
@@ -448,8 +448,8 @@ export class DataService implements OnDestroy {
   private process_local_only_user_docs(result) {
     this.G.L.entry("DataService.process_local_only_user_docs");
     // copy data from local-only docs to cache:
-    for (let row of result.rows) {
-      let doc = row.doc, key = doc['_id'], value = doc['value'];
+    for (const row of result.rows) {
+      const doc = row.doc, key = doc['_id'], value = doc['value'];
       this.user_cache[key] = value;
       this.G.L.trace("DataService.process_local_only_user_docs filled user cache with key", key, "and value", value);
       if (key=='local_language') {
@@ -536,7 +536,7 @@ export class DataService implements OnDestroy {
     if (!this.restored_poll_caches) {
       let initializing_polls = false;
       // TODO: go through user cache for pids
-      for (let key in this.user_cache) {
+      for (const key in this.user_cache) {
         if (this.check_whether_poll_or_option(key, this.user_cache[key])) {
           initializing_polls = true;
         }
@@ -555,9 +555,9 @@ export class DataService implements OnDestroy {
     // called whenever a connection to a remote user db was established
     this.G.L.entry("DataService.local_user_docs2cache");
     // decrypt and process all synced docs:
-    var initializing_polls = false;
-    for (let row of result.rows) {
-      let [dummy, initializing_poll] = this.doc2user_cache(row.doc);
+    let initializing_polls = false;
+    for (const row of result.rows) {
+      const [dummy, initializing_poll] = this.doc2user_cache(row.doc);
       initializing_polls = initializing_polls || initializing_poll;
     }
     if (!initializing_polls) {
@@ -569,10 +569,10 @@ export class DataService implements OnDestroy {
   private connect_to_remote_user_db() {
     // called at initialization and whenever db credentials were changed
     this.G.L.entry("DataService.connect_to_remote_user_db");
-    let user_password = this.user_cache['password'];
-    let user_db_private_username = "vodle.user." + this.email_and_pw_hash();
+    const user_password = this.user_cache['password'];
+    const user_db_private_username = "vodle.user." + this.email_and_pw_hash();
 
-    let promise = new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
 
       // ASYNC:
       this.get_remote_connection(
@@ -621,7 +621,7 @@ export class DataService implements OnDestroy {
     this._ready = false;
     this.uninitialized_pids.add(pid);
     this.ensure_poll_cache(pid);
-    let lpdb = this.get_local_poll_db(pid);
+    const lpdb = this.get_local_poll_db(pid);
 
     if ("state" in this.poll_caches[pid]) {
       this.G.L.trace("DataService.ensure_local_poll_data nothing to do", pid);
@@ -659,21 +659,21 @@ export class DataService implements OnDestroy {
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache", pid);
     // decrypt and process all synced docs:
-    for (let row of result.rows) {
+    for (const row of result.rows) {
       this.doc2poll_cache(pid, row.doc);
     }
     this._pids.add(pid);
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
-  public connect_to_remote_poll_db(pid:string) {
+  connect_to_remote_poll_db(pid:string) {
     // called at poll initialization
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
-    let poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
+    const poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
 
-    let promise = new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
 
       // ASYNC:
       this.get_remote_connection(
@@ -718,23 +718,23 @@ export class DataService implements OnDestroy {
 
   // HOOKS FOR OTHER SERVICES:
 
-  public change_poll_state(p:Poll, new_state:string) {
+  change_poll_state(p:Poll, new_state:string) {
     this._pids.add(p.pid);
 
     // called by PollService when changing state
-    let pid = p.pid, pd = {}, prefix = get_poll_key_prefix(pid);
+    const pid = p.pid, prefix = get_poll_key_prefix(pid);
     this.G.L.entry("DataService.change_poll_state", pid, new_state);
-    let old_state = this.user_cache[prefix + 'state'];
+    const old_state = this.user_cache[prefix + 'state'];
 
     if (old_state=='draft') {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
       // move data from local user db to poll db.
-      for (let [ukey, value] of Object.entries(this.user_cache)) {
+      for (const [ukey, value] of Object.entries(this.user_cache)) {
         if (ukey.startsWith(prefix)) {
           // used db entry belongs to this poll.
-          let key = ukey.substring(prefix.length);
+          const key = ukey.substring(prefix.length);
           if ((key != 'state') && !poll_keys_in_user_db.includes(key)) {
             if (this._setp_in_polldb(pid, key, value as string)) {
               this.delu(ukey);
@@ -769,7 +769,7 @@ export class DataService implements OnDestroy {
 
   // HOOKS FOR PAGES:
 
-  public login_submitted() {
+  login_submitted() {
     // called by login page when all necessary login information was submitted on the login page
     this.G.L.entry("DataService.login_submitted");
     this.show_loading();
@@ -798,10 +798,10 @@ export class DataService implements OnDestroy {
     this.show_loading();
 
     // Then return a promise to start the process:
-    let promise = new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
 
       // first connect to database "_users" with public credentials:
-      let conn_as_public = this.get_couchdb(server_url+"/_users", "vodle", public_password);
+      const conn_as_public = this.get_couchdb(server_url+"/_users", "vodle", public_password);
 
       // ASYNC:
       // try to get info to see if credentials are valid:
@@ -812,7 +812,7 @@ export class DataService implements OnDestroy {
         this.G.L.debug("DataService logged into "+server_url+"/_users as user 'vodle'. Info:", doc);
 
         // then connect to database "vodle" with private credentials:
-        let conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
+        const conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
 
         // ASYNC:
         // try to get info to see if credentials are valid:
@@ -858,7 +858,7 @@ export class DataService implements OnDestroy {
             this.G.L.debug("DataService.get_remote_connection generated user "+private_username);
 
             // connect again with private credentials:
-            let conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
+            const conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
             this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user");
 
             // ASYNC:
@@ -930,7 +930,7 @@ export class DataService implements OnDestroy {
     return new Promise((resolve, reject) => {
 
       // TODO: try creating or updating a timestamp document
-      let _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
+      const _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
 
       // ASYNC:
       conn.get(_id)
@@ -975,7 +975,7 @@ export class DataService implements OnDestroy {
     var result: boolean;
 
     if (this.remote_user_db) { 
-      let email_and_pw_hash = this.email_and_pw_hash();
+      const email_and_pw_hash = this.email_and_pw_hash();
       this.G.L.info("DataService starting user data sync");
 
       // ASYNC:
@@ -1016,13 +1016,13 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.start_user_sync", result);
     return result;
   }
+
   private start_poll_sync(pid:string): boolean {
     // try starting poll data local <--> remote syncing:
     this.G.L.entry("DataService.start_poll_sync", pid);
     var result: boolean;
 
     if (this.remote_poll_dbs[pid]) { 
-      let email_and_pw_hash = this.email_and_pw_hash();
       this.G.L.info("DataService starting poll data sync", pid);
 
       // ASYNC:
@@ -1071,7 +1071,7 @@ export class DataService implements OnDestroy {
 
   // PUBLIC DATA ACCESS METHODS:
 
-  public getu(key:string): string {
+  getu(key:string): string {
     // get user data item
     let value = this.user_cache[key] || '';
     if (!value && key=='language') {
@@ -1079,7 +1079,7 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
-  public setu(key:string, value:string): boolean {
+  setu(key:string, value:string): boolean {
     if (this.getu(key) == value) {
       return true;
     }
@@ -1090,10 +1090,10 @@ export class DataService implements OnDestroy {
     } else if (key=='local_language') {
         this.translate.use(value!=''?value:environment.default_lang);
     }
-    var old_values = {};
+    const old_values = {};
     if (keys_triggering_data_move.includes(key)) {
       // remember old credentials:
-      for (let k of keys_triggering_data_move) {
+      for (const k of keys_triggering_data_move) {
         old_values[k] = this.user_cache[k];
       }
     }
@@ -1104,7 +1104,7 @@ export class DataService implements OnDestroy {
     }
     return this.store_user_data(key, this.user_cache, key);
   }
-  public delu(key:string) {
+  delu(key:string) {
     // delete a user data item
     if (!(key in this.user_cache)) {
       this.G.L.trace("DataService.delp cannot delete unknown key", key);
@@ -1117,12 +1117,12 @@ export class DataService implements OnDestroy {
   private pid_is_draft(pid): boolean {
     return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
-  public getp(pid:string, key:string): string {
+  getp(pid:string, key:string): string {
     // get poll data item
-    var value = null;
+    let value = null;
     if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       // draft polls' data is stored in user's database:
-      let ukey = get_poll_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
     } else {
       // other polls' data is stored in poll's own database:
@@ -1131,7 +1131,7 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
-  public setp(pid:string, key:string, value:string): boolean {
+  setp(pid:string, key:string, value:string): boolean {
     // set poll data item
     // register pid, oid if necessary:
     this._pids.add(pid);
@@ -1143,7 +1143,7 @@ export class DataService implements OnDestroy {
       if (!(pid in this._pid_oids)) {
         this._pid_oids[pid] = new Set();
       }
-      let keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
+      const keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
       this._pid_oids[pid].add(oid);
       this.G.L.trace("DataService.setp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
@@ -1160,7 +1160,7 @@ export class DataService implements OnDestroy {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
   }
-  public delp(pid:string, key:string) {
+  delp(pid:string, key:string) {
     // delete a poll data item
     // deregister pid, oid if necessary:
     if (key == "title") {
@@ -1169,13 +1169,13 @@ export class DataService implements OnDestroy {
     }
     if (key.startsWith('option.') && key.endsWith('name') && (pid in this._pid_oids)) {
       this.G.L.trace("DataService.delp option key", pid, key);
-      let keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
+      const keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.'));
       this._pid_oids[pid].delete(oid);
       this.G.L.trace("DataService.delp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
     if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
       // construct key for user db:
-      let ukey = get_poll_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + key;
       this.delu(ukey);
     } else {
       if (!(pid in this.poll_caches) || !(key in this.poll_caches[pid])) {
@@ -1187,28 +1187,28 @@ export class DataService implements OnDestroy {
     }      
   }
 
-  public getv(pid:string, key:string): string {
+  getv(pid:string, key:string): string {
     // get voter data item
-    var value = null;
+    let value = null;
     if (voter_keys_in_user_db.includes(key)) {
       // construct key for user db:
-      let ukey = get_poll_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
     } else if (this.pid_is_draft(pid)) {
       // draft polls' data is stored in user's database.
       // construct key for user db:
-      let ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
     } else {
       // other polls' data is stored in poll's own database.
       // construct key for poll db:
-      let pkey = this.get_voter_key_prefix(pid) + key;
+      const pkey = this.get_voter_key_prefix(pid) + key;
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][pkey] || '';
     }
     return value;
   }
-  public setv(pid:string, key:string, value:string): boolean {
+  setv(pid:string, key:string, value:string): boolean {
     if (this.getv(pid, key) == value) {
       return true;
     }
@@ -1217,7 +1217,7 @@ export class DataService implements OnDestroy {
       // set voter data item in user db.
       value = value || '';
       // construct key for user db:
-      let ukey = get_poll_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + key;
       this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
       this.user_cache[ukey] = value;
       return this.store_user_data(ukey, this.user_cache, ukey);
@@ -1229,7 +1229,7 @@ export class DataService implements OnDestroy {
   }
 
   get_example_docs(): Promise<any> {
-    let promise = this.remote_user_db.allDocs({
+    const promise = this.remote_user_db.allDocs({
       include_docs: true,
       startkey: 'examples:;',
       endkey: 'examples;',
@@ -1245,7 +1245,7 @@ export class DataService implements OnDestroy {
     // set poll data item in user db:
     value = value || '';
     // construct key for user db:
-    let ukey = get_poll_key_prefix(pid) + key;
+    const ukey = get_poll_key_prefix(pid) + key;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
@@ -1262,7 +1262,7 @@ export class DataService implements OnDestroy {
     // set voter data item in user db:
     value = value || '';
     // construct key for user db:
-    let ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+    const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
     this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
@@ -1271,7 +1271,7 @@ export class DataService implements OnDestroy {
     // set voter data item in poll db:
     value = value || '';
     // construct key for poll db:
-    let pkey = this.get_voter_key_prefix(pid) + key;
+    const pkey = this.get_voter_key_prefix(pid) + key;
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
@@ -1314,7 +1314,7 @@ export class DataService implements OnDestroy {
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);
     } else if (change.direction=='pull') {
-      for (let doc of change.change.docs) {
+      for (const doc of change.change.docs) {
         if (doc._deleted) {
           local_changes = this.handle_deleted_user_doc(doc);
         } else {
@@ -1335,7 +1335,7 @@ export class DataService implements OnDestroy {
     if (change.deleted){
       local_changes = this.handle_deleted_poll_doc(pid, change.doc);
     } else if (change.direction=='pull') {
-      for (let doc of change.change.docs) {
+      for (const doc of change.change.docs) {
         if (doc._deleted) {
           local_changes = this.handle_deleted_poll_doc(pid, doc);
         } else {
@@ -1349,9 +1349,9 @@ export class DataService implements OnDestroy {
     }
   }
   private handle_deleted_user_doc(doc): boolean {
-    var _id = doc._id;
+    const _id = doc._id;
     if (_id.includes(':')) {
-      var key = _id.slice(_id.indexOf(':') + 1);
+      const key = _id.slice(_id.indexOf(':') + 1);
       if (key in this.user_cache) {
         this.G.L.trace("DataService.handle_user_db_change deleting", key);
         delete this.user_cache[key];
@@ -1365,9 +1365,9 @@ export class DataService implements OnDestroy {
     if (!(pid in this.poll_caches)) {
       return false;
     }
-    var _id = doc._id;
+    const _id = doc._id;
     if (_id.includes(pid)) {
-      var key = _id.slice(_id.indexOf(pid) + pid.length + 1);
+      const key = _id.slice(_id.indexOf(pid) + pid.length + 1);
       if (key in this.poll_caches[pid]) {
         this.G.L.trace("DataService.handle_poll_db_change deleting", key);
         delete this.poll_caches[pid][key];
@@ -1379,16 +1379,16 @@ export class DataService implements OnDestroy {
 
   private after_changes() {
     this.G.L.entry("DataService.after_changes");
-    var lang = this.getu('language');
+    const lang = this.getu('language');
     this.translate.use(lang!=''?lang:environment.default_lang);
 
     // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs:
-    for (let pid of this._pids) {
+    for (const pid of this._pids) {
       this.G.L.info("DataService.after_changes processing poll", pid);
       if (!(pid in this.G.P.polls)) {
         // poll object does not exist yet, so create it:
         this.G.L.debug("DataService.after_changes creating poll object", pid);
-        let p = new Poll(this.G, pid);
+        const p = new Poll(this.G, pid);
       }
       if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
         // try syncing with remote db:
@@ -1421,17 +1421,17 @@ export class DataService implements OnDestroy {
 //    for (let pid in this._pid_oids) {
 //      this.G.L.trace("DataService.after_changes _pid_oids", pid, [...this._pid_oids[pid]]);
 //    }
-    for (let pid in this._pid_oids) {
-      let oids = this._pid_oids[pid];
+    for (const pid in this._pid_oids) {
+      const oids = this._pid_oids[pid];
 //      this.G.L.trace("DataService.after_changes processing options", pid, [...oids]);
-      for (let oid of oids) {
+      for (const oid of oids) {
         if (pid in this.G.P.polls) {
-          let p = this.G.P.polls[pid];
+          const p = this.G.P.polls[pid];
 //          this.G.L.trace("DataService.after_changes processing option", pid, oid);
           if (!p.oids.includes(oid)) {
             // option object does not exist yet, so create it:
             this.G.L.trace("DataService.after_changes creating Option object", oid);
-            let o = new Option(this.G, p, oid);
+            const o = new Option(this.G, p, oid);
           }  
         } else {
           this.G.L.error("DataService.after_changes found an option for an unknown poll", pid, oid);
@@ -1454,17 +1454,18 @@ export class DataService implements OnDestroy {
 
   private doc2user_cache(doc): [boolean, boolean] {
     // populate user cache with key, value from doc
-    let _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + ':';
+    const _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + ':';
     if (_id.startsWith(prefix)) {
 
-      let key = _id.slice(prefix.length, _id.length);
-      let value_changed = false, initializing_poll = false, cyphertext = doc['value'];
+      const key = _id.slice(prefix.length, _id.length);
+      let value_changed = false, initializing_poll = false;
+      const cyphertext = doc['value'];
       this.G.L.trace("DataService.doc2user_cache cyphertext is", cyphertext);
 
       if (cyphertext) {
 
         // extract value and store in cache if changed:
-        let value = decrypt(cyphertext, this.user_cache['password']);
+        const value = decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
@@ -1499,7 +1500,7 @@ export class DataService implements OnDestroy {
     if (key.startsWith('poll.') && key.endsWith('.state')) {
 
       // it's a poll's state entry, so check whether we know this poll:
-      let pid = key.slice('poll.'.length, key.indexOf('.state')), state = value;
+      const pid = key.slice('poll.'.length, key.indexOf('.state')), state = value;
       if (!this._pids.has(pid)) {
         this.G.L.trace("DataService.check_whether_poll_or_option found new poll", pid);
         if (state == 'draft') {
@@ -1513,7 +1514,7 @@ export class DataService implements OnDestroy {
     } else if (key.startsWith('poll.') && key.includes('.option.') && key.endsWith('.name')) {
 
       // it's an option's oid entry, so check whether we know this option:
-      let pid = key.slice('poll.'.length, key.indexOf('.option.')), 
+      const pid = key.slice('poll.'.length, key.indexOf('.option.')), 
           oid = key.slice(key.indexOf('.option.') + '.option.'.length, key.indexOf('.name'));
       if (!(pid in this._pid_oids)) {
         this._pid_oids[pid] = new Set();
@@ -1529,7 +1530,7 @@ export class DataService implements OnDestroy {
 
   private doc2poll_cache(pid, doc): boolean {
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
-    let _id = doc._id, 
+    const _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
     var key, value_changed;
@@ -1537,9 +1538,9 @@ export class DataService implements OnDestroy {
     if (_id.includes('due_and_state')) {
       // it's the combined due and state doc, so extract both:
 
-      let prefix = get_poll_key_prefix(pid);
-      let due = decrypt(doc['due'], this.user_cache[prefix + 'password']);
-      let state = decrypt(doc['state'], this.user_cache[prefix + 'password']);
+      const prefix = get_poll_key_prefix(pid);
+      const due = decrypt(doc['due'], this.user_cache[prefix + 'password']);
+      const state = decrypt(doc['state'], this.user_cache[prefix + 'password']);
       value_changed = false;
 
       // store in cache if changed:
@@ -1562,13 +1563,13 @@ export class DataService implements OnDestroy {
     } else {
 
       value_changed = false;
-      let cyphertext = doc['value'];
+      const cyphertext = doc['value'];
       this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
 
       if (cyphertext) {
 
         // extract value:
-        let value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+        const value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
 
         // extract key depending on doc type:
         if (_id.startsWith(poll_doc_prefix)) {
@@ -1578,7 +1579,7 @@ export class DataService implements OnDestroy {
           if (key.startsWith('option.') && key.endsWith('.name')) {
 
             // it's an option's oid entry, so check whether we know this option:
-            let keyend = key.slice('option.'.length), 
+            const keyend = key.slice('option.'.length), 
                 oid = keyend.slice(0, keyend.indexOf('.'));
             if (!(pid in this._pid_oids)) {
               this._pid_oids[pid] = new Set();
@@ -1595,12 +1596,12 @@ export class DataService implements OnDestroy {
           // it's a voter doc.
           key = _id.slice(voter_doc_prefix.length, _id.length);
 
-          let keyfromvid = key.slice('voter.'.length),
+          const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
               subkey = keyfromvid.slice(vid.length + 1);
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
           if (subkey.startsWith("rating.")) {
-            let oid = subkey.slice("rating.".length), r = Number.parseInt(value);
+            const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
             this.G.P.update_own_rating(pid, vid, oid, r);
           }
 
@@ -1645,14 +1646,14 @@ export class DataService implements OnDestroy {
 
   private store_all_userdata() {
     // stores user_cache in suitable DBs. 
-    for (let [ukey, value] of Object.entries(this.user_cache)) {
+    for (const [ukey, value] of Object.entries(this.user_cache)) {
       this.store_user_data(ukey, this.user_cache, ukey);
     }
   }
 
   private store_all_polldata(pid:string) {
     // stores poll_cache[pid] in suitable DBs. 
-    for (let [key, value] of Object.entries(this.poll_caches[pid])) {
+    for (const [key, value] of Object.entries(this.poll_caches[pid])) {
       this.store_poll_data(pid, key, this.poll_caches[pid], key);
     }
   }
@@ -1670,7 +1671,7 @@ export class DataService implements OnDestroy {
       .then(doc => {
         // key existed in db, so update:
 
-        let value = dict[dict_key];
+        const value = dict[dict_key];
         if (doc.value != value) {
           doc.value = value;
           this.local_only_user_DB.put(doc)
@@ -1688,7 +1689,7 @@ export class DataService implements OnDestroy {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        let value = dict[dict_key];
+        const value = dict[dict_key];
         doc = {_id: key, value: value};
         this.local_only_user_DB.put(doc)
         .then(response => {
@@ -1705,14 +1706,14 @@ export class DataService implements OnDestroy {
     } else {
 
       // store encrypted with suitable owner prefix in doc id:
-      let email_and_pw_hash = this.email_and_pw_hash();
+      const email_and_pw_hash = this.email_and_pw_hash();
       if (!email_and_pw_hash) {
         this.G.L.warn("DataService.store_user_data couldn't set "+key+" since email or password are missing!");
 
         // RETURN:
         return false;
       }
-      let _id = user_doc_id_prefix + email_and_pw_hash + ':' + key, 
+      const _id = user_doc_id_prefix + email_and_pw_hash + ':' + key, 
           user_pw = this.user_cache['password'];
 
       // ASYNC:
@@ -1720,7 +1721,7 @@ export class DataService implements OnDestroy {
       .then(doc => {
 
         // key existed in db, so update:
-        let value = dict[dict_key], enc_value = encrypt(value, user_pw);
+        const value = dict[dict_key], enc_value = encrypt(value, user_pw);
         if (decrypt(doc.value, user_pw) != value) {
           doc.value = enc_value;
           this.local_synced_user_db.put(doc)
@@ -1738,7 +1739,7 @@ export class DataService implements OnDestroy {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        let value = dict[dict_key], enc_value = encrypt(value, user_pw);
+        const value = dict[dict_key], enc_value = encrypt(value, user_pw);
         doc = {
           '_id': _id, 
           'value': enc_value,
@@ -1778,22 +1779,22 @@ export class DataService implements OnDestroy {
         _id = poll_doc_id_prefix + pid + ':' + key;
         doc_value_key = 'value';
       }
-      let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+      const poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password is missing!");
 
         // RETURN:
         return false;
       }
-      let db = this.get_local_poll_db(pid);
+      const db = this.get_local_poll_db(pid);
 
       // ASYNC:
       db.get(_id)
       .then(doc => {
 
         // key existed in poll db, check whether update is allowed.
-        let value = dict[dict_key];
-        let enc_value = encrypt(value, poll_pw);
+        const value = dict[dict_key];
+        const enc_value = encrypt(value, poll_pw);
           if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", key, value);
@@ -1822,8 +1823,8 @@ export class DataService implements OnDestroy {
         doc = {
           '_id': _id,
         };
-        let value = dict[dict_key];
-        let enc_value = encrypt(value, poll_pw);
+        const value = dict[dict_key];
+        const enc_value = encrypt(value, poll_pw);
         doc[doc_value_key] = enc_value;
         db.put(doc)
         .then(response => {
@@ -1844,7 +1845,7 @@ export class DataService implements OnDestroy {
       // it's a voter data item.
 
       // check which voter's data this is:
-      let vid_prefix = key.slice(0, key.indexOf(':')),
+      const vid_prefix = key.slice(0, key.indexOf(':')),
           vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
@@ -1854,7 +1855,7 @@ export class DataService implements OnDestroy {
           return false;
       }
 
-      let _id = poll_doc_id_prefix + pid + '.' + key,
+      const _id = poll_doc_id_prefix + pid + '.' + key,
           poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='')||(!poll_pw) || (vid=='')||(!vid)) {
         this.G.L.warn("DataService.store_poll_data couldn't set voter data "+key+" in local_poll_DB since poll password is missing!");
@@ -1865,9 +1866,9 @@ export class DataService implements OnDestroy {
 
       // ASYNC:
       // try storing encrypted and with proper prefix:
-      let value = dict[dict_key];
-      let enc_value = encrypt(value, poll_pw);
-      let db = this.get_local_poll_db(pid);
+      const value = dict[dict_key];
+      const enc_value = encrypt(value, poll_pw);
+      const db = this.get_local_poll_db(pid);
       db.get(_id)
       .then(doc => {
 
@@ -1889,8 +1890,8 @@ export class DataService implements OnDestroy {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        let value = dict[dict_key];
-        let enc_value = encrypt(value, poll_pw);
+        const value = dict[dict_key];
+        const enc_value = encrypt(value, poll_pw);
           doc = {
           '_id': _id,
           'value': enc_value,
@@ -1923,7 +1924,7 @@ export class DataService implements OnDestroy {
     } else {
       db = this.local_synced_user_db;
       // compose id:
-      let email_and_pw_hash = this.email_and_pw_hash();
+      const email_and_pw_hash = this.email_and_pw_hash();
       if (!email_and_pw_hash) {
         this.G.L.warn("DataService.delete_user_data couldn't delete "+key+" since email or password are missing!");
 
@@ -1962,7 +1963,7 @@ export class DataService implements OnDestroy {
     // deletes a key from a poll database. 
     this.G.L.trace("DataService.delete_poll_data", pid, key);
 
-    let poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+    const poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
     var _id;
 
     // see what type of entry it is:
@@ -1988,7 +1989,7 @@ export class DataService implements OnDestroy {
       // it's a voter data item.
 
       // check which voter's data this is:
-      let vid_prefix = key.slice(0, key.indexOf(':')),
+      const vid_prefix = key.slice(0, key.indexOf(':')),
           vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
@@ -2007,7 +2008,7 @@ export class DataService implements OnDestroy {
       }
     }
 
-    let db = this.get_local_poll_db(pid);
+    const db = this.get_local_poll_db(pid);
 
     // ASYNC:
     db.get(_id)
@@ -2036,9 +2037,9 @@ export class DataService implements OnDestroy {
   }
 
   private email_and_pw_hash(): string {
-    let email = this.user_cache['email'], pw = this.user_cache['password'];
+    const email = this.user_cache['email'], pw = this.user_cache['password'];
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
-    let hash = myhash(email + ':' + pw);
+    const hash = myhash(email + ':' + pw);
 //    this.G.L.trace("email_and_pw_hash:", email, pw, hash);
     return hash;
   }

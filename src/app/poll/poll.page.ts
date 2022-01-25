@@ -24,31 +24,30 @@ export class PollPage implements OnInit {
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
-  public Array = Array;
+  Array = Array;
 
-//  public opos = {};
-  public oidsorted: string[] = [];
-  public sortingcounter: number = 0;
+  oidsorted: string[] = [];
+  sortingcounter: number = 0;
 
-  public approved = {}; // whether option is approved by me
-  public votedfor = null; // oid my prob. share goes to
-  public expanded = {};
+  approved = {}; // whether option is approved by me
+  votedfor = null; // oid my prob. share goes to
+  expanded = {};
 
   private pieradius = 20;
   private two_pi = 2*Math.PI; 
   slidercolor = {};
 
-  public refresh_paused = false;
-  public needs_refresh = false;
+  refresh_paused = false;
+  needs_refresh = false;
 
-  public scroll_position = 0;
-  public slidersAllowEvents = true; // TODO! false;
-  public rate_yourself_toggle: Record<string, boolean> = {};
-  public n_delegated = 0;
+  scroll_position = 0;
+  slidersAllowEvents = true; // TODO! false;
+  rate_yourself_toggle: Record<string, boolean> = {};
+  n_delegated = 0;
 
   // LIFECYCLE:
 
-  public ready = false;  
+  ready = false;  
 
   constructor(
       private router: Router,

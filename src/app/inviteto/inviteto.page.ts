@@ -30,7 +30,7 @@ export class InvitetoPage implements OnInit {
 
   // LIFECYCLE:
 
-  public ready = false;  
+  ready = false;  
 
   constructor(
     public router: Router,

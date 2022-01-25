@@ -16,34 +16,30 @@ import { PollService } from './poll.service';
 })
 export class GlobalService implements OnDestroy {
 
-  public L: Logger;
+  L: Logger;
 
   // constants or session-specific data:
 
-  public _urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
+  _urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
   // the following does not work: 
-  public urlRegex = /^(?:(http|ftp)(s)?:\/\/)?(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,6}\.?|[a-zA-Z0-9-]{2,}\.?)|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[?[a-fA-F0-9]*:[a-fA-F0-9:]+\]?)(?::\d+)?(?:\/?|[\/?]\S+)$/; 
+  urlRegex = /^(?:(http|ftp)(s)?:\/\/)?(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,6}\.?|[a-zA-Z0-9-]{2,}\.?)|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[?[a-fA-F0-9]*:[a-fA-F0-9:]+\]?)(?::\d+)?(?:\/?|[\/?]\S+)$/; 
   //               1          1       1  2          3                         3   2 2                                2                                                                        11      1 1              1                              
 
   static dologs = true; // set to false in production
 
-  public dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
-  public history_interval = 1000 * 60; // * 60; hourly
+  dateformatoptions = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }; 
+  history_interval = 1000 * 60; // * 60; hourly
 
   // for communicating with couchdb JSON database:
-  public couchdburl = "/cloudant"; // FIXME: make sure either proxy works on mobile too, or url is exchanged with true url then
-  public cloudantdburl = "https://08d90024-c549-4940-86ea-1fb7f7d76dc6-bluemix.cloudantnosqldb.appdomain.cloud/maxparc";
-  public dbheaders: HttpHeaders = null;
+  dbheaders: HttpHeaders = null;
 
-  public polls: {} = {}; // dict of Polls by pid
-  public openpoll =  null; //: Poll = null; // currently open poll
+  polls: {} = {}; // dict of Polls by pid
   
   // data to be persisted in storage:
-  public state_attributes = ["openpid", "username", "cloudant_up", "pollstates"];
-  public openpid: string = null;
-  public username: string = ''; // overall username
-  public cloudant_up: string; // cloudant credentials
-  public pollstates: {} = {};
+  state_attributes = ["openpid", "username", "cloudant_up", "pollstates"];
+  openpid: string = null;
+  username: string = ''; // overall username
+  pollstates: {} = {};
 
   constructor(
       loggingService: LoggingService,
@@ -99,7 +95,7 @@ export class GlobalService implements OnDestroy {
     document.body.removeChild(a);
   }
 
-  public demodata = {
+  demodata = {
     'system' : [
       ["Form of government",
       "Imagine we choose a form of government for the next century...",
@@ -126,15 +122,15 @@ export class Simulation {
 
   // TODO: dynamics!
 
-  public p: Poll;
+  p: Poll;
 
   // policy space model parameters:
-  public dim: number = 2;
-  public sigma: number = 1; // dispersion of options (1 = like voters)
+  dim: number = 2;
+  sigma: number = 1; // dispersion of options (1 = like voters)
 
   // utility data:
-  public vcoords: {} = {}; // dict of voter coordinate arrays by vid
-  public ocoords: {} = {}; // dict of option coordinate arrays by oid
+  vcoords: {} = {}; // dict of voter coordinate arrays by vid
+  ocoords: {} = {}; // dict of option coordinate arrays by oid
 
   constructor(p:Poll) {
     this.p = p; 

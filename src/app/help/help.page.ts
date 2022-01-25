@@ -8,12 +8,12 @@ import { TranslateService } from '@ngx-translate/core';
 })
 export class HelpPage implements OnInit {
 
-  public e_short = true;
-  public e_long = false;
-  public e_faq = false;
-  public e_q = [];
+  e_short = true;
+  e_long = false;
+  e_faq = false;
+  e_q = [];
 
-  public faqs = [
+  faqs = [
 ["How to pronounce 'vodle'?", `
 Like 'yodel'! (not like 'model' or 'noodle').
 `],

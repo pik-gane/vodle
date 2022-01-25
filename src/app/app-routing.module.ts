@@ -32,10 +32,6 @@ const routes: Routes = [
     loadChildren: () => import('./help/help.module').then( m => m.HelpPageModule)
   },
   {
-    path: 'home',
-    loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
-  },
-  {
     path: 'inviteto/:pid',
     loadChildren: () => import('./inviteto/inviteto.module').then( m => m.InvitetoPageModule)
   },
@@ -62,10 +58,6 @@ const routes: Routes = [
   {
     path: 'previewpoll/:pid',
     loadChildren: () => import('./previewpoll/previewpoll.module').then( m => m.PreviewpollPageModule)
-  },
-  {
-    path: 'sharepoll',
-    loadChildren: () => import('./sharepoll/sharepoll.module').then( m => m.SharepollPageModule)
   },
   {
     path: 'login',

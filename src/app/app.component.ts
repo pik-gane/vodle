@@ -7,7 +7,7 @@ import { TranslateService } from '@ngx-translate/core';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  public appPages = [
+  appPages = [
     {
       title: 'mypolls.-page-title',
       url: '/mypolls',

@@ -20,7 +20,7 @@ export class JoinpollPage implements OnInit {
 
   // LIFECYCLE:
 
-  public ready = false;  
+  ready = false;  
 
   constructor(
     public router: Router,
