@@ -5,7 +5,7 @@
 	"bundledWebRuntime": false,
 	"plugins": {
 		"LocalNotifications": {
-			"smallIcon": "assets/icon/favicon.ico",
+			"smallIcon": "icon",
 			"iconColor": "#488AFF",
 			"sound": "beep.wav"
 		}

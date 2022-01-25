@@ -94,6 +94,12 @@ export class SettingsPage implements OnInit {
     this.fill_form();
   }
 
+  ionViewDidLeave() {
+    this.G.L.entry("SettingsPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("SettingsPage.ionViewDidLeave");
+  }
+
   // OTHER HOOKS:
   
   // for DataService:

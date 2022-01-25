@@ -132,6 +132,12 @@ export class LoginPage implements OnInit {
     this.ready = true;
   }
 
+  ionViewDidLeave() {
+    this.G.L.entry("LoginPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("LoginPage.ionViewDidLeave");
+  }
+
   // OTHER HOOKS:
   
   // for DataService:

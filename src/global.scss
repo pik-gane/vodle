@@ -187,11 +187,7 @@ ion-icon.poll-type-list {
 }
 
 // make sure link color is the same as surrounding text:
-a, a:link, a:visited, a:hover, a:active {
-    color: inherit !important;
-}
-
-.externallink {
+a, a:link, a:visited, a:hover, a:active, .externallink {
     cursor: pointer;
     text-decoration-line: underline;
 //    text-decoration-color: grey;

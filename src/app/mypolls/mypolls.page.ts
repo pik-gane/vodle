@@ -51,8 +51,13 @@ export class MypollsPage implements OnInit {
 
   ionViewWillLeave() {
     this.G.L.entry("MypollsPage.ionViewWillLeave");
-    this.G.D.save_state();
     this.G.L.exit("MypollsPage.ionViewWillLeave");
+  }
+
+  ionViewDidLeave() {
+    this.G.L.entry("MypollsPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("MypollsPage.ionViewDidLeave");
   }
 
   // user actions:

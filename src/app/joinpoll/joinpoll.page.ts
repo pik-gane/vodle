@@ -79,6 +79,12 @@ export class JoinpollPage implements OnInit {
     this.G.L.exit("JoinPage.onDataReady");
   }
 
+  ionViewDidLeave() {
+    this.G.L.entry("JoinPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("JoinPage.ionViewDidLeave");
+  }
+
   go_button_clicked() {
     // TODO!
   }

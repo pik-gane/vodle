@@ -208,7 +208,16 @@
     "poll": {
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",
-        "sorting": "Optionen werden neu sortiert..."
+        "sorting": "Optionen werden neu sortiert...",
+
+        "delegate-button": "Delegieren",
+        "closes": "Schließt",
+
+        "delegate-header": "Delegiere an eine:n andere:n Teilnehmer:in",
+        "delegate-intro1": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Bewertungen werden auch als Deine Bewertungen verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Optionen weiterhin selbst bewerten.",
+        "delegate-intro2": "Bitte gib die Email-Adresse der/des andere:n Teilnehmer:in an, an die/den Du Deine Stimme delegieren möchtest:",
+        "delegate-email": "Email der/des Delegierten",
+        "request-delegation": "Delegation anfragen"
     },
 
     "previewpoll": {
@@ -217,7 +226,7 @@
         "caution2": "Die Teilnehmer:innen können bis zur festgelegten Schlusszeit abstimmen und Optionen hinzufügen, aber keine löschen. Dann wird die Abstimmung automatisch geschlossen. Einmal gestartet, kannst Du sie nicht mehr verkürzen oder verlängern.",
         "closes": "Schließt",
         "db-label": "Datenspeicherung",
-        "publish": "Abstimmung jetzt starten",
+        "publish": "Abstimmung starten",
         "type-label": "In dieser Abstimmung wird die Gruppe"
     },
 

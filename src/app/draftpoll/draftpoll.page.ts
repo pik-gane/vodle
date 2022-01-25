@@ -281,11 +281,15 @@ export class DraftpollPage implements OnInit {
         this.G.L.warn("DraftpollPage.ionViewWillLeave localNotifications.schedule failed:", err);
       });
     }
+    this.G.L.trace("DraftpollPage.ionViewWillLeave D.pids:", [...this.G.D.pids]);
     this.G.L.exit("DraftpollPage.ionViewWillLeave");
   }
 
   ionViewDidLeave() {
+    this.G.L.entry("DraftpollPage.ionViewDidLeave");
+    this.G.D.save_state();
     this.ready = false; // so that when returning, onDataReady will again be triggered
+    this.G.L.exit("DraftpollPage.ionViewDidLeave");
   }
 
   // OTHER HOOKS:

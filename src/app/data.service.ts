@@ -212,6 +212,11 @@ export class DataService implements OnDestroy {
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
 
   public ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
+  public eff_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
+  public delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of delegation data, not stored in database
+  public inv_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse delegation data, not stored in database
+  public eff_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
+  public inv_eff_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
   public tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
@@ -255,6 +260,7 @@ export class DataService implements OnDestroy {
 
   save_state() {
     this.G.L.entry("DataService.save_state");
+    this.G.L.trace("DataService.save_state _pids", [...this._pids]);
     this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
     for (let pid in this._pid_oids) {
       this.G.L.trace("DataService.save_state _pid_oids", pid, [...this._pid_oids[pid]]);
@@ -331,6 +337,11 @@ export class DataService implements OnDestroy {
     this.poll_caches = {};
     this.tally_caches = {};
     this.ratings_map_caches = {};
+    this.eff_ratings_map_caches = {};
+    this.delegation_map_caches = {};
+    this.inv_delegation_map_caches = {};
+    this.eff_delegation_map_caches = {};
+    this.inv_eff_delegation_map_caches = {};
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
@@ -351,6 +362,7 @@ export class DataService implements OnDestroy {
       if (('_pids' in state) && ('poll_caches' in state)) {
         this.restored_poll_caches = true;
       }
+      this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
       this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
       for (let pid in this._pid_oids) {
         this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid  ]]);
@@ -598,15 +610,17 @@ export class DataService implements OnDestroy {
     } 
     return this.local_poll_dbs[pid];
   }
+
   private ensure_local_poll_data(pid:string) {
     // start fetching poll data from local poll db:
-    this.G.L.entry("DataService.start_reading_local_poll_db", pid);
+    this.G.L.entry("DataService.ensure_local_poll_data", pid);
     this._ready = false;
     this.uninitialized_pids.add(pid);
     this.ensure_poll_cache(pid);
     let lpdb = this.get_local_poll_db(pid);
 
     if ("state" in this.poll_caches[pid]) {
+      this.G.L.trace("DataService.ensure_local_poll_data nothing to do", pid);
       // poll cache was restored from storage.
       this._pids.add(pid);
 
@@ -623,20 +637,21 @@ export class DataService implements OnDestroy {
 
       }).catch(err => {
 
-        this.G.L.error("DataService.start_reading_local_poll_db could not fetch all docs", pid, err);
+        this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
 
       }).finally(() => {
 
         this.uninitialized_pids.delete(pid);
-        this.G.L.trace("DataService.start_reading_local_poll_db no. of still uninitialized pids:", this.uninitialized_pids.size);
+        this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
         if (this.uninitialized_pids.size == 0) {
           this.local_docs2cache_finished();
         }  
 
       });
     }
-    this.G.L.exit("DataService.start_reading_local_poll_db", pid);
+    this.G.L.exit("DataService.ensure_local_poll_data", pid);
   }
+
   private local_poll_docs2cache(pid:string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache", pid);
     // decrypt and process all synced docs:
@@ -646,6 +661,7 @@ export class DataService implements OnDestroy {
     this._pids.add(pid);
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
+
   public connect_to_remote_poll_db(pid:string) {
     // called at poll initialization
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
@@ -699,6 +715,8 @@ export class DataService implements OnDestroy {
   // HOOKS FOR OTHER SERVICES:
 
   public change_poll_state(p:Poll, new_state:string) {
+    this._pids.add(p.pid);
+
     // called by PollService when changing state
     let pid = p.pid, pd = {}, prefix = get_poll_key_prefix(pid);
     this.G.L.entry("DataService.change_poll_state", pid, new_state);
@@ -1506,7 +1524,7 @@ export class DataService implements OnDestroy {
   }
 
   private doc2poll_cache(pid, doc): boolean {
-    this.G.L.entry("DataService.doc2poll_cache", pid);
+    this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
     let _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.';
@@ -1553,10 +1571,11 @@ export class DataService implements OnDestroy {
 
           // it's a non-voter poll doc.
           key = _id.slice(poll_doc_prefix.length, _id.length);
-          if (key.startsWith('option.') && key.endsWith('.oid')) {
+          if (key.startsWith('option.') && key.endsWith('.name')) {
 
             // it's an option's oid entry, so check whether we know this option:
-            let oid = value;
+            let keyend = key.slice('option.'.length), 
+                oid = keyend.slice(0, keyend.indexOf('.'));
             if (!(pid in this._pid_oids)) {
               this._pid_oids[pid] = new Set();
             }

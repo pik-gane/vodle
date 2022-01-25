@@ -72,6 +72,12 @@ export class PreviewpollPage implements OnInit {
     this.ready = true;
   }
 
+  ionViewDidLeave() {
+    this.G.L.entry("PreviewpollPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("PreviewpollPage.ionViewDidLeave");
+  }
+
   // HOOKS:
 
   publish_button_clicked() {

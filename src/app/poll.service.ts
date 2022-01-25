@@ -126,9 +126,10 @@ export class PollService {
   }
 
   update_rating(pid:string, vid:string, oid:string, r:number) {
-    let rp = this.G.D.ratings_map_caches[pid];
+    // TODO: this is the version with no delegation possible. change this so that here the pre-del. rating is changed and all dependent post-del. ratings are updated.
+    let rp = this.G.D.eff_ratings_map_caches[pid];
     if (!rp) {
-      this.G.D.ratings_map_caches[pid] = rp = new Map();
+      this.G.D.eff_ratings_map_caches[pid] = rp = new Map();
     }
     let rpo = rp.get(oid);
     if (!rpo) {
@@ -162,7 +163,7 @@ export class Poll {
       // generate a new draft poll
       pid = this.G.P.generate_pid();
       this.state = 'draft';
-      this.G.D.setp(pid, 'pid', pid);
+//      this.G.D.setp(pid, 'pid', pid);
     } else {
       // copy state from db into cache:
       this._state = this.G.D.getp(pid, 'state') as poll_state_t;
@@ -172,7 +173,7 @@ export class Poll {
     this.G.P.polls[pid] = this;
     if (this._pid in this.G.D.tally_caches) { 
       this.T = this.G.D.tally_caches[this._pid] as tally_cache;
-    } else {
+    } else if (!(this._state in [null, '', 'draft'])) {
       this.tally_all();
     }
     G.L.exit("Poll.constructor", pid);
@@ -266,9 +267,10 @@ export class Poll {
     var pd = null;
     if (old_state==new_state) return;
     if ({
+          null: ['draft'],
           '': ['draft'], 
-          'draft':['running'], 
-          'running':['closed']
+          'draft': ['running'], 
+          'running': ['closed']
         }[old_state].includes(new_state)) {
         this.G.D.change_poll_state(this, new_state);
         this._state = new_state;
@@ -475,7 +477,7 @@ export class Poll {
   - all Map type variables are named ..._map to make this unmistakable.
   */
 
-  // for each oid and vid, the rating (default: 0):
+  // for each oid and vid, the base (pre-delefation) rating (default: 0):
   _ratings_map: Map<string, Map<string, number>>;
   get ratings_map(): Map<string, Map<string, number>> {
     if (!this._ratings_map) {
@@ -483,11 +485,163 @@ export class Poll {
         this._ratings_map = this.G.D.ratings_map_caches[this._pid];
       } else {
         this.G.D.ratings_map_caches[this._pid] = this._ratings_map = new Map();
+        for (let oid of this.oids) {
+          this._ratings_map.set(oid, new Map());
+        }
+        // TODO: copy my own ratings into it?
       }  
     }
     return this._ratings_map;
   }
+  // for each oid and vid, the (direct) delegate's vid (default: null, meaning no delegation):
+  _delegation_map: Map<string, Map<string, string>>;
+  get delegation_map(): Map<string, Map<string, string>> {
+    if (!this._delegation_map) {
+      if (this._pid in this.G.D.delegation_map_caches) {
+        this._delegation_map = this.G.D.delegation_map_caches[this._pid];
+      } else {
+        this.G.D.delegation_map_caches[this._pid] = this._delegation_map = new Map();
+        for (let oid of this.oids) {
+          this._delegation_map.set(oid, new Map());
+        }
+      }  
+    }
+    return this._delegation_map;
+  }
+  // for each oid and vid, the set of vids who directly delegated to this vid (default: null, meaning no delegation):
+  _inv_delegation_map: Map<string, Map<string, Set<string>>>;
+  get inv_delegation_map(): Map<string, Map<string, Set<string>>> {
+    if (!this._inv_delegation_map) {
+      if (this._pid in this.G.D.inv_delegation_map_caches) {
+        this._inv_delegation_map = this.G.D.inv_delegation_map_caches[this._pid];
+      } else {
+        this.G.D.inv_delegation_map_caches[this._pid] = this._inv_delegation_map = new Map();
+        for (let oid of this.oids) {
+          this._inv_delegation_map.set(oid, new Map());
+        }
+      }  
+    }
+    return this._inv_delegation_map;
+  }
+  // for each oid and vid, the effective (indirect) delegate's vid (default: null, meaning no delegation):
+  _eff_delegation_map: Map<string, Map<string, string>>;
+  get eff_delegation_map(): Map<string, Map<string, string>> {
+    if (!this._delegation_map) {
+      if (this._pid in this.G.D.eff_delegation_map_caches) {
+        this._eff_delegation_map = this.G.D.eff_delegation_map_caches[this._pid];
+      } else {
+        this.G.D.eff_delegation_map_caches[this._pid] = this._eff_delegation_map = new Map();
+        for (let oid of this.oids) {
+          this._eff_delegation_map.set(oid, new Map());
+        }
+      }  
+    }
+    return this._eff_delegation_map;
+  }
+  // for each oid and vid, the set of vids who effectively delegated to this vid (default: null, meaning no delegation):
+  _inv_eff_delegation_map: Map<string, Map<string, Set<string>>>;
+  get inv_eff_delegation_map(): Map<string, Map<string, Set<string>>> {
+    if (!this._inv_eff_delegation_map) {
+      if (this._pid in this.G.D.inv_eff_delegation_map_caches) {
+        this._inv_eff_delegation_map = this.G.D.inv_eff_delegation_map_caches[this._pid];
+      } else {
+        this.G.D.inv_eff_delegation_map_caches[this._pid] = this._inv_eff_delegation_map = new Map();
+        for (let oid of this.oids) {
+          this._inv_eff_delegation_map.set(oid, new Map());
+        }
+      }  
+    }
+    return this._inv_eff_delegation_map;
+  }
+  // for each oid and vid, the effective (post-delegation) rating (default: 0):
+  _eff_ratings_map: Map<string, Map<string, number>>;
+  get eff_ratings_map(): Map<string, Map<string, number>> {
+    if (!this._eff_ratings_map) {
+      if (this._pid in this.G.D.eff_ratings_map_caches) {
+        this._eff_ratings_map = this.G.D.eff_ratings_map_caches[this._pid];
+      } else {
+        this.G.D.eff_ratings_map_caches[this._pid] = this._eff_ratings_map = new Map();
+        for (let oid of this.oids) {
+          this._eff_ratings_map.set(oid, new Map());
+        }
+        // TODO: copy my own ratings into it?
+      }  
+    }
+    return this._eff_ratings_map;
+  }
+
   T: tally_cache;
+
+  update_rating(vid:string, oid:string, value:number) {
+    // Called whenever a rating is updated.
+    // Updates the affected effective ratings based on delegation data.
+    // TODO!
+    // if changed, update rating:
+    if (!this.ratings_map.has(oid)) {
+      this.ratings_map.set(oid, new Map());
+      this.G.L.trace("Poll.update_rating first rating for option", oid);
+    }
+    let rs_map = this.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
+    if (value != old_value) {
+      // store new value:
+      rs_map.set(vid, value);
+      this.update_eff_rating(vid, oid, value);
+      // check whether vid has not delegated:
+      if (!this.delegation_map.get(oid).has(vid)) {
+        // vid has not delegated further, so
+        // update all dependent voters' effective ratings:
+        const eff_rs = this.eff_ratings_map.get(oid); 
+        eff_rs.set(vid, value);
+        const vid2s = this.inv_eff_delegation_map.get(oid).get(vid);
+        if (vid2s) {
+          for (let vid2 of vid2s) {
+            // vid2 effectively delegates their rating of oid to vid,
+            // hence we store vid's new rating of oid as vid2's effective rating of oid:
+            eff_rs.set(vid2, value);
+            this.update_eff_rating(vid2, oid, value);
+          }
+        }
+      }
+    }
+  }
+
+  add_delegation(vid:string, oid:string, delegate_vid:string) {
+    // Called whenever a delegation is added
+    let d_map = this.delegation_map.get(oid), 
+        eff_d_map = this.eff_delegation_map.get(oid), 
+        eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
+    // make sure no delegation exists yet and delegation would not create a cycle:
+    if (d_map.has(vid)) {
+      this.G.L.error("PollService.add_delegation when delegation already exists", vid, oid, delegate_vid, d_map.get(vid));
+    } else if (eff_d_vid == vid) { 
+      this.G.L.error("PollService.add_delegation when this would create a cycle", vid, oid, delegate_vid);
+    } else {
+      // register direct delegation:
+      d_map.set(vid, delegate_vid);
+      // register inverse:
+      let inv_d_map = this.inv_delegation_map.get(oid);
+      if (!inv_d_map.has(delegate_vid)) {
+        inv_d_map.set(delegate_vid, new Set());
+      }
+      inv_d_map.get(delegate_vid).add(vid);
+      // update effective delegations and inverses: 
+      const inv_eff_d_map = this.inv_eff_delegation_map.get(oid);
+      if (!inv_eff_d_map.has(eff_d_vid)) {
+        inv_eff_d_map.set(eff_d_vid, new Set());
+      }
+      const deps_vid = inv_eff_d_map.get(vid), 
+            deps_eff_d_vid = inv_eff_d_map.get(eff_d_vid);
+      // register effective delegation and inverse of vid:
+      eff_d_map.set(vid, eff_d_vid);
+      deps_eff_d_vid.add(vid);
+      // update effective delegation of dependent vids:
+      if (deps_vid) {
+        for (let vid2 of deps_vid) {
+          // TODO!
+        }  
+      }
+    }
+  }
 
   tally_all() {
     // Called after initialization.
@@ -511,7 +665,7 @@ export class Poll {
       shares_map: new Map()
     }
     // extract voters and total_ratings:
-    for (let [oid, rs_map] of this.ratings_map) {
+    for (let [oid, rs_map] of this.eff_ratings_map) {
 //      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
       let t = 0;
       for (let [vid, r] of rs_map) {
@@ -527,7 +681,7 @@ export class Poll {
     let score_factor = this.T.n_voters * 128;
 //    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
     for (let oid of this.oids) {
-      let rs_map = this.ratings_map.get(oid);
+      let rs_map = this.eff_ratings_map.get(oid);
 //      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
       if (rs_map) {
         let rsasc = this.update_ratings_ascending(oid, rs_map);
@@ -560,8 +714,8 @@ export class Poll {
     this.G.L.exit("Poll.tally_all", this._pid);
   }
 
-  update_rating(vid:string, oid:string, value:number) {
-    // Called whenever a rating is updated.
+  update_eff_rating(vid:string, oid:string, value:number) {
+    // Called whenever an effective rating is updated.
     // Updates a rating and all depending quantities up to the final shares.
     // Tries to do this as efficiently as possible.
 
@@ -571,20 +725,20 @@ export class Poll {
       this.T.allvids_set.add(vid);
       this.T.n_voters = this.T.allvids_set.size;
       n_changed = true;
-      this.G.L.trace("Poll.update_rating n_changed, first rating of voter", vid);
+      this.G.L.trace("Poll.update_rating n_changed, first eff. rating of voter", vid);
     }
     // if changed, update rating:
-    if (!this.ratings_map.has(oid)) {
-      this.ratings_map.set(oid, new Map());
-      this.G.L.trace("Poll.update_rating first rating for option", oid);
+    if (!this.eff_ratings_map.has(oid)) {
+      this.eff_ratings_map.set(oid, new Map());
+      this.G.L.trace("Poll.update_rating first eff. rating for option", oid);
     }
-    let rs_map = this.ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
+    let eff_rs_map = this.eff_ratings_map.get(oid), old_value = eff_rs_map.get(vid) || 0;
     if (value != old_value) {
       this.G.L.trace("Poll.update_rating rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {
-        rs_map.set(vid, value);
+        eff_rs_map.set(vid, value);
       } else {
-        rs_map.delete(vid);
+        eff_rs_map.delete(vid);
       }
       // update depending data:
 
@@ -607,7 +761,7 @@ export class Poll {
       this.T.ratings_ascending_map.set(oid, rsasc);
 
       // cutoff, approvals:
-      let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, rs_map, rsasc);
+      let [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, eff_rs_map, rsasc);
 
       let vids_approvals_changed = false,
           aps_map = this.T.approvals_map.get(oid);

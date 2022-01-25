@@ -29,10 +29,19 @@ Current state: pre-alpha, ~ 80 percent complete.
 
 ## Useful commands
 
-* running in dev mode: in main directory of git repo: ionic serve
+Running locally:
+* running locally in dev mode: in main directory of git repo: ionic serve
+* running locally in dev mode with external access: in main directory of git repo: ionic serve --external
+* running locally in prod mode with external access: in main directory of git repo: ionic serve --prod --external
+
+CouchDB:
 * starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
 * logging into container: sudo docker exec -it couch bash
 * sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
+* preparing couchdb for use with vodle: `cd couchdb` and `couchdb-bootstrap http://<adminuser>:<password>@<url>` (this populates the db with the contents of the couchdb folder) 
+
+Building app:
+* `ionic capacitor build android`, then in Android Studio `Run -> run app`
 
 ## Ideas for publication
 

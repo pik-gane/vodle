@@ -85,11 +85,11 @@ export class InvitetoPage implements OnInit {
       + this.p.password);
     this.G.L.info("InvitetoPage invite link:", this.invite_link);
     // TODO: make indentation in body work:
-    this.message_title = this.translate.instant('invite-email.subject', {due: this.p.due});
+    this.message_title = this.translate.instant('invite-email.subject', {due: this.G.D.format_date(this.p.due)});
     this.message_body = (this.translate.instant('invite-email.body-greeting') + "\n\n" 
                 + this.translate.instant('invite-email.body-before-title') + "\n\n"
                 + "\t    “" + this.p.title + "”.\n\n"
-                + this.translate.instant('invite-email.body-closes', {due: this.p.due}) + "\n\n"
+                + this.translate.instant('invite-email.body-closes', {due: this.G.D.format_date(this.p.due)}) + "\n\n"
                 + this.translate.instant('invite-email.body-before-link') + "\n\n" 
                 + "\t    " + this.invite_link + "\n\n"
                 + this.translate.instant('invite-email.body-dont-share') + "\n\n"
@@ -98,6 +98,12 @@ export class InvitetoPage implements OnInit {
     this.ready = true;
   }
 
+  ionViewDidLeave() {
+    this.G.L.entry("InvitetoPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("InvitetoPage.ionViewDidLeave");
+  }
+  
   // HOOKS:
 
   share_button_clicked() {

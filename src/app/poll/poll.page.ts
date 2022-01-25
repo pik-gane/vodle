@@ -123,7 +123,12 @@ export class PollPage implements OnInit {
     for (let oid of this.oidsorted) {
       this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
     }
+  }
+
+  ionViewDidLeave() {
+    this.G.L.entry("PollPage.ionViewDidLeave");
     this.G.D.save_state();
+    this.G.L.exit("PollPage.ionViewDidLeave");
   }
 
   async onScroll(ev) {
@@ -146,22 +151,6 @@ export class PollPage implements OnInit {
     this.content.scrollToTop(1000);
   }
 
-  // TODO: work on the following:
-  _onRangePointerdown(ev: PointerEvent) {
-    this.slidersAllowEvents = true;
-    let ev2 = new PointerEvent('pointerdown', {screenX:ev.screenX, screenY:ev.screenY});
-    let id = (ev.target as HTMLElement).id;
-    let id2 = id.slice(1);
-    document.getElementById(id2).dispatchEvent(ev2);
-  }
-  _onRangePointerup(ev: Event) {
-//    this.slidersAllowEvents = false;
-  }
-  __onRangePointerdown(ev: PointerEvent) {
-    let p = window.getComputedStyle(ev.target as HTMLElement).getPropertyValue('pointerEvents');
-    window.alert(p);
-  }
-  
   on_delegate_toggle_change() {
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
@@ -174,7 +163,7 @@ export class PollPage implements OnInit {
   show_stats() { 
     // update pies and bars, but not order!
     let p = this.p, T = p.T, myvid = p.myvid, 
-        ratings_map = p.ratings_map, approval_scores_map = T.approval_scores_map,
+        ratings_map = p.eff_ratings_map, approval_scores_map = T.approval_scores_map,
         shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (let oid of p.oids) {
@@ -263,7 +252,7 @@ export class PollPage implements OnInit {
   }
   set_slider_values() {
     for (let oid of this.p.oids) {
-      this.get_slider(oid).value = this.p.ratings_map.get(oid).get(this.p.myvid).toString();
+      this.get_slider(oid).value = this.p.eff_ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
   get_slider_value(oid: string) {
@@ -295,13 +284,14 @@ export class PollPage implements OnInit {
   // The following three handlers prevent the slider from responding when pointer is not on knob:
   onRangePointerdown(oid:string, ev:PointerEvent) {
     this.dragged_oid = oid;
-    const pos = this.get_knob_pos(oid), x = ev.screenX;
+    const pos = this.get_knob_pos(oid), x = ev.clientX;
     this.G.L.entry("onRangePointerdown", oid, x, pos);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
     }
   }
   onRangePointerup(oid:string, ev:PointerEvent) {
+    // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
@@ -311,7 +301,7 @@ export class PollPage implements OnInit {
     this.dragged_oid = null;
   }
   onRangeClick(oid:string, ev:MouseEvent) {
-    const pos = this.get_knob_pos(oid), x = ev.screenX;
+    const pos = this.get_knob_pos(oid), x = ev.clientX;
     this.G.L.entry("onRangeClick", oid, x, pos);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
@@ -328,18 +318,14 @@ export class PollPage implements OnInit {
           slider_rect = this.get_screen_coords(slider),
           value = this.get_slider_value(oid),
           knob_center_x = slider_rect.left + (slider_rect.right - slider_rect.left) * value / 100;
+    this.G.L.trace("Pointer get_knob_pos", slider_rect);
     return {left: knob_center_x - 20, right: knob_center_x + 20}
   }
   get_screen_coords(element: HTMLElement) {
-    let rect = element.getBoundingClientRect();
-    return {
-      left: window.screenX + rect.left,
-      right: window.screenX + rect.right,
-      top: window.screenY + rect.top,
-      bottom: window.screenY + rect.bottom,
-    }
+    return element.getBoundingClientRect();
   }
   swallow_event(ev) {
+    // FIRME: does not work in Android app yet!
     ev.stopPropagation();
     ev.preventDefault();
   }
