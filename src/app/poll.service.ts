@@ -385,7 +385,7 @@ export class Poll {
 
   set_myrating(oid: string, value: number, store:boolean=true) {
     if (store) {
-      this.G.D.setv(this._pid, "rating." + oid, value.toString());
+      this.G.D.setv(this._pid, "rating." + oid, value.toString(), true);
     }
     this.update_own_rating(this.myvid, oid, value);
   }
@@ -845,7 +845,7 @@ export class Poll {
         const rsasc = this.update_ratings_ascending(oid, rs_map);
 //        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
         this.update_cutoff_and_approvals(oid, rs_map, rsasc);
-        const apsc = this.update_approval_score(oid, this.T.approvals_map.get(oid));
+        const [apsc, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
         this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
 //        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
       } else {
@@ -963,10 +963,12 @@ export class Poll {
           vids_approvals_changed = true;
         }
       }
+      let svg_needs_update = false;
       if (vids_approvals_changed || others_approvals_changed) {
         // update approval score:
         this.G.L.trace("Poll.update_rating approvals changed", vids_approvals_changed, others_approvals_changed);
-        this.update_approval_score(oid, aps_map);
+        var apsc
+        [apsc, svg_needs_update] = this.update_approval_score(oid, aps_map);
       }
       // update total ratings and score(s):
       const tr = this.T.total_ratings_map.get(oid) + value - old_value,
@@ -1003,7 +1005,12 @@ export class Poll {
         this.G.L.trace("Poll.update_rating updating shares", votes_changed);
         const shares_changed = this.update_shares(oidsdesc);
         if (shares_changed) {
-          // TODO: what?
+          svg_needs_update = true;
+        }
+      }
+      if (svg_needs_update) {
+        if (this.G.D.page && this.G.D.page.has('show_stats')) {
+          this.G.D.page.show_stats();
         }
       }
     }
@@ -1064,12 +1071,13 @@ export class Poll {
     return [cutoff, cutoff_changed, approvals_changed];
   }
 
-  update_approval_score(oid:string, aps_map:Map<string, boolean>): number {
+  update_approval_score(oid:string, aps_map:Map<string, boolean>): [number, boolean] {
     const apsc = Array.from(aps_map.values()).filter(x => x==true).length;
     if (apsc != this.T.approval_scores_map.get(oid)) {
       this.T.approval_scores_map.set(oid, apsc);
+      return [apsc, true];
     }
-    return apsc;
+    return [apsc, false];
   }
 
   update_score(oid:string, apsc:number, tr:number, score_factor:number) {

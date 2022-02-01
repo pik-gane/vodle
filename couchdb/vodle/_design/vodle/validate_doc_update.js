@@ -14,6 +14,13 @@ function (newDoc, savedDoc, userCtx) {
                 if (!_id.startsWith("~" + userCtx.name +":")) {
                     throw ({forbidden: 'Only the owner of a voter document _id may update it.'});
                 }
+                // check whether doc contains a due date:
+                if (newDoc.due) {
+                    // reject if past due:
+                    if (new Date() > new Date(newDoc.due)) {
+                        throw ({forbidden: 'Attempt to change voting data after due date.'})
+                    }
+                }
             } else {
                 // it's a poll doc.
                 // is it the combi doc due+state?
@@ -39,6 +46,13 @@ function (newDoc, savedDoc, userCtx) {
                     let doc_pid = _id.substring(pollprefix.length, _id.indexOf(':')); 
                     if (!userCtx.name.startsWith("vodle.poll." + doc_pid +".voter.")) {
                         throw ({forbidden: 'Only voters in a poll may create poll documents.'});
+                    }
+                    // check whether doc contains a due date:
+                    if (newDoc.due) {
+                        // reject if past due:
+                        if (new Date() > new Date(newDoc.due)) {
+                            throw ({forbidden: 'Attempt to change voting data after due date.'})
+                        }
                     }
                 }
             }

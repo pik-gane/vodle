@@ -136,6 +136,9 @@ const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db
 const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid'];
 const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
 
+const poll_keystarts_requiring_due = ['option'];
+const voter_subkeystarts_requiring_due = ['rating', 'delegate', 'accept'];
+
 // ENCRYPTION:
 
 const textEncoder = new TextEncoder();
@@ -1221,7 +1224,11 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
-  setv(pid:string, key:string, value:string): boolean {
+  setv(pid:string, key:string, value:string, add_due=false): boolean {
+    /** Set a voter data item.
+     * If add_due, mark the database entry with poll's due date
+     * to allow couchdb validating that due date is not passed.
+     */
     if (this.getv(pid, key) == value) {
       return true;
     }
@@ -1237,7 +1244,7 @@ export class DataService implements OnDestroy {
     } else if (this.pid_is_draft(pid)) {
       return this._setv_in_userdb(pid, key, value);
     } else {
-      return this._setv_in_polldb(pid, key, value);
+      return this._setv_in_polldb(pid, key, value, add_due);
     }
   }
 
@@ -1280,15 +1287,18 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
-  private _setv_in_polldb(pid:string, key:string, value:string): boolean {
-    // set voter data item in poll db:
+  private _setv_in_polldb(pid:string, key:string, value:string, add_due=false): boolean {
+    /** Set voter data item in poll db.
+     * If add_due, mark the database entry with poll's due date
+     * to allow couchdb validating that due date is not passed.
+     */ 
     value = value || '';
     // construct key for poll db:
     const pkey = this.get_voter_key_prefix(pid) + key;
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
-    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey);
+    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, add_due);
   }
 
   private async show_loading() {
@@ -1341,6 +1351,7 @@ export class DataService implements OnDestroy {
       if (this._page.onDataChange) this._page.onDataChange();
     }
   }
+
   private handle_poll_db_change(pid, change) {
     // called by PouchDB sync
     this.G.L.trace("DataService.handle_poll_db_change", pid);
@@ -1361,6 +1372,7 @@ export class DataService implements OnDestroy {
       if (this._page.onDataChange) this._page.onDataChange();
     }
   }
+
   private handle_deleted_user_doc(doc): boolean {
     const _id = doc._id;
     if (_id.includes(':')) {
@@ -1373,6 +1385,7 @@ export class DataService implements OnDestroy {
     }
     return false;
   }
+
   private handle_deleted_poll_doc(pid:string, doc): boolean {
     // TODO: handle deleted rating (sets the rating to zero)
     if (!(pid in this.poll_caches)) {
@@ -1460,9 +1473,11 @@ export class DataService implements OnDestroy {
   }
 
   private ensure_poll_cache(pid:string) {
-    if (!this.poll_caches[pid]) {
-      this.poll_caches[pid] = {};
+    let cache = this.poll_caches[pid];
+    if (!cache) {
+      cache = this.poll_caches[pid] = {};
     }
+    return cache;
   }
 
   private doc2user_cache(doc): [boolean, boolean] {
@@ -1542,10 +1557,12 @@ export class DataService implements OnDestroy {
   }
 
   private doc2poll_cache(pid, doc): boolean {
+    /** Copy data from an incoming JSON doc to a poll cache. */
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
     const _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
-        voter_doc_prefix = poll_doc_id_prefix + pid + '.';
+        voter_doc_prefix = poll_doc_id_prefix + pid + '.',
+        cache = this.ensure_poll_cache(pid);
     var key, value_changed;
 
     if (_id.includes('due_and_state')) {
@@ -1557,13 +1574,12 @@ export class DataService implements OnDestroy {
       value_changed = false;
 
       // store in cache if changed:
-      this.ensure_poll_cache(pid);
-      if (this.poll_caches[pid]['due'] != due) {
-        this.poll_caches[pid]['due'] = due;
+      if (cache['due'] != due) {
+        cache['due'] = due;
         value_changed = true;
       }  
-      if (this.poll_caches[pid]['state'] != state) {
-        this.poll_caches[pid]['state'] = state;
+      if (cache['state'] != state) {
+        cache['state'] = state;
         // also set state in user db:
         this.setu(get_poll_key_prefix(pid) + 'state', state);
         if (pid in this.G.P.polls) {
@@ -1575,6 +1591,17 @@ export class DataService implements OnDestroy {
 
     } else {
 
+      // check if doc contains a claimed due date:
+      const doc_due = doc['due'];
+      if (doc_due) {
+        // check if it is correct:
+        if (!(doc_due==cache['due'])) {
+          this.G.L.warn("DataService.doc2poll_cache received doc with wrong due", doc, this.poll_caches[pid]['due']);
+
+          // RETURN:
+          return false;
+        }
+      }
       value_changed = false;
       const cyphertext = doc['value'];
       this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
@@ -1589,6 +1616,16 @@ export class DataService implements OnDestroy {
 
           // it's a non-voter poll doc.
           key = _id.slice(poll_doc_prefix.length, _id.length);
+
+          // check if doc should contain a claimed due data for validation:
+          const keystart = key.slice(0, (key+'.').indexOf('.'));
+          if (poll_keystarts_requiring_due.includes(keystart) && !doc_due) {
+            this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
+
+            // RETURN:
+            return false;  
+          }
+
           if (key.startsWith('option.') && key.endsWith('.name')) {
 
             // it's an option's oid entry, so check whether we know this option:
@@ -1612,6 +1649,16 @@ export class DataService implements OnDestroy {
           const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
               subkey = keyfromvid.slice(vid.length + 1);
+
+          // check if doc should contain a claimed due data for validation:
+          const subkeystart = subkey.slice(0, (subkey+'.').indexOf('.'));
+          if (voter_subkeystarts_requiring_due.includes(subkeystart) && !doc_due) {
+            this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
+
+            // RETURN:
+            return false;  
+          }
+
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
           if (subkey.startsWith("rating.")) {
             const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
@@ -1631,9 +1678,8 @@ export class DataService implements OnDestroy {
         this.G.L.trace("DataService.doc2poll_cache key, value", pid, key, value);
 
         // store in cache if changed:
-        this.ensure_poll_cache(pid);
-        if (this.poll_caches[pid][key] != value) {
-          this.poll_caches[pid][key] = value;
+        if (cache[key] != value) {
+          cache[key] = value;
           if (key == "state" && pid in this.G.P.polls) {
             // update poll's internal state cache:
             this.G.P.polls[pid]._state = value;
@@ -1773,7 +1819,7 @@ export class DataService implements OnDestroy {
     return true;
   }
 
-  private store_poll_data(pid:string, key:string, dict, dict_key:string): boolean {
+  private store_poll_data(pid:string, key:string, dict, dict_key:string, add_due=false): boolean {
     // stores key and value in poll database. 
     this.G.L.trace("DataService.store_poll_data", key, dict[dict_key]);
     var doc;
@@ -1819,6 +1865,9 @@ export class DataService implements OnDestroy {
         // now update:
         if (decrypt(doc[doc_value_key], poll_pw) != value) {
           doc[doc_value_key] = enc_value;
+          if (add_due) {
+            doc['due'] = this.poll_caches[pid]['due'];
+          }
           db.put(doc)
           .then(response => {
             this.G.L.trace("DataService.store_poll_data update", key, value);
@@ -1839,6 +1888,9 @@ export class DataService implements OnDestroy {
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
         doc[doc_value_key] = enc_value;
+        if (add_due) {
+          doc['due'] = this.poll_caches[pid]['due'];
+        }
         db.put(doc)
         .then(response => {
           this.G.L.trace("DataService.store_poll_data new", key, value);
@@ -1888,6 +1940,9 @@ export class DataService implements OnDestroy {
         // key existed in db, so update:
         if (decrypt(doc.value, poll_pw) != value) {
           doc['value'] = enc_value;
+          if (add_due) {
+            doc['due'] = this.poll_caches[pid]['due'];
+          }
           db.put(doc)
           .then(response => {
             this.G.L.trace("DataService.store_poll_data update", key, value);
@@ -1909,6 +1964,9 @@ export class DataService implements OnDestroy {
           '_id': _id,
           'value': enc_value,
         };
+        if (add_due) {
+          doc['due'] = this.poll_caches[pid]['due'];
+        }
         db.put(doc)
         .then(response => {
           this.G.L.trace("DataService.store_poll_data new", key, value);
