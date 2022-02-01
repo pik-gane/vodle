@@ -469,7 +469,8 @@ export class DataService implements OnDestroy {
       this.G.L.info("DataService found empty email or password, redirecting to login page.");
       this.hide_loading();
       if (!this.router.url.includes('/login')) {
-        this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start':'/login/used_before']);
+        const current_url = encodeURIComponent(this.router.url);
+        this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
       }
     } else {
       this.email_and_password_exist();
@@ -514,7 +515,7 @@ export class DataService implements OnDestroy {
       .then(success => {
 
         if (this.router.url.includes('/login')) {
-          this.router.navigate(['/login/connected']);
+          this.router.navigate(['/login/connected/'+this.page.then_url]);
         } 
 
       }).catch(err => {

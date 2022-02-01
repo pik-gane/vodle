@@ -52,6 +52,7 @@ export class LoginPage implements OnInit {
   // LIFECYCLE:
 
   ready = false;  
+  then_url: string;
 
   constructor(      
       private router: Router,
@@ -61,7 +62,8 @@ export class LoginPage implements OnInit {
       public G: GlobalService) { 
     this.G.L.entry("LoginPage.constructor");
     this.route.params.subscribe(params => { 
-      var step = this.step = params['step'] || 'start';
+      this.then_url = params['then'];
+      const step = this.step = params['step'] || 'start';
       this.G.L.info("LoginPage going to step", step);
       if (['start','language','used_before',
            'fresh_email','old_email','fresh_password','old_password',
@@ -168,23 +170,23 @@ export class LoginPage implements OnInit {
 
 
   submit_language() {
-    this.router.navigate(['/login/used_before']);
+    this.router.navigate(['/login/used_before/'+this.then_url]);
   }
 
   ask_used_before_no() {
-    this.router.navigate(['/login/fresh_email']);
+    this.router.navigate(['/login/fresh_email/'+this.then_url]);
   }
 
   ask_used_before_yes() {
-    this.router.navigate(['/login/old_email']);
+    this.router.navigate(['/login/old_email/'+this.then_url]);
   }
 
   submit_email() {
     if (this.emailFormGroup.get('email').valid) {
       if (this.step == 'fresh_email') {
-        this.router.navigate(['/login/fresh_password']);
+        this.router.navigate(['/login/fresh_password/'+this.then_url]);
       } else {
-        this.router.navigate(['/login/old_password']);
+        this.router.navigate(['/login/old_password/'+this.then_url]);
       }
     }
   }
@@ -197,7 +199,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_old_password() {
-    // TODO: test connection to vodle central. if fails, ask for different server or correct password?
+    // TODO: test connection to vodle central. if fails, ask for different server or correct password!
     if (this.oldPasswordFormGroup.get('pw').valid) {
       this.G.D.login_submitted();
     }
@@ -206,7 +208,9 @@ export class LoginPage implements OnInit {
   connected_dismissed() {
     this.G.D.init_notifications(true);
     // TODO: redirect to page we came from, or mypolls, and (?) remove login pages from router history? 
-    this.router.navigate(["/"]);
+    const target = decodeURIComponent(this.then_url||"/");
+    this.G.L.trace("LoginPage redirecting to", this.then_url, target);
+    this.router.navigate([target]);
   }
 
 }

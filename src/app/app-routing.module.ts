@@ -68,6 +68,10 @@ const routes: Routes = [
     loadChildren: () => import('./login/login.module').then( m => m.LoginPageModule)
   },
   {
+    path: 'login/:step/:then',
+    loadChildren: () => import('./login/login.module').then( m => m.LoginPageModule)
+  },
+  {
     path: 'configure-server',
     loadChildren: () => import('./configure-server/configure-server.module').then( m => m.ConfigureServerPageModule)
   },
