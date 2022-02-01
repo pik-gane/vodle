@@ -63,6 +63,11 @@
         "new": "Neu"
     },
 
+    "data": {
+        "notifications-permission-header": "Darf vodle Dir Benachrichtigungen zeigen?",
+        "notifications-permission-intro": "Wenn Du es erlaubst, kann vodle Dich an Abstimmungs-Fristen, Delegations-Anfragen und Ähnliches erinnern. Auf der Einstellungs-Seite kannst Du kontrollieren, welche Benachrichtigungen Du bekommen möchtest."
+    },
+
     "draftpoll": {
         "-page-title": "Abstimmung bearbeiten",
 
@@ -194,6 +199,15 @@
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
         "ready-to-start": "OK, viel Spaß mit vodle!"
     },
+
+    "logout": {
+        "-page-title": "Abmelden",
+        "confirm-header": "Wirklich abmelden?",
+        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht. Bitte versichere Dich, dass Du die Email-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest.",
+        "confirm-button": "Ja, abmelden",
+        "failed": "Abmelden fehlgeschlagen"
+    },
+
 
     "mypolls": {
         "-page-title": "Meine Abstimmungen",

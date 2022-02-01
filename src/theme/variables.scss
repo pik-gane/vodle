@@ -288,3 +288,17 @@ app-login {
     --background: transparent;
   }
 }
+app-logout {
+  background: url(../assets/img/bg_arms_outstretched_reversed.png) no-repeat;
+  background-position: bottom right;
+  background-size: auto 100%;
+  --ion-background-color: transparent;
+  ion-header {
+    ion-toolbar {
+      --background: transparent;
+    }
+  }
+  ion-content {
+    --background: transparent;
+  }
+}

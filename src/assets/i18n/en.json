@@ -58,6 +58,11 @@
         "new": "New"
     },
 
+    "data": {
+        "notifications-permission-header": "May vodle show you notifications?",
+        "notifications-permission-intro": "If you allow this, vodle can remind you of upcoming poll deadlines, delegation requests and other important events. You can control which notifications you want to receive on vodle's settings page."
+    },
+
     "draftpoll": {
         "-page-title": "Edit draft poll",
 
@@ -188,6 +193,14 @@
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them.",
         "ask-old-password": "Please enter your existing vodle password.",
         "ready-to-start": "OK, have fun with vodle!"
+    },
+
+    "logout": {
+        "-page-title": "Log out",
+        "confirm-header": "Really log out?",
+        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodle's data from this device. Please be sure to remember the email address and password you are using with vodle before logging out.",
+        "confirm-button": "Yes, log out",
+        "failed": "Could not log out for some reason"
     },
 
     "mypolls": {

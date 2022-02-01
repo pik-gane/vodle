@@ -1,4 +1,4 @@
-import { finalize } from 'rxjs/operators'; // TODO: what for??
+//import { finalize } from 'rxjs/operators'; // TODO: what for??
 
 import { Injectable, HostListener, SkipSelf, OnDestroy } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';

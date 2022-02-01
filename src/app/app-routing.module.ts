@@ -71,6 +71,10 @@ const routes: Routes = [
     path: 'configure-server',
     loadChildren: () => import('./configure-server/configure-server.module').then( m => m.ConfigureServerPageModule)
   },
+  {
+    path: 'logout',
+    loadChildren: () => import('./logout/logout.module').then( m => m.LogoutPageModule)
+  },
 ];
 
 @NgModule({

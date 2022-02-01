@@ -6,7 +6,7 @@ TODO:
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController } from '@ionic/angular';
+import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -210,6 +210,8 @@ export class DataService implements OnDestroy {
 
   private loadingElement: HTMLIonLoadingElement;
 
+  can_notify = false;
+
   // DATA:
 
   user_cache: {}; // temporary storage of user data
@@ -217,6 +219,7 @@ export class DataService implements OnDestroy {
   private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
 
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
+  private user_db_sync_handler;
 
   private _pids: Set<string>; // list of pids known to the user
   get pids() { return this._pids; }
@@ -226,6 +229,7 @@ export class DataService implements OnDestroy {
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
+  private poll_db_sync_handlers: Record<string, any>;
 
   own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
   effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
@@ -248,23 +252,10 @@ export class DataService implements OnDestroy {
   constructor(
       private router: Router,
       public loadingController: LoadingController,
+      public alertCtrl: AlertController,
       public translate: TranslateService,
       public storage: Storage,
       ) { 
-    // send local notification:
-    // TODO: test this!
-    LocalNotifications.schedule({
-      notifications: [{
-        title: "DataService constructor called.",
-        body: "DataService constructor called.",
-        id: 1
-      }]
-    })
-    .then(res => {
-      console.log("DataService constructor localNotifications.schedule succeeded");
-    }).catch(err => {
-      console.warn("DataService constructor localNotifications.schedule failed:", err);
-    });
   }
 
   ionViewWillLeave() {
@@ -276,7 +267,7 @@ export class DataService implements OnDestroy {
     console.log("DataService.ngOnDestroy exit");
   }
 
-  save_state() {
+  save_state(): Promise<any> {
     this.G.L.entry("DataService.save_state");
     this.G.L.trace("DataService.save_state _pids", [...this._pids]);
     this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
@@ -287,16 +278,8 @@ export class DataService implements OnDestroy {
     for (const a of state_attributes) {
       state[a] = this[a];
     }
-    this.storage.set('state', state)
-    .then(
-      (state) => {
-        console.log("DataService.save_state storing state succeeded");
-      },
-      (error) => {
-        console.log("DataService.save_state storing state failed:", error);        
-      }
-    );
     this.G.L.exit("DataService.save_state");
+    return this.storage.set('state', state)
   }
 
   // INITIALIZATION
@@ -392,6 +375,7 @@ export class DataService implements OnDestroy {
     }).finally(() => {
       this.init_databases();
     });
+    this.init_notifications(false);
     G.L.exit("DataService.init");
   }
 
@@ -401,7 +385,7 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.init_databases");
 
     // access locally stored data and get some statistics about it:
-    this.local_only_user_DB = new PouchDB('local_only_user');
+    this.local_only_user_DB = new PouchDB('local_only_user', {auto_compaction: true});
 
     this.local_only_user_DB.info()
     .then(doc => { 
@@ -414,7 +398,7 @@ export class DataService implements OnDestroy {
 
     });
 
-    this.local_synced_user_db = new PouchDB('local_synced_user');
+    this.local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
 
     this.local_synced_user_db.info()
     .then(doc => { 
@@ -430,6 +414,7 @@ export class DataService implements OnDestroy {
     this.uninitialized_pids = new Set();
     this.local_poll_dbs = {};
     this.remote_poll_dbs = {};
+    this.poll_db_sync_handlers = {};
 
     if (this.restored_user_cache) {
       // user_cache was restored from storage.
@@ -625,7 +610,7 @@ export class DataService implements OnDestroy {
 
   private get_local_poll_db(pid:string) {
     if (!(pid in this.local_poll_dbs)) {
-      this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid);
+      this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid, {auto_compaction: true});
       this.G.L.info("DataService.get_local_poll_db new poll db", pid, this.local_poll_dbs[pid]);
     } 
     return this.local_poll_dbs[pid];
@@ -933,6 +918,7 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.get_remote_connection");
     return promise;
   }
+
   private get_couchdb(url:string, username:string, password:string) {
     return new PouchDB(url, {
       auth: {username: username, password: password},
@@ -940,6 +926,7 @@ export class DataService implements OnDestroy {
     });
     // TODO: prevent Browser popup on 401?
   }
+
   private test_remote_connection(conn:PouchDB, private_username:string, private_password:string): Promise<boolean> {
     // FIXME: sometimes this gives an
     // ERROR Error: Uncaught (in promise): {"status":409,"name":"conflict","message":"Document update conflict"}
@@ -995,7 +982,7 @@ export class DataService implements OnDestroy {
       this.G.L.info("DataService starting user data sync");
 
       // ASYNC:
-      this.local_synced_user_db.sync(this.remote_user_db, {
+      this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
         since: 0,
         live: true,
         retry: true,
@@ -1042,7 +1029,7 @@ export class DataService implements OnDestroy {
       this.G.L.info("DataService starting poll data sync", pid);
 
       // ASYNC:
-      this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
+      this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
         since: 0,
         live: true,
         retry: true,
@@ -1095,6 +1082,7 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
+
   setu(key:string, value:string): boolean {
     if (this.getu(key) == value) {
       return true;
@@ -1120,6 +1108,7 @@ export class DataService implements OnDestroy {
     }
     return this.store_user_data(key, this.user_cache, key);
   }
+
   delu(key:string) {
     // delete a user data item
     if (!(key in this.user_cache)) {
@@ -1133,6 +1122,7 @@ export class DataService implements OnDestroy {
   private pid_is_draft(pid): boolean {
     return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
+
   getp(pid:string, key:string): string {
     // get poll data item
     let value = null;
@@ -1147,6 +1137,7 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
+
   setp(pid:string, key:string, value:string): boolean {
     // set poll data item
     // register pid, oid if necessary:
@@ -1176,6 +1167,7 @@ export class DataService implements OnDestroy {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
   }
+
   delp(pid:string, key:string) {
     // delete a poll data item
     // deregister pid, oid if necessary:
@@ -1224,6 +1216,7 @@ export class DataService implements OnDestroy {
     }
     return value;
   }
+
   setv(pid:string, key:string, value:string, add_due=false): boolean {
     /** Set a voter data item.
      * If add_due, mark the database entry with poll's due date
@@ -1247,6 +1240,8 @@ export class DataService implements OnDestroy {
       return this._setv_in_polldb(pid, key, value, add_due);
     }
   }
+
+  // TODO: delv!
 
   get_example_docs(): Promise<any> {
     const promise = this.remote_user_db.allDocs({
@@ -2124,6 +2119,75 @@ export class DataService implements OnDestroy {
   }
 
   // OTHER:
+
+  clear_all_local(): Promise<any> {
+    // called at logout.
+    // TODO: disable user interaction
+    this._ready = false;
+    return new Promise((resolve, reject) => {
+      // stop all syncs:
+      this.user_db_sync_handler.cancel();
+      for (const pid in this.poll_db_sync_handlers) {
+        this.poll_db_sync_handlers[pid].cancel();
+      }
+      // TODO: wait for all syncs to finish
+      // delete all local dbs:
+      this.local_only_user_DB.destroy()
+      .then(() => {
+        this.local_synced_user_db.destroy()
+        .then(() => {
+          for (let pid in this.local_poll_dbs) {
+            this.local_poll_dbs[pid].destroy();
+          }
+          // delete ionic local storage:
+          this.storage.clear()
+          .then(() => {
+            // DONE. 
+            resolve(true);
+          }).catch(reject);
+        }).catch(reject);
+      }).catch(reject);
+    });
+  }
+
+  init_notifications(prompt:boolean) {
+    LocalNotifications.requestPermissions().then(async res => {
+      const state = res['display'];
+      if (state.startsWith('prompt') && prompt) {
+        const dialog = await this.alertCtrl.create({ 
+          header: this.translate.instant('data.notifications-permission-header'), 
+          message: this.translate.instant('data.notifications-permission-intro'), 
+          buttons: [
+            { 
+              text: this.translate.instant('no'), 
+              role: 'cancel',
+              handler: () => { 
+                this.G.L.trace('DataService.init_notifications user No');
+              } 
+            },
+            { 
+              text: this.translate.instant('yes'),
+              role: 'ok', 
+              handler: () => {
+                this.G.L.trace('DataService.init_notifications user Yes');
+                this.init_notifications(prompt=false);
+              } 
+            } 
+          ] 
+        }); 
+        await dialog.present(); 
+      } else if (state=='granted') {
+        this.G.L.info("DataService.init_notifications granted");
+        this.can_notify = true;
+      } else {
+        this.G.L.info("DataService.init_notifications denied:", res);        
+        this.can_notify = false;
+      }
+    }).catch(err => {
+      console.warn("DataService.init_notifications failed:", err);
+    });
+    // TODO: test this!
+  }
 
   get_voter_key_prefix(pid:string): string {
     return 'voter.' + this.getp(pid, 'myvid') + ':';

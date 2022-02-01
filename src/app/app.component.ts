@@ -27,6 +27,11 @@ export class AppComponent {
       title: 'about.-page-title',
       url: '/about',
       icon: 'information-circle'
+    },
+    {
+      title: 'logout.-page-title',
+      url: '/logout',
+      icon: 'log-out-outline'
     }
     ];
 

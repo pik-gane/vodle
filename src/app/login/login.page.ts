@@ -204,6 +204,7 @@ export class LoginPage implements OnInit {
   }
 
   connected_dismissed() {
+    this.G.D.init_notifications(true);
     // TODO: redirect to page we came from, or mypolls, and (?) remove login pages from router history? 
     this.router.navigate(["/"]);
   }
