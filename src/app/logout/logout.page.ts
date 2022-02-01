@@ -75,16 +75,19 @@ export class LogoutPage implements OnInit {
             this.G.L.trace('LogoutPage.confirm_dialog logout');
             // TODO: clear all local storage:
             this.G.D.clear_all_local().then(() => {
-              // now redirect to login page:
+              // now reload page, which will reinit the app and redirect us to the login page
+              // (at least in browsers – what about native apps?):
+              LocalNotifications.schedule({ notifications: [{ id: null,
+                title: "Reloading...",
+                body: null
+              }]});
               window.location.reload();
             }).catch(error => {
-              LocalNotifications.schedule({
-                notifications: [{
+              LocalNotifications.schedule({ notifications: [{ id: null,
                   title: this.translate.instant("logout.failed"),
-                  body: null,
-                  id: null
-                }]
-              })
+                  body: null
+              }]});
+              // go back to previous page:
               this.location.back();
             })
           } 
