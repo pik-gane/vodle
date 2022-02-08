@@ -152,7 +152,7 @@ export class PollPage implements OnInit {
 
   on_rate_yourself_toggle_change(oid:string) {
     // update delegation data:
-    this.G.Del.update_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
     this.on_delegate_toggle_change();
   }
 
@@ -342,15 +342,23 @@ export class PollPage implements OnInit {
     }
   }
 
-  async delegate_dialog() { 
+  async delegate_dialog(email=null, invalid=false) { 
     const dialog = await this.alertCtrl.create({ 
       header: this.translate.instant('poll.delegate-header'), 
-      message: this.translate.instant('poll.delegate-intro1') + "<br/><br/><b>" + this.translate.instant('poll.delegate-intro2') + "</b>", 
+      message: 
+        this.translate.instant('poll.delegate-intro1') + "<br/><br/><b>" + 
+        (invalid 
+          ? '<i><span style="color:red!important">' + this.translate.instant('poll.delegate-intro2invalid') + '</span></i>'
+          // FIXME: won't render red for some reason...
+          : this.translate.instant('poll.delegate-intro2')
+        )
+        + "</b>", 
       inputs: [
         {
           name: 'email',
           placeholder: this.translate.instant('poll.delegate-email'),
-          type: 'email'
+          type: 'email',
+          value: email
         }
       ],
       buttons: [
@@ -364,9 +372,15 @@ export class PollPage implements OnInit {
         { 
           text: this.translate.instant('poll.request-delegation'),
           role: 'ok', 
-          handler: () => {
-            this.G.L.debug('delegate_dialog OK.');
-            // TODO: generate delegation id and open mailto link using email as sender
+          handler: data => {
+            const valid = this.G.D.email_is_valid(data.email);
+            this.G.L.debug('delegate_dialog OK.', data.email, valid);
+            if (!valid) {
+              this.delegate_dialog(data.email, true);
+            } else {
+              // TODO: generate delegation id and open mailto link using email as sender
+              this.G.Del.request_delegation_by_email(this.pid, data.email);
+            }
           } 
         } 
       ] 

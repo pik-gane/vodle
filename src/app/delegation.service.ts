@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
+import { Poll } from './poll.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +13,9 @@ export class DelegationService {
 
   private G: GlobalService;
 
-  constructor() { }
+  constructor(
+    public translate: TranslateService
+  ) { }
 
 
 /**
@@ -49,6 +53,12 @@ export class DelegationService {
  * 
  */
 
+  init(G:GlobalService) { 
+    // called by GlobalService
+    G.L.entry("DelegationService.init");
+    this.G = G; 
+  }
+
   get_my_dids_cache(pid:string) {
     if (!this.G.D.my_dids_caches[pid]) {
       this.G.D.my_dids_caches[pid] = new Map();
@@ -68,11 +78,37 @@ export class DelegationService {
     return this.G.D.generate_id(environment.data_service.did_length);
   }
 
-  prepare_delegation(pid:string) {
-    /** Generate key pair and store request data item in poll DB */
+  prepare_delegation(pid:string): [Poll, string, del_agreement_t, string] {
+    /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
+    this.G.L.entry("DelegationService.prepare_delegation", pid);
+    const p = this.G.P.polls[pid],
+          did = this.generate_did(),
+          keypair = this.G.D.generate_sign_keypair(),
+          request = {
+            option_spec: { type: "-", oids: [] }, // initially, we request delegation for all options
+            public_key: keypair.public
+          } as del_request_t,
+          agreement = {
+            client_vid: p.myvid,
+            private_key: keypair.private,
+            request: request,
+            status: "pending",
+            accepted_oids: new Set(),
+            active_oids: new Set()
+          } as del_agreement_t,
+          cache = this.get_delegation_agreements_cache(pid);
+    // store data in local cache:
+    cache.set(did, agreement)
+    // store request in poll db: 
+    this.update_my_request_in_db(pid, did, request);
+    // generate magic link to be sent to delegate:
+    const link = environment.magic_link_base_url + "drespond/" + pid + "/" + did;
+    this.G.L.debug("DelegationService.prepare_delegation invite link:", link);
+    this.G.L.exit("DelegationService.prepare_delegation");
+    return [p, did, agreement, link];
   }
 
-  update_delegation(pid:string, oid:string, activate:boolean) {
+  update_my_delegation(pid:string, oid:string, activate:boolean) {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */
     const did = this.get_my_dids_cache(pid).get(oid);
@@ -125,6 +161,20 @@ export class DelegationService {
 
   request_delegation_by_email(pid:string, email:string) {
     /** Send an email request */
+    const [p, did, agreement, link] = this.prepare_delegation(pid),
+          // TODO: make indentation in body work:
+          message_title = this.translate.instant('request-delegation.email-subject', {due: this.G.D.format_date(p.due)}),
+          message_body = (this.translate.instant('request-delegation.email-body-greeting') + "\n\n" 
+                + this.translate.instant('request-delegation.email-body-before-title') + "\n\n"
+                + "\t    “" + p.title + "”.\n\n"
+                + this.translate.instant('request-delegation.email-body-closes', {due: this.G.D.format_date(p.due)}) + "\n\n"
+                + this.translate.instant('request-delegation.email-body-explanation') + "\n\n" 
+                + this.translate.instant('request-delegation.email-body-before-link') + "\n\n" 
+                + "\t    " + link + "\n\n"
+                + this.translate.instant('request-delegation.email-body-dont-share') + "\n\n"
+                + this.translate.instant('request-delegation.email-body-regards')),
+          email_href = "mailto:?subject=" + encodeURIComponent(message_title) + "&body=" + encodeURIComponent(message_body);
+    this.G.L.debug("DelegationService.request_delegation_by_email mailtolink", email_href);
   }
 
 

@@ -373,6 +373,8 @@ export class DataService implements OnDestroy {
     this.poll_caches = {};
     this.tally_caches = {};
     this.own_ratings_map_caches = {};
+    this.my_dids_caches = {};
+    this.delegation_agreements_caches = {};
     this.effective_ratings_map_caches = {};
     this.direct_delegation_map_caches = {};
     this.inv_direct_delegation_map_caches = {};
@@ -2246,6 +2248,14 @@ export class DataService implements OnDestroy {
     return CryptoJS.lib.WordArray.random(length/2).toString();
   }
 
+  email_is_valid(email: string): boolean {
+    return !!String(email)
+      .toLowerCase()
+      .match(
+        /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+      );
+  }
+
   async test_sodium() {
     this.G.L.entry("DataService.test_sodium waiting for sodium");
     await Sodium.ready;
@@ -2267,7 +2277,7 @@ export class DataService implements OnDestroy {
     this.G.L.trace("DataService decrypted", decrypted);    
     */
 
-    const keypair = this.new_sign_keypair();
+    const keypair = this.generate_sign_keypair();
     this.G.L.trace("DataService.test_sodium keypair", keypair);
 
     const signed = this.sign(message, keypair.private);
@@ -2276,7 +2286,7 @@ export class DataService implements OnDestroy {
     const result = this.open_signed(signed, keypair.public); 
     this.G.L.trace("DataService.test_sodium opened", result);
 
-    const keypair2 = this.new_sign_keypair();
+    const keypair2 = this.generate_sign_keypair();
     const result2 = this.open_signed(signed, keypair2.public); 
     if (result2) {
       this.G.L.error("DataService.test_sodium should not have been able to open signed msg with wrong key!", keypair.public, keypair2.public, result2);  
@@ -2288,7 +2298,7 @@ export class DataService implements OnDestroy {
 
   // SIGNING:
 
-  new_sign_keypair() {
+  generate_sign_keypair() {
     try {
       const keypair = Sodium.crypto_sign_keypair();
       return {

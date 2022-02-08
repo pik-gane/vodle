@@ -225,6 +225,7 @@
         "delegate-header": "Delegate to some other voter",
         "delegate-intro1": "You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
         "delegate-intro2": "Please enter the email address of the voter you want to ask to be your delegate:",
+        "delegate-intro2invalid": "Please enter a valid email address of the voter you want to ask to be your delegate:",
         "delegate-email": "Delegate's email",
         "request-delegation": "Request delegation"
     },
@@ -237,6 +238,17 @@
         "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will"
+    },
+
+    "request-delegation": {
+        "email-subject": "Request to act as delegate in poll (closing {{due}})",
+        "email-body-greeting": "Dear participant,",
+        "email-body-before-title": "I'd like to ask you to act as my delegate in the vodle poll titled",
+        "email-body-closes": "(This poll closes on {{due}}.)",
+        "email-body-explanation": "If you accept, vodle will use your ratings automatically to set my ratings as well, with no additional work required by you.",
+        "email-body-before-link": "To accept or decline this request, please use the following link:",
+        "email-body-dont-share": "Please do not share this link with anyone else.",
+        "email-body-regards": "Best regards"
     },
 
     "select-server": {

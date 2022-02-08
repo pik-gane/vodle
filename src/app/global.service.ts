@@ -57,6 +57,7 @@ export class GlobalService implements OnDestroy {
     D.init(this); 
     P.init(this); 
     S.init(this);
+    Del.init(this);
 
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
