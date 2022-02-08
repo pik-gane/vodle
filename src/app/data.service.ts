@@ -23,6 +23,10 @@ import * as CryptoJS from 'crypto-js';
 //const crypto_algorithm = 'des-ede3';
 const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
+
+import * as Sodium from 'libsodium-wrappers';
+
+
 /** DATA STORAGE DESIGN
  * 
  * 
@@ -173,6 +177,15 @@ function myhash(what): string {
   return blake2s.hexDigest();
 }
 
+// SIGNING:
+
+function check_signature(msg:string, pubkey:string, signature:string) {
+  /** check whether a msg was correctly signed */
+
+}
+
+// TYPES:
+
 export type ospec_t = {type:"+" | "-", oids:Array<string>};
 export type drequest_t = {ospec:ospec_t, pubkey:string};
 export type dresponse_t = {vid:string, ospec:ospec_t, signature:string};
@@ -283,6 +296,7 @@ export class DataService implements OnDestroy {
   ionViewWillLeave() {
     this.save_state();
   }
+
   ngOnDestroy() {
     console.log("DataService.ngOnDestroy entry");
     this.save_state();
@@ -398,6 +412,29 @@ export class DataService implements OnDestroy {
       this.init_databases();
     });
     this.init_notifications(false);
+
+    // test sodium:
+    this.G.L.trace("DataService about to test sodium");
+    (async function() {
+      this.G.L.trace("DataService waiting for sodium");
+      await Sodium.ready;
+      this.G.L.trace("DataService sodium ready");
+    
+      // Initialize with random bytes:
+      let key = Sodium.randombytes_buf(32);
+      let nonce = Sodium.randombytes_buf(24);
+      let message = "This is just an example string. Hello dev.to readers!";
+    
+      this.G.L.trace("DataService encrypting", message, nonce, key);
+      // Encrypt:
+      let encrypted = Sodium.crypto_secretbox_easy(message, nonce, key);
+      this.G.L.trace("DataService encrypted", encrypted);
+    
+      // Decrypt:
+      let decrypted = Sodium.crypto_secretbox_open_easy(encrypted, nonce, key);
+      this.G.L.trace("DataService decrypted", decrypted, decrypted.toString());
+    }).bind(this)();
+
     G.L.exit("DataService.init");
   }
 

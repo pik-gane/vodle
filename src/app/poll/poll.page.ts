@@ -112,7 +112,7 @@ export class PollPage implements OnInit {
       this.expanded[oid] = false;
       this.rate_yourself_toggle[oid] = false;
     }
-    this.on_delegate_toggle_change()
+    this.on_delegate_toggle_change();
     window.setTimeout(this.show_stats.bind(this), 100);
     this.G.L.exit("PollPage.onDataReady");
   }
@@ -153,6 +153,10 @@ export class PollPage implements OnInit {
   on_rate_yourself_toggle_change(oid:string) {
     // update delegation data:
     this.G.Del.update_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    this.on_delegate_toggle_change();
+  }
+
+  on_delegate_toggle_change() {
     // update n_delegated: // TODO: make more efficient
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
