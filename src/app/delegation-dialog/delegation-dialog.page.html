@@ -8,7 +8,7 @@
         </ion-col>      
       </ion-item>
       <ion-item>
-        <ion-label position="floating" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
+        <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
         <ion-input 
           formControlName="nickname" 
           [placeholder]="'delegation-request.nickname-placeholder'|translate"
@@ -49,7 +49,7 @@
       <ion-item 
           lines="none" class="ion-text-end" text-wrap>
         <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-              shape="round">
+              shape="round" (click)="email_button_clicked($event)">
           <a [href]="mailto_url" target="_top" style="color:inherit;text-decoration:inherit">
             <span [innerHtml]="'delegation-request.compose-email'|translate"></span>&nbsp;
             <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->

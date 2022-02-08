@@ -243,10 +243,12 @@ export class PollPage implements OnInit {
   pause_refresh() {
     this.refresh_paused = true;
   }
+
   unpause_refresh() {
     this.refresh_paused = false;
     this.update_order(true);
   }
+
   refresh_once() {
     this.update_order(true);
   }
@@ -254,30 +256,37 @@ export class PollPage implements OnInit {
   expand(oid: string) {
     this.expanded[oid] = !this.expanded[oid];
   }
+
   get_slider(oid: string) {
     return <HTMLInputElement>document.getElementById('slider_'+oid+"_"+this.sortingcounter);
   }
+
   set_slider_values() {
     for (let oid of this.p.oids) {
       this.get_slider(oid).value = this.p.effective_ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
+
   get_slider_value(oid: string) {
     return Number(this.get_slider(oid).value);
   }
+
   apply_sliders_rating(oid: string) {
     this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
 //    this.G.D.save_state();
     this.show_stats();
   }
+
   rating_change_begins(oid: string) {
   }
+
   rating_changes(oid: string) {
     var slider = this.get_slider(oid),
         value = Number(slider.value);
     this.set_slider_color(oid, value);
     this.apply_sliders_rating(oid);
   }
+
   rating_change_ended(oid: string) {
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.trace("PollPage.rating_change_ended");
@@ -297,6 +306,7 @@ export class PollPage implements OnInit {
       this.swallow_event(ev);
     }
   }
+
   onRangePointerup(oid:string, ev:PointerEvent) {
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
@@ -307,6 +317,7 @@ export class PollPage implements OnInit {
     }
     this.dragged_oid = null;
   }
+
   onRangeClick(oid:string, ev:MouseEvent) {
     const pos = this.get_knob_pos(oid), x = ev.clientX;
     this.G.L.entry("onRangeClick", oid, x, pos);
@@ -314,12 +325,14 @@ export class PollPage implements OnInit {
       this.swallow_event(ev);
     }
   }
+
   onBodyPointerup(ev:PointerEvent) {
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
       this.onRangePointerup(this.dragged_oid, ev);
     }
   }
+
   get_knob_pos(oid: string){
     const slider = this.get_slider(oid), 
           slider_rect = this.get_screen_coords(slider),
@@ -328,11 +341,13 @@ export class PollPage implements OnInit {
     this.G.L.trace("pointer slider value", value);
     return {left: knob_center_x - 20, right: knob_center_x + 20}
   }
+
   get_screen_coords(element: HTMLElement) {
     return element.getBoundingClientRect();
   }
-  swallow_event(ev) {
-    // FIRME: does not work in Android app yet!
+
+  swallow_event(ev: Event) {
+    // FIXME: does not work in Android app yet!
     ev.stopPropagation();
     ev.preventDefault();
   }
@@ -350,6 +365,7 @@ export class PollPage implements OnInit {
         component: DelegationDialogPage, 
         translucent: true,
         showBackdrop: true,
+//        align: "center",
 //        cssClass: 'kebap',
         componentProps: {parent: this}
       })

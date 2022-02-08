@@ -8,6 +8,8 @@ import { Share } from '@capacitor/share';
 
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
+import { Poll } from '../poll.service';
+import { del_agreement_t } from '../data.service';
 
 @Component({
   selector: 'app-delegation-dialog',
@@ -19,12 +21,15 @@ export class DelegationDialogPage implements OnInit {
   @Input() parent: PollPage;
 
   ready = false;
-  
+
   can_use_web_share: boolean;
   can_share: boolean;
 
   formGroup: FormGroup;
 
+  p: Poll;
+  did: string;
+  agreement: del_agreement_t;
   delegation_link: string;
   message_title: string;
   message_body: string;
@@ -47,19 +52,18 @@ export class DelegationDialogPage implements OnInit {
       nickname: new FormControl('', Validators.required),
     });
     // prepare a new delegation:
-    const [p, did, agreement, link] = this.G.Del.prepare_delegation(this.parent.pid);
-    this.delegation_link = link;
+    [this.p, this.did, this.agreement, this.delegation_link] = this.G.Del.prepare_delegation(this.parent.pid);
     // TODO: make indentation in body work:
-    this.message_title = this.translate.instant('request-delegation.message-subject', {due: this.G.D.format_date(p.due)});
-    this.message_body = (this.translate.instant('request-delegation.message-body-greeting') + "\n\n" 
-                + this.translate.instant('request-delegation.message-body-before-title') + "\n\n"
-                + "\t    “" + p.title + "”.\n\n"
-                + this.translate.instant('request-delegation.message-body-closes', {due: this.G.D.format_date(p.due)}) + "\n\n"
-                + this.translate.instant('request-delegation.message-body-explanation') + "\n\n" 
-                + this.translate.instant('request-delegation.message-body-before-link') + "\n\n" 
-                + "\t    " + link + "\n\n"
-                + this.translate.instant('request-delegation.message-body-dont-share') + "\n\n"
-                + this.translate.instant('request-delegation.message-body-regards'));
+    this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
+    this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
+                + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
+                + "\t    “" + this.p.title + "”.\n\n"
+                + this.translate.instant('delegation-request.message-body-closes', {due: this.G.D.format_date(this.p.due)}) + "\n\n"
+                + this.translate.instant('delegation-request.message-body-explanation') + "\n\n" 
+                + this.translate.instant('delegation-request.message-body-before-link') + "\n\n" 
+                + "\t    " + this.delegation_link + "\n\n"
+                + this.translate.instant('delegation-request.message-body-dont-share') + "\n\n"
+                + this.translate.instant('delegation-request.message-body-regards'));
     this.mailto_url = "mailto:?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
     this.ready = true;
   }
@@ -84,6 +88,8 @@ export class DelegationDialogPage implements OnInit {
       dialogTitle: 'Share vodle delegation link',
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
+      this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.agreement);
+      this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
     });
@@ -92,7 +98,16 @@ export class DelegationDialogPage implements OnInit {
   copy_button_clicked() {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
     window.navigator.clipboard.writeText(this.delegation_link);
+    this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.agreement);
+    // TODO: notification
+    this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.copy_button_clicked");
   }
 
+  email_button_clicked(ev: MouseEvent) {
+    this.G.L.entry("DelegationDialogPage.email_button_clicked");
+    this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.agreement);
+    this.popover.dismiss();
+    this.G.L.exit("DelegationDialogPage.email_button_clicked");
+  }
 }
