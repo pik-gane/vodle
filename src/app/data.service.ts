@@ -152,6 +152,7 @@ function encrypt_deterministically(value, password:string) {
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
   return result;
 }
+
 function encrypt(value, password:string): string {
   try {
     const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
@@ -160,6 +161,7 @@ function encrypt(value, password:string): string {
     return null;
   }
 }
+
 function decrypt(value:string, password:string): string {
   try {
     const temp = CryptoJS.AES.decrypt(value, password);
@@ -170,6 +172,7 @@ function decrypt(value:string, password:string): string {
     return null;
   }
 }
+
 function myhash(what): string {
   // we use Blake2s since it is fast and more reliable than MD5
   const blake2s = new BLAKE2s(environment.data_service.hash_n_bytes); // 16? 32?
@@ -177,28 +180,24 @@ function myhash(what): string {
   return blake2s.hexDigest();
 }
 
-// SIGNING:
-
-function check_signature(msg:string, pubkey:string, signature:string) {
-  /** check whether a msg was correctly signed */
-
-}
-
 // TYPES:
 
-export type ospec_t = {type:"+" | "-", oids:Array<string>};
-export type drequest_t = {ospec:ospec_t, pubkey:string};
-export type dresponse_t = {vid:string, ospec:ospec_t, signature:string};
-export type dagreement_t = { // by pid, did
-  role?: "client" // this voter delegates to some other voter
-        | "delegate", // some other voter has delegated to this voter
-  privkey?: string,
-  request?: drequest_t, 
-  response?: dresponse_t, 
+export type del_option_spec_t = {type:"+" | "-", oids:Array<string>};
+export type del_request_t = {option_spec:del_option_spec_t, public_key:string};
+export type del_response_t = {option_spec:del_option_spec_t};
+export type del_signed_response_t = string;
+export type del_agreement_t = { // by pid, did
+  client_vid?: string,
+  delegate_vid?: string,
+  private_key?: string,
+  request?: del_request_t, 
+  signed_response?: del_signed_response_t, 
   status?: "pending" | "agreed" | "rejected" | "revoked",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
 };
+
+// TODO: add pid_t, vid_t, oid_t, did_t to prevent confusion! 
 
 // SERVICE:
 
@@ -265,7 +264,7 @@ export class DataService implements OnDestroy {
 
   my_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
 
-  delegation_agreements_caches: Record<string, Map<string, dagreement_t>>; 
+  delegation_agreements_caches: Record<string, Map<string, del_agreement_t>>; 
 
   direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
   inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
@@ -414,30 +413,11 @@ export class DataService implements OnDestroy {
     this.init_notifications(false);
 
     // test sodium:
-    this.G.L.trace("DataService about to test sodium");
-    (async function() {
-      this.G.L.trace("DataService waiting for sodium");
-      await Sodium.ready;
-      this.G.L.trace("DataService sodium ready");
-    
-      // Initialize with random bytes:
-      let key = Sodium.randombytes_buf(32);
-      let nonce = Sodium.randombytes_buf(24);
-      let message = "This is just an example string. Hello dev.to readers!";
-    
-      this.G.L.trace("DataService encrypting", message, nonce, key);
-      // Encrypt:
-      let encrypted = Sodium.crypto_secretbox_easy(message, nonce, key);
-      this.G.L.trace("DataService encrypted", encrypted);
-    
-      // Decrypt:
-      let decrypted = Sodium.crypto_secretbox_open_easy(encrypted, nonce, key);
-      this.G.L.trace("DataService decrypted", decrypted, decrypted.toString());
-    }).bind(this)();
+    this.test_sodium.bind(this)();
 
     G.L.exit("DataService.init");
   }
-
+  
   // User data initialization:
 
   private init_databases() {
@@ -2264,6 +2244,76 @@ export class DataService implements OnDestroy {
   generate_id(length:number): string {
     // generates a random string of requested length
     return CryptoJS.lib.WordArray.random(length/2).toString();
+  }
+
+  async test_sodium() {
+    this.G.L.entry("DataService.test_sodium waiting for sodium");
+    await Sodium.ready;
+    this.G.L.trace("DataService.test_sodium ready");
+  
+    // Initialize with random bytes:
+    let message = "This is just an example string.";
+  
+    /*
+    let key = Sodium.randombytes_buf(32);
+    let nonce = Sodium.randombytes_buf(24);
+
+    // Encrypt:
+    let encrypted = Sodium.crypto_secretbox_easy(message, nonce, key);
+    this.G.L.trace("DataService encrypted", encrypted);
+  
+    // Decrypt:
+    let decrypted = Sodium.to_string(Sodium.crypto_secretbox_open_easy(encrypted, nonce, key));
+    this.G.L.trace("DataService decrypted", decrypted);    
+    */
+
+    const keypair = this.new_sign_keypair();
+    this.G.L.trace("DataService.test_sodium keypair", keypair);
+
+    const signed = this.sign(message, keypair.private);
+    this.G.L.trace("DataService.test_sodium signed", signed);
+
+    const result = this.open_signed(signed, keypair.public); 
+    this.G.L.trace("DataService.test_sodium opened", result);
+
+    const keypair2 = this.new_sign_keypair();
+    const result2 = this.open_signed(signed, keypair2.public); 
+    if (result2) {
+      this.G.L.error("DataService.test_sodium should not have been able to open signed msg with wrong key!", keypair.public, keypair2.public, result2);  
+    } else {
+      this.G.L.trace("DataService.test_sodium correctly refused wrong key");  
+    }
+    this.G.L.exit("DataService.test_sodium waiting for sodium");
+  }
+
+  // SIGNING:
+
+  new_sign_keypair() {
+    try {
+      const keypair = Sodium.crypto_sign_keypair();
+      return {
+        public: Sodium.to_hex(keypair.publicKey), 
+        private: Sodium.to_hex(keypair.privateKey)
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  sign(message:string, private_key:string) {
+    try {
+      return Sodium.to_hex(Sodium.crypto_sign(message, Sodium.from_hex(private_key)));
+    } catch {
+      return undefined;
+    }
+  }
+
+  open_signed(signed_message:string, public_key:string) {
+    try {
+      return Sodium.to_string(Sodium.crypto_sign_open(Sodium.from_hex(signed_message), Sodium.from_hex(public_key)));
+    } catch {
+      return undefined;
+    }
   }
 
 }

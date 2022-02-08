@@ -375,6 +375,6 @@ export class PollPage implements OnInit {
   } 
 
   add_option() {
-    // TODO
+    // TODO: also add delegation if ospec.type == "-"
   }
 }
