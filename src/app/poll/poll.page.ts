@@ -2,10 +2,12 @@ import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core'
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, IonContent } from '@ionic/angular';
-import { AlertController } from '@ionic/angular'; 
+import { PopoverController, AlertController } from '@ionic/angular'; 
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
+
+import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
 
 @Component({
   selector: 'app-poll',
@@ -54,6 +56,7 @@ export class PollPage implements OnInit {
       private route: ActivatedRoute,
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
+      private popover: PopoverController,
       public translate: TranslateService,
       private zone: NgZone,
       public G: GlobalService) {
@@ -342,7 +345,20 @@ export class PollPage implements OnInit {
     }
   }
 
-  async delegate_dialog(email=null, invalid=false) { 
+  delegate_dialog(nickname=null, invalid=false) { // event: Event
+    this.popover.create({
+        component: DelegationDialogPage, 
+        translucent: true,
+        showBackdrop: true,
+//        cssClass: 'kebap',
+        componentProps: {parent: this}
+      })
+      .then((popoverElement)=>{
+        popoverElement.present();
+      })
+  }
+
+  async OLD_delegate_dialog(nickname=null, invalid=false) { 
     const dialog = await this.alertCtrl.create({ 
       header: this.translate.instant('poll.delegate-header'), 
       message: 
@@ -354,11 +370,19 @@ export class PollPage implements OnInit {
         )
         + "</b>", 
       inputs: [
+/*
         {
           name: 'email',
           placeholder: this.translate.instant('poll.delegate-email'),
           type: 'email',
           value: email
+        }
+*/
+        {
+          name: 'nickname',
+          placeholder: this.translate.instant('poll.delegate-nickname'),
+          type: 'text',
+          value: nickname
         }
       ],
       buttons: [
@@ -373,13 +397,12 @@ export class PollPage implements OnInit {
           text: this.translate.instant('poll.request-delegation'),
           role: 'ok', 
           handler: data => {
-            const valid = this.G.D.email_is_valid(data.email);
-            this.G.L.debug('delegate_dialog OK.', data.email, valid);
+            const valid = data.nickname != ''; // this.G.D.email_is_valid(data.email);
+            this.G.L.debug('delegate_dialog OK.', data.nickname, valid);
             if (!valid) {
-              this.delegate_dialog(data.email, true);
+              this.delegate_dialog(null, true);
             } else {
-              // TODO: generate delegation id and open mailto link using email as sender
-              this.G.Del.request_delegation_by_email(this.pid, data.email);
+              this.delegation_request_dialog(data.nickname);
             }
           } 
         } 
@@ -387,6 +410,12 @@ export class PollPage implements OnInit {
     }); 
     await dialog.present(); 
   } 
+  
+  async delegation_request_dialog(nickname: string) {
+    // TODO: show a similar dialog as for the inviteto page!
+
+    //               this.G.Del.request_delegation_by_email(this.pid, data.nickname);
+  }
 
   add_option() {
     // TODO: also add delegation if ospec.type == "-"

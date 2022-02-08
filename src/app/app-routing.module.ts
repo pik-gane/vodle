@@ -79,6 +79,10 @@ const routes: Routes = [
     path: 'logout',
     loadChildren: () => import('./logout/logout.module').then( m => m.LogoutPageModule)
   },
+  {
+    path: 'delegation-dialog',
+    loadChildren: () => import('./delegation-dialog/delegation-dialog.module').then( m => m.DelegationDialogPageModule)
+  },
 ];
 
 @NgModule({

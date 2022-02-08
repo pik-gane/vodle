@@ -453,6 +453,8 @@ export class DraftpollPage implements OnInit {
     this.add_option({});
   }
   
+  // kebap:
+
   showkebap(event: Event) {
     this.popover.create({
         event, 
@@ -466,8 +468,6 @@ export class DraftpollPage implements OnInit {
         popoverElement.present();
       })
   }
-
-  // kebap:
 
   send4review() { 
     this.G.L.warn("DraftpollPage.send4review not yet implemented!");

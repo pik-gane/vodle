@@ -9,6 +9,7 @@ import { PollPageRoutingModule } from './poll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
 
 import { PollPage } from './poll.page';
+export { PollPage } from './poll.page';
 
 @NgModule({
   imports: [
