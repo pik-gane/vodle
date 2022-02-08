@@ -76,7 +76,7 @@
         "compose-email": "Compose an email",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Delegation link copied to clipboard.",
-        "notification-copied-link-body": "Please send it to your delegate {{nickname}} now!",
+        "notification-copied-link-body": "Please send it now to your delegate, {{nickname}}!",
 
         "message-subject": "Request to act as delegate in poll (closing {{due}})",
         "message-body-greeting": "Dear fellow poll participant,",

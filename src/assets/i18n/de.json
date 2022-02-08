@@ -68,6 +68,31 @@
         "notifications-permission-intro": "Wenn Du es erlaubst, kann vodle Dich an Abstimmungs-Fristen, Delegations-Anfragen und Ähnliches erinnern. Auf der Einstellungs-Seite kannst Du kontrollieren, welche Benachrichtigungen Du bekommen möchtest."
     },
 
+    "delegation-request": {
+        "header": "Delegiere an eine:n andere:n Teilnehmer:in",
+        "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Bewertungen werden auch als Deine Bewertungen verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Optionen weiterhin selbst bewerten.",
+        "nickname-label": "Kurzname der/des Delegierten:",
+        "nickname-placeholder": "Dein Kurzname für diese Person (oder ihr voller Name)",
+
+        "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "request-options-without-share": "Am einfachsten kannst die Person per Email bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+
+        "share": "Teilen",
+        "compose-email": "Email schreiben",
+        "copy-link": "Link kopieren",
+        "notification-copied-link-title": "Delegierungs-Link in die Zwischenablage kopiert.",
+        "notification-copied-link-body": "Bitte sende ihn nun Deiner/Deinem Delegierten, {{nickname}}.",
+
+        "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung schließt {{due}})",
+        "message-body-greeting": "Liebe:r Teilnehmer:in,",
+        "message-body-before-title": "ich möchte Dich gerne bitten, mein:e Delegierte:r zu sein in der vodle-Abstimmung",
+        "message-body-closes": "(Die Abstimmung schließt am {{due}})",
+        "message-body-explanation": "Wenn Du zustimmst, wird vodle Deine Bewertungen automatisch verwenden, um auch meine Bewertungen festzulegen, ohne dass Dir zusätzliche Arbeit entsteht.",
+        "message-body-before-link": "Um meiner Bitte zuzustimmen oder sie abzulehnen, verwende bitte diesen Link:",
+        "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
+        "message-body-regards": "Mit besten Grüßen"
+    },
+
     "draftpoll": {
         "-page-title": "Abstimmung bearbeiten",
 
@@ -176,7 +201,7 @@
 
     "invite-email": {
         "subject": "Einladung zur Abstimmung (schließt {{due}})",
-        "body-greeting": "Liebe:r Teilmehmer:in,",
+        "body-greeting": "Liebe:r Teilnehmer:in,",
         "body-before-title": "ich lade Dich ein, an einer interaktiven Abstimmung teilzunehmen unter der Überschrift",
         "body-closes": "Die Abstimmung schließt am {{due}}.",
         "body-before-link": "Um teilzunehmen, verwende bitte diesen Link:",
@@ -229,17 +254,7 @@
         "sorting": "Optionen werden neu sortiert...",
 
         "delegate-button": "Delegieren",
-        "closes": "Schließt",
-
-        "delegate-header": "Delegiere an eine:n andere:n Teilnehmer:in",
-        "delegate-intro1": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Bewertungen werden auch als Deine Bewertungen verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Optionen weiterhin selbst bewerten.",
-        "-UNUSED-delegate-intro2": "Bitte gib die Email-Adresse der/des andere:n Teilnehmer:in an, an die/den Du Deine Stimme delegieren möchtest:",
-        "-UNUSED-delegate-intro2invalid": "Bitte gib eine gültige Email-Adresse der/des andere:n Teilnehmer:in an, an die/den Du Deine Stimme delegieren möchtest:",
-        "-UNUSED-delegate-email": "Email der/des Delegierten",
-        "delegate-intro2": "Bitte trage hier als Notiz einen Kurznamen für die/den andere:n Teilnehmer:in ein:",
-        "delegate-intro2invalid": "Bitte trage hier als Notiz einen nicht leeren Kurznamen für die/den andere:n Teilnehmer:in ein:",
-        "delegate-nickname": "Kurzname der/des Delegierten",
-        "request-delegation": "Delegation anfragen"
+        "closes": "Schließt"
     },
 
     "previewpoll": {
@@ -250,17 +265,6 @@
         "db-label": "Datenspeicherung",
         "publish": "Abstimmung starten",
         "type-label": "In dieser Abstimmung wird die Gruppe"
-    },
-
-    "request-delegation": {
-        "email-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung schließt {{due}})",
-        "email-body-greeting": "Liebe:r Teilmehmer:in,",
-        "email-body-before-title": "ich möchte Dich gerne bitten, als mein:e Delegierte:r zu agieren in der vodle-Abstimmung",
-        "email-body-closes": "(Die Abstimmung schließt am {{due}})",
-        "email-body-explanation": "Wenn Du zustimmst, wird vodle Deine Bewertungen automatisch verwenden, um auch meine Bewertungen festzulegen, ohne dass Dir zusätzliche Arbeit entsteht.",
-        "email-body-before-link": "Um meiner Bitte zuzustimmen oder sie abzulehnen, verwende bitte diesen Link:",
-        "email-body-dont-share": "Bitte gib den Link an niemanden weiter.",
-        "email-body-regards": "Mit besten Grüßen"
     },
 
     "select-server": {
