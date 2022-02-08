@@ -63,6 +63,29 @@
         "notifications-permission-intro": "If you allow this, vodle can remind you of upcoming poll deadlines, delegation requests and other important events. You can control which notifications you want to receive on vodle's settings page."
     },
 
+    "delegation-request": {
+        "header": "Delegate to some other voter",
+        "intro": "You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
+        "nickname-label": "Delegate's nickname:",
+        "nickname-placeholder": "Your nickname for that person (or their true name)",
+
+        "request-options-with-share": "To simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an email. Or you copy the delegation link and send it to them in any way you like.",
+        "request-options-without-share": "The simplest way to ask that person to act as your delegate is via email. Or you copy the delegation link and send it to them in any way you like.",
+
+        "share": "Use a messenger app",
+        "compose-email": "Compose an email",
+        "copy-link": "Copy link",
+
+        "message-subject": "Request to act as delegate in poll (closing {{due}})",
+        "message-body-greeting": "Dear participant,",
+        "message-body-before-title": "I'd like to ask you to act as my delegate in the vodle poll titled",
+        "message-body-closes": "(This poll closes on {{due}}.)",
+        "message-body-explanation": "If you accept, vodle will use your ratings automatically to set my ratings as well, with no additional work required by you.",
+        "message-body-before-link": "To accept or decline this request, please use the following link:",
+        "message-body-dont-share": "Please do not share this link with anyone else.",
+        "message-body-regards": "Best regards"
+    },
+
     "draftpoll": {
         "-page-title": "Edit draft poll",
 
@@ -221,16 +244,6 @@
 
         "delegate-button": "Delegate",
         "closes": "Closes",
-
-        "delegate-header": "Delegate to some other voter",
-        "delegate-intro1": "You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
-        "-UNUSED-delegate-intro2": "Please enter the email address of the voter you want to ask to be your delegate:",
-        "-UNUSED-delegate-intro2invalid": "Please enter a valid email address of the voter you want to ask to be your delegate:",
-        "-UNUSED-delegate-email": "Delegate's email",
-        "delegate-intro2": "Please enter here as a note some nickname of the voter you want to ask to be your delegate:",
-        "delegate-intro2invalid": "Please enter here as a note some non-empty nickname of the voter you want to ask to be your delegate:",
-        "delegate-nickname": "Delegate's nickname",
-        "request-delegation": "Request delegation"
     },
 
     "previewpoll": {
@@ -241,17 +254,6 @@
         "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will"
-    },
-
-    "request-delegation": {
-        "email-subject": "Request to act as delegate in poll (closing {{due}})",
-        "email-body-greeting": "Dear participant,",
-        "email-body-before-title": "I'd like to ask you to act as my delegate in the vodle poll titled",
-        "email-body-closes": "(This poll closes on {{due}}.)",
-        "email-body-explanation": "If you accept, vodle will use your ratings automatically to set my ratings as well, with no additional work required by you.",
-        "email-body-before-link": "To accept or decline this request, please use the following link:",
-        "email-body-dont-share": "Please do not share this link with anyone else.",
-        "email-body-regards": "Best regards"
     },
 
     "select-server": {
@@ -292,6 +294,7 @@
         "poll-url-valid": "Please enter a valid URL.",
         "poll-due-type-required": "Please select.",
         "poll-due-future": "This date and time is in the past.",
+        "nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
         "option-url-valid": "Please enter a valid URL."
     }

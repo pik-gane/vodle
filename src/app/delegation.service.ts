@@ -78,7 +78,7 @@ export class DelegationService {
     return this.G.D.generate_id(environment.data_service.did_length);
   }
 
-  prepare_delegation(pid:string): [Poll, string, del_agreement_t, string] {
+  prepare_delegation(pid: string): [Poll, string, del_agreement_t, string] {
     /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
     this.G.L.entry("DelegationService.prepare_delegation", pid);
     const p = this.G.P.polls[pid],
@@ -95,17 +95,19 @@ export class DelegationService {
             status: "pending",
             accepted_oids: new Set(),
             active_oids: new Set()
-          } as del_agreement_t,
-          cache = this.get_delegation_agreements_cache(pid);
-    // store data in local cache:
-    cache.set(did, agreement)
-    // store request in poll db: 
-    this.update_my_request_in_db(pid, did, request);
+          } as del_agreement_t;
     // generate magic link to be sent to delegate:
     const link = environment.magic_link_base_url + "drespond/" + pid + "/" + did;
-    this.G.L.debug("DelegationService.prepare_delegation invite link:", link);
+    this.G.L.debug("DelegationService.prepare_delegation link:", link);
     this.G.L.exit("DelegationService.prepare_delegation");
     return [p, did, agreement, link];
+  }
+
+  after_request_was_sent(pid: string, did: string, agreement: del_agreement_t) {
+    // store data in local cache:
+    this.get_delegation_agreements_cache(pid).set(did, agreement)
+    // store request in poll db: 
+    this.update_my_request_in_db(pid, did, agreement.request);
   }
 
   update_my_delegation(pid:string, oid:string, activate:boolean) {
@@ -163,16 +165,16 @@ export class DelegationService {
     /** Send an email request */
     const [p, did, agreement, link] = this.prepare_delegation(pid),
           // TODO: make indentation in body work:
-          message_title = this.translate.instant('request-delegation.email-subject', {due: this.G.D.format_date(p.due)}),
-          message_body = (this.translate.instant('request-delegation.email-body-greeting') + "\n\n" 
-                + this.translate.instant('request-delegation.email-body-before-title') + "\n\n"
+          message_title = this.translate.instant('request-delegation.message-subject', {due: this.G.D.format_date(p.due)}),
+          message_body = (this.translate.instant('request-delegation.message-body-greeting') + "\n\n" 
+                + this.translate.instant('request-delegation.message-body-before-title') + "\n\n"
                 + "\t    “" + p.title + "”.\n\n"
-                + this.translate.instant('request-delegation.email-body-closes', {due: this.G.D.format_date(p.due)}) + "\n\n"
-                + this.translate.instant('request-delegation.email-body-explanation') + "\n\n" 
-                + this.translate.instant('request-delegation.email-body-before-link') + "\n\n" 
+                + this.translate.instant('request-delegation.message-body-closes', {due: this.G.D.format_date(p.due)}) + "\n\n"
+                + this.translate.instant('request-delegation.message-body-explanation') + "\n\n" 
+                + this.translate.instant('request-delegation.message-body-before-link') + "\n\n" 
                 + "\t    " + link + "\n\n"
-                + this.translate.instant('request-delegation.email-body-dont-share') + "\n\n"
-                + this.translate.instant('request-delegation.email-body-regards')),
+                + this.translate.instant('request-delegation.message-body-dont-share') + "\n\n"
+                + this.translate.instant('request-delegation.message-body-regards')),
           email_href = "mailto:?subject=" + encodeURIComponent(message_title) + "&body=" + encodeURIComponent(message_body);
     this.G.L.debug("DelegationService.request_delegation_by_email mailtolink", email_href);
   }
