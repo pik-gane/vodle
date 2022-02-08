@@ -173,7 +173,19 @@ function myhash(what): string {
   return blake2s.hexDigest();
 }
 
-
+export type ospec_t = {type:"+" | "-", oids:Array<string>};
+export type drequest_t = {ospec:ospec_t, pubkey:string};
+export type dresponse_t = {vid:string, ospec:ospec_t, signature:string};
+export type dagreement_t = { // by pid, did
+  role?: "client" // this voter delegates to some other voter
+        | "delegate", // some other voter has delegated to this voter
+  privkey?: string,
+  request?: drequest_t, 
+  response?: dresponse_t, 
+  status?: "pending" | "agreed" | "rejected" | "revoked",
+  accepted_oids?: Set<string>, // oids accepted for delegation by delegate
+  active_oids?: Set<string> // among those, oids currently activated for delegation by client
+};
 
 // SERVICE:
 
@@ -185,6 +197,8 @@ const state_attributes = [
   "poll_caches", 
   "own_ratings_map_caches", 
   "effective_ratings_map_caches",
+  "my_delegations_caches",
+  "delegation_agreements_caches",
   "direct_delegation_map_caches",
   "inv_direct_delegation_map_caches",
   "indirect_delegation_map_caches",
@@ -231,14 +245,22 @@ export class DataService implements OnDestroy {
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
   private poll_db_sync_handlers: Record<string, any>;
 
+  // Caches with redundant information, not stored in database:
+
   own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
   effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
+
+  my_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
+
+  delegation_agreements_caches: Record<string, Map<string, dagreement_t>>; 
+
   direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
   inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
   indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of indirect delegation data, not stored in database
   inv_indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse indirect delegation data, not stored in database
   effective_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
   inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
+
   tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   // LYFECYCLE:
@@ -2200,6 +2222,11 @@ export class DataService implements OnDestroy {
 
   hash(what): string {
     return myhash(what);
+  }
+
+  generate_id(length:number): string {
+    // generates a random string of requested length
+    return CryptoJS.lib.WordArray.random(length/2).toString();
   }
 
 }

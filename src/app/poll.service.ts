@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 
-import * as CryptoJS from 'crypto-js';
-
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 
@@ -105,20 +103,20 @@ export class PollService {
   }
 
   generate_pid(): string {
-    return this.unused_pids.pop() || CryptoJS.lib.WordArray.random(6).toString();
+    return this.unused_pids.pop() || this.G.D.generate_id(environment.data_service.pid_length); //CryptoJS.lib.WordArray.random(6).toString();
   }
 
   generate_oid(pid:string): string {
     if (!(pid in this.unused_oids)) this.unused_oids[pid] = [];
-    return this.unused_oids[pid].pop() || CryptoJS.lib.WordArray.random(4).toString();
+    return this.unused_oids[pid].pop() || this.G.D.generate_id(environment.data_service.oid_length); //CryptoJS.lib.WordArray.random(4).toString();
   }
 
   generate_password(): string {
-    return CryptoJS.lib.WordArray.random(6).toString();
+    return this.G.D.generate_id(environment.data_service.pwd_length); //CryptoJS.lib.WordArray.random(6).toString();
   }
 
   generate_vid(): string {
-    return CryptoJS.lib.WordArray.random(4).toString();
+    return this.G.D.generate_id(environment.data_service.vid_length); //CryptoJS.lib.WordArray.random(4).toString();
   }
 
   update_ref_date() {

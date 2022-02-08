@@ -10,6 +10,7 @@ import { Logger, LoggingService } from "ionic-logging-service";
 import { DataService } from './data.service';
 import { SettingsService } from './settings.service';
 import { PollService } from './poll.service';
+import { DelegationService } from './delegation.service';
 
 @Injectable({
   providedIn: 'root'
@@ -48,6 +49,7 @@ export class GlobalService implements OnDestroy {
       public D: DataService,
       public P: PollService,
       public S: SettingsService,
+      public Del: DelegationService,
       ) {
     this.L = loggingService.getLogger("VODLE");
     this.L.entry("GlobalService.constructor");

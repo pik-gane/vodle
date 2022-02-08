@@ -150,11 +150,13 @@ export class PollPage implements OnInit {
     this.content.scrollToTop(1000);
   }
 
-  on_delegate_toggle_change() {
+  on_rate_yourself_toggle_change(oid:string) {
+    // update delegation data:
+    this.G.Del.update_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    // update n_delegated: // TODO: make more efficient
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
       if (!b) sum++;
-//      console.log(oid, b, sum, this.oidsorted.length);
     }
     this.n_delegated = sum;
   }

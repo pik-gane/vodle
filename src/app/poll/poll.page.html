@@ -1,5 +1,8 @@
 <!--
-  TODO: show if poll has different language
+  TODO: 
+  - show if poll has different language
+  - show winning prob. as percentage in circle?
+  - show avg. rating if necessary as tiebreaker (how?)
 
   <ion-icon name="people-outline"></ion-icon>
   <ion-icon name="arrow-redo-outline"></ion-icon>
@@ -241,7 +244,7 @@
             </ion-col>
             <ion-col class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
               <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
-                (ionChange)="on_delegate_toggle_change()"
+                (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
                 class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
                 style="position:relative; top:-8px;" 
                 [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
