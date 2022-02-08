@@ -166,9 +166,12 @@
         "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution-without-share1": "Am einfachsten kannst Du Leute per Email einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution2": "Der Einladungs-Link enthält die Abstimmungs-ID und ein Passwort. Jede Person, die den Link bekommt, egal ob direkt von Dir oder von jemandem weitergeleitet, kann abstimmen. Stell also bitte sicher, dass Du und die Teilnehmer:innen den Link nur berechtigten Leuten schicken.",
+
         "share": "Teilen",
         "compose-email": "Email schreiben",
-        "copy-link": "Link kopieren"
+        "copy-link": "Link kopieren",
+        "notification-copied-link-title": "Einladungs-Link in die Zwischenablage kopiert.",
+        "notification-copied-link-body": "Bitte sende ihn jetzt Deinen Teilnehmer:innen!"
     },
 
     "invite-email": {

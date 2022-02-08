@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
@@ -135,6 +136,18 @@ export class InvitetoPage implements OnInit {
   copy_button_clicked() {
     this.G.L.entry("InvitetoPage.copy_button_clicked");
     window.navigator.clipboard.writeText(this.invite_link);
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.translate.instant("inviteto.notification-copied-link-title"),
+        body: this.translate.instant("inviteto.notification-copied-link-body"),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("InvitetoPage.copy_button_clicked localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("InvitetoPage.copy_button_clicked localNotifications.schedule failed:", err);
+    });
     this.G.L.exit("InvitetoPage.copy_button_clicked");
   }
 }

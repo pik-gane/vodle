@@ -75,9 +75,11 @@
         "share": "Use a messenger app",
         "compose-email": "Compose an email",
         "copy-link": "Copy link",
+        "notification-copied-link-title": "Delegation link copied to clipboard.",
+        "notification-copied-link-body": "Please send it to your delegate {{nickname}} now!",
 
         "message-subject": "Request to act as delegate in poll (closing {{due}})",
-        "message-body-greeting": "Dear participant,",
+        "message-body-greeting": "Dear fellow poll participant,",
         "message-body-before-title": "I'd like to ask you to act as my delegate in the vodle poll titled",
         "message-body-closes": "(This poll closes on {{due}}.)",
         "message-body-explanation": "If you accept, vodle will use your ratings automatically to set my ratings as well, with no additional work required by you.",
@@ -184,9 +186,12 @@
         "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an email. Or you copy the invite link and distribute it in any way you like.",
         "caution-without-share1": "The simplest way to invite participants is via email. Or you copy the invite link and distribute it in any way you like.",
         "caution2": "The invite link contains the poll id and a poll password. Anyone who gets the link either directly or because someone forwarded it to them will be able to participate in the poll. So please make sure you and your participants only send it to authorized people.",
+
         "share": "Share",
         "compose-email": "Compose email",
-        "copy-link": "Copy link"
+        "copy-link": "Copy link",
+        "notification-copied-link-title": "Invite link copied to clipboard.",
+        "notification-copied-link-body": "Please send it to your participants now!"
     },
 
     "invite-email": {

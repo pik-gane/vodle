@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
@@ -99,7 +100,19 @@ export class DelegationDialogPage implements OnInit {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.agreement);
-    // TODO: notification
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.translate.instant("delegation-request.notification-copied-link-title"),
+        body: this.translate.instant("delegation-request.notification-copied-link-body", 
+                                     {nickname: this.formGroup.get('nickname').value}),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("DelegationDialogPage.copy_button_clicked localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("DelegationDialogPage.copy_button_clicked localNotifications.schedule failed:", err);
+    });
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.copy_button_clicked");
   }
