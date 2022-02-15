@@ -78,7 +78,7 @@ export class DelegationService {
     return this.G.D.generate_id(environment.data_service.did_length);
   }
 
-  prepare_delegation(pid: string): [Poll, string, del_request_t, del_agreement_t, string] {
+  prepare_delegation(pid: string): [Poll, string, del_request_t, string, del_agreement_t, string] {
     /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
     this.G.L.entry("DelegationService.prepare_delegation", pid);
     const p = this.G.P.polls[pid],
@@ -90,7 +90,6 @@ export class DelegationService {
           } as del_request_t,
           agreement = {
             client_vid: p.myvid,
-            private_key: keypair.private,
             status: "pending",
             accepted_oids: new Set(),
             active_oids: new Set()
@@ -99,12 +98,13 @@ export class DelegationService {
     const link = environment.magic_link_base_url + "drespond/" + pid + "/" + did;
     this.G.L.debug("DelegationService.prepare_delegation link:", link);
     this.G.L.exit("DelegationService.prepare_delegation");
-    return [p, did, request, agreement, link];
+    return [p, did, request, keypair.private, agreement, link];
   }
 
-  after_request_was_sent(pid: string, did: string, request: del_request_t, agreement: del_agreement_t) {
-    // store request in poll db:
-    this.set_request(pid, did, request);
+  after_request_was_sent(pid: string, did: string, request: del_request_t, private_key: string, agreement: del_agreement_t) {
+    // store request and private key in poll db:
+    this.set_private_key(pid, did, private_key);
+    this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
   }
@@ -136,7 +136,7 @@ export class DelegationService {
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
-          this.set_request(pid, did, request);
+          this.set_my_request(pid, did, request);
           // add delegation to poll object:
           p.add_delegation(p.myvid, oid, a.delegate_vid);
         }
@@ -154,7 +154,7 @@ export class DelegationService {
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
-          this.set_request(pid, did, request);
+          this.set_my_request(pid, did, request);
           // remove delegation from poll object:
           const p = this.G.P.polls[pid];
           p.del_delegation(p.myvid, oid);
@@ -165,105 +165,149 @@ export class DelegationService {
 
   // data handling:
 
-  get_request(pid: string, did: string): del_request_t {
-    const item = this.G.D.getv(pid, "drequ." + did);
+  get_nickname(pid: string, did: string): string {
+    return this.G.D.getp(pid, "del_nickname." + did);
+  }
+
+  set_nickname(pid: string, did: string, value: string) {
+    this.G.D.setp(pid, "del_nickname." + did, value);
+  }
+
+  get_private_key(pid: string, did: string): string {
+    return this.G.D.getp(pid, "del_private_key." + did);
+  }
+
+  set_private_key(pid: string, did: string, value: string) {
+    this.G.D.setp(pid, "del_private_key." + did, value);
+  }
+
+  get_request(pid: string, did: string, vid?: string): del_request_t {
+    if (!vid) {
+      vid = this.get_agreement(pid, did).client_vid;
+    }
+    const item = vid ? this.G.D.getv(pid, "drequ." + did, vid) : null;
     return item ? JSON.parse(item) as del_request_t : null;
   }
 
-  set_request(pid: string, did: string, value: del_request_t) {
-    this.G.D.setv(pid, "drequ." + did, JSON.stringify(value))
+  set_my_request(pid: string, did: string, value: del_request_t) {
+    this.G.D.setv(pid, "drequ." + did, JSON.stringify(value));
+    this.update_agreement(pid, did, null, value, null);
   }
 
-  get_signed_response(pid: string, did: string): del_signed_response_t {
-    return this.G.D.getv(pid, "dresp." + did);
+  get_signed_response(pid: string, did: string, vid?: string): del_signed_response_t {
+    if (!vid) {
+      vid = this.get_agreement(pid, did).delegate_vid;
+    }
+    return vid ? this.G.D.getv(pid, "dresp." + did, vid) : null;
   }
   
-  set_signed_response(pid: string, did: string, value: del_signed_response_t) {
-    this.G.D.setv(pid, "dresp." + did, value as string)
+  set_my_signed_response(pid: string, did: string, value: del_signed_response_t) {
+    this.G.D.setv(pid, "dresp." + did, value as string);
+    this.update_agreement(pid, did, null, null, value);
   }
 
-  update_request_in_cache(pid: string, vid: string,  did: string, value: string) {
-    /** parse request data JSON and store in cache */
-    const a = this.get_delegation_agreements_cache(pid).get(did);
-    a.client_vid = vid;
-    this.update_agreement(pid, did, a);
-  }
-
-  update_signed_response_in_cache(pid: string, vid: string, did: string, value: string) {
-    /** store signed response in cache */
-    const a = this.get_delegation_agreements_cache(pid).get(did),
-          request = this.get_request(pid, did);
-    if (!this.response_signed_incorrectly(request, value)) {
-      a.delegate_vid = vid;
-      this.update_agreement(pid, did, a);  
+  get_agreement(pid: string, did: string): del_agreement_t {
+    const cache = this.get_delegation_agreements_cache(pid);
+    let a = cache.get(did);
+    if (!a) {
+      a = {
+        status: "pending",
+        accepted_oids: new Set(),
+        active_oids: new Set()
+      } as del_agreement_t;
+      cache.set(did, a);
     }
+    return a;
   }
 
-  update_agreement(pid: string, did: string, a: del_agreement_t) {
-    /** compare request and response, validate signature, set status, extract acceptes and active oids */
-    const old_status = a.status, 
-          request = this.get_request(pid, did), 
-          signed_response = this.get_signed_response(pid, did);
+  process_request_from_db(pid: string, did: string, vid: string) {
+    const a = this.get_agreement(pid, did);
+    a.client_vid = vid;
+    this.update_agreement(pid, did, a, null, null);
+  }
+
+  process_signed_response_from_db(pid: string, did: string, vid: string) {
+    const a = this.get_agreement(pid, did),
+          request = this.get_request(pid, did, vid),
+          signed_response = this.get_signed_response(pid, did, vid);
     if (!request) {
-      // not complete yet:
+      return;
+    }
+    if (this.response_signed_incorrectly(request, signed_response)) {
+      this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
+      if (vid == a.delegate_vid) {
+        delete a.delegate_vid;
+      }
+      return
+    }    
+    // response is properly signed, so store it:
+    a.delegate_vid = vid;
+    this.update_agreement(pid, did, a, request, signed_response);
+  }
+
+  update_agreement(pid: string, did: string, agreement: del_agreement_t,
+        request: del_request_t, signed_response: del_signed_response_t) {
+    /** compare request and response, validate signature, set status, extract accepted and active oids */
+    // get relevant data:
+    const a = agreement || this.get_agreement(pid, did);
+    if (!request) {
+      request = this.get_request(pid, did, a.client_vid);
+    }
+    if (!signed_response) {
+      signed_response = this.get_signed_response(pid, did, a.delegate_vid);
+    }
+    const old_status = a.status;
+    if ((!request) || (!signed_response)) {
+      // agreement not complete yet:
       a.status = "pending";
     } else {
-      // first check for invalid signature:
-      if (this.response_signed_incorrectly(request, signed_response)) {
-        this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
-        // simply ignore response.
-      } else if (!signed_response) {
-        // not complete yet:
-        a.status = "pending";
+      // request and correctly signed response exist
+      if (!a.accepted_oids) {
+        a.accepted_oids = new Set();
+      }
+      const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
+      const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
+      if (!response.option_spec) {
+        a.status = "rejected";
+      } else if (response.option_spec.type == "+") {
+        // oids specifies accepted options
+        for (const oid of Array.from(a.accepted_oids.values())) {
+          if (!(oid in response.option_spec.oids)) {
+            // oid no longer accepted:
+            a.accepted_oids.delete(oid);
+            this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
+            // TODO: notify voter!
+          }
+        }
+        for (const oid of response.option_spec.oids) {
+          if (!a.accepted_oids.has(oid)) {
+            // oid newly accepted:
+            a.accepted_oids.add(oid);
+            this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
+            // TODO: notify voter!
+          }
+        }
+      } else if (response.option_spec.type == "-") {
+        // oids specifies NOT accepted options
+        for (const oid of Array.from(a.accepted_oids.values())) {
+          if (oid in response.option_spec.oids) {
+            // oid no longer accepted:
+            a.accepted_oids.delete(oid);
+            this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
+            // TODO: notify voter!
+          }
+        }
+        for (const oid of this.G.P.polls[pid].oids) {
+          if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
+            // oid newly accepted:
+            a.accepted_oids.add(oid);
+            this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
+            // TODO: notify voter!
+          }
+        }
+        a.status = "agreed";
       } else {
-        // request and correctly signed response exist
-        if (!a.accepted_oids) {
-          a.accepted_oids = new Set();
-        }
-        const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
-        const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
-        if (!response.option_spec) {
-          a.status = "rejected";
-        } else if (response.option_spec.type == "+") {
-          // oids specifies accepted options
-          for (const oid of Array.from(a.accepted_oids.values())) {
-            if (!(oid in response.option_spec.oids)) {
-              // oid no longer accepted:
-              a.accepted_oids.delete(oid);
-              this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
-              // TODO: notify voter!
-            }
-          }
-          for (const oid of response.option_spec.oids) {
-            if (!a.accepted_oids.has(oid)) {
-              // oid newly accepted:
-              a.accepted_oids.add(oid);
-              this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
-              // TODO: notify voter!
-            }
-          }
-        } else if (response.option_spec.type == "-") {
-          // oids specifies NOT accepted options
-          for (const oid of Array.from(a.accepted_oids.values())) {
-            if (oid in response.option_spec.oids) {
-              // oid no longer accepted:
-              a.accepted_oids.delete(oid);
-              this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
-              // TODO: notify voter!
-            }
-          }
-          for (const oid of this.G.P.polls[pid].oids) {
-            if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
-              // oid newly accepted:
-              a.accepted_oids.add(oid);
-              this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
-              // TODO: notify voter!
-            }
-          }
-          a.status = "agreed";
-        } else {
-          a.status = "rejected";
-        }
+        a.status = "rejected";
       }
     }
     if ((old_status=="pending") && (a.status=="agreed")) {

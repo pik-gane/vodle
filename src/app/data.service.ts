@@ -137,7 +137,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keys_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid'];
+const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname'];
 const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
 
 const poll_keystarts_requiring_due = ['option'];
@@ -189,7 +189,6 @@ export type del_signed_response_t = string;
 export type del_agreement_t = { // by pid, did
   client_vid?: string,
   delegate_vid?: string,
-  private_key?: string,
   status?: "pending" | "agreed" | "rejected" | "revoked",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
@@ -775,8 +774,10 @@ export class DataService implements OnDestroy {
       for (const [ukey, value] of Object.entries(this.user_cache)) {
         if (ukey.startsWith(prefix)) {
           // used db entry belongs to this poll.
-          const key = ukey.substring(prefix.length);
-          if ((key != 'state') && !poll_keys_in_user_db.includes(key)) {
+          const key = ukey.substring(prefix.length),
+                pos = (key+'.').indexOf('.'),
+                subkey = (key+'.').slice(0, pos);
+          if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
             if (this._setp_in_polldb(pid, key, value as string)) {
               this.delu(ukey);
             } else {
@@ -1166,7 +1167,9 @@ export class DataService implements OnDestroy {
   getp(pid:string, key:string): string {
     // get poll data item
     let value = null;
-    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
+    const pos = (key+'.').indexOf('.'),
+          subkey = (key+'.').slice(0, pos);
+    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       // draft polls' data is stored in user's database:
       const ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
@@ -1195,7 +1198,9 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.setp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
     // decide where to store data:
-    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
+    const pos = (key+'.').indexOf('.'),
+          subkey = (key+'.').slice(0, pos);
+    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
       if (!(key in this.poll_caches[pid])) {
@@ -1221,7 +1226,9 @@ export class DataService implements OnDestroy {
       this._pid_oids[pid].delete(oid);
       this.G.L.trace("DataService.delp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
-    if (this.pid_is_draft(pid) || poll_keys_in_user_db.includes(key)) {
+    const pos = (key+'.').indexOf('.'),
+          subkey = (key+'.').slice(0, pos);
+    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       // construct key for user db:
       const ukey = get_poll_key_prefix(pid) + key;
       this.delu(ukey);
@@ -1235,8 +1242,8 @@ export class DataService implements OnDestroy {
     }      
   }
 
-  getv(pid:string, key:string): string {
-    // get voter data item
+  getv(pid: string, key: string, vid?: string): string {
+    // get own voter data item
     let value = null;
     if (voter_keys_in_user_db.includes(key)) {
       // construct key for user db:
@@ -1245,12 +1252,12 @@ export class DataService implements OnDestroy {
     } else if (this.pid_is_draft(pid)) {
       // draft polls' data is stored in user's database.
       // construct key for user db:
-      const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+      const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid, vid) + key;
       value = this.user_cache[ukey] || '';
     } else {
       // other polls' data is stored in poll's own database.
       // construct key for poll db:
-      const pkey = this.get_voter_key_prefix(pid) + key;
+      const pkey = this.get_voter_key_prefix(pid, vid) + key;
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][pkey] || '';
     }
@@ -1591,7 +1598,7 @@ export class DataService implements OnDestroy {
     return initializing_poll;
   }
 
-  private doc2poll_cache(pid, doc): boolean {
+  private doc2poll_cache(pid: string, doc): boolean {
     /** Copy data from an incoming JSON doc to a poll cache. */
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
     const _id = doc._id, 
@@ -1698,6 +1705,12 @@ export class DataService implements OnDestroy {
           if (subkey.startsWith("rating.")) {
             const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
             this.G.P.update_own_rating(pid, vid, oid, r);
+          } else if (subkey.startsWith("drequ.")) {
+            const did = subkey.slice("drequ.".length);
+            this.G.Del.process_request_from_db(pid, did, vid);
+          } else if (subkey.startsWith("dresp.")) {
+            const did = subkey.slice("dresp.".length);
+            this.G.Del.process_signed_response_from_db(pid, did, vid);
           }
 
         } else {
@@ -2229,8 +2242,8 @@ export class DataService implements OnDestroy {
     // TODO: test this!
   }
 
-  get_voter_key_prefix(pid:string): string {
-    return 'voter.' + this.getp(pid, 'myvid') + ':';
+  get_voter_key_prefix(pid: string, vid?: string): string {
+    return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + ':';
   }
   
   format_date(date: Date): string {
