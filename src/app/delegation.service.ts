@@ -221,18 +221,27 @@ export class DelegationService {
   }
 
   process_request_from_db(pid: string, did: string, vid: string) {
+    /** after receiving a new or changed request from the db, process it: */
     const a = this.get_agreement(pid, did);
+    if (a.delegate_vid && !a.client_vid) {
+      a.client_vid = vid;
+      // check earlier response for correct signature:
+      const request = this.get_request(pid, did, vid),
+            signed_response = this.get_signed_response(pid, did, vid);
+      if (this.response_signed_incorrectly(request, signed_response)) {
+        this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
+        delete a.delegate_vid;
+      }    
+    }
     a.client_vid = vid;
     this.update_agreement(pid, did, a, null, null);
   }
 
   process_signed_response_from_db(pid: string, did: string, vid: string) {
+    /** after receiving a new or changed response from the db, process it: */
     const a = this.get_agreement(pid, did),
           request = this.get_request(pid, did, vid),
           signed_response = this.get_signed_response(pid, did, vid);
-    if (!request) {
-      return;
-    }
     if (this.response_signed_incorrectly(request, signed_response)) {
       this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
       if (vid == a.delegate_vid) {
@@ -240,14 +249,14 @@ export class DelegationService {
       }
       return
     }    
-    // response is properly signed, so store it:
     a.delegate_vid = vid;
     this.update_agreement(pid, did, a, request, signed_response);
   }
 
   update_agreement(pid: string, did: string, agreement: del_agreement_t,
         request: del_request_t, signed_response: del_signed_response_t) {
-    /** compare request and response, validate signature, set status, extract accepted and active oids */
+    /** after changes to request or response,
+     * compare request and response, set status, extract accepted and active oids */
     // get relevant data:
     const a = agreement || this.get_agreement(pid, did);
     if (!request) {
@@ -316,6 +325,7 @@ export class DelegationService {
   }
 
   response_signed_incorrectly(request: del_request_t, signed_response: del_signed_response_t) {
+    /** whether the response can be identified as being signed incorrectly */
     if (!signed_response) {
       // no response, so no invalid signature:
       return false;
