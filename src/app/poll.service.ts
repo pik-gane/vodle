@@ -383,7 +383,7 @@ export class Poll {
 
   set_myrating(oid: string, value: number, store:boolean=true) {
     if (store) {
-      this.G.D.setv(this._pid, "rating." + oid, value.toString(), true);
+      this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }
     this.update_own_rating(this.myvid, oid, value);
   }

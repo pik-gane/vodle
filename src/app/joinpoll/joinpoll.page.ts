@@ -76,6 +76,7 @@ export class JoinpollPage implements OnInit {
       this.p.init_myvid();
       this.G.D.connect_to_remote_poll_db(this.pid);
     }
+    this.ready = true;
     this.G.L.exit("JoinPage.onDataReady");
   }
 
@@ -86,6 +87,6 @@ export class JoinpollPage implements OnInit {
   }
 
   go_button_clicked() {
-    // TODO!
+    this.router.navigate(["/poll/" + this.pid]);
   }
 }

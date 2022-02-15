@@ -553,7 +553,7 @@ export class DataService implements OnDestroy {
       .then(success => {
 
         if (this.router.url.includes('/login')) {
-          this.router.navigate(['/login/connected/'+this.page.then_url]);
+          this.router.navigate(['/login/connected/' + ((!!this.page) ? this.page.then_url || '' : '')]);
         } 
 
       }).catch(err => {
@@ -782,6 +782,7 @@ export class DataService implements OnDestroy {
                 pos = (key+'.').indexOf('.'),
                 subkey = (key+'.').slice(0, pos);
           if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
+            // FIXME: some entries now need the due to be added for validation!
             if (this._setp_in_polldb(pid, key, value as string)) {
               this.delu(ukey);
             } else {
@@ -1269,9 +1270,9 @@ export class DataService implements OnDestroy {
     return value;
   }
 
-  setv(pid:string, key:string, value:string, add_due=false): boolean {
+  setv(pid:string, key:string, value:string): boolean {
     /** Set a voter data item.
-     * If add_due, mark the database entry with poll's due date
+     * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
      */
     if (this.getv(pid, key) == value) {
@@ -1289,7 +1290,7 @@ export class DataService implements OnDestroy {
     } else if (this.pid_is_draft(pid)) {
       return this._setv_in_userdb(pid, key, value);
     } else {
-      return this._setv_in_polldb(pid, key, value, add_due);
+      return this._setv_in_polldb(pid, key, value);
     }
   }
 
@@ -1318,12 +1319,17 @@ export class DataService implements OnDestroy {
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
   private _setp_in_polldb(pid:string, key:string, value:string): boolean {
-    // set poll data item in poll db:
-    value = value || '';
+    /** Set poll data item in poll db.
+     * If necessary, mark the database entry with poll's due date
+     * to allow couchdb validating that due date is not passed.
+     */ 
+     value = value || '';
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
     this.poll_caches[pid][key] = value;
-    return this.store_poll_data(pid, key, this.poll_caches[pid], key);
+    const keystart = key.slice(0, (key+'.').indexOf('.'));
+    return this.store_poll_data(pid, key, this.poll_caches[pid], key, 
+                                poll_keystarts_requiring_due.includes(keystart));
   }
   private _setv_in_userdb(pid:string, key:string, value:string): boolean {
     // set voter data item in user db:
@@ -1334,9 +1340,9 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
-  private _setv_in_polldb(pid:string, key:string, value:string, add_due=false): boolean {
+  private _setv_in_polldb(pid:string, key:string, value:string): boolean {
     /** Set voter data item in poll db.
-     * If add_due, mark the database entry with poll's due date
+     * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
      */ 
     value = value || '';
@@ -1345,7 +1351,9 @@ export class DataService implements OnDestroy {
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
-    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, add_due);
+    const subkeystart = key.slice(0, (key+'.').indexOf('.'));
+    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, 
+                                voter_subkeystarts_requiring_due.includes(subkeystart));
   }
 
   private async show_loading() {
