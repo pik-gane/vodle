@@ -696,17 +696,21 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.ensure_local_poll_data", pid);
   }
 
-  private local_poll_docs2cache(pid:string, result) {
+  private local_poll_docs2cache(pid: string, result) {
     this.G.L.entry("DataService.local_poll_docs2cache", pid);
     // decrypt and process all synced docs:
+    let local_changes = false;
     for (const row of result.rows) {
-      this.doc2poll_cache(pid, row.doc);
+      local_changes = local_changes || this.doc2poll_cache(pid, row.doc);
     }
     this._pids.add(pid);
+    if (local_changes) {
+      this.save_state();
+    }
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
-  connect_to_remote_poll_db(pid:string) {
+  connect_to_remote_poll_db(pid: string) {
     // called at poll initialization
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
@@ -1485,18 +1489,11 @@ export class DataService implements OnDestroy {
     }
 
     // process all known oids and, if necessary, generate Option objects:
-//    this.G.L.trace("DataService.after_changes processing _pid_oids");
-//    this.G.L.trace("DataService.after_changes _pid_oids", JSON.stringify(this._pid_oids));
-//    for (let pid in this._pid_oids) {
-//      this.G.L.trace("DataService.after_changes _pid_oids", pid, [...this._pid_oids[pid]]);
-//    }
     for (const pid in this._pid_oids) {
       const oids = this._pid_oids[pid];
-//      this.G.L.trace("DataService.after_changes processing options", pid, [...oids]);
       for (const oid of oids) {
         if (pid in this.G.P.polls) {
           const p = this.G.P.polls[pid];
-//          this.G.L.trace("DataService.after_changes processing option", pid, oid);
           if (!p.oids.includes(oid)) {
             // option object does not exist yet, so create it:
             this.G.L.trace("DataService.after_changes creating Option object", oid);
@@ -1508,8 +1505,10 @@ export class DataService implements OnDestroy {
       }
     }
 
+    this.save_state();
     this.G.L.exit("DataService.after_changes");
   }
+
   private poll_has_db_credentials(pid:string) {
     // return whether poll db credentials are nonempty:
     return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'myvid')!='';
@@ -1710,22 +1709,22 @@ export class DataService implements OnDestroy {
 
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
 
-          // store in cache if changed:
+          // if changed, store in cache and postprocess:
           if (cache[key] != value) {
             cache[key] = value;
             value_changed = true;
-          }  
 
-          if (subkey.startsWith("rating.")) {
-            const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
-            this.G.P.update_own_rating(pid, vid, oid, r);
-          } else if (subkey.startsWith("del_request.")) {
-            const did = subkey.slice("del_request.".length);
-            this.G.Del.process_request_from_db(pid, did, vid);
-          } else if (subkey.startsWith("del_response.")) {
-            const did = subkey.slice("del_response.".length);
-            this.G.Del.process_signed_response_from_db(pid, did, vid);
-          }
+            if (subkey.startsWith("rating.")) {
+              const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
+              this.G.P.update_own_rating(pid, vid, oid, r);
+            } else if (subkey.startsWith("del_request.")) {
+              const did = subkey.slice("del_request.".length);
+              this.G.Del.process_request_from_db(pid, did, vid);
+            } else if (subkey.startsWith("del_response.")) {
+              const did = subkey.slice("del_response.".length);
+              this.G.Del.process_signed_response_from_db(pid, did, vid);
+            }
+          }  
 
         } else {
 

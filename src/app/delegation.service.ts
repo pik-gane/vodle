@@ -169,7 +169,7 @@ export class DelegationService {
       client_vid = this.get_agreement(pid, did).client_vid;
     }
     const item = (!!client_vid) ? this.G.D.getv(pid, "del_request." + did, client_vid) : null;
-    this.G.L.trace("DelegationService.get_request", pid, did, client_vid, item, this.G.D.getv(pid, "del_request." + did, client_vid));
+    this.G.L.trace("DelegationService.get_request", pid, did, client_vid, item);
     return item ? JSON.parse(item) as del_request_t : null;
   }
 
@@ -224,7 +224,7 @@ export class DelegationService {
   process_signed_response_from_db(pid: string, did: string, vid: string) {
     /** after receiving a new or changed response from the db, process it: */
     const a = this.get_agreement(pid, did),
-          request = this.get_request(pid, did, vid),
+          request = this.get_request(pid, did, a.client_vid),
           signed_response = this.get_signed_response(pid, did, vid);
     if (this.response_signed_incorrectly(request, signed_response)) {
       this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
