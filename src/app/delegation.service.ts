@@ -132,7 +132,7 @@ export class DelegationService {
 
   accept(pid: string, did: string, private_key: string) {
     /** accept a delegation request, store response in db */
-    const response = {option_spec: {type: "-", oids: []}} as del_response_t, // TODO: allow partial acceptance for only some options
+    const response = {option_spec: {type: "-", oids: []}} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.accept", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
@@ -140,7 +140,7 @@ export class DelegationService {
 
   decline(pid: string, did: string, private_key: string) {
     /** decline a delegation request, store response in db */
-    const response = {option_spec: null} as del_response_t,
+    const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
@@ -264,45 +264,45 @@ export class DelegationService {
       const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
       if (!response.option_spec) {
         a.status = "declined";
-      } else if (response.option_spec.type == "+") {
-        // oids specifies accepted options
-        for (const oid of Array.from(a.accepted_oids.values())) {
-          if (!(oid in response.option_spec.oids)) {
-            // oid no longer accepted:
-            a.accepted_oids.delete(oid);
-            this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
-            // TODO: notify voter!
-          }
-        }
-        for (const oid of response.option_spec.oids) {
-          if (!a.accepted_oids.has(oid)) {
-            // oid newly accepted:
-            a.accepted_oids.add(oid);
-            this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
-            // TODO: notify voter!
-          }
-        }
-      } else if (response.option_spec.type == "-") {
-        // oids specifies NOT accepted options
-        for (const oid of Array.from(a.accepted_oids.values())) {
-          if (oid in response.option_spec.oids) {
-            // oid no longer accepted:
-            a.accepted_oids.delete(oid);
-            this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
-            // TODO: notify voter!
-          }
-        }
-        for (const oid of this.G.P.polls[pid].oids) {
-          if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
-            // oid newly accepted:
-            a.accepted_oids.add(oid);
-            this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
-            // TODO: notify voter!
-          }
-        }
-        a.status = "agreed";
       } else {
-        a.status = "declined";
+        if (response.option_spec.type == "+") {
+          // oids specifies accepted options
+          for (const oid of Array.from(a.accepted_oids.values())) {
+            if (!(oid in response.option_spec.oids)) {
+              // oid no longer accepted:
+              a.accepted_oids.delete(oid);
+              this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+          for (const oid of response.option_spec.oids) {
+            if (!a.accepted_oids.has(oid)) {
+              // oid newly accepted:
+              a.accepted_oids.add(oid);
+              this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+        } else if (response.option_spec.type == "-") {
+          // oids specifies NOT accepted options
+          for (const oid of Array.from(a.accepted_oids.values())) {
+            if (oid in response.option_spec.oids) {
+              // oid no longer accepted:
+              a.accepted_oids.delete(oid);
+              this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+          for (const oid of this.G.P.polls[pid].oids) {
+            if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
+              // oid newly accepted:
+              a.accepted_oids.add(oid);
+              this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+        }
+        a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
     }
     if ((old_status=="pending") && (a.status=="agreed")) {
