@@ -88,6 +88,12 @@
         "message-body-regards": "Best regards"
     },
 
+    "delrespond": {
+        "-page-title": "Act as delegate?",
+        "accept": "Accept",
+        "decline": "Decline"
+    },
+
     "draftpoll": {
         "-page-title": "Edit draft poll",
 

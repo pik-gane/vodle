@@ -51,11 +51,14 @@ export class DelegationDialogPage implements OnInit {
   ionViewWillEnter() {
     this.can_use_web_share = (typeof navigator.share === "function");
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
+    const ctrl = new FormControl('', Validators.required);
     this.formGroup = this.formBuilder.group({
-      nickname: new FormControl('', Validators.required),
+      nickname: ctrl,
     });
+    // TODO: what if already some delegation active or pending?
     // prepare a new delegation:
     [this.p, this.did, this.request, this.private_key, this.agreement, this.delegation_link] = this.G.Del.prepare_delegation(this.parent.pid);
+//    ctrl.setValue(this.G.D.getp(this.p.pid, "del_nickname." + this.did));
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
     this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
@@ -67,17 +70,19 @@ export class DelegationDialogPage implements OnInit {
                 + "\t    " + this.delegation_link + "\n\n"
                 + this.translate.instant('delegation-request.message-body-dont-share') + "\n\n"
                 + this.translate.instant('delegation-request.message-body-regards'));
-    this.update_request();
+    this.update_request("");
     this.ready = true;
   }
 
   nickname_changed() {
-    this.update_request();
+    const nickname = this.formGroup.get('nickname').value;
+    this.G.D.setp(this.p.pid, "del_nickname." + this.did, nickname);
+    this.update_request(nickname);
   }
 
-  update_request() {
+  update_request(nickname: string) {
     this.G.L.entry("DelegationDialogPage.update_request");
-    this.mailto_url = "mailto:" + encodeURIComponent(this.formGroup.get('nickname').value) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
+    this.mailto_url = "mailto:" + encodeURIComponent(nickname) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
   }
 
   ClosePopover()

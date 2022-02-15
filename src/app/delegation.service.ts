@@ -21,35 +21,12 @@ export class DelegationService {
 /**
  * Flow:
  * 
- * v1 sends v2 request with did, vid1, ospec1, privkey
- * v1 stores v1.drequest.did = {ospec1, pubkey}
- * v2 stores v2.dresponse.did = {vid1, ospec2, signature with privkey}
+ * v1 sends v2 link with pid, did, privkey
+ * v1 stores v1.del_request.did = {ospec1, pubkey}
+ * v2 stores v2.del_response.did = privkey-signed {ospec2}
  * v1,v2 may update ospec1, ospec2 at any time
  *
- * ospec = "*" | ("+" | "-",[oid,...,oid])  
- * 
- * when v receives v1.drequest.did:
- *   set dc[did].request = request, .status = "pending"
- *   if dc[did].response:
- *     update()
- * when v receives v2.dresponse.did:
- *   set dc[did].response = response, .status = "pending"
- *   if dc[did].request:
- *     update()
- *  
- *   
- * update():
- *   if sig ok:
- *     get oldoids from .status
- *     calc newoids by intersecting ospec1, ospec2
- *     for oid in oldoids-newoids:
- *       delete delegation[oid][vid1]
- *     for oid in newoids-oldoids:
- *       delegation[oid][vid1] = vid2
- *     .status = newoids
- *   else:
- *     remove response
- *   if v in v1,v2: notify of changes
+ * ospec = ("+" | "-", [oid,...,oid])  
  * 
  */
 
@@ -59,19 +36,7 @@ export class DelegationService {
     this.G = G; 
   }
 
-  get_my_dids_cache(pid:string) {
-    if (!this.G.D.my_dids_caches[pid]) {
-      this.G.D.my_dids_caches[pid] = new Map();
-    }
-    return this.G.D.my_dids_caches[pid];
-  }
-
-  get_delegation_agreements_cache(pid:string) {
-    if (!this.G.D.delegation_agreements_caches[pid]) {
-      this.G.D.delegation_agreements_caches[pid] = new Map();
-    }
-    return this.G.D.delegation_agreements_caches[pid];
-  }
+  // REQUESTING A DELEGATION:
 
   generate_did(): string {
     // generates a delegation id
@@ -95,7 +60,7 @@ export class DelegationService {
             active_oids: new Set()
           } as del_agreement_t;
     // generate magic link to be sent to delegate:
-    const link = environment.magic_link_base_url + "drespond/" + pid + "/" + did;
+    const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + keypair.private;
     this.G.L.debug("DelegationService.prepare_delegation link:", link);
     this.G.L.exit("DelegationService.prepare_delegation");
     return [p, did, request, keypair.private, agreement, link];
@@ -163,7 +128,25 @@ export class DelegationService {
     }
   }
 
-  // data handling:
+  // RESPONDING TO A DELEGATION REQUEST:
+
+  accept(pid: string, did: string, private_key: string) {
+    /** accept a delegation request, store response in db */
+    const response = {option_spec: {type: "-", oids: []}} as del_response_t, // TODO: allow partial acceptance for only some options
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.accept", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  decline(pid: string, did: string, private_key: string) {
+    /** decline a delegation request, store response in db */
+    const response = {option_spec: null} as del_response_t,
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.decline", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  // DATA HANDLING:
 
   get_nickname(pid: string, did: string): string {
     return this.G.D.getp(pid, "del_nickname." + did);
@@ -181,16 +164,17 @@ export class DelegationService {
     this.G.D.setp(pid, "del_private_key." + did, value);
   }
 
-  get_request(pid: string, did: string, vid?: string): del_request_t {
-    if (!vid) {
-      vid = this.get_agreement(pid, did).client_vid;
+  get_request(pid: string, did: string, client_vid?: string): del_request_t {
+    if (!client_vid) {
+      client_vid = this.get_agreement(pid, did).client_vid;
     }
-    const item = vid ? this.G.D.getv(pid, "drequ." + did, vid) : null;
+    const item = (!!client_vid) ? this.G.D.getv(pid, "del_request." + did, client_vid) : null;
+    this.G.L.trace("DelegationService.get_request", pid, did, client_vid, item, this.G.D.getv(pid, "del_request." + did, client_vid));
     return item ? JSON.parse(item) as del_request_t : null;
   }
 
   set_my_request(pid: string, did: string, value: del_request_t) {
-    this.G.D.setv(pid, "drequ." + did, JSON.stringify(value));
+    this.G.D.setv(pid, "del_request." + did, JSON.stringify(value));
     this.update_agreement(pid, did, null, value, null);
   }
 
@@ -198,11 +182,11 @@ export class DelegationService {
     if (!vid) {
       vid = this.get_agreement(pid, did).delegate_vid;
     }
-    return vid ? this.G.D.getv(pid, "dresp." + did, vid) : null;
+    return vid ? this.G.D.getv(pid, "del_response." + did, vid) : null;
   }
   
   set_my_signed_response(pid: string, did: string, value: del_signed_response_t) {
-    this.G.D.setv(pid, "dresp." + did, value as string);
+    this.G.D.setv(pid, "del_response." + did, value as string);
     this.update_agreement(pid, did, null, null, value);
   }
 
@@ -266,8 +250,10 @@ export class DelegationService {
       signed_response = this.get_signed_response(pid, did, a.delegate_vid);
     }
     const old_status = a.status;
+    this.G.L.entry("DelegationService.update_agreement", pid, did, a, request, signed_response, old_status);
     if ((!request) || (!signed_response)) {
       // agreement not complete yet:
+      this.G.L.trace("DelegationService.update_agreement not complete yet", pid);
       a.status = "pending";
     } else {
       // request and correctly signed response exist
@@ -277,7 +263,7 @@ export class DelegationService {
       const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
       const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
       if (!response.option_spec) {
-        a.status = "rejected";
+        a.status = "declined";
       } else if (response.option_spec.type == "+") {
         // oids specifies accepted options
         for (const oid of Array.from(a.accepted_oids.values())) {
@@ -316,12 +302,13 @@ export class DelegationService {
         }
         a.status = "agreed";
       } else {
-        a.status = "rejected";
+        a.status = "declined";
       }
     }
     if ((old_status=="pending") && (a.status=="agreed")) {
       // TODO: notify voter!
     } // ETC!
+    this.G.L.exit("DelegationService.update_agreement", a.status, a.accepted_oids);
   }
 
   response_signed_incorrectly(request: del_request_t, signed_response: del_signed_response_t) {
@@ -333,8 +320,27 @@ export class DelegationService {
     return !this.G.D.open_signed(signed_response, request.public_key);
   }
 
+  sign_response(response: del_response_t, private_key: string): del_signed_response_t {
+    return this.G.D.sign(this.response2string(response), private_key);
+  }
+
   response2string(response: del_response_t): string {
     /** turn response data without signature deterministically into a string message that can be signed: */
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }
+
+  get_my_dids_cache(pid:string) {
+    if (!this.G.D.my_dids_caches[pid]) {
+      this.G.D.my_dids_caches[pid] = new Map();
+    }
+    return this.G.D.my_dids_caches[pid];
+  }
+
+  get_delegation_agreements_cache(pid:string) {
+    if (!this.G.D.delegation_agreements_caches[pid]) {
+      this.G.D.delegation_agreements_caches[pid] = new Map();
+    }
+    return this.G.D.delegation_agreements_caches[pid];
+  }
+
 }

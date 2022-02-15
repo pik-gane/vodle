@@ -182,14 +182,14 @@ function myhash(what): string {
 
 // TYPES:
 
-export type del_option_spec_t = {type:"+" | "-", oids:Array<string>};
-export type del_request_t = {option_spec:del_option_spec_t, public_key:string};
-export type del_response_t = {option_spec:del_option_spec_t};
+export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
+export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
+export type del_response_t = {option_spec: del_option_spec_t};
 export type del_signed_response_t = string;
 export type del_agreement_t = { // by pid, did
   client_vid?: string,
   delegate_vid?: string,
-  status?: "pending" | "agreed" | "rejected" | "revoked",
+  status?: "pending" | "agreed" | "declined" | "revoked",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
 };
@@ -1258,6 +1258,7 @@ export class DataService implements OnDestroy {
       // other polls' data is stored in poll's own database.
       // construct key for poll db:
       const pkey = this.get_voter_key_prefix(pid, vid) + key;
+//      this.G.L.trace("getv", pid, key, vid, pkey)
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][pkey] || '';
     }
@@ -1683,6 +1684,12 @@ export class DataService implements OnDestroy {
 
           }
 
+          // store in cache if changed:
+          if (cache[key] != value) {
+            cache[key] = value;
+            value_changed = true;
+          }  
+
         } else if (_id.startsWith(voter_doc_prefix)) {
 
           // it's a voter doc.
@@ -1702,14 +1709,21 @@ export class DataService implements OnDestroy {
           }
 
           this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
+
+          // store in cache if changed:
+          if (cache[key] != value) {
+            cache[key] = value;
+            value_changed = true;
+          }  
+
           if (subkey.startsWith("rating.")) {
             const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
             this.G.P.update_own_rating(pid, vid, oid, r);
-          } else if (subkey.startsWith("drequ.")) {
-            const did = subkey.slice("drequ.".length);
+          } else if (subkey.startsWith("del_request.")) {
+            const did = subkey.slice("del_request.".length);
             this.G.Del.process_request_from_db(pid, did, vid);
-          } else if (subkey.startsWith("dresp.")) {
-            const did = subkey.slice("dresp.".length);
+          } else if (subkey.startsWith("del_response.")) {
+            const did = subkey.slice("del_response.".length);
             this.G.Del.process_signed_response_from_db(pid, did, vid);
           }
 
@@ -1724,16 +1738,6 @@ export class DataService implements OnDestroy {
 
         }
         this.G.L.trace("DataService.doc2poll_cache key, value", pid, key, value);
-
-        // store in cache if changed:
-        if (cache[key] != value) {
-          cache[key] = value;
-          if (key == "state" && pid in this.G.P.polls) {
-            // update poll's internal state cache:
-            this.G.P.polls[pid]._state = value;
-          }
-          value_changed = true;
-        }  
 
       } else {
 

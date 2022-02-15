@@ -12,6 +12,10 @@ const routes: Routes = [
     loadChildren: () => import('./about/about.module').then( m => m.AboutPageModule)
   },
   {
+    path: 'delrespond/:pid/:did/:private_key',
+    loadChildren: () => import('./delrespond/delrespond.module').then( m => m.DelrespondPageModule)
+  },
+  {
     path: 'draftpoll',
     loadChildren: () => import('./draftpoll/draftpoll.module').then( m => m.DraftpollPageModule)
   },
