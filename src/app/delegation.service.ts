@@ -78,7 +78,7 @@ export class DelegationService {
     return this.G.D.generate_id(environment.data_service.did_length);
   }
 
-  prepare_delegation(pid: string): [Poll, string, del_agreement_t, string] {
+  prepare_delegation(pid: string): [Poll, string, del_request_t, del_agreement_t, string] {
     /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
     this.G.L.entry("DelegationService.prepare_delegation", pid);
     const p = this.G.P.polls[pid],
@@ -91,7 +91,6 @@ export class DelegationService {
           agreement = {
             client_vid: p.myvid,
             private_key: keypair.private,
-            request: request,
             status: "pending",
             accepted_oids: new Set(),
             active_oids: new Set()
@@ -100,14 +99,14 @@ export class DelegationService {
     const link = environment.magic_link_base_url + "drespond/" + pid + "/" + did;
     this.G.L.debug("DelegationService.prepare_delegation link:", link);
     this.G.L.exit("DelegationService.prepare_delegation");
-    return [p, did, agreement, link];
+    return [p, did, request, agreement, link];
   }
 
-  after_request_was_sent(pid: string, did: string, agreement: del_agreement_t) {
-    // store data in local cache:
-    this.get_delegation_agreements_cache(pid).set(did, agreement)
-    // store request in poll db: 
-    this.update_my_request_in_db(pid, did, agreement.request);
+  after_request_was_sent(pid: string, did: string, request: del_request_t, agreement: del_agreement_t) {
+    // store request in poll db:
+    this.set_request(pid, did, request);
+    // store redundant data only in cache:
+    this.get_delegation_agreements_cache(pid).set(did, agreement);
   }
 
   update_my_delegation(pid:string, oid:string, activate:boolean) {
@@ -130,13 +129,14 @@ export class DelegationService {
           // activate
           a.accepted_oids.add(oid);
           // update request data and store it in db:
-          const ospec = a.request.option_spec;
+          const request = this.get_request(pid, did);
+          const ospec = request.option_spec;
           if (ospec.type == "+") {
             ospec.oids.push(oid);
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
-          this.update_my_request_in_db(pid, did, a.request);
+          this.set_request(pid, did, request);
           // add delegation to poll object:
           p.add_delegation(p.myvid, oid, a.delegate_vid);
         }
@@ -147,12 +147,14 @@ export class DelegationService {
           // deactivate
           a.accepted_oids.delete(oid);
           // update request data and store it in db:
-          const ospec = a.request.option_spec;
+          const request = this.get_request(pid, did);
+          const ospec = request.option_spec;
           if (ospec.type == "-") {
             ospec.oids.push(oid);
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
+          this.set_request(pid, did, request);
           // remove delegation from poll object:
           const p = this.G.P.polls[pid];
           p.del_delegation(p.myvid, oid);
@@ -161,69 +163,56 @@ export class DelegationService {
     }
   }
 
-  request_delegation_by_email(pid:string, email:string) {
-    /** Send an email request */
-    const [p, did, agreement, link] = this.prepare_delegation(pid),
-          // TODO: make indentation in body work:
-          message_title = this.translate.instant('request-delegation.message-subject', {due: this.G.D.format_date(p.due)}),
-          message_body = (this.translate.instant('request-delegation.message-body-greeting') + "\n\n" 
-                + this.translate.instant('request-delegation.message-body-before-title') + "\n\n"
-                + "\t    “" + p.title + "”.\n\n"
-                + this.translate.instant('request-delegation.message-body-closes', {due: this.G.D.format_date(p.due)}) + "\n\n"
-                + this.translate.instant('request-delegation.message-body-explanation') + "\n\n" 
-                + this.translate.instant('request-delegation.message-body-before-link') + "\n\n" 
-                + "\t    " + link + "\n\n"
-                + this.translate.instant('request-delegation.message-body-dont-share') + "\n\n"
-                + this.translate.instant('request-delegation.message-body-regards')),
-          email_href = "mailto:?subject=" + encodeURIComponent(message_title) + "&body=" + encodeURIComponent(message_body);
-    this.G.L.debug("DelegationService.request_delegation_by_email mailtolink", email_href);
-  }
-
-
   // data handling:
 
-  update_my_request_in_db(pid:string, did:string, request:del_request_t) {
-    /** store request data as data item in db */
-    this.G.D.setv(pid, "drequest."+did, JSON.stringify(request));
+  get_request(pid: string, did: string): del_request_t {
+    const item = this.G.D.getv(pid, "drequ." + did);
+    return item ? JSON.parse(item) as del_request_t : null;
   }
 
-  update_my_signed_response_in_db(pid:string, did:string, signed_response:del_signed_response_t) {
-    /** store response data as data item in db */
-    this.G.D.setv(pid, "dresponse."+did, JSON.stringify(signed_response));
+  set_request(pid: string, did: string, value: del_request_t) {
+    this.G.D.setv(pid, "drequ." + did, JSON.stringify(value))
   }
 
-  update_request_in_cache(pid:string, vid:string,  did:string, value:string) {
+  get_signed_response(pid: string, did: string): del_signed_response_t {
+    return this.G.D.getv(pid, "dresp." + did);
+  }
+  
+  set_signed_response(pid: string, did: string, value: del_signed_response_t) {
+    this.G.D.setv(pid, "dresp." + did, value as string)
+  }
+
+  update_request_in_cache(pid: string, vid: string,  did: string, value: string) {
     /** parse request data JSON and store in cache */
     const a = this.get_delegation_agreements_cache(pid).get(did);
     a.client_vid = vid;
-    a.request = JSON.parse(value);
     this.update_agreement(pid, did, a);
   }
 
-  update_signed_response_in_cache(pid:string, vid:string, did:string, value:string) {
+  update_signed_response_in_cache(pid: string, vid: string, did: string, value: string) {
     /** store signed response in cache */
-    const a = this.get_delegation_agreements_cache(pid).get(did);
-    if (!this.response_signed_incorrectly(a, value)) {
+    const a = this.get_delegation_agreements_cache(pid).get(did),
+          request = this.get_request(pid, did);
+    if (!this.response_signed_incorrectly(request, value)) {
       a.delegate_vid = vid;
-      a.signed_response = value;
       this.update_agreement(pid, did, a);  
     }
   }
 
-  update_agreement(pid:string, did:string, a:del_agreement_t) {
+  update_agreement(pid: string, did: string, a: del_agreement_t) {
     /** compare request and response, validate signature, set status, extract acceptes and active oids */
-    const old_status = a.status;
-    if (!a.request) {
+    const old_status = a.status, 
+          request = this.get_request(pid, did), 
+          signed_response = this.get_signed_response(pid, did);
+    if (!request) {
       // not complete yet:
       a.status = "pending";
     } else {
       // first check for invalid signature:
-      if (this.response_signed_incorrectly(a, a.signed_response)) {
+      if (this.response_signed_incorrectly(request, signed_response)) {
         this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
-        // simply ignore response:
-        delete a.signed_response;
-      }
-      if (!a.signed_response) {
+        // simply ignore response.
+      } else if (!signed_response) {
         // not complete yet:
         a.status = "pending";
       } else {
@@ -231,7 +220,7 @@ export class DelegationService {
         if (!a.accepted_oids) {
           a.accepted_oids = new Set();
         }
-        const pair = JSON.parse(this.G.D.open_signed(a.signed_response, a.request.public_key));
+        const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
         const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
         if (!response.option_spec) {
           a.status = "rejected";
@@ -282,15 +271,15 @@ export class DelegationService {
     } // ETC!
   }
 
-  response_signed_incorrectly(a:del_agreement_t, signed_response:del_signed_response_t) {
+  response_signed_incorrectly(request: del_request_t, signed_response: del_signed_response_t) {
     if (!signed_response) {
       // no response, so no invalid signature:
       return false;
     }
-    return !this.G.D.open_signed(signed_response, a.request.public_key);
+    return !this.G.D.open_signed(signed_response, request.public_key);
   }
 
-  response2string(response:del_response_t): string {
+  response2string(response: del_response_t): string {
     /** turn response data without signature deterministically into a string message that can be signed: */
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }

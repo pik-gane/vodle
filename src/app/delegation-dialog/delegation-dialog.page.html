@@ -12,6 +12,7 @@
         <ion-input 
           formControlName="nickname" 
           [placeholder]="'delegation-request.nickname-placeholder'|translate"
+          (ionChange)="nickname_changed()"
           type="text">
         </ion-input>
       </ion-item>

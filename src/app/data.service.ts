@@ -190,8 +190,6 @@ export type del_agreement_t = { // by pid, did
   client_vid?: string,
   delegate_vid?: string,
   private_key?: string,
-  request?: del_request_t, 
-  signed_response?: del_signed_response_t, 
   status?: "pending" | "agreed" | "rejected" | "revoked",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
