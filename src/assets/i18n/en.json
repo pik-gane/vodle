@@ -91,6 +91,10 @@
 
     "delrespond": {
         "-page-title": "Act as delegate?",
+        "header": "Do you agree to act as a delegate for this voter in the poll <i>“{{poll_title}}”?</i>",
+        "intro": "Your ratings will then also control the other voter's ratings.",
+        "details": "If you accept, you can still choose whether you want to rate the options yourself or delegate your (and the other voter's) ratings further to some third person.",
+        "check-first": "You can also check your ratings first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline"
     },
