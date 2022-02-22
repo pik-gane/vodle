@@ -12,9 +12,11 @@ import { Poll } from '../poll.service';
 })
 export class DelrespondPage implements OnInit {
 
+  url: string;
   pid: string;
   p: Poll;
   did: string;
+  from: string;
   private_key: string;
 
   // LIFECYCLE:
@@ -28,8 +30,10 @@ export class DelrespondPage implements OnInit {
     public G: GlobalService) {
     this.G.L.entry("DelrespondPage.constructor");
     this.route.params.subscribe( params => { 
+      this.url = this.router.url;
       this.pid = params['pid'];
       this.did = params['did'];
+      this.from = decodeURIComponent(params['from']);
       this.private_key = params['private_key'];
     } );
   }
@@ -60,6 +64,7 @@ export class DelrespondPage implements OnInit {
         this.G.L.warn("DelrespondPage called for closed poll", this.pid);
       } else {
         this.G.L.info("DelrespondPage called for known poll", this.pid);
+        this.G.Del.store_incoming_request(this.did, this.pid, this.from, this.url);
       }
     } else {
       this.G.L.warn("DelrespondPage called for unknown pid");

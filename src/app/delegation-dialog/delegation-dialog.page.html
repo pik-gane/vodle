@@ -26,6 +26,18 @@
           </div>
         </ng-container>
       </div>
+      <ion-item>
+        <small>
+          <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
+          <ion-input 
+            formControlName="from" 
+            [placeholder]="'delegation-request.from-placeholder'|translate"
+            (ionChange)="from_changed()"
+            (ionBlur)="from_changed()"
+            type="text">
+          </ion-input>
+        </small>
+      </ion-item>
       <ng-container *ngIf="can_share">
         <ion-item lines="none">
           <ion-col class="ion-no-padding ion-no-margin">

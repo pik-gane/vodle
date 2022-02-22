@@ -51,13 +51,13 @@ export class DelegationDialogPage implements OnInit {
   ionViewWillEnter() {
     this.can_use_web_share = (typeof navigator.share === "function");
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
-    const ctrl = new FormControl('', Validators.required);
     this.formGroup = this.formBuilder.group({
-      nickname: ctrl,
+      nickname: new FormControl('', Validators.required),
+      from:  new FormControl(this.G.S.email)
     });
     // TODO: what if already some delegation active or pending?
     // prepare a new delegation:
-    [this.p, this.did, this.request, this.private_key, this.agreement, this.delegation_link] = this.G.Del.prepare_delegation(this.parent.pid);
+    [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
 //    ctrl.setValue(this.G.D.getp(this.p.pid, "del_nickname." + this.did));
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
@@ -80,6 +80,12 @@ export class DelegationDialogPage implements OnInit {
     this.update_request(nickname);
   }
 
+  from_changed() {
+    const from = this.formGroup.get('from').value;
+    this.G.D.setp(this.p.pid, "del_from." + this.did, from);
+    this.set_delegation_link(from);
+  }
+
   update_request(nickname: string) {
     this.G.L.entry("DelegationDialogPage.update_request");
     this.mailto_url = "mailto:" + encodeURIComponent(nickname) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
@@ -93,12 +99,18 @@ export class DelegationDialogPage implements OnInit {
   validation_messages = {
     'nickname': [
       { type: 'required', message: 'validation.nickname-required' },
-    ]
+    ],
+    'from': []
+  }
+
+  set_delegation_link(from: string) {
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key);
   }
 
   share_button_clicked() {
     this.G.L.entry("DelegationDialogPage.share_button_clicked");
     this.nickname_changed();
+    this.from_changed();
     Share.share({
       title: this.message_title,
       text: this.message_body,
@@ -116,6 +128,7 @@ export class DelegationDialogPage implements OnInit {
   copy_button_clicked() {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
     this.nickname_changed();
+    this.from_changed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     LocalNotifications.schedule({
@@ -138,6 +151,7 @@ export class DelegationDialogPage implements OnInit {
   email_button_clicked(ev: MouseEvent) {
     this.G.L.entry("DelegationDialogPage.email_button_clicked");
     this.nickname_changed();
+    this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");

@@ -68,7 +68,9 @@
         "header": "Delegate to some other voter",
         "intro": "You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
         "nickname-label": "Delegate's nickname:",
-        "nickname-placeholder": "Your nickname for that person (or their true name)",
+        "nickname-placeholder": "The nickname of that person (or their true name)",
+        "from-label": "The delegate will see the following as the sender of this request:",
+        "from-placeholder": "Enter your own email address, name or nickname",
 
         "request-options-with-share": "To simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an email. Or you copy the delegation link and send it to them in any way you like.",
         "request-options-without-share": "The simplest way to ask that person to act as your delegate is via email. Or you copy the delegation link and send it to them in any way you like.",
@@ -91,7 +93,7 @@
 
     "delrespond": {
         "-page-title": "Act as delegate?",
-        "header": "Do you agree to act as a delegate for this voter in the poll <i>“{{poll_title}}”?</i>",
+        "header": "Do you agree to act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
         "intro": "Your ratings will then also control the other voter's ratings.",
         "details": "If you accept, you can still choose whether you want to rate the options yourself or delegate your (and the other voter's) ratings further to some third person.",
         "check-first": "You can also check your ratings first and then return here to accept or decline.",

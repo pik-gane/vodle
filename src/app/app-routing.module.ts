@@ -12,7 +12,7 @@ const routes: Routes = [
     loadChildren: () => import('./about/about.module').then( m => m.AboutPageModule)
   },
   {
-    path: 'delrespond/:pid/:did/:private_key',
+    path: 'delrespond/:pid/:did/:from/:private_key',
     loadChildren: () => import('./delrespond/delrespond.module').then( m => m.DelrespondPageModule)
   },
   {

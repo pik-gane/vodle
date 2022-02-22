@@ -137,7 +137,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname'];
+const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from'];
 const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
 
 const poll_keystarts_requiring_due = ['option'];
@@ -215,6 +215,7 @@ const state_attributes = [
   "own_ratings_map_caches", 
   "effective_ratings_map_caches",
   "my_delegations_caches",
+  "incoming_did_caches",
   "delegation_agreements_caches",
   "direct_delegation_map_caches",
   "inv_direct_delegation_map_caches",
@@ -268,7 +269,8 @@ export class DataService implements OnDestroy {
   own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
   effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
 
-  my_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
+  outgoing_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
+  incoming_dids_caches: Record<string, Map<string, [string, string]>>; // [from, url] of received delegation request links by pid, did 
 
   delegation_agreements_caches: Record<string, Map<string, del_agreement_t>>; 
 
@@ -381,7 +383,8 @@ export class DataService implements OnDestroy {
     this.poll_caches = {};
     this.tally_caches = {};
     this.own_ratings_map_caches = {};
-    this.my_dids_caches = {};
+    this.outgoing_dids_caches = {};
+    this.incoming_dids_caches = {};
     this.delegation_agreements_caches = {};
     this.effective_ratings_map_caches = {};
     this.direct_delegation_map_caches = {};
@@ -1563,7 +1566,11 @@ export class DataService implements OnDestroy {
           if (key.startsWith("news.")) {
             this.G.L.trace("DataService.doc2user_cache news", key);
             this.news_keys.add(key);
+          } else if (key.startsWith("del_incoming.")) {
+            this.G.L.trace("DataService.doc2user_cache incoming did", key);
+            this.incoming_dids_caches[key.slice("del_incoming.".length)] = JSON.parse(value); 
           }
+
         }
         this.G.L.trace("DataService.doc2user_cache key, value", key, value);
 

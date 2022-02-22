@@ -43,7 +43,7 @@ export class DelegationService {
     return this.G.D.generate_id(environment.data_service.did_length);
   }
 
-  prepare_delegation(pid: string): [Poll, string, del_request_t, string, del_agreement_t, string] {
+  prepare_delegation(pid: string): [Poll, string, del_request_t, string, del_agreement_t] {
     /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
     this.G.L.entry("DelegationService.prepare_delegation", pid);
     const p = this.G.P.polls[pid],
@@ -59,11 +59,15 @@ export class DelegationService {
             accepted_oids: new Set(),
             active_oids: new Set()
           } as del_agreement_t;
-    // generate magic link to be sent to delegate:
-    const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + keypair.private;
-    this.G.L.debug("DelegationService.prepare_delegation link:", link);
     this.G.L.exit("DelegationService.prepare_delegation");
-    return [p, did, request, keypair.private, agreement, link];
+    return [p, did, request, keypair.private, agreement];
+  }
+
+  get_delegation_link(pid: string, did: string, from: string, privkey: string): string {
+    /** generate magic link to be sent to delegate */
+    const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + encodeURIComponent(from) + "/" + privkey;
+    this.G.L.debug("DelegationService.get_delegation_link", link);
+    return link;
   }
 
   after_request_was_sent(pid: string, did: string, request: del_request_t, private_key: string, agreement: del_agreement_t) {
@@ -134,6 +138,15 @@ export class DelegationService {
   }
 
   // RESPONDING TO A DELEGATION REQUEST:
+
+  store_incoming_request(did: string, pid: string, from: string, url: string) {
+    this.G.D.setu("del_incoming."+did, JSON.stringify([from, url]));
+    let cache = this.G.D.incoming_dids_caches[pid];
+    if (!cache) {
+      cache = this.G.D.incoming_dids_caches[pid] = new Map();
+    }
+    cache[did] = [from, url]; 
+  }
 
   accept(pid: string, did: string, private_key: string) {
     /** accept a delegation request, store response in db */
@@ -349,10 +362,10 @@ export class DelegationService {
   }
 
   get_my_dids_cache(pid:string) {
-    if (!this.G.D.my_dids_caches[pid]) {
-      this.G.D.my_dids_caches[pid] = new Map();
+    if (!this.G.D.outgoing_dids_caches[pid]) {
+      this.G.D.outgoing_dids_caches[pid] = new Map();
     }
-    return this.G.D.my_dids_caches[pid];
+    return this.G.D.outgoing_dids_caches[pid];
   }
 
   get_delegation_agreements_cache(pid:string) {
