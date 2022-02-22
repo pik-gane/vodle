@@ -20,7 +20,8 @@ export const environment = {
     pwd_length: 12,
     oid_length: 8,
     vid_length: 8,
-    did_length: 8
+    did_length: 8,
+    nid_length: 4
   },
   db_put_retry_delay_ms: 100,
   default_lang: "en",

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { news_t } from '../data.service';
 
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll.service";
@@ -13,13 +14,15 @@ export class MypollsPage implements OnInit {
 
   Object = Object;
 
+  news: Set<news_t> = new Set();
+
   closed_expanded = false;
   drafts_expanded = false;
   older_expanded = false;
 
   // LIFECYCLE:
 
-  ready: boolean;  
+  ready: boolean;
 
   constructor(
     public G: GlobalService,
@@ -36,6 +39,7 @@ export class MypollsPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("MypollsPage.ionViewWillEnter");
     this.G.D.page = this;
+    this.G.N.add({class:'hello', title:'Yes!'}); // , body:'No?'
   }
 
   ionViewDidEnter() {
@@ -46,7 +50,13 @@ export class MypollsPage implements OnInit {
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("MypollsPage.onDataReady");
+    this.onDataChange();
     this.ready = true;
+  }
+
+  onDataChange() {
+    this.G.L.entry("MypollsPage.onDataChange");
+    this.news = this.G.N.filter({class: 'hello'});
   }
 
   ionViewWillLeave() {

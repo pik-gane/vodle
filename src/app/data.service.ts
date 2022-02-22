@@ -193,6 +193,14 @@ export type del_agreement_t = { // by pid, did
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
 };
+export type news_t = {
+  key: string,
+  class: string,
+  pid?: string,
+  title: string,
+  body?: string,
+  auto_dismiss: boolean  // whether this is automatically dismissed when seen
+}
 
 // TODO: add pid_t, vid_t, oid_t, did_t to prevent confusion! 
 
@@ -214,7 +222,8 @@ const state_attributes = [
   "inv_indirect_delegation_map_caches",
   "effective_delegation_map_caches",
   "inv_effective_delegation_map_caches",
-  "tally_caches"
+  "tally_caches",
+  "news_keys"
 ];
 
 @Injectable({
@@ -271,6 +280,8 @@ export class DataService implements OnDestroy {
   inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
 
   tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
+
+  news_keys: Set<string>;
 
   // LYFECYCLE:
 
@@ -379,6 +390,7 @@ export class DataService implements OnDestroy {
     this.inv_indirect_delegation_map_caches = {};
     this.effective_delegation_map_caches = {};
     this.inv_effective_delegation_map_caches = {};
+    this.news_keys = new Set();
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
@@ -1158,7 +1170,7 @@ export class DataService implements OnDestroy {
   delu(key:string) {
     // delete a user data item
     if (!(key in this.user_cache)) {
-      this.G.L.trace("DataService.delp cannot delete unknown key", key);
+      this.G.L.trace("DataService.delu cannot delete unknown key", key);
       return;
     }
     delete this.user_cache[key];
@@ -1547,6 +1559,11 @@ export class DataService implements OnDestroy {
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
+
+          if (key.startsWith("news.")) {
+            this.G.L.trace("DataService.doc2user_cache news", key);
+            this.news_keys.add(key);
+          }
         }
         this.G.L.trace("DataService.doc2user_cache key, value", key, value);
 
@@ -2071,7 +2088,7 @@ export class DataService implements OnDestroy {
 
       db.remove(doc)
       .then(() => {
-        this.G.L.trace("DataService.delete_user_data local-only delete", key);
+        this.G.L.trace("DataService.delete_user_data delete", key);
       })
       .catch(err => {
         this.G.L.warn("DataService.delete_user_data couldn't delete, will try again soon", key, doc, err);

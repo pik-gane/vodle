@@ -18,6 +18,27 @@
 <ion-content *ngIf="ready">
   <ion-list lines="full">
 
+    <!--NEWS-->
+
+    <ion-card *ngFor="let n of news">
+      <ion-card-content class="ion-no-margin ion-no-padding">
+        <ion-item lines="none" class="ion-no-margin ion-no-padding item-text-wrap" color="warning">
+          &nbsp;&nbsp;
+          <ion-label class="ion-no-margin ion-no-padding">
+            {{n.title}}
+            <small *ngIf="n.body">
+              <br/>
+              {{n.body}}
+            </small>  
+          </ion-label>
+          <ion-button slot="end" class="ion-no-margin ion-no-padding" fill="clear" size="small" (click)="news.delete(n);G.N.dismiss(n.key)">
+            <ion-icon slot="icon-only" name="close-outline">
+            </ion-icon>    
+          </ion-button>  
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
     <!--RUNNING-->
 
     <ion-item color="primary">

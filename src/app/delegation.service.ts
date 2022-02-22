@@ -18,17 +18,17 @@ export class DelegationService {
   ) { }
 
 
-/**
- * Flow:
- * 
- * v1 sends v2 link with pid, did, privkey
- * v1 stores v1.del_request.did = {ospec1, pubkey}
- * v2 stores v2.del_response.did = privkey-signed {ospec2}
- * v1,v2 may update ospec1, ospec2 at any time
- *
- * ospec = ("+" | "-", [oid,...,oid])  
- * 
- */
+  /**
+   * Flow:
+   * 
+   * v1 sends v2 link with pid, did, privkey
+   * v1 stores v1.del_request.did = {ospec1, pubkey}
+   * v2 stores v2.del_response.did = privkey-signed {ospec2}
+   * v1,v2 may update ospec1, ospec2 at any time
+   *
+   * ospec = ("+" | "-", [oid,...,oid])  
+   * 
+   */
 
   init(G:GlobalService) { 
     // called by GlobalService
@@ -69,27 +69,32 @@ export class DelegationService {
   after_request_was_sent(pid: string, did: string, request: del_request_t, private_key: string, agreement: del_agreement_t) {
     // store request and private key in poll db:
     this.set_private_key(pid, did, private_key);
+    this.get_my_dids_cache(pid).set("*", did);
     this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
   }
 
-  update_my_delegation(pid:string, oid:string, activate:boolean) {
+  update_my_delegation(pid: string, oid: string, activate: boolean) {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */
-    const did = this.get_my_dids_cache(pid).get(oid);
     const p = this.G.P.polls[pid];
+    let did = this.get_my_dids_cache(pid).get(oid);
     if (!did) {
-      this.G.L.error("DelegationService.update_delegation without existing did", pid, oid, activate);
+      did = this.get_my_dids_cache(pid).get("*");
+    }
+    if (!did) {
+      this.G.L.error("DelegationService.update_my_delegation without existing did", pid, oid, activate);
     } else {
+      this.G.L.trace("DelegationService.update_my_delegation", pid, oid, did);
       const a = this.get_delegation_agreements_cache(pid).get(did);
       if ((a.client_vid != p.myvid) 
           || (a.status != "agreed") 
           || !a.accepted_oids.has(oid)) {
-        this.G.L.error("DelegationService.update_delegation without agreed delegation from me", pid, oid, activate, did);
+        this.G.L.error("DelegationService.update_my_delegation without agreed delegation from me", pid, oid, activate, did);
       } else if (activate) {
         if (a.active_oids.has(oid)) {
-          this.G.L.warn("DelegationService.update_delegation oid already active", pid, oid, did);
+          this.G.L.warn("DelegationService.update_my_delegation oid already active", pid, oid, did);
         } else {
           // activate
           a.accepted_oids.add(oid);
@@ -107,7 +112,7 @@ export class DelegationService {
         }
       } else {
         if (!a.active_oids.has(oid)) {
-          this.G.L.warn("DelegationService.update_delegation oid not active", pid, oid, did);
+          this.G.L.warn("DelegationService.update_my_delegation oid not active", pid, oid, did);
         } else {
           // deactivate
           a.accepted_oids.delete(oid);

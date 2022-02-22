@@ -11,6 +11,7 @@ import { DataService } from './data.service';
 import { SettingsService } from './settings.service';
 import { PollService } from './poll.service';
 import { DelegationService } from './delegation.service';
+import { NewsService } from './news.service';
 
 @Injectable({
   providedIn: 'root'
@@ -50,6 +51,7 @@ export class GlobalService implements OnDestroy {
       public P: PollService,
       public S: SettingsService,
       public Del: DelegationService,
+      public N: NewsService
       ) {
     this.L = loggingService.getLogger("VODLE");
     this.L.entry("GlobalService.constructor");
@@ -58,6 +60,7 @@ export class GlobalService implements OnDestroy {
     P.init(this); 
     S.init(this);
     Del.init(this);
+    N.init(this);
 
     window.addEventListener("beforeunload", this.onBeforeUnload);
     window.onbeforeunload = this.onBeforeUnload;
