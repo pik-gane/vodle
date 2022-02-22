@@ -9,6 +9,13 @@ import { GlobalService } from './global.service';
 })
 export class SettingsService {
 
+  notification_classes = [
+    'delegation_accepted',
+    'delegation_declined',
+    'new_option',
+    'poll_closed'
+  ];
+
   private G: GlobalService;
 
   constructor() { }
@@ -67,8 +74,8 @@ export class SettingsService {
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
-  get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls)=="1"; }
-  set_notify_of(cls: string, value: string) { this.G.D.setu('notify_of_'+cls, value?"1":"0"); }
+  get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls)!="0"; } // by default, all notifications are on
+  set_notify_of(cls: string, value: boolean) { this.G.D.setu('notify_of_'+cls, value?"1":"0"); }
 
   closing_soon_fraction = 1/7; // TODO: turn into settings option
 

@@ -248,6 +248,13 @@
         "no-draft-polls": "Currently, you have no polls drafted.<br/><small>To start or draft a new poll, click the '+' button below!</small>"
     },
 
+    "notify_of": {
+        "delegation_accepted": "A delegation request was accepted",
+        "delegation_declined": "A delegation request was declined",
+        "new_option": "An option was added to a poll",
+        "poll_closed": "A poll closed"
+    },
+
     "poll": {
         "-page-title": "Poll",
         "-page-title-running": "Running poll",

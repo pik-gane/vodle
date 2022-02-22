@@ -165,21 +165,26 @@
       - if "denied", grey it out and show a message to please grant notifications first.
     -->
 
-    <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
-    </ion-item>
-    <ion-item>
-      <ion-checkbox slot="start"></ion-checkbox><ion-label>When a poll is closing soon</ion-label>
-    </ion-item>
-    <ion-item>
-      <ion-checkbox slot="start"></ion-checkbox><ion-label>When a poll's results are available</ion-label>
-    </ion-item>
-    <!--and:
-    when a new option was added
-    when my vote turns into an abstention
-    when my voting weight changes
-    when my delegate's weight changes
-    when my delegate delegates my ratings further
-    when my delegate changed their ratings
-    -->
   </form>
+  <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
+  </ion-item>
+  <ion-item>
+    <ion-checkbox slot="start" [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.new_option'|translate"></ion-label>
+  </ion-item>
+  <ion-item>
+    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_accepted" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_accepted'|translate"></ion-label>
+  </ion-item>
+  <ion-item>
+    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_declined'|translate"></ion-label>
+  </ion-item>
+  <ion-item>
+    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closed'|translate"></ion-label>
+  </ion-item>
+  <!--and:
+  when my vote turns into an abstention
+  when my voting weight changes
+  when my delegate's weight changes
+  when my delegate delegates my ratings further
+  when my delegate changed their ratings
+  -->
 </ion-content>

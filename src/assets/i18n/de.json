@@ -248,6 +248,13 @@
         "no-draft-polls": "Momentan hast Du keine Abstimmungen entworfen.<br/><small>Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!</small>"
     },
 
+    "notify_of": {
+        "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
+        "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
+        "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
+        "poll_closed": "Eine Abstimmung wurde geschlossen"
+    },
+
     "poll": {
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",

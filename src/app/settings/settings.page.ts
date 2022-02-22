@@ -37,6 +37,7 @@ export class SettingsPage implements OnInit {
   editing_password: boolean;
   showing_password: boolean;
   advanced_expanded: boolean;
+  notify_of: {};
 
   // LIFECYCLE:
 
@@ -75,6 +76,7 @@ export class SettingsPage implements OnInit {
     this.editing_password = false;
     this.showing_password = false;
     this.advanced_expanded = false;
+    this.notify_of = {};
   }
 
   ionViewDidEnter() {
@@ -164,5 +166,15 @@ export class SettingsPage implements OnInit {
       db_other_server_url: this.G.S.db_other_server_url||'',
       db_other_password: this.G.S.db_other_password||'',
     });
+    for (const cls of this.G.S.notification_classes) {
+      this.notify_of[cls] = this.G.S.get_notify_of(cls);
+    }
+  }
+
+  notify_changed() {
+    for (const [cls, value] of Object.entries(this.notify_of)) {
+      this.G.S.set_notify_of(cls, value as boolean);
+      this.G.L.trace("SettingsPage.notify_changed", cls, value);
+    }
   }
 }
