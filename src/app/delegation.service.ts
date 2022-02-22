@@ -205,6 +205,8 @@ export class DelegationService {
   
   set_my_signed_response(pid: string, did: string, value: del_signed_response_t) {
     this.G.D.setv(pid, "del_response." + did, value as string);
+    const a = this.get_agreement(pid, did);
+    a.delegate_vid = this.G.P.polls[pid].myvid;
     this.update_agreement(pid, did, null, null, value);
   }
 
@@ -222,36 +224,36 @@ export class DelegationService {
     return a;
   }
 
-  process_request_from_db(pid: string, did: string, vid: string) {
+  process_request_from_db(pid: string, did: string, client_vid: string) {
     /** after receiving a new or changed request from the db, process it: */
     const a = this.get_agreement(pid, did);
     if (a.delegate_vid && !a.client_vid) {
-      a.client_vid = vid;
+      a.client_vid = client_vid;
       // check earlier response for correct signature:
-      const request = this.get_request(pid, did, vid),
-            signed_response = this.get_signed_response(pid, did, vid);
+      const request = this.get_request(pid, did, client_vid),
+            signed_response = this.get_signed_response(pid, did, client_vid);
       if (this.response_signed_incorrectly(request, signed_response)) {
         this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
         delete a.delegate_vid;
       }    
     }
-    a.client_vid = vid;
+    a.client_vid = client_vid;
     this.update_agreement(pid, did, a, null, null);
   }
 
-  process_signed_response_from_db(pid: string, did: string, vid: string) {
+  process_signed_response_from_db(pid: string, did: string, delegate_vid: string) {
     /** after receiving a new or changed response from the db, process it: */
     const a = this.get_agreement(pid, did),
           request = this.get_request(pid, did, a.client_vid),
-          signed_response = this.get_signed_response(pid, did, vid);
+          signed_response = this.get_signed_response(pid, did, delegate_vid);
     if (this.response_signed_incorrectly(request, signed_response)) {
       this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
-      if (vid == a.delegate_vid) {
+      if (delegate_vid == a.delegate_vid) {
         delete a.delegate_vid;
       }
-      return
+      return;
     }    
-    a.delegate_vid = vid;
+    a.delegate_vid = delegate_vid;
     this.update_agreement(pid, did, a, request, signed_response);
   }
 
@@ -270,12 +272,17 @@ export class DelegationService {
     }
     const old_status = a.status;
     this.G.L.entry("DelegationService.update_agreement", pid, did, a, request, signed_response, old_status);
+
     if ((!request) || (!signed_response)) {
+
       // agreement not complete yet:
       this.G.L.trace("DelegationService.update_agreement not complete yet", pid);
       a.status = "pending";
+
     } else {
-      // request and correctly signed response exist
+      // request and correctly signed response exist.
+
+      // update accepted_oids and status:
       if (!a.accepted_oids) {
         a.accepted_oids = new Set();
       }
@@ -286,7 +293,7 @@ export class DelegationService {
       } else {
         if (response.option_spec.type == "+") {
           // oids specifies accepted options
-          for (const oid of Array.from(a.accepted_oids.values())) {
+          for (const oid of a.accepted_oids) {
             if (!(oid in response.option_spec.oids)) {
               // oid no longer accepted:
               a.accepted_oids.delete(oid);
@@ -304,7 +311,7 @@ export class DelegationService {
           }
         } else if (response.option_spec.type == "-") {
           // oids specifies NOT accepted options
-          for (const oid of Array.from(a.accepted_oids.values())) {
+          for (const oid of a.accepted_oids) {
             if (oid in response.option_spec.oids) {
               // oid no longer accepted:
               a.accepted_oids.delete(oid);
@@ -323,7 +330,59 @@ export class DelegationService {
         }
         a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
+
+      // update active_oids:
+      if (!a.active_oids) {
+        a.active_oids = new Set();
+      }
+      if (request.option_spec) {
+        if (request.option_spec.type == "+") {
+          // oids specifies accepted options
+          for (const oid of a.active_oids) {
+            if (!(a.accepted_oids.has(oid) && (oid in request.option_spec.oids))) {
+              // oid no longer active:
+              a.active_oids.delete(oid);
+              p.del_delegation(a.client_vid, oid);
+              this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+          for (const oid of request.option_spec.oids) {
+            if (a.accepted_oids.has(oid) && !a.active_oids.has(oid)) {
+              // oid newly active:
+              a.active_oids.add(oid);
+              p.add_delegation(a.client_vid, oid, a.delegate_vid);
+              this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+        } else if (request.option_spec.type == "-") {
+          // oids specifies NOT accepted options
+          for (const oid of a.active_oids) {
+            if ((oid in response.option_spec.oids) || !a.accepted_oids.has(oid)) {
+              // oid no longer active:
+              a.active_oids.delete(oid);
+              p.del_delegation(a.client_vid, oid);
+              this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+          for (const oid of a.accepted_oids) {
+            if ((!a.active_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
+              // oid newly active:
+              a.active_oids.add(oid);
+              p.add_delegation(a.client_vid, oid, a.delegate_vid);
+              this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
+              // TODO: notify voter!
+            }
+          }
+        }
+        a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
+      }
+    
     }
+
+    // if voter affected directly, add news item:
     if (a.client_vid == p.myvid) {
       if ((old_status=="pending") && (a.status=="agreed")) {
         this.G.N.add({
@@ -340,6 +399,8 @@ export class DelegationService {
         });
       }
     }
+
+
     this.G.L.exit("DelegationService.update_agreement", a.status, a.accepted_oids);
   }
 

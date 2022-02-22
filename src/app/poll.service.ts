@@ -657,25 +657,26 @@ export class Poll {
 
   // Methods dealing with changes to the delegation graph:
 
-  add_delegation(vid:string, oid:string, delegate_vid:string) {
+  add_delegation(client_vid:string, oid:string, delegate_vid:string) {
     // Called whenever a delegation is added
     const d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid), 
           eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
     // make sure no delegation exists yet and delegation would not create a cycle:
-    if (d_map.has(vid)) {
-      this.G.L.error("PollService.add_delegation when delegation already exists", vid, oid, delegate_vid, d_map.get(vid));
-    } else if (eff_d_vid == vid) { 
-      this.G.L.error("PollService.add_delegation when this would create a cycle", vid, oid, delegate_vid);
+    if (d_map.has(client_vid)) {
+      this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, d_map.get(client_vid));
+    } else if (eff_d_vid == client_vid) { 
+      this.G.L.error("PollService.add_delegation when this would create a cycle", client_vid, oid, delegate_vid);
     } else {
+      this.G.L.trace("PollService.add_delegation feasible", client_vid, oid, delegate_vid);
 
       // register DIRECT delegation and inverse:
       const inv_d_map = this.inv_direct_delegation_map.get(oid);
       if (!inv_d_map.has(delegate_vid)) {
         inv_d_map.set(delegate_vid, new Set());
       }
-      d_map.set(vid, delegate_vid);
-      inv_d_map.get(delegate_vid).add(vid);
+      d_map.set(client_vid, delegate_vid);
+      inv_d_map.get(delegate_vid).add(client_vid);
 
       // update INDIRECT delegations and inverses:
       const ind_d_map = this.indirect_delegation_map.get(oid),
@@ -686,24 +687,24 @@ export class Poll {
       if (!inv_ind_d_map.has(delegate_vid)) {
         inv_ind_d_map.set(delegate_vid, new Set());
       }
-      if (!inv_eff_d_map.has(vid)) {
-        inv_eff_d_map.set(vid, new Set());
+      if (!inv_eff_d_map.has(client_vid)) {
+        inv_eff_d_map.set(client_vid, new Set());
       }
       const inv_ind_ds_of_delegate = inv_ind_d_map.get(delegate_vid),
-            inv_eff_ds_of_vid = inv_eff_d_map.get(vid);
+            inv_eff_ds_of_vid = inv_eff_d_map.get(client_vid);
       // vid:
       ind_ds_of_vid.add(delegate_vid);
-      inv_ind_ds_of_delegate.add(vid);
+      inv_ind_ds_of_delegate.add(client_vid);
       if (ind_ds_of_delegate) {
         for (const vid2 of ind_ds_of_delegate) {
           if (!inv_ind_d_map.has(vid2)) {
             inv_ind_d_map.set(vid2, new Set());
           }
           ind_ds_of_vid.add(vid2);
-          inv_ind_d_map.get(vid2).add(vid);
+          inv_ind_d_map.get(vid2).add(client_vid);
         }
       }
-      ind_d_map.set(vid, ind_ds_of_vid);
+      ind_d_map.set(client_vid, ind_ds_of_vid);
       // dependent voters:
       for (const vid2 of inv_eff_ds_of_vid) {
         const ind_ds_of_vid2 = ind_d_map.get(vid2);
@@ -727,9 +728,9 @@ export class Poll {
       }
       const deps_eff_d_vid = inv_eff_d_map.get(eff_d_vid);
       // this vid:
-      eff_d_map.set(vid, eff_d_vid);
-      deps_eff_d_vid.add(vid);
-      this.update_effective_rating(vid, oid, eff_rating);
+      eff_d_map.set(client_vid, eff_d_vid);
+      deps_eff_d_vid.add(client_vid);
+      this.update_effective_rating(client_vid, oid, eff_rating);
       // dependent voters:
       for (const vid2 of inv_eff_ds_of_vid) {
         eff_d_map.set(vid2, eff_d_vid);
@@ -739,34 +740,34 @@ export class Poll {
     }
   }
 
-  del_delegation(vid: string, oid: string) {
+  del_delegation(client_vid: string, oid: string) {
     // Called whenever a voter revokes her delegation for some option
     const d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid);
     // make sure a delegation exists:
-    if (!d_map.has(vid)) {
-      this.G.L.error("PollService.del_delegation when no delegation exists", vid, oid);
+    if (!d_map.has(client_vid)) {
+      this.G.L.error("PollService.del_delegation when no delegation exists", client_vid, oid);
     } else {
-      const old_d_vid = d_map.get(vid),
-            old_eff_d_of_vid = eff_d_map.get(vid),
+      const old_d_vid = d_map.get(client_vid),
+            old_eff_d_of_vid = eff_d_map.get(client_vid),
             inv_d_map = this.inv_direct_delegation_map.get(oid),
             ind_d_map = this.indirect_delegation_map.get(oid),
-            old_ind_ds_of_vid = ind_d_map.get(vid),
+            old_ind_ds_of_vid = ind_d_map.get(client_vid),
             inv_ind_d_map = this.inv_indirect_delegation_map.get(oid),
-            inv_ind_ds_of_vid = inv_ind_d_map.get(vid),
+            inv_ind_ds_of_vid = inv_ind_d_map.get(client_vid),
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
-            inv_eff_ds_of_vid = inv_eff_d_map.get(vid),
+            inv_eff_ds_of_vid = inv_eff_d_map.get(client_vid),
             inv_eff_ds_of_old_eff_d_of_vid = inv_eff_d_map.get(old_eff_d_of_vid);
 
       // deregister DIRECT delegation and inverse of vid:
-      d_map.delete(vid);
-      inv_d_map.get(old_d_vid).delete(vid);
+      d_map.delete(client_vid);
+      inv_d_map.get(old_d_vid).delete(client_vid);
 
       // deregister INDIRECT delegation of vid to others:
       for (const vid2 of old_ind_ds_of_vid) {
-        inv_ind_d_map.get(vid2).delete(vid);
+        inv_ind_d_map.get(vid2).delete(client_vid);
       }
-      ind_d_map.delete(vid);
+      ind_d_map.delete(client_vid);
 
       // deregister INDIRECT delegation of voters who indirectly delegated to vid to old indirect delegates of vid:
       if (inv_ind_ds_of_vid) {
@@ -780,17 +781,17 @@ export class Poll {
       }
 
       // deregister EFFECTIVE delegation and inverse of vid and reset eff. rating to own rating:
-      const eff_rating = this.own_ratings_map.get(oid).get(vid);
-      eff_d_map.delete(vid);
-      inv_eff_ds_of_old_eff_d_of_vid.delete(vid);
-      this.update_effective_rating(vid, oid, eff_rating);
+      const eff_rating = this.own_ratings_map.get(oid).get(client_vid);
+      eff_d_map.delete(client_vid);
+      inv_eff_ds_of_old_eff_d_of_vid.delete(client_vid);
+      this.update_effective_rating(client_vid, oid, eff_rating);
 
       // rewire EFFECTIVE delegation and inverse of voters who indirectly delegated to vid,
       // and update eff. ratings:
       if (inv_ind_ds_of_vid) {
         for (const vid2 of inv_ind_ds_of_vid) {
           inv_eff_ds_of_old_eff_d_of_vid.delete(vid2);
-          eff_d_map.set(vid2, vid);
+          eff_d_map.set(vid2, client_vid);
           inv_eff_ds_of_vid.add(vid2);
           this.update_effective_rating(vid2, oid, eff_rating);
         }            

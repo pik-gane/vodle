@@ -53,12 +53,11 @@ export class DelegationDialogPage implements OnInit {
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
       nickname: new FormControl('', Validators.required),
-      from:  new FormControl(this.G.S.email)
+      from: new FormControl(this.G.S.email)
     });
     // TODO: what if already some delegation active or pending?
     // prepare a new delegation:
     [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
-//    ctrl.setValue(this.G.D.getp(this.p.pid, "del_nickname." + this.did));
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
     this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 

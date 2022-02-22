@@ -35,5 +35,5 @@ map.clear()
 set.add|delete(member)
 set.size
 if (set.has(member))
-for (const key of set)
+for (const member of set)
 set.clear()
