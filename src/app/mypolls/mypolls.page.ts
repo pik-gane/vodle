@@ -39,7 +39,8 @@ export class MypollsPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("MypollsPage.ionViewWillEnter");
     this.G.D.page = this;
-    this.G.N.add({class:'hello', title:'Yes!'}); // , body:'No?'
+//    this.G.N.add({class:'hello', title:'Welcome', body:'...to the mypolls page!'}); // TODO: remove in production
+    if (this.ready) this.onDataChange();
   }
 
   ionViewDidEnter() {
@@ -56,7 +57,13 @@ export class MypollsPage implements OnInit {
 
   onDataChange() {
     this.G.L.entry("MypollsPage.onDataChange");
-    this.news = this.G.N.filter({class: 'hello'});
+    this.news = new Set([
+//      ...this.G.N.filter({class: 'hello'}), // TODO: remove in production
+      ...this.G.N.filter({class: 'new_option'}),
+      ...this.G.N.filter({class: 'delegation_accepted'}),
+      ...this.G.N.filter({class: 'delegation_declined'}),
+      ...this.G.N.filter({class: 'poll_closed'})      
+    ]);
   }
 
   ionViewWillLeave() {

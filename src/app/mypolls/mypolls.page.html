@@ -31,8 +31,11 @@
               {{n.body}}
             </small>  
           </ion-label>
+          <ion-button *ngIf="n.pid" class="ion-no-margin" fill="clear" size="small" [routerLink]="'/poll/'+n.pid"  style="color:var(--ion-color-warning-contrast)!important">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
           <ion-button slot="end" class="ion-no-margin ion-no-padding" fill="clear" size="small" (click)="news.delete(n);G.N.dismiss(n.key)">
-            <ion-icon slot="icon-only" name="close-outline">
+            <ion-icon slot="icon-only" name="close-outline" style="color:gray!important">
             </ion-icon>    
           </ion-button>  
         </ion-item>

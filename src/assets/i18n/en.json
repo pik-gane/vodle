@@ -10,6 +10,7 @@
     "db-pw": "Database password",
     "edit": "Edit",
     "email": "Email",
+    "go-to-poll": "go to poll",
     "hide": "Hide",
     "language": "Language",
     "monthnames": "January, February, March, April, May, June, July, August, September, October, November, December",
@@ -246,6 +247,15 @@
         "older": "Older",
         "drafts": "Drafts",
         "no-draft-polls": "Currently, you have no polls drafted.<br/><small>To start or draft a new poll, click the '+' button below!</small>"
+    },
+
+    "news-title": {
+        "delegation_accepted": "{{nickname}} accepted your delegation request",
+        "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request" 
+    },
+
+    "news-body": {
+        "delegation_declined": "You might want to ask a different delegate" 
     },
 
     "notify_of": {

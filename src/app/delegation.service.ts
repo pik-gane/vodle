@@ -247,7 +247,8 @@ export class DelegationService {
     /** after changes to request or response,
      * compare request and response, set status, extract accepted and active oids */
     // get relevant data:
-    const a = agreement || this.get_agreement(pid, did);
+    const a = agreement || this.get_agreement(pid, did),
+          p = this.G.P.polls[pid];
     if (!request) {
       request = this.get_request(pid, did, a.client_vid);
     }
@@ -298,7 +299,7 @@ export class DelegationService {
               // TODO: notify voter!
             }
           }
-          for (const oid of this.G.P.polls[pid].oids) {
+          for (const oid of p.oids) {
             if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
               // oid newly accepted:
               a.accepted_oids.add(oid);
@@ -310,9 +311,22 @@ export class DelegationService {
         a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
     }
-    if ((old_status=="pending") && (a.status=="agreed")) {
-      // TODO: notify voter!
-    } // ETC!
+    if (a.client_vid == p.myvid) {
+      if ((old_status=="pending") && (a.status=="agreed")) {
+        this.G.N.add({
+          class: 'delegation_accepted', 
+          pid: pid,
+          title: this.translate.instant('news-title.delegation_accepted', {nickname: this.get_nickname(pid, did)}) 
+        });
+      } else if ((old_status=="pending") && (a.status=="declined")) {
+        this.G.N.add({
+          class: 'delegation_declined', 
+          pid: pid,
+          title: this.translate.instant('news-title.delegation_declined', {nickname: this.get_nickname(pid, did)}),
+          body: this.translate.instant('news-body.delegation_declined') 
+        });
+      }
+    }
     this.G.L.exit("DelegationService.update_agreement", a.status, a.accepted_oids);
   }
 

@@ -98,6 +98,7 @@ export class DelegationDialogPage implements OnInit {
 
   share_button_clicked() {
     this.G.L.entry("DelegationDialogPage.share_button_clicked");
+    this.nickname_changed();
     Share.share({
       title: this.message_title,
       text: this.message_body,
@@ -114,6 +115,7 @@ export class DelegationDialogPage implements OnInit {
 
   copy_button_clicked() {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
+    this.nickname_changed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     LocalNotifications.schedule({
@@ -135,6 +137,7 @@ export class DelegationDialogPage implements OnInit {
 
   email_button_clicked(ev: MouseEvent) {
     this.G.L.entry("DelegationDialogPage.email_button_clicked");
+    this.nickname_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");
