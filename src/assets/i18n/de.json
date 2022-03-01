@@ -94,6 +94,26 @@
         "message-body-regards": "Mit besten Grüßen"
     },
 
+    "delrespond": {
+        "-page-title": "Delegierte:r sein?",
+
+        "header": "Bist Du bereit, Delegierte:r zu sein {{from}} in der Abstimmung <i>“{{poll_title}}”?</i>",
+        "intro": "Deine Bewertungen kontrollieren dann auch die Bewertungen dieser Person.",
+        "details": "Wenn Du zustimmst, kannst Du immer noch entscheiden, ob Du die Optionen selbst bewerten oder die Bewertung an eine dritte Person weiter delegieren willst.",
+        "check-first": "Du kannst auch erst einmal Deine Bewertungen überprüfen und dann hierher zurückkehren, um zuzustimmen oder abzulehnen.",
+        "accept": "Stimme zu",
+        "decline": "Lehne ab",
+
+        "cycle-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>“{{poll_title}}”</i>",
+        "two-way-intro": "Allerdings hast Du selbst Deine Bewertungen an genau diese Person, {{from}}, delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
+        "cycle-intro": "Allerdings hat Dein:e eigene:r Delegierte:r für diese Abstimmung die Bewertung bereits direkt oder indirekt an {{from}} delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
+        "cycle-details": "Andernfalls ergäbe dies einen Delegierungs-Kreis, und vodle wüsste nicht, wessen Bewertungen verwendet werden sollen.",
+        "cycle-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
+
+        "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
+        "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal."
+    },
+
     "draftpoll": {
         "-page-title": "Abstimmung bearbeiten",
 
