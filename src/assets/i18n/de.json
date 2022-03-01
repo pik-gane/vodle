@@ -244,8 +244,17 @@
     },
 
     "joinpoll": {
-        "-page-title": "Einer Abstimmung beitreten"
+        "-page-title": "Einer Abstimmung beitreten",
+        "header": "Willkommen zur interaktiven Abstimmung <i>„{{poll_title}}“!</i>",
+        "p1-winner": "Es geht darum, bis {{due}} zwischen mehreren Optionen zu wählen. Am Ende wird genau eine Option gewinnen.",
+        "p1-share": "Es geht darum, bis {{due}} eine Ressource oder ein Budget zwischen verschiedenen Zielen aufzuteilen.",
+        "p2": "Einige Optionen sind bereits vorgeschlagen worden. Jede:r Teilnehmer:in kann jederzeit weitere Optionen vorschlagen, bis zum Ende.",
+        "p3": "Du kannst Deine Meinung zu den Optionen ausdrücken, in dem Du sie <i>bewertest</i>. Du kannst jeder Option eine Bewertung zwischen 0 (keine Zustimmung) und 100 (sichere Zustimmung) geben.",
+        "p4": "Wenn Du unsicher über eine oder mehrere Optionen bist, kannst Du deren Bewertung auch an eine:n andere:n Teilnehmer:in Deines Vertrauens <i>delegieren.</i> Dann zählen deren Bewertungen dieser Optionen auch als Deine.Wenn Du gar keine Zeit hast, über die Optionen nachzudenken, kannst Du auch alle Bewertungen an jemand anderes delegieren.",
+        "p5": "Du kannst Deine Bewertungen und Delegationen jederzeit ändern, bis zum Ende. Es ist sogar sinnvoll, den Abstimmungs-Verlauf über die Zeit zu verfolgen, Deine Bewertungen an das, was Du siehst, anzupassen, neu vorgeschlagene Optionen zu bewerten, oder selbst welche vorzuschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen.",
+        "p6": "Wenn Du wissen willst, wie vodle die Bewertungen verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}."
     },
+
 
     "login": {
         "-page-title": "Login",

@@ -12,6 +12,9 @@ import { Poll } from '../poll.service';
 })
 export class JoinpollPage implements OnInit {
 
+  help_link_start = '<a href="/help">';
+  help_link_end = '</a>';
+
   db_server_url: string;
   db_password: string;
   pid: string;

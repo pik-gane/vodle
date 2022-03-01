@@ -10,50 +10,31 @@
 <ion-content *ngIf="ready && (p!=null)">
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
-      <h4>Welcome to the interactive poll {{p.title}}</h4>
-      <p>
-        This poll is about deciding between a number of options. 
-        In the end, your group will pick exactly one option.
-      </p>
+      <h4 [innerHtml]="'joinpoll.header'|translate:{poll_title:p.title}"></h4>
+      <p [innerHtml]="(p.type=='winner'?'joinpoll.p1-winner':'joinpoll.p1-share')|translate:{due:p.due}"></p>
     </ion-col>
   </ion-item>
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
-      <p>
-        Some options have already been suggested, 
-        but any participant in the poll can suggest further options at any time, 
-        until the poll closes.
-      </p>
+      <p [innerHtml]="'joinpoll.p2'|translate"></p>
     </ion-col>
   </ion-item>
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
-      <p>
-        You can express your opinion about the suggested options by <i>rating</i> them.
-        You can give each option a rating between 0 (don't approve) and 100 (approve for sure).
-      </p>
+      <p [innerHtml]="'joinpoll.p3'|translate"></p>
     </ion-col>
   </ion-item>
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <small>
-        <p>
-          If you are unsure about some option, you can also <i>delegate</i> that rating to someone you trust. 
-          In that case, that person's rating of the option counts for you as well.
-          If you don't have the time for thinking about the option, you can also delegate all of your ratings to  someone else.
-        </p>
+        <p [innerHtml]="'joinpoll.p4'|translate"></p>
       </small>
     </ion-col>
   </ion-item>
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <small>
-        <p>
-          You can change your ratings or delegations at any time until the poll closes, which is on {{p.due}}.
-          In fact, it often makes sense to follow how the poll results develop between now and then,
-          and adjust your ratings to what you see, rate additional options that might get suggested, or add one   yourself. 
-          That way, you can together find a good compromise or reach consensus.
-        </p>
+        <p [innerHtml]="'joinpoll.p5'|translate"></p>
       </small>
     </ion-col>
   </ion-item>
@@ -70,9 +51,7 @@
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <small>
-        <p>
-          If you want to know how the ratings are used by vodle to determine the results, see here.
-        </p>
+        <p [innerHtml]="'joinpoll.p4'|translate:{link_start:help_link_start,link_end:help_link_end}"></p>
       </small>
     </ion-col>
   </ion-item>
