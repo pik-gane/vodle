@@ -313,6 +313,14 @@
     "poll": {
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",
+
+        "also-for-other": "Manche oder alle der Bewertungen weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
+        "also-for-others": "Manche oder alle der Bewertungen weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
+        "declined-some": "Du hast auch einige Bitten um Delegation abgelehnt.",
+        "declined-all": "Du hast alle Bitten um Delegation abgelehnt.",
+        "have-accepted": "Du hast <b>zugestimmt</b>, Delegierte:r zu sein für",
+        "have-declined": "Du hast <b>abgelehnt</b>, Delegierte:r zu sein für",
+
         "sorting": "Optionen werden neu sortiert...",
 
         "delegate-button": "Delegieren",

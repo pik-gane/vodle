@@ -316,6 +316,10 @@
 
         "also-for-other": "Some or all of the ratings below are also used for one other voter, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other voters, who have directly or indirectly delegated to you.",
+        "declined-some": "You have also declined some delegation requests.",
+        "declined-all": "You have declined all delegation requests.",
+        "have-accepted": "You have <b>accepted</b> delegation by",
+        "have-declined": "You have <b>declined</b> delegation by",
 
         "sorting": "Sorting options by approval...",
 
