@@ -809,6 +809,22 @@ export class Poll {
     }
   }
 
+  get_n_indirect_option_clients(vid: string, oid: string): number {
+    /** count how many voters have indirectly delegated to vid for oid */
+    return (this.inv_indirect_delegation_map.get(oid).get(vid)||new Set()).size;
+  }
+
+  get_n_indirect_clients(vid: string): number {
+    /** count how many voters have indirectly delegated to vid for some oid */
+    let clients = new Set();
+    for (const oid of this.oids) {
+      for (const vid2 of (this.inv_indirect_delegation_map.get(oid).get(vid)||new Set())) {
+        clients.add(vid2);
+      }
+    }
+    return clients.size;
+  }
+
   tally_all() {
     // Called after initialization.
     // Tallies all. 

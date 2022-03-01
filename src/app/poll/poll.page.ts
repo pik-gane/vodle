@@ -16,17 +16,21 @@ import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.mod
 })
 export class PollPage implements OnInit {
 
-  Object = Object;
+  Array = Array;
   Math = Math;
+  Object = Object;
+
+  @ViewChild(IonContent, { static: false }) content: IonContent;
 
   page = "previewpoll";
 
   pid: string;
   p: Poll;
 
-  @ViewChild(IonContent, { static: false }) content: IonContent;
-
-  Array = Array;
+  incoming_delegation_expanded = false;
+  n_indirect_clients = 1;
+  accepted_requests = [];
+  declined_requests = [];
 
   oidsorted: string[] = [];
   sortingcounter: number = 0;
@@ -109,7 +113,6 @@ export class PollPage implements OnInit {
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
     this.ready = true;
-//    this.loopUpdate();
     this.update_order();
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
@@ -117,7 +120,32 @@ export class PollPage implements OnInit {
     }
     this.on_delegate_toggle_change();
     window.setTimeout(this.show_stats.bind(this), 100);
+    this.update_incoming();
     this.G.L.exit("PollPage.onDataReady");
+  }
+
+  onDataChange() {
+    this.p.tally_all();
+    this.update_order();
+    this.update_incoming();
+  }
+
+  update_incoming() {
+    // determine own weight:
+    this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
+    // find incoming delegations:
+    const cache = this.G.D.incoming_dids_caches[this.pid];
+    this.accepted_requests = [];
+    this.declined_requests = [];
+    if (cache) {
+      for (let [did, [from, url, status]] of cache) {
+        if (status == 'accepted') {
+          this.accepted_requests.push({from:from, url:url});
+        } else if (status.startsWith('declined')) {
+          this.declined_requests.push({from:from, url:url});
+        } 
+      }
+    }
   }
 
   ionViewWillLeave() {

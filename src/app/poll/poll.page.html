@@ -79,11 +79,43 @@
           </ion-row>
         </ion-grid>
       </ion-item>
-      <ion-item color="light">
+
+      <!-- INCOMING DELEGATIONS BANNER: -->
+
+      <ion-item color="light" *ngIf="n_indirect_clients>0">
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;padding-bottom:6px;">
-            <ion-col class="ion-no-margin ion-padding-right">
-              <small>The ratings below are also used for 3 other voters, who have delegated to you.</small>
+            <ion-col class="ion-no-margin ion-padding-right" 
+                    (click)="incoming_delegation_expanded=!incoming_delegation_expanded"
+                    style="cursor:pointer">
+              <small>
+                <ion-icon size="small" class="ion-no-padding ion-no-margin" 
+                  style="position:relative; left:-3px; top:5px;"
+                  [name]="incoming_delegation_expanded?'caret-down':'caret-forward'" 
+                  slot="icon-only">
+                </ion-icon>
+                <span [innerHtml]="(n_indirect_clients==1?'poll.also-for-other':'poll.also-for-others')|translate:{n_others:n_indirect_clients}"></span>
+              </small>
+            </ion-col>
+          </ion-row>
+          <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length>0">
+            <ion-col class="ion-text-right">
+              <small>
+                You have <b>accepted</b> delegation by
+                <ion-chip *ngFor="let r of accepted_requests" [routerLink]="r.url" outline="true">
+                  <ion-icon style="color:grey" size="small" name="mail-open-outline"></ion-icon><small>{{r.from}}</small>
+                </ion-chip>
+              </small>
+            </ion-col>
+          </ion-row>
+          <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length>0">
+            <ion-col class="ion-text-right">
+              <small>
+                You have <b>declined</b> delegation by
+                <ion-chip *ngFor="let r of declined_requests" [routerLink]="r.url" outline="true">
+                  <ion-icon style="color:grey" size="small" name="mail-open-outline"></ion-icon><small>{{r.from}}</small>
+                </ion-chip>
+              </small>
             </ion-col>
           </ion-row>
         </ion-grid>
