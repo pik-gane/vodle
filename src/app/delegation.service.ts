@@ -73,7 +73,7 @@ export class DelegationService {
   after_request_was_sent(pid: string, did: string, request: del_request_t, private_key: string, agreement: del_agreement_t) {
     // store request and private key in poll db:
     this.set_private_key(pid, did, private_key);
-    this.get_my_dids_cache(pid).set("*", did);
+    this.get_my_outgoing_dids_cache(pid).set("*", did);
     this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
@@ -83,9 +83,9 @@ export class DelegationService {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */
     const p = this.G.P.polls[pid];
-    let did = this.get_my_dids_cache(pid).get(oid);
+    let did = this.get_my_outgoing_dids_cache(pid).get(oid);
     if (!did) {
-      did = this.get_my_dids_cache(pid).get("*");
+      did = this.get_my_outgoing_dids_cache(pid).get("*");
     }
     if (!did) {
       this.G.L.error("DelegationService.update_my_delegation without existing did", pid, oid, activate);
@@ -496,7 +496,7 @@ export class DelegationService {
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }
 
-  get_my_dids_cache(pid:string) {
+  get_my_outgoing_dids_cache(pid:string) {
     if (!this.G.D.outgoing_dids_caches[pid]) {
       this.G.D.outgoing_dids_caches[pid] = new Map();
     }

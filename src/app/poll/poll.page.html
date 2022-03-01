@@ -63,10 +63,15 @@
 -->
   <ion-content *ngIf="ready" (pointerup)="onBodyPointerup($event)" >
     <ion-list lines="full">
+
+      <!-- GENERAL POLL INFORMATION -->
       <ion-item color="primary">
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin">
             <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
+              <small *ngIf="p.language!=G.S.language">
+                <p [innerHtml]="'poll.different-language'|translate:{language:G.S.language_names[p.language]}"></p>
+              </small>
               <h3><b><i>{{p.title}}</i></b></h3>
               <i>{{p.desc}}</i>
               <small *ngIf="(p.url||'')!=''">&nbsp;
@@ -74,7 +79,10 @@
                 <!--(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)-->
               </small>
               <br/>
-              <small><span [innerHtml]="'poll.closes'|translate"></span>&nbsp;<span [innerHtml]="G.D.format_date(p.due)"></span></small>
+              <small>
+                <span [innerHtml]="'poll.closes'|translate"></span>&nbsp;<span [innerHtml]="G.D.format_date(p.due)"></span>
+                <ion-badge *ngIf="true||p.is_closing_soon" class="ion-no-margin" style="margin-left:5px; position: relative; bottom:-6px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+              </small>
             </ion-col>
           </ion-row>
         </ion-grid>
@@ -124,29 +132,26 @@
 
       <!-- Banner(s) with important messages: -->
 
-      <ion-item color="warning"> <!--light-->
+      <ion-item color="warning" *ngIf="delegate"> 
         <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;">
+          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
             <ion-col class="ion-no-margin ion-padding-right">
-              <small>{{
-                n_delegated == oidsorted.length ? 'All of your' : (
-                  2*n_delegated > oidsorted.length ? 'Most of your' : (
-                    n_delegated > 0 ? 'Some of your' : 'Currently none of your'))}} 
-                ratings are controlled&nbsp;by&nbsp;your&nbsp;delegate</small><br/>
-              dcd@posteo.de&nbsp;
-              <ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;">
-                <ion-icon name="pencil-outline"></ion-icon>
-              </ion-button>&nbsp;
-              <ion-button class="ion-no-padding ion-no-border" fill="clear" style="position:relative;top:-7px;">
-                <ion-icon name="trash-outline"></ion-icon>
-              </ion-button>
+              <small>
+                <p>
+                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                  <span [innerHtml]="'poll.delegate-controls-'+(n_delegated == oidsorted.length ? 'all' : 
+                  2*n_delegated > oidsorted.length ? 'most' : 
+                    n_delegated > 0 ? 'some' : 'none')|translate"></span>
+                </p>
+              </small>
             </ion-col>
-            <ion-col class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" style="padding-bottom:3px;">
-<!--              <small>If&nbsp;you&nbsp;still&nbsp;want&nbsp;to</small><br/>
-              rate&nbsp;some&nbsp;options&nbsp;yourself,<br/>
-              <small>choose&nbsp;them&nbsp;here</small>&nbsp;<ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon>
--->
-              <small><p>Choose<br/>whose ratings<br/>to use&nbsp;
+            <ion-col size="auto" class="ion-no-margin">
+              <ion-button fill="clear">
+                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+              </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </ion-col>
+            <ion-col size="auto" class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" style="padding-bottom:3px;">
+              <small><p><span [innerHtml]="'poll.choose-whose-ratings'|translate"></span>&nbsp;
               <ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon></p></small>
             </ion-col>
           </ion-row>
@@ -209,7 +214,7 @@
         </ion-grid>
       </ion-item>-->
   
-      <!-- Options: -->
+      <!-- OPTIONS: -->
 
       <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index">
         <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
@@ -274,15 +279,16 @@
                 </ion-label>
               </ion-range>
             </ion-col>
-            <ion-col class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
+            <ion-col *ngIf="delegate" class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
               <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
                 (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
                 class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
                 style="position:relative; top:-8px;" 
                 [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
               </ion-toggle>
-              <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;"
-              [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'<small>my own</small>':'<small>delegate\'s</small>'"></div>
+              <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+                <small [innerHtml]="(rate_yourself_toggle[oidsorted[i]]?'poll.my-own':'poll.delegate-s')|translate"></small>
+              </div>
             </ion-col>  
           </ion-row>
           <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded[oidsorted[i]]">

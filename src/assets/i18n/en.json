@@ -110,18 +110,16 @@
         "cycle-revoke-first": "If you would still like to accept the request, please consider revoking your own delegation first and then return here.",
 
         "accepted-header": "You have accepted this request from {{from}}.",
-        "accepted-intro": "So your ratings are currently controlling that person's ratings in the poll {{poll_title}}.",
+        "accepted-intro": "So your ratings are currently controlling that person's ratings in the poll <i>“{{poll_title}}”.</i>",
         "accepted-details": "If you want to revoke your acceptance, you can do this. As long as the other person has not withdrawn her request, you can also later accept it again.",
         "keep": "Keep",
         "revoke": "Revoke",
 
         "declined-header": "You have declined this request from {{from}}.",
-        "declined-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll {{poll_title}}.",
+        "declined-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll <i>“{{poll_title}}”.</i>",
         "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
         "no-change": "Don't change",
 
-        "declined-impossible-header": "You have declined this request from {{from}}.",
-        "declined-impossible-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll {{poll_title}}.",
         "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle.",
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
@@ -314,12 +312,23 @@
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
 
+        "different-language": "This poll is in a different language ({{language}}).",
+
         "also-for-other": "Some or all of the ratings below are also used for one other voter, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other voters, who have directly or indirectly delegated to you.",
         "declined-some": "You have also declined some delegation requests.",
         "declined-all": "You have declined all delegation requests.",
         "have-accepted": "You have <b>accepted</b> delegation by",
         "have-declined": "You have <b>declined</b> delegation by",
+
+        "delegate-controls-all": "controls all of your ratings as your delegate",
+        "delegate-controls-most": "controls most of your ratings as your delegate",
+        "delegate-controls-some": "controls some of your ratings as your delegate",
+        "delegate-controls-none": "currently controls none of your ratings as your delegate",
+
+        "choose-whose-ratings": "Choose<br/>whose ratings<br/>to use",
+        "my-own": "my own",
+        "delegate-s": "delegate's",
 
         "sorting": "Sorting options by approval...",
 

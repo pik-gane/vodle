@@ -214,7 +214,7 @@ const state_attributes = [
   "poll_caches", 
   "own_ratings_map_caches", 
   "effective_ratings_map_caches",
-  "my_delegations_caches",
+  "outgoing_dids_caches",
   "incoming_dids_caches",
   "delegation_agreements_caches",
   "direct_delegation_map_caches",

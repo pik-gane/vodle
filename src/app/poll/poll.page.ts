@@ -26,6 +26,7 @@ export class PollPage implements OnInit {
 
   pid: string;
   p: Poll;
+  delegate: string;
 
   incoming_delegation_expanded = false;
   n_indirect_clients = 1;
@@ -120,17 +121,17 @@ export class PollPage implements OnInit {
     }
     this.on_delegate_toggle_change();
     window.setTimeout(this.show_stats.bind(this), 100);
-    this.update_incoming();
+    this.update_delegation_info();
     this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
     this.p.tally_all();
     this.update_order();
-    this.update_incoming();
+    this.update_delegation_info();
   }
 
-  update_incoming() {
+  update_delegation_info() {
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -146,6 +147,18 @@ export class PollPage implements OnInit {
         } 
       }
     }
+    // find outgoing delegation:
+    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+    this.G.L.trace("PollPage.update_delegation_info did", did);
+    if (did) {
+      const agreement = this.G.Del.get_agreement(this.pid, did);
+      this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
+      if (agreement.status == "agreed") {
+        this.delegate = this.G.Del.get_nickname(this.pid, did);
+        this.G.L.trace("PollPage.update_delegation_info delegate", this.delegate);
+      }
+    }
+
   }
 
   ionViewWillLeave() {
