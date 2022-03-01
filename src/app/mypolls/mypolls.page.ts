@@ -16,6 +16,8 @@ export class MypollsPage implements OnInit {
 
   news: Set<news_t> = new Set();
 
+  unanswered_requests = []; 
+
   closed_expanded = false;
   drafts_expanded = false;
   older_expanded = false;
@@ -39,7 +41,6 @@ export class MypollsPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("MypollsPage.ionViewWillEnter");
     this.G.D.page = this;
-//    this.G.N.add({class:'hello', title:'Welcome', body:'...to the mypolls page!'}); // TODO: remove in production
     if (this.ready) this.onDataChange();
   }
 
@@ -58,12 +59,23 @@ export class MypollsPage implements OnInit {
   onDataChange() {
     this.G.L.entry("MypollsPage.onDataChange");
     this.news = new Set([
-//      ...this.G.N.filter({class: 'hello'}), // TODO: remove in production
       ...this.G.N.filter({class: 'new_option'}),
       ...this.G.N.filter({class: 'delegation_accepted'}),
       ...this.G.N.filter({class: 'delegation_declined'}),
       ...this.G.N.filter({class: 'poll_closed'})      
     ]);
+    this.unanswered_requests = [];
+    for (const pid in this.G.P.polls) {
+      const cache = this.G.D.incoming_dids_caches[pid];
+      if (cache) {
+        for (let [did, [from, url, status]] of cache) {
+          if (["can-accept","two-way","cycle"].includes(status)) {
+            this.G.L.trace("MypollsPage.onDataChange found unanswered request", did, from, url, status);
+            this.unanswered_requests.push({pid:pid, did:did, from:from, url:url, status:status});
+          }
+        }  
+      }
+    }
   }
 
   ionViewWillLeave() {

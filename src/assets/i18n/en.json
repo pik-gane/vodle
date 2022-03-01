@@ -53,10 +53,12 @@
 
     "badges": {
         "abstaining": "Abstaining",
+        "can-accept": "Can accept",
         "closing-soon": "Closing soon",
         "delegated": "Delegated",
         "draft": "Draft",
-        "new": "New"
+        "new": "New",
+        "please-check": "Please check"
     },
 
     "data": {
@@ -262,7 +264,9 @@
 
     "mypolls": {
         "-page-title": "My polls",
-        "running": "Running",
+        "please-respond": "Please respond:",
+        "request-by": "Delegation request by {{from}}",
+        "running": "Running polls",
         "no-running-polls": "Currently, vodle knows of no running polls that you can vote in.<br/><small>If you have received an invitation to a poll, please click the link in the invitation!</small>",
         "recently-closed": "Closed",
         "no-recently-closed-polls": "Vodle knows of no closed polls that you have voted in.<br/><small>If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.</small>",

@@ -42,6 +42,29 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- UNANSWERED REQUESTS -->
+
+    <ng-container *ngIf="unanswered_requests.length > 0">
+      <ion-item color="primary">
+        <ion-label><b [innerHtml]="'mypolls.please-respond'|translate"></b></ion-label>
+      </ion-item>
+      <ng-container *ngFor="let r of unanswered_requests">
+        <ion-item>
+          <ion-label [routerLink]="r.url" style="cursor: pointer;">
+            <ion-icon class="poll-type-list" size="small" name="help-outline"></ion-icon>&nbsp;
+            <span [innerHtml]="'mypolls.request-by'|translate:{from:r.from}"></span>
+          </ion-label>
+          <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
+            <ion-badge *ngIf="r.status=='can-accept'" class="ion-no-margin" style="margin-left:5px;" color="primary" [innerHtml]="'badges.can-accept'|translate"></ion-badge>
+            <ion-badge *ngIf="(r.status=='two-way')||(r.status=='cycle')" class="ion-no-margin" style="margin-left:5px;" color="secondary" [innerHtml]="'badges.please-check'|translate"></ion-badge>
+          </ion-buttons>
+        </ion-item>
+      </ng-container>
+      <ng-container *ngIf="Object.keys(G.P.running_polls).length==0">
+        <ion-item><p [innerHtml] ="'mypolls.no-running-polls'|translate"></p></ion-item>
+      </ng-container>  
+    </ng-container>
+
     <!--RUNNING-->
 
     <ion-item color="primary">
@@ -53,13 +76,13 @@
           <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i [innerHtml]="p.title"></i>
         </ion-label>
-        <ion-buttons *ngIf="can_invite(p)" slot="end" class="ion-no-padding ion-no-margin">
+        <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
           <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end">Abstaining</ion-badge>
 -->
-          <ion-button fill="clear" [routerLink]="'/inviteto/'+p.pid">
+          <ion-button *ngIf="can_invite(p)" fill="clear" [routerLink]="'/inviteto/'+p.pid">
             <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
           </ion-button>
         </ion-buttons>

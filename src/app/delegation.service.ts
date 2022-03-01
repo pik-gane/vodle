@@ -193,7 +193,7 @@ export class DelegationService {
     if (!cache) {
       cache = this.G.D.incoming_dids_caches[pid] = new Map();
     }
-    cache[did] = [from, url, status]; 
+    cache.set(did, [from, url, status]); 
   }
 
   accept(pid: string, did: string, private_key: string) {

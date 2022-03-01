@@ -58,10 +58,12 @@
     
     "badges": {
         "abstaining": "Enthaltung",
+        "can-accept": "Zustimmung möglich",
         "closing-soon": "Schließt bald",
         "delegated": "Delegiert",
         "draft": "Entwurf",
-        "new": "Neu"
+        "new": "Neu",
+        "please-check": "Bitte prüfen"
     },
 
     "data": {
@@ -266,7 +268,9 @@
 
     "mypolls": {
         "-page-title": "Meine Abstimmungen",
-        "running": "Noch offen",
+        "please-respond": "Bitte beantworten:",
+        "request-by": "Bitte um Delegation von {{from}}",
+        "running": "Offene Abstimmungen",
         "no-running-polls": "Momentan kennt vodle keine offenen Abstimmungen, an denen Du teilnehmen kannst.<br/><small>Wenn Du eine Einladung zu einer Abstimmung erhalten hast, klick bitte auf den Link in der Einladung!</small>",
         "recently-closed": "Abgeschlossen",
         "no-recently-closed-polls": "Vodle kennt keine abgeschlossenen Abstimmungen, an denen Du teilgenommen hast.<br/><small>Wenn Du eine alte Einladung zu einer bereits abgeschlossenen Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.</small>",
