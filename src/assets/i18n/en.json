@@ -109,16 +109,20 @@
         "cycle-details": "Otherwise, this would create a delegation cycle and vodle would not know whose ratings to use",
         "cycle-revoke-first": "If you would still like to accept the request, please consider revoking your own delegation first and then return here.",
 
-        "accepted-header": "You have already accepted this request from {{from}}.",
+        "accepted-header": "You have accepted this request from {{from}}.",
         "accepted-intro": "So your ratings are currently controlling that person's ratings in the poll {{poll_title}}.",
         "accepted-details": "If you want to revoke your acceptance, you can do this. As long as the other person has not withdrawn her request, you can also later accept it again.",
         "keep": "Keep",
         "revoke": "Revoke",
 
-        "declined-header": "You have already declined this request from {{from}}.",
+        "declined-header": "You have declined this request from {{from}}.",
         "declined-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll {{poll_title}}.",
         "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
         "no-change": "Don't change",
+
+        "declined-impossible-header": "You have declined this request from {{from}}.",
+        "declined-impossible-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll {{poll_title}}.",
+        "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle.",
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later."

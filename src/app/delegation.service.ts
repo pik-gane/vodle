@@ -143,23 +143,20 @@ export class DelegationService {
     if (pid in this.G.P.polls) {
       const p = this.G.P.polls[pid];
       if (p.state != 'running') {
-        this.G.L.warn("DelrespondPage called for closed poll", pid);
         return "closed";
       } else {
-        this.G.L.info("DelrespondPage called for known poll", pid);
         // check if request has been retrieved from db:
         const agreement = this.G.D.delegation_agreements_caches[pid].get(did);
         if (agreement) {
-          const myvid = p.myvid;
+          // check if already answered:
           if (agreement.status == 'agreed') {
             return "accepted";
-          } else if (agreement.status == 'declined') {
-            return "declined";
           } 
-          // TODO: check if already declined!
           // check if already delegating (in)directly back to client_vid for at least one option:
+          var possible;
           const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
                 effdelmap = this.G.D.effective_delegation_map_caches[pid],
+                myvid = p.myvid,
                 client_vid = agreement.client_vid;
           let two_way = false, cycle = false;
           for (let oid of p.oids) {
@@ -172,19 +169,22 @@ export class DelegationService {
             }
           }
           if (two_way) {
-            return "two-way";
+            possible = "two-way";
           } else if (cycle) {
-            return "cycle";
+            possible = "cycle";
           } else {
-            return "can-accept";
+            possible = "possible";
+          }
+          if (agreement.status == 'declined') {
+            return "declined, " + possible;
+          } else {
+            return possible;
           }
         } else {
-          this.G.L.warn("DelrespondPage called when request not received from db");
           return "not-in-db";
         }
       }
     } else {
-      this.G.L.warn("DelrespondPage called for unknown pid");
       return "poll-unknown";
     }
   }

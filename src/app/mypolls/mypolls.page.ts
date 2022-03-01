@@ -69,7 +69,7 @@ export class MypollsPage implements OnInit {
       const cache = this.G.D.incoming_dids_caches[pid];
       if (cache) {
         for (let [did, [from, url, status]] of cache) {
-          if (["can-accept","two-way","cycle"].includes(status)) {
+          if (["possible","two-way","cycle"].includes(status)) {
             this.G.L.trace("MypollsPage.onDataChange found unanswered request", did, from, url, status);
             this.unanswered_requests.push({pid:pid, did:did, from:from, url:url, status:status});
           }
