@@ -115,6 +115,11 @@
         "keep": "Keep",
         "revoke": "Revoke",
 
+        "declined-header": "You have already declined this request from {{from}}.",
+        "declined-intro": "So your ratings are currently <i>not</i> controlling that person's ratings in the poll {{poll_title}}.",
+        "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
+        "no-change": "Don't change",
+
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later."
     },

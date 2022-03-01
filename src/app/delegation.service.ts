@@ -151,9 +151,11 @@ export class DelegationService {
         const agreement = this.G.D.delegation_agreements_caches[pid].get(did);
         if (agreement) {
           const myvid = p.myvid;
-          if (agreement.delegate_vid == myvid) {
+          if (agreement.status == 'agreed') {
             return "accepted";
-          }
+          } else if (agreement.status == 'declined') {
+            return "declined";
+          } 
           // TODO: check if already declined!
           // check if already delegating (in)directly back to client_vid for at least one option:
           const dirdelmap = this.G.D.direct_delegation_map_caches[pid],

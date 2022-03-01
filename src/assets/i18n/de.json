@@ -118,6 +118,11 @@
         "keep": "Beibehalten",
         "revoke": "Widerrufen",
 
+        "declined-header": "Du hast diese Bitte von {{from}} bereits abgelehnt.",
+        "declined-intro": "Deine Bewertungen kontrollieren also momentan <i>nicht</i> die Bewertungen dieser Person in der Abstimmung {{poll_title}}.",
+        "declined-details": "Wenn Du nun aber zustimmen willst, kannst Du dies tun. Du kannst die Zustimmung später immer noch wieder zurückziehen.",
+        "no-change": "Keine Änderung",
+
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal."
     },
