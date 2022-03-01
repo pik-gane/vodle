@@ -139,13 +139,61 @@ export class DelegationService {
 
   // RESPONDING TO A DELEGATION REQUEST:
 
-  store_incoming_request(did: string, pid: string, from: string, url: string) {
-    this.G.D.setu("del_incoming."+did, JSON.stringify([from, url]));
+  get_incoming_request_status(pid: string, did: string): string {
+    if (pid in this.G.P.polls) {
+      const p = this.G.P.polls[pid];
+      if (p.state != 'running') {
+        this.G.L.warn("DelrespondPage called for closed poll", pid);
+        return "closed";
+      } else {
+        this.G.L.info("DelrespondPage called for known poll", pid);
+        // check if request has been retrieved from db:
+        const agreement = this.G.D.delegation_agreements_caches[pid].get(did);
+        if (agreement) {
+          const myvid = p.myvid;
+          if (agreement.delegate_vid == myvid) {
+            return "accepted";
+          }
+          // TODO: check if already declined!
+          // check if already delegating (in)directly back to client_vid for at least one option:
+          const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
+                effdelmap = this.G.D.effective_delegation_map_caches[pid],
+                client_vid = agreement.client_vid;
+          let two_way = false, cycle = false;
+          for (let oid of p.oids) {
+            if (dirdelmap.get(oid).get(myvid) == client_vid) {
+              two_way = true;
+              break;
+            } else if (effdelmap.get(oid).get(myvid) == client_vid) {
+              cycle = true;
+              break;
+            }
+          }
+          if (two_way) {
+            return "two-way";
+          } else if (cycle) {
+            return "cycle";
+          } else {
+            return "can-accept";
+          }
+        } else {
+          this.G.L.warn("DelrespondPage called when request not received from db");
+          return "not-in-db";
+        }
+      }
+    } else {
+      this.G.L.warn("DelrespondPage called for unknown pid");
+      return "poll-unknown";
+    }
+  }
+
+  store_incoming_request(pid: string, did: string, from: string, url: string, status: string) {
+    this.G.D.setu("del_incoming."+did, JSON.stringify([from, url, status]));
     let cache = this.G.D.incoming_dids_caches[pid];
     if (!cache) {
       cache = this.G.D.incoming_dids_caches[pid] = new Map();
     }
-    cache[did] = [from, url]; 
+    cache[did] = [from, url, status]; 
   }
 
   accept(pid: string, did: string, private_key: string) {

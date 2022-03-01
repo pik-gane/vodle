@@ -101,11 +101,17 @@
         "accept": "Accept",
         "decline": "Decline",
 
-        "cycle-header": "{{from}} asks you to act as their delegate in the poll <i>“{{poll_title}}”</i>",
+        "cycle-header": "{{from}} asks you to act as their delegate in the poll <i>“{{poll_title}}”.</i>",
         "two-way-intro": "But you have already delegated your own ratings for the same poll to that very person, {{from}}. As long as this is the case, you cannot accept this request.",
         "cycle-intro": "However, your own delegate for this poll has directly or indirectly delegated your ratings further to {{from}}. As long as this is the case, you cannot accept this request.",
         "cycle-details": "Otherwise, this would create a delegation cycle and vodle would not know whose ratings to use",
         "cycle-revoke-first": "If you would still like to accept the request, please consider revoking your own delegation first and then return here.",
+
+        "accepted-header": "You have already accepted this request from {{from}}.",
+        "accepted-intro": "So your ratings are currently controlling that person's ratings in the poll {{poll_title}}.",
+        "accepted-details": "If you want to revoke your acceptance, you can do this. As long as the other person has not withdrawn her request, you can also later accept it again.",
+        "keep": "Keep",
+        "revoke": "Revoke",
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later."

@@ -104,11 +104,17 @@
         "accept": "Stimme zu",
         "decline": "Lehne ab",
 
-        "cycle-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>“{{poll_title}}”</i>",
+        "cycle-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>“{{poll_title}}”.</i>",
         "two-way-intro": "Allerdings hast Du selbst Deine Bewertungen an genau diese Person, {{from}}, delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
         "cycle-intro": "Allerdings hat Dein:e eigene:r Delegierte:r für diese Abstimmung die Bewertung bereits direkt oder indirekt an {{from}} delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
         "cycle-details": "Andernfalls ergäbe dies einen Delegierungs-Kreis, und vodle wüsste nicht, wessen Bewertungen verwendet werden sollen.",
         "cycle-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
+
+        "accepted-header": "Du hast dieser Bitte von {{from}} bereits zugestimmt.",
+        "accepted-intro": "Deine Bewertungen kontrollieren also momentan die Bewertungen dieser Person in der Abstimmung {{poll_title}}.",
+        "accepted-details": "Wenn Du Deine Zustimmung widerrufen möchtest, kannst Du dies tun. Solange die andere Person ihre Bitte nicht zurückzieht, kannst Du ihr auch später wieder zustimmen.",
+        "keep": "Beibehalten",
+        "revoke": "Widerrufen",
 
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal."

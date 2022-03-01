@@ -120,7 +120,43 @@
     </ion-item>
   </ng-container>
 
-  <ng-container *ngIf="status=='unknown'">
+  <ng-container *ngIf="status=='accepted'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b [innerHtml]="'delrespond.accepted-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
+        <p [innerHtml]="'delrespond.accepted-intro'|translate:{from:from,poll_title:p.title}"></p> 
+        <small><p [innerHtml]="'delrespond.accepted-details'|translate"></p></small>
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="warning"
+            shape="round"
+            (click)="decline()">
+          <ion-icon name="ban"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.revoke'|translate"></span>
+        </ion-button>&nbsp;&nbsp;
+        <ion-button size="large" color="primary"
+            shape="round"
+            (click)="accept()">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.keep'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>  
+  </ng-container>
+
+  <ng-container *ngIf="status=='poll-unknown'">
     <ion-item [innerHtml]="'delrespond.poll-unknown'|translate">      
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
