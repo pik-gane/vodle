@@ -657,17 +657,24 @@ export class Poll {
 
   // Methods dealing with changes to the delegation graph:
 
-  add_delegation(client_vid:string, oid:string, delegate_vid:string) {
-    // Called whenever a delegation is added
+  add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {
+    /** Called whenever a delegation shall be added. Returns whether this succeeded */
     const d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid), 
           eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
     // make sure no delegation exists yet and delegation would not create a cycle:
     if (d_map.has(client_vid)) {
+
       this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, d_map.get(client_vid));
+      return false;
+
     } else if (eff_d_vid == client_vid) { 
+
       this.G.L.error("PollService.add_delegation when this would create a cycle", client_vid, oid, delegate_vid);
+      return false;
+
     } else {
+
       this.G.L.trace("PollService.add_delegation feasible", client_vid, oid, delegate_vid);
 
       // register DIRECT delegation and inverse:
@@ -737,6 +744,8 @@ export class Poll {
         deps_eff_d_vid.add(vid2);
         this.update_effective_rating(vid2, oid, eff_rating);
       }  
+
+      return true;
     }
   }
 

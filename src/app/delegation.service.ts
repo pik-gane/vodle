@@ -350,10 +350,12 @@ export class DelegationService {
           for (const oid of request.option_spec.oids) {
             if (a.accepted_oids.has(oid) && !a.active_oids.has(oid)) {
               // oid newly active:
-              a.active_oids.add(oid);
-              p.add_delegation(a.client_vid, oid, a.delegate_vid);
-              this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              // TODO: notify voter!
+              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
+                a.active_oids.add(oid);
+                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
+              } else {
+                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
+              }
             }
           }
         } else if (request.option_spec.type == "-") {
@@ -370,10 +372,12 @@ export class DelegationService {
           for (const oid of a.accepted_oids) {
             if ((!a.active_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
               // oid newly active:
-              a.active_oids.add(oid);
-              p.add_delegation(a.client_vid, oid, a.delegate_vid);
-              this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              // TODO: notify voter!
+              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
+                a.active_oids.add(oid);
+                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
+              } else {
+                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
+              }
             }
           }
         }

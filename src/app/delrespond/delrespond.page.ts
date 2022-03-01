@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
+import { del_agreement_t } from '../data.service';
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
@@ -18,6 +19,8 @@ export class DelrespondPage implements OnInit {
   did: string;
   from: string;
   private_key: string;
+  agreement: del_agreement_t;
+  status: string;
 
   // LIFECYCLE:
 
@@ -62,12 +65,43 @@ export class DelrespondPage implements OnInit {
       this.p = this.G.P.polls[this.pid];
       if (this.p.state != 'running') {
         this.G.L.warn("DelrespondPage called for closed poll", this.pid);
+        this.status = "closed";
       } else {
         this.G.L.info("DelrespondPage called for known poll", this.pid);
         this.G.Del.store_incoming_request(this.did, this.pid, this.from, this.url);
+        // check if request has been retrieved from db:
+        this.agreement = this.G.D.delegation_agreements_caches[this.pid].get(this.did);
+        if (this.agreement) {
+          // check if already delegating indirectly back to client_vid for at least one option:
+          const dirdelmap = this.G.D.direct_delegation_map_caches[this.pid],
+                effdelmap = this.G.D.effective_delegation_map_caches[this.pid],
+                myvid = this.p.myvid,
+                client_vid = this.agreement.client_vid;
+          let two_way = false, cycle = false;
+          for (let oid of this.p.oids) {
+            if (dirdelmap.get(oid).get(myvid) == client_vid) {
+              two_way = true;
+              break;
+            } else if (effdelmap.get(oid).get(myvid) == client_vid) {
+              cycle = true;
+              break;
+            }
+          }
+          if (two_way) {
+            this.status = "two-way";
+          } else if (cycle) {
+            this.status = "cycle";
+          } else {
+            this.status = "can-accept";
+          }
+        } else {
+          this.G.L.warn("DelrespondPage called when request not received from db");
+          this.status = "not-in-db";
+        }
       }
     } else {
       this.G.L.warn("DelrespondPage called for unknown pid");
+      this.status = "unknown";
     }
     this.ready = true;
     this.G.L.exit("DelrespondPage.onDataReady");

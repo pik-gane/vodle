@@ -272,7 +272,7 @@ export class DataService implements OnDestroy {
   outgoing_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
   incoming_dids_caches: Record<string, Map<string, [string, string]>>; // [from, url] of received delegation request links by pid, did 
 
-  delegation_agreements_caches: Record<string, Map<string, del_agreement_t>>; 
+  delegation_agreements_caches: Record<string, Map<string, del_agreement_t>>; // by pid, did
 
   direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
   inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
