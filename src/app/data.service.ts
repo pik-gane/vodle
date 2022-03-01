@@ -1669,7 +1669,7 @@ export class DataService implements OnDestroy {
       const doc_due = doc['due'];
       if (doc_due) {
         // check if it is correct:
-        if (!(doc_due==cache['due'])) {
+        if (!!cache['due'] && !(doc_due == cache['due'])) {
           this.G.L.warn("DataService.doc2poll_cache received doc with wrong due", doc, this.poll_caches[pid]['due']);
 
           // RETURN:

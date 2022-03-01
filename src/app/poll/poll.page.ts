@@ -298,6 +298,7 @@ export class PollPage implements OnInit {
   dragged_oid: string = undefined;
 
   // The following three handlers prevent the slider from responding when pointer is not on knob:
+  
   onRangePointerdown(oid:string, ev:PointerEvent) {
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = ev.clientX;

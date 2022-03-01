@@ -92,7 +92,7 @@ export class DelrespondPage implements OnInit {
     this.router.navigate(["/poll/" + this.pid]);
   }
 
-  dismiss_unknown_poll() {
+  dismiss() {
     this.router.navigate(["/mypolls"]);
   }
 

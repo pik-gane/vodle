@@ -60,34 +60,26 @@ export class DelegationDialogPage implements OnInit {
     [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
-    this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
-                + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
-                + "\t    “" + this.p.title + "”.\n\n"
-                + this.translate.instant('delegation-request.message-body-closes', {due: this.G.D.format_date(this.p.due)}) + "\n\n"
-                + this.translate.instant('delegation-request.message-body-explanation') + "\n\n" 
-                + this.translate.instant('delegation-request.message-body-before-link') + "\n\n" 
-                + "\t    " + this.delegation_link + "\n\n"
-                + this.translate.instant('delegation-request.message-body-dont-share') + "\n\n"
-                + this.translate.instant('delegation-request.message-body-regards'));
-    this.update_request("");
+    this.update_request();
     this.ready = true;
   }
 
   nickname_changed() {
     const nickname = this.formGroup.get('nickname').value;
     this.G.D.setp(this.p.pid, "del_nickname." + this.did, nickname);
-    this.update_request(nickname);
+    this.update_request();
   }
 
   from_changed() {
     const from = this.formGroup.get('from').value;
     this.G.D.setp(this.p.pid, "del_from." + this.did, from);
     this.set_delegation_link(from);
+    this.update_request();
   }
 
-  update_request(nickname: string) {
+  update_request() {
     this.G.L.entry("DelegationDialogPage.update_request");
-    this.mailto_url = "mailto:" + encodeURIComponent(nickname) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
+    this.mailto_url = "mailto:" + encodeURIComponent(this.formGroup.get('nickname').value) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
   }
 
   ClosePopover()
@@ -104,6 +96,15 @@ export class DelegationDialogPage implements OnInit {
 
   set_delegation_link(from: string) {
     this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key);
+    this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
+                + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
+                + "\t    “" + this.p.title + "”.\n\n"
+                + this.translate.instant('delegation-request.message-body-closes', {due: this.G.D.format_date(this.p.due)}) + "\n\n"
+                + this.translate.instant('delegation-request.message-body-explanation') + "\n\n" 
+                + this.translate.instant('delegation-request.message-body-before-link') + "\n\n" 
+                + "\t    " + this.delegation_link + "\n\n"
+                + this.translate.instant('delegation-request.message-body-dont-share') + "\n\n"
+                + this.translate.instant('delegation-request.message-body-regards'));
   }
 
   share_button_clicked() {

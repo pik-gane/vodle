@@ -243,14 +243,17 @@ export class DelegationService {
 
   set_my_request(pid: string, did: string, value: del_request_t) {
     this.G.D.setv(pid, "del_request." + did, JSON.stringify(value));
+    const a = this.get_agreement(pid, did);
+    a.client_vid = this.G.P.polls[pid].myvid;
     this.update_agreement(pid, did, null, value, null);
   }
 
   get_signed_response(pid: string, did: string, vid?: string): del_signed_response_t {
+    this.G.L.entry("DelegationService.get_signed_response", pid, did, vid);
     if (!vid) {
       vid = this.get_agreement(pid, did).delegate_vid;
     }
-    return vid ? this.G.D.getv(pid, "del_response." + did, vid) : null;
+    return (!!vid) ? this.G.D.getv(pid, "del_response." + did, vid) : null;
   }
   
   set_my_signed_response(pid: string, did: string, value: del_signed_response_t) {
@@ -263,6 +266,7 @@ export class DelegationService {
   get_agreement(pid: string, did: string): del_agreement_t {
     const cache = this.get_delegation_agreements_cache(pid);
     let a = cache.get(did);
+    this.G.L.entry("DelegationService.get_agreement", pid, did, a);
     if (!a) {
       a = {
         status: "pending",
@@ -283,7 +287,7 @@ export class DelegationService {
       const request = this.get_request(pid, did, client_vid),
             signed_response = this.get_signed_response(pid, did, client_vid);
       if (this.response_signed_incorrectly(request, signed_response)) {
-        this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
+        this.G.L.warn("DelegationService.process_request_from_db: response was not properly signed", a);
         delete a.delegate_vid;
       }    
     }
@@ -293,11 +297,13 @@ export class DelegationService {
 
   process_signed_response_from_db(pid: string, did: string, delegate_vid: string) {
     /** after receiving a new or changed response from the db, process it: */
+    this.G.L.entry("DelegationService.process_signed_response_from_db", pid, did, delegate_vid);
     const a = this.get_agreement(pid, did),
           request = this.get_request(pid, did, a.client_vid),
           signed_response = this.get_signed_response(pid, did, delegate_vid);
+    this.G.L.trace("DelegationService.process_signed_response_from_db", request, signed_response);
     if (this.response_signed_incorrectly(request, signed_response)) {
-      this.G.L.warn("DelegationService.update_agreement: response was not properly signed", a);
+      this.G.L.warn("DelegationService.process_signed_response_from_db: response was not properly signed", a);
       if (delegate_vid == a.delegate_vid) {
         delete a.delegate_vid;
       }
@@ -311,6 +317,7 @@ export class DelegationService {
         request: del_request_t, signed_response: del_signed_response_t) {
     /** after changes to request or response,
      * compare request and response, set status, extract accepted and active oids */
+    this.G.L.entry("DelegationService.update_agreement", pid, did, agreement, request, signed_response);
     // get relevant data:
     const a = agreement || this.get_agreement(pid, did),
           p = this.G.P.polls[pid];
@@ -444,6 +451,12 @@ export class DelegationService {
           pid: pid,
           title: this.translate.instant('news-title.delegation_accepted', {nickname: this.get_nickname(pid, did)}) 
         });
+      } else if ((old_status=="declined") && (a.status=="agreed")) {
+        this.G.N.add({
+          class: 'delegation_accepted', 
+          pid: pid,
+          title: this.translate.instant('news-title.delegation_accepted_after_all', {nickname: this.get_nickname(pid, did)}) 
+        });
       } else if ((old_status=="pending") && (a.status=="declined")) {
         this.G.N.add({
           class: 'delegation_declined', 
@@ -451,17 +464,24 @@ export class DelegationService {
           title: this.translate.instant('news-title.delegation_declined', {nickname: this.get_nickname(pid, did)}),
           body: this.translate.instant('news-body.delegation_declined') 
         });
+      } else if ((old_status=="agreed") && (a.status=="declined")) {
+        this.G.N.add({
+          class: 'delegation_declined', 
+          pid: pid,
+          title: this.translate.instant('news-title.delegation_revoked', {nickname: this.get_nickname(pid, did)}),
+          body: this.translate.instant('news-body.delegation_declined') 
+        });
       }
     }
-
 
     this.G.L.exit("DelegationService.update_agreement", a.status, a.accepted_oids);
   }
 
   response_signed_incorrectly(request: del_request_t, signed_response: del_signed_response_t) {
     /** whether the response can be identified as being signed incorrectly */
-    if (!signed_response) {
-      // no response, so no invalid signature:
+    this.G.L.entry("DelegationService.response_signed_incorrectly", request, signed_response);
+    if ((!signed_response)||(!request)) {
+      // no request or response, so no invalid signature:
       return false;
     }
     return !this.G.D.open_signed(signed_response, request.public_key);

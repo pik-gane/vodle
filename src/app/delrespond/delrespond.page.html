@@ -195,14 +195,46 @@
   </ng-container>
 
   <ng-container *ngIf="status=='poll-unknown'">
-    <ion-item [innerHtml]="'delrespond.poll-unknown'|translate">      
-      <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
+      </ion-col>
     </ion-item>  
-    <ion-button size="large" color="primary" slot="end"
-        shape="round"
-        (click)="dismiss_unknown_poll()">
-      <span [innerHtml]="'OK'|translate"></span>&nbsp;
-    </ion-button>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="primary" 
+            shape="round"
+            (click)="dismiss()">
+          <span [innerHtml]="'OK'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+  </ng-container>
+
+  <ng-container *ngIf="status=='closed'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p> 
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="primary"
+            shape="round"
+            (click)="dismiss()">
+          <span [innerHtml]="'OK'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>  
   </ng-container>
 
   <ng-container *ngIf="status=='not-in-db'">

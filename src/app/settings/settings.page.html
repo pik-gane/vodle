@@ -40,8 +40,8 @@
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
-        <ion-button 
-            tabindex="-1" style="padding-top: 10px;" color="primary" 
+        <ion-button fill="clear"
+            tabindex="-1" style="padding-top: 10px;"
             [disabled]="editing_email && !formGroup.get('email').valid"
             (click)="editing_email=!editing_email">
           <!--TODO: give focus to field-->
@@ -77,19 +77,21 @@
               </ion-input>
             </ion-item>
           </ion-col>
-          <ion-button 
-              tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
-              (click)="showing_password=!showing_password">
-            <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>
-            <!--&nbsp;<span [innerHtml]="(showing_password?'hide':'show')|translate"></span>-->
-          </ion-button>
-          <ion-button 
-              tabindex="-1" style="padding-top: 10px;" color="primary" 
-              (click)="editing_password=!editing_password" 
-              [disabled]="editing_password && !formGroup.get('pw').valid">
-            <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
-            <!--<span [innerHtml]="(editing_password?'OK':'settings.edit')|translate"></span>-->
-          </ion-button>
+          <ion-buttons>
+            <ion-button 
+                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
+                (click)="showing_password=!showing_password">
+              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>
+              <!--&nbsp;<span [innerHtml]="(showing_password?'hide':'show')|translate"></span>-->
+            </ion-button>
+            <ion-button fill="clear"
+                tabindex="-1" style="padding-top: 10px;" color="primary" 
+                (click)="editing_password=!editing_password" 
+                [disabled]="editing_password && !formGroup.get('pw').valid">
+              <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
+              <!--<span [innerHtml]="(editing_password?'OK':'settings.edit')|translate"></span>-->
+            </ion-button>
+          </ion-buttons>
         </ion-row>
       </ion-grid>
       <div class="validation-errors">

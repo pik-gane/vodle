@@ -51,7 +51,7 @@
       <ng-container *ngFor="let r of unanswered_requests">
         <ion-item>
           <ion-label [routerLink]="r.url" style="cursor: pointer;">
-            <ion-icon class="poll-type-list" size="small" name="help-outline"></ion-icon>&nbsp;
+            <ion-icon class="poll-type-list" size="small" name="mail-open-outline"></ion-icon>&nbsp;
             <span [innerHtml]="'mypolls.request-by'|translate:{from:r.from}"></span>
           </ion-label>
           <ion-buttons slot="end" class="ion-no-padding ion-no-margin">

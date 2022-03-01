@@ -184,7 +184,7 @@
         "use-example-from-db": "Ein Beispiel verwenden:",
         "use-example-from-db-none": "(Kein Beispiel verwenden)",
 
-        "notification-saved-title": "Entwurf gesprichert unter „Meine Abstimmungen“"
+        "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
     },
     
     "help": {
@@ -270,7 +270,6 @@
         "failed": "Abmelden fehlgeschlagen"
     },
 
-
     "mypolls": {
         "-page-title": "Meine Abstimmungen",
         "please-respond": "Bitte beantworten:",
@@ -282,6 +281,17 @@
         "older": "Älter",
         "drafts": "Entwürfe",
         "no-draft-polls": "Momentan hast Du keine Abstimmungen entworfen.<br/><small>Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!</small>"
+    },
+
+    "news-title": {
+        "delegation_accepted": "{{nickname}} hat Deiner Bitte um Delegation zugestimmt.",
+        "delegation_declined": "Leider hat {{nickname}} Deine Bitte um Delegation abgelehnt.",
+        "delegation_accepted_after_all": "{{nickname}} hat Deiner Bitte um Delegation jetzt doch zugestimmt.",
+        "delegation_revoked": "Leider hat {{nickname}} Deine Bitte um Delegation jetzt doch abgelehnt."  
+    },
+
+    "news-body": {
+        "delegation_declined": "Vielleicht möchtest Du eine andere Person als Delegierte:n anfragen."
     },
 
     "notify_of": {

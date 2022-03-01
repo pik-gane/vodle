@@ -181,7 +181,7 @@
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Don't use an example)",
 
-        "notification-saved-title": "Draft saved under “My polls”"
+        "notification-saved-title": "Draft saved under “My polls”."
     },
 
     "help": {
@@ -281,12 +281,14 @@
     },
 
     "news-title": {
-        "delegation_accepted": "{{nickname}} accepted your delegation request",
-        "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request" 
+        "delegation_accepted": "{{nickname}} accepted your delegation request.",
+        "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request.",
+        "delegation_accepted_after_all": "{{nickname}} has now accepted your delegation request after all.",
+        "delegation_revoked": "Unfortunately, {{nickname}} revoked her earlier agreement to your delegation request."  
     },
 
     "news-body": {
-        "delegation_declined": "You might want to ask a different delegate" 
+        "delegation_declined": "You might want to ask a different delegate."
     },
 
     "notify_of": {
