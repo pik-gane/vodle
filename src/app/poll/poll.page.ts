@@ -187,12 +187,6 @@ export class PollPage implements OnInit {
     this.scroll_position = scrollPosition / (totalContentHeight - viewportHeight);
     
   }
-  scrollToBottom() {
-    this.content.scrollToBottom(1000);
-  }
-  scrollToTop() {
-    this.content.scrollToTop(1000);
-  }
 
   on_rate_yourself_toggle_change(oid:string) {
     // update delegation data:

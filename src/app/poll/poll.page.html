@@ -1,6 +1,5 @@
 <!--
   TODO: 
-  - show if poll has different language
   - show winning prob. as percentage in circle?
   - show avg. rating if necessary as tiebreaker (how?)
 
@@ -10,340 +9,396 @@
   <ion-icon name="open-outline"></ion-icon>
 -->
 
+<!-- HEADER: -->
+
 <ion-header (pointerup)="onBodyPointerup($event)">
-  <ion-toolbar style="padding-right:11px;">
+  <ion-toolbar style="padding-right: 11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title [innerHtml]="'poll.-page-title'|translate"></ion-title>
+    <ion-title [innerHtml]="'poll.-page-title' | translate"></ion-title>
     <ion-buttons slot="end">
-      <!-- TODO: consider moving the delegate button further down -->
-      <ion-button (click)="delegate_dialog()" shape="round" fill="solid" color="primary" size="large">
-        <span [innerHtml]="'poll.delegate-button'|translate"></span>&nbsp;<ion-icon src="assets/icon/delegate-simple.svg"></ion-icon>
+
+      <!-- DELEGATE BUTTON: -->
+      <ion-button 
+          (click)="delegate_dialog()" 
+          shape="round" fill="solid" color="primary" size="large">
+        <span 
+          [innerHtml]="'poll.delegate-button' | translate">
+        </span>&nbsp;<ion-icon 
+          src="assets/icon/delegate-simple.svg">
+        </ion-icon>
       </ion-button>
       <!--TODO: if delegation is on, show a menu instead with: revoke delegation, change delegate-->
-<!-- If we want a help button: 
-      <ion-button routerLink="/help" fill="clear">
-        <ion-icon name="help" slot="icon-only"></ion-icon>
-      </ion-button>-->
-    </ion-buttons>
 
-<!-- TODO: get rid of this?
-    <ng-template [ngIf]="!refresh_paused">
-      <ion-button slot="end" (click)="pauseRefresh()" fill="clear" no-margin>
-        <ion-icon name="refresh" size="large"></ion-icon>
-      </ion-button>
-    </ng-template>
-    <ng-template [ngIf]="refresh_paused && !needs_refresh">
-      <ion-button slot="end" (click)="unpauseRefresh()" fill="clear" no-margin>
-        <ion-icon src="/assets/icon/md-norefresh.svg" size="large"></ion-icon>
-      </ion-button>
-    </ng-template>
-    <ng-template [ngIf]="refresh_paused && needs_refresh">
-      <ion-button slot="end" (click)="refreshOnce()" fill="clear" no-margin>
-        <ion-icon src="/assets/icon/md-needsrefresh.svg" size="large"></ion-icon>
-      </ion-button>
-    </ng-template>
--->
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<!-- TODO: decide whether we want scroll buttons:
-  <ion-content [scrollEvents]="true" (ionScroll)="onScroll($event)">
-  <ion-fab size="small" *ngIf="scroll_position>0" vertical="top" horizontal="end" slot="fixed">
-    <ion-fab-button size="small" (click)="scrollToTop()" fill="clear" color="primary">
-      <ion-icon size="small" name="chevron-up-outline"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
-  <ion-fab size="small" *ngIf="scroll_position<1" vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button size="small" (click)="scrollToBottom()" fill="clear" color="primary">
-      <ion-icon size="small" name="chevron-down-outline"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+<!-- SCROLLABLE CONTENT: -->
+
+<ion-content *ngIf="ready" (pointerup)="onBodyPointerup($event)">
+  <ion-list lines="full">
+
+    <!-- GENERAL POLL INFORMATION -->
+
+    <ion-item color="primary">
+      <ion-grid class="ion-no-padding ion-no-margin">
+        <ion-row class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
+
+            <!-- NOTIFY OF DIFFERENT LANGUAGE: -->
+            <small *ngIf="p.language != G.S.language">
+              <p [innerHtml]="'poll.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
+            </small>
+
+            <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
+            <h3><b><i>{{p.title}}</i></b></h3>
+            <i>{{p.desc}}</i>
+            <small *ngIf="(p.url||'')!=''">&nbsp;
+              (<ion-text 
+                class="externallink" 
+                (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
+                [innerHtml]="'read-more' | translate">
+              </ion-text>)
+            </small>
+            <br/>
+
+            <!-- CLOSING DATE, CLOSING SOON BADGE: -->
+            <small>
+              <span 
+                [innerHtml]="'poll.closes' | translate">
+              </span>&nbsp;<span 
+                [innerHtml]="G.D.format_date(p.due)">
+              </span>
+              <ion-badge *ngIf="true || p.is_closing_soon" 
+                class="ion-no-margin" 
+                style="margin-left: 5px; position: relative; bottom: -6px;" 
+                color="danger" 
+                [innerHtml]="'badges.closing-soon'|translate">
+              </ion-badge>
+            </small>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+
+<!-- TODO: shall we show this type of statistics like
+  - total no. of non-abstaining (=not all-zero) voters
+  - level of consensus reached = expected approval of winner
 -->
-  <ion-content *ngIf="ready" (pointerup)="onBodyPointerup($event)" >
-    <ion-list lines="full">
 
-      <!-- GENERAL POLL INFORMATION -->
-      <ion-item color="primary">
-        <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin">
-            <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
-              <small *ngIf="p.language!=G.S.language">
-                <p [innerHtml]="'poll.different-language'|translate:{language:G.S.language_names[p.language]}"></p>
-              </small>
-              <h3><b><i>{{p.title}}</i></b></h3>
-              <i>{{p.desc}}</i>
-              <small *ngIf="(p.url||'')!=''">&nbsp;
-                (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" [innerHtml]="'read-more'|translate"></ion-text>)
-                <!--(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)-->
-              </small>
-              <br/>
-              <small>
-                <span [innerHtml]="'poll.closes'|translate"></span>&nbsp;<span [innerHtml]="G.D.format_date(p.due)"></span>
-                <ion-badge *ngIf="true||p.is_closing_soon" class="ion-no-margin" style="margin-left:5px; position: relative; bottom:-6px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
-              </small>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-item>
+    <!-- INCOMING DELEGATIONS BANNER: -->
 
-      <!-- INCOMING DELEGATIONS BANNER: -->
+    <ion-item *ngIf="(accepted_requests.length > 0) || (declined_requests.length > 0)"
+        color="light">
+      <ion-grid class="ion-no-padding ion-no-margin">
 
-      <ion-item color="light" *ngIf="(accepted_requests.length>0)||(declined_requests.length>0)">
-        <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin" style="padding-top:5px;padding-bottom:6px;">
-            <ion-col class="ion-no-margin ion-padding-right" 
-                    (click)="incoming_delegation_expanded=!incoming_delegation_expanded"
-                    style="cursor:pointer">
-              <small>
-                <ion-icon size="small" class="ion-no-padding ion-no-margin" 
-                  style="position:relative; left:-3px; top:5px;"
-                  [name]="incoming_delegation_expanded?'caret-down':'caret-forward'" 
-                  slot="icon-only">
+        <!-- SUMMARY: -->
+
+        <ion-row 
+            class="ion-no-padding ion-no-margin" 
+            style="padding-top: 5px; padding-bottom: 6px;">
+          <!--Click on row expands details:-->
+          <ion-col 
+              class="ion-no-margin ion-padding-right" 
+              (click)="incoming_delegation_expanded =! incoming_delegation_expanded"
+              style="cursor:pointer">
+            <small>
+              <ion-icon size="small" class="ion-no-padding ion-no-margin" 
+                style="position: relative; left: -3px; top: 5px;"
+                [name]="incoming_delegation_expanded ? 'caret-down' : 'caret-forward'" 
+                slot="icon-only">
+              </ion-icon>
+              <span *ngIf="accepted_requests.length > 0" 
+                [innerHtml]="
+                  ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
+                  | translate: {n_others: n_indirect_clients})
+                  + ' '
+                ">
+              </span>
+              <span *ngIf="declined_requests.length > 0" 
+                [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
+              </span>
+            </small>
+          </ion-col>
+        </ion-row>
+
+        <!-- EXPANDABLE DETAILS: -->
+
+        <!-- Accepted requests: -->
+        <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length > 0">
+          <ion-col class="ion-text-right">
+            <small>
+              <span [innerHtml]="'poll.have-accepted' | translate"></span>
+              <ion-chip *ngFor="let r of accepted_requests" 
+                  [routerLink]="r.url" 
+                  outline="true">
+                <ion-icon 
+                  name="mail-open-outline"
+                  style="color:grey" size="small">
                 </ion-icon>
-                <span *ngIf="accepted_requests.length>0" [innerHtml]="((n_indirect_clients==1?'poll.also-for-other':'poll.also-for-others')|translate:{n_others:n_indirect_clients})+' '"></span>
-                <span *ngIf="declined_requests.length>0" [innerHtml]="(n_indirect_clients==0?'poll.declined-all':'poll.declined-some')|translate"></span>
-              </small>
-            </ion-col>
-          </ion-row>
-          <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length>0">
-            <ion-col class="ion-text-right">
-              <small>
-                <span [innerHtml]="'poll.have-accepted'|translate"></span>
-                <ion-chip *ngFor="let r of accepted_requests" [routerLink]="r.url" outline="true">
-                  <ion-icon style="color:grey" size="small" name="mail-open-outline"></ion-icon><small>{{r.from}}</small>
-                </ion-chip>
-              </small>
-            </ion-col>
-          </ion-row>
-          <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length>0">
-            <ion-col class="ion-text-right">
-              <small>
-                <span [innerHtml]="'poll.have-declined'|translate"></span>
-                <ion-chip *ngFor="let r of declined_requests" [routerLink]="r.url" outline="true">
-                  <ion-icon style="color:grey" size="small" name="mail-open-outline"></ion-icon><small>{{r.from}}</small>
-                </ion-chip>
-              </small>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-item>
+                <small>{{r.from}}</small>
+              </ion-chip>
+            </small>
+          </ion-col>
+        </ion-row>
 
-      <!-- Banner(s) with important messages: -->
+        <!-- Declined requests: -->
+        <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length > 0">
+          <ion-col class="ion-text-right">
+            <small>
+              <span [innerHtml]="'poll.have-declined' | translate"></span>
+              <ion-chip *ngFor="let r of declined_requests" 
+                  [routerLink]="r.url" 
+                  outline="true">
+                <ion-icon 
+                  name="mail-open-outline"
+                  style="color:grey" size="small">
+                </ion-icon>
+                <small>{{r.from}}</small>
+              </ion-chip>
+            </small>
+          </ion-col>
+        </ion-row>
 
-      <ion-item color="warning" *ngIf="delegate"> 
-        <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
-            <ion-col class="ion-no-margin ion-padding-right">
-              <small>
-                <p>
-                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
-                  <span [innerHtml]="'poll.delegate-controls-'+(n_delegated == oidsorted.length ? 'all' : 
-                  2*n_delegated > oidsorted.length ? 'most' : 
-                    n_delegated > 0 ? 'some' : 'none')|translate"></span>
-                </p>
-              </small>
-            </ion-col>
-            <ion-col size="auto" class="ion-no-margin">
-              <ion-button fill="clear">
-                <ion-icon name="trash-outline" style="color:black"></ion-icon>
-              </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            </ion-col>
-            <ion-col size="auto" class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" style="padding-bottom:3px;">
-              <small><p><span [innerHtml]="'poll.choose-whose-ratings'|translate"></span>&nbsp;
-              <ion-icon name="arrow-down-outline" style="position:relative;top:3px;"></ion-icon></p></small>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-item>
+      </ion-grid>
+    </ion-item>
 
-<!-- TODO: what happens to this?
-      <ion-item>
-        <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin">
-            <ion-col class="ion-no-padding ion-no-margin">
-              <ng-template [ngIf]="expanded=='poll'">
-                <ng-template [ngIf]="p.url!=null">
-                  <ion-button (click)="g.showinbrowser(p.url)" fill="clear" 
-                    class="ion-no-padding ion-no-margin ion-float-right ion-padding-left">
-                    <ion-icon name="open" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ng-template>
-                <h4>{{p.desc}}</h4>
-                <small><b><span style="color:#9abcbd">created by Jobst</span></b></small><br/>&nbsp;<br/>
-              </ng-template>
-              <b>
-                <span style="color:#62a73b">Use the sliders to <span style="color:#3465a4">rate</span> the options
-                <small><a routerLink="/help">(how?)</a></small>
-                <br/>
-                <small>It's a good idea to give one option 100, all better-than-average options something larger than 0,
-                and all worse-than-average options zero.<br/>&nbsp;
-                </small></span>
-              </b>
-            </ion-col>
-            <ion-col size="1" class="ion-no-padding ion-no-margin">
-              <ion-button (click)="expand('poll')" class="ion-float-right ion-no-padding ion-no-margin" 
-                  fill="clear">
-                <ion-icon [name]="(expanded=='poll')?'arrow-dropup':'arrow-dropdown'" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-col>
-          </ion-row>
-          <app-expandable [expanded]="expanded=='poll'">
-            <ion-row class="ion-no-padding ion-no-margin">
-              <ion-col class="ion-no-padding ion-no-margin">
-                <ion-button class="ion-float-right ion-no-padding" routerLink="/pollstats">
-                  <ion-icon name="pulse" size="small"></ion-icon>
-                </ion-button>
-                <b>
-                  <span style="color:#769596">
-                    {{Math.round(p.expected_approval*1000)/10}}%&nbsp;{{(p.type=='winner')?'consensus':'focus'}} so far,
-                    poll closes Thu 28 Mar 2019.
-                  </span>
-                  <span style="color:#9abcbd">
-                    <small>
-                      Currently {{Math.round(p.voting_share*1000)/10}}% are supporting some option,
-                      the largest support is {{Math.round(p.max_approval*1000)/10}}%,
-                      the smallest is {{Math.round(p.min_approval*1000)/10}}%.
-                    </small>
-                  </span>
-                </b>
-              </ion-col>
-            </ion-row>
-          </app-expandable>
-        </ion-grid>
-      </ion-item>-->
-  
-      <!-- OPTIONS: -->
+    <!-- OUTGOING DELEGATION BANNER: -->
 
-      <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
-          <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none"/>
-          <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
-        </svg>
-        <ion-grid class="ion-no-padding ion-no-margin">
-          <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;"><!--ion-padding-top -->
-            <ion-col size="auto" class="ion-no-padding ion-no-margin">
-              <!--TODO: move expand button to right end of slider-->
-              <ion-button (click)="expand(oidsorted[i])" fill="clear" style="position:relative; left:-5px; z-index:10;"
-                  class="ion-no-padding ion-no-margin">
-                <ion-icon size="small" class="ion-no-padding ion-no-margin" 
-                  style="color:black; z-index:10;"
-                  [name]="(expanded[oidsorted[i]])?'chevron-down-outline':'chevron-forward-outline'" 
-                  slot="icon-only"></ion-icon><!--FIXME: improve placement-->
-              </ion-button>
-            </ion-col>
-            <ion-col class="ion-no-padding ion-no-margin">
-              <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;">
-                <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
-              </ion-label>
-            </ion-col>
-<!-- TODO: delete when it's clear that the version further down is used instead:
-            <ion-col size="auto" class="ion-no-padding ion-no-margin">
-              <ion-label class="ion-no-padding ion-no-margin ion-text-right" style="padding-top: 4px;"
-                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'you rate this':'<small>delegated</small>'"></ion-label>
-              <ion-label class="ion-no-padding ion-no-margin ion-text-right" 
-                style="padding-top: 4px; position:relative; z-index: 10; top: 20px;"
-                [innerHtml]="rate_yourself_toggle[oidsorted[i]]?'<small>my own</small>':'<small>delegate\'s</small>'"></ion-label>
-            </ion-col>
--->
-          </ion-row>
-          <ion-row class="ion-no-padding ion-no-margin">
-            <!-- TODO: make slider respond to click only when at knob: -->
-            <ion-col class="ion-no-padding ion-no-margin" [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
-              (click)="onRangeClick(oidsorted[i], $event)" (pointerdown)="onRangePointerdown(oidsorted[i], $event)" (pointerup)="onRangePointerup(oidsorted[i], $event)" 
-            ><!--[color]="slidercolor[oidsorted[i]]"-->
-              <ion-range 
-                  [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
-                  [color]="slidercolor[oidsorted[i]]"
-                  [value]="p.get_myrating(oidsorted[i])" 
-                  (ionFocus)="rating_change_begins(oidsorted[i])" 
-                  (ionChange)="rating_changes(oidsorted[i])" 
-                  pin="true" min="0" max="100"
-                  [style]="'--bar-background:rgba(0,0,0,0);'
-                    +(rate_yourself_toggle[oidsorted[i]]
-                    ?'pointer-events:;--bar-height:7px;--knob-size:35px'
-                    :'pointer-events:none;--bar-height:5px;--knob-size:17px')" 
-                  class="ion-no-padding ion-no-margin"><!--35px-->
-                <ion-label slot="end" class="ion-no-padding ion-no-margin" style="margin-right:12px;">
-                  <!--don't do width:100% in ion-label since otherwise the slider is not working properly-->
-                  <div style="position:absolute;bottom:0px;right:11px;z-index:-10;width:100%;padding-left:11px">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                      <rect [id]="'bar_'+oidsorted[i]" x="100%" width="0%" y="8" height="18" 
-                        fill="#bce4e5" stroke="none"/>
-                            <!--TODO?: [attr.x]="''+(100*(1-p.T.approval_scores_map.get(oidsorted[i])))+'%'" [attr.width]="''+(100*p.T.approval_scores_map.get(oidsorted[i]))+'%'"-->
-                      <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3"/>
-                      <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none"/>
-                    </svg>
-                  </div>
-                </ion-label>
-              </ion-range>
-            </ion-col>
-            <ion-col *ngIf="delegate" class="ion-no-margin ion-no-padding" size="auto">&nbsp;&nbsp;&nbsp;
-              <ion-toggle [id]="'rate_yourself_toggle_'+oidsorted[i]" 
-                (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
-                class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                style="position:relative; top:-8px;" 
-                [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
-              </ion-toggle>
-              <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
-                <small [innerHtml]="(rate_yourself_toggle[oidsorted[i]]?'poll.my-own':'poll.delegate-s')|translate"></small>
-              </div>
-            </ion-col>  
-          </ion-row>
-          <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" [expanded]="expanded[oidsorted[i]]">
-            <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
-              <ion-col class="ion-no-padding ion-no-margin">
-                <b><span style="color:#9abcbd"><small>currently </small>
-                  <ng-template [ngIf]="p.type=='winner'">
-                    <span style="color:#769596"> {{Math.round(p.T.shares_map.get(oidsorted[i])*1000)/10}}%<small>&nbsp;chance&nbsp;to&nbsp;win</small></span>
-                  </ng-template>
-                  <ng-template [ngIf]="p.type=='share'">
-                    <span style="color:#769596">getting&nbsp;{{Math.round(p.T.shares_map.get(oidsorted[i])*1000)/10}}%<small>&nbsp;of&nbsp;the&nbsp;budget</small></span>
-                  </ng-template>
-                  <small><span style="color:#4c822e" [style.display]="(votedfor==oidsorted[i])?'inline':'none'">&nbsp;(including&nbsp;your&nbsp;share)</span>,
-                    approved&nbsp;by&nbsp;</small>{{Math.round(p.T.approval_scores_map.get(oidsorted[i])*1000)/10}}%</span>
-                  <span style="color:#62a73b" [style.display]="approved[oidsorted[i]]?'inline':'none'">
-                    <small>&nbsp;(including&nbsp;you)</small>
-                  </span>
-                  <span style="color:#9abcbd">
-                    <small>&nbsp;<b>(<a [href]="'/explainoptionresult/'+oidsorted[i]">explain</a>)</b></small>
-                  </span>
-                </b>
-<!--                <ion-button [routerLink]="'/explainsupport/'+oidsorted[i]" no-padding>
-                  <ion-icon name="help" size="small" slot="icon-only"></ion-icon>
-                </ion-button>-->
-                <span [style.display]="(p.options[oidsorted[i]].desc!=null||p.options[oidsorted[i]].url!=null)?'inline':'none'"><br/></span>
-                <span [style.display]="p.options[oidsorted[i]].desc!=null?'inline':'none'">
-                  <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
+    <ion-item *ngIf="delegate" 
+        color="warning"> 
+      <ion-grid class="ion-no-padding ion-no-margin">
+        <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
+
+          <!-- Info about how many ratings the delegate controls: -->
+          <ion-col class="ion-no-margin ion-padding-right">
+            <small>
+              <p>
+                <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                <span [innerHtml]="
+                  'poll.delegate-controls-' 
+                  + (n_delegated == oidsorted.length ? 'all' 
+                     : 2*n_delegated > oidsorted.length ? 'most' 
+                     : n_delegated > 0 ? 'some' : 'none'
+                    ) | translate
+                  ">
                 </span>
-                <span [style.display]="p.options[oidsorted[i]].url!=null?'inline':'none'">
+              </p>
+            </small>
+          </ion-col>
+
+          <!-- Cancel delegation button: -->
+          <ion-col size="auto" class="ion-no-margin">
+            <ion-button fill="clear">
+              <ion-icon name="trash-outline" style="color:black"></ion-icon>
+            </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          </ion-col>
+
+          <!-- Help text for delegation toggles: -->
+          <ion-col 
+              size="auto" 
+              class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
+              style="padding-bottom:3px;">
+            <small>
+              <p>
+                <span [innerHtml]="'poll.choose-whose-ratings' | translate"></span>&nbsp;
+                <ion-icon 
+                  name="arrow-down-outline" 
+                  style="position:relative;top:3px;">
+                </ion-icon>
+              </p>
+            </small>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+
+    <!-- OPTIONS: -->
+
+    <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index">
+
+      <!-- PIE CHART WITH WINNING PROBABILITY: -->
+
+      <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
+        <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
+        <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
+      </svg>
+
+      <!-- REST OF ALWAYS VISIBLE STUFF: -->
+      <ion-grid class="ion-no-padding ion-no-margin">
+
+        <!-- OPTION NAME: -->
+
+        <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;">
+          <ion-col size="auto" class="ion-no-padding ion-no-margin">
+            <!-- Button for expanding details: -->
+            <ion-button 
+                (click)="expand(oidsorted[i])" 
+                fill="clear" style="position:relative; left:-5px; z-index:10;"
+                class="ion-no-padding ion-no-margin">
+              <ion-icon 
+                  [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                  size="small" class="ion-no-padding ion-no-margin" 
+                  style="color:black; z-index:10;"
+                  slot="icon-only">
+              </ion-icon><!--FIXME: improve consistent placement in various browsers-->
+            </ion-button>
+          </ion-col>
+          <ion-col class="ion-no-padding ion-no-margin">
+            <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;">
+              <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
+            </ion-label>
+          </ion-col>
+        </ion-row>
+
+        <!-- RATING CONTROLS: -->
+
+        <ion-row class="ion-no-padding ion-no-margin">
+
+          <ion-col 
+              [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
+              class="ion-no-padding ion-no-margin" 
+              (click)="onRangeClick(oidsorted[i], $event)" 
+              (pointerdown)="onRangePointerdown(oidsorted[i], $event)" 
+              (pointerup)="onRangePointerup(oidsorted[i], $event)">
+
+            <!-- SLIDER: -->
+
+            <ion-range 
+                [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
+                [color]="slidercolor[oidsorted[i]]"
+                [value]="p.get_myrating(oidsorted[i])" 
+                (ionFocus)="rating_change_begins(oidsorted[i])" 
+                (ionChange)="rating_changes(oidsorted[i])" 
+                pin="true" min="0" max="100"
+                [style]="'--bar-background: rgba(0,0,0,0);'
+                  + (rate_yourself_toggle[oidsorted[i]]
+                  ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
+                  : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
+                class="ion-no-padding ion-no-margin">
+
+              <!-- APPROVAL BAR: -->
+
+              <ion-label 
+                  slot="end" 
+                  class="ion-no-padding ion-no-margin" 
+                  style="margin-right:12px;">
+                  <!--don't do width:100% in ion-label since otherwise the slider is not working properly!-->
+                <div style="position: absolute; bottom: 0px; right: 11px; z-index: -10; width: 100%; padding-left: 11px">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                    <rect [id]="'bar_' + oidsorted[i]" 
+                      x="100%" width="0%" y="8" height="18" 
+                      fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
+                    <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3" />
+                    <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />
+                  </svg>
+                </div>
+              </ion-label>
+            </ion-range>
+          </ion-col>
+
+          <!-- DELEGATION TOGGLE: -->
+
+          <ion-col *ngIf="delegate" 
+              class="ion-no-margin ion-no-padding" 
+              size="auto">&nbsp;&nbsp;&nbsp;
+            <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
+              (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
+              class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
+              style="position:relative; top:-8px;" 
+              [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
+            </ion-toggle>
+            <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+              <small [innerHtml]="
+                rate_yourself_toggle[oidsorted[i]] 
+                ? ('poll.my-own' | translate) 
+                : ('poll.delegate-s' | translate: {delegate: delegate})
+                " >
+              </small>
+            </div>
+          </ion-col>  
+        </ion-row>
+
+        <!-- EXPANDABLE OPTION DETAILS -->
+
+        <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" 
+            [expanded]="expanded[oidsorted[i]]">
+          <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <b>
+                <!-- Winning chance/budget share: -->
+                <span style="color:#769596">
+                  <span [innerHtml]="
+                    (p.type == 'winner' ? 'poll.chance-to-win' : 'poll.of-the-budget') 
+                    | translate: {percentage: 
+                      Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
+                    }">
+                  </span>
                   <small>
-                    (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))" [innerHtml]="'read-more'|translate"></ion-text>)
-                    <!--(<a [href]="p.options[oidsorted[i]].url" target="_blank" rel="noopener noreferrer" [innerHtml]="'read-more'|translate"></a>)-->
+                    <span style="color:#4c822e" 
+                      [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
+                      [innerHtml]="'poll.including-your-share' | translate">
+                    </span>,
                   </small>
                 </span>
-<!--                <ng-template [ngIf]="p.options[oidsorted[i]].url!=null">
-                  <ion-button (click)="g.showinbrowser(p.options[oidsorted[i]].url)" fill="clear" item-end no-padding padding-left no-margin>
-                    <ion-icon name="open" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ng-template>-->
-              </ion-col>
-            </ion-row>
-          </app-expandable>
-        </ion-grid>
-      </ion-item>
-      <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
-        <ion-fab-button size="small" (click)="add_option()" fill="clear" color="primary">
-          <ion-icon name="add"></ion-icon>
-        </ion-fab-button>
-        <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
-          Add option
-        </ion-button>
-      </ion-item>
-      <ion-item lines="none">
-        <small>If you believe some important option is missing and is not covered by any of the listed options, 
-          you can add it. Once added, options cannot be edited or removed again, however.</small>
-      </ion-item>
-    </ion-list>
-  </ion-content>
+                <!-- Approval: -->
+                <span style="color:#9abcbd">
+                  <span [innerHtml]="
+                    'poll.approved-by' | translate: {percentage:
+                      Math.round(p.T.approval_scores_map.get(oidsorted[i]) * 1000) / 10
+                    }">
+                  </span>
+                </span>
+                <small>
+                  <span style="color:#62a73b" 
+                    [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
+                    [innerHtml]="'poll.including-you' | translate">
+                  </span>
+                  <span style="color:#9abcbd">
+                    &nbsp;(<a 
+                      [href]="'/explainoptionresult/'+oidsorted[i]" 
+                      [innerHtml]="'poll.explain' | translate">
+                    </a>)
+                  </span>
+                </small>
+              </b>
+              <span [style.display]="(!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url) ? 'inline' : 'none'">
+                <br/>
+              </span>
+              <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
+                <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
+              </span>
+              <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
+                <small>
+                  (<ion-text 
+                      class="externallink" 
+                      (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))" 
+                      [innerHtml]="'read-more' | translate">
+                  </ion-text>)
+                </small>
+              </span>
+            </ion-col>
+          </ion-row>
+        </app-expandable>
+      </ion-grid>
+    </ion-item>
+
+    <!-- ADD OPTION BUTTON: -->
+
+    <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
+      <ion-fab-button size="small" (click)="add_option()" fill="clear" color="primary">
+        <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+      <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
+        Add option
+      </ion-button>
+    </ion-item>
+    <ion-item lines="none">
+      <small>If you believe some important option is missing and is not covered by any of the listed options, 
+        you can add it. Once added, options cannot be edited or removed again, however.</small>
+    </ion-item>
+
+  </ion-list>
+</ion-content>

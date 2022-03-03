@@ -326,9 +326,16 @@
         "delegate-controls-some": "controls some of your ratings as your delegate",
         "delegate-controls-none": "currently controls none of your ratings as your delegate",
 
-        "choose-whose-ratings": "Choose<br/>whose ratings<br/>to use",
+        "choose-whose-ratings": "Choose<br/>whose rating<br/>to use",
         "my-own": "my own",
-        "delegate-s": "delegate's",
+        "delegate-s": "{{delegate}}’s",
+
+        "chance-to-win": "{{percentage}}% <small>current chance to win</small>",
+        "of-the-budget": "<small>gets</small> {{percentage}}% <small>of the budget</small>",
+        "including-your-share": " (including your share)",
+        "approved-by": "<small>approved by</small> {{percentage}}%",
+        "including-you": " (including you)",
+        "explain": "explain",
 
         "sorting": "Sorting options by approval...",
 

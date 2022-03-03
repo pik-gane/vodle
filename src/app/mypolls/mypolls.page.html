@@ -73,7 +73,7 @@
     <ng-container *ngFor="let p of running_polls">
       <ion-item>
         <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
-          <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <!--<ion-icon *ngIf="p.type=='share'" class="poll-type-list" size="small" src="assets/icon/flowers.svg"></ion-icon>--><ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i [innerHtml]="p.title"></i>
         </ion-label>
         <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
