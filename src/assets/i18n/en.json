@@ -330,11 +330,13 @@
         "my-own": "my own",
         "delegate-s": "{{delegate}}’s",
 
-        "chance-to-win": "{{percentage}}% <small>current chance to win</small>",
-        "of-the-budget": "<small>gets</small> {{percentage}}% <small>of the budget</small>",
+        "chance-to-win": "{{percentage}}%<small> current chance to win</small>",
+        "of-the-budget": "<small>currently gets </small>{{percentage}}%<small> of the budget</small>",
         "including-your-share": " (including your share)",
-        "approved-by": "<small>approved by</small> {{percentage}}%",
+
+        "approved-by": "<small>approved by </small>{{percentage}}%",
         "including-you": " (including you)",
+
         "explain": "explain",
 
         "sorting": "Sorting options by approval...",

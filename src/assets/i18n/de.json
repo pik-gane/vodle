@@ -337,6 +337,15 @@
         "my-own": "meine",
         "delegate-s": "{{delegate}}s",
 
+        "chance-to-win": "{{percentage}}%<small> aktuelle Gewinnchance</small>",
+        "of-the-budget": "<small>bekäme jetzt </small>{{percentage}}%<small> des Budgets</small>",
+        "including-your-share": " (inkl. Deinem Anteil)",
+
+        "approved-by": "<small>es stimmen </small>{{percentage}}%<small> zu</small>",
+        "including-you": " (auch Du)",
+
+        "explain": "erklären",
+
         "sorting": "Optionen werden neu sortiert...",
 
         "delegate-button": "Delegieren",
