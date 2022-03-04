@@ -319,7 +319,10 @@
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",
 
+        "delegate-button": "Delegieren",
+
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
+        "closes": "Schließt",
 
         "also-for-other": "Manche oder alle der Bewertungen weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Bewertungen weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
@@ -346,10 +349,9 @@
 
         "explain": "erklären",
 
-        "sorting": "Optionen werden neu sortiert...",
+        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
 
-        "delegate-button": "Delegieren",
-        "closes": "Schließt"
+        "sorting": "Optionen werden neu sortiert..."
     },
 
     "previewpoll": {

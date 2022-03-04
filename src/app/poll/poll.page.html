@@ -20,7 +20,7 @@
     <ion-buttons slot="end">
 
       <!-- DELEGATE BUTTON: -->
-      
+
       <ion-button 
           (click)="delegate_dialog()" 
           shape="round" fill="solid" color="primary" size="large">
@@ -56,7 +56,7 @@
             <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
             <h3><b><i>{{p.title}}</i></b></h3>
             <i>{{p.desc}}</i>
-            <small *ngIf="(p.url||'')!=''">&nbsp;
+            <small *ngIf="(p.url || '') != ''">&nbsp;
               (<ion-text 
                 class="externallink" 
                 (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
@@ -72,7 +72,7 @@
               </span>&nbsp;<span 
                 [innerHtml]="G.D.format_date(p.due)">
               </span>
-              <ion-badge *ngIf="true || p.is_closing_soon" 
+              <ion-badge *ngIf="p.is_closing_soon" 
                 class="ion-no-margin" 
                 style="margin-left: 5px; position: relative; bottom: -6px;" 
                 color="danger" 
@@ -397,8 +397,7 @@
       </ion-button>
     </ion-item>
     <ion-item lines="none">
-      <small>If you believe some important option is missing and is not covered by any of the listed options, 
-        you can add it. Once added, options cannot be edited or removed again, however.</small>
+      <small [innerHtml]="'poll.add-option-info' | translate"></small>
     </ion-item>
 
   </ion-list>

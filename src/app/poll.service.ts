@@ -15,9 +15,9 @@ type poll_due_type_t = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"
                         |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
 type tally_cache = { // T is short for "tally data"
   // array of known vids:
-  allvids_set: Set<string>;
+  all_vids_set: Set<string>;
   // number of voters known:
-  n_voters: number;
+  n_not_abstaining: number;
   // for each oid, an array of ascending ratings: 
   ratings_ascending_map: Map<string, Array<number>>;
   // for each oid, the approval cutoff (rating at and above which option is approved):
@@ -246,11 +246,11 @@ export class Poll {
 
   get myvid(): string { return this.G.D.getp(this._pid, 'myvid'); }
   set myvid(value: string) {
-    if (this.T.allvids_set.has(this.myvid)) {
-      this.T.allvids_set.delete(this.myvid);
+    if (this.T.all_vids_set.has(this.myvid)) {
+      this.T.all_vids_set.delete(this.myvid);
     }
     this.G.D.setp(this._pid, 'myvid', value);
-    this.T.allvids_set.add(value);
+    this.T.all_vids_set.add(value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:
@@ -337,7 +337,7 @@ export class Poll {
     } else {
       this._options[o.oid] = o;
       if (!this.own_ratings_map.has(o.oid)) this.own_ratings_map.set(o.oid, new Map());
-      if (!this.effective_ratings_map.has(o.oid)) this.effective_ratings_map.set(o.oid, new Map());
+      if (!this.proxy_ratings_map.has(o.oid)) this.proxy_ratings_map.set(o.oid, new Map());
       if (!this.direct_delegation_map.has(o.oid)) this.direct_delegation_map.set(o.oid, new Map());
       if (!this.inv_direct_delegation_map.has(o.oid)) this.inv_direct_delegation_map.set(o.oid, new Map());
       if (!this.indirect_delegation_map.has(o.oid)) this.indirect_delegation_map.set(o.oid, new Map());
@@ -636,7 +636,50 @@ export class Poll {
     return this._inv_effective_delegation_map;
   }
 
-  // for each oid and vid, the effective (post-delegation) rating (default: 0):
+  // for each oid and vid, the proxy (post-delegation) rating (default: 0):
+  _proxy_ratings_map: Map<string, Map<string, number>>;
+  get proxy_ratings_map(): Map<string, Map<string, number>> {
+    if (!this._proxy_ratings_map) {
+      if (this._pid in this.G.D.proxy_ratings_map_caches) {
+        this._proxy_ratings_map = this.G.D.proxy_ratings_map_caches[this._pid];
+      } else {
+        this.G.D.proxy_ratings_map_caches[this._pid] = this._proxy_ratings_map = new Map();
+        for (const oid of this.oids) {
+          this._proxy_ratings_map.set(oid, new Map());
+        }
+        // TODO: copy my own ratings into it?
+      }  
+    }
+    return this._proxy_ratings_map;
+  }
+
+  // for each oid and vid, the max (over oids) proxy rating (default: 0):
+  _max_proxy_ratings_map: Map<string, number>;
+  get max_proxy_ratings_map(): Map<string, number> {
+    if (!this._max_proxy_ratings_map) {
+      if (this._pid in this.G.D.max_proxy_ratings_map_caches) {
+        this._max_proxy_ratings_map = this.G.D.max_proxy_ratings_map_caches[this._pid];
+      } else {
+        this.G.D.max_proxy_ratings_map_caches[this._pid] = this._max_proxy_ratings_map = new Map();
+      }  
+    }
+    return this._max_proxy_ratings_map;
+  }
+
+  // for each oid and vid, the argmax (over oids) proxy rating (i.e., list of oids, default: []):
+  _argmax_proxy_ratings_map: Map<string, Set<string>>;
+  get argmax_proxy_ratings_map(): Map<string, Set<string>> {
+    if (!this._argmax_proxy_ratings_map) {
+      if (this._pid in this.G.D.argmax_proxy_ratings_map_caches) {
+        this._argmax_proxy_ratings_map = this.G.D.argmax_proxy_ratings_map_caches[this._pid];
+      } else {
+        this.G.D.argmax_proxy_ratings_map_caches[this._pid] = this._argmax_proxy_ratings_map = new Map();
+      }  
+    }
+    return this._argmax_proxy_ratings_map;
+  }
+
+  // for each oid and vid, the effective (post-delegation and post-adjustment to ensure some approval) rating (default: 0):
   _effective_ratings_map: Map<string, Map<string, number>>;
   get effective_ratings_map(): Map<string, Map<string, number>> {
     if (!this._effective_ratings_map) {
@@ -647,7 +690,6 @@ export class Poll {
         for (const oid of this.oids) {
           this._effective_ratings_map.set(oid, new Map());
         }
-        // TODO: copy my own ratings into it?
       }  
     }
     return this._effective_ratings_map;
@@ -728,8 +770,8 @@ export class Poll {
         }  
       }  
 
-      // update EFFECTIVE delegations, inverses, and effective ratings: 
-      const eff_rating = this.own_ratings_map.get(oid).get(eff_d_vid);
+      // update EFFECTIVE delegations, inverses, and proxy ratings: 
+      const proxy_rating = this.own_ratings_map.get(oid).get(eff_d_vid);
       if (!inv_eff_d_map.has(eff_d_vid)) {
         inv_eff_d_map.set(eff_d_vid, new Set());
       }
@@ -737,12 +779,12 @@ export class Poll {
       // this vid:
       eff_d_map.set(client_vid, eff_d_vid);
       deps_eff_d_vid.add(client_vid);
-      this.update_effective_rating(client_vid, oid, eff_rating);
+      this.update_proxy_rating(client_vid, oid, proxy_rating);
       // dependent voters:
       for (const vid2 of inv_eff_ds_of_vid) {
         eff_d_map.set(vid2, eff_d_vid);
         deps_eff_d_vid.add(vid2);
-        this.update_effective_rating(vid2, oid, eff_rating);
+        this.update_proxy_rating(vid2, oid, proxy_rating);
       }  
 
       return true;
@@ -789,20 +831,20 @@ export class Poll {
         }
       }
 
-      // deregister EFFECTIVE delegation and inverse of vid and reset eff. rating to own rating:
-      const eff_rating = this.own_ratings_map.get(oid).get(client_vid);
+      // deregister EFFECTIVE delegation and inverse of vid and reset proxy rating to own rating:
+      const proxy_rating = this.own_ratings_map.get(oid).get(client_vid);
       eff_d_map.delete(client_vid);
       inv_eff_ds_of_old_eff_d_of_vid.delete(client_vid);
-      this.update_effective_rating(client_vid, oid, eff_rating);
+      this.update_proxy_rating(client_vid, oid, proxy_rating);
 
       // rewire EFFECTIVE delegation and inverse of voters who indirectly delegated to vid,
-      // and update eff. ratings:
+      // and update proxy ratings:
       if (inv_ind_ds_of_vid) {
         for (const vid2 of inv_ind_ds_of_vid) {
           inv_eff_ds_of_old_eff_d_of_vid.delete(vid2);
           eff_d_map.set(vid2, client_vid);
           inv_eff_ds_of_vid.add(vid2);
-          this.update_effective_rating(vid2, oid, eff_rating);
+          this.update_proxy_rating(vid2, oid, proxy_rating);
         }            
       }
 
@@ -826,15 +868,13 @@ export class Poll {
   }
 
   tally_all() {
-    // Called after initialization.
+    // Called after initialization and when changes come via the db.
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-//    this.G.L.trace("Poll.tally_all ratings_map_caches", this._pid, this.G.D.ratings_map_caches);
-//    this.G.L.trace("Poll.tally_all ratings", this._pid, [...this.ratings_map.entries()]);
     this.G.D.tally_caches[this._pid] = this.T = {
-      allvids_set: new Set(),
-      n_voters: 0,
+      all_vids_set: new Set(),
+      n_not_abstaining: 0,
       ratings_ascending_map: new Map(),
       cutoffs_map: new Map(),
       approvals_map: new Map(),
@@ -847,28 +887,36 @@ export class Poll {
       shares_map: new Map()
     }
     // extract voters and total_ratings:
-    for (const [oid, rs_map] of this.effective_ratings_map) {
+    for (const [oid, proxy_rs_map] of this.proxy_ratings_map) {
 //      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
       let t = 0;
-      for (const [vid, r] of rs_map) {
+      for (const [vid, r] of proxy_rs_map) {
 //        this.G.L.trace("Poll.tally_all rating", this._pid, oid, vid, r);
-        this.T.allvids_set.add(vid);
+        this.T.all_vids_set.add(vid);
         t += r;
       }
       this.T.total_ratings_map.set(oid, t);
     }
-    this.T.n_voters = this.T.allvids_set.size;
+
+    // count non-abstaining voters:
+    this.T.n_not_abstaining = 0;
+    for (const vid of this.T.all_vids_set) {
+      if (this.max_proxy_ratings_map.get(vid) > 0) {
+        this.T.n_not_abstaining += 1;
+      }
+    }
+
 //    this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
     // calculate cutoffs, approvals, and scores of all options:
-    const score_factor = this.T.n_voters * 128;
+    const score_factor = this.T.n_not_abstaining * 128;
 //    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
     for (const oid of this.oids) {
-      const rs_map = this.effective_ratings_map.get(oid);
+      const eff_rs_map = this.effective_ratings_map.get(oid);
 //      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
-      if (rs_map) {
-        const rsasc = this.update_ratings_ascending(oid, rs_map);
+      if (eff_rs_map) {
+        const rsasc = this.update_ratings_ascending(oid, eff_rs_map);
 //        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
-        this.update_cutoff_and_approvals(oid, rs_map, rsasc);
+        this.update_cutoff_and_approvals(oid, eff_rs_map, rsasc);
         const [apsc, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
         this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
 //        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
@@ -886,7 +934,7 @@ export class Poll {
     this.update_ordering();
     const oidsdesc = this.T.oids_descending;
 //    this.G.L.trace("Poll.tally_all oidsdesc", this._pid, oidsdesc);
-    for (const vid of this.T.allvids_set) {
+    for (const vid of this.T.all_vids_set) {
       this.update_vote(vid, oidsdesc);
     }
 //    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
@@ -898,7 +946,7 @@ export class Poll {
 
   // Methods dealing with individual rating updates:
 
-  update_own_rating(vid:string, oid:string, value:number) {
+  update_own_rating(vid: string, oid: string, value: number) {
     // Called whenever a rating is updated.
     // Updates the affected effective ratings based on delegation data.
     // if changed, update rating:
@@ -914,47 +962,226 @@ export class Poll {
       if (!this.direct_delegation_map.get(oid).has(vid)) {
         // vid has not delegated this rating,
         // so update all dependent voters' effective ratings:
-        this.update_effective_rating(vid, oid, value);
+        this.update_proxy_rating(vid, oid, value);
         const vid2s = this.inv_effective_delegation_map.get(oid).get(vid);
         if (vid2s) {
           for (const vid2 of vid2s) {
             // vid2 effectively delegates their rating of oid to vid,
             // hence we store vid's new rating of oid as vid2's effective rating of oid:
-            this.update_effective_rating(vid2, oid, value);
+            this.update_proxy_rating(vid2, oid, value);
           }
         }
       }
     }
   }
 
-  update_effective_rating(vid:string, oid:string, value:number) {
-    // Called whenever an effective rating is updated.
+  update_proxy_rating(vid: string, oid: string, value: number) {
+    // Called whenever a proxy rating is updated.
     // Updates a rating and all depending quantities up to the final shares.
     // Tries to do this as efficiently as possible.
 
     // if necessary, register voter:
     let n_changed = false;
-    if (!this.T.allvids_set.has(vid)) {
-      this.T.allvids_set.add(vid);
-      this.T.n_voters = this.T.allvids_set.size;
+    if (!this.T.all_vids_set.has(vid)) {
+      this.T.all_vids_set.add(vid);
+      this.T.n_not_abstaining = this.T.all_vids_set.size;
       n_changed = true;
-      this.G.L.trace("Poll.update_rating n_changed, first eff. rating of voter", vid);
+      this.G.L.trace("Poll.update_rating n_changed, first proxy rating of voter", vid);
     }
-    // if changed, update rating:
-    if (!this.effective_ratings_map.has(oid)) {
-      this.effective_ratings_map.set(oid, new Map());
-      this.G.L.trace("Poll.update_rating first eff. rating for option", oid);
+    // if changed, update proxy rating:
+    if (!this.proxy_ratings_map.has(oid)) {
+      this.proxy_ratings_map.set(oid, new Map());
+      this.G.L.trace("Poll.update_rating first proxy rating for option", oid);
     }
-    const eff_rs_map = this.effective_ratings_map.get(oid), old_value = eff_rs_map.get(vid) || 0;
+
+    const proxy_rs_map = this.proxy_ratings_map.get(oid), old_value = proxy_rs_map.get(vid) || 0;
     if (value != old_value) {
-      this.G.L.trace("Poll.update_rating rating of", oid, "by", vid, "changed from", old_value, "to", value);
+      this.G.L.trace("Poll.update_rating proxy rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {
+        proxy_rs_map.set(vid, value);
+      } else {
+        proxy_rs_map.delete(vid);
+      }
+      // update depending data:
+
+      // update effective ratings of this oid and potentially other oids:
+      const old_max_r = this.max_proxy_ratings_map.get(vid) || 0,
+            old_argmax_r_set = this.argmax_proxy_ratings_map.get(vid) || new Set(),
+            eff_rating_changes_map = new Map<string, number>();
+      var max_r = old_max_r, 
+          argmax_r_set = old_argmax_r_set;
+      if (old_max_r == 0) {
+        // voter was abstaining before but is no longer since value > 0 
+        // => set new max and adjust rating to effectively 100 to ensure approval of oid:
+        max_r = value;
+        argmax_r_set = new Set([oid]);
+        eff_rating_changes_map.set(oid, 100);
+        n_changed = true;
+      } else if (old_max_r == 100) {
+        // some options were actually rated 100
+        if (old_value == 100) {
+          // oid was a favourite, so check if the only one:
+          if (argmax_r_set.size == 1) {
+            // oid was sole favourite, have to find new max!
+            max_r = -1;
+            argmax_r_set = new Set();
+            for (const oid2 of this.oids) {
+              const r2 = this.proxy_ratings_map.get(oid2).get(vid);
+              if (r2 > max_r) {
+                max_r = r2;
+                argmax_r_set = new Set([oid2]);
+              } else if (r2 == max_r) {
+                argmax_r_set.add(oid2);
+              }
+            }
+            // resulting eff ratings changes:
+            if (max_r == 0) {
+              // voter begins abstaining.
+              eff_rating_changes_map.set(oid, 0);
+              n_changed = true;
+            } else {
+              if (!argmax_r_set.has(oid)) {
+                // oid no longer fav, so set proxy value as eff value:
+                eff_rating_changes_map.set(oid, value);
+              }
+              for (const oid2 of argmax_r_set) {
+                if (oid2 != oid) {
+                  eff_rating_changes_map.set(oid2, 100);
+                }
+              }  
+            }
+          } else {
+            // there were other favourites, so max stays at 100, so simply remove from argmax and set new value:
+            argmax_r_set.delete(oid);
+            eff_rating_changes_map.set(oid, value);
+          }
+        } else {
+          // oid was no favourite, so check if it becomes one:
+          if (value == 100) {
+            // oid becomes additional favourite, so add to argmax:
+            argmax_r_set.add(oid);
+          }
+          // set new value:
+          eff_rating_changes_map.set(oid, value);
+        }
+      } else {
+        // no option was actually rated 100, so eff. ratings differ from proxy ratings
+        if (old_value == max_r) {
+          // oid was a favourite, so has eff. rating 100.
+          if (value < old_value) {
+            // rating decreases.
+            // check if oid is the only fav.:
+            if (argmax_r_set.size == 1) {
+              // oid was sole favourite, have to find new max!
+              max_r = -1;
+              argmax_r_set = new Set();
+              for (const oid2 of this.oids) {
+                const r2 = this.proxy_ratings_map.get(oid2).get(vid);
+                if (r2 > max_r) {
+                  max_r = r2;
+                  argmax_r_set = new Set([oid2]);
+                } else if (r2 == max_r) {
+                  argmax_r_set.add(oid2);
+                }
+              }
+              // resulting eff ratings changes:
+              if (max_r == 0) {
+                // voter begins abstaining.
+                eff_rating_changes_map.set(oid, 0);
+                n_changed = true;
+              } else {
+                if (!argmax_r_set.has(oid)) {
+                  // oid no longer fav, so set proxy value as eff value:
+                  eff_rating_changes_map.set(oid, value);
+                }
+                for (const oid2 of argmax_r_set) {
+                  if (oid2 != oid) {
+                    eff_rating_changes_map.set(oid2, 100);
+                  }
+                }  
+              }
+            } else {
+              // there were other favourites, so simply remove from argmax and set new value:
+              argmax_r_set.delete(oid);
+              eff_rating_changes_map.set(oid, value);
+            }
+          } else {
+            // rating increases.
+            // check if oid is the only fav.:
+            if (argmax_r_set.size == 1) {
+              // oid remains sole favourite, so nothing changes!
+            } else {
+              // oid becomes sole favourite, other favs. eff. ratings go down to their proxy ratings:
+              for (const oid2 of argmax_r_set) {
+                if (oid2 != oid) {
+                  eff_rating_changes_map.set(oid2, this.proxy_ratings_map.get(oid2).get(vid));
+                }
+              }
+              max_r = value;
+              argmax_r_set = new Set([oid]);
+            }
+          }
+        } else {
+          // oid was no favourite, so check if it becomes one:
+          if (value < old_value) {
+            // rating decreases, so just register rating:
+            eff_rating_changes_map.set(oid, value);
+          } else {
+            // oid becomes a fav. check if the only one:
+            if (value == max_r) {
+              // rating increases to current max, so oid becomes additional fav.
+              argmax_r_set.add(oid);
+            } else {
+              // rating increases beyond current max, so oid becomes sole fav. with eff, rating 100
+              // other favs. eff. ratings go down to their proxy ratings:
+              for (const oid2 of argmax_r_set) {
+                if (oid2 != oid) {
+                  eff_rating_changes_map.set(oid2, this.proxy_ratings_map.get(oid2).get(vid));
+                }
+              }
+              max_r = value;
+              argmax_r_set = new Set([oid]);
+            }
+            eff_rating_changes_map.set(oid, 100);
+          }
+        }
+      }
+      // store new max, argmax:
+      if (max_r > 0) {
+        this.max_proxy_ratings_map.set(vid, max_r);
+      } else {
+        this.max_proxy_ratings_map.delete(vid);
+      }
+      this.argmax_proxy_ratings_map.set(vid, argmax_r_set);
+      // now update what needs to be updated as a consequence:
+      if (eff_rating_changes_map.size > 0) {
+        this.update_proxy_rating_phase2(vid, n_changed, eff_rating_changes_map);
+      }
+    }
+    if (VERIFY_TALLY) {
+      const candidate = new Map(this.T.shares_map);
+      this.tally_all();
+      for (const oid of this.T.shares_map.keys()) {
+        if (this.T.shares_map.get(oid) != candidate.get(oid)) {
+          this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...candidate], [...this.T.shares_map]);
+          return;
+        }
+      }
+//      this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
+    }
+  }
+
+  private update_proxy_rating_phase2(vid: string, n_changed: boolean, eff_rating_changes_map: Map<string, number>) {
+    // process the consequences of changing one or more effective ratings of vid
+    for (const [oid, value] of eff_rating_changes_map) {
+      // register change in map and get old eff. rating:
+      const eff_rs_map = this.effective_ratings_map.get(oid),
+            old_value = eff_rs_map.get(vid);
+      if (value > 0) {
         eff_rs_map.set(vid, value);
       } else {
         eff_rs_map.delete(vid);
       }
-      // update depending data:
-
       // update ratings_ascending faster than by resorting:
       const rsasc_old = this.T.ratings_ascending_map.get(oid);
       const index = rsasc_old.indexOf(old_value);
@@ -968,7 +1195,7 @@ export class Poll {
           break;
         }
       }
-      if (rsasc.length < this.T.n_voters) {
+      if (rsasc.length < this.T.n_not_abstaining) {
         rsasc.push(value);
       }
       // store result back:
@@ -996,7 +1223,7 @@ export class Poll {
       }
       // update total ratings and score(s):
       const tr = this.T.total_ratings_map.get(oid) + value - old_value,
-          score_factor = this.T.n_voters * 128;
+          score_factor = this.T.n_not_abstaining * 128;
       this.T.total_ratings_map.set(oid, tr);
       if (n_changed) {
         // update all scores:
@@ -1013,7 +1240,7 @@ export class Poll {
       if (ordering_changed || others_approvals_changed) {
         // update everyone's votes:
         this.G.L.trace("Poll.update_rating updating everyone's votes", ordering_changed);
-        for (const vid2 of this.T.allvids_set) {
+        for (const vid2 of this.T.all_vids_set) {
           votes_changed ||= this.update_vote(vid2, oidsdesc);
         }
       } else if (vids_approvals_changed) {
@@ -1038,34 +1265,23 @@ export class Poll {
         }
       }
     }
-    if (VERIFY_TALLY) {
-      const candidate = new Map(this.T.shares_map);
-      this.tally_all();
-      for (const oid of this.T.shares_map.keys()) {
-        if (this.T.shares_map.get(oid) != candidate.get(oid)) {
-          this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...candidate], [...this.T.shares_map]);
-          return;
-        }
-      }
-//      this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
-    }
   }
 
-  update_ratings_ascending(oid:string, rs_map:Map<string, number>): Array<number> {
+  update_ratings_ascending(oid: string, eff_rs_map: Map<string, number>): Array<number> {
     // sort ratings ascending:
-    const rsasc_non0 = Array.from(rs_map.values()).sort() as Array<number>;
+    const eff_rs_asc_non0 = Array.from(eff_rs_map.values()).sort() as Array<number>;
     // make sure array is correct length by padding with zeros:
-    const rsasc = Array(this.T.n_voters - rsasc_non0.length).fill(0).concat(rsasc_non0);
-    this.T.ratings_ascending_map.set(oid, rsasc);
-    return rsasc;
+    const eff_rs_asc = Array(this.T.n_not_abstaining - eff_rs_asc_non0.length).fill(0).concat(eff_rs_asc_non0);
+    this.T.ratings_ascending_map.set(oid, eff_rs_asc);
+    return eff_rs_asc;
   }
 
-  update_cutoff_and_approvals(oid:string, rs_map:Map<string, number>, rsasc:Array<number>): [number, boolean, boolean] {
+  update_cutoff_and_approvals(oid: string, eff_rs_map: Map<string, number>, eff_rs_asc: Array<number>): [number, boolean, boolean] {
     // update approval cutoff:
     let cutoff = 100;
-    const cutoff_factor = 100 / this.T.n_voters;
-    for (let index=0; index<this.T.n_voters; index++) {
-      const r = rsasc[index];
+    const cutoff_factor = 100 / this.T.n_not_abstaining;
+    for (let index=0; index<this.T.n_not_abstaining; index++) {
+      const r = eff_rs_asc[index];
       // check whether strictly less than r percent have a rating strictly less than r:
       const pct_less_than_r = cutoff_factor * index;
       if (pct_less_than_r < r) {
@@ -1084,8 +1300,9 @@ export class Poll {
       // cutoff has changed, so update all approvals:
       cutoff_changed = true;
 //      this.G.L.trace("Poll.update_cutoff_and_approvals changed to", cutoff);
-      for (const [vid2, r2] of rs_map) {
-        const ap = (r2 >= cutoff);
+      for (const vid2 of this.T.all_vids_set) {
+        const r2 = eff_rs_map.get(vid2) || 0,
+              ap = (r2 >= cutoff);
         if (ap != aps_map.get(vid2)) {
           aps_map.set(vid2, ap);
           approvals_changed = true;  
@@ -1095,20 +1312,20 @@ export class Poll {
     return [cutoff, cutoff_changed, approvals_changed];
   }
 
-  update_approval_score(oid:string, aps_map:Map<string, boolean>): [number, boolean] {
-    const apsc = Array.from(aps_map.values()).filter(x => x==true).length;
-    if (apsc != this.T.approval_scores_map.get(oid)) {
-      this.T.approval_scores_map.set(oid, apsc);
-      return [apsc, true];
+  update_approval_score(oid: string, approval_map: Map<string, boolean>): [number, boolean] {
+    const approval_score = Array.from(approval_map.values()).filter(x => x==true).length;
+    if (approval_score != this.T.approval_scores_map.get(oid)) {
+      this.T.approval_scores_map.set(oid, approval_score);
+      return [approval_score, true];
     }
-    return [apsc, false];
+    return [approval_score, false];
   }
 
-  update_score(oid:string, apsc:number, tr:number, score_factor:number) {
+  update_score(oid: string, approval_score: number, total_rating: number, score_factor: number) {
     // TODO: make the following tie-breaker faster by storing i permanently.
     // calculate a tiebreaking value between 0 and 1 based on the hash of the option name:
     const tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(this.options[oid].name), 16).toString());
-    this.T.scores_map.set(oid, apsc * score_factor + tr + tie_breaker);
+    this.T.scores_map.set(oid, approval_score * score_factor + total_rating + tie_breaker);
   }
 
   update_ordering(): [Array<string>, boolean] {
@@ -1127,9 +1344,9 @@ export class Poll {
     return [oidsdesc, ordering_changed];
   }
 
-  update_vote(vid:string, oidsdesc:Array<string>): boolean {
+  update_vote(vid: string, oids_desc: Array<string>): boolean {
     let vote = "", vote_changed = false;
-    for (const oid2 of oidsdesc) {
+    for (const oid2 of oids_desc) {
       if (this.T.approvals_map.get(oid2).get(vid)) {
         vote = oid2;
         break;
@@ -1142,14 +1359,14 @@ export class Poll {
     return vote_changed;
   }
 
-  update_shares(oidsdesc:Array<string>): boolean {
+  update_shares(oids_desc: Array<string>): boolean {
     let total_n_votes = 0,
         shares_changed = false;
     this.T.n_votes_map.set("", 0); 
-    for (const oid2 of oidsdesc) {
+    for (const oid2 of oids_desc) {
       this.T.n_votes_map.set(oid2, 0);
     }
-    for (const vid2 of this.T.allvids_set) {
+    for (const vid2 of this.T.all_vids_set) {
       const vote = this.T.votes_map.get(vid2);
       this.T.n_votes_map.set(vote, this.T.n_votes_map.get(vote) + 1);
       if (vote != "") {
@@ -1158,7 +1375,7 @@ export class Poll {
     }
     if (total_n_votes > 0) {
       // shares are proportional to votes received:
-      for (const oid2 of oidsdesc) {
+      for (const oid2 of oids_desc) {
         const share = this.T.n_votes_map.get(oid2) / total_n_votes;
         if (share != this.T.shares_map.get(oid2)) {
           this.T.shares_map.set(oid2, share);
@@ -1167,8 +1384,8 @@ export class Poll {
       }  
     } else {
       // all abstained, so shares are uniform:
-      const k = oidsdesc.length;
-      for (const oid2 of oidsdesc) {
+      const k = oids_desc.length;
+      for (const oid2 of oids_desc) {
         const share = 1 / k;
         if (share != this.T.shares_map.get(oid2)) {
           this.T.shares_map.set(oid2, share);

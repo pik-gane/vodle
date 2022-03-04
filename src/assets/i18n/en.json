@@ -312,7 +312,10 @@
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
 
+        "delegate-button": "Delegate",
+
         "different-language": "This poll is in a different language ({{language}}).",
+        "closes": "Closes",
 
         "also-for-other": "Some or all of the ratings below are also used for one other voter, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other voters, who have directly or indirectly delegated to you.",
@@ -338,11 +341,10 @@
         "including-you": " (including you)",
 
         "explain": "explain",
+        
+        "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
 
-        "sorting": "Sorting options by approval...",
-
-        "delegate-button": "Delegate",
-        "closes": "Closes"
+        "sorting": "Sorting options by approval..."
     },
 
     "previewpoll": {

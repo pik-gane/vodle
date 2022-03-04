@@ -213,7 +213,10 @@ const state_attributes = [
   "_pid_oids", 
   "poll_caches", 
   "own_ratings_map_caches", 
+  "proxy_ratings_map_caches",
   "effective_ratings_map_caches",
+  "max_proxy_ratings_map_caches",
+  "argmax_proxy_ratings_map_caches",
   "outgoing_dids_caches",
   "incoming_dids_caches",
   "delegation_agreements_caches",
@@ -266,8 +269,14 @@ export class DataService implements OnDestroy {
 
   // Caches with redundant information, not stored in database:
 
+  // ratings by pid, oid, vid
   own_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of ratings data, not stored in database
+  proxy_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of proxy ratings data, not stored in database
   effective_ratings_map_caches: Record<string, Map<string, Map<string, number>>>; // redundant storage of effective ratings data, not stored in database
+
+  // (arg)max (over oids) proxy rating by pid, vid:
+  max_proxy_ratings_map_caches: Record<string, Map<string, number>>; // redundant storage of max proxy ratings data, not stored in database 
+  argmax_proxy_ratings_map_caches: Record<string, Map<string, Set<string>>>; // redundant storage of oids having max proxy ratings data, not stored in database 
 
   outgoing_dids_caches: Record<string, Map<string, string>>; // did of delegation requests this voter issues, by pid, oid
   incoming_dids_caches: Record<string, Map<string, [string, string, string]>>; // [from, url, status] of received delegation request links by pid, did 
@@ -386,13 +395,16 @@ export class DataService implements OnDestroy {
     this.outgoing_dids_caches = {};
     this.incoming_dids_caches = {};
     this.delegation_agreements_caches = {};
-    this.effective_ratings_map_caches = {};
     this.direct_delegation_map_caches = {};
     this.inv_direct_delegation_map_caches = {};
     this.indirect_delegation_map_caches = {};
     this.inv_indirect_delegation_map_caches = {};
     this.effective_delegation_map_caches = {};
     this.inv_effective_delegation_map_caches = {};
+    this.proxy_ratings_map_caches = {};
+    this.max_proxy_ratings_map_caches = {};
+    this.argmax_proxy_ratings_map_caches = {};
+    this.effective_ratings_map_caches = {};
     this.news_keys = new Set();
     // make sure storage exists:
     this.storage.create();
