@@ -237,7 +237,7 @@
             <!-- Button for expanding details: -->
             <ion-button 
                 (click)="expand(oidsorted[i])" 
-                fill="clear" style="position:relative; left:-5px; z-index:10;"
+                fill="clear" style="position:relative; left:-5px; z-index:1;"
                 class="ion-no-padding ion-no-margin">
               <ion-icon 
                   [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
@@ -275,7 +275,7 @@
                 (ionChange)="rating_changes(oidsorted[i])" 
                 pin="true" min="0" max="100"
                 [style]="'--bar-background: rgba(0,0,0,0);'
-                  + (rate_yourself_toggle[oidsorted[i]]
+                  + (rate_yourself_toggle[oidsorted[i]] || !delegate
                   ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                   : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
                 class="ion-no-padding ion-no-margin">

@@ -13,7 +13,7 @@ type poll_state_t = ""|"draft"|"running"|"closed";
 type poll_type_t = "winner"|"share";
 type poll_due_type_t = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
                         |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
-type tally_cache = { // T is short for "tally data"
+type tally_cache_t = { // T is short for "tally data"
   // array of known vids:
   all_vids_set: Set<string>;
   // number of voters known:
@@ -169,7 +169,7 @@ export class Poll {
     this._pid = pid;
     this.G.P.polls[pid] = this;
     if (this._pid in this.G.D.tally_caches) { 
-      this.T = this.G.D.tally_caches[this._pid] as tally_cache;
+      this.T = this.G.D.tally_caches[this._pid] as tally_cache_t;
     } else if (!(this._state in [null, '', 'draft'])) {
       this.tally_all();
     }
@@ -246,11 +246,7 @@ export class Poll {
 
   get myvid(): string { return this.G.D.getp(this._pid, 'myvid'); }
   set myvid(value: string) {
-    if (this.T.all_vids_set.has(this.myvid)) {
-      this.T.all_vids_set.delete(this.myvid);
-    }
     this.G.D.setp(this._pid, 'myvid', value);
-    this.T.all_vids_set.add(value);
   }
 
   // state is stored both in user's and in poll's (if not draft) database:
@@ -695,22 +691,22 @@ export class Poll {
     return this._effective_ratings_map;
   }
 
-  T: tally_cache;
+  T: tally_cache_t;
 
   // Methods dealing with changes to the delegation graph:
 
   add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {
     /** Called whenever a delegation shall be added. Returns whether this succeeded */
-    const d_map = this.direct_delegation_map.get(oid), 
+    const dir_d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid), 
-          eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
+          new_eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
     // make sure no delegation exists yet and delegation would not create a cycle:
-    if (d_map.has(client_vid)) {
+    if (dir_d_map.has(client_vid)) {
 
-      this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, d_map.get(client_vid));
+      this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
       return false;
 
-    } else if (eff_d_vid == client_vid) { 
+    } else if (new_eff_d_vid == client_vid) { 
 
       this.G.L.error("PollService.add_delegation when this would create a cycle", client_vid, oid, delegate_vid);
       return false;
@@ -720,71 +716,69 @@ export class Poll {
       this.G.L.trace("PollService.add_delegation feasible", client_vid, oid, delegate_vid);
 
       // register DIRECT delegation and inverse:
-      const inv_d_map = this.inv_direct_delegation_map.get(oid);
-      if (!inv_d_map.has(delegate_vid)) {
-        inv_d_map.set(delegate_vid, new Set());
+      dir_d_map.set(client_vid, delegate_vid);
+      const inv_dir_d_map = this.inv_direct_delegation_map.get(oid);
+      if (!inv_dir_d_map.has(delegate_vid)) {
+        inv_dir_d_map.set(delegate_vid, new Set());
       }
-      d_map.set(client_vid, delegate_vid);
-      inv_d_map.get(delegate_vid).add(client_vid);
+      inv_dir_d_map.get(delegate_vid).add(client_vid);
 
       // update INDIRECT delegations and inverses:
       const ind_d_map = this.indirect_delegation_map.get(oid),
             ind_ds_of_delegate = ind_d_map.get(delegate_vid),
-            ind_ds_of_vid = new Set<string>(),
             inv_ind_d_map = this.inv_indirect_delegation_map.get(oid),
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid);
       if (!inv_ind_d_map.has(delegate_vid)) {
         inv_ind_d_map.set(delegate_vid, new Set());
       }
-      if (!inv_eff_d_map.has(client_vid)) {
-        inv_eff_d_map.set(client_vid, new Set());
-      }
       const inv_ind_ds_of_delegate = inv_ind_d_map.get(delegate_vid),
-            inv_eff_ds_of_vid = inv_eff_d_map.get(client_vid);
+            inv_eff_ds_of_client = inv_eff_d_map.get(client_vid);
       // vid:
-      ind_ds_of_vid.add(delegate_vid);
+      const ind_ds_of_client = new Set([delegate_vid]);
+      ind_d_map.set(client_vid, ind_ds_of_client);
       inv_ind_ds_of_delegate.add(client_vid);
       if (ind_ds_of_delegate) {
-        for (const vid2 of ind_ds_of_delegate) {
-          if (!inv_ind_d_map.has(vid2)) {
-            inv_ind_d_map.set(vid2, new Set());
+        for (const vid of ind_ds_of_delegate) {
+          ind_ds_of_client.add(vid);
+          if (!inv_ind_d_map.has(vid)) {
+            inv_ind_d_map.set(vid, new Set());
           }
-          ind_ds_of_vid.add(vid2);
-          inv_ind_d_map.get(vid2).add(client_vid);
+          inv_ind_d_map.get(vid).add(client_vid);
         }
       }
-      ind_d_map.set(client_vid, ind_ds_of_vid);
-      // dependent voters:
-      for (const vid2 of inv_eff_ds_of_vid) {
-        const ind_ds_of_vid2 = ind_d_map.get(vid2);
-        ind_ds_of_vid2.add(delegate_vid);
-        inv_ind_ds_of_delegate.add(vid2);
-        if (ind_ds_of_delegate) {
-          for (const vid3 of ind_ds_of_delegate) {
-            if (!inv_ind_d_map.has(vid3)) {
-              inv_ind_d_map.set(vid3, new Set());
+      // voters dependent on client:
+      if (inv_eff_ds_of_client) {
+        for (const vid of inv_eff_ds_of_client) {
+          const ind_ds_of_vid = ind_d_map.get(vid);
+          ind_ds_of_vid.add(delegate_vid);
+          inv_ind_ds_of_delegate.add(vid);
+          if (ind_ds_of_delegate) {
+            for (const vid2 of ind_ds_of_delegate) {
+              ind_ds_of_vid.add(vid2);
+              if (!inv_ind_d_map.has(vid2)) {
+                inv_ind_d_map.set(vid2, new Set());
+              }
+              inv_ind_d_map.get(vid2).add(vid);
             }
-            ind_ds_of_vid2.add(vid3);
-            inv_ind_d_map.get(vid3).add(vid2);
-          }
-        }  
-      }  
+          }  
+        }    
+      }
 
       // update EFFECTIVE delegations, inverses, and proxy ratings: 
-      const proxy_rating = this.own_ratings_map.get(oid).get(eff_d_vid);
-      if (!inv_eff_d_map.has(eff_d_vid)) {
-        inv_eff_d_map.set(eff_d_vid, new Set());
+      const new_proxy_rating = this.own_ratings_map.get(oid).get(new_eff_d_vid);
+      if (!inv_eff_d_map.has(new_eff_d_vid)) {
+        inv_eff_d_map.set(new_eff_d_vid, new Set());
       }
-      const deps_eff_d_vid = inv_eff_d_map.get(eff_d_vid);
+      const inv_eff_ds_of_new_eff_d = inv_eff_d_map.get(new_eff_d_vid);
       // this vid:
-      eff_d_map.set(client_vid, eff_d_vid);
-      deps_eff_d_vid.add(client_vid);
-      this.update_proxy_rating(client_vid, oid, proxy_rating);
+      eff_d_map.set(client_vid, new_eff_d_vid);
+      inv_eff_ds_of_new_eff_d.add(client_vid);
+      this.update_proxy_rating(client_vid, oid, new_proxy_rating);
       // dependent voters:
-      for (const vid2 of inv_eff_ds_of_vid) {
-        eff_d_map.set(vid2, eff_d_vid);
-        deps_eff_d_vid.add(vid2);
-        this.update_proxy_rating(vid2, oid, proxy_rating);
+      for (const vid of inv_eff_ds_of_client) {
+        eff_d_map.set(vid, new_eff_d_vid);
+        inv_eff_ds_of_new_eff_d.add(vid);
+        this.update_proxy_rating(vid, oid, new_proxy_rating);
       }  
 
       return true;
@@ -793,61 +787,60 @@ export class Poll {
 
   del_delegation(client_vid: string, oid: string) {
     // Called whenever a voter revokes her delegation for some option
-    const d_map = this.direct_delegation_map.get(oid), 
+    const dir_d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid);
     // make sure a delegation exists:
-    if (!d_map.has(client_vid)) {
+    if (!dir_d_map.has(client_vid)) {
       this.G.L.error("PollService.del_delegation when no delegation exists", client_vid, oid);
     } else {
-      const old_d_vid = d_map.get(client_vid),
-            old_eff_d_of_vid = eff_d_map.get(client_vid),
-            inv_d_map = this.inv_direct_delegation_map.get(oid),
+      const old_d_vid = dir_d_map.get(client_vid),
+            old_eff_d_of_client = eff_d_map.get(client_vid),
+            inv_dir_d_map = this.inv_direct_delegation_map.get(oid),
             ind_d_map = this.indirect_delegation_map.get(oid),
-            old_ind_ds_of_vid = ind_d_map.get(client_vid),
+            old_ind_ds_of_client = ind_d_map.get(client_vid),
             inv_ind_d_map = this.inv_indirect_delegation_map.get(oid),
-            inv_ind_ds_of_vid = inv_ind_d_map.get(client_vid),
+            inv_ind_ds_of_client = inv_ind_d_map.get(client_vid),
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
-            inv_eff_ds_of_vid = inv_eff_d_map.get(client_vid),
-            inv_eff_ds_of_old_eff_d_of_vid = inv_eff_d_map.get(old_eff_d_of_vid);
+            inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
+            inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client);
 
       // deregister DIRECT delegation and inverse of vid:
-      d_map.delete(client_vid);
-      inv_d_map.get(old_d_vid).delete(client_vid);
+      dir_d_map.delete(client_vid);
+      inv_dir_d_map.get(old_d_vid).delete(client_vid);
 
       // deregister INDIRECT delegation of vid to others:
-      for (const vid2 of old_ind_ds_of_vid) {
-        inv_ind_d_map.get(vid2).delete(client_vid);
+      for (const vid of old_ind_ds_of_client) {
+        inv_ind_d_map.get(vid).delete(client_vid);
       }
       ind_d_map.delete(client_vid);
 
       // deregister INDIRECT delegation of voters who indirectly delegated to vid to old indirect delegates of vid:
-      if (inv_ind_ds_of_vid) {
-        for (const vid2 of inv_ind_ds_of_vid) {
-          const ind_ds_of_vid2 = ind_d_map.get(vid2);
-          for (const vid3 of old_ind_ds_of_vid) {
-            ind_ds_of_vid2.delete(vid3);
-            inv_ind_d_map.get(vid3).delete(vid2);
+      if (inv_ind_ds_of_client) {
+        for (const vid of inv_ind_ds_of_client) {
+          const ind_ds_of_vid = ind_d_map.get(vid);
+          for (const vid2 of old_ind_ds_of_client) {
+            ind_ds_of_vid.delete(vid2);
+            inv_ind_d_map.get(vid2).delete(vid);
           }
         }
       }
 
       // deregister EFFECTIVE delegation and inverse of vid and reset proxy rating to own rating:
-      const proxy_rating = this.own_ratings_map.get(oid).get(client_vid);
+      const new_proxy_rating = this.own_ratings_map.get(oid).get(client_vid);
       eff_d_map.delete(client_vid);
-      inv_eff_ds_of_old_eff_d_of_vid.delete(client_vid);
-      this.update_proxy_rating(client_vid, oid, proxy_rating);
+      inv_eff_ds_of_old_eff_d_of_client.delete(client_vid);
+      this.update_proxy_rating(client_vid, oid, new_proxy_rating);
 
       // rewire EFFECTIVE delegation and inverse of voters who indirectly delegated to vid,
       // and update proxy ratings:
-      if (inv_ind_ds_of_vid) {
-        for (const vid2 of inv_ind_ds_of_vid) {
-          inv_eff_ds_of_old_eff_d_of_vid.delete(vid2);
-          eff_d_map.set(vid2, client_vid);
-          inv_eff_ds_of_vid.add(vid2);
-          this.update_proxy_rating(vid2, oid, proxy_rating);
+      if (inv_ind_ds_of_client) {
+        for (const vid of inv_ind_ds_of_client) {
+          inv_eff_ds_of_old_eff_d_of_client.delete(vid);
+          eff_d_map.set(vid, client_vid);
+          inv_eff_ds_of_client.add(vid);
+          this.update_proxy_rating(vid, oid, new_proxy_rating);
         }            
       }
-
     }
   }
 
@@ -901,7 +894,7 @@ export class Poll {
     // count non-abstaining voters:
     this.T.n_not_abstaining = 0;
     for (const vid of this.T.all_vids_set) {
-      if (this.max_proxy_ratings_map.get(vid) > 0) {
+      if (this.max_proxy_ratings_map.get(vid) || 0 > 0) {
         this.T.n_not_abstaining += 1;
       }
     }
@@ -952,7 +945,7 @@ export class Poll {
     // if changed, update rating:
     if (!this.own_ratings_map.has(oid)) {
       this.own_ratings_map.set(oid, new Map());
-      this.G.L.trace("Poll.update_rating first own rating for option", oid);
+      this.G.L.trace("Poll.update_own_rating first own rating for option", oid);
     }
     const rs_map = this.own_ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
     if (value != old_value) {
@@ -986,17 +979,17 @@ export class Poll {
       this.T.all_vids_set.add(vid);
       this.T.n_not_abstaining = this.T.all_vids_set.size;
       n_changed = true;
-      this.G.L.trace("Poll.update_rating n_changed, first proxy rating of voter", vid);
+      this.G.L.trace("Poll.update_proxy_rating n_changed, first proxy rating of voter", vid);
     }
     // if changed, update proxy rating:
     if (!this.proxy_ratings_map.has(oid)) {
       this.proxy_ratings_map.set(oid, new Map());
-      this.G.L.trace("Poll.update_rating first proxy rating for option", oid);
+      this.G.L.trace("Poll.update_proxy_rating first proxy rating for option", oid);
     }
 
     const proxy_rs_map = this.proxy_ratings_map.get(oid), old_value = proxy_rs_map.get(vid) || 0;
     if (value != old_value) {
-      this.G.L.trace("Poll.update_rating proxy rating of", oid, "by", vid, "changed from", old_value, "to", value);
+      this.G.L.trace("Poll.update_proxy_rating proxy rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {
         proxy_rs_map.set(vid, value);
       } else {
@@ -1008,9 +1001,11 @@ export class Poll {
       const old_max_r = this.max_proxy_ratings_map.get(vid) || 0,
             old_argmax_r_set = this.argmax_proxy_ratings_map.get(vid) || new Set(),
             eff_rating_changes_map = new Map<string, number>();
+      this.G.L.trace("Poll.update_proxy_rating old max, argmax",old_max_r,[...old_argmax_r_set]);
       var max_r = old_max_r, 
-          argmax_r_set = old_argmax_r_set;
+      argmax_r_set = old_argmax_r_set;
       if (old_max_r == 0) {
+        this.G.L.trace("Poll.update_proxy_rating old max was 0");
         // voter was abstaining before but is no longer since value > 0 
         // => set new max and adjust rating to effectively 100 to ensure approval of oid:
         max_r = value;
@@ -1018,15 +1013,17 @@ export class Poll {
         eff_rating_changes_map.set(oid, 100);
         n_changed = true;
       } else if (old_max_r == 100) {
+        this.G.L.trace("Poll.update_proxy_rating old max was 100");
         // some options were actually rated 100
         if (old_value == 100) {
           // oid was a favourite, so check if the only one:
           if (argmax_r_set.size == 1) {
+            this.G.L.trace("Poll.update_proxy_rating option decreased from only favourite");
             // oid was sole favourite, have to find new max!
             max_r = -1;
             argmax_r_set = new Set();
             for (const oid2 of this.oids) {
-              const r2 = this.proxy_ratings_map.get(oid2).get(vid);
+              const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
               if (r2 > max_r) {
                 max_r = r2;
                 argmax_r_set = new Set([oid2]);
@@ -1052,10 +1049,12 @@ export class Poll {
             }
           } else {
             // there were other favourites, so max stays at 100, so simply remove from argmax and set new value:
+            this.G.L.trace("Poll.update_proxy_rating option decreased from several favourites");
             argmax_r_set.delete(oid);
             eff_rating_changes_map.set(oid, value);
           }
         } else {
+          this.G.L.trace("Poll.update_proxy_rating option changed from non-favourite");
           // oid was no favourite, so check if it becomes one:
           if (value == 100) {
             // oid becomes additional favourite, so add to argmax:
@@ -1065,6 +1064,7 @@ export class Poll {
           eff_rating_changes_map.set(oid, value);
         }
       } else {
+        this.G.L.trace("Poll.update_proxy_rating old max was >0 and <100");
         // no option was actually rated 100, so eff. ratings differ from proxy ratings
         if (old_value == max_r) {
           // oid was a favourite, so has eff. rating 100.
@@ -1072,11 +1072,12 @@ export class Poll {
             // rating decreases.
             // check if oid is the only fav.:
             if (argmax_r_set.size == 1) {
+              this.G.L.trace("Poll.update_proxy_rating option decreased from only favourite");
               // oid was sole favourite, have to find new max!
               max_r = -1;
               argmax_r_set = new Set();
               for (const oid2 of this.oids) {
-                const r2 = this.proxy_ratings_map.get(oid2).get(vid);
+                const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
                 if (r2 > max_r) {
                   max_r = r2;
                   argmax_r_set = new Set([oid2]);
@@ -1101,6 +1102,7 @@ export class Poll {
                 }  
               }
             } else {
+              this.G.L.trace("Poll.update_proxy_rating option decreased from several favourites");
               // there were other favourites, so simply remove from argmax and set new value:
               argmax_r_set.delete(oid);
               eff_rating_changes_map.set(oid, value);
@@ -1109,29 +1111,34 @@ export class Poll {
             // rating increases.
             // check if oid is the only fav.:
             if (argmax_r_set.size == 1) {
-              // oid remains sole favourite, so nothing changes!
+              this.G.L.trace("Poll.update_proxy_rating option increased from only favourite");
+              // oid remains sole favourite
             } else {
+              this.G.L.trace("Poll.update_proxy_rating option increased from several favourites");
               // oid becomes sole favourite, other favs. eff. ratings go down to their proxy ratings:
               for (const oid2 of argmax_r_set) {
                 if (oid2 != oid) {
                   eff_rating_changes_map.set(oid2, this.proxy_ratings_map.get(oid2).get(vid));
                 }
               }
-              max_r = value;
               argmax_r_set = new Set([oid]);
             }
+            max_r = value;
           }
         } else {
           // oid was no favourite, so check if it becomes one:
           if (value < old_value) {
+            this.G.L.trace("Poll.update_proxy_rating option decreased from non-favourite");
             // rating decreases, so just register rating:
             eff_rating_changes_map.set(oid, value);
           } else {
             // oid becomes a fav. check if the only one:
             if (value == max_r) {
+              this.G.L.trace("Poll.update_proxy_rating option increased to several favourites");
               // rating increases to current max, so oid becomes additional fav.
               argmax_r_set.add(oid);
             } else {
+              this.G.L.trace("Poll.update_proxy_rating option increased to only favourite");
               // rating increases beyond current max, so oid becomes sole fav. with eff, rating 100
               // other favs. eff. ratings go down to their proxy ratings:
               for (const oid2 of argmax_r_set) {
@@ -1146,6 +1153,7 @@ export class Poll {
           }
         }
       }
+      this.G.L.trace("PollService.update_proxy_rating",n_changed,eff_rating_changes_map,old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
       // store new max, argmax:
       if (max_r > 0) {
         this.max_proxy_ratings_map.set(vid, max_r);
@@ -1173,6 +1181,7 @@ export class Poll {
 
   private update_proxy_rating_phase2(vid: string, n_changed: boolean, eff_rating_changes_map: Map<string, number>) {
     // process the consequences of changing one or more effective ratings of vid
+    this.G.L.entry("PollService.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
     for (const [oid, value] of eff_rating_changes_map) {
       // register change in map and get old eff. rating:
       const eff_rs_map = this.effective_ratings_map.get(oid),
@@ -1270,6 +1279,7 @@ export class Poll {
   update_ratings_ascending(oid: string, eff_rs_map: Map<string, number>): Array<number> {
     // sort ratings ascending:
     const eff_rs_asc_non0 = Array.from(eff_rs_map.values()).sort() as Array<number>;
+//    this.G.L.trace("PollService.update_ratings_ascending", [...eff_rs_map.entries()], eff_rs_asc_non0, this.T.n_not_abstaining);
     // make sure array is correct length by padding with zeros:
     const eff_rs_asc = Array(this.T.n_not_abstaining - eff_rs_asc_non0.length).fill(0).concat(eff_rs_asc_non0);
     this.T.ratings_ascending_map.set(oid, eff_rs_asc);

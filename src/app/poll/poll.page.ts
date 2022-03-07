@@ -48,7 +48,6 @@ export class PollPage implements OnInit {
   needs_refresh = false;
 
   scroll_position = 0;
-  slidersAllowEvents = true; // TODO! false;
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
 
@@ -298,7 +297,7 @@ export class PollPage implements OnInit {
 
   set_slider_values() {
     for (let oid of this.p.oids) {
-      this.get_slider(oid).value = this.p.effective_ratings_map.get(oid).get(this.p.myvid).toString();
+      this.get_slider(oid).value = this.p.proxy_ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
 

@@ -21,7 +21,7 @@ export class DelegationService {
   /**
    * Flow:
    * 
-   * v1 sends v2 link with pid, did, privkey
+   * v1 sends v2 link with pid, did, from, privkey
    * v1 stores v1.del_request.did = {ospec1, pubkey}
    * v2 stores v2.del_response.did = privkey-signed {ospec2}
    * v1,v2 may update ospec1, ospec2 at any time
@@ -401,7 +401,6 @@ export class DelegationService {
               a.active_oids.delete(oid);
               p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
-              // TODO: notify voter!
             }
           }
           for (const oid of request.option_spec.oids) {
@@ -423,7 +422,6 @@ export class DelegationService {
               a.active_oids.delete(oid);
               p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
-              // TODO: notify voter!
             }
           }
           for (const oid of a.accepted_oids) {
