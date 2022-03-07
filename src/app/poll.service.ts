@@ -1132,12 +1132,13 @@ export class Poll {
             // rating decreases, so just register rating:
             eff_rating_changes_map.set(oid, value);
           } else {
-            // oid becomes a fav. check if the only one:
+            // oid might become a fav.::
             if (value == max_r) {
               this.G.L.trace("Poll.update_proxy_rating option increased to several favourites");
               // rating increases to current max, so oid becomes additional fav.
               argmax_r_set.add(oid);
-            } else {
+              eff_rating_changes_map.set(oid, 100);
+            } else if (value > max_r) {
               this.G.L.trace("Poll.update_proxy_rating option increased to only favourite");
               // rating increases beyond current max, so oid becomes sole fav. with eff, rating 100
               // other favs. eff. ratings go down to their proxy ratings:
@@ -1148,8 +1149,11 @@ export class Poll {
               }
               max_r = value;
               argmax_r_set = new Set([oid]);
+              eff_rating_changes_map.set(oid, 100);
+            } else {
+              this.G.L.trace("Poll.update_proxy_rating option increased to non-favourite");
+              eff_rating_changes_map.set(oid, value);
             }
-            eff_rating_changes_map.set(oid, 100);
           }
         }
       }
