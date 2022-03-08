@@ -102,7 +102,10 @@ export class GlobalService implements OnDestroy {
   }
 
   map2str(map: Map<any, any>): string {
-    return [...map.entries()].toString();
+    return JSON.stringify([...map.entries()].reduce((o, [key, value]) => { 
+      o[key] = (value instanceof Set) ? [...value] : (value instanceof Map) ? [...value.entries()] : value; 
+      return o; 
+    }, {}));
   }
 
   demodata = {

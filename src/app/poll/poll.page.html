@@ -82,6 +82,7 @@
                 [innerHtml]="'badges.closing-soon'|translate">
               </ion-badge>
             </small>
+
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -131,6 +132,7 @@
         <!-- EXPANDABLE DETAILS: -->
 
         <!-- Accepted requests: -->
+
         <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length > 0">
           <ion-col class="ion-text-right">
             <small>
@@ -149,6 +151,7 @@
         </ion-row>
 
         <!-- Declined requests: -->
+
         <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length > 0">
           <ion-col class="ion-text-right">
             <small>
@@ -370,7 +373,7 @@
                 <span style="color:#9abcbd">
                   <span [innerHtml]="
                     'poll.approved-by' | translate: {percentage:
-                      Math.round(p.T.approval_scores_map.get(oidsorted[i]) * 1000) / 10
+                      Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10
                     }">
                   </span>
                 </span>
@@ -406,6 +409,12 @@
               <!-- debugging info: -->
 
               <small>
+                <br/>direct_delegation_map: {{G.map2str(p.direct_delegation_map.get(oidsorted[i]))}}
+                <br/>inv_direct_delegation_map: {{G.map2str(p.inv_direct_delegation_map.get(oidsorted[i]))}}
+                <br/>indirect_delegation_map: {{G.map2str(p.indirect_delegation_map.get(oidsorted[i]))}}
+                <br/>inv_indirect_delegation_map: {{G.map2str(p.inv_indirect_delegation_map.get(oidsorted[i]))}}
+                <br/>effective_delegation_map: {{G.map2str(p.effective_delegation_map.get(oidsorted[i]))}}
+                <br/>inv_effective_delegation_map: {{G.map2str(p.inv_effective_delegation_map.get(oidsorted[i]))}}
                 <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
                 <br/>cutoffs_map: {{G.map2str(p.T.cutoffs_map)}}
 <!--                <br/>approvals_map: {{G.map2str(p.T.approvals_map)}}-->
