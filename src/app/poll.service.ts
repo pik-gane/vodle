@@ -1217,42 +1217,46 @@ export class Poll {
     this.G.L.entry("PollService.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
     for (const [oid, value] of eff_rating_changes_map) {
       // register change in map and get old eff. rating:
-      const eff_rs_map = this.effective_ratings_map.get(oid),
-            old_value = eff_rs_map.get(vid);
+      var eff_rs_map = this.effective_ratings_map.get(oid);
+      if (!eff_rs_map) {
+        eff_rs_map = new Map();
+        this.effective_ratings_map.set(oid, eff_rs_map);
+      }
+      const old_value = eff_rs_map.get(vid) || 0;
       if (value > 0) {
         eff_rs_map.set(vid, value);
       } else {
         eff_rs_map.delete(vid);
       }
       // update ratings_ascending faster than by resorting:
-      const rsasc_old = this.T.ratings_ascending_map.get(oid);
-      const index = rsasc_old.indexOf(old_value);
+      const ratings_ascending_old = this.T.ratings_ascending_map.get(oid) || [];
+      const index = ratings_ascending_old.indexOf(old_value);
       // remove old value:
-      const rsasc_without = rsasc_old.slice(0, index).concat(rsasc_old.slice(index + 1));
+      const rsasc_without = ratings_ascending_old.slice(0, index).concat(ratings_ascending_old.slice(index + 1));
       // insert new value at correct position:
-      let rsasc = rsasc_without;
+      let ratings_ascending = rsasc_without;
       for (let index=0; index<rsasc_without.length; index++) {
-        if (rsasc_old[index] >= value) {
-          rsasc = rsasc_without.slice(0, index).concat([value]).concat(rsasc_without.slice(index));    
+        if (ratings_ascending_old[index] >= value) {
+          ratings_ascending = rsasc_without.slice(0, index).concat([value]).concat(rsasc_without.slice(index));    
           break;
         }
       }
-      if (rsasc.length < this.T.n_not_abstaining) {
-        rsasc.push(value);
+      if (ratings_ascending.length < this.T.n_not_abstaining) {
+        ratings_ascending.push(value);
       }
       // store result back:
-      this.T.ratings_ascending_map.set(oid, rsasc);
+      this.T.ratings_ascending_map.set(oid, ratings_ascending);
 
       // cutoff, approvals:
-      const [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, eff_rs_map, rsasc);
+      const [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, eff_rs_map, ratings_ascending);
 
       let vids_approvals_changed = false;
-      const aps_map = this.T.approvals_map.get(oid);
+      const approvals_map = this.T.approvals_map.get(oid);
       if (!others_approvals_changed) {
         // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
-        const ap = (value >= cutoff);
-        if (ap != aps_map.get(vid)) {
-          aps_map.set(vid, ap);
+        const approval = (value >= cutoff);
+        if (approval != approvals_map.get(vid)) {
+          approvals_map.set(vid, approval);
           vids_approvals_changed = true;
         }
       }
@@ -1260,13 +1264,13 @@ export class Poll {
       if (vids_approvals_changed || others_approvals_changed) {
         // update approval score:
         this.G.L.trace("Poll.update_rating approvals changed", vids_approvals_changed, others_approvals_changed);
-        var apsc
-        [apsc, svg_needs_update] = this.update_approval_score(oid, aps_map);
+        var approval_score;
+        [approval_score, svg_needs_update] = this.update_approval_score(oid, approvals_map);
       }
       // update total ratings and score(s):
-      const tr = this.T.total_ratings_map.get(oid) + value - old_value,
-          score_factor = this.T.n_not_abstaining * 128;
-      this.T.total_ratings_map.set(oid, tr);
+      const total_rating = (this.T.total_ratings_map.get(oid) || 0) + value - old_value,
+            score_factor = this.T.n_not_abstaining * 128;
+      this.T.total_ratings_map.set(oid, total_rating);
       if (n_changed) {
         // update all scores:
         for (const oid2 of this.T.scores_map.keys()) {
@@ -1274,7 +1278,7 @@ export class Poll {
         }
       } else {
         // only update oid's score:
-        this.update_score(oid, this.T.approval_scores_map.get(oid), tr, score_factor);
+        this.update_score(oid, this.T.approval_scores_map.get(oid), total_rating, score_factor);
       }
       // update option ordering:
       const [oidsdesc, ordering_changed] = this.update_ordering();
