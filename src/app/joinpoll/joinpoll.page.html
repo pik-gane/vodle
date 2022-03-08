@@ -7,11 +7,19 @@
   </ion-toolbar>
 </ion-header>
 
+<ion-content *ngIf="!ready">
+  Waiting for poll data...
+</ion-content>
+
+<ion-content *ngIf="ready && !p">
+  Initializing poll...
+</ion-content>
+
 <ion-content *ngIf="ready && (p!=null)">
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <h4 [innerHtml]="'joinpoll.header'|translate:{poll_title:p.title}"></h4>
-      <p [innerHtml]="(p.type=='winner'?'joinpoll.p1-winner':'joinpoll.p1-share')|translate:{due:p.due}"></p>
+      <p [innerHtml]="(p.type=='winner'?'joinpoll.p1-winner':'joinpoll.p1-share')|translate:{due:p.due_string}"></p>
     </ion-col>
   </ion-item>
   <ion-item class="ion-text-center">
@@ -51,7 +59,7 @@
   <ion-item class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <small>
-        <p [innerHtml]="'joinpoll.p4'|translate:{link_start:help_link_start,link_end:help_link_end}"></p>
+        <p [innerHtml]="'joinpoll.p6'|translate:{link_start:help_link_start,link_end:help_link_end}"></p>
       </small>
     </ion-col>
   </ion-item>

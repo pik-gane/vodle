@@ -101,6 +101,10 @@ export class GlobalService implements OnDestroy {
     document.body.removeChild(a);
   }
 
+  map2str(map: Map<any, any>): string {
+    return [...map.entries()].toString();
+  }
+
   demodata = {
     'system' : [
       ["Form of government",

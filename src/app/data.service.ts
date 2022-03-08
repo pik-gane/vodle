@@ -737,38 +737,108 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
-  connect_to_remote_poll_db(pid: string) {
-    // called at poll initialization
+  connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
+    // called at poll initialization or when joining a poll
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
     const poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
+    var promise: Promise<any>
 
-    const promise = new Promise((resolve, reject) => {
+    if (wait_for_replication) {
 
-      // ASYNC:
-      this.get_remote_connection(
-        this.getp(pid, 'db_server_url'), this.getp(pid, 'db_password'),
-        poll_db_private_username, this.G.S.password
-      ).then(db => { 
+      // connect, replicate one, wait for it to finish, then start continuous sync and return:
 
-        this.remote_poll_dbs[pid] = db;
-        // start synchronisation asynchronously:
-        this.start_poll_sync(pid);
+      promise = new Promise((resolve, reject) => {
 
-        // RESOLVE:
-        resolve(true);
+        // ASYNC:
+        this.get_remote_connection(
+          this.getp(pid, 'db_server_url'), this.getp(pid, 'db_password'),
+          poll_db_private_username, this.G.S.password
+        ).then(db => { 
+  
+          this.remote_poll_dbs[pid] = db;
+  
+          // replicate once and wait for it to finish:
 
-      }).catch(err => {
+          db.replicate.from(this.remote_poll_dbs[pid], {
+              retry: true,
+              include_docs: true,
+              filter: (doc, req) => (
+                // we want poll docs:
+                (poll_doc_id_prefix + pid + ':' <= doc._id 
+                  && doc._id < poll_doc_id_prefix + pid + ';')   // ';' is the ASCII character after ':'
+                // and voter docs:
+                || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
+                    && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
+              )
+          }).on('change', change => {
 
-        this.G.L.warn("DataService.connect_to_remote_poll_db failed", pid, err);
+            // process incoming docs:
+            this.handle_poll_db_change.bind(this)(pid, change);
 
-        // REJECT:
-        reject(err);
+          }).on('complete', function () {
 
+            // now start synchronisation asynchronously:
+            this.start_poll_sync.bind(this)(pid);
+    
+            // RESOLVE:
+            resolve(true);
+
+          }).on('error', function (err) {
+
+            this.G.L.warn("DataService.connect_to_remote_poll_db failed", pid, err);
+  
+            // REJECT:
+            reject(err);
+  
+          });
+          
+  
+        }).catch(err => {
+  
+          this.G.L.warn("DataService.connect_to_remote_poll_db failed", pid, err);
+  
+          // REJECT:
+          reject(err);
+  
+        });
+  
       });
 
-    });
+    } else {
+
+      // connect, start continuous sync and return:
+
+      promise = new Promise((resolve, reject) => {
+
+        // ASYNC:
+        this.get_remote_connection(
+          this.getp(pid, 'db_server_url'), this.getp(pid, 'db_password'),
+          poll_db_private_username, this.G.S.password
+        ).then(db => { 
+  
+          this.remote_poll_dbs[pid] = db;
+  
+          // start synchronisation asynchronously:
+          this.start_poll_sync(pid);
+  
+          // RESOLVE:
+          resolve(true);
+  
+        }).catch(err => {
+  
+          this.G.L.warn("DataService.connect_to_remote_poll_db failed", pid, err);
+  
+          // REJECT:
+          reject(err);
+  
+        });
+  
+      });
+  
+    }
+
     this.G.L.exit("DataService.connect_to_remote_poll_db", pid);
     return promise;
   }
@@ -1655,9 +1725,10 @@ export class DataService implements OnDestroy {
       // it's the combined due and state doc, so extract both:
 
       const prefix = get_poll_key_prefix(pid);
-      const due = decrypt(doc['due'], this.user_cache[prefix + 'password']);
+      const due = doc['due'];
       const state = decrypt(doc['state'], this.user_cache[prefix + 'password']);
       value_changed = false;
+      this.G.L.trace("DataServicedoc2poll_cache due_and_state old new",cache['due'],cache['state'],due,state);
 
       // store in cache if changed:
       if (cache['due'] != due) {
@@ -1812,7 +1883,7 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private store_user_data(key:string, dict, dict_key:string): boolean {
+  private store_user_data(key:string, dict, dict_key:string, enforce=false): boolean {
     // stores key and value = dict[dict_key] in user database. 
     this.G.L.trace("DataService.store_user_data", key, dict[dict_key]);
     var doc;
@@ -1826,7 +1897,7 @@ export class DataService implements OnDestroy {
         // key existed in db, so update:
 
         const value = dict[dict_key];
-        if (doc.value != value) {
+        if (enforce || doc.value != value) {
           doc.value = value;
           this.local_only_user_DB.put(doc)
           .then(() => {
@@ -1834,7 +1905,7 @@ export class DataService implements OnDestroy {
           })
           .catch(err => {
             this.G.L.warn("DataService.store_user_data couldn't local-only update, will try again soon", key, value, doc, err);
-            window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
+            window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key, enforce=true);
           });
         } else {
           this.G.L.trace("DataService.store_user_data local-only no need to update", key, value);
@@ -1850,9 +1921,12 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.store_user_data local-only new", key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_user_data couldn't local-only new, will try again soon", key, value, doc, err);
-          // FIXME: why does this sometimes fail? Apparently the same item gets set twice in very close sequence. Why? 
-          window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
+          this.G.L.warn("DataService.store_user_data couldn't local-only new", key, value, doc, err);
+          this.local_only_user_DB.get(key)
+          .then(doc => {
+            this.G.L.warn("DataService.store_user_data will try again soon", key, value, doc, err);
+            window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key, enforce=true);
+          });
         });
 
       });
@@ -1914,9 +1988,9 @@ export class DataService implements OnDestroy {
     return true;
   }
 
-  private store_poll_data(pid:string, key:string, dict, dict_key:string, add_due=false): boolean {
+  private store_poll_data(pid:string, key:string, dict, dict_key:string, add_due=false, enforce=false): boolean {
     // stores key and value in poll database. 
-    this.G.L.trace("DataService.store_poll_data", key, dict[dict_key]);
+    this.G.L.trace("DataService.store_poll_data", pid, key, dict[dict_key]);
     var doc;
 
     // see what type of entry it is:
@@ -1929,12 +2003,13 @@ export class DataService implements OnDestroy {
       if ((key == 'due') || (key == 'state')) {
         _id = poll_doc_id_prefix + pid + ':due_and_state';
         doc_value_key = key;
+        add_due = true;
       } else {
         _id = poll_doc_id_prefix + pid + ':' + key;
         doc_value_key = 'value';
       }
       const poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
-      if ((poll_pw=='')||(!poll_pw)) {
+      if ((poll_pw=='') || (!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password is missing!");
 
         // RETURN:
@@ -1951,28 +2026,27 @@ export class DataService implements OnDestroy {
         const enc_value = encrypt(value, poll_pw);
           if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
-          this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", key, value);
-        } else if ((doc_value_key == 'due') && (decrypt(doc.due, poll_pw) != value)) {
+          this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
+        } else if ((key == 'due') && (doc.due != value)) {
           // this is not allowed for poll docs!
-          this.G.L.error("DataService.store_poll_data tried changing due time", key, value);
+          this.G.L.error("DataService.store_poll_data tried changing due time", pid, key, value);
         } // TODO: also check state change against due time!
 
         // now update:
-        if (decrypt(doc[doc_value_key], poll_pw) != value) {
-          doc[doc_value_key] = enc_value;
+        if (enforce || decrypt(doc[doc_value_key], poll_pw) != value) {
+          doc[doc_value_key] = (key == 'due') ? value: enc_value;
           if (add_due) {
             doc['due'] = this.poll_caches[pid]['due'];
           }
           db.put(doc)
           .then(response => {
-            this.G.L.trace("DataService.store_poll_data update", key, value);
+            this.G.L.trace("DataService.store_poll_data update", pid, key, value, doc);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update, will try again soon", key, value, doc, err);
-//            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
+            this.G.L.warn("DataService.store_poll_data couldn't update", pid, key, value, doc, err);
           });
         } else {
-          this.G.L.trace("DataService.store_poll_data no need to update", key, value);
+          this.G.L.trace("DataService.store_poll_data no need to update", pid, key, value);
         }
         
       }).catch(err => {
@@ -1982,19 +2056,26 @@ export class DataService implements OnDestroy {
         };
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        doc[doc_value_key] = enc_value;
+        doc[doc_value_key] = (key == 'due') ? value : enc_value;
         if (add_due) {
           doc['due'] = this.poll_caches[pid]['due'];
         }
+        if (key=='due') {
+          doc['state'] = encrypt(this.poll_caches[pid]['state'], poll_pw);
+        }
         db.put(doc)
         .then(response => {
-          this.G.L.trace("DataService.store_poll_data new", key, value);
+          this.G.L.trace("DataService.store_poll_data new", pid, key, value, doc);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value, doc, err);
-          window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
+          this.G.L.warn("DataService.store_poll_data couldn't new", pid, key, value, doc, err);
+          // if doc exists, try again:
+          db.get(_id)
+          .then(doc => {
+            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key, add_due, true);
+            this.G.L.trace("DataService.store_poll_data scheduled new try", pid, key, value, doc, err);
+          });
         });  
-
       });
 
       // RETURN:
@@ -2009,7 +2090,7 @@ export class DataService implements OnDestroy {
           vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
-          this.G.L.error("DataService.store_poll_data tried changing another voter's data item", key);
+          this.G.L.error("DataService.store_poll_data tried changing another voter's data item", pid, key);
 
           // RETURN: 
           return false;
@@ -2033,21 +2114,21 @@ export class DataService implements OnDestroy {
       .then(doc => {
 
         // key existed in db, so update:
-        if (decrypt(doc.value, poll_pw) != value) {
+        if (enforce || decrypt(doc.value, poll_pw) != value) {
           doc['value'] = enc_value;
           if (add_due) {
             doc['due'] = this.poll_caches[pid]['due'];
           }
           db.put(doc)
           .then(response => {
-            this.G.L.trace("DataService.store_poll_data update", key, value);
+            this.G.L.trace("DataService.store_poll_data update", pid, key, value);
           })
           .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update voter doc, will try again soon", key, value, doc, err);
-            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
+            this.G.L.warn("DataService.store_poll_data couldn't update voter doc, will try again soon", pid, key, value, doc, err);
+            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key, add_due, true);
           });
         } else {
-          this.G.L.trace("DataService.store_poll_data no need to update", key, value);
+          this.G.L.trace("DataService.store_poll_data no need to update", pid, key, value);
         }
 
       }).catch(err => {
@@ -2064,11 +2145,16 @@ export class DataService implements OnDestroy {
         }
         db.put(doc)
         .then(response => {
-          this.G.L.trace("DataService.store_poll_data new", key, value);
+          this.G.L.trace("DataService.store_poll_data new", pid, key, value);
         })
         .catch(err => {
-          this.G.L.warn("DataService.store_poll_data couldn't new, will try again soon", key, value, doc, err);
-          window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key);
+          this.G.L.warn("DataService.store_poll_data couldn't new", pid, key, value, doc, err);
+          // if doc exists, try again:
+          db.get(_id)
+          .then(doc => {
+            this.G.L.info("DataService.store_poll_data will try again soon", pid, key, value, doc, err);
+            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key, add_due, true);
+          });
         });  
 
       });
@@ -2294,7 +2380,7 @@ export class DataService implements OnDestroy {
   }
   
   format_date(date: Date): string {
-    return date.toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+    return date ? date.toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : '';
   }
 
   hash(what): string {

@@ -15,12 +15,12 @@ export const environment = {
   data_service: {
     central_db_server_url: "http://localhost:5984/",
     central_db_password: "none",
-    hash_n_bytes: 8,
-    pid_length: 12,
     pwd_length: 12,
-    oid_length: 8,
-    vid_length: 8,
-    did_length: 8,
+    hash_n_bytes: 8,
+    pid_length: 6,
+    oid_length: 4,
+    vid_length: 2,
+    did_length: 4,
     nid_length: 4
   },
   db_put_retry_delay_ms: 100,

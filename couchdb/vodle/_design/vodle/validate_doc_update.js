@@ -28,7 +28,7 @@ function (newDoc, savedDoc, userCtx) {
                     // yes, so make sure due is not changed and state is changed in accordance to due:
                     if (savedDoc && (newDoc.due != savedDoc.due)) {
                         throw ({forbidden: 'Noone may update or delete due dates.'})
-                    } else if ((newDoc.due||'')!='') {
+                    } else if ((newDoc.due||'') != '') {
                         let now = new Date();
                         let due = new Date(newDoc.due);
                         if (newDoc.state != 'closed' && now > due) {

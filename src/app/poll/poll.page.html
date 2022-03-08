@@ -49,11 +49,13 @@
           <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
 
             <!-- NOTIFY OF DIFFERENT LANGUAGE: -->
-            <small *ngIf="p.language != G.S.language">
+
+            <small *ngIf="(!!p.language) && (p.language != G.S.language)">
               <p [innerHtml]="'poll.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
             </small>
 
             <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
+
             <h3><b><i>{{p.title}}</i></b></h3>
             <i>{{p.desc}}</i>
             <small *ngIf="(p.url || '') != ''">&nbsp;
@@ -66,6 +68,7 @@
             <br/>
 
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
+
             <small>
               <span 
                 [innerHtml]="'poll.closes' | translate">
@@ -228,6 +231,7 @@
       </svg>
 
       <!-- REST OF ALWAYS VISIBLE STUFF: -->
+
       <ion-grid class="ion-no-padding ion-no-margin">
 
         <!-- OPTION NAME: -->
@@ -270,7 +274,7 @@
             <ion-range 
                 [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                 [color]="slidercolor[oidsorted[i]]"
-                [value]="p.get_myrating(oidsorted[i])" 
+                [value]="p.get_my_proxy_rating(oidsorted[i])" 
                 (ionFocus)="rating_change_begins(oidsorted[i])" 
                 (ionChange)="rating_changes(oidsorted[i])" 
                 pin="true" min="0" max="100"
@@ -380,6 +384,21 @@
                   </ion-text>)
                 </small>
               </span>
+
+              <!-- debugging info: -->
+
+              <small>
+                <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
+                <br/>cutoffs_map: {{G.map2str(p.T.cutoffs_map)}}
+<!--                <br/>approvals_map: {{G.map2str(p.T.approvals_map)}}-->
+                <br/>approval_scores_map: {{G.map2str(p.T.approval_scores_map)}}
+                <br/>total_ratings_map: {{G.map2str(p.T.total_ratings_map)}}
+<!--                <br/>scores_map: {{G.map2str(p.T.scores_map)}}-->
+                <br/>votes_map: {{G.map2str(p.T.votes_map)}}
+                <br/>n_votes_map: {{G.map2str(p.T.n_votes_map)}}
+                <br/>shares_map: {{G.map2str(p.T.shares_map)}}
+              </small>
+
             </ion-col>
           </ion-row>
         </app-expandable>

@@ -323,10 +323,13 @@ export class Poll {
       // TODO: improve validity check already in form field!
       ((value||'')!='') && (value.getTime() === value.getTime()) ? value.toISOString() : ''); 
   }
+  get due_string(): string {
+    return this.G.D.format_date(this.due);
+  }
 
   private _options: Record<string, Option> = {};
   _add_option(o: Option) {
-    this.G.L.entry("Poll._add_option");
+//    this.G.L.entry("Poll._add_option");
     // will only be called by the option itself to self-register in its poll!
     if (o.oid in this._options) {
       return false;
@@ -377,11 +380,19 @@ export class Poll {
     return rs_map.get(this.myvid);
   }
 
-  set_myrating(oid: string, value: number, store:boolean=true) {
+  set_myrating(oid: string, value: number, store: boolean=true) {
+    /** Set own rating in caches and optionally store it in DB.
+     * While a slider is dragged, this will be called with store=false,
+     * when the slider is released, it will be called with store=true
+     */
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }
     this.update_own_rating(this.myvid, oid, value);
+  }
+
+  get_my_proxy_rating(oid: string): number {
+    return this.proxy_ratings_map.get(oid).get(this.myvid) || 0;
   }
 
   get remaining_time_fraction(): number {
@@ -1423,7 +1434,7 @@ export class Option {
                name:string=null, desc:string=null, url:string=null) { 
     // TODO: ensure uniqueness of name within poll!
     this.G = G;
-    this.G.L.entry("Option constructor");
+//    this.G.L.entry("Option constructor");
     this.p = poll;
     if (!oid) {
       oid = this.G.P.generate_oid(poll.pid);
@@ -1435,7 +1446,7 @@ export class Option {
     if ((desc||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.desc', desc);
     if ((url||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.url', url);
     poll._add_option(this);
-    this.G.L.exit("Option constructor");
+//    this.G.L.exit("Option constructor");
   }
 
   delete() {

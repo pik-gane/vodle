@@ -18,7 +18,12 @@
 <ion-content *ngIf="ready">
   <ion-list lines="full">
 
-    <!--NEWS-->
+    <!-- debugging -->
+<!--    <ion-item *ngFor="let p of Object.values(G.P.polls)">
+      <p>{{p.title}}: {{p.state}}</p>
+    </ion-item>
+-->
+    <!-- NEWS -->
 
     <ion-card *ngFor="let n of news">
       <ion-card-content class="ion-no-margin ion-no-padding">

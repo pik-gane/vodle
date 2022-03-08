@@ -12,6 +12,7 @@
     <ion-item color="warning">
       <ion-col class="ion-no-padding ion-no-margin" [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></ion-col>
     </ion-item>
+<!--
     <ion-item (click)="details_expanded=!details_expanded">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-icon class="poll-type"
@@ -40,6 +41,7 @@
         </ion-icon>
       </ion-buttons>
     </ion-item>
+-->
     <!--TODO: disable buttons and notify if due is in the past by now-->
     <ng-container *ngIf="can_share">
       <ion-item lines="none">

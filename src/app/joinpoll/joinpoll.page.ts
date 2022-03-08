@@ -77,9 +77,11 @@ export class JoinpollPage implements OnInit {
       this.p.db_password = this.db_password;
       this.p.password = this.poll_password;
       this.p.init_myvid();
-      this.G.D.connect_to_remote_poll_db(this.pid);
+      this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
+        // remote poll db has been replicated completely to local poll db
+        this.ready = true;
+      });
     }
-    this.ready = true;
     this.G.L.exit("JoinPage.onDataReady");
   }
 
