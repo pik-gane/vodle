@@ -123,7 +123,8 @@ export class PollService {
     this.ref_date = new Date();
   }
 
-  update_own_rating(pid:string, vid:string, oid:string, r:number) {
+  update_own_rating(pid: string, vid: string, oid: string, value: number) {
+    this.G.L.trace("PollService.update_own_rating", pid, vid, oid, value);
     let poll_rs_map = this.G.D.own_ratings_map_caches[pid];
     if (!poll_rs_map) {
       this.G.D.own_ratings_map_caches[pid] = poll_rs_map = new Map();
@@ -133,13 +134,13 @@ export class PollService {
       rs_map = new Map();
       poll_rs_map.set(oid, rs_map); 
     }
-    if (r != rs_map.get(vid)) {
+    if (value != rs_map.get(vid)) {
       if (pid in this.polls) {
         // let the poll object do the update:
-        this.polls[pid].update_own_rating(vid, oid, r);
+        this.polls[pid].update_own_rating(vid, oid, value);
       } else {
         // just store the new value:
-        rs_map.set(vid, r);
+        rs_map.set(vid, value);
       }
     }
   }
@@ -414,6 +415,8 @@ export class Poll {
     }
   }
 
+  ratings_have_changed = false;
+
   // OTHER HOOKS:
 
   set_db_credentials() {
@@ -499,6 +502,13 @@ export class Poll {
   init_myratings() {
     for (const oid in this.options) {
       this.set_myrating(oid, 0);
+    }
+  }
+
+  after_incoming_changes() {
+    if ((this.state == 'running') && (this.ratings_have_changed)) {
+      this.tally_all();
+      this.ratings_have_changed = false;
     }
   }
 
@@ -954,16 +964,23 @@ export class Poll {
     // Called whenever a rating is updated.
     // Updates the affected effective ratings based on delegation data.
     // if changed, update rating:
+    this.G.L.trace("Poll.update_own_rating", this.pid, vid, oid, value);
     if (!this.own_ratings_map.has(oid)) {
       this.own_ratings_map.set(oid, new Map());
       this.G.L.trace("Poll.update_own_rating first own rating for option", oid);
     }
     const rs_map = this.own_ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
+    this.G.L.trace("Poll.update_own_rating old rating:", this.pid, vid, oid, old_value);
     if (value != old_value) {
       // store new value:
       rs_map.set(vid, value);
+      this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
       // check whether vid has not delegated:
+      if (!this.direct_delegation_map.get(oid)) {
+        this.direct_delegation_map.set(oid, new Map());
+      }
       if (!this.direct_delegation_map.get(oid).has(vid)) {
+        this.G.L.trace("Poll.update_own_rating voter has not delegated", this.pid, vid, oid);
         // vid has not delegated this rating,
         // so update all dependent voters' effective ratings:
         this.update_proxy_rating(vid, oid, value);
@@ -983,6 +1000,7 @@ export class Poll {
     // Called whenever a proxy rating is updated.
     // Updates a rating and all depending quantities up to the final shares.
     // Tries to do this as efficiently as possible.
+    this.G.L.entry("Poll.update_proxy_rating", this.pid, vid, oid, value);
 
     // if necessary, register voter:
     let n_changed = false;

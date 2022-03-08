@@ -30,7 +30,7 @@ export class JoinpollPage implements OnInit {
     private route: ActivatedRoute,
     public translate: TranslateService,
     public G: GlobalService) {
-    this.G.L.entry("JoinPage.constructor");
+    this.G.L.entry("JoinpollPage.constructor");
     this.route.params.subscribe( params => { 
       this.db_server_url = params['db_server_url'];
       this.db_password = params['db_password'];
@@ -40,38 +40,38 @@ export class JoinpollPage implements OnInit {
   }
 
   ngOnInit() {
-    this.G.L.entry("JoinPage.ngOnInit");
+    this.G.L.entry("JoinpollPage.ngOnInit");
   }
 
   ionViewWillEnter() {
-    this.G.L.entry("JoinPage.ionViewWillEnter");
+    this.G.L.entry("JoinpollPage.ionViewWillEnter");
     this.G.D.page = this;
     // TODO: generate poll object and try connecting via data service
   }
 
   ionViewDidEnter() {
-    this.G.L.entry("JoinPage.ionViewDidEnter");
+    this.G.L.entry("JoinpollPage.ionViewDidEnter");
     if (this.G.D.ready) {
       this.onDataReady();
     }
-    this.G.L.debug("JoinPage.ready:", this.ready);
+    this.G.L.debug("JoinpollPage.ready:", this.ready);
     // TODO: either go to voting page directly or show some kind of welcome page?
   }
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
-    this.G.L.entry("JoinPage.onDataReady");
+    this.G.L.entry("JoinpollPage.onDataReady");
     if (this.pid in this.G.P.polls) {
       this.p = this.G.P.polls[this.pid];
       if (this.p.state == 'draft') {
-        this.G.L.warn("JoinPage called for draft poll, redirecting to mypolls page", this.pid);
+        this.G.L.warn("JoinpollPage called for draft poll, redirecting to mypolls page", this.pid);
         this.router.navigate(["/mypolls"]);
       } else {
-        this.G.L.info("JoinPage called for known poll, redirecting to polls page", this.pid);
+        this.G.L.info("JoinpollPage called for known poll, redirecting to polls page", this.pid);
         this.router.navigate(["/poll/" + this.pid]);
       }
     } else {
-      this.G.L.info("JoinPage called for unknown pid, trying to connect", this.pid);
+      this.G.L.info("JoinpollPage called for unknown pid, trying to connect", this.pid);
       this.p = new Poll(this.G, this.pid);
       this.p.db_server_url = this.db_server_url;
       this.p.db_password = this.db_password;
@@ -82,13 +82,13 @@ export class JoinpollPage implements OnInit {
         this.ready = true;
       });
     }
-    this.G.L.exit("JoinPage.onDataReady");
+    this.G.L.exit("JoinpollPage.onDataReady");
   }
 
   ionViewDidLeave() {
-    this.G.L.entry("JoinPage.ionViewDidLeave");
+    this.G.L.entry("JoinpollPage.ionViewDidLeave");
     this.G.D.save_state();
-    this.G.L.exit("JoinPage.ionViewDidLeave");
+    this.G.L.exit("JoinpollPage.ionViewDidLeave");
   }
 
   go_button_clicked() {

@@ -1003,21 +1003,23 @@ export class DataService implements OnDestroy {
 
             // connect again with private credentials:
             const conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
-            this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user");
+            this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user "+private_username);
 
             // ASYNC:
             // try to get info to see if credentials are valid:
             conn_as_private.info()
             .then(doc => { 
 
-              this.G.L.debug("DataService.get_remote_connection logged into "+server_url+" as new actual user. Info:", doc);
+              this.G.L.debug("DataService.get_remote_connection logged into "+server_url+" as new actual user "+private_username+". Info:", doc);
 
               // ASYNC:
               this.test_remote_connection(conn_as_private, private_username, private_password)
               .then(success => {
 
-              // RESOLVE:
-              resolve(conn_as_private);
+                this.G.L.trace("DataService.get_remote_connection has write access as "+private_username+". All looks fine.");
+
+                // RESOLVE:
+                resolve(conn_as_private);
 
               }).catch(err => {
 
@@ -1106,6 +1108,7 @@ export class DataService implements OnDestroy {
         }).catch(err => {
 
           reject(err);
+
         });
 
       });
@@ -2437,7 +2440,7 @@ export class DataService implements OnDestroy {
     } else {
       this.G.L.trace("DataService.test_sodium correctly refused wrong key");  
     }
-    this.G.L.exit("DataService.test_sodium waiting for sodium");
+    this.G.L.exit("DataService.test_sodium");
   }
 
   // SIGNING:

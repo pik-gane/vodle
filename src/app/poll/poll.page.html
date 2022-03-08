@@ -223,6 +223,21 @@
 
     <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index">
 
+      <!-- Possible alternative placement of expansion button, not preferred just now:
+      <ion-button 
+          (click)="expand(oidsorted[i])" 
+          fill="clear"
+          class="ion-no-padding ion-no-margin"
+          style="position:absolute; left:-4px; top:5px; z-index:1;">
+        <ion-icon 
+            [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+            size="small" class="ion-no-padding ion-no-margin" 
+            style="color:black; z-index:10;"
+            slot="icon-only">
+        </ion-icon>
+      </ion-button>
+      -->
+
       <!-- PIE CHART WITH WINNING PROBABILITY: -->
 
       <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px">
@@ -234,11 +249,11 @@
 
       <ion-grid class="ion-no-padding ion-no-margin">
 
-        <!-- OPTION NAME: -->
-
         <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;">
+
+          <!-- Button for expanding details: -->
+
           <ion-col size="auto" class="ion-no-padding ion-no-margin">
-            <!-- Button for expanding details: -->
             <ion-button 
                 (click)="expand(oidsorted[i])" 
                 fill="clear" style="position:relative; left:-5px; z-index:1;"
@@ -251,6 +266,9 @@
               </ion-icon><!--FIXME: improve consistent placement in various browsers-->
             </ion-button>
           </ion-col>
+
+          <!-- OPTION NAME: -->
+
           <ion-col class="ion-no-padding ion-no-margin">
             <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;">
               <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
