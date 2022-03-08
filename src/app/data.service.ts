@@ -241,8 +241,7 @@ export class DataService implements OnDestroy {
   private restored_poll_caches = false;
 
   // current page, used for notifying of changes method:
-  private _page; 
-  set page(page) { this._page = page; }
+  page: any;
 
   private loadingElement: HTMLIonLoadingElement;
 
@@ -853,7 +852,7 @@ export class DataService implements OnDestroy {
     this.G.L.info("DataService READY");
     this._ready = true;
     this.hide_loading();
-    if (this._page && this._page.onDataReady) this._page.onDataReady();
+    if (this.page && this.page.onDataReady) this.page.onDataReady();
     this.G.L.exit("DataService.local_user_docs2cache_finished");
   }
 
@@ -1503,7 +1502,7 @@ export class DataService implements OnDestroy {
     }
     if (local_changes) {
       this.after_changes();
-      if (this._page.onDataChange) this._page.onDataChange();
+      if (this.page.onDataChange) this.page.onDataChange();
     }
   }
 
@@ -1524,7 +1523,7 @@ export class DataService implements OnDestroy {
     }
     if (local_changes) {
       this.after_changes();
-      if (this._page.onDataChange) this._page.onDataChange();
+      if (this.page.onDataChange) this.page.onDataChange();
     }
   }
 
@@ -1611,6 +1610,11 @@ export class DataService implements OnDestroy {
           this.G.L.error("DataService.after_changes found an option for an unknown poll", pid, oid);
         }
       }
+    }
+
+    // notifty all running polls that they might need to tally:
+    for (const [pid, p] of Object.entries(this.G.P.polls)) {
+      p.after_incoming_changes();
     }
 
     this.save_state();

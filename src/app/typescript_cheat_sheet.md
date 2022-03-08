@@ -9,6 +9,7 @@ if (index in array)
 if (array.includes(value)) 
 for (const index in array)
 for (const value of array)
+array.sort((n1,n2)=>n1-n2) // otherwise numbers are sortes like strings!!
 
 ## Records (= Object!)
 

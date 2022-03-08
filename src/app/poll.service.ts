@@ -952,7 +952,12 @@ export class Poll {
       this.update_vote(vid, oidsdesc);
     }
 //    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
-    this.update_shares(oidsdesc);
+    if (this.update_shares(oidsdesc)) {
+      this.G.L.trace("Poll.tally_all pie charts need updating");
+      if (!!this.G.D.page && typeof this.G.D.page['show_stats'] === 'function') {
+        this.G.D.page.show_stats();
+      }
+    }
 //    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
 
     this.G.L.exit("Poll.tally_all", this._pid);
@@ -1229,9 +1234,13 @@ export class Poll {
         eff_rs_map.delete(vid);
       }
       // update ratings_ascending faster than by resorting:
-      const ratings_ascending_old = this.T.ratings_ascending_map.get(oid) || [];
+      const ratings_ascending_old = this.T.ratings_ascending_map.get(oid) || [...eff_rs_map.values()];
       const index = ratings_ascending_old.indexOf(old_value);
-      // remove old value:
+      // replace old value by new:
+      ratings_ascending_old[index] = value;
+      // repair ordering:
+      let ratings_ascending = ratings_ascending_old.sort((n1,n2)=>n1-n2);      
+/*      // remove old value:
       const rsasc_without = ratings_ascending_old.slice(0, index).concat(ratings_ascending_old.slice(index + 1));
       // insert new value at correct position:
       let ratings_ascending = rsasc_without;
@@ -1244,6 +1253,7 @@ export class Poll {
       if (ratings_ascending.length < this.T.n_not_abstaining) {
         ratings_ascending.push(value);
       }
+*/
       // store result back:
       this.T.ratings_ascending_map.set(oid, ratings_ascending);
 
@@ -1306,7 +1316,8 @@ export class Poll {
         }
       }
       if (svg_needs_update) {
-        if (this.G.D.page && this.G.D.page.has('show_stats')) {
+        this.G.L.trace("Poll.update_rating pie charts need updating");
+        if (!!this.G.D.page && typeof this.G.D.page['show_stats'] === 'function') {
           this.G.D.page.show_stats();
         }
       }
@@ -1315,7 +1326,7 @@ export class Poll {
 
   update_ratings_ascending(oid: string, eff_rs_map: Map<string, number>): Array<number> {
     // sort ratings ascending:
-    const eff_rs_asc_non0 = Array.from(eff_rs_map.values()).sort() as Array<number>;
+    const eff_rs_asc_non0 = Array.from(eff_rs_map.values()).sort((n1,n2)=>n1-n2) as Array<number>;
 //    this.G.L.trace("PollService.update_ratings_ascending", [...eff_rs_map.entries()], eff_rs_asc_non0, this.T.n_not_abstaining);
     // make sure array is correct length by padding with zeros:
     const eff_rs_asc = Array(this.T.n_not_abstaining - eff_rs_asc_non0.length).fill(0).concat(eff_rs_asc_non0);
@@ -1328,11 +1339,11 @@ export class Poll {
     let cutoff = 100;
     const cutoff_factor = 100 / this.T.n_not_abstaining;
     for (let index=0; index<this.T.n_not_abstaining; index++) {
-      const r = eff_rs_asc[index];
+      const rating = eff_rs_asc[index];
       // check whether strictly less than r percent have a rating strictly less than r:
       const pct_less_than_r = cutoff_factor * index;
-      if (pct_less_than_r < r) {
-        cutoff = r;
+      if (pct_less_than_r < rating) {
+        cutoff = rating;
         break;
       }
     }
@@ -1342,16 +1353,17 @@ export class Poll {
     // update approvals:
     let cutoff_changed = false,
         approvals_changed = false;
-    const aps_map = this.T.approvals_map.get(oid);
+    const approvals_map = this.T.approvals_map.get(oid);
     if (cutoff != this.T.cutoffs_map.get(oid)) {
       // cutoff has changed, so update all approvals:
+      this.T.cutoffs_map.set(oid, cutoff);
       cutoff_changed = true;
 //      this.G.L.trace("Poll.update_cutoff_and_approvals changed to", cutoff);
-      for (const vid2 of this.T.all_vids_set) {
-        const r2 = eff_rs_map.get(vid2) || 0,
-              ap = (r2 >= cutoff);
-        if (ap != aps_map.get(vid2)) {
-          aps_map.set(vid2, ap);
+      for (const vid of this.T.all_vids_set) {
+        const rating = eff_rs_map.get(vid) || 0,
+              approval = (rating >= cutoff);
+        if (approval != approvals_map.get(vid)) {
+          approvals_map.set(vid, approval);
           approvals_changed = true;  
         }
       }
@@ -1410,32 +1422,34 @@ export class Poll {
     let total_n_votes = 0,
         shares_changed = false;
     this.T.n_votes_map.set("", 0); 
-    for (const oid2 of oids_desc) {
-      this.T.n_votes_map.set(oid2, 0);
+    for (const oid of oids_desc) {
+      this.T.n_votes_map.set(oid, 0);
     }
-    for (const vid2 of this.T.all_vids_set) {
-      const vote = this.T.votes_map.get(vid2);
-      this.T.n_votes_map.set(vote, this.T.n_votes_map.get(vote) + 1);
+    for (const vid of this.T.all_vids_set) {
+      const vote = this.T.votes_map.get(vid) || '';
+      this.T.n_votes_map.set(vote, (this.T.n_votes_map.get(vote) || 0) + 1);
       if (vote != "") {
         total_n_votes++;
       }
     }
     if (total_n_votes > 0) {
       // shares are proportional to votes received:
-      for (const oid2 of oids_desc) {
-        const share = this.T.n_votes_map.get(oid2) / total_n_votes;
-        if (share != this.T.shares_map.get(oid2)) {
-          this.T.shares_map.set(oid2, share);
+      for (const oid of oids_desc) {
+        const share = (this.T.n_votes_map.get(oid) || 0) / total_n_votes;
+        if (share != this.T.shares_map.get(oid)) {
+          this.G.L.trace("PollPage.update_shares",this.pid, oid, share);
+          this.T.shares_map.set(oid, share);
           shares_changed = true;
         }
       }  
     } else {
       // all abstained, so shares are uniform:
       const k = oids_desc.length;
-      for (const oid2 of oids_desc) {
+      for (const oid of oids_desc) {
         const share = 1 / k;
-        if (share != this.T.shares_map.get(oid2)) {
-          this.T.shares_map.set(oid2, share);
+        if (share != this.T.shares_map.get(oid)) {
+          this.G.L.trace("PollPage.update_shares",this.pid, oid, share);
+          this.T.shares_map.set(oid, share);
           shares_changed = true;
         }
       }  

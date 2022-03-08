@@ -203,7 +203,8 @@ export class PollPage implements OnInit {
   }
 
   show_stats() { 
-    // update pies and bars, but not order!
+    /** update pies and bars, but not order! */
+    this.G.L.entry("PollPage.show_stats");
     let p = this.p, T = p.T, myvid = p.myvid, 
         approval_scores_map = T.approval_scores_map,
         shares_map = T.shares_map, approvals_map = T.approvals_map;
