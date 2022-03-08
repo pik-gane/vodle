@@ -125,22 +125,22 @@ export class PollService {
 
   update_own_rating(pid: string, vid: string, oid: string, value: number) {
     this.G.L.trace("PollService.update_own_rating", pid, vid, oid, value);
-    let poll_rs_map = this.G.D.own_ratings_map_caches[pid];
-    if (!poll_rs_map) {
-      this.G.D.own_ratings_map_caches[pid] = poll_rs_map = new Map();
+    let poll_ratings_map = this.G.D.own_ratings_map_caches[pid];
+    if (!poll_ratings_map) {
+      this.G.D.own_ratings_map_caches[pid] = poll_ratings_map = new Map();
     }
-    let rs_map = poll_rs_map.get(oid);
-    if (!rs_map) {
-      rs_map = new Map();
-      poll_rs_map.set(oid, rs_map); 
+    let this_ratings_map = poll_ratings_map.get(oid);
+    if (!this_ratings_map) {
+      this_ratings_map = new Map();
+      poll_ratings_map.set(oid, this_ratings_map); 
     }
-    if (value != rs_map.get(vid)) {
+    if (value != this_ratings_map.get(vid)) {
       if (pid in this.polls) {
         // let the poll object do the update:
         this.polls[pid].update_own_rating(vid, oid, value);
       } else {
         // just store the new value:
-        rs_map.set(vid, value);
+        this_ratings_map.set(vid, value);
       }
     }
   }
@@ -374,11 +374,11 @@ export class Poll {
     if (!this.own_ratings_map.has(oid)) {
       this.own_ratings_map.set(oid, new Map());
     }
-    const rs_map = this.own_ratings_map.get(oid);
-    if (!rs_map.has(this.myvid)) {
-      rs_map.set(this.myvid, 0);
+    const ratings_map = this.own_ratings_map.get(oid);
+    if (!ratings_map.has(this.myvid)) {
+      ratings_map.set(this.myvid, 0);
     }
-    return rs_map.get(this.myvid);
+    return ratings_map.get(this.myvid);
   }
 
   set_myrating(oid: string, value: number, store: boolean=true) {
@@ -786,7 +786,7 @@ export class Poll {
       }
 
       // update EFFECTIVE delegations, inverses, and proxy ratings: 
-      const new_proxy_rating = this.own_ratings_map.get(oid).get(new_eff_d_vid);
+      const new_proxy_rating = this.own_ratings_map.get(oid).get(new_eff_d_vid) || 0;
       if (!inv_eff_d_map.has(new_eff_d_vid)) {
         inv_eff_d_map.set(new_eff_d_vid, new Set());
       }
@@ -796,12 +796,13 @@ export class Poll {
       inv_eff_ds_of_new_eff_d.add(client_vid);
       this.update_proxy_rating(client_vid, oid, new_proxy_rating);
       // dependent voters:
-      for (const vid of inv_eff_ds_of_client) {
-        eff_d_map.set(vid, new_eff_d_vid);
-        inv_eff_ds_of_new_eff_d.add(vid);
-        this.update_proxy_rating(vid, oid, new_proxy_rating);
-      }  
-
+      if (inv_eff_ds_of_client) {
+        for (const vid of inv_eff_ds_of_client) {
+          eff_d_map.set(vid, new_eff_d_vid);
+          inv_eff_ds_of_new_eff_d.add(vid);
+          this.update_proxy_rating(vid, oid, new_proxy_rating);
+        }  
+      }
       return true;
     }
   }
@@ -847,7 +848,7 @@ export class Poll {
       }
 
       // deregister EFFECTIVE delegation and inverse of vid and reset proxy rating to own rating:
-      const new_proxy_rating = this.own_ratings_map.get(oid).get(client_vid);
+      const new_proxy_rating = this.own_ratings_map.get(oid).get(client_vid) || 0;
       eff_d_map.delete(client_vid);
       inv_eff_ds_of_old_eff_d_of_client.delete(client_vid);
       this.update_proxy_rating(client_vid, oid, new_proxy_rating);
