@@ -198,6 +198,14 @@ export class DelegationService {
     cache.set(did, [from, url, status]); 
   }
 
+  update_incoming_request_status(pid: string, did: string, status: string) {
+    const cache = this.G.D.incoming_dids_caches[pid],
+          [from, url, old_status] = cache.get(did);
+    if (status != old_status) {
+      this.store_incoming_request(pid, did, from, url, status);
+    }
+  }
+
   accept(pid: string, did: string, private_key: string) {
     /** accept a delegation request, store response in db */
     const response = {option_spec: {type: "-", oids: []}} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
@@ -260,7 +268,8 @@ export class DelegationService {
     this.G.D.setv(pid, "del_response." + did, value as string);
     const a = this.get_agreement(pid, did);
     a.delegate_vid = this.G.P.polls[pid].myvid;
-    this.update_agreement(pid, did, null, null, value);
+    this.update_agreement(pid, did, a, null, value);
+    this.update_incoming_request_status(pid, did, a.status);
   }
 
   get_agreement(pid: string, did: string): del_agreement_t {
