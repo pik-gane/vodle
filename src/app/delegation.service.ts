@@ -107,7 +107,7 @@ export class DelegationService {
           const request = this.get_request(pid, did);
           const ospec = request.option_spec;
           if (ospec.type == "+") {
-            if(ospec.oids.includes(oid)) {
+            if(!ospec.oids.includes(oid)) {
               ospec.oids.push(oid);
             }
           } else {
@@ -127,7 +127,7 @@ export class DelegationService {
           const request = this.get_request(pid, did);
           const ospec = request.option_spec;
           if (ospec.type == "-") {
-            if(ospec.oids.includes(oid)) {
+            if(!ospec.oids.includes(oid)) {
               ospec.oids.push(oid);
             }
           } else {
@@ -429,9 +429,9 @@ export class DelegationService {
             }
           }
         } else if (request.option_spec.type == "-") {
-          // oids specifies NOT accepted options
+          // request.option_spec.oids specifies NOT requested options
           for (const oid of a.active_oids) {
-            if (response.option_spec.oids.includes(oid) || !a.accepted_oids.has(oid)) {
+            if (request.option_spec.oids.includes(oid) || !a.accepted_oids.has(oid)) {
               // oid no longer active:
               a.active_oids.delete(oid);
               p.del_delegation(a.client_vid, oid);
@@ -439,7 +439,7 @@ export class DelegationService {
             }
           }
           for (const oid of a.accepted_oids) {
-            if ((!a.active_oids.has(oid)) && (!response.option_spec.oids.includes(oid))) {
+            if ((!a.active_oids.has(oid)) && (!request.option_spec.oids.includes(oid))) {
               // oid newly active:
               if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
                 a.active_oids.add(oid);
@@ -486,7 +486,7 @@ export class DelegationService {
       }
     }
 
-    this.G.L.exit("DelegationService.update_agreement", a.status, a.accepted_oids);
+    this.G.L.exit("DelegationService.update_agreement", a.status, [...a.accepted_oids], [...a.active_oids]);
   }
 
   response_signed_incorrectly(request: del_request_t, signed_response: del_signed_response_t) {
