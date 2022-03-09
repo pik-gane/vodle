@@ -1,4 +1,4 @@
-import { Component, OnInit, NgZone, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, IonContent } from '@ionic/angular';
@@ -56,13 +56,13 @@ export class PollPage implements OnInit {
   ready = false;  
 
   constructor(
+      private changeDetector: ChangeDetectorRef,
       private router: Router,
       private route: ActivatedRoute,
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
       private popover: PopoverController,
       public translate: TranslateService,
-      private zone: NgZone,
       public G: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
       this.zone.run(() => {
@@ -128,6 +128,7 @@ export class PollPage implements OnInit {
     this.p.tally_all();
     this.update_order();
     this.update_delegation_info();
+    this.changeDetector.detectChanges();
   }
 
   update_delegation_info() {

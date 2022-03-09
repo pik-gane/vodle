@@ -870,6 +870,9 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
+      // first store due in polldb so that it can be used for the other items:
+      this._setp_in_polldb(pid, 'due', p.due.toISOString());
+
       // move data from local user db to poll db.
       for (const [ukey, value] of Object.entries(this.user_cache)) {
         if (ukey.startsWith(prefix)) {
@@ -878,7 +881,6 @@ export class DataService implements OnDestroy {
                 pos = (key+'.').indexOf('.'),
                 subkey = (key+'.').slice(0, pos);
           if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
-            // FIXME: some entries now need the due to be added for validation!
             if (this._setp_in_polldb(pid, key, value as string)) {
               this.delu(ukey);
             } else {

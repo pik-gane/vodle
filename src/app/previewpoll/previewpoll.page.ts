@@ -99,6 +99,4 @@ export class PreviewpollPage implements OnInit {
     this.G.L.exit("PreviewpollPage.publish_button_clicked");
   }
 
-
-  // OTHER:
 }

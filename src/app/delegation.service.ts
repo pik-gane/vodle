@@ -99,14 +99,17 @@ export class DelegationService {
       } else if (activate) {
         if (a.active_oids.has(oid)) {
           this.G.L.warn("DelegationService.update_my_delegation oid already active", pid, oid, did);
-        } else {
+        } 
+        if (true) {
           // activate
           a.accepted_oids.add(oid);
           // update request data and store it in db:
           const request = this.get_request(pid, did);
           const ospec = request.option_spec;
           if (ospec.type == "+") {
-            ospec.oids.push(oid);
+            if(ospec.oids.includes(oid)) {
+              ospec.oids.push(oid);
+            }
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
@@ -124,7 +127,9 @@ export class DelegationService {
           const request = this.get_request(pid, did);
           const ospec = request.option_spec;
           if (ospec.type == "-") {
-            ospec.oids.push(oid);
+            if(ospec.oids.includes(oid)) {
+              ospec.oids.push(oid);
+            }
           } else {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
@@ -360,7 +365,7 @@ export class DelegationService {
         if (response.option_spec.type == "+") {
           // oids specifies accepted options
           for (const oid of a.accepted_oids) {
-            if (!(oid in response.option_spec.oids)) {
+            if (!response.option_spec.oids.includes(oid)) {
               // oid no longer accepted:
               a.accepted_oids.delete(oid);
               this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
@@ -378,7 +383,7 @@ export class DelegationService {
         } else if (response.option_spec.type == "-") {
           // oids specifies NOT accepted options
           for (const oid of a.accepted_oids) {
-            if (oid in response.option_spec.oids) {
+            if (response.option_spec.oids.includes(oid)) {
               // oid no longer accepted:
               a.accepted_oids.delete(oid);
               this.G.L.trace("DelegationService.update_agreement revoked oid", pid, oid);
@@ -386,7 +391,7 @@ export class DelegationService {
             }
           }
           for (const oid of p.oids) {
-            if ((!a.accepted_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
+            if ((!a.accepted_oids.has(oid)) && (!response.option_spec.oids.includes(oid))) {
               // oid newly accepted:
               a.accepted_oids.add(oid);
               this.G.L.trace("DelegationService.update_agreement added oid", pid, oid);
@@ -405,7 +410,7 @@ export class DelegationService {
         if (request.option_spec.type == "+") {
           // oids specifies accepted options
           for (const oid of a.active_oids) {
-            if (!(a.accepted_oids.has(oid) && (oid in request.option_spec.oids))) {
+            if (!(a.accepted_oids.has(oid) && request.option_spec.oids.includes(oid))) {
               // oid no longer active:
               a.active_oids.delete(oid);
               p.del_delegation(a.client_vid, oid);
@@ -426,7 +431,7 @@ export class DelegationService {
         } else if (request.option_spec.type == "-") {
           // oids specifies NOT accepted options
           for (const oid of a.active_oids) {
-            if ((oid in response.option_spec.oids) || !a.accepted_oids.has(oid)) {
+            if (response.option_spec.oids.includes(oid) || !a.accepted_oids.has(oid)) {
               // oid no longer active:
               a.active_oids.delete(oid);
               p.del_delegation(a.client_vid, oid);
@@ -434,7 +439,7 @@ export class DelegationService {
             }
           }
           for (const oid of a.accepted_oids) {
-            if ((!a.active_oids.has(oid)) && (!(oid in response.option_spec.oids))) {
+            if ((!a.active_oids.has(oid)) && (!response.option_spec.oids.includes(oid))) {
               // oid newly active:
               if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
                 a.active_oids.add(oid);

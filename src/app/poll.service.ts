@@ -724,8 +724,13 @@ export class Poll {
     // make sure no delegation exists yet and delegation would not create a cycle:
     if (dir_d_map.has(client_vid)) {
 
-      this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
-      return false;
+      if (dir_d_map.get(client_vid) == delegate_vid) {
+        this.G.L.warn("PollService.add_delegation of existing delegation", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
+        return true;
+      } else {
+        this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
+        return false;  
+      }
 
     } else if (new_eff_d_vid == client_vid) { 
 
