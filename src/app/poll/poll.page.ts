@@ -116,7 +116,18 @@ export class PollPage implements OnInit {
     this.update_order();
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
-      this.rate_yourself_toggle[oid] = false;
+      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
+      if (!did) {
+        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      }
+      if (did) {
+        const a = this.G.Del.get_agreement(this.pid, did);
+        this.G.L.trace("PollPage found did, agreement", oid, did, a, [...a.accepted_oids], [...a.active_oids]);
+        this.rate_yourself_toggle[oid] = !a.active_oids.has(oid);
+      } else {
+        this.G.L.trace("PollPage found no did for", oid);
+        this.rate_yourself_toggle[oid] = true;
+      }
     }
     this.on_delegate_toggle_change();
     window.setTimeout(this.show_stats.bind(this), 100);
