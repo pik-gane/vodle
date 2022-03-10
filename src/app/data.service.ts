@@ -296,10 +296,14 @@ export class DataService implements OnDestroy {
   // LYFECYCLE:
 
   private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
+
   private _ready: boolean = false;
   get ready() { return this._ready; }
+
   private _loading: boolean = false;
   get loading() { return this._loading; }
+
+  private need_poll_db_replication: Record<string, boolean> = {};
 
   constructor(
       private router: Router,
@@ -410,25 +414,29 @@ export class DataService implements OnDestroy {
     // restore state from storage:
     this.storage.get('state')
     .then((state) => {
-      G.L.debug('DataService got state from storage');
-      for (const a of state_attributes) {
-        if ((a in state) && (state[a] != undefined)) {
-          this[a] = state[a];
-          G.L.trace("DataService restored attribute", a, "from storage");
-        } else {
-          G.L.warn("DataService couldn't find attribute", a, "in storage");
+      if (!!state) {
+        G.L.debug('DataService got state from storage');
+        for (const a of state_attributes) {
+          if ((a in state) && (state[a] != undefined)) {
+            this[a] = state[a];
+            G.L.trace("DataService restored attribute", a, "from storage");
+          } else {
+            G.L.warn("DataService couldn't find attribute", a, "in storage");
+          }
         }
-      }
-      if ('user_cache' in state) {
-        this.restored_user_cache = true;
-      }
-      if (('_pids' in state) && ('poll_caches' in state)) {
-        this.restored_poll_caches = true;
-      }
-      this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
-      this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
-      for (const pid in this._pid_oids) {
-        this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid  ]]);
+        if ('user_cache' in state) {
+          this.restored_user_cache = true;
+        }
+        if (('_pids' in state) && ('poll_caches' in state)) {
+          this.restored_poll_caches = true;
+        }
+        this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
+        this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
+        for (const pid in this._pid_oids) {
+          this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid]]);
+        }  
+      } else {
+        G.L.warn('DataService could not get state from storage (empty)', state);
       }
     }).catch((error) => {
       G.L.warn('DataService could not get state from storage:', error);
@@ -677,6 +685,7 @@ export class DataService implements OnDestroy {
     if (!(pid in this.local_poll_dbs)) {
       this.local_poll_dbs[pid] = new PouchDB('local_poll_'+pid, {auto_compaction: true});
       this.G.L.info("DataService.get_local_poll_db new poll db", pid, this.local_poll_dbs[pid]);
+      this.need_poll_db_replication[pid] = true;
     } 
     return this.local_poll_dbs[pid];
   }
@@ -738,7 +747,7 @@ export class DataService implements OnDestroy {
 
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
     // called at poll initialization or when joining a poll
-    this.G.L.entry("DataService.connect_to_remote_poll_db", pid);
+    this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication);
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
     const poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
@@ -778,6 +787,8 @@ export class DataService implements OnDestroy {
 
           }).on('complete', function () {
 
+            this.need_poll_db_replication[pid] = false;
+            
             // now start synchronisation asynchronously:
             this.start_poll_sync.bind(this)(pid);
     
@@ -1580,7 +1591,7 @@ export class DataService implements OnDestroy {
 
           // ASYNC:
           // connect to remote and start sync:
-          this.connect_to_remote_poll_db(pid)
+          this.connect_to_remote_poll_db(pid, this.need_poll_db_replication[pid] || false)
           .catch(err => {
 
             this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);

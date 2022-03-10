@@ -21,7 +21,7 @@
 
       <!-- DELEGATE BUTTON: -->
 
-      <ion-button 
+      <ion-button *ngIf="!delegate"
           (click)="delegate_dialog()" 
           shape="round" fill="solid" color="primary" size="large">
         <span 
@@ -30,7 +30,6 @@
           src="assets/icon/delegate-simple.svg">
         </ion-icon>
       </ion-button>
-      <!--TODO: if delegation is on, show a menu instead with: revoke delegation, change delegate-->
 
     </ion-buttons>
   </ion-toolbar>
@@ -180,7 +179,7 @@
         <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
 
           <!-- Info about how many ratings the delegate controls: -->
-          
+
           <ion-col class="ion-no-margin ion-padding-right">
             <small>
               <p>
