@@ -161,22 +161,36 @@ export class DelegationService {
           var possible;
           const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
                 effdelmap = this.G.D.effective_delegation_map_caches[pid],
+                inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
                 myvid = p.myvid,
                 client_vid = agreement.client_vid;
-          let two_way = false, cycle = false;
+          let two_way = false, cycle = false, weight_exceeded = false;
           for (let oid of p.oids) {
-            if (dirdelmap.get(oid).get(myvid) == client_vid) {
+            if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
               two_way = true;
               break;
-            } else if (effdelmap.get(oid).get(myvid) == client_vid) {
-              cycle = true;
-              break;
+            } else {
+              const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
+              if (effdel_vid == client_vid) {
+                cycle = true;
+                break;
+              } else {
+                const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
+                if ((thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
+                    + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
+                    > environment.delegation.max_weight) {
+                  weight_exceeded = true;
+                }
+                break;
+              }
             }
           }
           if (two_way) {
             possible = "two-way";
           } else if (cycle) {
             possible = "cycle";
+          } else if (weight_exceeded) {
+            possible = "weight-exceeded";
           } else {
             possible = "possible";
           }

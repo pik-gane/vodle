@@ -19,6 +19,9 @@ export const environment = {
     did_length: 16,
     nid_length: 8
   },
+  delegation: {
+    max_weight: 10
+  },
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",

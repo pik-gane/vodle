@@ -73,7 +73,7 @@ export class LogoutPage implements OnInit {
           role: 'ok', 
           handler: () => {
             this.G.L.trace('LogoutPage.confirm_dialog logout');
-            // TODO: clear all local storage:
+            // clear all local storage:
             this.G.D.clear_all_local().then(() => {
               // now reload page, which will reinit the app and redirect us to the login page
               // (at least in browsers – what about native apps?):

@@ -112,6 +112,11 @@
         "cycle-details": "Andernfalls ergäbe dies einen Delegierungs-Kreis, und vodle wüsste nicht, wessen Bewertungen verwendet werden sollen.",
         "cycle-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
 
+        "weight-exceeded-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>„{{poll_title}}“.</i>",
+        "weight-exceeded-intro": "Allerdings würde das Dir oder der Person, an die Du selbst delegiert hast, ein Stimmgewicht geben, das größer ist als das Maximum {{limit}}. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
+        "weight-exceeded-details": "Anderenfalls würdest Du oder dein:e Delegierte:r zu mächtig in dieser Abstimmung werden.",
+        "weight-exceeded-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, eine andere Bitte um Delegation, der Du bereits zugestimmt hast, doch abzulehnen oder Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
+
         "accepted-header": "Du hast dieser Bitte von {{from}} zugestimmt.",
         "accepted-intro": "Deine Bewertungen kontrollieren also momentan die Bewertungen dieser Person in der Abstimmung <i>„{{poll_title}}“.</i>",
         "accepted-details": "Wenn Du Deine Zustimmung widerrufen möchtest, kannst Du dies tun. Solange die andere Person ihre Bitte nicht zurückzieht, kannst Du ihr auch später wieder zustimmen.",

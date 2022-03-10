@@ -119,6 +119,41 @@
       </ion-col>
     </ion-item>
   </ng-container>
+  <ng-container *ngIf="status=='weight-exceeded'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b [innerHtml]="'delrespond.weight-exceeded-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
+        <p [innerHtml]="'delrespond.weight-exceeded-intro:{from:from,limit:environment.delegation.max_weight}'|translate"></p> 
+        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'delrespond.weight-exceeded-revoke-first'|translate"></p>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <ion-button size="large" color="warning"
+            shape="round"
+            (click)="decline()">
+          <ion-icon name="ban"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.decline'|translate"></span>
+        </ion-button>&nbsp;&nbsp;
+        <ion-button size="large" color="primary" disabled="true"
+            shape="round"
+            (click)="accept()">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.accept'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+  </ng-container>
 
   <ng-container *ngIf="status=='accepted'">
     <ion-item lines="none" class="ion-text-center">
