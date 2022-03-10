@@ -769,6 +769,7 @@ export class DataService implements OnDestroy {
   
           // replicate once and wait for it to finish:
 
+          this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           db.replicate.from(this.remote_poll_dbs[pid], {
               retry: true,
               include_docs: true,
@@ -782,13 +783,17 @@ export class DataService implements OnDestroy {
               )
           }).on('change', change => {
 
+            this.G.L.trace("DataService.connect_to_remote_poll_db one-time replication received change", change);
+
             // process incoming docs:
             this.handle_poll_db_change.bind(this)(pid, change);
 
           }).on('complete', function () {
 
+            this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
+
             this.need_poll_db_replication[pid] = false;
-            
+
             // now start synchronisation asynchronously:
             this.start_poll_sync.bind(this)(pid);
     
@@ -803,7 +808,7 @@ export class DataService implements OnDestroy {
             reject(err);
   
           });
-          
+          this.G.L.trace("DataService.connect_to_remote_poll_db started one-time replication", pid);
   
         }).catch(err => {
   
@@ -937,8 +942,8 @@ export class DataService implements OnDestroy {
 
   // REMOTE CONNECTION METHODS:
 
-  private get_remote_connection(server_url:string, public_password:string,
-                                private_username:string, private_password:string
+  private get_remote_connection(server_url:string, user_vodle_password:string,
+                                actual_db_username:string, actual_db_user_password:string
                                 ): Promise<PouchDB> {
     // TODO: check network reachability!
     /* 
@@ -948,7 +953,7 @@ export class DataService implements OnDestroy {
     if necessary, generate it in the db, then connect again as this user,
     finally try creating/updating a timestamp file.
     */ 
-    this.G.L.entry("DataService.get_remote_connection", server_url, public_password, private_username, private_password);
+    this.G.L.entry("DataService.get_remote_connection", server_url, user_vodle_password, actual_db_username, actual_db_user_password);
     // since all this may take some time,
     // make clear we are working:
     this.show_loading();
@@ -957,38 +962,38 @@ export class DataService implements OnDestroy {
     const promise = new Promise((resolve, reject) => {
 
       // first connect to database "_users" with public credentials:
-      const conn_as_public = this.get_couchdb(server_url+"/_users", "vodle", public_password);
+      const conn_as_user_vodle = this.get_couchdb(server_url+"/_users", "vodle", user_vodle_password);
 
       // ASYNC:
       // try to get info to see if credentials are valid:
       this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/_users as user vodle");
-      conn_as_public.info()
+      conn_as_user_vodle.info()
       .then(doc => { 
 
         this.G.L.debug("DataService logged into "+server_url+"/_users as user 'vodle'. Info:", doc);
 
         // then connect to database "vodle" with private credentials:
-        const conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
+        const conn_as_actual_user = this.get_couchdb(server_url+"/vodle", actual_db_username, actual_db_user_password);
 
         // ASYNC:
         // try to get info to see if credentials are valid:
-        this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user "+private_username);
-        conn_as_private.info()
+        this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user "+actual_db_username);
+        conn_as_actual_user.info()
         .then(doc => { 
 
           this.G.L.debug("DataService logged into "+server_url+" as actual user. Info:", doc);
 
           // ASYNC:
-          this.test_remote_connection(conn_as_private, private_username, private_password)
+          this.test_remote_connection(conn_as_actual_user, actual_db_username, actual_db_user_password)
           .then(success => {
 
             // RESOLVE:
-            resolve(conn_as_private);
+            resolve(conn_as_actual_user);
 
           }).catch(err => {
 
             // Since we could log in but not write, the db must be configured wrong:
-            this.G.L.error("DataService.get_remote_connection could not write in database "+server_url+"/vodle as user "+private_username+ ". Please contact the database server admin!", err);
+            this.G.L.error("DataService.get_remote_connection could not write in database "+server_url+"/vodle as user "+actual_db_username+ ". Please contact the database server admin!", err);
 
             // REJECT:
             reject(["write failed", err]);
@@ -998,45 +1003,45 @@ export class DataService implements OnDestroy {
         }).catch(err => {
 
           this.G.L.debug("DataService.get_remote_connection could not log into "+server_url+"/vodle as actual user:", err);
-          this.G.L.info("DataService.get_remote_connection: logging in for the first time as this user? Trying to register user "+private_username+" in database.");
+          this.G.L.info("DataService.get_remote_connection: logging in for the first time as this user? Trying to register user "+actual_db_username+" in database.");
 
           // ASYNC:
           // try to generate new user:
-          conn_as_public.put({ 
-            _id: "org.couchdb.user:"+private_username,
-            name: private_username, 
-            password: private_password,
+          conn_as_user_vodle.put({ 
+            _id: "org.couchdb.user:"+actual_db_username,
+            name: actual_db_username, 
+            password: actual_db_user_password,
             type: "user",
             roles: [],
             comment: "user generated by vodle"
           }).then(response => {
 
-            this.G.L.debug("DataService.get_remote_connection generated user "+private_username);
+            this.G.L.debug("DataService.get_remote_connection generated user "+actual_db_username);
 
             // connect again with private credentials:
-            const conn_as_private = this.get_couchdb(server_url+"/vodle", private_username, private_password);
-            this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user "+private_username);
+            const conn_as_actual_user = this.get_couchdb(server_url+"/vodle", actual_db_username, actual_db_user_password);
+            this.G.L.debug("DataService.get_remote_connection trying to get info for "+server_url+"/vodle as actual user "+actual_db_username);
 
             // ASYNC:
             // try to get info to see if credentials are valid:
-            conn_as_private.info()
+            conn_as_actual_user.info()
             .then(doc => { 
 
-              this.G.L.debug("DataService.get_remote_connection logged into "+server_url+" as new actual user "+private_username+". Info:", doc);
+              this.G.L.debug("DataService.get_remote_connection logged into "+server_url+" as new actual user "+actual_db_username+". Info:", doc);
 
               // ASYNC:
-              this.test_remote_connection(conn_as_private, private_username, private_password)
+              this.test_remote_connection(conn_as_actual_user, actual_db_username, actual_db_user_password)
               .then(success => {
 
-                this.G.L.trace("DataService.get_remote_connection has write access as "+private_username+". All looks fine.");
+                this.G.L.trace("DataService.get_remote_connection has write access as "+actual_db_username+". All looks fine.");
 
                 // RESOLVE:
-                resolve(conn_as_private);
+                resolve(conn_as_actual_user);
 
               }).catch(err => {
 
                 // Since we could log in but not write, the db must be configured wrong, so notify user of this:
-                this.G.L.error("DataService could not write in database "+server_url+"/vodle as new user "+private_username+ ". Please contact the database server admin!", err);
+                this.G.L.error("DataService could not write in database "+server_url+"/vodle as new user "+actual_db_username+ ". Please contact the database server admin!", err);
 
                 // REJECT:
                 reject(["write failed", err]);
@@ -1052,7 +1057,7 @@ export class DataService implements OnDestroy {
           
           }).catch(err => {
 
-            this.G.L.error("DataService.get_remote_connection could not generate user "+private_username, err);
+            this.G.L.error("DataService.get_remote_connection could not generate user "+actual_db_username, err);
 
             // REJECT:
             reject(["generate user failed", err]);

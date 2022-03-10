@@ -79,6 +79,20 @@ export class DelegationService {
     this.get_delegation_agreements_cache(pid).set(did, agreement);
   }
 
+  get_potential_effective_delegate(pid: string, oid: string): string {
+    /** get the vid of the potential effective delegate when delegation was activated
+     * while it actually isn't.
+     */
+    let did = this.get_my_outgoing_dids_cache(pid).get(oid);
+    if (!did) {
+      did = this.get_my_outgoing_dids_cache(pid).get("*");
+    }
+    if (!did) { return null; }
+    const a = (this.get_delegation_agreements_cache(pid)||new Map()).get(did);
+    if (!a || !a.delegate_vid) { return null; }
+    return a.delegate_vid;
+  }
+
   update_my_delegation(pid: string, oid: string, activate: boolean) {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */

@@ -116,22 +116,10 @@ export class PollPage implements OnInit {
     this.update_order();
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
-      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
-      if (!did) {
-        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
-      }
-      if (did) {
-        const a = this.G.Del.get_agreement(this.pid, did);
-        this.G.L.trace("PollPage found did, agreement", oid, did, a, [...a.accepted_oids], [...a.active_oids]);
-        this.rate_yourself_toggle[oid] = !a.active_oids.has(oid);
-      } else {
-        this.G.L.trace("PollPage found no did for", oid);
-        this.rate_yourself_toggle[oid] = true;
-      }
     }
-    this.on_delegate_toggle_change();
     window.setTimeout(this.show_stats.bind(this), 100);
     this.update_delegation_info();
+    this.on_delegate_toggle_change();
     this.G.L.exit("PollPage.onDataReady");
   }
 
@@ -151,7 +139,7 @@ export class PollPage implements OnInit {
     this.declined_requests = [];
     if (cache) {
       for (let [did, [from, url, status]] of cache) {
-        if (status == 'accepted') {
+        if (status == 'agreed') {
           this.accepted_requests.push({from:from, url:url});
         } else if (status.startsWith('declined')) {
           this.declined_requests.push({from:from, url:url});
@@ -167,9 +155,28 @@ export class PollPage implements OnInit {
       if (agreement.status == "agreed") {
         this.delegate = this.G.Del.get_nickname(this.pid, did);
         this.G.L.trace("PollPage.update_delegation_info delegate", this.delegate);
+      } else {
+        this.delegate = null;
       }
     }
+    this.update_delegation_toggles();
+  }
 
+  update_delegation_toggles() {
+    for (let oid of this.oidsorted) {
+      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
+      if (!did) {
+        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      }
+      if (did) {
+        const a = this.G.Del.get_agreement(this.pid, did);
+        this.G.L.trace("PollPage found did, agreement", oid, did, a, [...a.accepted_oids], [...a.active_oids]);
+        this.rate_yourself_toggle[oid] = !a.active_oids.has(oid);
+      } else {
+        this.G.L.trace("PollPage found no did for", oid);
+        this.rate_yourself_toggle[oid] = true;
+      }
+    }
   }
 
   ionViewWillLeave() {
@@ -217,13 +224,13 @@ export class PollPage implements OnInit {
   show_stats() { 
     /** update pies and bars, but not order! */
     this.G.L.entry("PollPage.show_stats");
-    let p = this.p, T = p.T, myvid = p.myvid, 
+    const p = this.p, T = p.T, myvid = p.myvid, 
         approval_scores_map = T.approval_scores_map,
         shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
-    for (let oid of p.oids) {
+    for (const oid of p.oids) {
       // FIXME: bar and pie are sometimes null here, but not when running the getElementById in the console. why?
-      let approval_score = approval_scores_map.get(oid),
+      const approval_score = approval_scores_map.get(oid),
           share = shares_map.get(oid),
           bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
           pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
@@ -248,6 +255,23 @@ export class PollPage implements OnInit {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, p.get_myrating(oid));
+      if (this.rate_yourself_toggle[oid]) {
+        // update dashed needle showing delegate's rating
+        const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
+              knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
+              delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
+        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
+        if (delegate_vid) {
+          const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          this.G.L.trace("PollPage.show_stats rating", rating);
+          if (needle) {
+            needle.x2.baseVal.valueAsString = (rating).toString() + '%';
+          }
+          if (knob) {
+            knob.cx.baseVal.valueAsString = (rating).toString() + '%';
+          }    
+        }
+      }
     }
   }
 
