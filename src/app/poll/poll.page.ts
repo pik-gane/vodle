@@ -182,7 +182,9 @@ export class PollPage implements OnInit {
   ionViewWillLeave() {
     // make sure current slider values are really stored in database:
     for (let oid of this.oidsorted) {
-      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+      if (!this.delegate || this.rate_yourself_toggle[oid]) {
+        this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+      }
     }
   }
 
@@ -207,8 +209,11 @@ export class PollPage implements OnInit {
   }
 
   on_rate_yourself_toggle_change(oid:string) {
+//    const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
     // update delegation data:
     this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    // update slider value:
+//    this.get_slider(oid).value = new_rating.toString();
     this.on_delegate_toggle_change();
   }
 
@@ -343,7 +348,9 @@ export class PollPage implements OnInit {
   }
 
   apply_sliders_rating(oid: string) {
-    this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
+    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
+    }
 //    this.G.D.save_state();
     this.show_stats();
   }
@@ -362,7 +369,9 @@ export class PollPage implements OnInit {
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.trace("PollPage.rating_change_ended");
     this.update_order();
-    this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+    }
     this.G.D.save_state();
   }
 
