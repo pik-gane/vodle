@@ -434,7 +434,7 @@ export class PollPage implements OnInit {
   }
 
   // only here for debugging purposes:
-  close_poll() {
+  simulate_closing() {
     if (confirm("really close the poll?")) {
 //      this.p.close();
 //      this.router.navigate(["/closedpoll"]);
@@ -446,6 +446,7 @@ export class PollPage implements OnInit {
         component: DelegationDialogPage, 
         translucent: true,
         showBackdrop: true,
+        // TODO: avoid vertical misplacement
 //        align: "center",
 //        cssClass: 'kebap',
         componentProps: {parent: this}
@@ -455,7 +456,32 @@ export class PollPage implements OnInit {
       })
   }
 
-/*
+  async revoke_delegation_dialog() { 
+    const confirm = await this.alertCtrl.create({ 
+      message: this.translate.instant(
+        'poll.revoke_delegation', {nickname: this.delegate}), 
+      buttons: [
+        { 
+          text: this.translate.instant('cancel'), 
+          role: 'Cancel',
+          handler: () => { 
+            console.log('Confirm Cancel.');  
+          } 
+        },
+        { 
+          text: this.translate.instant('OK'),
+          role: 'Ok', 
+          handler: () => {
+            this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"));
+            this.delegate = null;
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  } 
+
+  /*
   async OLD_delegate_dialog(nickname=null, invalid=false) { 
     const dialog = await this.alertCtrl.create({ 
       header: this.translate.instant('poll.delegate-header'), 

@@ -1411,6 +1411,24 @@ export class DataService implements OnDestroy {
     }
   }
 
+  delv(pid:string, key:string) {
+    // delete a voter data item
+    if (voter_keys_in_user_db.includes(key)) {
+      const ukey = get_poll_key_prefix(pid) + key;
+      delete this.user_cache[ukey];
+      this.delete_user_data(ukey);
+    } else if (this.pid_is_draft(pid)) {
+      const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+      delete this.user_cache[ukey];
+      this.delete_user_data(ukey);  
+    } else {
+      const pkey = this.get_voter_key_prefix(pid) + key;
+      this.ensure_poll_cache(pid);
+      delete this.poll_caches[pid][pkey];
+      this.delete_poll_data(pid, pkey); 
+    }
+  }
+
   // TODO: delv!
 
   get_example_docs(): Promise<any> {
@@ -1559,13 +1577,25 @@ export class DataService implements OnDestroy {
   }
 
   private handle_deleted_poll_doc(pid:string, doc): boolean {
-    // TODO: handle deleted rating (sets the rating to zero)
     if (!(pid in this.poll_caches)) {
       return false;
     }
     const _id = doc._id;
     if (_id.includes(pid)) {
       const key = _id.slice(_id.indexOf(pid) + pid.length + 1);
+      if (key.includes('.del_request.')) {
+        const keyfromvid = key.slice('voter.'.length),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              subkey = keyfromvid.slice(vid.length + 1);
+        const did = subkey.slice("del_request.".length);
+        this.G.Del.process_deleted_request_from_db(pid, did, vid);
+      } else if (key.includes('.rating.')) {
+        const keyfromvid = key.slice('voter.'.length),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              subkey = keyfromvid.slice(vid.length + 1);
+        const oid = subkey.slice("rating.".length);
+        this.G.P.update_own_rating(pid, vid, oid, 0);
+      }  
       if (key in this.poll_caches[pid]) {
         this.G.L.trace("DataService.handle_poll_db_change deleting", key);
         delete this.poll_caches[pid][key];
@@ -1835,8 +1865,8 @@ export class DataService implements OnDestroy {
           key = _id.slice(voter_doc_prefix.length, _id.length);
 
           const keyfromvid = key.slice('voter.'.length),
-              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
-              subkey = keyfromvid.slice(vid.length + 1);
+                vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+                subkey = keyfromvid.slice(vid.length + 1);
 
           // check if doc should contain a claimed due data for validation:
           const subkeystart = subkey.slice(0, (subkey+'.').indexOf('.'));

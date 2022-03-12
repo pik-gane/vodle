@@ -88,7 +88,7 @@ export class DelegationService {
       did = this.get_my_outgoing_dids_cache(pid).get("*");
     }
     if (!did) { return null; }
-    const a = (this.get_delegation_agreements_cache(pid)||new Map()).get(did);
+    const a = this.get_agreement(pid, did);
     if (!a || !a.delegate_vid) { return null; }
     return a.delegate_vid;
   }
@@ -147,6 +147,31 @@ export class DelegationService {
           }
           this.set_my_request(pid, did, request);
         }
+      }
+    }
+  }
+
+  revoke_delegation(pid: string, did: string) {
+    this.G.L.entry("DelegationService.revoke_delegation", pid, did);
+    const a = this.get_delegation_agreements_cache(pid).get(did);
+    const p = this.G.P.polls[pid];
+    if ((a.client_vid != p.myvid)) {
+      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
+    } else {
+      this.G.D.delv(pid, "del_request." + did);
+      const acache = this.get_delegation_agreements_cache(pid);
+      if (acache) {
+        const oids = acache.get(did).active_oids;
+        if (oids) {
+          for (const oid of oids) {
+            p.del_delegation(p.myvid, oid);
+          }
+        }
+        acache.delete(did);
+      }
+      const dcache = this.get_my_outgoing_dids_cache(pid);
+      if (dcache) {
+        dcache.delete(did);
       }
     }
   }
@@ -330,6 +355,25 @@ export class DelegationService {
     }
     a.client_vid = client_vid;
     this.update_agreement(pid, did, a, null, null);
+  }
+
+  process_deleted_request_from_db(pid: string, did: string, client_vid: string) {
+    const a = this.get_delegation_agreements_cache(pid).get(did);
+    const p = this.G.P.polls[pid];
+    if ((a.client_vid != client_vid)) {
+      this.G.L.error("DelegationService.process_deleted_request_from_db with wrong client_vid", pid, did);
+    } else {
+      const acache = this.get_delegation_agreements_cache(pid);
+      if (acache) {
+        const oids = acache.get(did).active_oids;
+        if (oids) {
+          for (const oid of oids) {
+            p.del_delegation(client_vid, oid);
+          }
+        }
+        acache.delete(did);
+      }
+    }
   }
 
   process_signed_response_from_db(pid: string, did: string, delegate_vid: string) {
