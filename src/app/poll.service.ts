@@ -370,7 +370,7 @@ export class Poll {
   get oids() { return Object.keys(this._options); }
   get n_options() { return this.oids.length; }
 
-  get_myrating(oid: string): number {
+  get_my_own_rating(oid: string): number {
     if (!this.own_ratings_map.has(oid)) {
       this.own_ratings_map.set(oid, new Map());
     }
@@ -381,7 +381,7 @@ export class Poll {
     return ratings_map.get(this.myvid);
   }
 
-  set_myrating(oid: string, value: number, store: boolean=true) {
+  set_my_own_rating(oid: string, value: number, store: boolean=true) {
     /** Set own rating in caches and optionally store it in DB.
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
@@ -501,7 +501,7 @@ export class Poll {
 
   init_myratings() {
     for (const oid in this.options) {
-      this.set_myrating(oid, 0);
+      this.set_my_own_rating(oid, 0);
     }
   }
 

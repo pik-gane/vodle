@@ -183,7 +183,7 @@ export class PollPage implements OnInit {
     // make sure current slider values are really stored in database:
     for (let oid of this.oidsorted) {
       if (!this.delegate || this.rate_yourself_toggle[oid]) {
-        this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
       }
     }
   }
@@ -259,7 +259,7 @@ export class PollPage implements OnInit {
       } else {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
-      this.set_slider_color(oid, p.get_myrating(oid));
+      this.set_slider_color(oid, p.get_my_proxy_rating(oid));
       if (this.rate_yourself_toggle[oid]) {
         // update dashed needle showing delegate's rating
         const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
@@ -349,7 +349,7 @@ export class PollPage implements OnInit {
 
   apply_sliders_rating(oid: string) {
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
-      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), false);
+      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
 //    this.G.D.save_state();
     this.show_stats();
@@ -370,7 +370,7 @@ export class PollPage implements OnInit {
     this.G.L.trace("PollPage.rating_change_ended");
     this.update_order();
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
-      this.p.set_myrating(oid, Math.round(this.get_slider_value(oid)), true);
+      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
     this.G.D.save_state();
   }

@@ -128,8 +128,6 @@ export class DelegationService {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
           this.set_my_request(pid, did, request);
-          // add delegation to poll object:
-          p.add_delegation(p.myvid, oid, a.delegate_vid);
         }
       } else {
         if (!a.active_oids.has(oid)) {
@@ -148,9 +146,6 @@ export class DelegationService {
             ospec.oids.splice(ospec.oids.indexOf(oid), 1);
           }
           this.set_my_request(pid, did, request);
-          // remove delegation from poll object:
-          const p = this.G.P.polls[pid];
-          p.del_delegation(p.myvid, oid);
         }
       }
     }
