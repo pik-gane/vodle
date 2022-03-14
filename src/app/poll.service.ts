@@ -204,6 +204,13 @@ export class Poll {
   get pid(): string { return this._pid; }
   // pid is read-only, set at construction
 
+  // private attributes of the user:
+
+  get have_acted(): boolean { return this.G.D.getp(this._pid, 'have_acted') == 'true'; }
+  set have_acted(value: boolean) {
+    this.G.D.setp(this._pid, 'have_acted', value.toString());
+  }
+
   // attributes that are needed to access the poll's database 
   // and thus stored in user's personal data.
   // they may only be changed in state 'draft':
@@ -386,6 +393,9 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
+    if (value != 0) {
+      this.have_acted = true;
+    }
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }
@@ -407,9 +417,20 @@ export class Poll {
       return null;
     }
   }
+
   get is_closing_soon(): boolean {
     if ((this._state == "running")&&(!!this.start_date)&&(this.due)) {
       return this.remaining_time_fraction < this.G.S.closing_soon_fraction;
+    } else {
+      return false;
+    }
+  }
+
+  get am_abstaining(): boolean {
+    /** whether or not I'm currently abstaining */
+    if (!!this.T.votes_map) {
+      const myvote = this.T.votes_map.get(this.myvid);
+      return !myvote || myvote == "";
     } else {
       return false;
     }

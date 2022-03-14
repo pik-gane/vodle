@@ -137,8 +137,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from'];
-const voter_keys_in_user_db = ['have_opened', 'have_rated', 'have_seen_results'];
+const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_acted', 'have_seen_results'];
 
 const poll_keystarts_requiring_due = ['option'];
 const voter_subkeystarts_requiring_due = ['rating', 'delegate', 'accept'];
@@ -1367,11 +1366,7 @@ export class DataService implements OnDestroy {
   getv(pid: string, key: string, vid?: string): string {
     // get own voter data item
     let value = null;
-    if (voter_keys_in_user_db.includes(key)) {
-      // construct key for user db:
-      const ukey = get_poll_key_prefix(pid) + key;
-      value = this.user_cache[ukey] || '';
-    } else if (this.pid_is_draft(pid)) {
+    if (this.pid_is_draft(pid)) {
       // draft polls' data is stored in user's database.
       // construct key for user db:
       const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid, vid) + key;
@@ -1396,15 +1391,7 @@ export class DataService implements OnDestroy {
       return true;
     }
     // set voter data item
-    if (voter_keys_in_user_db.includes(key)) {
-      // set voter data item in user db.
-      value = value || '';
-      // construct key for user db:
-      const ukey = get_poll_key_prefix(pid) + key;
-      this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
-      this.user_cache[ukey] = value;
-      return this.store_user_data(ukey, this.user_cache, ukey);
-    } else if (this.pid_is_draft(pid)) {
+    if (this.pid_is_draft(pid)) {
       return this._setv_in_userdb(pid, key, value);
     } else {
       return this._setv_in_polldb(pid, key, value);
@@ -1413,11 +1400,7 @@ export class DataService implements OnDestroy {
 
   delv(pid:string, key:string) {
     // delete a voter data item
-    if (voter_keys_in_user_db.includes(key)) {
-      const ukey = get_poll_key_prefix(pid) + key;
-      delete this.user_cache[ukey];
-      this.delete_user_data(ukey);
-    } else if (this.pid_is_draft(pid)) {
+    if (this.pid_is_draft(pid)) {
       const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
       delete this.user_cache[ukey];
       this.delete_user_data(ukey);  

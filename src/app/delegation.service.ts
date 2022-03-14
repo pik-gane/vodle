@@ -77,6 +77,7 @@ export class DelegationService {
     this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
+    this.G.P.polls[pid].have_acted = true;
     this.G.D.save_state();
   }
 

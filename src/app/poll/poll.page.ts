@@ -481,53 +481,6 @@ export class PollPage implements OnInit {
     await confirm.present(); 
   } 
 
-  /*
-  async OLD_delegate_dialog(nickname=null, invalid=false) { 
-    const dialog = await this.alertCtrl.create({ 
-      header: this.translate.instant('poll.delegate-header'), 
-      message: 
-        this.translate.instant('poll.delegate-intro1') + "<br/><br/><b>" + 
-        (invalid 
-          ? '<i><span style="color:red!important">' + this.translate.instant('poll.delegate-intro2invalid') + '</span></i>'
-          // FIXME: won't render red for some reason...
-          : this.translate.instant('poll.delegate-intro2')
-        )
-        + "</b>", 
-      inputs: [
-        {
-          name: 'nickname',
-          placeholder: this.translate.instant('poll.delegate-nickname'),
-          type: 'text',
-          value: nickname
-        }
-      ],
-      buttons: [
-        { 
-          text: this.translate.instant('cancel'), 
-          role: 'cancel',
-          handler: () => { 
-            this.G.L.debug('delegate_dialog cancelled.');
-          } 
-        },
-        { 
-          text: this.translate.instant('poll.request-delegation'),
-          role: 'ok', 
-          handler: data => {
-            const valid = data.nickname != ''; // this.G.D.email_is_valid(data.email);
-            this.G.L.debug('delegate_dialog OK.', data.nickname, valid);
-            if (!valid) {
-              this.delegate_dialog(null, true);
-            } else {
-              this.delegation_request_dialog(data.nickname);
-            }
-          } 
-        } 
-      ] 
-    }); 
-    await dialog.present(); 
-  } 
-*/
-
   add_option() {
     // TODO: also add delegation if ospec.type == "-"
   }
