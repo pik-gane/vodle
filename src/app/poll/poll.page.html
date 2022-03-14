@@ -124,33 +124,37 @@
 
     <!-- VOTE STATUS BANNER: -->
 
-    <ion-item *ngIf="true"
-        [color]="p.am_abstaining ? 'warning' : 'light'">
-      <ion-grid class="ion-no-padding ion-no-margin">
-
-        <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-margin ion-padding-right" >
-            <small>
-              <p *ngIf="p.am_abstaining">
-                <span style="font-size: medium">You are abstaining.</span> 
-                You may want to rate at least your favourite or delegate your ratings to someone you trust.
-              </p>
-              <p *ngIf="p.my_n_rated_positive == 1">
-                <span style="font-size: medium">You are rating only one option.</span> 
-                You may want to rate some possible compromise options as well.
-              </p>
-              <p *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1">
-                <span style="font-size: medium">You are approving only one of the options you rated positive.</span> 
-                Please check if your ratings are large enough. If you find an option acceptable, your rating should be larger than the percentage of voters who you expect to remain opposed to the option.
-              </p>
-              <p *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)">
-                <span style="font-size: medium">You are not approving the top-most option.</span> 
-                Please check if that option is acceptable to you. If so, your rating should be larger than the percentage of voters who you expect to remain opposed to the option.
-              </p>
-            </small>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
+    <ion-item *ngIf="p.am_abstaining" color="danger">
+      <small>
+        <p>
+          <span style="font-size: medium" [innerHtml]="'poll.hint-abstaining-1'|translate"></span>&nbsp; 
+          <span [innerHtml]="'poll.hint-abstaining-2'|translate"></span>
+        </p>
+      </small>
+    </ion-item>
+    <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
+      <small>
+        <p>
+          <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1'|translate"></span>&nbsp; 
+          <span [innerHtml]="'poll.hint-only1positive-2'|translate"></span>
+        </p>
+      </small>
+    </ion-item>
+    <ion-item *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1" color="secondary">
+      <small>
+        <p>
+          <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1'|translate"></span>&nbsp; 
+          <span [innerHtml]="'poll.hint-only1approved-2'|translate"></span>
+        </p>
+      </small>
+    </ion-item>
+    <ion-item *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)" color="light">
+      <small>
+        <p>
+          <span style="font-size: medium" [innerHtml]="'poll.hint-mostapproved-1'|translate"></span>&nbsp;
+          <span [innerHtml]="'poll.hint-mostapproved-2'|translate"></span>
+        </p>
+      </small>
     </ion-item>
 
     <!-- INCOMING DELEGATIONS BANNER: -->
