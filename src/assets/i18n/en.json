@@ -327,7 +327,7 @@
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",
         "hint-only1positive-1": "You are rating only one option.",
-        "hint-only1positive-2": "You may want to rate some possible compromise options as well.",
+        "hint-only1positive-2": "You should consider rating some possible compromise options as well.",
         "hint-only1approved-1": "You are approving only one of the options you rated positive.",
         "hint-only1approved-2": "Please check if your ratings are large enough. If you find an option acceptable, your rating should be larger than the percentage of voters who you expect to remain opposed to the option.",
         "hint-mostapproved-1": "You are not approving the top-most option.",

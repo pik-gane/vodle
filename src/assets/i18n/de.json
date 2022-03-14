@@ -330,7 +330,15 @@
 
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
         "closes": "Schließt",
-        "you-abstain": "(Du enthälst Dich)",
+
+        "hint-abstaining-1": "Du enthältst Dich momentan.",
+        "hint-abstaining-2": "Du solltest wenigstens Deine Lieblingsoption bewerten oder Deine Bewertungen an jemand delegieren.",
+        "hint-only1positive-1": "Du bewertest momentan nur eine Option.",
+        "hint-only1positive-2": "Du solltest überlegen, auch mögliche Kompromiss-Optionen zu bewerten.",
+        "hint-only1approved-1": "Du stimmst momentan nur einer der von Dir bewerteten Optionen zu.",
+        "hint-only1approved-2": "Bitte prüfe, ob Deine Bewertungen hoch genug sind. Wenn Du eine Option akzeptabel findest, sollte Deine Bewertung höher sein als der Prozentsatz an Wähler:innen, von denen Du denkst, dass sie gegen die Option bleiben werden.",
+        "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
+        "hint-mostapproved-2": "Bitte prüfe, ob diese Option für Dich akzeptabel ist. Wenn ja, sollte Deine Bewertung höher sein als der Prozentsatz an Wähler:innen, von denen Du denkst, dass sie gegen die Option bleiben werden.",
 
         "also-for-other": "Manche oder alle der Bewertungen weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Bewertungen weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
