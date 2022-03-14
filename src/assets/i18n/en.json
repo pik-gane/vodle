@@ -13,9 +13,11 @@
     "go-to-poll": "go to poll",
     "hide": "Hide",
     "language": "Language",
+    "level-of-agreement": "agreement",
     "monthnames": "January, February, March, April, May, June, July, August, September, October, November, December",
     "next": "Next",
     "no": "No",
+    "non-abstaining-voters": "non-abstaining voters",
     "OK": "OK",
     "options": "Options",
     "password": "Password",
@@ -321,6 +323,7 @@
 
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Closes",
+        "you-abstain": "(you abstain)",
 
         "also-for-other": "Some or all of the ratings below are also used for one other voter, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other voters, who have directly or indirectly delegated to you.",

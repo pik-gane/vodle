@@ -81,17 +81,17 @@
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 
             <small>
-              <span 
+              <ion-badge *ngIf="p.is_closing_soon" 
+                class="ion-no-margin" 
+                style="position: relative; bottom: -6px;" 
+                color="danger" 
+                [innerHtml]="'badges.closing-soon'|translate">
+              </ion-badge>
+              <span *ngIf="!p.is_closing_soon"
                 [innerHtml]="'poll.closes' | translate">
               </span>&nbsp;<b 
                 [innerHtml]="G.D.format_date(p.due)">
               </b>
-              <ion-badge *ngIf="p.is_closing_soon" 
-                class="ion-no-margin" 
-                style="margin-left: 5px; position: relative; bottom: -6px;" 
-                color="danger" 
-                [innerHtml]="'badges.closing-soon'|translate">
-              </ion-badge>
             </small>
             <br/>
 
@@ -99,17 +99,15 @@
                 color="light" style="position: relative; top: 3px" 
                 [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
             </ion-icon>
-            <small>
-              <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>% agreement&nbsp;&nbsp;&nbsp;&nbsp;
+            <small style="white-space: nowrap;">
+              <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>&nbsp;&nbsp;&nbsp;&nbsp;
             </small>
             <ion-icon 
                 color="light" style="position: relative; top: 3px" 
                 name="people-outline">
-            </ion-icon>
-            <small>
-              <b>&nbsp;{{p.T.n_not_abstaining}}</b> non-abstaining voters
-            </small>
-            <ion-button
+            </ion-icon>&nbsp;<small style="white-space: nowrap;">
+              <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
+            </small><ion-button
                 class="ion-no-padding ion-no-margin" fill="clear" size="small" 
                 style="position: relative; top: -2px"
                 [routerLink]="'/inviteto/'+p.pid" >
@@ -118,7 +116,9 @@
                   name="share-social-outline" 
                   color="light">
               </ion-icon>  
-            </ion-button>
+            </ion-button><small *ngIf="p.am_abstaining" style="white-space: nowrap;">
+              &nbsp;&nbsp;&nbsp;&nbsp;<span [innerHtml]="'poll.you-abstain'|translate"></span>
+            </small>
 
           </ion-col>
         </ion-row>

@@ -18,9 +18,11 @@
     "go-to-poll": "zur Abstimmung",
     "hide": "Verbergen",
     "language": "Sprache",
+    "level-of-agreement": "Einigung",
     "monthnames": "Januar, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember",
     "next": "Weiter",
     "no": "Nein",
+    "non-abstaining-voters": "Teilnehmer:innen (ohne Enthaltungen)",
     "OK": "OK",
     "options": "Optionen",
     "password": "Passwort",
@@ -328,6 +330,7 @@
 
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
         "closes": "Schließt",
+        "you-abstain": "(Du enthälst Dich)",
 
         "also-for-other": "Manche oder alle der Bewertungen weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Bewertungen weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
