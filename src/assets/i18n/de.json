@@ -89,7 +89,7 @@
         "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung schließt {{due}})",
         "message-body-greeting": "Liebe:r Teilnehmer:in,",
         "message-body-before-title": "ich möchte Dich gerne bitten, mein:e Delegierte:r zu sein in der vodle-Abstimmung",
-        "message-body-closes": "(Die Abstimmung schließt am {{due}})",
+        "message-body-closes": "(Die Abstimmung schließt am {{due}}.)",
         "message-body-explanation": "Wenn Du zustimmst, wird vodle Deine Bewertungen automatisch verwenden, um auch meine Bewertungen festzulegen, ohne dass Dir zusätzliche Arbeit entsteht.",
         "message-body-before-link": "Um meiner Bitte zuzustimmen oder sie abzulehnen, verwende bitte diesen Link:",
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
@@ -336,10 +336,11 @@
         "have-accepted": "Du hast <b>zugestimmt</b>, Delegierte:r zu sein für",
         "have-declined": "Du hast <b>abgelehnt</b>, Delegierte:r zu sein für",
 
-        "delegate-controls-all": "kontrolliert alle Deine Bewertungen als Dein:e Delegierte:r",
-        "delegate-controls-most": "kontrolliert die meisten Deiner Bewertungen als Dein:e Delegierte:r",
-        "delegate-controls-some": "kontrolliert einige Deiner Bewertungen als Dein:e Delegierte:r",
-        "delegate-controls-none": "kontrolliert momentan <i>keine</i> Deiner Bewertungen als Dein:e Delegierte:r",
+        "delegate-not-responded": "hat Deine Bitte um Delegation noch nicht beantwortet.",
+        "delegate-controls-all": "kontrolliert alle Deine Bewertungen als Dein:e Delegierte:r.",
+        "delegate-controls-most": "kontrolliert die meisten Deiner Bewertungen als Dein:e Delegierte:r.",
+        "delegate-controls-some": "kontrolliert einige Deiner Bewertungen als Dein:e Delegierte:r.",
+        "delegate-controls-none": "kontrolliert momentan <i>keine</i> Deiner Bewertungen als Dein:e Delegierte:r.",
 
         "choose-whose-ratings": "Wessen<br/>Bewertung<br/>nehmen?",
         "my-own": "meine",
@@ -354,6 +355,7 @@
 
         "explain": "erklären",
 
+        "add-option": "Option hinzufügen",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
 
         "sorting": "Optionen werden neu sortiert..."

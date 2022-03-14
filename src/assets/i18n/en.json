@@ -329,10 +329,11 @@
         "have-accepted": "You have <b>accepted</b> delegation by",
         "have-declined": "You have <b>declined</b> delegation by",
 
-        "delegate-controls-all": "controls all of your ratings as your delegate",
-        "delegate-controls-most": "controls most of your ratings as your delegate",
-        "delegate-controls-some": "controls some of your ratings as your delegate",
-        "delegate-controls-none": "currently controls none of your ratings as your delegate",
+        "delegate-not-responded": "has not yes responded to your delegation request.",
+        "delegate-controls-all": "controls all of your ratings as your delegate.",
+        "delegate-controls-most": "controls most of your ratings as your delegate.",
+        "delegate-controls-some": "controls some of your ratings as your delegate.",
+        "delegate-controls-none": "currently controls none of your ratings as your delegate.",
         "revoke_delegation": "Do you really want to revoke your delegation to {{nickname}}? If you do, you can later send a new delegation request to someone else or again to {{nickname}}. If you don't, you can still take control of some of your ratings via the toggles to the right.",
 
         "choose-whose-ratings": "Choose<br/>whose rating<br/>to use",
@@ -348,6 +349,7 @@
 
         "explain": "explain",
         
+        "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
 
         "sorting": "Sorting options by approval..."

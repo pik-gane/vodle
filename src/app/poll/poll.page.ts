@@ -27,6 +27,7 @@ export class PollPage implements OnInit {
   pid: string;
   p: Poll;
   delegate: string;
+  delegation_status = "none";
 
   incoming_delegation_expanded = false;
   n_indirect_clients = 1;
@@ -150,14 +151,10 @@ export class PollPage implements OnInit {
     const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
     this.G.L.trace("PollPage.update_delegation_info did", did);
     if (did) {
+      this.delegate = this.G.Del.get_nickname(this.pid, did);
       const agreement = this.G.Del.get_agreement(this.pid, did);
       this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
-      if (agreement.status == "agreed") {
-        this.delegate = this.G.Del.get_nickname(this.pid, did);
-        this.G.L.trace("PollPage.update_delegation_info delegate", this.delegate);
-      } else {
-        this.delegate = null;
-      }
+      this.delegation_status = agreement.status;
     }
     this.update_delegation_toggles();
   }
@@ -472,8 +469,11 @@ export class PollPage implements OnInit {
           text: this.translate.instant('OK'),
           role: 'Ok', 
           handler: () => {
-            this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"));
+            this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
             this.delegate = null;
+            this.delegation_status = 'none';
+            this.update_delegation_info();
+            this.G.D.save_state();
           } 
         } 
       ] 

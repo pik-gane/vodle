@@ -21,7 +21,8 @@
 
       <!-- DELEGATE BUTTON: -->
 
-      <ion-button *ngIf="!delegate"
+      <!--
+      <ion-button *ngIf="delegation_status!='agreed'"
           (click)="delegate_dialog()" 
           shape="round" fill="solid" color="primary" size="large">
         <span 
@@ -29,6 +30,17 @@
         </span>&nbsp;<ion-icon 
           src="assets/icon/delegate-simple.svg">
         </ion-icon>
+      </ion-button>
+      -->
+      <ion-button *ngIf="delegation_status!='agreed'"
+          (click)="delegate_dialog()" 
+          shape="round" size="large" color="primary">
+        <span 
+          [innerHtml]="'poll.delegate-button' | translate">
+        </span>&nbsp;<ion-button shape="round" fill="solid" color="primary">
+          <ion-icon src="assets/icon/delegate-simple.svg">
+          </ion-icon>
+        </ion-button>
       </ion-button>
 
     </ion-buttons>
@@ -184,7 +196,38 @@
 
     <!-- OUTGOING DELEGATION BANNER: -->
 
-    <ion-item *ngIf="delegate" 
+    <ion-item *ngIf="delegation_status=='pending'" 
+        color="warning"> 
+      <ion-grid class="ion-no-padding ion-no-margin">
+        <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
+
+          <!-- Info about how many ratings the delegate controls: -->
+
+          <ion-col class="ion-no-margin ion-padding-right">
+            <small>
+              <p>
+                <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                <span [innerHtml]="
+                  'poll.delegate-not-responded' | translate
+                  ">
+                </span>
+              </p>
+            </small>
+          </ion-col>
+
+          <!-- Revoke delegation button: -->
+
+          <ion-col size="auto" class="ion-no-margin">
+            <ion-button fill="clear" (click)="revoke_delegation_dialog()">
+              <ion-icon name="trash-outline" style="color:black"></ion-icon>
+            </ion-button>
+          </ion-col>
+
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+
+    <ion-item *ngIf="delegation_status=='agreed'" 
         color="warning"> 
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
@@ -313,7 +356,7 @@
                 (ionChange)="rating_changes(oidsorted[i])" 
                 pin="true" min="0" max="100"
                 [style]="'--bar-background: rgba(0,0,0,0);'
-                  + (rate_yourself_toggle[oidsorted[i]] || !delegate
+                  + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
                   ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                   : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
                 class="ion-no-padding ion-no-margin">
@@ -339,7 +382,7 @@
                 <!-- DELEGATE'S RATING -->
 
                 <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
-                    [style.display]="!!delegate && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
+                    [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
                   <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
                     <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="#9abcbd" stroke-width="2" stroke-dasharray="3 2" />
                     <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="#9abcbd" stroke="none"/>
@@ -353,7 +396,7 @@
 
           <!-- DELEGATION TOGGLE: -->
 
-          <ion-col *ngIf="delegate" 
+          <ion-col *ngIf="delegation_status=='agreed'" 
               class="ion-no-margin ion-no-padding" 
               size="auto">&nbsp;&nbsp;&nbsp;
             <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
@@ -464,8 +507,8 @@
       <ion-fab-button size="small" (click)="add_option()" fill="clear" color="primary">
         <ion-icon name="add"></ion-icon>
       </ion-fab-button>
-      <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"> 
-        Add option
+      <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option()"
+        [innerHtml]="'poll.add-option' | translate"> 
       </ion-button>
     </ion-item>
     <ion-item lines="none">

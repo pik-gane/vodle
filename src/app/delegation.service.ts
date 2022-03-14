@@ -77,6 +77,7 @@ export class DelegationService {
     this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
+    this.G.D.save_state();
   }
 
   get_potential_effective_delegate(pid: string, oid: string): string {
@@ -151,7 +152,7 @@ export class DelegationService {
     }
   }
 
-  revoke_delegation(pid: string, did: string) {
+  revoke_delegation(pid: string, did: string, oid: string) {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
     const a = this.get_delegation_agreements_cache(pid).get(did);
     const p = this.G.P.polls[pid];
@@ -169,10 +170,10 @@ export class DelegationService {
         }
         acache.delete(did);
       }
-      const dcache = this.get_my_outgoing_dids_cache(pid);
-      if (dcache) {
-        dcache.delete(did);
-      }
+    }
+    const dcache = this.get_my_outgoing_dids_cache(pid);
+    if (dcache) {
+      dcache.delete(oid);
     }
   }
 

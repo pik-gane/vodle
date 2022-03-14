@@ -98,11 +98,11 @@ export class DelegationDialogPage implements OnInit {
     this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key);
     this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
                 + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
-                + "\t    “" + this.p.title + "”.\n\n"
+                + String.fromCharCode(160).repeat(4) + this.p.title + ".\n\n"
                 + this.translate.instant('delegation-request.message-body-closes', {due: this.G.D.format_date(this.p.due)}) + "\n\n"
                 + this.translate.instant('delegation-request.message-body-explanation') + "\n\n" 
                 + this.translate.instant('delegation-request.message-body-before-link') + "\n\n" 
-                + "\t    " + this.delegation_link + "\n\n"
+                + String.fromCharCode(160).repeat(4) + this.delegation_link + "\n\n"
                 + this.translate.instant('delegation-request.message-body-dont-share') + "\n\n"
                 + this.translate.instant('delegation-request.message-body-regards'));
   }
@@ -144,6 +144,7 @@ export class DelegationDialogPage implements OnInit {
     }).catch(err => {
       this.G.L.warn("DelegationDialogPage.copy_button_clicked localNotifications.schedule failed:", err);
     });
+    this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.copy_button_clicked");
   }
@@ -153,6 +154,7 @@ export class DelegationDialogPage implements OnInit {
     this.nickname_changed();
     this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
+    this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");
   }
