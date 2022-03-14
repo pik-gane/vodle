@@ -116,10 +116,38 @@
                   name="share-social-outline" 
                   color="light">
               </ion-icon>  
-            </ion-button><small *ngIf="p.am_abstaining" style="white-space: nowrap;">
-              &nbsp;&nbsp;&nbsp;&nbsp;<span [innerHtml]="'poll.you-abstain'|translate"></span>
-            </small>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
 
+    <!-- VOTE STATUS BANNER: -->
+
+    <ion-item *ngIf="true"
+        [color]="p.am_abstaining ? 'warning' : 'light'">
+      <ion-grid class="ion-no-padding ion-no-margin">
+
+        <ion-row class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-margin ion-padding-right" >
+            <small>
+              <p *ngIf="p.am_abstaining">
+                <span style="font-size: medium">You are abstaining.</span> 
+                You may want to rate at least your favourite or delegate your ratings to someone you trust.
+              </p>
+              <p *ngIf="p.my_n_rated_positive == 1">
+                <span style="font-size: medium">You are rating only one option.</span> 
+                You may want to rate some possible compromise options as well.
+              </p>
+              <p *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1">
+                <span style="font-size: medium">You are approving only one of the options you rated positive.</span> 
+                Please check if your ratings are large enough. If you find an option acceptable, your rating should be larger than the percentage of voters who you expect to remain opposed to the option.
+              </p>
+              <p *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)">
+                <span style="font-size: medium">You are not approving the top-most option.</span> 
+                Please check if that option is acceptable to you. If so, your rating should be larger than the percentage of voters who you expect to remain opposed to the option.
+              </p>
+            </small>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -136,7 +164,6 @@
         <ion-row 
             class="ion-no-padding ion-no-margin" 
             style="padding-top: 5px; padding-bottom: 6px;">
-          <!--Click on row expands details:-->
           <ion-col class="ion-no-margin ion-padding-right" >
             <small>
               <span *ngIf="accepted_requests.length > 0" 

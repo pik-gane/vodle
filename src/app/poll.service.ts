@@ -441,6 +441,28 @@ export class Poll {
     }
   }
 
+  get my_n_rated_positive(): number {
+    /** number of positive ratings */
+    let n_positive = 0;
+    for (const oid of this.oids) {
+      if (this.get_my_proxy_rating(oid) > 0) {
+        n_positive++;
+      }
+    }
+    return n_positive;
+  }
+
+  get my_n_approved(): number {
+    /** number of approved options */
+    let n_approved = 0;
+    for (const oid of this.oids) {
+      if (this.T.approvals_map.get(oid) && this.T.approvals_map.get(oid).get(this.myvid)) {
+        n_approved++;
+      }
+    }
+    return n_approved;
+  }
+
   get have_delegated(): boolean {
     const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
     if (!did) return false;
