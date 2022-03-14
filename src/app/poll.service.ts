@@ -742,6 +742,15 @@ export class Poll {
 
   T: tally_cache_t;
 
+  get agreement_level(): number  {
+    const approval_scores_map = this.T.approval_scores_map, N = this.T.n_not_abstaining;
+    let expected_approval_score = 0;
+    for (const [oid, p] of this.T.shares_map.entries()) {
+      expected_approval_score += p * approval_scores_map.get(oid);
+    }
+    return expected_approval_score / Math.max(1, N);
+  }
+
   // Methods dealing with changes to the delegation graph:
 
   add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {

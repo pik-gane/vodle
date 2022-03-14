@@ -83,9 +83,9 @@
             <small>
               <span 
                 [innerHtml]="'poll.closes' | translate">
-              </span>&nbsp;<span 
+              </span>&nbsp;<b 
                 [innerHtml]="G.D.format_date(p.due)">
-              </span>
+              </b>
               <ion-badge *ngIf="p.is_closing_soon" 
                 class="ion-no-margin" 
                 style="margin-left: 5px; position: relative; bottom: -6px;" 
@@ -93,27 +93,37 @@
                 [innerHtml]="'badges.closing-soon'|translate">
               </ion-badge>
             </small>
+            <br/>
 
-            <!-- debugging info: -->
-
+            <ion-icon 
+                color="light" style="position: relative; top: 3px" 
+                [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
+            </ion-icon>
             <small>
-              <p>
-              <br/>incoming_dids_cache: {{G.map2str((G.D.incoming_dids_caches||{})[pid])}}
-              <br/>delegation_agreements_cache: {{G.map2str((G.D.delegation_agreements_caches||{})[pid])}}
-              <br/>outgoing_dids_cache: {{G.map2str((G.D.outgoing_dids_caches||{})[pid])}}
-              </p>
+              <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>% agreement&nbsp;&nbsp;&nbsp;&nbsp;
             </small>
-
+            <ion-icon 
+                color="light" style="position: relative; top: 3px" 
+                name="people-outline">
+            </ion-icon>
+            <small>
+              <b>&nbsp;{{p.T.n_not_abstaining}}</b> non-abstaining voters
+            </small>
+            <ion-button
+                class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                style="position: relative; top: -2px"
+                [routerLink]="'/inviteto/'+p.pid" >
+              <ion-icon 
+                  class="ion-no-padding ion-no-margin" 
+                  name="share-social-outline" 
+                  color="light">
+              </ion-icon>  
+            </ion-button>
 
           </ion-col>
         </ion-row>
       </ion-grid>
     </ion-item>
-
-<!-- TODO: shall we show this type of statistics like
-  - total no. of non-abstaining (=not all-zero) voters
-  - level of consensus reached = expected approval of winner
--->
 
     <!-- INCOMING DELEGATIONS BANNER: -->
 
