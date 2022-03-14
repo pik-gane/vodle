@@ -94,6 +94,7 @@ export class PreviewpollPage implements OnInit {
     this.p.state = 'running';
     // set own ratings to zero:
     this.p.init_myratings();
+    this.p.creator = this.G.S.email;
     // go to invitation page:
     this.router.navigate(['/inviteto/'+this.pid]);
     this.G.L.exit("PreviewpollPage.publish_button_clicked");

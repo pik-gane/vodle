@@ -11,7 +11,7 @@ function (newDoc, savedDoc, userCtx) {
             if (_id.includes('.voter.')) {
                 // it's a voter doc.
                 // let only the owner create, update, or delete it:
-                if (!_id.startsWith("~" + userCtx.name +":")) {
+                if (!_id.includes(".TEST_") && !_id.startsWith("~" + userCtx.name +":")) {
                     throw ({forbidden: 'Only the owner of a voter document _id may update it.'});
                 }
                 // check whether doc contains a due date:

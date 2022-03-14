@@ -93,7 +93,7 @@ export class MypollsPage implements OnInit {
 
   can_invite(p: Poll) {
     // TODO: only author can invite? 
-    return true; 
+    return p.creator == this.G.S.email;
   }
 
   // helper methods:

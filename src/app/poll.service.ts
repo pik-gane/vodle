@@ -206,6 +206,11 @@ export class Poll {
 
   // private attributes of the user:
 
+  get creator(): string { return this.G.D.getp(this._pid, 'creator'); }
+  set creator(value: string) {
+    this.G.D.setp(this._pid, 'creator', value);
+  }
+
   get have_acted(): boolean { return this.G.D.getp(this._pid, 'have_acted') == 'true'; }
   set have_acted(value: boolean) {
     this.G.D.setp(this._pid, 'have_acted', value.toString());

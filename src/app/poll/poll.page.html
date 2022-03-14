@@ -137,16 +137,8 @@
             class="ion-no-padding ion-no-margin" 
             style="padding-top: 5px; padding-bottom: 6px;">
           <!--Click on row expands details:-->
-          <ion-col 
-              class="ion-no-margin ion-padding-right" 
-              (click)="incoming_delegation_expanded =! incoming_delegation_expanded"
-              style="cursor:pointer">
+          <ion-col class="ion-no-margin ion-padding-right" >
             <small>
-              <ion-icon size="small" class="ion-no-padding ion-no-margin" 
-                style="position: relative; left: -3px; top: 5px;"
-                [name]="incoming_delegation_expanded ? 'caret-down' : 'caret-forward'" 
-                slot="icon-only">
-              </ion-icon>
               <span *ngIf="accepted_requests.length > 0" 
                 [innerHtml]="
                   ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
@@ -157,6 +149,16 @@
               <span *ngIf="declined_requests.length > 0" 
                 [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
               </span>
+              &nbsp;
+              <ion-button
+                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                  style="position: relative; top: -4px"
+                  (click)="incoming_delegation_expanded =! incoming_delegation_expanded">
+                <ion-icon 
+                    class="ion-no-padding ion-no-margin" 
+                    name="ellipsis-horizontal">
+                </ion-icon>  
+              </ion-button>
             </small>
           </ion-col>
         </ion-row>

@@ -96,8 +96,11 @@
 
           <!-- Invite-to button: -->
 
-          <ion-button *ngIf="can_invite(p)" fill="clear" [routerLink]="'/inviteto/'+p.pid">
-            <ion-icon name="share-social-outline" slot="icon-only"></ion-icon>
+          <ion-button *ngIf="can_invite(p)" fill="clear" 
+              style="position: relative; right: -10px;"
+              class="ion-no-padding ion-no-margin"
+              [routerLink]="'/inviteto/'+p.pid">
+            <ion-icon name="share-social-outline" slot="icon-only" color="primary"></ion-icon>
           </ion-button>
 
         </ion-buttons>

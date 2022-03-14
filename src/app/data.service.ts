@@ -137,7 +137,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_acted', 'have_seen_results'];
+const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_acted', 'have_seen_results'];
 
 const poll_keystarts_requiring_due = ['option'];
 const voter_subkeystarts_requiring_due = ['rating', 'delegate', 'accept'];
@@ -1541,10 +1541,8 @@ export class DataService implements OnDestroy {
       }
     }
     if (local_changes) {
-      console.log("AA");
       this.after_changes();
       if (this.page.onDataChange) {
-        console.log("BB");
         this.page.onDataChange();
       }
     }
