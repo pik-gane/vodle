@@ -436,6 +436,13 @@ export class Poll {
     }
   }
 
+  get have_delegated(): boolean {
+    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+    if (!did) return false;
+    const agreement = this.G.Del.get_agreement(this.pid, did);
+    return (agreement.status == "agreed") && (agreement.active_oids.size == agreement.accepted_oids.size);
+  }
+
   ratings_have_changed = false;
 
   // OTHER HOOKS:

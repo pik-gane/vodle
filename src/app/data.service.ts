@@ -1541,8 +1541,12 @@ export class DataService implements OnDestroy {
       }
     }
     if (local_changes) {
+      console.log("AA");
       this.after_changes();
-      if (this.page.onDataChange) this.page.onDataChange();
+      if (this.page.onDataChange) {
+        console.log("BB");
+        this.page.onDataChange();
+      }
     }
   }
 

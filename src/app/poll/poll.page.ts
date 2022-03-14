@@ -125,10 +125,12 @@ export class PollPage implements OnInit {
   }
 
   onDataChange() {
+    this.G.L.entry("PollPage.onDataChange");
     this.p.tally_all();
     this.update_order();
     this.update_delegation_info();
     this.changeDetector.detectChanges();
+    this.G.L.exit("PollPage.onDataChange");
   }
 
   update_delegation_info() {
