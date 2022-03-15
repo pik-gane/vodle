@@ -57,7 +57,8 @@
     "addoption": {
         "header": "Add another option",
         "intro": "Please make sure the new option is not already covered by the existing options.",
-        "info": "Once added, the option cannot be edited or removed again."
+        "info": "Once added, the option cannot be edited or removed again.",
+        "notification-added-title": "Option added"
     },
 
     "badges": {

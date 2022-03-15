@@ -78,15 +78,15 @@
             <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
 
             <h3><b><i>{{p.title}}</i></b></h3>
-            <i>{{p.desc}}</i>
-            <small *ngIf="(p.url || '') != ''">&nbsp;
+            <i *ngIf="(p.desc||'')!=''">{{p.desc}}&nbsp;</i>
+            <small *ngIf="(p.url||'') != ''">
               (<ion-text 
                 class="externallink" 
                 (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
                 [innerHtml]="'read-more' | translate">
               </ion-text>)
             </small>
-            <br/>
+            <br *ngIf="(p.desc||'')!='' || (p.url||'') != ''"/>
 
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 

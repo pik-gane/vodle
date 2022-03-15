@@ -62,7 +62,8 @@
     "addoption": {
         "header": "Option hinzufügen",
         "intro": "Bitte stelle sicher, dass die neue Option noch nicht von den vorhandenen Optionen abgedeckt ist.",
-        "info": "Einmal hinzugefügte Optionen kann niemand mehr verändern oder löschen."
+        "info": "Einmal hinzugefügte Optionen kann niemand mehr verändern oder löschen.",
+        "notification-added-title": "Option hinzugefügt"
     },
 
     "badges": {

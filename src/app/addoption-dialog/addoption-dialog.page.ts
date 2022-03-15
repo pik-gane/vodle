@@ -1,6 +1,7 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController } from '@ionic/angular';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
@@ -68,6 +69,16 @@ export class AddoptionDialogPage implements OnInit {
           desc = this.formGroup.get('option_desc').value,
           url = this.formGroup.get('option_url').value;
     new Option(this.G, this.p, null, name, desc, url);
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.translate.instant("addoption.notification-added-title"),
+        body: name,
+        id: 0
+      }]
+    })
+    .then(res => {
+    }).catch(err => {
+    });
     this.popover.dismiss();
   }
 
