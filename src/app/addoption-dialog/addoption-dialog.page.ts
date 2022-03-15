@@ -79,6 +79,9 @@ export class AddoptionDialogPage implements OnInit {
     .then(res => {
     }).catch(err => {
     });
+    if (this.parent.delegation_status == 'agreed') {
+      this.G.Del.update_my_delegation(this.p.pid, o.oid, true);
+    }
     this.parent.oidsorted.push(o.oid);
     this.parent.sortingcounter++;
     this.p.tally_all();

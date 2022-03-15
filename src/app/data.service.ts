@@ -769,7 +769,7 @@ export class DataService implements OnDestroy {
           // replicate once and wait for it to finish:
 
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
-          db.replicate.from(this.remote_poll_dbs[pid], {
+          this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
               retry: true,
               include_docs: true,
               filter: (doc, req) => (

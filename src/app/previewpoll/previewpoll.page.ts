@@ -101,7 +101,10 @@ export class PreviewpollPage implements OnInit {
         const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
         if (Array.isArray(ratings)) {
           for (const i in ratings) {
-            this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, ratings[i], "simulated"+i);
+            const vid = "simulated"+i,
+                  r = ratings[i];
+            this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
+            this.G.P.update_own_rating(this.pid, vid, oid, r);
           }
         }
       }
