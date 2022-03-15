@@ -1516,7 +1516,8 @@ export class DataService implements OnDestroy {
   // DBs --> caches:
 
   private handle_user_db_change(change) {
-    // called by PouchDB sync
+    // called by PouchDB sync and replicate
+    change = JSON.parse(JSON.stringify(change));
     this.G.L.trace("DataService.handle_user_db_change");
     let local_changes = false;
     if (change.deleted){
@@ -1541,7 +1542,8 @@ export class DataService implements OnDestroy {
   }
 
   private handle_poll_db_change(pid, change) {
-    // called by PouchDB sync
+    // called by PouchDB sync and replicate
+    change = JSON.parse(JSON.stringify(change));
     this.G.L.trace("DataService.handle_poll_db_change", pid);
     let local_changes = false;
     if (change.deleted){
