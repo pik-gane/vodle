@@ -87,6 +87,10 @@ const routes: Routes = [
     path: 'delegation-dialog',
     loadChildren: () => import('./delegation-dialog/delegation-dialog.module').then( m => m.DelegationDialogPageModule)
   },
+  {
+    path: 'addoption-dialog',
+    loadChildren: () => import('./addoption-dialog/addoption-dialog.module').then( m => m.AddoptionDialogPageModule)
+  },
 ];
 
 @NgModule({

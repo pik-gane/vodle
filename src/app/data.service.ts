@@ -1496,7 +1496,7 @@ export class DataService implements OnDestroy {
   }
   
   fix_url(url:string): string {
-    // make sure remote db urls start with http:// or https://
+    // make sure urls start with http:// or https://
     if (!url) return null;
     return (url.startsWith("http://")||url.startsWith("https://")) ? url : "http://" + url;
   }

@@ -99,7 +99,7 @@ export class GlobalService implements OnDestroy {
       we do this workaround to prevent the opened page from access to the current session:
     */ 
     const a = document.createElement('a');
-    a.href = url;
+    a.href = this.D.fix_url(url);
     a.target = '_blank';
     document.body.appendChild(a);
     a.click();

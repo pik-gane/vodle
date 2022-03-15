@@ -363,11 +363,6 @@ export class DraftpollPage implements OnInit {
     this.pd.db_other_password = value;
   }
   
-  test_url(url: string) {
-    if (!url.startsWith("http")) url = "http://" + url; // TODO: improve this logic
-    this.G.open_url_in_new_tab(url);
-  }
-
   blur_option_name(i: number, d: boolean) {
     if (d) {
       this.option_stage = this.max(this.option_stage, this.formGroup.get('option_name'+i).valid?1:0);

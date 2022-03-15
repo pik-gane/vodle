@@ -1,0 +1,89 @@
+<ion-content *ngIf="ready">
+  <form [formGroup]="formGroup">
+
+    <!-- NAME: -->
+
+    <ion-item>
+      <ion-label position="floating" color="primary">
+        <span [innerHtml]="
+            (p.type=='winner' 
+            ? 'draftpoll.option-name-label' 
+            : 'draftpoll.target-name-label') | translate">
+        </span>
+      </ion-label>
+      <ion-input 
+        formControlName="option_name" 
+        [placeholder]="(p.type == 'winner' 
+                        ? 'draftpoll.option-name-placeholder' 
+                        : 'draftpoll.target-name-placeholder') | translate"
+        type="text" required tabindex="0" 
+        style="font-weight: bold; font-style: italic;">
+      </ion-input>      
+    </ion-item>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.option_name">
+        <div class="error-message" 
+            *ngIf="formGroup.get('option_name').hasError(validation.type) 
+                    && (formGroup.get('option_name').dirty || formGroup.get('option_name').touched)"
+            [innerHtml]="validation.message|translate">
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- DESCRIPTION: -->
+
+    <ion-item>
+      <ion-label position="floating" color="primary">
+        <span [innerHtml]="'draftpoll.option-desc-label'|translate">
+        </span>
+      </ion-label>
+      <ion-textarea 
+        formControlName="option_desc" tabindex="0" 
+        [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
+        rows="1" auto-grow type="text" 
+        style="font-style: italic;">
+      </ion-textarea>
+    </ion-item>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.option_desc">
+        <div class="error-message" 
+            *ngIf="formGroup.get('option_desc').hasError(validation.type) 
+                    && (formGroup.get('option_desc').dirty || formGroup.get('option_desc').touched)"
+          [innerHtml]="validation.message|translate">
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- READ-MORE LINK (URL): -->
+
+    <ion-item>
+      <ion-label position="floating" color="primary">
+        <span [innerHtml]="'draftpoll.option-url-label'|translate">
+        </span>
+      </ion-label>
+      <ion-input 
+        formControlName="option_url" 
+        [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
+        type="text"  tabindex="0" 
+        style="font-size: smaller;">
+      </ion-input>
+      <ion-button 
+          *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 
+          fill="clear" slot="end" class="skip-button" tabindex="-1" 
+          (click)="G.open_url_in_new_tab(formGroup.get('option_url').value)">
+        <ion-icon name="open-outline"></ion-icon>&nbsp;
+        <span [innerHtml]="'test'|translate"></span>
+      </ion-button>
+    </ion-item>
+    <div class="validation-errors">
+      <ng-container *ngFor="let validation of validation_messages.option_url">
+        <div class="error-message" 
+            *ngIf="formGroup.get('option_url').hasError(validation.type) 
+                    && (formGroup.get('option_url').dirty || formGroup.get('option_url').touched)"
+          [innerHtml]="validation.message|translate">
+        </div>
+      </ng-container>
+    </div>
+
+  </form>
+</ion-content>

@@ -146,7 +146,7 @@
         <ion-button 
             *ngIf="formGroup.get('poll_url').valid && ![null,''].includes(formGroup.get('poll_url').value)" 
             tabindex="-1" fill="clear" slot="end" class="skip-button" 
-            (click)="test_url(formGroup.get('poll_url').value)">
+            (click)="G.open_url_in_new_tab(formGroup.get('poll_url').value)">
           <ion-icon name="open-outline"></ion-icon>&nbsp;
           <span [innerHtml]="'test'|translate"></span>
         </ion-button>
@@ -357,7 +357,7 @@
             <ion-button 
                 *ngIf="formGroup.get('option_url'+i).valid && ![null,''].includes(formGroup.get('option_url'+i).value)" 
                 fill="clear" slot="end" class="skip-button" tabindex="-1" 
-                (click)="test_url(formGroup.get('option_url'+i).value)">
+                (click)="G.open_url_in_new_tab(formGroup.get('option_url'+i).value)">
               <ion-icon name="open-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'test'|translate"></span>
             </ion-button>

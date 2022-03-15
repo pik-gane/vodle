@@ -9,6 +9,7 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 
 @Component({
   selector: 'app-poll',
@@ -456,9 +457,6 @@ export class PollPage implements OnInit {
         component: DelegationDialogPage, 
         translucent: true,
         showBackdrop: true,
-        // TODO: avoid vertical misplacement
-//        align: "center",
-//        cssClass: 'kebap',
         componentProps: {parent: this}
       })
       .then((popoverElement)=>{
@@ -494,7 +492,17 @@ export class PollPage implements OnInit {
     await confirm.present(); 
   } 
 
-  add_option() {
+  add_option(event: Event) {
     // TODO: also add delegation if ospec.type == "-"
+    this.popover.create({
+      event, 
+      component: AddoptionDialogPage, 
+      translucent: true,
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((popoverElement)=>{
+      popoverElement.present();
+    })
   }
 }
