@@ -62,8 +62,8 @@ export class GlobalService implements OnDestroy {
     Del.init(this);
     N.init(this);
 
-    window.addEventListener("beforeunload", this.onBeforeUnload);
-    window.onbeforeunload = this.onBeforeUnload;
+    window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
+    window.onbeforeunload = this.onBeforeUnload.bind(this);
 
     this.L.exit("GlobalService.constructor");
   }
@@ -77,15 +77,9 @@ export class GlobalService implements OnDestroy {
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
     console.log("DATA onBeforeUnload entry");
-//    this.D.save_state();
+    this.D.save_state();
     console.log("DATA onBeforeUnload exit");
   }
-
-/* not needed?
-  showinbrowser(uri) {
-    window.open(uri,'_system','location=yes');
-  }
-*/
 
   // TODO: use this consistently wherever an external page is accessed:
   open_url_in_new_tab(url: string) {
