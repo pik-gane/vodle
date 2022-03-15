@@ -125,6 +125,7 @@ export class PollPage implements OnInit {
     window.setTimeout(this.show_stats.bind(this), 100);
     this.update_delegation_info();
     this.on_delegate_toggle_change();
+    this.p.have_seen = true;
     this.G.L.exit("PollPage.onDataReady");
   }
 

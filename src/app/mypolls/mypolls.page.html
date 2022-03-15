@@ -86,9 +86,9 @@
 
           <!-- Badges: -->
 
-          <ion-badge *ngIf="!p.have_acted" class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+          <ion-badge *ngIf="!p.have_seen" class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
           <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
-          <ion-badge *ngIf="p.am_abstaining" class="ion-no-margin" style="margin-left:5px;" color="warning" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
+          <ion-badge *ngIf="p.have_seen && p.am_abstaining" class="ion-no-margin" style="margin-left:5px;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
           <ion-badge *ngIf="p.have_delegated" class="ion-no-margin" style="margin-left:5px;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
 
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>

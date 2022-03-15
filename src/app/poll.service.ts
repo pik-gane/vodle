@@ -1491,6 +1491,7 @@ export class Poll {
   }
 
   update_shares(oids_descending: Array<string>): boolean {
+    // TODO: this sometimes seems to work incorrectly at the very beginning.
     let total_n_votes = 0,
         shares_changed = false;
     this.T.n_votes_map.set("", 0); 
