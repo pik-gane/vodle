@@ -499,6 +499,7 @@ export class PollPage implements OnInit {
       component: AddoptionDialogPage, 
       translucent: true,
       showBackdrop: true,
+//      cssClass: 'add-option-class', // TODO: improve positioning
       componentProps: {parent: this}
     })
     .then((popoverElement)=>{

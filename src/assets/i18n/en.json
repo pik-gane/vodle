@@ -1,4 +1,5 @@
 {
+    "add": "Add",
     "add-option": "Add option",
     "add-target": "Add target",
     "cancel": "Cancel",
@@ -51,6 +52,12 @@
 
         "h3": "Support vodle!",
         "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
+    },
+
+    "addoption": {
+        "header": "Add another option",
+        "intro": "Please make sure the new option is not already covered by the existing options.",
+        "info": "Once added, the option cannot be edited or removed again."
     },
 
     "badges": {
@@ -127,7 +134,7 @@
         "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
         "no-change": "Don't change",
 
-        "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle.",
+        "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle or a too large voting weight.",
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later."

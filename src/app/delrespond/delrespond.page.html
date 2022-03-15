@@ -9,6 +9,10 @@
 
 <ion-content *ngIf="ready">
 
+  <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
+
+  <!-- Acceptance is possible: -->
+
   <ng-container *ngIf="status=='possible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -44,6 +48,8 @@
       </ion-label>
     </ion-item>  
   </ng-container>
+
+  <!-- Acceptance would lead to cycle: -->
 
   <ng-container *ngIf="(status=='cycle')||(status=='two-way')">
     <ion-item lines="none" class="ion-text-center">
@@ -84,6 +90,7 @@
       </ion-col>
     </ion-item>  
   </ng-container>
+  <!--
   <ng-container *ngIf="status=='cycle'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -119,6 +126,10 @@
       </ion-col>
     </ion-item>
   </ng-container>
+  -->
+  
+  <!-- Acceptance would exceed maximum allowed voting weight: -->
+
   <ng-container *ngIf="status=='weight-exceeded'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -154,6 +165,8 @@
       </ion-col>
     </ion-item>
   </ng-container>
+
+  <!-- Request was already accepted but can be declined after the fact: -->
 
   <ng-container *ngIf="status=='accepted'">
     <ion-item lines="none" class="ion-text-center">
@@ -191,6 +204,8 @@
     </ion-item>  
   </ng-container>
 
+  <!-- Request was already declined but can be accepted after the fact: -->
+
   <ng-container *ngIf="status=='declined, possible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -227,7 +242,9 @@
     </ion-item>  
   </ng-container>
 
-  <ng-container *ngIf="(status=='declined, two-way')||(status=='declined, cycle')">
+  <!-- Request was already declined and cannot be accepted: -->
+
+  <ng-container *ngIf="(status=='declined, two-way')||(status=='declined, cycle')||(status=='declined, weight-exceeded')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -256,6 +273,8 @@
     </ion-item>  
   </ng-container>
 
+  <!-- Poll is unknown: -->
+
   <ng-container *ngIf="status=='poll-unknown'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -272,6 +291,8 @@
       </ion-col>
     </ion-item>
   </ng-container>
+
+  <!-- Poll is already closed: -->
 
   <ng-container *ngIf="status=='closed'">
     <ion-item lines="none" class="ion-text-center">
@@ -298,6 +319,8 @@
       </ion-label>
     </ion-item>  
   </ng-container>
+
+  <!-- We're still missing some data: -->
 
   <ng-container *ngIf="status=='not-in-db'">
     <ion-item [innerHtml]="'delrespond.try-again'|translate">      
