@@ -1263,7 +1263,7 @@ export class Poll {
           }
         }
       }
-      this.G.L.trace("PollService.update_proxy_rating",n_changed,eff_rating_changes_map,old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      this.G.L.trace("Poll.update_proxy_rating",n_changed,eff_rating_changes_map,old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
       // store new max, argmax:
       if (max_r > 0) {
         this.max_proxy_ratings_map.set(vid, max_r);
@@ -1291,7 +1291,7 @@ export class Poll {
 
   private update_proxy_rating_phase2(vid: string, n_changed: boolean, eff_rating_changes_map: Map<string, number>) {
     // process the consequences of changing one or more effective ratings of vid
-    this.G.L.entry("PollService.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
+    this.G.L.entry("Poll.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
     for (const [oid, value] of eff_rating_changes_map) {
       // register change in map and get old eff. rating:
       var eff_rs_map = this.effective_ratings_map.get(oid);
@@ -1490,11 +1490,11 @@ export class Poll {
     return vote_changed;
   }
 
-  update_shares(oids_desc: Array<string>): boolean {
+  update_shares(oids_descending: Array<string>): boolean {
     let total_n_votes = 0,
         shares_changed = false;
     this.T.n_votes_map.set("", 0); 
-    for (const oid of oids_desc) {
+    for (const oid of oids_descending) {
       this.T.n_votes_map.set(oid, 0);
     }
     for (const vid of this.T.all_vids_set) {
@@ -1506,7 +1506,7 @@ export class Poll {
     }
     if (total_n_votes > 0) {
       // shares are proportional to votes received:
-      for (const oid of oids_desc) {
+      for (const oid of oids_descending) {
         const share = (this.T.n_votes_map.get(oid) || 0) / total_n_votes;
         if (share != this.T.shares_map.get(oid)) {
           this.G.L.trace("PollPage.update_shares",this.pid, oid, share);
@@ -1516,8 +1516,8 @@ export class Poll {
       }  
     } else {
       // all abstained, so shares are uniform:
-      const k = oids_desc.length;
-      for (const oid of oids_desc) {
+      const k = oids_descending.length;
+      for (const oid of oids_descending) {
         const share = 1 / k;
         if (share != this.T.shares_map.get(oid)) {
           this.G.L.trace("PollPage.update_shares",this.pid, oid, share);

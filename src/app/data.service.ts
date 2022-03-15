@@ -139,8 +139,8 @@ const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db
 // some poll and voter data keys are stored in the user db rather than in the poll db:
 const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_seen', 'have_acted', 'have_seen_results', 'simulated_ratings'];
 
-const poll_keystarts_requiring_due = ['option'];
-const voter_subkeystarts_requiring_due = ['rating', 'delegate', 'accept'];
+const poll_keystarts_requiring_due = ['state', 'option'];
+const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response']; 
 
 // ENCRYPTION:
 
@@ -873,7 +873,15 @@ export class DataService implements OnDestroy {
 
   // HOOKS FOR OTHER SERVICES:
 
-  change_poll_state(p:Poll, new_state:string) {
+  wait_for_user_db(): Promise<any> {
+    return this.local_synced_user_db.info();
+  }
+
+  wait_for_poll_db(pid: string): Promise<any> {
+    return this.local_poll_dbs[pid].info();
+  }
+
+  change_poll_state(p: Poll, new_state: string) {
     this._pids.add(p.pid);
 
     // called by PollService when changing state
@@ -887,37 +895,38 @@ export class DataService implements OnDestroy {
 
       // first store due in polldb so that it can be used for the other items:
       this._setp_in_polldb(pid, 'due', p.due.toISOString());
-
-      // move data from local user db to poll db.
-      for (const [ukey, value] of Object.entries(this.user_cache)) {
-        if (ukey.startsWith(prefix)) {
-          // used db entry belongs to this poll.
-          const key = ukey.substring(prefix.length),
-                pos = (key+'.').indexOf('.'),
-                subkey = (key+'.').slice(0, pos);
-          if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
-            if (this._setp_in_polldb(pid, key, value as string)) {
-              this.delu(ukey);
-            } else {
-              this.G.L.warn("DataService.change_poll_state couldn't move", pid, ukey, key);
+      // now wait for poll db before continuing:
+      this.wait_for_poll_db(pid).finally(() => {
+        // move data from local user db to poll db.
+        for (const [ukey, value] of Object.entries(this.user_cache)) {
+          if (ukey.startsWith(prefix)) {
+            // used db entry belongs to this poll.
+            const key = ukey.substring(prefix.length),
+                  pos = (key+'.').indexOf('.'),
+                  subkey = (key+'.').slice(0, pos);
+            if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
+              if (this._setp_in_polldb(pid, key, value as string)) {
+                this.delu(ukey);
+              } else {
+                this.G.L.warn("DataService.change_poll_state couldn't move", pid, ukey, key);
+              }
             }
           }
         }
-      }
-
-      // finally, start synching with remote poll db:
-      // check if db credentials are set:
-      if (this.poll_has_db_credentials(pid)) {
-        this.G.L.trace("DataService.change_poll_state found remote poll db credentials");
-        // connect to remote and start sync:
-        this.connect_to_remote_poll_db(pid).catch(err => {
-          this.G.L.warn("DataService.change_poll_state couldn't start remote poll db syncing for", pid, err);
+        // finally, start synching with remote poll db:
+        // check if db credentials are set:
+        if (this.poll_has_db_credentials(pid)) {
+          this.G.L.trace("DataService.change_poll_state found remote poll db credentials");
+          // connect to remote and start sync:
+          this.connect_to_remote_poll_db(pid).catch(err => {
+            this.G.L.warn("DataService.change_poll_state couldn't start remote poll db syncing for", pid, err);
+            // TODO
+          });
+        } else {
+          this.G.L.warn("DataService.change_poll_state couldn't find remote poll db credential for", pid);
           // TODO
-        });
-      } else {
-        this.G.L.warn("DataService.change_poll_state couldn't find remote poll db credential for", pid);
-        // TODO
-      }
+        }
+      });
     }
 
     if (new_state != 'draft') {
@@ -1436,6 +1445,7 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
+
   private _setp_in_polldb(pid: string, key: string, value: string): boolean {
     /** Set poll data item in poll db.
      * If necessary, mark the database entry with poll's due date
@@ -1449,6 +1459,7 @@ export class DataService implements OnDestroy {
     return this.store_poll_data(pid, key, this.poll_caches[pid], key, 
                                 poll_keystarts_requiring_due.includes(keystart));
   }
+
   private _setv_in_userdb(pid: string, key: string, value: string): boolean {
     // set voter data item in user db:
     value = value || '';
@@ -1458,6 +1469,7 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
+
   setv_in_polldb(pid: string, key: string, value: string, vid?: string): boolean {
     /** Set voter data item in poll db.
      * If necessary, mark the database entry with poll's due date
@@ -1761,6 +1773,7 @@ export class DataService implements OnDestroy {
         cache = this.ensure_poll_cache(pid);
     var key, value_changed;
 
+/*
     if (_id.includes('due_and_state')) {
       // it's the combined due and state doc, so extract both:
 
@@ -1786,8 +1799,9 @@ export class DataService implements OnDestroy {
         value_changed = true;
       }  
 
-    } else {
-
+    } else 
+*/
+    {
       // check if doc contains a claimed due date:
       const doc_due = doc['due'];
       if (doc_due) {
@@ -1821,6 +1835,15 @@ export class DataService implements OnDestroy {
 
             // RETURN:
             return false;  
+          }
+
+          if (key == 'state') {
+            // also set state in user db:
+            this.setu(get_poll_key_prefix(pid) + 'state', value);
+            if (pid in this.G.P.polls) {
+              // also update poll's internal state cache:
+              this.G.P.polls[pid]._state = value;
+            }
           }
 
           if (key.startsWith('option.') && key.endsWith('.name')) {
@@ -2040,11 +2063,14 @@ export class DataService implements OnDestroy {
 
       // store encrypted and with correct prefix:
       var _id, doc_value_key;
+      /*
       if ((key == 'due') || (key == 'state')) {
         _id = poll_doc_id_prefix + pid + ':due_and_state';
         doc_value_key = key;
         add_due = true;
-      } else {
+      } else 
+      */ 
+      {
         _id = poll_doc_id_prefix + pid + ':' + key;
         doc_value_key = 'value';
       }
@@ -2100,9 +2126,11 @@ export class DataService implements OnDestroy {
         if (add_due) {
           doc['due'] = this.poll_caches[pid]['due'];
         }
+        /*
         if (key=='due') {
           doc['state'] = encrypt(this.poll_caches[pid]['state'], poll_pw);
         }
+        */
         db.put(doc)
         .then(response => {
           this.G.L.trace("DataService.store_poll_data new", pid, key, value, doc);
@@ -2264,9 +2292,12 @@ export class DataService implements OnDestroy {
       // it's a non-voter data item.
 
       // use correct prefix:
+      /*
       if ((key == 'due') || (key == 'state')) {
         _id = poll_doc_id_prefix + pid + ':due_and_state';
-      } else {
+      } else 
+      */
+      {
         _id = poll_doc_id_prefix + pid + ':' + key;
       }
       if ((poll_pw=='')||(!poll_pw)) {
@@ -2368,6 +2399,7 @@ export class DataService implements OnDestroy {
           // delete ionic local storage:
           this.storage.clear()
           .then(() => {
+            this.storage = null;
             // DONE. 
             resolve(true);
           }).catch(reject);

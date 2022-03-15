@@ -77,17 +77,19 @@ export class GlobalService implements OnDestroy {
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: Event) {
     console.log("DATA onBeforeUnload entry");
-    this.D.save_state();
-    if (this.D.page) {
-      if (this.D.page.ionViewWillLeave) {
-        this.D.page.ionViewWillLeave();
-      }
-      if (this.D.page.ionViewDidLeave) {
-        this.D.page.ionViewDidLeave();
-      }
-      if (this.D.page.ngOnDestroy) {
-        this.D.page.ngOnDestroy();
-      }
+    if (this.storage) {
+      this.D.save_state();
+      if (this.D.page) {
+        if (this.D.page.ionViewWillLeave) {
+          this.D.page.ionViewWillLeave();
+        }
+        if (this.D.page.ionViewDidLeave) {
+          this.D.page.ionViewDidLeave();
+        }
+        if (this.D.page.ngOnDestroy) {
+          this.D.page.ngOnDestroy();
+        }
+      }  
     }
     console.log("DATA onBeforeUnload exit");
   }

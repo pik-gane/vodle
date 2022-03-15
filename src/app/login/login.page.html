@@ -98,7 +98,7 @@ TODO:
       <ion-item lines="none">
         <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
       </ion-item>
-  </ng-container>
+    </ng-container>
 
     <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
       <ion-item class="item-text-wrap" lines="none">
@@ -284,8 +284,9 @@ TODO:
         <p><br/><br/><br/></p>
       </ion-item>
       <ion-item lines="none">
+        <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
         <ion-button size="larger" color="primary" slot="end"
-            shape="round"
+            shape="round" type="submit"
             (click)="connected_dismissed()">
           <span [innerHtml]="'start'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>

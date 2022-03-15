@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectorRef } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { PopoverController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -40,6 +40,7 @@ export class AddoptionDialogPage implements OnInit {
     private popover: PopoverController,
     public G: GlobalService,
     public translate: TranslateService,
+    private ref: ChangeDetectorRef
   ) { 
   }
 
@@ -84,8 +85,12 @@ export class AddoptionDialogPage implements OnInit {
     }
     this.parent.oidsorted.push(o.oid);
     this.parent.sortingcounter++;
-    this.p.tally_all();
-    this.popover.dismiss();
+    this.ref.detectChanges();
+    // need to wait a little for the view to refresh:
+    setTimeout(() => {
+      this.p.tally_all();
+      this.popover.dismiss();
+    }, 200);
   }
 
   ClosePopover()

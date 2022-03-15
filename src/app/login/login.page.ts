@@ -207,7 +207,6 @@ export class LoginPage implements OnInit {
 
   connected_dismissed() {
     this.G.D.init_notifications(true);
-    // TODO: redirect to page we came from, or mypolls, and (?) remove login pages from router history? 
     const target = decodeURIComponent(((!!this.then_url) && !this.then_url.includes('logout')) ? this.then_url : "/");
     this.G.L.trace("LoginPage redirecting to", this.then_url, target);
     this.router.navigate([target]);

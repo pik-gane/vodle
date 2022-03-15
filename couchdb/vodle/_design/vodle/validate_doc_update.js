@@ -23,6 +23,7 @@ function (newDoc, savedDoc, userCtx) {
                 }
             } else {
                 // it's a poll doc.
+                /*
                 // is it the combi doc due+state?
                 if (_id.endsWith("due_and_state")) {
                     // yes, so make sure due is not changed and state is changed in accordance to due:
@@ -37,8 +38,21 @@ function (newDoc, savedDoc, userCtx) {
                             throw ({forbidden: 'Attempt to set state to closed before due date.'})
                         }
                     }
+                }
+                */
+                if (_id.endsWith(".state")) {
+                    // It's a state doc. Make sure state is changed in accordance to due:
+                    if ((newDoc.due||'') != '') {
+                        let now = new Date();
+                        let due = new Date(newDoc.due);
+                        if (newDoc.value != 'closed' && now > due) {
+                            throw ({forbidden: 'Attempt to set state to not closed after due date.'})
+                        } else if (newDoc.value == 'closed' && now < due) {
+                            throw ({forbidden: 'Attempt to set state to closed before due date.'})
+                        }
+                    }
                 } else {
-                    // if it already exists, let noone update or delete it:
+                    // if doc already exists, let noone update or delete it:
                     if (savedDoc) {
                         throw ({forbidden: 'Noone may update or delete existing poll documents.'})
                     }

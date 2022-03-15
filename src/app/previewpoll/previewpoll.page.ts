@@ -89,30 +89,32 @@ export class PreviewpollPage implements OnInit {
     this.p.init_password();
     // register the user herself as a voter in the poll:
     this.p.init_myvid();
-    // set state to running, which will cause the poll data to be stored in the designated server:
     this.p.start_date = new Date();
-    this.p.state = 'running';
-    // set own ratings to zero:
-    this.p.init_myratings();
-    this.p.creator = this.G.S.email;
-    // if test, register simulated voters:
-    if (this.p.is_test) {
-      for (const oid of this.p.oids) {
-        const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
-        if (Array.isArray(ratings)) {
-          for (const i in ratings) {
-            const vid = "simulated"+i,
-                  r = ratings[i];
-            this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
-            this.G.P.update_own_rating(this.pid, vid, oid, r);
+    // wait for these changes to user db to be finished before continuing!
+    this.G.D.wait_for_user_db().finally(() => {
+      // set state to running, which will cause the poll data to be stored in the designated server:
+      this.p.state = 'running';
+      // set own ratings to zero:
+      this.p.init_myratings();
+      this.p.creator = this.G.S.email;
+      // if test, register simulated voters:
+      if (this.p.is_test) {
+        for (const oid of this.p.oids) {
+          const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
+          if (Array.isArray(ratings)) {
+            for (const i in ratings) {
+              const vid = "simulated"+i,
+                    r = ratings[i];
+              this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
+              this.G.P.update_own_rating(this.pid, vid, oid, r);
+            }
           }
         }
       }
-    }
-
-    // go to invitation page:
-    this.router.navigate(['/inviteto/'+this.pid]);
-    this.G.L.exit("PreviewpollPage.publish_button_clicked");
+      // go to invitation page:
+      this.router.navigate(['/inviteto/'+this.pid]);
+      this.G.L.exit("PreviewpollPage.publish_button_clicked");
+    });
   }
 
 }
