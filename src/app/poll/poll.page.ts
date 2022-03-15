@@ -6,6 +6,7 @@ import { PopoverController, AlertController } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
+import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
 
@@ -51,6 +52,8 @@ export class PollPage implements OnInit {
   scroll_position = 0;
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
+
+  news: Set<news_t> = new Set();
 
   // LIFECYCLE:
 
@@ -129,6 +132,7 @@ export class PollPage implements OnInit {
     this.p.tally_all();
     this.update_order();
     this.update_delegation_info();
+    this.news = this.G.N.filter({pid: this.pid});
     this.changeDetector.detectChanges();
     this.G.L.exit("PollPage.onDataChange");
   }
@@ -183,6 +187,12 @@ export class PollPage implements OnInit {
     for (let oid of this.oidsorted) {
       if (!this.delegate || this.rate_yourself_toggle[oid]) {
         this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+      }
+    }
+    // dismiss auto-dismissing news:
+    for (const news of this.news) {
+      if (news.auto_dismiss) {
+        this.G.N.dismiss(news.key);
       }
     }
   }
@@ -440,8 +450,9 @@ export class PollPage implements OnInit {
     }
   }
 
-  delegate_dialog() {
+  delegate_dialog(event: Event) {
     this.popover.create({
+        event, 
         component: DelegationDialogPage, 
         translucent: true,
         showBackdrop: true,

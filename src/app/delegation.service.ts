@@ -530,6 +530,7 @@ export class DelegationService {
         this.G.N.add({
           class: 'delegation_accepted', 
           pid: pid,
+          auto_dismiss: true,
           title: this.translate.instant('news-title.delegation_accepted', {nickname: this.get_nickname(pid, did)}) 
         });
       } else if ((old_status=="declined") && (a.status=="agreed")) {
