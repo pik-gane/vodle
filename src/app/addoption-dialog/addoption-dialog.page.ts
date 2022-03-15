@@ -67,8 +67,8 @@ export class AddoptionDialogPage implements OnInit {
     /** add the option */
     const name = this.formGroup.get('option_name').value,
           desc = this.formGroup.get('option_desc').value,
-          url = this.formGroup.get('option_url').value;
-    new Option(this.G, this.p, null, name, desc, url);
+          url = this.formGroup.get('option_url').value,
+          o = new Option(this.G, this.p, null, name, desc, url);
     LocalNotifications.schedule({
       notifications: [{
         title: this.translate.instant("addoption.notification-added-title"),
@@ -79,6 +79,9 @@ export class AddoptionDialogPage implements OnInit {
     .then(res => {
     }).catch(err => {
     });
+    this.parent.oidsorted.push(o.oid);
+    this.parent.sortingcounter++;
+    this.p.tally_all();
     this.popover.dismiss();
   }
 

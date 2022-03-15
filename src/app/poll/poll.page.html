@@ -333,7 +333,7 @@
 
     <!-- OPTIONS: -->
 
-    <ion-item *ngFor="let item of [].constructor(p.oids.length); let i = index" style="align-items:flex-start">
+    <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
 
       <!-- Possible alternative placement of expansion button, not preferred just now:
       <ion-button 
@@ -354,7 +354,7 @@
 
       <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px" style="position:relative; top:14px;">
         <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
-        <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 20 20 Z" fill="#9abcbd" />
+        <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
       </svg>
 
       <!-- REST OF ALWAYS VISIBLE STUFF: -->

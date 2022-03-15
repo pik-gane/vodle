@@ -292,12 +292,16 @@ export class PollPage implements OnInit {
 
   async update_order(force=false) {
     // TODO: rather have this triggered by tally function!
-    for (let i in this.oidsorted) { // loops over the indices
-      if (this.oidsorted[i] != this.p.T.oids_descending[i]) {
-//        this.G.L.trace("PollPage.update_order", this.oidsorted[i], this.p.T.oids_descending[i]);
-        this.needs_refresh = true;
-        break;
-      }
+    if (this.oidsorted.length != this.p.oids.length) {
+      this.needs_refresh = true;
+    } else {
+      for (let i in this.oidsorted) { // loops over the indices
+        if (this.oidsorted[i] != this.p.T.oids_descending[i]) {
+  //        this.G.L.trace("PollPage.update_order", this.oidsorted[i], this.p.T.oids_descending[i]);
+          this.needs_refresh = true;
+          break;
+        }
+      }  
     }
     if (force || (this.needs_refresh && !(this.refresh_paused))) {
       // link displayed sorting to poll's sorting:
