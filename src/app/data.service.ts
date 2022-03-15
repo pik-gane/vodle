@@ -1521,8 +1521,11 @@ export class DataService implements OnDestroy {
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);
-    } else if (change.direction=='pull') {
-      for (const doc of change.change.docs) {
+    } else if (!change.direction || change.direction == 'pull') {
+      if (change.change) {
+        change = change.change;
+      }
+      for (const doc of change.docs) {
         if (doc._deleted) {
           local_changes = this.handle_deleted_user_doc(doc);
         } else {
@@ -1543,8 +1546,11 @@ export class DataService implements OnDestroy {
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_poll_doc(pid, change.doc);
-    } else if (change.direction=='pull') {
-      for (const doc of change.change.docs) {
+    } else if (!change.direction || change.direction == 'pull') {
+      if (change.change) {
+        change = change.change;
+      }
+      for (const doc of change.docs) {
         if (doc._deleted) {
           local_changes = this.handle_deleted_poll_doc(pid, doc);
         } else {

@@ -239,6 +239,9 @@ export class PollPage implements OnInit {
 
   show_stats() { 
     /** update pies and bars, but not order! */
+    if (!this.ready) {
+      return
+    }
     this.G.L.entry("PollPage.show_stats");
     const p = this.p, T = p.T, myvid = p.myvid, 
         approval_scores_map = T.approval_scores_map,
