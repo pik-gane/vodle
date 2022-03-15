@@ -1,5 +1,5 @@
 {
-    ":COMMENT": "Template for example polls. Duplicate file, remove one of the two colons ::, and rename it adequately to example:whatever.json",
+    ":COMMENT": "Template for example polls. Duplicate file, remove one of the two colons ::, and rename it adequately to examples:whatever.json",
 
     "type": "Poll type: winner|share",
 
@@ -18,12 +18,14 @@
         {
             "name": "Option 1 name (must be unique within the poll)",
             "desc": "Option 1 description (optional)",
-            "url": "Option 1 'read more' URL (optional)"
+            "url": "Option 1 'read more' URL (optional)",
+            "ratings": "Option 1 list of ratings of simulated voters (optional)"
         },
         {
             "name": "Option k name (must be unique within the poll)",
             "desc": "Option k description (optional)",
-            "url": "Option k 'read more' URL (optional)"
+            "url": "Option k 'read more' URL (optional)",
+            "ratings": "Option k list of ratings of simulated voters (optional)"
         }
     ]
 

@@ -1,0 +1,42 @@
+{
+    "is_test": true,
+    
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "Icecream flavour",
+
+    "desc": "What flavour should we buy for tonight's party?",
+    
+    "due_type": "10min",
+
+    "options": [
+        {
+            "name": "Vanilla",
+            "desc": "This will get universal approval if you rate it at more than zero",
+            "ratings": [19,38,57,76]
+        },
+        {
+            "name": "Chocolate",
+            "desc": "This will get 80% approval if you rate it at 21 or higher",
+            "ratings": [79,58,37,0]
+        },
+        {
+            "name": "Strawberry",
+            "desc": "This is the favourite of two simulated voters",
+            "ratings": [100,100,0,0]
+        },
+        {
+            "name": "Lemon",
+            "desc": "This is the favourite of one simulated voter",
+            "ratings": [0,0,100,0]
+        },
+        {
+            "name": "Mango",
+            "desc": "This is the favourite of one simulated voter",
+            "ratings": [0,0,0,100]
+        }
+    ]
+
+}

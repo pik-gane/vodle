@@ -18,7 +18,7 @@ import { GlobalService } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 
-type option_data_t = { oid?, name?, desc?, url? };
+type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
 @Component({
   selector: 'app-draftpoll',
@@ -48,6 +48,7 @@ export class DraftpollPage implements OnInit {
 
   pd: { 
     pid?,
+    is_test?,
     type?, language?, 
     title?, desc?, url?, 
     due_type?, due_custom?, 
@@ -213,7 +214,7 @@ export class DraftpollPage implements OnInit {
       this.G.L.info("DraftpollPage.ionViewWillLeave saving draft");
       var p;
       if (!this.pid) {
-        this.pid = this.G.P.generate_pid();
+        this.pid = (this.pd.is_test == true ? 'TEST_' : '') + this.G.P.generate_pid();
       }
       if (!(this.pid in this.G.P.polls)) {
         // generate new poll object:
@@ -222,6 +223,9 @@ export class DraftpollPage implements OnInit {
         p = this.G.P.polls[this.pid];
       }
       p.state = 'draft';
+      if (this.pd.is_test == true) {
+        p.is_test = true;
+      }
       p.type = this.pd.type;
       p.language = this.pd.language;
       p.title = this.pd.title;
@@ -247,7 +251,6 @@ export class DraftpollPage implements OnInit {
             // generate new options object:
             this.G.L.trace("  creating new Option object");
             o = new Option(this.G, p, od.oid, od.name, od.desc, od.url);
-            this.G.L.trace("   ...", o);
           } else {
             o = p.options[od.oid];
             this.G.L.trace("  reusing Option object", o);
@@ -256,6 +259,10 @@ export class DraftpollPage implements OnInit {
             o.url = od.url;
           }
           oids.push(od.oid);
+          if (p.is_test && !!od.ratings) {
+            // mark poll as test poll and store ratings of simulated voters:
+            this.G.D.setp(this.pid, 'simulated_ratings.'+od.oid, JSON.stringify(od.ratings));
+          }
         }
       }
       this.G.L.trace(" oids now", oids);
@@ -499,7 +506,7 @@ export class DraftpollPage implements OnInit {
     this.formGroup.get('poll_due_custom').updateValueAndValidity();
     if (this.formGroup.valid) {
       if (!this.pid) {
-        this.pid = this.G.P.generate_pid();
+        this.pid = (this.pd.is_test == true ? 'TEST_' : '') + this.G.P.generate_pid();
       }
       this.router.navigate(['/previewpoll/'+this.pid]);
     }

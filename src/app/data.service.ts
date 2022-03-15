@@ -137,7 +137,7 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_acted', 'have_seen_results'];
+const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_seen', 'have_acted', 'have_seen_results', 'simulated_ratings'];
 
 const poll_keystarts_requiring_due = ['option'];
 const voter_subkeystarts_requiring_due = ['rating', 'delegate', 'accept'];
@@ -1382,7 +1382,7 @@ export class DataService implements OnDestroy {
     return value;
   }
 
-  setv(pid:string, key:string, value:string): boolean {
+  setv(pid: string, key: string, value: string): boolean {
     /** Set a voter data item.
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
@@ -1394,11 +1394,11 @@ export class DataService implements OnDestroy {
     if (this.pid_is_draft(pid)) {
       return this._setv_in_userdb(pid, key, value);
     } else {
-      return this._setv_in_polldb(pid, key, value);
+      return this.setv_in_polldb(pid, key, value);
     }
   }
 
-  delv(pid:string, key:string) {
+  delv(pid: string, key: string) {
     // delete a voter data item
     if (this.pid_is_draft(pid)) {
       const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
@@ -1427,7 +1427,7 @@ export class DataService implements OnDestroy {
 
   // OTHER METHODS:
 
-  private _setp_in_userdb(pid:string, key:string, value:string): boolean {
+  private _setp_in_userdb(pid: string, key: string, value: string): boolean {
     // set poll data item in user db:
     value = value || '';
     // construct key for user db:
@@ -1436,7 +1436,7 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
-  private _setp_in_polldb(pid:string, key:string, value:string): boolean {
+  private _setp_in_polldb(pid: string, key: string, value: string): boolean {
     /** Set poll data item in poll db.
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
@@ -1449,7 +1449,7 @@ export class DataService implements OnDestroy {
     return this.store_poll_data(pid, key, this.poll_caches[pid], key, 
                                 poll_keystarts_requiring_due.includes(keystart));
   }
-  private _setv_in_userdb(pid:string, key:string, value:string): boolean {
+  private _setv_in_userdb(pid: string, key: string, value: string): boolean {
     // set voter data item in user db:
     value = value || '';
     // construct key for user db:
@@ -1458,16 +1458,16 @@ export class DataService implements OnDestroy {
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
-  private _setv_in_polldb(pid:string, key:string, value:string): boolean {
+  setv_in_polldb(pid: string, key: string, value: string, vid?: string): boolean {
     /** Set voter data item in poll db.
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
      */ 
     value = value || '';
     // construct key for poll db:
-    const pkey = this.get_voter_key_prefix(pid) + key;
+    const pkey = this.get_voter_key_prefix(pid, vid) + key;
     this.ensure_poll_cache(pid);
-    this.G.L.trace("DataService._setv_in_polldb", pid, key, value);
+    this.G.L.trace("DataService.setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
     const subkeystart = key.slice(0, (key+'.').indexOf('.'));
     return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, 
@@ -2127,8 +2127,8 @@ export class DataService implements OnDestroy {
 
       // check which voter's data this is:
       const vid_prefix = key.slice(0, key.indexOf(':')),
-          vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
-      if (vid_prefix != 'voter.' + vid) {
+            vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
+      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true') {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.store_poll_data tried changing another voter's data item", pid, key);
 

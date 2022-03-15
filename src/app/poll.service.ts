@@ -207,14 +207,13 @@ export class Poll {
   // private attributes of the user:
 
   get creator(): string { return this.G.D.getp(this._pid, 'creator'); }
-  set creator(value: string) {
-    this.G.D.setp(this._pid, 'creator', value);
-  }
+  set creator(value: string) { this.G.D.setp(this._pid, 'creator', value); }
+
+  get have_seen(): boolean { return this.G.D.getp(this._pid, 'have_seen') == 'true'; }
+  set have_seen(value: boolean) { this.G.D.setp(this._pid, 'have_seen', value.toString()); }
 
   get have_acted(): boolean { return this.G.D.getp(this._pid, 'have_acted') == 'true'; }
-  set have_acted(value: boolean) {
-    this.G.D.setp(this._pid, 'have_acted', value.toString());
-  }
+  set have_acted(value: boolean) { this.G.D.setp(this._pid, 'have_acted', value.toString()); }
 
   // attributes that are needed to access the poll's database 
   // and thus stored in user's personal data.
@@ -287,6 +286,9 @@ export class Poll {
   // all other attributes are accessed via setp, getp, 
   // which automatically use the user's database for state 'draft' 
   // and the poll's database otherwise (in which case they are also read-only).
+
+  get is_test(): boolean { return this.G.D.getp(this._pid, 'is_test') == 'true'; }
+  set is_test(value: boolean) { this.G.D.setp(this._pid, 'is_test', value.toString()); }
 
   get type(): poll_type_t { return this.G.D.getp(this._pid, 'type') as poll_type_t; }
   set type(value: poll_type_t) { this.G.D.setp(this._pid, 'type', value); }

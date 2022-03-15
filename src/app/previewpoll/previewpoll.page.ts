@@ -95,6 +95,18 @@ export class PreviewpollPage implements OnInit {
     // set own ratings to zero:
     this.p.init_myratings();
     this.p.creator = this.G.S.email;
+    // if test, register simulated voters:
+    if (this.p.is_test) {
+      for (const oid of this.p.oids) {
+        const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
+        if (Array.isArray(ratings)) {
+          for (const i in ratings) {
+            this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, ratings[i], "simulated"+i);
+          }
+        }
+      }
+    }
+
     // go to invitation page:
     this.router.navigate(['/inviteto/'+this.pid]);
     this.G.L.exit("PreviewpollPage.publish_button_clicked");
