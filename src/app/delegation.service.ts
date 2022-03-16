@@ -556,6 +556,8 @@ export class DelegationService {
       }
     }
 
+    // TODO: update tally!
+
     this.G.L.exit("DelegationService.update_agreement", a.status, [...a.accepted_oids], [...a.active_oids]);
   }
 

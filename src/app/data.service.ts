@@ -1517,7 +1517,7 @@ export class DataService implements OnDestroy {
 
   private handle_user_db_change(change) {
     // called by PouchDB sync and replicate
-    change = JSON.parse(JSON.stringify(change));
+//    change = JSON.parse(JSON.stringify(change));
     this.G.L.trace("DataService.handle_user_db_change");
     let local_changes = false;
     if (change.deleted){
@@ -1541,22 +1541,32 @@ export class DataService implements OnDestroy {
     }
   }
 
+  pending_changes = 0;
+
   private handle_poll_db_change(pid, change) {
     // called by PouchDB sync and replicate
-    change = JSON.parse(JSON.stringify(change));
-    this.G.L.trace("DataService.handle_poll_db_change", pid);
+//    change = JSON.parse(JSON.stringify(change));
+    this.G.L.entry("DataService.handle_poll_db_change", pid, this.pending_changes);
     let local_changes = false;
     if (change.deleted){
+      this.G.L.trace("DataService.handle_poll_db_change handling deleted");
       local_changes = this.handle_deleted_poll_doc(pid, change.doc);
     } else if (!change.direction || change.direction == 'pull') {
+      this.G.L.trace("DataService.handle_poll_db_change handling incoming");
       if (change.change) {
+        this.G.L.trace("DataService.handle_poll_db_change one deeper");
         change = change.change;
       }
+      this.G.L.trace("DataService.handle_poll_db_change n_docs, change:", change.docs.length, change);
       for (const doc of change.docs) {
         if (doc._deleted) {
+          this.G.L.trace("DataService.handle_poll_db_change doc was deleted", doc);
           local_changes = this.handle_deleted_poll_doc(pid, doc);
         } else {
+          this.G.L.trace("DataService.handle_poll_db_change doc was updated/new", doc);
+          this.pending_changes += 1;
           local_changes = this.doc2poll_cache(pid, doc);
+          this.pending_changes -= 1;
         }
       }
     }
@@ -1566,6 +1576,7 @@ export class DataService implements OnDestroy {
         this.page.onDataChange();
       }
     }
+    this.G.L.exit("DataService.handle_poll_db_change", pid, this.pending_changes);
   }
 
   private handle_deleted_user_doc(doc): boolean {
@@ -1581,7 +1592,8 @@ export class DataService implements OnDestroy {
     return false;
   }
 
-  private handle_deleted_poll_doc(pid:string, doc): boolean {
+  private handle_deleted_poll_doc(pid: string, doc): boolean {
+    this.G.L.entry("DataService.handle_deleted_poll_doc", pid, doc);
     if (!(pid in this.poll_caches)) {
       return false;
     }
@@ -1774,161 +1786,133 @@ export class DataService implements OnDestroy {
 
   private doc2poll_cache(pid: string, doc): boolean {
     /** Copy data from an incoming JSON doc to a poll cache. */
+
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
+
     const _id = doc._id, 
         poll_doc_prefix = poll_doc_id_prefix + pid + ':',
         voter_doc_prefix = poll_doc_id_prefix + pid + '.',
         cache = this.ensure_poll_cache(pid);
     var key, value_changed;
 
-/*
-    if (_id.includes('due_and_state')) {
-      // it's the combined due and state doc, so extract both:
+    // check if doc contains a claimed due date:
+    const doc_due = doc['due'];
+    if (doc_due) {
+      // check if it is correct:
+      if (!!cache['due'] && !(doc_due == cache['due'])) {
+        this.G.L.warn("DataService.doc2poll_cache received doc with wrong due", doc, this.poll_caches[pid]['due']);
 
-      const prefix = get_poll_key_prefix(pid);
-      const due = doc['due'];
-      const state = decrypt(doc['state'], this.user_cache[prefix + 'password']);
-      value_changed = false;
-      this.G.L.trace("DataServicedoc2poll_cache due_and_state old new",cache['due'],cache['state'],due,state);
-
-      // store in cache if changed:
-      if (cache['due'] != due) {
-        cache['due'] = due;
-        value_changed = true;
-      }  
-      if (cache['state'] != state) {
-        cache['state'] = state;
-        // also set state in user db:
-        this.setu(get_poll_key_prefix(pid) + 'state', state);
-        if (pid in this.G.P.polls) {
-          // also update poll's internal state cache:
-          this.G.P.polls[pid]._state = state;
-        }
-        value_changed = true;
-      }  
-
-    } else 
-*/
-    {
-      // check if doc contains a claimed due date:
-      const doc_due = doc['due'];
-      if (doc_due) {
-        // check if it is correct:
-        if (!!cache['due'] && !(doc_due == cache['due'])) {
-          this.G.L.warn("DataService.doc2poll_cache received doc with wrong due", doc, this.poll_caches[pid]['due']);
-
-          // RETURN:
-          return false;
-        }
+        // RETURN:
+        return false;
       }
-      value_changed = false;
-      const cyphertext = doc['value'];
-      this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
+    }
+    value_changed = false;
+    const cyphertext = doc['value'];
+    this.G.L.trace("DataService.doc2poll_cache cyphertext is", cyphertext);
 
-      if (cyphertext) {
+    if (cyphertext) {
 
-        // extract value:
-        const value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+      // extract value:
+      const value = decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
 
-        // extract key depending on doc type:
-        if (_id.startsWith(poll_doc_prefix)) {
+      // extract key depending on doc type:
+      if (_id.startsWith(poll_doc_prefix)) {
 
-          // it's a non-voter poll doc.
-          key = _id.slice(poll_doc_prefix.length, _id.length);
+        // it's a non-voter poll doc.
+        key = _id.slice(poll_doc_prefix.length, _id.length);
 
-          // check if doc should contain a claimed due data for validation:
-          const keystart = key.slice(0, (key+'.').indexOf('.'));
-          if (poll_keystarts_requiring_due.includes(keystart) && !doc_due) {
-            this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
-
-            // RETURN:
-            return false;  
-          }
-
-          if (key == 'state') {
-            // also set state in user db:
-            this.setu(get_poll_key_prefix(pid) + 'state', value);
-            if (pid in this.G.P.polls) {
-              // also update poll's internal state cache:
-              this.G.P.polls[pid]._state = value;
-            }
-          }
-
-          if (key.startsWith('option.') && key.endsWith('.name')) {
-
-            // it's an option's oid entry, so check whether we know this option:
-            const keyend = key.slice('option.'.length), 
-                oid = keyend.slice(0, keyend.indexOf('.'));
-            if (!(pid in this._pid_oids)) {
-              this._pid_oids[pid] = new Set();
-            }
-            if (!this._pid_oids[pid].has(oid)) {
-              this.G.L.trace("DataService.doc2poll_cache found new option", pid, oid);
-              this._pid_oids[pid].add(oid);
-            }
-
-          }
-
-          // store in cache if changed:
-          if (cache[key] != value) {
-            cache[key] = value;
-            value_changed = true;
-          }  
-
-        } else if (_id.startsWith(voter_doc_prefix)) {
-
-          // it's a voter doc.
-          key = _id.slice(voter_doc_prefix.length, _id.length);
-
-          const keyfromvid = key.slice('voter.'.length),
-                vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
-                subkey = keyfromvid.slice(vid.length + 1);
-
-          // check if doc should contain a claimed due data for validation:
-          const subkeystart = subkey.slice(0, (subkey+'.').indexOf('.'));
-          if (voter_subkeystarts_requiring_due.includes(subkeystart) && !doc_due) {
-            this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
-
-            // RETURN:
-            return false;  
-          }
-
-          this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
-
-          // if changed, store in cache and postprocess:
-          if (cache[key] != value) {
-            cache[key] = value;
-            value_changed = true;
-
-            if (subkey.startsWith("rating.")) {
-              const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
-              this.G.P.update_own_rating(pid, vid, oid, r);
-            } else if (subkey.startsWith("del_request.")) {
-              const did = subkey.slice("del_request.".length);
-              this.G.Del.process_request_from_db(pid, did, vid);
-            } else if (subkey.startsWith("del_response.")) {
-              const did = subkey.slice("del_response.".length);
-              this.G.Del.process_signed_response_from_db(pid, did, vid);
-            }
-          }  
-
-        } else {
-
-          // it's neither.
-          this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", pid, _id);
-          this.G.L.exit("DataService.doc2poll_cache false");
+        // check if doc should contain a claimed due data for validation:
+        const keystart = key.slice(0, (key+'.').indexOf('.'));
+        if (poll_keystarts_requiring_due.includes(keystart) && !doc_due) {
+          this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
 
           // RETURN:
-          return false;
+          return false;  
+        }
+
+        if (key == 'state') {
+          // also set state in user db:
+          this.setu(get_poll_key_prefix(pid) + 'state', value);
+          if (pid in this.G.P.polls) {
+            // also update poll's internal state cache:
+            this.G.P.polls[pid]._state = value;
+          }
+        }
+
+        if (key.startsWith('option.') && key.endsWith('.name')) {
+
+          // it's an option's oid entry, so check whether we know this option:
+          const keyend = key.slice('option.'.length), 
+              oid = keyend.slice(0, keyend.indexOf('.'));
+          if (!(pid in this._pid_oids)) {
+            this._pid_oids[pid] = new Set();
+          }
+          if (!this._pid_oids[pid].has(oid)) {
+            this.G.L.trace("DataService.doc2poll_cache found new option", pid, oid);
+            this._pid_oids[pid].add(oid);
+          }
 
         }
-        this.G.L.trace("DataService.doc2poll_cache key, value", pid, key, value);
+
+        // store in cache if changed:
+        if (cache[key] != value) {
+          cache[key] = value;
+          value_changed = true;
+        }  
+
+      } else if (_id.startsWith(voter_doc_prefix)) {
+
+        // it's a voter doc.
+        key = _id.slice(voter_doc_prefix.length, _id.length);
+
+        const keyfromvid = key.slice('voter.'.length),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              subkey = keyfromvid.slice(vid.length + 1);
+
+        // check if doc should contain a claimed due data for validation:
+        const subkeystart = subkey.slice(0, (subkey+'.').indexOf('.'));
+        if (voter_subkeystarts_requiring_due.includes(subkeystart) && !doc_due) {
+          this.G.L.warn("DataService.doc2poll_cache received doc missing necessary due date", doc);
+
+          // RETURN:
+          return false;  
+        }
+
+        this.G.L.trace("DataService.doc2poll_cache voter data item", pid, vid, subkey, value);
+
+        // if changed, store in cache and postprocess:
+        if (cache[key] != value) {
+          cache[key] = value;
+          value_changed = true;
+
+          if (subkey.startsWith("rating.")) {
+            const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
+            this.G.P.update_own_rating(pid, vid, oid, r);
+          } else if (subkey.startsWith("del_request.")) {
+            const did = subkey.slice("del_request.".length);
+            this.G.Del.process_request_from_db(pid, did, vid);
+          } else if (subkey.startsWith("del_response.")) {
+            const did = subkey.slice("del_response.".length);
+            this.G.Del.process_signed_response_from_db(pid, did, vid);
+          }
+        }  
 
       } else {
 
-        this.G.L.warn("DataService.doc2poll_cache got corrupt doc", pid, JSON.stringify(doc));
+        // it's neither.
+        this.G.L.error("DataService.doc2poll_cache got corrupt doc _id", pid, _id);
+        this.G.L.exit("DataService.doc2poll_cache false");
+
+        // RETURN:
+        return false;
 
       }
+      this.G.L.trace("DataService.doc2poll_cache key, value", pid, key, value);
+
+    } else {
+
+      this.G.L.warn("DataService.doc2poll_cache got corrupt doc", pid, JSON.stringify(doc));
+
     }
 
     // returns whether the value actually changed.
