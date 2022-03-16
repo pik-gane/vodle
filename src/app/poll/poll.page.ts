@@ -320,6 +320,9 @@ export class PollPage implements OnInit {
       this.oidsorted = [...this.p.T.oids_descending];
       this.sortingcounter++;
       this.needs_refresh = false;
+      setTimeout(()=>{
+        this.show_stats.bind(this)();
+      }, 100);
     } 
   }
 

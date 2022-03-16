@@ -780,14 +780,7 @@ export class DataService implements OnDestroy {
                 || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
                     && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
               )
-          }).on('change', change => {
-
-            this.G.L.trace("DataService.connect_to_remote_poll_db one-time replication received change", change);
-
-            // process incoming docs:
-            this.handle_poll_db_change.bind(this)(pid, change);
-
-          }).on('complete', function () {
+          })/*.on('complete', function () {
 
             this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
 
@@ -798,6 +791,25 @@ export class DataService implements OnDestroy {
     
             // RESOLVE:
             resolve(true);
+
+          })*/.on('change', change => {
+
+            this.G.L.trace("DataService.connect_to_remote_poll_db one-time replication received change", change);
+
+            // process incoming docs:
+            this.handle_poll_db_change.bind(this)(pid, change);
+
+            if (change.pending == 0) {
+              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
+
+              this.need_poll_db_replication[pid] = false;
+
+              // now start synchronisation asynchronously:
+              this.start_poll_sync.bind(this)(pid);
+      
+              // RESOLVE:
+              resolve(true);  
+            }
 
           }).on('error', function (err) {
 
