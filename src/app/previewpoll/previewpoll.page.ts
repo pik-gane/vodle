@@ -106,10 +106,11 @@ export class PreviewpollPage implements OnInit {
               const vid = "simulated"+i,
                     r = ratings[i];
               this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
-              this.G.P.update_own_rating(this.pid, vid, oid, r);
+              this.G.P.update_own_rating(this.pid, vid, oid, r, false);
             }
           }
         }
+        this.p.tally_all();
       }
       // go to invitation page:
       this.router.navigate(['/inviteto/'+this.pid]);

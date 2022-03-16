@@ -1102,7 +1102,7 @@ export class DataService implements OnDestroy {
     // ERROR Error: Uncaught (in promise): {"status":409,"name":"conflict","message":"Document update conflict"}
     return new Promise((resolve, reject) => {
 
-      // TODO: try creating or updating a timestamp document
+      // try creating or updating a timestamp document
       const _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
 
       // ASYNC:
@@ -1541,7 +1541,7 @@ export class DataService implements OnDestroy {
     }
   }
 
-  pending_changes = 0;
+  pending_changes = 0; // used for debugging
 
   private handle_poll_db_change(pid, change) {
     // called by PouchDB sync and replicate
@@ -1611,7 +1611,7 @@ export class DataService implements OnDestroy {
               vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
               subkey = keyfromvid.slice(vid.length + 1);
         const oid = subkey.slice("rating.".length);
-        this.G.P.update_own_rating(pid, vid, oid, 0);
+        this.G.P.update_own_rating(pid, vid, oid, 0, false);
       }  
       if (key in this.poll_caches[pid]) {
         this.G.L.trace("DataService.handle_poll_db_change deleting", key);
@@ -1789,10 +1789,14 @@ export class DataService implements OnDestroy {
 
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
 
-    const _id = doc._id, 
-        poll_doc_prefix = poll_doc_id_prefix + pid + ':',
-        voter_doc_prefix = poll_doc_id_prefix + pid + '.',
-        cache = this.ensure_poll_cache(pid);
+    const _id = doc._id;
+    if (_id.includes(':timestamp')) {
+      return true;
+    }
+
+    const poll_doc_prefix = poll_doc_id_prefix + pid + ':',
+          voter_doc_prefix = poll_doc_id_prefix + pid + '.',
+          cache = this.ensure_poll_cache(pid);
     var key, value_changed;
 
     // check if doc contains a claimed due date:
@@ -1887,7 +1891,7 @@ export class DataService implements OnDestroy {
 
           if (subkey.startsWith("rating.")) {
             const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
-            this.G.P.update_own_rating(pid, vid, oid, r);
+            this.G.P.update_own_rating(pid, vid, oid, r, false);
           } else if (subkey.startsWith("del_request.")) {
             const did = subkey.slice("del_request.".length);
             this.G.Del.process_request_from_db(pid, did, vid);
@@ -2054,19 +2058,8 @@ export class DataService implements OnDestroy {
       // it's a non-voter data item.
 
       // store encrypted and with correct prefix:
-      var _id, doc_value_key;
-      /*
-      if ((key == 'due') || (key == 'state')) {
-        _id = poll_doc_id_prefix + pid + ':due_and_state';
-        doc_value_key = key;
-        add_due = true;
-      } else 
-      */ 
-      {
-        _id = poll_doc_id_prefix + pid + ':' + key;
-        doc_value_key = 'value';
-      }
-      const poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+      const _id = poll_doc_id_prefix + pid + ':' + key,
+            poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='') || (!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password is missing!");
 
@@ -2082,7 +2075,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-          if ((doc_value_key == 'value') && (decrypt(doc.value, poll_pw) != value)) {
+          if (decrypt(doc.value, poll_pw) != value) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2091,8 +2084,8 @@ export class DataService implements OnDestroy {
         } // TODO: also check state change against due time!
 
         // now update:
-        if (enforce || decrypt(doc[doc_value_key], poll_pw) != value) {
-          doc[doc_value_key] = (key == 'due') ? value: enc_value;
+        if (enforce || decrypt(doc['value'], poll_pw) != value) {
+          doc['value'] = (key == 'due') ? value: enc_value;
           if (add_due) {
             doc['due'] = this.poll_caches[pid]['due'];
           }
@@ -2114,15 +2107,10 @@ export class DataService implements OnDestroy {
         };
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        doc[doc_value_key] = (key == 'due') ? value : enc_value;
+        doc['value'] = (key == 'due') ? value : enc_value;
         if (add_due) {
           doc['due'] = this.poll_caches[pid]['due'];
         }
-        /*
-        if (key=='due') {
-          doc['state'] = encrypt(this.poll_caches[pid]['state'], poll_pw);
-        }
-        */
         db.put(doc)
         .then(response => {
           this.G.L.trace("DataService.store_poll_data new", pid, key, value, doc);
@@ -2284,14 +2272,7 @@ export class DataService implements OnDestroy {
       // it's a non-voter data item.
 
       // use correct prefix:
-      /*
-      if ((key == 'due') || (key == 'state')) {
-        _id = poll_doc_id_prefix + pid + ':due_and_state';
-      } else 
-      */
-      {
-        _id = poll_doc_id_prefix + pid + ':' + key;
-      }
+      _id = poll_doc_id_prefix + pid + ':' + key;
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.delete_poll_data couldn't delete "+key+" from local_poll_DB since poll password or voter id are missing!");
 

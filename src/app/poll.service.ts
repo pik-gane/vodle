@@ -123,7 +123,7 @@ export class PollService {
     this.ref_date = new Date();
   }
 
-  update_own_rating(pid: string, vid: string, oid: string, value: number) {
+  update_own_rating(pid: string, vid: string, oid: string, value: number, update_tally=false) {
     if (!(value >= 0 && value <= 100)) {
       this.G.L.warn("PollService.update_own_rating replaced invalid rating by zero", value);
       value = 0;
@@ -140,8 +140,8 @@ export class PollService {
     }
     if (value != this_ratings_map.get(vid)) {
       if (pid in this.polls) {
-        // let the poll object do the update:
-        this.polls[pid].update_own_rating(vid, oid, value);
+        // let the poll object do the update
+        this.polls[pid].update_own_rating(vid, oid, value, update_tally);
       } else {
         // just store the new value:
         this_ratings_map.set(vid, value);
@@ -158,8 +158,6 @@ export class Poll {
 
   private G: GlobalService;
   _state: string;  // cache for state since it is asked very often
-
-  update_tally_immediately = false;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
@@ -412,7 +410,7 @@ export class Poll {
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }
-    this.update_own_rating(this.myvid, oid, value);
+    this.update_own_rating(this.myvid, oid, value, true);
   }
 
   get_my_proxy_rating(oid: string): number {
@@ -570,8 +568,8 @@ export class Poll {
 
   after_incoming_changes() {
     if ((this.state == 'running') && (this.ratings_have_changed)) {
-      this.tally_all();
       this.ratings_have_changed = false;
+      this.tally_all();
     }
   }
 
@@ -1043,7 +1041,7 @@ export class Poll {
 
   // Methods dealing with individual rating updates:
 
-  update_own_rating(vid: string, oid: string, value: number) {
+  update_own_rating(vid: string, oid: string, value: number, update_tally=false) {
     // Called whenever a rating is updated.
     // Updates the affected effective ratings based on delegation data.
     // if changed, update rating:
@@ -1055,6 +1053,7 @@ export class Poll {
     const rs_map = this.own_ratings_map.get(oid), old_value = rs_map.get(vid) || 0;
     this.G.L.trace("Poll.update_own_rating old rating:", this.pid, vid, oid, old_value);
     if (value != old_value) {
+      this.ratings_have_changed = true;
       // store new value:
       rs_map.set(vid, value);
       this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
@@ -1067,7 +1066,7 @@ export class Poll {
 
         // vid has not delegated this rating,
         // so update all dependent voters' effective ratings:
-        this.update_proxy_rating(vid, oid, value);
+        this.update_proxy_rating(vid, oid, value, update_tally);
 
         console.log("HA:A");
         const vid2s = (this.inv_effective_delegation_map.get(oid)||new Map()).get(vid);
@@ -1077,14 +1076,14 @@ export class Poll {
           for (const vid2 of vid2s) {
             // vid2 effectively delegates their rating of oid to vid,
             // hence we store vid's new rating of oid as vid2's effective rating of oid:
-            this.update_proxy_rating(vid2, oid, value);
+            this.update_proxy_rating(vid2, oid, value, update_tally);
           }
         }
       }
     }
   }
 
-  update_proxy_rating(vid: string, oid: string, value: number) {
+  update_proxy_rating(vid: string, oid: string, value: number, update_tally=false) {
     // Called whenever a proxy rating is updated.
     // Updates a rating and all depending quantities up to the final shares.
     // Tries to do this as efficiently as possible.
@@ -1284,7 +1283,7 @@ export class Poll {
       this.argmax_proxy_ratings_map.set(vid, argmax_r_set);
       // now update what needs to be updated as a consequence:
       if (eff_rating_changes_map.size > 0) {
-        this.update_proxy_rating_phase2(vid, n_changed, eff_rating_changes_map);
+        this.update_proxy_rating_phase2(vid, n_changed, eff_rating_changes_map, update_tally);
       }
       if (VERIFY_TALLY) {
         const candidate = new Map(this.T.shares_map);
@@ -1300,7 +1299,11 @@ export class Poll {
     }
   }
 
-  private update_proxy_rating_phase2(vid: string, n_changed: boolean, eff_rating_changes_map: Map<string, number>) {
+  private update_proxy_rating_phase2(
+        vid: string, 
+        n_changed: boolean, 
+        eff_rating_changes_map: Map<string, number>, 
+        update_tally=false) {
     // process the consequences of changing one or more effective ratings of vid
     this.G.L.entry("Poll.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
 
@@ -1319,7 +1322,7 @@ export class Poll {
         eff_rs_map.delete(vid);
       }
 
-      if (this.update_tally_immediately) {
+      if (update_tally) {
         // update ratings_ascending faster than by resorting:
         const ratings_ascending_old = this.T.ratings_ascending_map.get(oid) || [...eff_rs_map.values()];
         const index = ratings_ascending_old.indexOf(old_value);
