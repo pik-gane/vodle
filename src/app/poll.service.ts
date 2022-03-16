@@ -1067,11 +1067,7 @@ export class Poll {
         // vid has not delegated this rating,
         // so update all dependent voters' effective ratings:
         this.update_proxy_rating(vid, oid, value, update_tally);
-
-        console.log("HA:A");
         const vid2s = (this.inv_effective_delegation_map.get(oid)||new Map()).get(vid);
-        console.log("HA:B");
-
         if (vid2s) {
           for (const vid2 of vid2s) {
             // vid2 effectively delegates their rating of oid to vid,
@@ -1285,16 +1281,26 @@ export class Poll {
       if (eff_rating_changes_map.size > 0) {
         this.update_proxy_rating_phase2(vid, n_changed, eff_rating_changes_map, update_tally);
       }
-      if (VERIFY_TALLY) {
-        const candidate = new Map(this.T.shares_map);
+      if (environment.tallying.verify_updates) {
+        const my_shares_map = new Map(this.T.shares_map),
+              my_votes_map = new Map(this.T.votes_map),
+              my_approval_scores_map = new Map(this.T.approval_scores_map),
+              my_cutoffs_map = new Map(this.T.cutoffs_map);
         this.tally_all();
         for (const oid of this.T.shares_map.keys()) {
-          if (this.T.shares_map.get(oid) != candidate.get(oid)) {
-            this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...candidate], [...this.T.shares_map]);
+          /* FIXME: this is really sometimes giving inconsistent results!
+          * e.g. when going to abstention, vote is not correctly removed.
+          * it seems that in that case some cutoffs are already wrong (too low)
+          */
+          if (this.T.shares_map.get(oid) != my_shares_map.get(oid)) {
+            this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...my_shares_map], [...this.T.shares_map]);
+            console.log([...my_votes_map], [...this.T.votes_map]);
+            console.log([...my_approval_scores_map], [...this.T.approval_scores_map]);
+            console.log([...my_cutoffs_map], [...this.T.cutoffs_map]);
             return;
           }
         }
-        this.G.L.trace("Poll.update_rating produced consistent shares:", [...candidate], [...this.T.shares_map]);
+        this.G.L.trace("Poll.update_rating produced consistent shares:", [...my_shares_map], [...this.T.shares_map]);
       }
     }
   }

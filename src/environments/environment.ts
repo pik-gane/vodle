@@ -30,7 +30,10 @@ export const environment = {
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
   magic_link_base_url: "http://localhost:8100/",
-  support_vodle_url: "http://vodle.it/#support"
+  support_vodle_url: "http://vodle.it/#support",
+  tallying: {
+    verify_updates: true
+  }
 };
 
 /*
