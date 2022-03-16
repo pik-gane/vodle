@@ -187,7 +187,7 @@ export class DelegationService {
         return "closed";
       } else {
         // check if request has been retrieved from db:
-        const agreement = this.G.D.delegation_agreements_caches[pid].get(did);
+        const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
         if (agreement) {
           // check if already answered:
           if (agreement.status == 'agreed') {

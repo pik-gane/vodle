@@ -138,7 +138,8 @@
         "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle or a too large voting weight.",
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
-        "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later."
+        "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
+        "closed": "Unfortunately, this poll is already closed."
     },
 
     "draftpoll": {
@@ -259,9 +260,11 @@
 
     "joinpoll": {
         "-page-title": "Join a poll",
-        "header": "Welcome to the interactive poll <i>“{{poll_title}}”!</i>",
-        "p1-winner": "This poll is about deciding between a number of options until {{due}}. In the end, exactly one option will win.",
-        "p1-share": "This poll is about dividing some resource or budget between a number of targets until {{due}}.",
+        "fetching": "Just a moment please, I'm fetching this poll's data...",
+        "initializing": "Just a moment please, I'm initializing the poll...",
+        "header": "Welcome to the interactive poll<br/><i>“{{poll_title}}”!</i>",
+        "p1-winner": "This poll is about deciding between a number of options until <b>{{due}}.</b> In the end, exactly one option will win.",
+        "p1-share": "This poll is about dividing some resource or budget between a number of targets until <b>{{due}}.</b>",
         "p2": "Some options have already been suggested. Any participant in the poll can suggest further options at any time, until the poll closes.",
         "p3": "You can express your opinion about the suggested options by <i>rating</i> them. You can give each option a rating between 0 (don't approve) and 100 (approve for sure).",
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those ratings to someone you trust. In that case, that person's ratings of these options counts for you as well. If you don't have the time to think about the options at all, you can also delegate all of your ratings to someone else.",

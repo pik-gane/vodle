@@ -325,11 +325,13 @@ export class DataService implements OnDestroy {
 
   save_state(): Promise<any> {
     this.G.L.entry("DataService.save_state");
+/*
     this.G.L.trace("DataService.save_state _pids", [...this._pids]);
     this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
     for (const pid in this._pid_oids) {
       this.G.L.trace("DataService.save_state _pid_oids", pid, [...this._pid_oids[pid]]);
     }
+*/
     const state = {};
     for (const a of state_attributes) {
       state[a] = this[a];
@@ -780,7 +782,8 @@ export class DataService implements OnDestroy {
                 || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
                     && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
               )
-          })/*.on('complete', function () {
+          })/* on('complete') is never called, so we cannot do it this way but must check for 0 pending inside 'change' (see below):
+          .on('complete', function () {
 
             this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
 
@@ -792,7 +795,8 @@ export class DataService implements OnDestroy {
             // RESOLVE:
             resolve(true);
 
-          })*/.on('change', change => {
+          })*/
+          .on('change', change => {
 
             this.G.L.trace("DataService.connect_to_remote_poll_db one-time replication received change", change);
 
@@ -800,6 +804,8 @@ export class DataService implements OnDestroy {
             this.handle_poll_db_change.bind(this)(pid, change);
 
             if (change.pending == 0) {
+              // replication completed
+
               this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
 
               this.need_poll_db_replication[pid] = false;

@@ -279,7 +279,7 @@ export class PollPage implements OnInit {
         const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
               knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
-        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
+//        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
         if (delegate_vid) {
           const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
           this.G.L.trace("PollPage.show_stats rating", rating);
