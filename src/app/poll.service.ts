@@ -19,7 +19,7 @@ type tally_cache_t = { // T is short for "tally data"
   // number of voters known:
   n_not_abstaining: number;
   // for each oid, an array of ascending ratings: 
-  ratings_ascending_map: Map<string, Array<number>>;
+  effective_ratings_ascending_map: Map<string, Array<number>>;
   // for each oid, the approval cutoff (rating at and above which option is approved):
   cutoffs_map: Map<string, number>;
   // for each oid and vid, the approval (default: false):
@@ -27,7 +27,7 @@ type tally_cache_t = { // T is short for "tally data"
   // for each oid, the approval score:
   approval_scores_map: Map<string, number>;
   // for each oid, the total rating:
-  total_ratings_map: Map<string, number>;
+  total_effective_ratings_map: Map<string, number>;
   // for each oid, the effective score:
   scores_map: Map<string, number>;
   // oids sorted by descending score:
@@ -965,11 +965,11 @@ export class Poll {
     this.G.D.tally_caches[this._pid] = this.T = {
       all_vids_set: new Set(),
       n_not_abstaining: 0,
-      ratings_ascending_map: new Map(),
+      effective_ratings_ascending_map: new Map(),
       cutoffs_map: new Map(),
       approvals_map: new Map(),
       approval_scores_map: new Map(),
-      total_ratings_map: new Map(),
+      total_effective_ratings_map: new Map(),
       scores_map: new Map(),
       oids_descending: [],
       votes_map: new Map(),
@@ -977,15 +977,15 @@ export class Poll {
       shares_map: new Map()
     }
     // extract voters and total_ratings:
-    for (const [oid, proxy_rs_map] of this.proxy_ratings_map) {
+    for (const [oid, effective_ratings_map] of this.effective_ratings_map) {
 //      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
-      let t = 0;
-      for (const [vid, r] of proxy_rs_map) {
+      let total_effective_rating = 0;
+      for (const [vid, effective_rating] of effective_ratings_map) {
 //        this.G.L.trace("Poll.tally_all rating", this._pid, oid, vid, r);
         this.T.all_vids_set.add(vid);
-        t += r;
+        total_effective_rating += effective_rating;
       }
-      this.T.total_ratings_map.set(oid, t);
+      this.T.total_effective_ratings_map.set(oid, total_effective_rating);
     }
 
     // count non-abstaining voters:
@@ -1001,34 +1001,34 @@ export class Poll {
     const score_factor = this.T.n_not_abstaining * 128;
 //    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
     for (const oid of this.oids) {
-      const eff_rs_map = this.effective_ratings_map.get(oid);
+      const effective_ratings_map = this.effective_ratings_map.get(oid);
 //      this.G.L.trace("Poll.tally_all rs_map", this._pid, oid, [...rs_map]);
-      if (eff_rs_map) {
-        const rsasc = this.update_ratings_ascending(oid, eff_rs_map);
+      if (effective_ratings_map) {
+        const effective_ratings_ascending = this.update_ratings_ascending(oid, effective_ratings_map);
 //        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
-        this.update_cutoff_and_approvals(oid, eff_rs_map, rsasc);
-        const [apsc, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
-        this.update_score(oid, apsc, this.T.total_ratings_map.get(oid), score_factor);
+        this.update_cutoff_and_approvals(oid, effective_ratings_map, effective_ratings_ascending);
+        const [approval_score, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
+        this.update_score(oid, approval_score, this.T.total_effective_ratings_map.get(oid), score_factor);
 //        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
       } else {
-        this.T.ratings_ascending_map.set(oid, []);
+        this.T.effective_ratings_ascending_map.set(oid, []);
         this.T.cutoffs_map.set(oid, 100);
         this.T.approvals_map.set(oid, new Map());
         this.T.approval_scores_map.set(oid, 0);
-        this.T.total_ratings_map.set(oid, 0);
+        this.T.total_effective_ratings_map.set(oid, 0);
         this.T.scores_map.set(oid, 0); 
       }
     }
 //    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
     // order and calculate votes and shares:
     this.update_ordering();
-    const oidsdesc = this.T.oids_descending;
+    const oids_descending = this.T.oids_descending;
 //    this.G.L.trace("Poll.tally_all oidsdesc", this._pid, oidsdesc);
     for (const vid of this.T.all_vids_set) {
-      this.update_vote(vid, oidsdesc);
+      this.update_vote(vid, oids_descending);
     }
 //    this.G.L.trace("Poll.tally_all votes", this._pid, this.T.votes_map);
-    if (this.update_shares(oidsdesc)) {
+    if (this.update_shares(oids_descending)) {
       this.G.L.trace("Poll.tally_all pie charts need updating");
       if (!!this.G.D.page && typeof this.G.D.page['show_stats'] === 'function') {
         this.G.D.page.show_stats();
@@ -1086,20 +1086,18 @@ export class Poll {
     this.G.L.entry("Poll.update_proxy_rating", this.pid, vid, oid, value);
 
     // if necessary, register voter:
-    let n_changed = false;
     if (!this.T.all_vids_set.has(vid)) {
       this.T.all_vids_set.add(vid);
-      this.T.n_not_abstaining = this.T.all_vids_set.size;
-      n_changed = true;
       this.G.L.trace("Poll.update_proxy_rating n_changed, first proxy rating of voter", vid);
     }
-    // if changed, update proxy rating:
     if (!this.proxy_ratings_map.has(oid)) {
       this.proxy_ratings_map.set(oid, new Map());
       this.G.L.trace("Poll.update_proxy_rating first proxy rating for option", oid);
     }
 
-    const proxy_rs_map = this.proxy_ratings_map.get(oid), old_value = proxy_rs_map.get(vid) || 0;
+    // if changed, update proxy rating:
+    const proxy_rs_map = this.proxy_ratings_map.get(oid), 
+          old_value = proxy_rs_map.get(vid) || 0;
     if (value != old_value) {
       this.G.L.trace("Poll.update_proxy_rating proxy rating of", oid, "by", vid, "changed from", old_value, "to", value);
       if (value != 0) {
@@ -1110,6 +1108,7 @@ export class Poll {
       // update depending data:
 
       // update effective ratings of this oid and potentially other oids:
+      let n_changed = false;
       const old_max_r = this.max_proxy_ratings_map.get(vid) || 0,
             old_argmax_r_set = this.argmax_proxy_ratings_map.get(vid) || new Set(),
             eff_rating_changes_map = new Map<string, number>();
@@ -1117,12 +1116,13 @@ export class Poll {
       var max_r = old_max_r, 
       argmax_r_set = old_argmax_r_set;
       if (old_max_r == 0) {
-        this.G.L.trace("Poll.update_proxy_rating old max was 0");
+        this.G.L.trace("Poll.update_proxy_rating voter stops abstaining");
         // voter was abstaining before but is no longer since value > 0 
         // => set new max and adjust rating to effectively 100 to ensure approval of oid:
         max_r = value;
         argmax_r_set = new Set([oid]);
         eff_rating_changes_map.set(oid, 100);
+        this.T.n_not_abstaining += 1;
         n_changed = true;
       } else if (old_max_r == 100) {
         this.G.L.trace("Poll.update_proxy_rating old max was 100");
@@ -1145,8 +1145,10 @@ export class Poll {
             }
             // resulting eff ratings changes:
             if (max_r == 0) {
+              this.G.L.trace("Poll.update_proxy_rating voter begins abstaining");
               // voter begins abstaining.
               eff_rating_changes_map.set(oid, 0);
+              this.T.n_not_abstaining -= 1;
               n_changed = true;
             } else {
               if (!argmax_r_set.has(oid)) {
@@ -1199,8 +1201,10 @@ export class Poll {
               }
               // resulting eff ratings changes:
               if (max_r == 0) {
+                this.G.L.trace("Poll.update_proxy_rating voter begins abstaining");
                 // voter begins abstaining.
                 eff_rating_changes_map.set(oid, 0);
+                this.T.n_not_abstaining -= 1;
                 n_changed = true;
               } else {
                 if (!argmax_r_set.has(oid)) {
@@ -1269,7 +1273,7 @@ export class Poll {
           }
         }
       }
-      this.G.L.trace("Poll.update_proxy_rating",n_changed,eff_rating_changes_map,old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      this.G.L.trace("Poll.update_proxy_rating",n_changed,[...eff_rating_changes_map],old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
       // store new max, argmax:
       if (max_r > 0) {
         this.max_proxy_ratings_map.set(vid, max_r);
@@ -1311,114 +1315,129 @@ export class Poll {
         eff_rating_changes_map: Map<string, number>, 
         update_tally=false) {
     // process the consequences of changing one or more effective ratings of vid
-    this.G.L.entry("Poll.update_proxy_rating_phase2",vid,n_changed,[...eff_rating_changes_map.entries()]);
+    this.G.L.entry("Poll.update_proxy_rating_phase2",vid,n_changed,this.T.n_not_abstaining,[...eff_rating_changes_map.entries()]);
 
     for (const [oid, value] of eff_rating_changes_map) {
 
       // register change in map and get old eff. rating:
-      var eff_rs_map = this.effective_ratings_map.get(oid);
-      if (!eff_rs_map) {
-        eff_rs_map = new Map();
-        this.effective_ratings_map.set(oid, eff_rs_map);
+      var effective_ratings_map = this.effective_ratings_map.get(oid);
+      if (!effective_ratings_map) {
+        effective_ratings_map = new Map();
+        this.effective_ratings_map.set(oid, effective_ratings_map);
       }
-      const old_value = eff_rs_map.get(vid) || 0;
+      const old_value = effective_ratings_map.get(vid) || 0;
       if (value > 0) {
-        eff_rs_map.set(vid, value);
+        effective_ratings_map.set(vid, value);
       } else {
-        eff_rs_map.delete(vid);
+        effective_ratings_map.delete(vid);
       }
 
       if (update_tally) {
+        this.G.L.trace("Poll.update_proxy_rating_phase2 update_tally");
         // update ratings_ascending faster than by resorting:
-        const ratings_ascending_old = this.T.ratings_ascending_map.get(oid) || [...eff_rs_map.values()];
-        const index = ratings_ascending_old.indexOf(old_value);
-        // replace old value by new:
-        ratings_ascending_old[index] = value;
-        // repair ordering:
-        let ratings_ascending = ratings_ascending_old.sort((n1,n2)=>n1-n2);      
-  /*      // remove old value:
-        const rsasc_without = ratings_ascending_old.slice(0, index).concat(ratings_ascending_old.slice(index + 1));
-        // insert new value at correct position:
-        let ratings_ascending = rsasc_without;
-        for (let index=0; index<rsasc_without.length; index++) {
-          if (ratings_ascending_old[index] >= value) {
-            ratings_ascending = rsasc_without.slice(0, index).concat([value]).concat(rsasc_without.slice(index));    
-            break;
+        const old_effective_ratings_ascending = this.T.effective_ratings_ascending_map.get(oid) || [...effective_ratings_map.values()];
+        var effective_ratings_ascending;
+        if (old_value == 0) {
+          old_effective_ratings_ascending.push(value);
+          // repair ordering:
+          effective_ratings_ascending = old_effective_ratings_ascending.sort((n1,n2)=>n1-n2);      
+        } else {
+          const index = old_effective_ratings_ascending.indexOf(old_value);
+          if (value == 0) {
+            effective_ratings_ascending = old_effective_ratings_ascending.slice(0, index).concat(old_effective_ratings_ascending.slice(index + 1));
+          } else {
+            // replace old value by new:
+            old_effective_ratings_ascending[index] = value;
+            // repair ordering:
+            effective_ratings_ascending = old_effective_ratings_ascending.sort((n1,n2)=>n1-n2);      
           }
         }
-        if (ratings_ascending.length < this.T.n_not_abstaining) {
-          ratings_ascending.push(value);
-        }
-  */
         // store result back:
-        this.T.ratings_ascending_map.set(oid, ratings_ascending);
+        this.T.effective_ratings_ascending_map.set(oid, effective_ratings_ascending);
+        this.G.L.trace("Poll.update_proxy_rating_phase2 ratings_ascending", effective_ratings_ascending);
+        // update total rating:
+        const total_rating = (this.T.total_effective_ratings_map.get(oid) || 0) + value - old_value;
+        this.T.total_effective_ratings_map.set(oid, total_rating);
+      }
+    }
 
+    if (update_tally) {
+
+      const score_factor = this.T.n_not_abstaining * 128;
+      
+      let others_approvals_changed = false,
+          vids_approvals_changed = false,
+          svg_needs_update = false;
+
+      // update stuff of only the directly affected oids or, if n_changed, all oids:
+      const oids = n_changed ? this.oids : eff_rating_changes_map.keys();
+      for (const oid of oids) {
         // cutoff, approvals:
-        const [cutoff, cutoff_changed, others_approvals_changed] = this.update_cutoff_and_approvals(oid, eff_rs_map, ratings_ascending);
+        const [cutoff, cutoff_changed, oid_others_approvals_changed] = this.update_cutoff_and_approvals(oid, this.effective_ratings_map.get(oid), this.T.effective_ratings_ascending_map.get(oid));
 
-        let vids_approvals_changed = false;
+        let oid_vids_approvals_changed = false;
         const approvals_map = this.T.approvals_map.get(oid);
-        if (!others_approvals_changed) {
+        if (!cutoff_changed) {
           // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
-          const approval = (value >= cutoff);
+          const approval = ((this.effective_ratings_map.get(oid).get(vid)||0) >= cutoff);
           if (approval != approvals_map.get(vid)) {
             approvals_map.set(vid, approval);
-            vids_approvals_changed = true;
+            oid_vids_approvals_changed = true;
           }
         }
-        let svg_needs_update = false;
-        if (vids_approvals_changed || others_approvals_changed) {
+        if (oid_vids_approvals_changed || oid_others_approvals_changed) {
           // update approval score:
-          this.G.L.trace("Poll.update_rating approvals changed", vids_approvals_changed, others_approvals_changed);
-          var approval_score;
-          [approval_score, svg_needs_update] = this.update_approval_score(oid, approvals_map);
-        }
-        // update total ratings and score(s):
-        const total_rating = (this.T.total_ratings_map.get(oid) || 0) + value - old_value,
-              score_factor = this.T.n_not_abstaining * 128;
-        this.T.total_ratings_map.set(oid, total_rating);
-        if (n_changed) {
-          // update all scores:
-          for (const oid2 of this.T.scores_map.keys()) {
-            this.update_score(oid2, this.T.approval_scores_map.get(oid2), this.T.total_ratings_map.get(oid2), score_factor);
-          }
-        } else {
-          // only update oid's score:
-          this.update_score(oid, this.T.approval_scores_map.get(oid), total_rating, score_factor);
-        }
-        // update option ordering:
-        const [oidsdesc, ordering_changed] = this.update_ordering();
-        let votes_changed = false;
-        if (ordering_changed || others_approvals_changed) {
-          // update everyone's votes:
-          this.G.L.trace("Poll.update_rating updating everyone's votes", ordering_changed);
-          for (const vid2 of this.T.all_vids_set) {
-            votes_changed ||= this.update_vote(vid2, oidsdesc);
-          }
-        } else if (vids_approvals_changed) {
-          // update only vid's vote:
-          this.G.L.trace("Poll.update_rating updating vid's vote");
-          votes_changed = this.update_vote(vid, oidsdesc);
-        } else {
-          // neither the ordering nor the approvals have changed, 
-          // so the votes and winning probabilities/shared don't change either
-        }
-        if (votes_changed || n_changed) {
-          // update winning probabilities/shares:
-          this.G.L.trace("Poll.update_rating updating shares", votes_changed);
-          const shares_changed = this.update_shares(oidsdesc);
-          if (shares_changed) {
+          this.G.L.trace("Poll.update_proxy_rating_phase2 approvals changed", oid, oid_vids_approvals_changed, oid_others_approvals_changed);
+          const [approval_score, oid_svg_needs_update] = this.update_approval_score(oid, approvals_map);
+          if (oid_svg_needs_update) {
             svg_needs_update = true;
           }
         }
-        if (svg_needs_update) {
-          this.G.L.trace("Poll.update_rating pie charts need updating");
-          if (!!this.G.D.page && typeof this.G.D.page['show_stats'] === 'function') {
-            this.G.D.page.show_stats();
-          }
+        // update score:
+        this.update_score(oid, this.T.approval_scores_map.get(oid), this.T.total_effective_ratings_map.get(oid), score_factor);
+
+        if (oid_others_approvals_changed) {
+          others_approvals_changed = true;
+        }
+        if (oid_vids_approvals_changed) {
+          vids_approvals_changed = true;
         }
       }
-    }
+
+      // update option ordering:
+      const [oids_descending, ordering_changed] = this.update_ordering();
+      let votes_changed = false;
+      if (ordering_changed || others_approvals_changed) {
+        // update everyone's votes:
+        this.G.L.trace("Poll.update_proxy_rating_phase2 updating everyone's votes", ordering_changed);
+        for (const vid2 of this.T.all_vids_set) {
+          if (this.update_vote(vid2, oids_descending)) {
+            votes_changed = true;
+          }          
+        }
+      } else if (vids_approvals_changed) {
+        // update only vid's vote:
+        this.G.L.trace("Poll.update_proxy_rating_phase2 updating vid's vote");
+        votes_changed = this.update_vote(vid, oids_descending);
+      } else {
+        // neither the ordering nor the approvals have changed, 
+        // so the votes and winning probabilities/shared don't change either
+      }
+      if (votes_changed || n_changed) {
+        // update winning probabilities/shares:
+        this.G.L.trace("Poll.update_proxy_rating_phase2 updating shares", votes_changed);
+        const shares_changed = this.update_shares(oids_descending);
+        if (shares_changed) {
+          svg_needs_update = true;
+        }
+      }
+      if (svg_needs_update) {
+        this.G.L.trace("Poll.update_proxy_rating_phase2 pie charts need updating");
+        if (!!this.G.D.page && typeof this.G.D.page['show_stats'] === 'function') {
+          this.G.D.page.show_stats();
+        }
+      }
+    }    
   }
 
   update_ratings_ascending(oid: string, eff_rs_map: Map<string, number>): Array<number> {
@@ -1427,19 +1446,21 @@ export class Poll {
 //    this.G.L.trace("PollService.update_ratings_ascending", [...eff_rs_map.entries()], eff_rs_asc_non0, this.T.n_not_abstaining);
     // make sure array is correct length by padding with zeros:
     const eff_rs_asc = Array(this.T.n_not_abstaining - eff_rs_asc_non0.length).fill(0).concat(eff_rs_asc_non0);
-    this.T.ratings_ascending_map.set(oid, eff_rs_asc);
+    this.T.effective_ratings_ascending_map.set(oid, eff_rs_asc);
     return eff_rs_asc;
   }
 
-  update_cutoff_and_approvals(oid: string, eff_rs_map: Map<string, number>, eff_rs_asc: Array<number>): [number, boolean, boolean] {
+  update_cutoff_and_approvals(oid: string, effective_ratings_map: Map<string, number>, effective_ratings_ascending: Array<number>): [number, boolean, boolean] {
+    this.G.L.entry("Poll.update_cutoff_and_approvals", oid, this.T.n_not_abstaining, [...effective_ratings_map], effective_ratings_ascending);
     // update approval cutoff:
     let cutoff = 100;
-    const cutoff_factor = 100 / this.T.n_not_abstaining;
-    for (let index=0; index<this.T.n_not_abstaining; index++) {
-      const rating = eff_rs_asc[index];
+    const cutoff_factor = 100 / this.T.n_not_abstaining,
+          offset = this.T.n_not_abstaining - effective_ratings_ascending.length; // accounts for potentially missing leading zeros in array
+    for (let index = 0; index < effective_ratings_ascending.length; index++) {
+      const rating = effective_ratings_ascending[index];
       // check whether strictly less than r percent have a rating strictly less than r:
-      const pct_less_than_r = cutoff_factor * index;
-      if (pct_less_than_r < rating) {
+      const pct_less_than_r = cutoff_factor * (index + offset);
+      if (pct_less_than_r < rating && rating > 0) {
         cutoff = rating;
         break;
       }
@@ -1457,7 +1478,7 @@ export class Poll {
       cutoff_changed = true;
 //      this.G.L.trace("Poll.update_cutoff_and_approvals changed to", cutoff);
       for (const vid of this.T.all_vids_set) {
-        const rating = eff_rs_map.get(vid) || 0,
+        const rating = effective_ratings_map.get(vid) || 0,
               approval = (rating >= cutoff);
         if (approval != approvals_map.get(vid)) {
           approvals_map.set(vid, approval);
@@ -1500,14 +1521,15 @@ export class Poll {
     return [oidsdesc, ordering_changed];
   }
 
-  update_vote(vid: string, oids_desc: Array<string>): boolean {
+  update_vote(vid: string, oids_descending: Array<string>): boolean {
     let vote = "", vote_changed = false;
-    for (const oid2 of oids_desc) {
-      if (this.T.approvals_map.get(oid2).get(vid)) {
-        vote = oid2;
+    for (const oid of oids_descending) {
+      if ((this.T.approvals_map.get(oid)||new Map()).get(vid)) {
+        vote = oid;
         break;
       }
     }
+    this.G.L.trace("Poll.update_vote", vid, this.T.votes_map.get(vid), vote);
     if (vote != this.T.votes_map.get(vid)) {
       this.T.votes_map.set(vid, vote);
       vote_changed = true;

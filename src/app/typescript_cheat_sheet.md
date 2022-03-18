@@ -1,3 +1,7 @@
+# don't use
+
+x ||= f(), because f will not be called if x==true!
+
 # containers 
 
 ## Array

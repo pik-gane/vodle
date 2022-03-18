@@ -37,7 +37,12 @@ export class SettingsPage implements OnInit {
   editing_password: boolean;
   showing_password: boolean;
   advanced_expanded: boolean;
-  notify_of: {};
+  notify_of: { 
+    delegation_accepted?: boolean,
+    delegation_declined?: boolean,
+    new_option?: boolean,
+    poll_closed?: boolean
+  };
 
   // LIFECYCLE:
 
