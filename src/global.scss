@@ -202,3 +202,11 @@ a, a:link, a:visited, a:hover, a:active, .externallink {
     left: 10px;
 }
 */
+
+ion-popover {
+    div.popover-content {
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+  }
+}

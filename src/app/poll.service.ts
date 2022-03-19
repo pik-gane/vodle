@@ -417,6 +417,10 @@ export class Poll {
     return this.proxy_ratings_map.get(oid).get(this.myvid) || 0;
   }
 
+  get_my_effective_rating(oid: string): number {
+    return this.effective_ratings_map.get(oid).get(this.myvid) || 0;
+  }
+
   get remaining_time_fraction(): number {
     // the remaining running time as a fraction of the total running
     if ((this._state == "running")&&(!!this.start_date)&&(this.due)) {

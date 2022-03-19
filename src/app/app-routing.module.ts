@@ -91,6 +91,10 @@ const routes: Routes = [
     path: 'addoption-dialog',
     loadChildren: () => import('./addoption-dialog/addoption-dialog.module').then( m => m.AddoptionDialogPageModule)
   },
+  {
+    path: 'explain-approval',
+    loadChildren: () => import('./explain-approval/explain-approval.module').then( m => m.ExplainApprovalPageModule)
+  },
 ];
 
 @NgModule({

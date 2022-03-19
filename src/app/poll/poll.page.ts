@@ -10,6 +10,7 @@ import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
+import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
 
 @Component({
   selector: 'app-poll',
@@ -469,6 +470,18 @@ export class PollPage implements OnInit {
         translucent: true,
         showBackdrop: true,
         componentProps: {parent: this}
+      })
+      .then((popoverElement)=>{
+        popoverElement.present();
+      })
+  }
+
+  explain_approval_dialog(oid: string) {
+    this.popover.create({
+        component: ExplainApprovalPage, 
+        translucent: true,
+        showBackdrop: true,
+        componentProps: {parent: this, oid: oid}
       })
       .then((popoverElement)=>{
         popoverElement.present();

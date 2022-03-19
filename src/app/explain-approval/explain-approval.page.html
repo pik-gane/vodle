@@ -1,0 +1,30 @@
+<ion-content *ngIf="ready">
+  <svg xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="0 0 100 100">
+    <g transform="translate(11 11) scale(0.7 0.7) scale(1 -1) translate(0 -100)">
+      <line x1="0" y1="0" x2="100" y2="100" stroke="grey" stroke-width="0.2"/>
+      <g *ngFor="let item of rs; let i = index">
+        <line [attr.y1]="poss[i]" [attr.y2]="poss[i]" [attr.x1]="-.5" [attr.x2]="rs[i]" stroke="#bce4e5"/>
+      </g>
+      <line *ngFor="let item of rs; let i = index" [attr.x1]="poss[i]" [attr.x2]="poss[i]" [attr.y1]="-.5" [attr.y2]="rs[i]" [attr.stroke]="cs[i]"/>
+      <line [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" [attr.x1]="-.5" [attr.x2]="myr" stroke-width="3" [attr.stroke]="cs[myi]"/>
+      <line x1="105" y1="0" x2="110" y2="0" stroke="#bce4e5" stroke-width="0.2"/>
+      <line x1="105" y1="50" x2="110" y2="50" stroke="#bce4e5" stroke-width="0.2"/>
+      <line x1="105" y1="100" x2="110" y2="100" stroke="#bce4e5" stroke-width="0.2"/>
+      <rect [attr.x]="100*(1-a)" y="-15" [attr.width]="100*a" height="10" fill="#bce4e5" stroke="none"/>
+      <g transform="scale(1 -1)" font-family="Quicksand Medium" font-size="5px" >
+        <text x="50" y="-105" fill="black" text-anchor="middle">ratings</text>
+        <text x="-2" [attr.y]="1.5-poss[i]" [attr.fill]="cs[myi]" font-weight="bold" text-anchor="end">you</text>
+        <text x="112" y="1.5" fill="#bce4e5">0</text>
+        <text x="112" y="-48.5" fill="#bce4e5">50</text>
+        <text x="112" y="-98.5" fill="#bce4e5">100</text>
+        <text x="100" y="11.5" fill="black" text-anchor="end">{{Math.round(a*1000)/10}}%&nbsp;</text>
+        <text x="100" y="11.5" fill="black">&nbsp;approval</text>
+        <text x="0" y="-50" fill="black">data: {{[oid,rs,cs,myr,n,myi,a]}}</text>
+      </g>
+    </g>
+  </svg>
+  <ion-button shape="round"
+      (click)="ClosePopover()">
+    <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>&nbsp;
+  </ion-button>
+</ion-content>

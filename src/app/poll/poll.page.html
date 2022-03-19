@@ -506,7 +506,7 @@
                   </span>
                   <span style="color:#9abcbd">
                     &nbsp;(<a 
-                      [href]="'/explainoptionresult/'+oidsorted[i]" 
+                      (click)="explain_approval_dialog(oidsorted[i])"
                       [innerHtml]="'poll.explain' | translate">
                     </a>)
                   </span>
@@ -539,15 +539,14 @@
                 <br/>inv_effective_delegation_map: {{G.map2str(p.inv_effective_delegation_map.get(oidsorted[i]))}}
                 <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
                 <br/>cutoffs_map: {{G.map2str(p.T.cutoffs_map)}}
-<!--                <br/>approvals_map: {{G.map2str(p.T.approvals_map)}}-->
                 <br/>approval_scores_map: {{G.map2str(p.T.approval_scores_map)}}
                 <br/>total_ratings_map: {{G.map2str(p.T.total_ratings_map)}}
-<!--                <br/>scores_map: {{G.map2str(p.T.scores_map)}}-->
                 <br/>votes_map: {{G.map2str(p.T.votes_map)}}
                 <br/>n_votes_map: {{G.map2str(p.T.n_votes_map)}}
                 <br/>shares_map: {{G.map2str(p.T.shares_map)}}
               </small>
-
+              <!---->
+              
             </ion-col>
           </ion-row>
         </app-expandable>
