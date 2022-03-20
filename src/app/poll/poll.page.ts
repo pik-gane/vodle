@@ -480,6 +480,7 @@ export class PollPage implements OnInit {
     this.popover.create({
         component: ExplainApprovalPage, 
         translucent: true,
+        cssClass: 'explain-approval',
         showBackdrop: true,
         componentProps: {parent: this, oid: oid}
       })
