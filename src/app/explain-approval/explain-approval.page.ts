@@ -21,6 +21,7 @@ export class ExplainApprovalPage implements OnInit {
   ready = false;
 
   p: Poll;
+  optionname: string;
   rs: number[];
   rmin: number;
   a: number;
@@ -28,6 +29,7 @@ export class ExplainApprovalPage implements OnInit {
   n: number;
   myr: number;
   myi: number;
+  thresholdi: number;
   poss: number[];
 
   constructor(
@@ -46,16 +48,21 @@ export class ExplainApprovalPage implements OnInit {
           myr = this.myr = p.get_my_effective_rating(oid),
           n = p.T.n_not_abstaining,
           offset = n - rs.length;
+    this.optionname = p.options[oid].name;
     this.rs = [];
+    this.thresholdi = undefined;
     for (let i=0; i<n; i++) {
       let r = i < offset ? 0 : rs[i-offset];
       this.rs.push(r);
       cs.push((r == 0) ? '#d33939' : (r < rmin) ? '#3465a4' : '#62a73b');
       poss.push(Math.round(100*(i+.01)/n));
+      if (!this.thresholdi && r >= rmin) {
+        this.thresholdi = i;
+      }
     }
     this.myi = rs.indexOf(myr);
     this.a = p.T.approval_scores_map.get(oid) / n;
-    this.parent.G.L.trace(":",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss);
+    this.parent.G.L.trace(":",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);
   }
 
   ionViewDidEnter() {
