@@ -36,6 +36,13 @@
   </ion-item>
   <ion-item class="ion-no-margin ion-no-padding">
     <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-25 -25 150 150">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                refX="0" refY="3.5" orient="auto">
+          <polyline points="0 0, 10 3.5, 0 7" />
+        </marker>
+      </defs>
+
       <g *ngIf="tab=='approval'" font-family="Quicksand Medium" font-size="4">
 
         <text x="0" y="-11" fill="black">&nbsp;everyone's ratings for this option</text>
@@ -43,7 +50,7 @@
 
         <g transform="scale(1 -1) translate(0 -100)">
 
-          <!-- small approval bar: -->
+          <!-- approval bar: -->
           <g *ngIf="a>0" [attr.transform]="'translate('+(100*(1-a))+' '+(100*(1-a))+')'">
             <animateTransform attributeName="transform" attributeType="XML" 
                 type="translate" [attr.from]="''+(100*(1-a))+' '+(100*(1-a))" [attr.to]="'100 '+poss[myi]" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- move to own rating -->
@@ -110,9 +117,9 @@
             <!-- threshold vertical: -->
             <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-12" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
             <!-- own rating marker: -->
-            <line stroke-width="1" 
+            <line stroke-width="2" 
                 [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" x1="0" [attr.x2]="myr" [attr.stroke]="cs[myi]" />
-            <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="1.5" [attr.fill]="cs[myi]" />
+            <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="3" [attr.fill]="cs[myi]" />
             <!-- final annotations: -->
             <g transform="scale(1 -1)" fill="black">
               <g *ngIf="a<1" font-size="3">
@@ -151,6 +158,88 @@
           </g>
 
         </g>
+      </g>
+
+      <g *ngIf="tab=='share'" font-family="Quicksand Medium" font-size="4">
+
+        <!-- bottom row approval bar: -->
+        <g transform="translate(0 110)">
+          <rect [attr.x]="100*(1-a)" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none">
+          </rect>
+          <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+          </line>
+          <g font-weight="bold">
+            <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*1000)/10}}%</text>
+            <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
+          </g>
+        </g>
+
+        <!-- higher-up options' rows: -->
+        <g transform="translate(0 80)">
+
+          <!-- other option's pie chart: -->
+          <g transform="translate(-10 0) scale(.3 .3)">
+            <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
+            <path id="_pie_other" d="M 0,0 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />  
+          </g>
+
+          <!-- explanation: -->
+          <g transform="translate(0 -1)" fill="#9abcbd">
+            <text y="0">
+              Another 
+              <tspan font-weight="bold">23%</tspan>
+              approve 
+              <tspan font-style="italic">{{optionname}}</tspan>
+            </text>
+            <text y="3.5" font-size="3">
+              but no higher-ranked option, so their share goes to that option.
+            </text>
+          </g>
+
+          <!-- arrow: -->
+          <line [attr.x1]="100*(1-a)+15" x2="-4" y1="29" y2="5" marker-end="url(#arrowhead)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5">
+          </line>
+
+          <!-- approval share: -->
+          <rect [attr.x]="100*(1-a)+12+0.1" y="29" [attr.width]="23-0.2" height="2" fill="#9abcbd" stroke="none">
+          </rect>
+
+        </g>
+
+        <!-- bottom row: -->
+        <g transform="translate(0 110)">
+
+          <!-- explanation: -->
+          <g transform="translate(-14 -13)">
+            <!-- backdrop: -->
+            <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
+            <text y="0">
+              The remaining <!--if none above: "None of the ... approve any higher-ranked option"-->
+              <tspan font-weight="bold" fill="#4c822e">12%</tspan>
+              approve no higher-ranked option, <!--if only one above: "don't"-->
+            </text>
+            <text y="4">
+              so their share goes to <!--if none above: "so the whole share goes to"-->
+              <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+            </text>
+          </g>
+
+          <!-- this option's pie chart: -->
+          <g transform="translate(-10 0) scale(.3 .3)">
+            <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
+            <path id="_pie_own" d="M 0,0 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#4c822e" />  
+          </g>
+
+          <!-- arrow: -->
+          <line [attr.x1]="100*(1-a)" x2="-2" y1="0" y2="0" marker-end="url(#arrowhead)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5">
+          </line>
+
+          <!-- approval share: -->
+          <rect [attr.x]="100*(1-a)" y="-1" [attr.width]="12-0.1" height="2" fill="#4c822e" stroke="none">
+          </rect>
+
+        </g>
+
       </g>
     </svg>
   </ion-item>

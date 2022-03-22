@@ -110,7 +110,7 @@ export class ExplainApprovalPage implements OnInit {
 
   ionViewDidEnter() {
     this.ready = true;
-    this.restart();
+    window.setTimeout(this.restart, 100);
   }
 
   ClosePopover()
