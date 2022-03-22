@@ -1,127 +1,149 @@
+<!-- TODO:
+  * remove "you" if abstaining
+  * how to deal with fake 100 ratings?
+  * rather only show one bar, where the "you" is
+-->
+
 <!-- ANIMATION:
+  * from sec. tr1 to tr2, the ratings come in
   * from sec. 0 to 4, the opposition and approval bars will build from left to right / bottom to top
   * from sec. 4 to 5, the approval bar will "fall" into its final horizontal position 
   * from sec. 5 to 6, the approval bar widens to full height and the opposition bar fades out
   * at sec. 6, voter's own rating shows
 -->
 <ion-content *ngIf="ready">
-  <svg xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-20 -20 140 140">
-    <g font-family="Quicksand Medium" font-size="4">
+  <ion-item>
+    <ion-button shape="round" fill="clear"
+        (click)="ClosePopover()">
+      <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+    </ion-button>
+    <ion-label>
+      Approval for <b><i>{{optionname}}</i></b>
+    </ion-label>
+    <ion-button shape="round" fill="clear" slot="end"
+        (click)="restart()">
+      <ion-icon slot="icon-only" name="reload-outline"></ion-icon>
+    </ion-button>
+  </ion-item>
+  <ion-item>
+    <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-25 -25 150 150">
+      <g font-family="Quicksand Medium" font-size="4">
 
-      <g transform="scale(1 -1) translate(0 -100)">
+        <text x="0" y="-11" fill="black">&nbsp;everyone's ratings for this option</text>
+        <text x="0" y="-7" fill="#808080" font-size="3">&nbsp;sorted from large to small</text>
 
-        <!-- small approval bar: -->
-        <g *ngIf="a>0" [attr.transform]="'translate('+(100*(1-a))+','+(100*(1-a))+')'">
-          <animate attributeName="opacity" 
-            from="1" to="0" begin="5s" dur="1s" fill="freeze" />
-          <g transform="rotate(90)"><!-- initially upwards -->
+        <g transform="scale(1 -1) translate(0 -100)">
+
+          <!-- small approval bar: -->
+          <g *ngIf="a>0" [attr.transform]="'translate('+(100*(1-a))+' '+(100*(1-a))+')'">
             <animateTransform attributeName="transform" attributeType="XML" 
-              type="rotate" from="90" to="0" begin="4s" dur="1s" fill="freeze" /><!-- rotate to horizontal -->
-            <rect x="-0.5" y="-2.5" width="0" height="5" fill="#62a73ba0" stroke="none"><!--finally: #bce4e5-->
-              <animate attributeName="width" 
-                from="0" [attr.to]="0.5+100*a" [attr.begin]="''+(4*(1-a))+'s'" [attr.dur]="''+(4*a)+'s'" fill="freeze" />
-            </rect>
-            <line display="none" x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="#62a73ba0" stroke-width="0.5">
-              <set attributeName="display" to="inline" [attr.begin]="''+(4*(1-a))+'s'" />
-            </line>
-          </g>
-        </g>
-
-        <!-- wide approval bar: -->
-        <g [attr.transform]="'translate('+(100*(1-a))+', 0)'" opacity="0">
-          <animate attributeName="opacity" 
-            from="0" to="1" begin="5s" dur="1s" fill="freeze" />
-          <rect x="0" y="-2.5" [attr.width]="100*a" height="105" fill="#bce4e5" stroke="none">
-          </rect>
-          <line [attr.x1]="100*a" y1="-5" [attr.x2]="100*a" y2="105" stroke="#bce4e5" stroke-width="0.5" />
-        </g>
-
-        <!-- left vertical: -->
-        <line x1="0" y1="-9" x2="0" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
-
-        <!-- diagonal: -->
-        <line x1="-4" y1="-5" x2="106" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
-
-        <!-- rating needles: -->
-        <g *ngFor="let item of rs; let i = index">
-          <line stroke-width="0.5"
-                [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="black" />
-          <circle [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="black" />
-        </g>
-
-        <!-- first approving needle: -->
-        <line stroke-width="0"
-          [attr.y1]="poss[thresholdi]" [attr.y2]="poss[thresholdi]" x1="0" [attr.x2]="rs[thresholdi]" [attr.stroke]="cs[thresholdi]">
-          <animate attributeName="stroke-width" 
-            from="5" to="0" [attr.begin]="''+(4*(1-a))+'s'" dur="0.4s" fill="freeze" />
-        </line>
-
-        <!-- small approval label: -->
-        <g *ngIf="a>0" display="none" [attr.transform]="'translate('+(100*(1-a))+','+(100*(1-a))+')'">
-          <set attributeName="display" to="inline" [attr.begin]="''+(4*(1-a))+'s'" />
-          <animate attributeName="opacity" 
-            from="1" to="0" begin="5s" dur="1s" fill="freeze" />
-          <g transform="rotate(90)"><!-- initially upwards -->
-            <animateTransform attributeName="transform" attributeType="XML" 
-              type="rotate" from="90" to="0" begin="4s" dur="1s" fill="freeze" /><!-- rotate to horizontal -->
-            <g transform="translate(0, -1.25) scale(1 -1)">
-              <text fill="black">&nbsp;approval</text>
+                type="translate" [attr.from]="''+(100*(1-a))+' '+(100*(1-a))" [attr.to]="'100 '+poss[myi]" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- move to own rating -->
+            <g transform="rotate(90)"><!-- initially upwards -->
+              <animateTransform attributeName="transform" attributeType="XML" 
+                type="rotate" from="90" to="180" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- rotate to horizontal -->
+              <rect x="-0.5" y="-2.5" width="0" height="5" fill="#bce4e5" stroke="none"><!--not:#62a73ba0-->
+                <animate attributeName="width" 
+                  from="0" [attr.to]="0.5+100*a" [attr.begin]="''+tab1+'s'" [attr.dur]="''+(tab2-tab1)+'s'" fill="freeze" />
+              </rect>
+              <line display="none" x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+                <set attributeName="display" to="inline" [attr.begin]="''+tab1+'s'" />
+              </line>
             </g>
           </g>
-        </g>
 
-        <!-- wide approval label: -->
-        <g transform="translate(100, -1.25) scale(1 -1)" opacity="0">
-          <animate attributeName="opacity" 
-            from="0" to="1" begin="5s" dur="1s" fill="freeze" />
-          <text fill="black" text-anchor="end">{{Math.round(a*1000)/10}}%&nbsp;approval&nbsp;</text>
-        </g>
+          <!-- left vertical: -->
+          <line x1="0" y1="-12" x2="0" y2="115" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
 
-        <!-- own rating marker: -->
-        <g opacity="0">
-          <animate attributeName="opacity" 
-            from="0" to="1" begin="5s" dur="1s" fill="freeze" />
-          <g *ngFor="let item of rs; let i = index">
-            <line stroke-width="0.5"
-                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" [attr.stroke]="cs[i]" />
-            <circle [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" [attr.fill]="cs[i]" />
+          <!-- rating needles: -->
+          <g transform="scale(0 1)"><!-- initially zero width -->
+            <animateTransform attributeName="transform" attributeType="XML" 
+              type="scale" from="0 1" to="1 1" [attr.begin]="''+tr1+'s'" [attr.dur]="''+(tr2-tr1)+'s'" fill="freeze" /><!-- grow to real width -->
+            <line *ngFor="let item of rs; let i = index" 
+                  stroke-width="0.5"
+                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="black">
+              <set attributeName="stroke" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
+            </line>
+            <circle *ngFor="let item of rs; let i = index"
+                  [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="black">
+              <set attributeName="fill" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
+            </circle>
           </g>
-          <line stroke-width="1" 
-              [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" x1="0" [attr.x2]="myr" [attr.stroke]="cs[myi]" />
-          <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="1.5" [attr.fill]="cs[myi]" />
-          <g transform="translate(-2, 0) scale(1 -1)">
-            <text x="0" [attr.y]="1-poss[myi]" [attr.fill]="cs[myi]" font-weight="bold" text-anchor="end">you</text>
-          </g>
-        </g>
-  
-        <!-- opposition bar and label: -->
-        <g *ngIf="a<1" transform="rotate(45) translate(0, 7)">
-          <animate attributeName="opacity" 
-            from="1" to="0" begin="5s" dur="1s" fill="freeze" />
-          <g transform="scale(1.4142, 1)">
-            <rect [attr.x]="0" y="-12.5" width="0" height="5" fill="#3465a4a0" stroke="none">
-              <animate attributeName="width" 
-                from="0" [attr.to]="100*(1-a)-0.5" begin="0s" [attr.dur]="''+(4*(1-a))+'s'" fill="freeze" />
-            </rect>
-          </g>
-          <line x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5" />
-          <g transform="translate(0, -11.25) scale(1 -1)">
-            <text fill="black">&nbsp;opposition</text>
-          </g>  
-        </g>
 
+          <!-- diagonal: -->
+          <line opacity="0" x1="-4" y1="-5" x2="106" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2">
+            <animate attributeName="opacity" 
+              from="0" to="1" [attr.begin]="''+td1+'s'" [attr.dur]="''+(td2-td1)+'s'" fill="freeze" /><!-- fade in -->
+          </line>
+
+          <!-- first approving needle: -->
+          <line stroke-width="0"
+            [attr.y1]="poss[thresholdi]" [attr.y2]="poss[thresholdi]" x1="0" [attr.x2]="rs[thresholdi]" [attr.stroke]="cs[thresholdi]">
+            <animate attributeName="stroke-width" 
+              from="5" to="0" [attr.begin]="''+tt1+'s'" [attr.dur]="''+(tt2-tt1)+'s'" fill="freeze" />
+          </line>
+
+          <!-- small approval label: -->
+          <g *ngIf="a>0" display="none" [attr.transform]="'translate('+(100*(1-a))+','+(100*(1-a))+')'">
+            <set attributeName="display" to="inline" [attr.begin]="''+tab1+'s'" /><!---->
+            <animate attributeName="opacity" 
+              from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
+            <g transform="rotate(90)">
+              <g transform="translate(0, -1.25) scale(1 -1)">
+                <text fill="black">&nbsp;approval</text>
+              </g>
+            </g>
+          </g>
+
+          <!-- final elements: -->
+          <g opacity="0">
+            <animate attributeName="opacity" 
+              from="0" to="1" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" />
+            <!-- threshold vertical: -->
+            <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-12" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+            <!-- own rating marker: -->
+            <line stroke-width="1" 
+                [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" x1="0" [attr.x2]="myr" [attr.stroke]="cs[myi]" />
+            <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="1.5" [attr.fill]="cs[myi]" />
+            <!-- final annotations: -->
+            <g transform="scale(1 -1)" fill="black">
+              <g *ngIf="a<1" font-size="3">
+                <text [attr.x]="100*(1-a)" y="7" fill="#3465a4" text-anchor="end">smaller ratings&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="10" fill="#3465a4" text-anchor="end">don't approve&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="7" fill="#62a73b">&nbsp;&nbsp;larger ratings</text>
+                <text [attr.x]="100*(1-a)" y="10" fill="#62a73b">&nbsp;&nbsp;do approve</text>
+              </g>
+              <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
+                <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end">your&nbsp;&nbsp;</text>
+                <text x="0" y="3" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
+                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*100)}}%</text>
+                <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
+              </g>
+            </g>
+          </g>
+    
+          <!-- opposition bar and label: -->
+          <g *ngIf="a<1" transform="rotate(45) translate(0, 7)">
+            <animate attributeName="opacity" 
+              from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
+            <g transform="scale(1.4142, 1)">
+              <rect [attr.x]="0" y="-12.5" width="0" height="5" fill="#3465a4a0" stroke="none">
+                <animate attributeName="width" 
+                  from="0" [attr.to]="100*(1-a)-0.5" [attr.begin]="''+tob1+'s'" [attr.dur]="''+(tob2-tob1)+'s'" fill="freeze" />
+              </rect>
+            </g>
+            <line display="none" x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5">
+              <set attributeName="display" to="inline" [attr.begin]="''+tob1+'s'" />
+            </line>
+            <g transform="translate(0, -11.25) scale(1 -1)" opacity="0">
+              <animate attributeName="opacity" 
+                from="0" to="1" [attr.begin]="''+td1+'s'" [attr.dur]="''+(td2-td1)+'s'" fill="freeze" /><!-- fade in -->
+              <text fill="black">&nbsp;opposition</text>
+            </g>  
+          </g>
+
+        </g>
+    
       </g>
-
-      <text x="-10" y="-10" fill="black" font-weight="bold">Approval for “{{optionname}}”</text>
-      <text x="0" y="108" fill="black">&nbsp;everyone's ratings for this option</text>
-      <text x="0" y="112" fill="#808080" font-size="3">&nbsp;(sorted from small to large)</text>
-  
-    </g>
-  </svg>
-<!--
-  <ion-button shape="round"
-      (click)="ClosePopover()">
-    <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>&nbsp;
-  </ion-button>
--->
+    </svg>
+  </ion-item>
 </ion-content>
