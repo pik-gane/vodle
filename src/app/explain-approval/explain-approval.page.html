@@ -11,23 +11,32 @@
   * from sec. 5 to 6, the approval bar widens to full height and the opposition bar fades out
   * at sec. 6, voter's own rating shows
 -->
-<ion-content *ngIf="ready">
-  <ion-item>
-    <ion-button shape="round" fill="clear"
-        (click)="ClosePopover()">
-      <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-    </ion-button>
+<ion-content *ngIf="ready" class="ion-no-margin ion-no-padding">
+  <ion-item class="ion-no-margin ion-no-padding">
+    <ion-buttons>
+      &nbsp;&nbsp;
+      <ion-button shape="round" fill="clear"
+          (click)="back()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-label>
-      Approval for <b><i>{{optionname}}</i></b>
+      {{tab=='approval'?'Approval':'Share'}} for <b><i>{{optionname}}</i></b>
     </ion-label>
-    <ion-button shape="round" fill="clear" slot="end"
-        (click)="restart()">
-      <ion-icon slot="icon-only" name="reload-outline"></ion-icon>
-    </ion-button>
+    <ion-buttons slot="end" class="ion-no-margin ion-no-padding">
+      <ion-button shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+          (click)="restart()">
+        <ion-icon slot="icon-only" name="reload-outline"></ion-icon>
+      </ion-button>
+      <ion-button *ngIf="tab=='approval'" shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+          (click)="forward()">
+        <ion-icon slot="icon-only" name="arrow-forward-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-item>
-  <ion-item>
+  <ion-item class="ion-no-margin ion-no-padding">
     <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-25 -25 150 150">
-      <g font-family="Quicksand Medium" font-size="4">
+      <g *ngIf="tab=='approval'" font-family="Quicksand Medium" font-size="4">
 
         <text x="0" y="-11" fill="black">&nbsp;everyone's ratings for this option</text>
         <text x="0" y="-7" fill="#808080" font-size="3">&nbsp;sorted from large to small</text>
@@ -142,7 +151,6 @@
           </g>
 
         </g>
-    
       </g>
     </svg>
   </ion-item>

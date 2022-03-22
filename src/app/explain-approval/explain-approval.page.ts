@@ -19,6 +19,8 @@ export class ExplainApprovalPage implements OnInit {
   @Input() oid: string;
 
   ready = false;
+  tab = "approval";
+  seen_tabs = new Set([this.tab]);
 
   p: Poll;
   optionname: string;
@@ -86,8 +88,29 @@ export class ExplainApprovalPage implements OnInit {
     svg.setCurrentTime(0); 
   }
 
+  back() {
+    if (this.tab=='approval') {
+      this.ClosePopover();
+    } else {
+      this.go('approval');
+    }
+  }
+
+  forward() {
+    this.go('share');
+  }
+
+  go(tab: string) {
+    this.tab = tab;
+    if (!this.seen_tabs.has(tab)) {
+      this.seen_tabs.add(tab);
+      this.restart();
+    }
+  }
+
   ionViewDidEnter() {
     this.ready = true;
+    this.restart();
   }
 
   ClosePopover()
