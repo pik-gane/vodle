@@ -115,7 +115,7 @@
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
                 <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end">your&nbsp;&nbsp;</text>
                 <text x="0" y="3" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
-                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*100)}}%</text>
+                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*1000)/10}}%</text>
                 <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
               </g>
             </g>
@@ -131,14 +131,14 @@
                   from="0" [attr.to]="100*(1-a)-0.5" [attr.begin]="''+tob1+'s'" [attr.dur]="''+(tob2-tob1)+'s'" fill="freeze" />
               </rect>
             </g>
-            <line display="none" x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5">
+            <g display="none">
               <set attributeName="display" to="inline" [attr.begin]="''+tob1+'s'" />
-            </line>
-            <g transform="translate(0, -11.25) scale(1 -1)" opacity="0">
-              <animate attributeName="opacity" 
-                from="0" to="1" [attr.begin]="''+td1+'s'" [attr.dur]="''+(td2-td1)+'s'" fill="freeze" /><!-- fade in -->
-              <text fill="black">&nbsp;opposition</text>
-            </g>  
+              <line x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5">
+              </line>
+              <g transform="translate(0, -11.25) scale(1 -1)" >
+                <text fill="black">&nbsp;opposition</text>
+              </g>   
+            </g>
           </g>
 
         </g>

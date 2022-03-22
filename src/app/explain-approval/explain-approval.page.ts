@@ -70,7 +70,7 @@ export class ExplainApprovalPage implements OnInit {
       rs.push(r);
       cs.push((r == 0) ? '#d33939' : (r < rmin) ? '#3465a4' : '#62a73b');
       ts.push(''+(this.tob1 + dur*i/n + (r < rmin ? 0 : this.dtt))+'s' )
-      poss.push(Math.round(100*(i+.01)/n));
+      poss.push(100*(i+.01)/n);
       if (this.thresholdi < 0 && r >= rmin) {
         this.thresholdi = i;
       }
