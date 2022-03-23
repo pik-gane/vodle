@@ -35,6 +35,7 @@ export class ExplainApprovalPage implements OnInit {
   n: number;
   myr: number;
   myi: number;
+  myv: string;
   thresholdi: number;
   poss: number[];
   // timing:
@@ -46,6 +47,7 @@ export class ExplainApprovalPage implements OnInit {
   to1 = 8; to2 = 9;  // own status
 
   // data for share animation:
+  oids: string[];
   os: string[];
   ps: number[];
   ss: number[];
@@ -63,7 +65,7 @@ export class ExplainApprovalPage implements OnInit {
           oid = this.oid,
           rs0 = p.T.effective_ratings_ascending_map.get(oid),
           rs = this.rs = [],
-          rmin = p.T.cutoffs_map.get(oid) || 100,
+          rmin = this.rmin = p.T.cutoffs_map.get(oid) || 100,
           cs = this.cs = [],
           ts = this.ts = [],
           poss = this.poss = [],
@@ -96,7 +98,9 @@ export class ExplainApprovalPage implements OnInit {
           vids = [],
           vm = p.T.votes_map,
           dattrs = this.dattrs = [];
-    let os = this.os = [],
+    this.myv = vm.get(p.myvid);
+    let oids = this.oids = [],
+        os = this.os = [],
         ps = this.ps = [],
         ss = this.ss = [];
     for (const [vid, ap] of p.T.approvals_map.get(oid)) {
@@ -116,6 +120,7 @@ export class ExplainApprovalPage implements OnInit {
     let lastss = 0;
     for (const oid2 of this.parent.oidsorted) {
       if (oid2 in nvs || oid2 == oid) {
+        oids.push(oid2);
         os.push(p.options[oid2].name);
         const thisps = (nvs[oid2] || 0) / n;
         ps.push(thisps);
@@ -133,6 +138,7 @@ export class ExplainApprovalPage implements OnInit {
       for (let index=4; index<os.length-1; index++) {
         sumps += ps[index];
       }
+      oids = this.oids = oids.slice(0, 4).concat(['', oids[-1]]);
       os = this.os = os.slice(0, 4).concat(['other higher-ranked options', os[-1]]);
       ps = this.ps = ps.slice(0, 4).concat([sumps, ps[-1]]);
       ss = this.ss = ss.slice(0, 5).concat([ss[-1]]);

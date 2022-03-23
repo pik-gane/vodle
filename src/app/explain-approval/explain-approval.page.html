@@ -1,16 +1,9 @@
 <!-- TODO:
+  * treat all abstaining case!
   * remove "you" if abstaining
   * how to deal with fake 100 ratings?
-  * rather only show one bar, where the "you" is
 -->
 
-<!-- ANIMATION:
-  * from sec. tr1 to tr2, the ratings come in
-  * from sec. 0 to 4, the opposition and approval bars will build from left to right / bottom to top
-  * from sec. 4 to 5, the approval bar will "fall" into its final horizontal position 
-  * from sec. 5 to 6, the approval bar widens to full height and the opposition bar fades out
-  * at sec. 6, voter's own rating shows
--->
 <ion-content *ngIf="ready" class="ion-no-margin ion-no-padding">
   <ion-item class="ion-no-margin ion-no-padding">
     <ion-buttons>
@@ -43,11 +36,21 @@
         </marker>
         <marker id="arrowhead-green" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
-          <polyline points="0 0, 10 3.5, 0 7" fill="#4c822e"/>
+          <polyline points="0 0, 10 3.5, 0 7" fill="black"/><!--or #4c822e ?-->
         </marker>
       </defs>
 
+      <!-- APPROVAL TAB: -->
+
       <g *ngIf="tab=='approval'" font-family="Quicksand Medium" font-size="4">
+
+        <!-- ANIMATION:
+          * from sec. tr1 to tr2, the ratings come in
+          * from sec. 0 to 4, the opposition and approval bars will build from left to right / bottom to top
+          * from sec. 4 to 5, the approval bar will "fall" into its final horizontal position 
+          * from sec. 5 to 6, the approval bar widens to full height and the opposition bar fades out
+          * at sec. 6, voter's own rating shows
+        -->
 
         <text x="0" y="-11" fill="black">&nbsp;everyone's ratings for this option</text>
         <text x="0" y="-7" fill="#808080" font-size="3">&nbsp;sorted from large to small</text>
@@ -135,7 +138,7 @@
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
                 <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end">your&nbsp;&nbsp;</text>
                 <text x="0" y="3" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
-                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*1000)/10}}%</text>
+                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;<tspan font-size="6">{{Math.round(a*1000)/10}}%</tspan></text>
                 <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
               </g>
             </g>
@@ -164,13 +167,32 @@
         </g>
       </g>
 
+      <!-- SHARE TAB: -->
+
       <g *ngIf="tab=='share'" font-family="Quicksand Medium" font-size="4">
 
         <!-- TODO:
-          * add intro
           * fade black arrows and explanation to grey
         -->
-        
+      
+        <!-- intro: -->
+        <g transform="translate(-14 -6)">
+          <!-- text: -->
+          <text y="-6" fill="#769596" font-size="3">
+            Every voter's share goes to the highest-ranked option they approve. 
+          </text>
+          <text y="0">
+            Of the 
+            {{Math.round(a*1000)/10}}% 
+            of voters 
+            {{myr >= rmin ? '(including you)' : ''}}
+            who approve this option
+          </text>
+          <text y="4">
+            {{ps.length == 1 ? 'no-one also approves a' : 'some also approve some'}} higher-ranked option.
+          </text>
+        </g>
+
         <!-- bottom row approval bar: -->
         <g [attr.transform]="'translate(0 '+(20+15*os.length)+')'">
           <rect [attr.x]="100*(1-a)" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none">
@@ -184,7 +206,7 @@
         </g>
 
         <!-- higher-up options' rows: -->
-        <g *ngFor="let item of [].constructor(os.length-1); let i = index" [attr.transform]="'translate(0 '+(20+15*i)+')'">
+        <g *ngFor="let item of [].constructor(os.length-1); let i = index" [attr.transform]="'translate(0 '+(15+15*i)+')'">
 
           <!-- other option's pie chart: -->
           <g transform="translate(-10 0) scale(.3 .3)">
@@ -193,27 +215,28 @@
           </g>
 
           <!-- explanation: -->
-          <g transform="translate(0 -1)" fill="#9abcbd">
+          <g transform="translate(0 -1)" fill="#769596">
             <!-- backdrop: -->
             <rect x="-1" y="-4" width="140" height="9" fill="#ffffffff"></rect>
             <!-- text: -->
             <text y="0">
-              {{i==0?'Among them,':'Another'}} 
-              <tspan font-weight="bold">{{Math.round(ps[i]*1000)/10}}%</tspan>
+              {{ps.length == 2 ? '' : i == 0 ? 'Among them,' : 'Another'}} 
+              {{Math.round(ps[i]*1000)/10}}%
+              {{myv == oids[i] ? '(including you)' : ''}}
               approve 
-              <tspan font-style="italic">{{os[i]}}</tspan>
+              <tspan font-style="italic">{{os[i]}}{{i == 0 ? ',' : ''}}</tspan>
             </text>
             <text y="3.5" font-size="3">
-              but no higher-ranked option, so their share goes to that option.
+              {{i > 0 ? 'but no option ranked even higher, ':''}}so their share goes to that option.
             </text>
           </g>
 
           <!-- arrow: -->
-          <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="-1+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#9abcbd" stroke-width="0.2" stroke-dasharray=".5 .5">
+          <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="4+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#9abcbd" stroke-width="0.2" stroke-dasharray=".5 .5">
           </line>
 
           <!-- approval share: -->
-          <rect [attr.x]="100*(1-ss[i+1])+0.1" [attr.y]="-1+(os.length-i)*15" [attr.width]="100*ps[i]-0.2" height="2" fill="#9abcbd" stroke="none">
+          <rect [attr.x]="100*(1-ss[i+1])+0.1" [attr.y]="4+(os.length-i)*15" [attr.width]="100*ps[i]-0.2" height="2" fill="#9abcbd" stroke="none">
           </rect>
 
         </g>
@@ -222,40 +245,42 @@
         <g [attr.transform]="'translate(0 '+(20+15*os.length)+')'">
 
           <!-- explanation: -->
-          <g transform="translate(-14 -14)">
+          <g transform="translate(-14 -17)">
             <!-- backdrop: -->
             <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
             <!-- text: -->
             <g *ngIf="ps.length == 1">
               <text y="0">
-                None of them approve any higher-ranked option,
+                Therefore the whole share of
+                <tspan font-weight="bold" fill="#4c822e" font-size="6">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                {{myv == oids[oids.length-1] ? '(including your share)' : ''}}
               </text>
               <text y="4">
-                so the whole share goes to
-                <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+                goes to <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
             </g>
             <g *ngIf="ps.length > 1">
               <text y="0">
                 The remaining 
-                <tspan font-weight="bold" fill="#4c822e">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                <tspan font-weight="bold" fill="#4c822e" font-size="6">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                {{myv == oids[oids.length-1] ? '(including you)' : ''}}
                 {{ps.length == 2 ? "don't," : "approve no higher-ranked option,"}}
               </text>
               <text y="4">
-                so their share goes to
+                and only their share goes to
                 <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
             </g>
           </g>
 
           <!-- this option's pie chart: -->
-          <g transform="translate(-10 0) scale(.3 .3)">
+          <g transform="translate(-10 0) scale(.45 .45)">
             <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
             <path id="_pie_own" [attr.d]="dattrs[dattrs.length-1]" fill="#4c822e" />  
           </g>
 
           <!-- arrow: -->
-          <line [attr.x1]="100*(1-a)" x2="-2" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="#4c822e" stroke-width="0.2" stroke-dasharray=".5 .5">
+          <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5"><!--or #4c822e?-->
           </line>
 
           <!-- approval share: -->
