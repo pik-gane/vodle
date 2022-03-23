@@ -24,6 +24,9 @@ export class ExplainApprovalPage implements OnInit {
 
   p: Poll;
   optionname: string;
+
+  // data for approval animation:
+
   rs: number[];
   rmin: number;
   a: number;
@@ -34,14 +37,19 @@ export class ExplainApprovalPage implements OnInit {
   myi: number;
   thresholdi: number;
   poss: number[];
-
-  // animation timing:
+  // timing:
   tr1 = 0; tr2 = 2;  // ratings needles
   td1 = 2; td2 = 4;  // diagonal
   tob1 = 4; tob2: number;  // opposition bar
   dtt = 1; tt1: number; tt2: number;  // threshold
   tab1: number; tab2 = 7;  // approval bar
   to1 = 8; to2 = 9;  // own status
+
+  // data for share animation:
+  os: string[];
+  ps: number[];
+  ss: number[];
+  dattrs: string[];
 
   constructor(
     private popover: PopoverController,
@@ -50,6 +58,7 @@ export class ExplainApprovalPage implements OnInit {
   }
 
   ngOnInit() {
+    // approval:
     const p = this.p = this.parent.p,
           oid = this.oid,
           rs0 = p.T.effective_ratings_ascending_map.get(oid),
@@ -81,6 +90,65 @@ export class ExplainApprovalPage implements OnInit {
 
     this.parent.G.L.trace("ANIMATION:",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);
     this.parent.G.L.trace("ANIMATION:",dur, this.tob2, this.tt2);
+
+    // share:
+    const nvs = {},
+          vids = [],
+          vm = p.T.votes_map,
+          dattrs = this.dattrs = [];
+    let os = this.os = [],
+        ps = this.ps = [],
+        ss = this.ss = [];
+    for (const [vid, ap] of p.T.approvals_map.get(oid)) {
+      if (ap) {
+        vids.push(vid);
+      }
+    }
+    for (const vid of vids) {
+      // find no. of voters who vote for oid2 instead of for oid
+      const oid2 = vm.get(vid);
+      if (!(oid2 in nvs)) {
+        nvs[oid2] = 0;
+      }
+      nvs[oid2]++;
+    }
+    this.parent.G.L.trace("partial share:", vids, nvs);
+    let lastss = 0;
+    for (const oid2 of this.parent.oidsorted) {
+      if (oid2 in nvs || oid2 == oid) {
+        os.push(p.options[oid2].name);
+        const thisps = (nvs[oid2] || 0) / n;
+        ps.push(thisps);
+        ss.push(lastss);
+        this.parent.G.L.trace("partial share:", oid2, thisps, lastss);
+        lastss += thisps;
+      }
+      if (oid2 == oid) {
+        break; // since later options can't get votes from approvers of oid
+      }
+    }
+    if (os.length > 6) {
+      // need to summarize the last few!
+      let sumps = 0;
+      for (let index=4; index<os.length-1; index++) {
+        sumps += ps[index];
+      }
+      os = this.os = os.slice(0, 4).concat(['other higher-ranked options', os[-1]]);
+      ps = this.ps = ps.slice(0, 4).concat([sumps, ps[-1]]);
+      ss = this.ss = ss.slice(0, 5).concat([ss[-1]]);
+    }
+    for (const i in ps) {
+      const share = ps[i],
+            R = this.parent.pieradius,
+            dx = R * Math.sin(this.parent.two_pi * share),
+            dy = R * (1 - Math.cos(this.parent.two_pi * share)),
+            more_than_180_degrees_flag = share > 0.5 ? 1 : 0;
+      if (share < 1) {
+        dattrs.push("M 0,0 l 0,-"+R+" a "+R+" "+R+" 0 "+more_than_180_degrees_flag+" 1 "+dx+" "+dy+" Z");
+      } else { // a full circle
+        dattrs.push('d', "M 0,0 l 0,-20 a 20 20 0 1 1 0 "+(2*R)+" a 20 20 0 1 1 0 "+(-2*R)+" Z");
+      }
+    }
   }
 
   restart() {

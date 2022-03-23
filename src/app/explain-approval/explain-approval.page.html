@@ -37,9 +37,13 @@
   <ion-item class="ion-no-margin ion-no-padding">
     <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-25 -25 150 150">
       <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+        <marker id="arrowhead-grey" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
-          <polyline points="0 0, 10 3.5, 0 7" />
+          <polyline points="0 0, 10 3.5, 0 7" fill="#9abcbd"/>
+        </marker>
+        <marker id="arrowhead-green" markerWidth="10" markerHeight="7" 
+                refX="0" refY="3.5" orient="auto">
+          <polyline points="0 0, 10 3.5, 0 7" fill="#4c822e"/>
         </marker>
       </defs>
 
@@ -162,8 +166,13 @@
 
       <g *ngIf="tab=='share'" font-family="Quicksand Medium" font-size="4">
 
+        <!-- TODO:
+          * add intro
+          * fade black arrows and explanation to grey
+        -->
+        
         <!-- bottom row approval bar: -->
-        <g transform="translate(0 110)">
+        <g [attr.transform]="'translate(0 '+(20+15*os.length)+')'">
           <rect [attr.x]="100*(1-a)" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none">
           </rect>
           <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
@@ -175,21 +184,24 @@
         </g>
 
         <!-- higher-up options' rows: -->
-        <g transform="translate(0 80)">
+        <g *ngFor="let item of [].constructor(os.length-1); let i = index" [attr.transform]="'translate(0 '+(20+15*i)+')'">
 
           <!-- other option's pie chart: -->
           <g transform="translate(-10 0) scale(.3 .3)">
             <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
-            <path id="_pie_other" d="M 0,0 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />  
+            <path id="_pie_other" [attr.d]="dattrs[i]" fill="#9abcbd" />  
           </g>
 
           <!-- explanation: -->
           <g transform="translate(0 -1)" fill="#9abcbd">
+            <!-- backdrop: -->
+            <rect x="-1" y="-4" width="140" height="9" fill="#ffffffff"></rect>
+            <!-- text: -->
             <text y="0">
-              Another 
-              <tspan font-weight="bold">23%</tspan>
+              {{i==0?'Among them,':'Another'}} 
+              <tspan font-weight="bold">{{Math.round(ps[i]*1000)/10}}%</tspan>
               approve 
-              <tspan font-style="italic">{{optionname}}</tspan>
+              <tspan font-style="italic">{{os[i]}}</tspan>
             </text>
             <text y="3.5" font-size="3">
               but no higher-ranked option, so their share goes to that option.
@@ -197,45 +209,57 @@
           </g>
 
           <!-- arrow: -->
-          <line [attr.x1]="100*(1-a)+15" x2="-4" y1="29" y2="5" marker-end="url(#arrowhead)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5">
+          <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="-1+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#9abcbd" stroke-width="0.2" stroke-dasharray=".5 .5">
           </line>
 
           <!-- approval share: -->
-          <rect [attr.x]="100*(1-a)+12+0.1" y="29" [attr.width]="23-0.2" height="2" fill="#9abcbd" stroke="none">
+          <rect [attr.x]="100*(1-ss[i+1])+0.1" [attr.y]="-1+(os.length-i)*15" [attr.width]="100*ps[i]-0.2" height="2" fill="#9abcbd" stroke="none">
           </rect>
 
         </g>
 
         <!-- bottom row: -->
-        <g transform="translate(0 110)">
+        <g [attr.transform]="'translate(0 '+(20+15*os.length)+')'">
 
           <!-- explanation: -->
-          <g transform="translate(-14 -13)">
+          <g transform="translate(-14 -14)">
             <!-- backdrop: -->
             <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
-            <text y="0">
-              The remaining <!--if none above: "None of the ... approve any higher-ranked option"-->
-              <tspan font-weight="bold" fill="#4c822e">12%</tspan>
-              approve no higher-ranked option, <!--if only one above: "don't"-->
-            </text>
-            <text y="4">
-              so their share goes to <!--if none above: "so the whole share goes to"-->
-              <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
-            </text>
+            <!-- text: -->
+            <g *ngIf="ps.length == 1">
+              <text y="0">
+                None of them approve any higher-ranked option,
+              </text>
+              <text y="4">
+                so the whole share goes to
+                <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+              </text>
+            </g>
+            <g *ngIf="ps.length > 1">
+              <text y="0">
+                The remaining 
+                <tspan font-weight="bold" fill="#4c822e">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                {{ps.length == 2 ? "don't," : "approve no higher-ranked option,"}}
+              </text>
+              <text y="4">
+                so their share goes to
+                <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+              </text>
+            </g>
           </g>
 
           <!-- this option's pie chart: -->
           <g transform="translate(-10 0) scale(.3 .3)">
             <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
-            <path id="_pie_own" d="M 0,0 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#4c822e" />  
+            <path id="_pie_own" [attr.d]="dattrs[dattrs.length-1]" fill="#4c822e" />  
           </g>
 
           <!-- arrow: -->
-          <line [attr.x1]="100*(1-a)" x2="-2" y1="0" y2="0" marker-end="url(#arrowhead)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5">
+          <line [attr.x1]="100*(1-a)" x2="-2" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="#4c822e" stroke-width="0.2" stroke-dasharray=".5 .5">
           </line>
 
           <!-- approval share: -->
-          <rect [attr.x]="100*(1-a)" y="-1" [attr.width]="12-0.1" height="2" fill="#4c822e" stroke="none">
+          <rect [attr.x]="100*(1-a)+0.1" y="-1" [attr.width]="100*ps[ps.length-1]-0.2" height="2" fill="#4c822e" stroke="none">
           </rect>
 
         </g>

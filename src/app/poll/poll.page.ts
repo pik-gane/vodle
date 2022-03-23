@@ -44,8 +44,8 @@ export class PollPage implements OnInit {
   votedfor = null; // oid my prob. share goes to
   expanded = {};
 
-  private pieradius = 20;
-  private two_pi = 2*Math.PI; 
+  pieradius = 20;
+  two_pi = 2*Math.PI; 
   slidercolor = {};
 
   refresh_paused = false;
