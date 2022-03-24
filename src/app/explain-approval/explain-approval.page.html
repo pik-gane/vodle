@@ -131,7 +131,7 @@
               </line>
             </g>
             <!-- threshold vertical: -->
-            <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-29" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+            <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-29" y2="101" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
             <!-- own rating marker: -->
             <line stroke-width="2" 
                 [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" x1="0" [attr.x2]="myr" [attr.stroke]="cs[myi]" />
@@ -194,20 +194,23 @@
         -->
       
         <!-- intro: -->
-        <g transform="translate(-14 -6)">
+        <g transform="translate(-14 -4)">
           <!-- text: -->
-          <text y="-6" fill="#769596" font-size="5">
-            Every voter's share goes to the highest-ranked option they approve. 
+          <text y="-13" fill="#769596" font-size="5">
+            Everyone's share goes to the 
+          </text>
+          <text y="-8" fill="#769596" font-size="5">
+            highest-ranked option they approve. 
           </text>
           <text y="0">
             Of the 
             {{Math.round(a*1000)/10}}% 
-            of voters 
-            {{myr >= rmin ? '(including you)' : ''}}
+<!--            of voters 
+            {{myr >= rmin ? '(including you)' : ''}}-->
             who approve this option
           </text>
-          <text y="4">
-            {{ps.length == 1 ? 'no-one also approves a' : 'some also approve some'}} higher-ranked option.
+          <text y="5">
+            {{ps.length == 1 ? 'no-one also approves a' : 'some also approve a'}} higher-ranked option.
           </text>
         </g>
 
@@ -217,10 +220,8 @@
           </rect>
           <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
           </line>
-          <g font-weight="bold">
-            <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;{{Math.round(a*1000)/10}}%</text>
-            <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
-          </g>
+          <text x="100" y="8" fill="#9abcbd" text-anchor="end"><tspan font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
+          <text x="100" y="13" fill="#9abcbd" text-anchor="end">approval&nbsp;</text>
         </g>
 
         <!-- higher-up options' rows: -->
@@ -244,7 +245,7 @@
               approve 
               <tspan font-style="italic">{{os[i]}}{{i == 0 ? ',' : ''}}</tspan>
             </text>
-            <text y="3.5" font-size="5">
+            <text y="5" font-size="5">
               {{i > 0 ? 'but no option ranked even higher, ':''}}so their share goes to that option.
             </text>
           </g>
@@ -269,22 +270,22 @@
             <!-- text: -->
             <g *ngIf="ps.length == 1">
               <text y="0">
-                Therefore the whole share of
-                <tspan font-weight="bold" fill="#4c822e" font-size="6">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
-                {{myv == oids[oids.length-1] ? '(including your share)' : ''}}
+                So the whole share of
+                <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                {{myv == oids[oids.length-1] ? '(including yours)' : ''}}
               </text>
-              <text y="4">
+              <text y="5">
                 goes to <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
             </g>
             <g *ngIf="ps.length > 1">
               <text y="0">
                 The remaining 
-                <tspan font-weight="bold" fill="#4c822e" font-size="6">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
+                <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
                 {{myv == oids[oids.length-1] ? '(including you)' : ''}}
                 {{ps.length == 2 ? "don't," : "approve no higher-ranked option,"}}
               </text>
-              <text y="4">
+              <text y="5">
                 and only their share goes to
                 <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
