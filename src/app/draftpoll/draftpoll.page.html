@@ -24,7 +24,7 @@
     <!-- GENERAL POLL INFORMATION: -->
 
     <ion-item color="primary">
-      <span [innerHtml]="'draftpoll.general-information'|translate"></span>
+      <ion-label [innerHtml]="'draftpoll.general-information'|translate"></ion-label>
       <ion-button slot="end" fill="clear" (click)="show_details=!show_details" class="ion-no-margin ion-no-padding">
         <span style="color: white" [innerHtml]="'details'|translate"></span>
         <ion-toggle 
@@ -249,8 +249,8 @@
     <!-- OPTIONS: -->
 
     <ng-container *ngIf="stage>5"><!--stage 6-->
-      <ion-item color="primary" 
-        [innerHtml]="(formGroup.get('poll_type').value=='winner' ? 'options' : 'possible-targets')|translate">
+      <ion-item color="primary">
+        <ion-label [innerHtml]="(formGroup.get('poll_type').value=='winner' ? 'options' : 'possible-targets')|translate"></ion-label>
       </ion-item>
 
       <!-- LOOP OVER OPTIONS: -->

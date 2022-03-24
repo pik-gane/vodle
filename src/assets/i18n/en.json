@@ -299,13 +299,23 @@
         "-page-title": "My polls",
         "please-respond": "Please respond:",
         "request-by": "Delegation request by {{from}}",
+
         "running": "Running polls",
-        "no-running-polls": "Currently, vodle knows of no running polls that you can vote in.<br/><small>If you have received an invitation to a poll, please click the link in the invitation!</small>",
+
+        "no-running-polls-1": "Currently, vodle knows of no running polls that you can vote in.",
+        "no-running-polls-2": "If you have received an invitation to a poll, please click the link in the invitation!",
+
         "recently-closed": "Closed",
-        "no-recently-closed-polls": "Vodle knows of no closed polls that you have voted in.<br/><small>If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.</small>",
+
+        "no-recently-closed-polls-1": "Vodle knows of no closed polls that you have voted in.",
+        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.",
+
         "older": "Older",
+        
         "drafts": "Drafts",
-        "no-draft-polls": "Currently, you have no polls drafted.<br/><small>To start or draft a new poll, click the '+' button below!</small>"
+
+        "no-draft-polls-1": "Currently, you have no polls drafted.",
+        "no-draft-polls-2": "To start or draft a new poll, click the '+' button below!"
     },
 
     "news-title": {

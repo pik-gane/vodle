@@ -16,8 +16,8 @@
       <ion-select interface="popover" formControlName="db_from_pid" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
           style="font-size: smaller;"
           (ionChange)="set_db_from_pid()">
-        <ng-container *ngFor="let pid of Object.keys(G.polls)">
-          <ion-select-option *ngIf="pid!=page_object.p.pid" [value]="pid" [innerHtml]="G.polls[pid].title"></ion-select-option>
+        <ng-container *ngFor="let pid of Object.keys(G.P.polls)">
+          <ion-select-option *ngIf="pid!=page_object.p.pid" [value]="pid" [innerHtml]="G.P.polls[pid].title"></ion-select-option>
         </ng-container>
       </ion-select>
     </ion-item>

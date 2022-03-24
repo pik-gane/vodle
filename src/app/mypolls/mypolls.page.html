@@ -107,7 +107,12 @@
       </ion-item>
     </ng-container>
     <ng-container *ngIf="Object.keys(G.P.running_polls).length==0">
-      <ion-item><p [innerHtml] ="'mypolls.no-running-polls'|translate"></p></ion-item>
+      <ion-item>
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml] ="'mypolls.no-running-polls-1'|translate"></p>
+          <small><p [innerHtml] ="'mypolls.no-running-polls-2'|translate"></p></small>
+        </ion-col>
+      </ion-item>
     </ng-container>
 
     <!--RECENTLY CLOSED:-->
@@ -126,7 +131,12 @@
         </ion-item>
       </ng-container>
       <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0">
-        <ion-item><p [innerHtml] ="'mypolls.no-recently-closed-polls'|translate"></p></ion-item>
+        <ion-item>
+          <ion-col class="ion-no-padding ion-no-margin">
+            <p [innerHtml] ="'mypolls.no-recently-closed-polls-1'|translate"></p>
+            <small><p [innerHtml] ="'mypolls.no-recently-closed-polls-2'|translate"></p></small>
+          </ion-col>
+        </ion-item>
       </ng-container>
     </ng-container>
     <!--OLDER-->
@@ -168,7 +178,12 @@
         </ion-item>
       </ng-container>
       <ng-container *ngIf="Object.keys(G.P.draft_polls).length==0">
-        <ion-item><p [innerHtml] ="'mypolls.no-draft-polls'|translate"></p></ion-item>
+        <ion-item>
+          <ion-col class="ion-no-padding ion-no-margin">
+            <p [innerHtml] ="'mypolls.no-draft-polls-1'|translate"></p>
+            <small><p [innerHtml] ="'mypolls.no-draft-polls-2'|translate"></p></small>
+          </ion-col>
+        </ion-item>
       </ng-container>
     </ng-container>
         

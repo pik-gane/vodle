@@ -25,7 +25,7 @@
         </h3></ion-text>
         <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
           <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [innerHtml]="p.desc"></i></ion-text>
-          <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
+          <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary"><span *ngIf="((p.desc||'')!='')&&((p.url||'')!='')">&nbsp;</span>
             (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" [innerHtml]="'read-more'|translate"></ion-text>)
             <!--(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
               <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
@@ -33,7 +33,7 @@
           </ion-text>
         </p>
         <p>
-          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))+'.'"></ion-text>
+          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))"></ion-text>
           <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" style="color: red;"></ion-text>
         </p>
         <p *ngIf="((p.language||'')!='') && (p.language!=G.S.language)">
