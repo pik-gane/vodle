@@ -1,8 +1,8 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, IonContent } from '@ionic/angular';
-import { PopoverController, AlertController } from '@ionic/angular'; 
+import { LoadingController, IonContent, IonRouterOutlet } from '@ionic/angular';
+import { PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
@@ -65,9 +65,11 @@ export class PollPage implements OnInit {
       private changeDetector: ChangeDetectorRef,
       private router: Router,
       private route: ActivatedRoute,
+      private routerOutlet: IonRouterOutlet,
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
       private popover: PopoverController,
+      private modalController: ModalController,
       public translate: TranslateService,
       public G: GlobalService) {
     /* this.events.subscribe('updateScreen', () => {
@@ -245,23 +247,23 @@ export class PollPage implements OnInit {
     }
     this.G.L.entry("PollPage.show_stats");
     const p = this.p, T = p.T, myvid = p.myvid, 
-        approval_scores_map = T.approval_scores_map,
-        shares_map = T.shares_map, approvals_map = T.approvals_map;
+          approval_scores_map = T.approval_scores_map,
+          shares_map = T.shares_map, approvals_map = T.approvals_map;
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (const oid of p.oids) {
       // FIXME: bar and pie are sometimes null here, but not when running the getElementById in the console. why?
-      const approval_score = approval_scores_map.get(oid),
-          share = shares_map.get(oid),
-          bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
-          pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
-          R = this.pieradius,
-          dx = R * Math.sin(this.two_pi * share),
-          dy = R * (1 - Math.cos(this.two_pi * share)),
-          more_than_180_degrees_flag = share > 0.5 ? 1 : 0; 
+      const a = approval_scores_map.get(oid) / T.n_not_abstaining,
+            share = shares_map.get(oid),
+            bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
+            pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
+            R = this.pieradius,
+            dx = R * Math.sin(this.two_pi * share),
+            dy = R * (1 - Math.cos(this.two_pi * share)),
+            more_than_180_degrees_flag = share > 0.5 ? 1 : 0; 
       this.approved[oid] = approvals_map.get(oid).get(myvid);
       if (bar) {
-        bar.width.baseVal.valueAsString = (100 * approval_score).toString() + '%';
-        bar.x.baseVal.valueAsString = (100 * (1 - approval_score)).toString() + '%';
+        bar.width.baseVal.valueAsString = (100 * a).toString() + '%';
+        bar.x.baseVal.valueAsString = (100 * (1 - a)).toString() + '%';
       } else {
         this.G.L.warn("PollPage.show_stats couldn't change slider bar", oid);
       }
@@ -476,7 +478,7 @@ export class PollPage implements OnInit {
       })
   }
 
-  explain_approval_dialog(oid: string) {
+  _old_explain_approval_dialog(oid: string) {
     this.popover.create({
         component: ExplainApprovalPage, 
         translucent: true,
@@ -488,6 +490,30 @@ export class PollPage implements OnInit {
         popoverElement.present();
       })
   }
+
+  explain_approval_dialog(oid: string) {
+    this.modalController.create({
+        component: ExplainApprovalPage, 
+//        translucent: true,
+        cssClass: 'explain-approval',
+        showBackdrop: true,
+        componentProps: {parent: this, oid: oid},
+        swipeToClose: true,
+        presentingElement: this.routerOutlet.nativeEl
+    })
+      .then((modalElement)=>{
+        modalElement.present();
+      })
+  }
+  /*
+  async presentModal() {
+    const modal = await this.modalController.create({
+      component: ModalPage,
+      cssClass: 'my-custom-class'
+    });
+    return await modal.present();
+  }
+  */
 
   async revoke_delegation_dialog() { 
     const confirm = await this.alertCtrl.create({ 

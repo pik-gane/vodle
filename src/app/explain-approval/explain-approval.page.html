@@ -27,8 +27,9 @@
       </ion-button>
     </ion-buttons>
   </ion-item>
-  <ion-item class="ion-no-margin ion-no-padding">
-    <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="500px" height="500px" viewBox="-25 -25 150 150">
+
+  <ion-item class="ion-no-margin ion-no-padding" lines="none">
+    <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="-25 -25 130 155">
       <defs>
         <marker id="arrowhead-grey" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
@@ -42,18 +43,18 @@
 
       <!-- APPROVAL TAB: -->
 
-      <g *ngIf="tab=='approval'" font-family="Quicksand Medium" font-size="4">
+      <g *ngIf="tab=='approval'" font-family="Quicksand" font-size="5">
 
         <!-- ANIMATION:
-          * from sec. tr1 to tr2, the ratings come in
+          * from sec. tr1 to tr2, the ratings come in 
           * from sec. 0 to 4, the opposition and approval bars will build from left to right / bottom to top
           * from sec. 4 to 5, the approval bar will "fall" into its final horizontal position 
           * from sec. 5 to 6, the approval bar widens to full height and the opposition bar fades out
           * at sec. 6, voter's own rating shows
         -->
 
-        <text x="0" y="-11" fill="black">&nbsp;everyone's ratings for this option</text>
-        <text x="0" y="-7" fill="#808080" font-size="3">&nbsp;sorted from large to small</text>
+        <text x="0" y="-11" fill="black">&nbsp;all ratings for this option</text>
+        <text x="0" y="-6" fill="#808080" font-size="5">&nbsp;from large to small</text>
 
         <g transform="scale(1 -1) translate(0 -100)">
 
@@ -75,7 +76,7 @@
           </g>
 
           <!-- left vertical: -->
-          <line x1="0" y1="-12" x2="0" y2="115" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+          <line x1="0" y1="0" x2="0" y2="115" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
 
           <!-- rating needles: -->
           <g transform="scale(0 1)"><!-- initially zero width -->
@@ -121,25 +122,41 @@
           <g opacity="0">
             <animate attributeName="opacity" 
               from="0" to="1" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" />
+            <!-- approval bar -->
+            <g display="none" [attr.transform]="'translate(100 '+poss[myi]+') rotate(180)'">
+              <set attributeName="display" to="inline" [attr.begin]="''+to2+'s'"></set>
+              <rect x="-0.5" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none"><!--not:#62a73ba0-->
+              </rect>
+              <line x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+              </line>
+            </g>
             <!-- threshold vertical: -->
-            <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-12" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+            <line *ngIf="a<1" [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-29" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
             <!-- own rating marker: -->
             <line stroke-width="2" 
                 [attr.y1]="poss[myi]" [attr.y2]="poss[myi]" x1="0" [attr.x2]="myr" [attr.stroke]="cs[myi]" />
             <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="3" [attr.fill]="cs[myi]" />
             <!-- final annotations: -->
             <g transform="scale(1 -1)" fill="black">
-              <g *ngIf="a<1" font-size="3">
-                <text [attr.x]="100*(1-a)" y="7" fill="#3465a4" text-anchor="end">smaller ratings&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="10" fill="#3465a4" text-anchor="end">don't approve&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="7" fill="#62a73b">&nbsp;&nbsp;larger ratings</text>
-                <text [attr.x]="100*(1-a)" y="10" fill="#62a73b">&nbsp;&nbsp;do approve</text>
+              <g *ngIf="a<1" font-size="5">
+                <text [attr.x]="100*(1-a)" y="12" fill="#3465a4" text-anchor="end">smaller&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="17" fill="#3465a4" text-anchor="end">ratings&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="22" fill="#3465a4" text-anchor="end">don't&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="27" fill="#3465a4" text-anchor="end">approve&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="12" fill="#62a73b">&nbsp;&nbsp;larger</text>
+                <text [attr.x]="100*(1-a)" y="17" fill="#62a73b">&nbsp;&nbsp;ratings</text>
+                <text [attr.x]="100*(1-a)" y="22" fill="#62a73b">&nbsp;&nbsp;do</text>
+                <text [attr.x]="100*(1-a)" y="27" fill="#62a73b">&nbsp;&nbsp;approve</text>
               </g>
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
                 <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end">your&nbsp;&nbsp;</text>
-                <text x="0" y="3" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
-                <text x="100" y="-1" fill="#9abcbd">&nbsp;&nbsp;<tspan font-size="6">{{Math.round(a*1000)/10}}%</tspan></text>
-                <text x="100" y="3" fill="#9abcbd">&nbsp;&nbsp;approval</text>
+                <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
+                <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
+                  <!-- backdrop: -->
+                  <rect x="75" y="-16" width="25" height="13" fill="#ffffffd0"></rect>
+                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
+                  <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end">approval&nbsp;</text>
+                </g>
               </g>
             </g>
           </g>
@@ -169,7 +186,7 @@
 
       <!-- SHARE TAB: -->
 
-      <g *ngIf="tab=='share'" font-family="Quicksand Medium" font-size="4">
+      <g *ngIf="tab=='share'" font-family="Quicksand Medium" font-size="5">
 
         <!-- TODO:
           * fade black arrows and explanation to grey
@@ -179,7 +196,7 @@
         <!-- intro: -->
         <g transform="translate(-14 -6)">
           <!-- text: -->
-          <text y="-6" fill="#769596" font-size="3">
+          <text y="-6" fill="#769596" font-size="5">
             Every voter's share goes to the highest-ranked option they approve. 
           </text>
           <text y="0">
@@ -227,7 +244,7 @@
               approve 
               <tspan font-style="italic">{{os[i]}}{{i == 0 ? ',' : ''}}</tspan>
             </text>
-            <text y="3.5" font-size="3">
+            <text y="3.5" font-size="5">
               {{i > 0 ? 'but no option ranked even higher, ':''}}so their share goes to that option.
             </text>
           </g>

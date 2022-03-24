@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { PopoverController } from '@ionic/angular';
+import { ModalController, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";
@@ -55,6 +55,7 @@ export class ExplainApprovalPage implements OnInit {
 
   constructor(
     private popover: PopoverController,
+    private modalController: ModalController,
     translate: TranslateService,
     G: GlobalService) { 
   }
@@ -164,7 +165,7 @@ export class ExplainApprovalPage implements OnInit {
 
   back() {
     if (this.tab=='approval') {
-      this.ClosePopover();
+      this.close();
     } else {
       this.go('approval');
     }
@@ -187,9 +188,10 @@ export class ExplainApprovalPage implements OnInit {
     window.setTimeout(this.restart, 100);
   }
 
-  ClosePopover()
+  close()
   {
-    this.popover.dismiss();
+    this.modalController.dismiss();
+//    this.popover.dismiss();
   }
 
 }
