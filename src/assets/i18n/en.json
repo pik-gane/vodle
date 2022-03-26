@@ -227,6 +227,10 @@
 
         "title-share": "Share for",
 
+        "all-abstain-line-1":                   "Since all voters abstain, all",
+        "all-abstain-line-2-before-percentage": "options get the same share of ",
+        "all-abstain-line-2-after-percentage":  "",
+
         "share-intro-line-1": "Everyone's share goes to the",
         "share-intro-line-2": "highest-ranked option they approve.",
 

@@ -230,6 +230,10 @@
 
         "title-share": "Anteil für",
 
+        "all-abstain-line-1":                   "Weil alle sich enthalten, bekommen",
+        "all-abstain-line-2-before-percentage": "alle Optionen den gleichen Anteil von ",
+        "all-abstain-line-2-after-percentage":  "",
+
         "share-intro-line-1": "Der von einer Person kontrollierte Anteil geht",
         "share-intro-line-2": "zur höchst-gelisteten Option, der sie zustimmt.",
 

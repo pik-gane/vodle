@@ -78,7 +78,7 @@ export class ExplainApprovalPage implements OnInit {
           ts = this.ts = [],
           poss = this.poss = [],
           myr = this.myr = p.get_my_effective_rating(oid),
-          n = p.T.n_not_abstaining,
+          n = this.n = p.T.n_not_abstaining,
           offset = n - rs0.length,
           dur = this.tab2 - this.tob1 - this.dtt,
           a = this.a = (p.T.approval_scores_map.get(oid) / n) || 0;
