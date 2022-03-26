@@ -261,7 +261,27 @@
 
         "another-incl-you-line-1-before-optionname": "Weitere {{percentage}}% (inkl. Dir) stimmen ",
         "another-incl-you-line-1-after-optionname": "",
-        "another-incl-you-line-2": "zu, aber keiner höher-gelisteten Option."
+        "another-incl-you-line-2": "zu, aber keiner höher-gelisteten Option.",
+
+        "whole-share-line-1-before-percentage": "Also geht der ganze Anteil von ",
+        "whole-share-line-1-after-percentage": "",
+        "whole-share-line-2-before-optionname": "an ",
+        "whole-share-line-2-after-optionname": ".",
+
+        "whole-share-incl-you-line-1-before-percentage": "Also geht der ganze Anteil von ",
+        "whole-share-incl-you-line-1-after-percentage": " (inkl.",
+        "whole-share-incl-you-line-2-before-optionname": "Deinem) an ",
+        "whole-share-incl-you-line-2-after-optionname": ".",
+
+        "remaining-line-1-before-percentage": "Der Anteil der übrigen ",
+        "remaining-line-1-after-percentage": "",
+        "remaining-line-2-before-optionname": "geht an ",
+        "remaining-line-2-after-optionname": ".",
+
+        "remaining-incl-you-line-1-before-percentage": "Der Anteil der übrigen ",
+        "remaining-incl-you-line-1-after-percentage": " (inkl. Deinem)",
+        "remaining-incl-you-line-2-before-optionname": "geht an ",
+        "remaining-incl-you-line-2-after-optionname": "."
     },
 
     "help": {

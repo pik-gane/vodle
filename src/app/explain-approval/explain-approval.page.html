@@ -301,28 +301,38 @@
             <!-- backdrop: -->
             <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
             <!-- text: -->
-            <g *ngIf="ps.length == 1">
-              <text y="0" [innerHtml]="'explain.'|translate">
-                So the whole share of
-                <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
-                {{myv == oids[oids.length-1] ? '(including yours)' : ''}}
+            <g *ngIf="ps.length == 1 && myv != oid">
+              <text y="0">
+                {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
               </text>
-              <text y="5" [innerHtml]="'explain.'|translate">
-                goes to <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+              <text y="5">
+                {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
               </text>
-            </g>
-            <g *ngIf="ps.length > 1">
-              <text y="0" [innerHtml]="'explain.'|translate">
-                The remaining 
-                <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
-                {{myv == oids[oids.length-1] ? '(including you)' : ''}}
-                {{ps.length == 2 ? "don't," : "approve no higher-ranked option,"}}
+            </g> 
+            <g *ngIf="ps.length == 1 && myv == oid">
+              <text y="0">
+                {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
               </text>
-              <text y="5" [innerHtml]="'explain.'|translate">
-                and only their share goes to
-                <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
+              <text y="5">
+                {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
               </text>
-            </g>
+            </g> 
+            <g *ngIf="ps.length > 1 && myv != oid">
+              <text y="0">
+                {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
+              </text>
+              <text y="5">
+                {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
+              </text>
+            </g> 
+            <g *ngIf="ps.length > 1 && myv == oid">
+              <text y="0">
+                {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
+              </text>
+              <text y="5">
+                {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}
+              </text>
+            </g> 
           </g>
 
           <!-- this option's pie chart: -->

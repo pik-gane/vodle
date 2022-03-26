@@ -130,7 +130,7 @@ export class ExplainApprovalPage implements OnInit {
       if (oid2 in nvs || oid2 == oid) {
         oids.push(oid2);
         os.push(p.options[oid2].name);
-        const thisps = ((nvs[oid2] || 0) / n) || (1 / this.parent.oidsorted.length);
+        const thisps = (n > 0) ? ((nvs[oid2] || 0) / n) : (1 / this.parent.oidsorted.length);
         ps.push(thisps);
         ss.push(lastss);
         this.parent.G.L.trace("partial share:", oid2, thisps, lastss);

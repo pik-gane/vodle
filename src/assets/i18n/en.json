@@ -258,7 +258,27 @@
 
         "another-incl-you-line-1-before-optionname": "Another {{percentage}}% (including you) approve ",
         "another-incl-you-line-1-after-optionname": "",
-        "another-incl-you-line-2": "but nothing higher up."
+        "another-incl-you-line-2": "but nothing higher up.",
+
+        "whole-share-line-1-before-percentage": "So the whole share of ",
+        "whole-share-line-1-after-percentage": "",
+        "whole-share-line-2-before-optionname": "goes to ",
+        "whole-share-line-2-after-optionname": ".",
+
+        "whole-share-incl-you-line-1-before-percentage": "So the whole share of ",
+        "whole-share-incl-you-line-1-after-percentage": " (including yours)",
+        "whole-share-incl-you-line-2-before-optionname": "goes to ",
+        "whole-share-incl-you-line-2-after-optionname": ".",
+
+        "remaining-line-1-before-percentage": "The share of the remaining ",
+        "remaining-line-1-after-percentage": "",
+        "remaining-line-2-before-optionname": "goes to ",
+        "remaining-line-2-after-optionname": ".",
+
+        "remaining-incl-you-line-1-before-percentage": "The share of the remaining ",
+        "remaining-incl-you-line-1-after-percentage": "",
+        "remaining-incl-you-line-2-before-optionname": "(including yours) goes to ",
+        "remaining-incl-you-line-2-after-optionname": "."
     },
 
     "help": {
