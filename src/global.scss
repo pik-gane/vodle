@@ -91,9 +91,10 @@ ion-select {
     --max-height: 90%!important;
 }
 .explain-approval {
-    --height:100%!important;
-//    --height: 520px!important;
+    --height:85%!important;
+    --max-width:900px!important;
 }
+/*
 .explain-approval .sc-ion-popover-md {
     --width: auto;
     --min-width: auto;
@@ -105,7 +106,7 @@ ion-select {
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
 }
-
+*/
 .current-field {
 //    font-weight: 900;
 //    font-size: large;

@@ -53,6 +53,13 @@ export class ExplainApprovalPage implements OnInit {
   ss: number[];
   dattrs: string[];
 
+  // svg code snippets:
+
+  text_y0_start = '<text y="0">';
+  tspan_i_start = '<tspan font-style="italic">';
+  tspan_end = '</tspan>';
+  text_end = '</text>'; 
+
   constructor(
     private popover: PopoverController,
     private modalController: ModalController,
@@ -64,7 +71,7 @@ export class ExplainApprovalPage implements OnInit {
     // approval:
     const p = this.p = this.parent.p,
           oid = this.oid,
-          rs0 = p.T.effective_ratings_ascending_map.get(oid),
+          rs0 = (p.T.effective_ratings_ascending_map||new Map()).get(oid)||[],
           rs = this.rs = [],
           rmin = this.rmin = p.T.cutoffs_map.get(oid) || 100,
           cs = this.cs = [],
@@ -74,7 +81,7 @@ export class ExplainApprovalPage implements OnInit {
           n = p.T.n_not_abstaining,
           offset = n - rs0.length,
           dur = this.tab2 - this.tob1 - this.dtt,
-          a = this.a = p.T.approval_scores_map.get(oid) / n;
+          a = this.a = (p.T.approval_scores_map.get(oid) / n) || 0;
     this.optionname = p.options[oid].name;
     this.tob2 = this.tt1 = this.tob1 + dur*(1-a);
     this.tt2 = this.tab1 = this.tt1 + this.dtt;
@@ -123,7 +130,7 @@ export class ExplainApprovalPage implements OnInit {
       if (oid2 in nvs || oid2 == oid) {
         oids.push(oid2);
         os.push(p.options[oid2].name);
-        const thisps = (nvs[oid2] || 0) / n;
+        const thisps = ((nvs[oid2] || 0) / n) || (1 / this.parent.oidsorted.length);
         ps.push(thisps);
         ss.push(lastss);
         this.parent.G.L.trace("partial share:", oid2, thisps, lastss);
@@ -158,10 +165,12 @@ export class ExplainApprovalPage implements OnInit {
     }
   }
 
-  restart() {
-    const svg = <SVGSVGElement><unknown>document.getElementById("animation");
-    svg.setCurrentTime(0); 
+  ionViewDidEnter() {
+    this.ready = true;
+    window.setTimeout(this.restart, 100);
   }
+
+  // top-row navigation:
 
   back() {
     if (this.tab=='approval') {
@@ -183,15 +192,36 @@ export class ExplainApprovalPage implements OnInit {
     }
   }
 
-  ionViewDidEnter() {
-    this.ready = true;
-    window.setTimeout(this.restart, 100);
-  }
-
   close()
   {
     this.modalController.dismiss();
 //    this.popover.dismiss();
+  }
+
+  // bottom-row controls:
+
+  restart() {
+    const svg = <SVGSVGElement><unknown>document.getElementById("animation");
+    svg.setCurrentTime(0); 
+  }
+
+  playing = true;
+
+  pause() {
+    const svg = <SVGSVGElement><unknown>document.getElementById("animation");
+    svg.pauseAnimations();
+    this.playing = false;
+  }
+
+  unpause() {
+    const svg = <SVGSVGElement><unknown>document.getElementById("animation");
+    svg.unpauseAnimations();
+    this.playing = true;
+  }
+
+  to_end() {
+    const svg = <SVGSVGElement><unknown>document.getElementById("animation");
+    svg.setCurrentTime(10); 
   }
 
 }

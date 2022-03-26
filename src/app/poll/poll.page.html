@@ -414,10 +414,14 @@
                     class="ion-no-padding ion-no-margin" 
                     (click)="onRangeClick(oidsorted[i], $event)" 
                     (pointerdown)="onRangePointerdown(oidsorted[i], $event)" 
-                    (pointerup)="onRangePointerup(oidsorted[i], $event)">
+                    (touchstart)="onRangePointerdown(oidsorted[i], $event)" 
+                    (touchup)="onRangePointerup(oidsorted[i], $event)"
+                    (pointerup)="onRangePointerup(oidsorted[i], $event)"
+                    >
 
                   <!-- SLIDER: -->
 
+                  <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
                   <ion-range 
                       [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                       [color]="slidercolor[oidsorted[i]]"

@@ -1324,6 +1324,7 @@ export class Poll {
     for (const [oid, value] of eff_rating_changes_map) {
 
       // register change in map and get old eff. rating:
+      this.G.L.error("TEST",JSON.stringify(this.effective_ratings_map), typeof this.effective_ratings_map);
       var effective_ratings_map = this.effective_ratings_map.get(oid);
       if (!effective_ratings_map) {
         effective_ratings_map = new Map();
@@ -1377,13 +1378,13 @@ export class Poll {
       const oids = n_changed ? this.oids : eff_rating_changes_map.keys();
       for (const oid of oids) {
         // cutoff, approvals:
-        const [cutoff, cutoff_changed, oid_others_approvals_changed] = this.update_cutoff_and_approvals(oid, this.effective_ratings_map.get(oid), this.T.effective_ratings_ascending_map.get(oid));
+        const [cutoff, cutoff_changed, oid_others_approvals_changed] = this.update_cutoff_and_approvals(oid, this.effective_ratings_map.get(oid)||new Map(), this.T.effective_ratings_ascending_map.get(oid)||[]);
 
         let oid_vids_approvals_changed = false;
         const approvals_map = this.T.approvals_map.get(oid);
         if (!cutoff_changed) {
           // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
-          const approval = ((this.effective_ratings_map.get(oid).get(vid)||0) >= cutoff);
+          const approval = (((this.effective_ratings_map.get(oid)||new Map()).get(vid)||0) >= cutoff);
           if (approval != approvals_map.get(vid)) {
             approvals_map.set(vid, approval);
             oid_vids_approvals_changed = true;

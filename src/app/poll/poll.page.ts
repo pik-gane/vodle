@@ -252,7 +252,7 @@ export class PollPage implements OnInit {
     this.votedfor = T.votes_map.get(this.p.myvid);
     for (const oid of p.oids) {
       // FIXME: bar and pie are sometimes null here, but not when running the getElementById in the console. why?
-      const a = approval_scores_map.get(oid) / T.n_not_abstaining,
+      const a = (approval_scores_map.get(oid) / T.n_not_abstaining) || 0,
             share = shares_map.get(oid),
             bar = <SVGRectElement><unknown>document.getElementById('bar_'+oid),
             pie = <SVGPathElement><unknown>document.getElementById('pie_'+oid),
@@ -452,7 +452,8 @@ export class PollPage implements OnInit {
   }
 
   swallow_event(ev: Event) {
-    // FIXME: does not work in Android app yet!
+    this.G.L.trace("swallowing event", ev);
+    // FIXME: does not work in Android app and Chrome-simulated mobile devices yet!
     ev.stopPropagation();
     ev.preventDefault();
   }

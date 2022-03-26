@@ -202,6 +202,65 @@
         "notification-saved-title": "Draft saved under “My polls”."
     },
 
+    "explain": {
+        "title-approval": "Approval for",
+
+        "all-ratings": "all ratings for this option",
+        "large-to-small": "sorted from large to small",
+
+        "opposition": "opposition",
+        "vertical-approval-label": "approval",
+        "horizontal-approval-label": "approval",
+
+        "your-rating-line-1": "your",
+        "your-rating-line-2": "rating",
+
+        "threshold-smaller-line-1": "smaller",
+        "threshold-smaller-line-2": "ratings",
+        "threshold-smaller-line-3": "don't",
+        "threshold-smaller-line-4": "approve",
+
+        "threshold-larger-line-1": "larger",
+        "threshold-larger-line-2": "ratings",
+        "threshold-larger-line-3": "do",
+        "threshold-larger-line-4": "approve",
+
+        "title-share": "Share for",
+
+        "share-intro-line-1": "Everyone's share goes to the",
+        "share-intro-line-2": "highest-ranked option they approve.",
+
+        "no-one-line-1": "Of the {{percentage}}% who approve this option",
+        "no-one-line-2": "no-one also approves a higher-ranked option.",
+
+        "some-line-1": "Of the {{percentage}}% who approve this option",
+        "some-line-2": "some also approve a higher-ranked option.",
+
+        "only-higher-line-1-before-optionname": "{{percentage}}% approve ",
+        "only-higher-line-1-after-optionname": ",",
+        "only-higher-line-2": "so their share goes to that option.",
+
+        "only-higher-incl-you-line-1-before-optionname": "{{percentage}}% (including you) approve ",
+        "only-higher-incl-you-line-1-after-optionname": ",",
+        "only-higher-incl-you-line-2": "so their share goes to that option.",
+
+        "among-them-line-1-before-optionname": "Among them, {{percentage}}% approve ",
+        "among-them-line-1-after-optionname": ",",
+        "among-them-line-2": "so their share goes to that option.",
+
+        "among-them-incl-you-line-1-before-optionname": "Among them, {{percentage}}% (including you) approve ",
+        "among-them-incl-you-line-1-after-optionname": ",",
+        "among-them-incl-you-line-2": "so their share goes to that option.",
+
+        "another-line-1-before-optionname": "Another {{percentage}}% approve ",
+        "another-line-1-after-optionname": "",
+        "another-line-2": "but nothing higher up.",
+
+        "another-incl-you-line-1-before-optionname": "Another {{percentage}}% (including you) approve ",
+        "another-incl-you-line-1-after-optionname": "",
+        "another-incl-you-line-2": "but nothing higher up."
+    },
+
     "help": {
         "-page-title": "Help",
 
@@ -311,7 +370,7 @@
         "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.",
 
         "older": "Older",
-        
+
         "drafts": "Drafts",
 
         "no-draft-polls-1": "Currently, you have no polls drafted.",

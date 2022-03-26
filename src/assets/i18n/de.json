@@ -205,6 +205,65 @@
         "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
     },
     
+    "explain": {
+        "title-approval": "Zustimmung für",
+
+        "all-ratings": "Alle Bewertungen dieser Option",
+        "large-to-small": "sortiert von groß zu klein",
+
+        "opposition": "Opposition",
+        "vertical-approval-label": "Zustimmung",
+        "horizontal-approval-label": "Zustimmung",
+
+        "your-rating-line-1": "Deine",
+        "your-rating-line-2": "Bewertg.",
+
+        "threshold-smaller-line-1": "Kleinere",
+        "threshold-smaller-line-2": "Bewertungen",
+        "threshold-smaller-line-3": "stimmen",
+        "threshold-smaller-line-4": "nicht zu",
+
+        "threshold-larger-line-1": "Größere",
+        "threshold-larger-line-2": "Bewertungen",
+        "threshold-larger-line-3": "stimmen",
+        "threshold-larger-line-4": "zu",
+
+        "title-share": "Anteil für",
+
+        "share-intro-line-1": "Der von einer Person kontrollierte Anteil geht",
+        "share-intro-line-2": "zur höchst-gelisteten Option, der sie zustimmt.",
+
+        "no-one-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
+        "no-one-line-2": "stimmt keine:r einer höher gelisteten Option zu.",
+
+        "some-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
+        "some-line-2": "stimmen manche einer höher gelisteten Option zu.",
+
+        "only-higher-line-1-before-optionname": "{{percentage}}% stimmen ",
+        "only-higher-line-1-after-optionname": "",
+        "only-higher-line-2": "zu, also geht ihr Anteil zu dieser Option.",
+
+        "only-higher-incl-you-line-1-before-optionname": "{{percentage}}% (inkl. Dir) stimmen ",
+        "only-higher-incl-you-line-1-after-optionname": "",
+        "only-higher-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
+
+        "among-them-line-1-before-optionname": "Von diesen stimmen {{percentage}}% ",
+        "among-them-line-1-after-optionname": "",
+        "among-them-line-2": "zu, also geht ihr Anteil zu dieser Option.",
+
+        "among-them-incl-you-line-1-before-optionname": "Von diesen stimmen {{percentage}}% (inkl. Dir) ",
+        "among-them-incl-you-line-1-after-optionname": "",
+        "among-them-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
+
+        "another-line-1-before-optionname": "Weitere {{percentage}}% stimmen ",
+        "another-line-1-after-optionname": "",
+        "another-line-2": "zu, aber keiner höher-gelisteten Option.",
+
+        "another-incl-you-line-1-before-optionname": "Weitere {{percentage}}% (inkl. Dir) stimmen ",
+        "another-incl-you-line-1-after-optionname": "",
+        "another-incl-you-line-2": "zu, aber keiner höher-gelisteten Option."
+    },
+
     "help": {
         "-page-title": "Hilfe",
 
@@ -319,7 +378,7 @@
         "older": "Älter",
 
         "drafts": "Entwürfe",
-        
+
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
         "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!"
     },

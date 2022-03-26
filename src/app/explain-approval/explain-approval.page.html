@@ -14,22 +14,22 @@
       </ion-button>
     </ion-buttons>
     <ion-label>
-      {{tab=='approval'?'Approval':'Share'}} for <b><i>{{optionname}}</i></b>
+      {{(tab == 'approval' ? 'explain.title-approval' : 'explain.title-share')|translate}} <b><i>{{optionname}}</i></b>
     </ion-label>
     <ion-buttons slot="end" class="ion-no-margin ion-no-padding">
-      <ion-button shape="round" fill="clear" class="ion-no-margin ion-no-padding"
-          (click)="restart()">
-        <ion-icon slot="icon-only" name="reload-outline"></ion-icon>
-      </ion-button>
       <ion-button *ngIf="tab=='approval'" shape="round" fill="clear" class="ion-no-margin ion-no-padding"
           (click)="forward()">
         <ion-icon slot="icon-only" name="arrow-forward-outline"></ion-icon>
       </ion-button>
+      <ion-button *ngIf="tab=='share'" shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+          (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
     </ion-buttons>
   </ion-item>
 
-  <ion-item class="ion-no-margin ion-no-padding" lines="none">
-    <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="-25 -25 130 155">
+  <ion-item class="ion-no-margin ion-no-padding">
+    <svg id="animation" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="-25 -25 130 160">
       <defs>
         <marker id="arrowhead-grey" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
@@ -53,8 +53,8 @@
           * at sec. 6, voter's own rating shows
         -->
 
-        <text x="0" y="-11" fill="black">&nbsp;all ratings for this option</text>
-        <text x="0" y="-6" fill="#808080" font-size="5">&nbsp;from large to small</text>
+        <text x="0" y="-11" fill="black">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
+        <text x="0" y="-6" fill="#808080" font-size="5">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
 
         <g transform="scale(1 -1) translate(0 -100)">
 
@@ -113,7 +113,7 @@
               from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
             <g transform="rotate(90)">
               <g transform="translate(0, -1.25) scale(1 -1)">
-                <text fill="black">&nbsp;approval</text>
+                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.vertical-approval-label'|translate"></tspan></text>
               </g>
             </g>
           </g>
@@ -139,23 +139,23 @@
             <!-- final annotations: -->
             <g transform="scale(1 -1)" fill="black">
               <g *ngIf="a<1" font-size="5">
-                <text [attr.x]="100*(1-a)" y="12" fill="#3465a4" text-anchor="end">smaller&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="17" fill="#3465a4" text-anchor="end">ratings&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="22" fill="#3465a4" text-anchor="end">don't&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="27" fill="#3465a4" text-anchor="end">approve&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="12" fill="#62a73b">&nbsp;&nbsp;larger</text>
-                <text [attr.x]="100*(1-a)" y="17" fill="#62a73b">&nbsp;&nbsp;ratings</text>
-                <text [attr.x]="100*(1-a)" y="22" fill="#62a73b">&nbsp;&nbsp;do</text>
-                <text [attr.x]="100*(1-a)" y="27" fill="#62a73b">&nbsp;&nbsp;approve</text>
+                <text [attr.x]="100*(1-a)" y="12" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="17" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="22" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-3'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="27" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-4'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="12" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-1'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="17" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-2'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="22" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-3'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="27" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-4'|translate"></tspan></text>
               </g>
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
-                <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end">your&nbsp;&nbsp;</text>
-                <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end">rating&nbsp;&nbsp;</text>
+                <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
                   <rect x="75" y="-16" width="25" height="13" fill="#ffffffd0"></rect>
                   <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
-                  <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end">approval&nbsp;</text>
+                  <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
               </g>
             </g>
@@ -176,7 +176,7 @@
               <line x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5">
               </line>
               <g transform="translate(0, -11.25) scale(1 -1)" >
-                <text fill="black">&nbsp;opposition</text>
+                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.opposition'|translate"></tspan></text>
               </g>   
             </g>
           </g>
@@ -196,22 +196,22 @@
         <!-- intro: -->
         <g transform="translate(-14 -4)">
           <!-- text: -->
-          <text y="-13" fill="#769596" font-size="5">
-            Everyone's share goes to the 
+          <text y="-13" fill="#769596" font-size="5" [innerHtml]="'explain.share-intro-line-1'|translate">
           </text>
-          <text y="-8" fill="#769596" font-size="5">
-            highest-ranked option they approve. 
+          <text y="-8" fill="#769596" font-size="5" [innerHtml]="'explain.share-intro-line-2'|translate">
           </text>
-          <text y="0">
-            Of the 
-            {{Math.round(a*1000)/10}}% 
-<!--            of voters 
-            {{myr >= rmin ? '(including you)' : ''}}-->
-            who approve this option
-          </text>
-          <text y="5">
-            {{ps.length == 1 ? 'no-one also approves a' : 'some also approve a'}} higher-ranked option.
-          </text>
+          <ng-container *ngIf="ps.length != 1">
+            <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+            </text>
+            <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+            </text>
+          </ng-container>
+          <ng-container *ngIf="ps.length == 1">
+            <text y="0" [innerHtml]="'explain.no-one-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+            </text>
+            <text y="5" [innerHtml]="'explain.no-one-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+            </text>
+          </ng-container>
         </g>
 
         <!-- bottom row approval bar: -->
@@ -221,7 +221,7 @@
           <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
           </line>
           <text x="100" y="8" fill="#9abcbd" text-anchor="end"><tspan font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
-          <text x="100" y="13" fill="#9abcbd" text-anchor="end">approval&nbsp;</text>
+          <text x="100" y="13" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
         </g>
 
         <!-- higher-up options' rows: -->
@@ -238,16 +238,49 @@
             <!-- backdrop: -->
             <rect x="-1" y="-4" width="140" height="9" fill="#ffffffff"></rect>
             <!-- text: -->
-            <text y="0">
-              {{ps.length == 2 ? '' : i == 0 ? 'Among them,' : 'Another'}} 
-              {{Math.round(ps[i]*1000)/10}}%
-              {{myv == oids[i] ? '(including you)' : ''}}
-              approve 
-              <tspan font-style="italic">{{os[i]}}{{i == 0 ? ',' : ''}}</tspan>
-            </text>
-            <text y="5" font-size="5">
-              {{i > 0 ? 'but no option ranked even higher, ':''}}so their share goes to that option.
-            </text>
+            <g *ngIf="ps.length == 2 && myv != oids[i]">
+              <text y="0">
+                {{('explain.only-higher-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.only-higher-line-2'|translate">
+              </text>
+            </g> 
+            <g *ngIf="ps.length == 2 && myv == oids[i]">
+              <text y="0">
+                {{('explain.only-higher-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.only-higher-incl-you-line-2'|translate">
+              </text>
+            </g> 
+            <g *ngIf="ps.length != 2 && i == 0 && myv != oids[i]">
+              <text y="0">
+                {{('explain.among-them-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.among-them-line-2'|translate">
+              </text>
+            </g> 
+            <g *ngIf="ps.length != 2 && i == 0 && myv == oids[i]">
+              <text y="0">
+                {{('explain.among-them-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.among-them-incl-you-line-2'|translate">
+              </text>
+            </g> 
+            <g *ngIf="ps.length != 2 && i > 0 && myv != oids[i]">
+              <text y="0">
+                {{('explain.another-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.another-line-2'|translate">
+              </text>
+            </g> 
+            <g *ngIf="ps.length != 2 && i > 0 && myv == oids[i]">
+              <text y="0">
+                {{('explain.another-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+              </text>
+              <text y="5" [innerHtml]="'explain.another-incl-you-line-2'|translate">
+              </text>
+            </g> 
+            <!-- TODO: further cases: 0 approval; all-abstention -->
           </g>
 
           <!-- arrow: -->
@@ -269,23 +302,23 @@
             <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
             <!-- text: -->
             <g *ngIf="ps.length == 1">
-              <text y="0">
+              <text y="0" [innerHtml]="'explain.'|translate">
                 So the whole share of
                 <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
                 {{myv == oids[oids.length-1] ? '(including yours)' : ''}}
               </text>
-              <text y="5">
+              <text y="5" [innerHtml]="'explain.'|translate">
                 goes to <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
             </g>
             <g *ngIf="ps.length > 1">
-              <text y="0">
+              <text y="0" [innerHtml]="'explain.'|translate">
                 The remaining 
                 <tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>
                 {{myv == oids[oids.length-1] ? '(including you)' : ''}}
                 {{ps.length == 2 ? "don't," : "approve no higher-ranked option,"}}
               </text>
-              <text y="5">
+              <text y="5" [innerHtml]="'explain.'|translate">
                 and only their share goes to
                 <tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}.</tspan>
               </text>
@@ -311,4 +344,32 @@
       </g>
     </svg>
   </ion-item>
+
+  <!-- animation play controls:-->
+
+  <ion-item lines="none" class="ion-text-center">
+    <ion-col></ion-col>
+    <ion-col size="auto">
+      <ion-buttons class="ion-no-margin ion-no-padding">
+        <ion-button shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+            (click)="restart()">
+          <ion-icon slot="icon-only" name="reload-outline"></ion-icon>
+        </ion-button>
+        <ion-button *ngIf="playing" shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+            (click)="pause()">
+          <ion-icon slot="icon-only" name="pause-outline"></ion-icon>
+        </ion-button>
+        <ion-button *ngIf="!playing" shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+            (click)="unpause()">
+          <ion-icon slot="icon-only" name="play-outline"></ion-icon>
+        </ion-button>
+        <ion-button shape="round" fill="clear" class="ion-no-margin ion-no-padding"
+            (click)="to_end()">
+          <ion-icon slot="icon-only" name="play-skip-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-col>
+    <ion-col></ion-col>
+  </ion-item>
+
 </ion-content>
