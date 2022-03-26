@@ -332,7 +332,7 @@ export class PollPage implements OnInit {
   set_slider_color(oid: string, value: number) {
     this.slidercolor[oid] = 
       (value == 0) ? 'vodlered' : 
-      (value + this.p.T.approval_scores_map.get(oid) * 100 <= 100) ? 'vodleblue' : 
+      (value + ((this.p.T.approval_scores_map.get(oid) / this.p.T.n_not_abstaining) || 0) * 100 <= 100) ? 'vodleblue' : 
       (this.votedfor != oid) ? 'vodlegreen' : 
       'vodledarkgreen';
   }

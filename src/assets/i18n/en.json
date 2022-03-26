@@ -240,6 +240,9 @@
         "no-one-line-1": "Of the {{percentage}}% who approve this option",
         "no-one-line-2": "no-one also approves a higher-ranked option.",
 
+        "all-line-1": "Of the {{percentage}}% who approve this option",
+        "all-line-2": "everyone also approves a higher-ranked option.",
+
         "some-line-1": "Of the {{percentage}}% who approve this option",
         "some-line-2": "some also approve a higher-ranked option.",
 
@@ -251,11 +254,11 @@
         "only-higher-incl-you-line-1-after-optionname": ",",
         "only-higher-incl-you-line-2": "so their share goes to that option.",
 
-        "among-them-line-1-before-optionname": "Among them, {{percentage}}% approve ",
+        "among-them-line-1-before-optionname": "{{percentage}}% approve ",
         "among-them-line-1-after-optionname": ",",
         "among-them-line-2": "so their share goes to that option.",
 
-        "among-them-incl-you-line-1-before-optionname": "Among them, {{percentage}}% (including you) approve ",
+        "among-them-incl-you-line-1-before-optionname": "{{percentage}}% (including you) approve ",
         "among-them-incl-you-line-1-after-optionname": ",",
         "among-them-incl-you-line-2": "so their share goes to that option.",
 

@@ -221,7 +221,7 @@ export class ExplainApprovalPage implements OnInit {
 
   to_end() {
     const svg = <SVGSVGElement><unknown>document.getElementById("animation");
-    svg.setCurrentTime(10); 
+    svg.setCurrentTime(100); 
   }
 
 }

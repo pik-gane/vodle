@@ -238,12 +238,20 @@
               </ng-container>
               <ng-container *ngIf="a > 0">
                 <ng-container *ngIf="ps.length != 1">
-                  <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:Math.round(a*1000)/10}">
-                  </text>
-                  <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:Math.round(a*1000)/10}">
-                  </text>
+                  <ng-container *ngIf="ps[ps.length-1] == 0">
+                    <text y="0" [innerHtml]="'explain.all-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+                    </text>
+                    <text y="5" [innerHtml]="'explain.all-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+                    </text>
                   </ng-container>
-                  <ng-container *ngIf="ps.length == 1">
+                  <ng-container *ngIf="ps[ps.length-1] > 0">
+                    <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+                    </text>
+                    <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+                    </text>
+                  </ng-container>
+                </ng-container>
+                <ng-container *ngIf="ps.length == 1">
                   <text y="0" [innerHtml]="'explain.no-one-line-1'|translate:{percentage:Math.round(a*1000)/10}">
                   </text>
                   <text y="5" [innerHtml]="'explain.no-one-line-2'|translate:{percentage:Math.round(a*1000)/10}">
@@ -332,7 +340,7 @@
             </g>
 
             <!-- arrow: -->
-            <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="4+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#9abcbd" stroke-width="0.2" stroke-dasharray=".5 .5">
+            <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="4+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#769596" stroke-width="0.2" stroke-dasharray=".5 .5">
             </line>
 
             <!-- approval share: -->

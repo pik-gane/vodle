@@ -243,6 +243,9 @@
         "no-one-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
         "no-one-line-2": "stimmt keine:r einer höher gelisteten Option zu.",
 
+        "all-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
+        "all-line-2": "stimmen alle auch einer höher gelisteten Option zu.",
+
         "some-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
         "some-line-2": "stimmen manche einer höher gelisteten Option zu.",
 
@@ -254,11 +257,11 @@
         "only-higher-incl-you-line-1-after-optionname": "",
         "only-higher-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
 
-        "among-them-line-1-before-optionname": "Von diesen stimmen {{percentage}}% ",
+        "among-them-line-1-before-optionname": "{{percentage}}% stimmen ",
         "among-them-line-1-after-optionname": "",
         "among-them-line-2": "zu, also geht ihr Anteil zu dieser Option.",
 
-        "among-them-incl-you-line-1-before-optionname": "Von diesen stimmen {{percentage}}% (inkl. Dir) ",
+        "among-them-incl-you-line-1-before-optionname": "{{percentage}}% (inkl. Dir) stimmen ",
         "among-them-incl-you-line-1-after-optionname": "",
         "among-them-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
 
