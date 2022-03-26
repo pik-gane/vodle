@@ -230,6 +230,9 @@
         "share-intro-line-1": "Everyone's share goes to the",
         "share-intro-line-2": "highest-ranked option they approve.",
 
+        "zero-line-1": "No-one approves this option,",
+        "zero-line-2": "so it gets no share.",
+
         "no-one-line-1": "Of the {{percentage}}% who approve this option",
         "no-one-line-2": "no-one also approves a higher-ranked option.",
 
@@ -278,7 +281,12 @@
         "remaining-incl-you-line-1-before-percentage": "The share of the remaining ",
         "remaining-incl-you-line-1-after-percentage": "",
         "remaining-incl-you-line-2-before-optionname": "(including yours) goes to ",
-        "remaining-incl-you-line-2-after-optionname": "."
+        "remaining-incl-you-line-2-after-optionname": ".",
+
+        "nothing-left-line-1-before-percentage": "So there remain ",
+        "nothing-left-line-1-after-percentage": "",
+        "nothing-left-line-2-before-optionname": "for ",
+        "nothing-left-line-2-after-optionname": "."
     },
 
     "help": {

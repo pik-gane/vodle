@@ -200,13 +200,19 @@
           </text>
           <text y="-8" fill="#769596" font-size="5" [innerHtml]="'explain.share-intro-line-2'|translate">
           </text>
-          <ng-container *ngIf="ps.length != 1">
+          <ng-container *ngIf="ps[ps.length-1] == 0">
+            <text y="0" [innerHtml]="'explain.zero-line-1'|translate">
+            </text>
+            <text y="5" [innerHtml]="'explain.zero-line-2'|translate">
+            </text>
+          </ng-container>
+          <ng-container *ngIf="ps[ps.length-1] > 0 && ps.length != 1">
             <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:Math.round(a*1000)/10}">
             </text>
             <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:Math.round(a*1000)/10}">
             </text>
           </ng-container>
-          <ng-container *ngIf="ps.length == 1">
+          <ng-container *ngIf="ps[ps.length-1] > 0 && ps.length == 1">
             <text y="0" [innerHtml]="'explain.no-one-line-1'|translate:{percentage:Math.round(a*1000)/10}">
             </text>
             <text y="5" [innerHtml]="'explain.no-one-line-2'|translate:{percentage:Math.round(a*1000)/10}">
@@ -238,48 +244,48 @@
             <!-- backdrop: -->
             <rect x="-1" y="-4" width="140" height="9" fill="#ffffffff"></rect>
             <!-- text: -->
-            <g *ngIf="ps.length == 2 && myv != oids[i]">
+            <ng-container *ngIf="ps.length == 2 && myv != oids[i]">
               <text y="0">
                 {{('explain.only-higher-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.only-higher-line-2'|translate">
               </text>
-            </g> 
-            <g *ngIf="ps.length == 2 && myv == oids[i]">
+            </ng-container> 
+            <ng-container *ngIf="ps.length == 2 && myv == oids[i]">
               <text y="0">
                 {{('explain.only-higher-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.only-higher-incl-you-line-2'|translate">
               </text>
-            </g> 
-            <g *ngIf="ps.length != 2 && i == 0 && myv != oids[i]">
+            </ng-container> 
+            <ng-container *ngIf="ps.length != 2 && i == 0 && myv != oids[i]">
               <text y="0">
                 {{('explain.among-them-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.among-them-line-2'|translate">
               </text>
-            </g> 
-            <g *ngIf="ps.length != 2 && i == 0 && myv == oids[i]">
+            </ng-container> 
+            <ng-container *ngIf="ps.length != 2 && i == 0 && myv == oids[i]">
               <text y="0">
                 {{('explain.among-them-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.among-them-incl-you-line-2'|translate">
               </text>
-            </g> 
-            <g *ngIf="ps.length != 2 && i > 0 && myv != oids[i]">
+            </ng-container> 
+            <ng-container *ngIf="ps.length != 2 && i > 0 && myv != oids[i]">
               <text y="0">
                 {{('explain.another-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.another-line-2'|translate">
               </text>
-            </g> 
-            <g *ngIf="ps.length != 2 && i > 0 && myv == oids[i]">
+            </ng-container> 
+            <ng-container *ngIf="ps.length != 2 && i > 0 && myv == oids[i]">
               <text y="0">
                 {{('explain.another-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
               </text>
               <text y="5" [innerHtml]="'explain.another-incl-you-line-2'|translate">
               </text>
-            </g> 
+            </ng-container> 
             <!-- TODO: further cases: 0 approval; all-abstention -->
           </g>
 
@@ -301,38 +307,46 @@
             <!-- backdrop: -->
             <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
             <!-- text: -->
-            <g *ngIf="ps.length == 1 && myv != oid">
+            <ng-container *ngIf="ps.length == 1 && myv != oid">
               <text y="0">
                 {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
               </text>
               <text y="5">
                 {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
               </text>
-            </g> 
-            <g *ngIf="ps.length == 1 && myv == oid">
+            </ng-container> 
+            <ng-container *ngIf="ps.length == 1 && myv == oid">
               <text y="0">
                 {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
               </text>
               <text y="5">
                 {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
               </text>
-            </g> 
-            <g *ngIf="ps.length > 1 && myv != oid">
+            </ng-container> 
+            <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv != oid">
               <text y="0">
                 {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
               </text>
               <text y="5">
                 {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
               </text>
-            </g> 
-            <g *ngIf="ps.length > 1 && myv == oid">
+            </ng-container> 
+            <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv == oid">
               <text y="0">
                 {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
               </text>
               <text y="5">
                 {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}
               </text>
-            </g> 
+            </ng-container> 
+            <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] == 0">
+              <text y="0">
+                {{'explain.nothing-left-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">0%</tspan>{{'explain.nothing-left-line-1-after-percentage'|translate}}
+              </text>
+              <text y="5">
+                {{'explain.nothing-left-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.nothing-left-line-2-after-optionname'|translate}}
+              </text>
+            </ng-container> 
           </g>
 
           <!-- this option's pie chart: -->
@@ -340,15 +354,16 @@
             <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
             <path id="_pie_own" [attr.d]="dattrs[dattrs.length-1]" fill="#4c822e" />  
           </g>
+          <ng-container *ngIf="ps[ps.length-1] > 0">
 
-          <!-- arrow: -->
-          <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5"><!--or #4c822e?-->
-          </line>
+            <!-- arrow: -->
+            <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5"><!--or #4c822e?-->
+            </line>
 
-          <!-- approval share: -->
-          <rect [attr.x]="100*(1-a)+0.1" y="-1" [attr.width]="100*ps[ps.length-1]-0.2" height="2" fill="#4c822e" stroke="none">
-          </rect>
-
+            <!-- approval share: -->
+            <rect [attr.x]="100*(1-a)+0.1" y="-1" [attr.width]="100*ps[ps.length-1]-0.2" height="2" fill="#4c822e" stroke="none">
+            </rect>
+          </ng-container>
         </g>
 
       </g>
