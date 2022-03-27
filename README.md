@@ -1,178 +1,126 @@
+<div id="top"></div>
 
-# Development of a group decision / voting app "vodle"
-
-Current goal: complete a minimum viable product (MVP) that runs as a web-app only and provides base functionality (setting up polls, voting, seeing and understanding results).
-
-Current state: pre-alpha, ~ 80 percent complete. 
-
-(Later: extend functionality and deploy as android/ios app as well)
-
-**Contributors: please look at the Issues page and the folder [doc/development](doc/development)!**
-
-## Basic architecture
-
-* web/android/ios app
-* communication between voters via any couchdb database
-* no other central server for now (but probably later for certain tasks)
-
-## Technology stack
-
-* App development framework: Ionic (typescript, angular)
-* GUI: html, svg
-* Communication: JSON, Email (later also messenger apps), Deep links
-
-## Very coarse overview of source code file tree
-
-* src/app/about|help|home|mypolls|openpoll|pollstats etc.: folders of individual app pages.
-* src/app/whatever/whatever.page.ts|html: gui logics and layout
-* src/app/global.service.ts: background logics with classes for polls and options etc.
-
-## Useful commands
-
-Running locally:
-* running locally in dev mode: in main directory of git repo: ionic serve
-* running locally in dev mode with external access: in main directory of git repo: ionic serve --external
-* running locally in prod mode with external access: in main directory of git repo: ionic serve --prod --external
-
-CouchDB:
-* starting local couchdb in docker: sudo docker run --name couch --memory 1G -p 5984:5984 -d couchdb --storage-opt size=1G
-* logging into container: sudo docker exec -it couch bash
-* sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
-* preparing couchdb for use with vodle: `cd couchdb` and `couchdb-bootstrap http://<adminuser>:<password>@<url>` (this populates the db with the contents of the couchdb folder) 
-
-Building app:
-* `ionic capacitor build android`, then in Android Studio `Run -> run app`
-
-## Ideas for publication
-
-### channels
-
-* web app at vodle.it
-* app shops
-* promote "vodle" button to cinemas etc.
-* get startups to use it
-
-### application situations
-
-#### probabilistic:
-
-* movie (<-- movie theatre)
-* restaurant (<-- gastro pages)
-* hotel (<-- booking engine)
-* what to cook (<-- recipe server)
-* date
-* train/flight connection (<-- carrier or specialized search engine)
-* holiday destination
-* product variant (<-- webshop)
-* band name
-* company logo
-
-### proportional allocation:
-
-* art award money
-* group speaker/rep temporary service time
-* budget, time or other resources for projects
+<!-- PROJECT SHIELDS -->
+<!--
+*** I'm using markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
+<!--[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![GNU License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]-->
 
 
-# [OLD STUFF, please ignore for now:]
 
-## Building
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/othneildrew/Best-README-Template">
+    <img src="src/assets/topleft_icon.png" alt="Logo" height="80">
+  </a>
 
-I did the following to get the unsigned android debug build going:
+  <h1 align="center">A fair and efficient, interactive, general-purpose<br/>group-decision app</h1>
 
-* sudo npm i -g cordova
-* npm install @ionic-native/push
-* npm install cordova-plugin-ionic@^5.0.0
-* npm install ajv@^6.9.1
-* npm install fsevents@1.2.7
-* sudo apt install openjdk-8-jdk
-* sudo update-alternatives - -config java
-  then select 1.8
-* sudo update-alternatives - -config javac
-  then select 1.8
-* export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-* sudo apt install gradle android-sdk-build-tools
-* ...android-sdk-linux/tools/bin/sdkmanager --install "platforms;android-27"
-* ...android-sdk-linux/tools/bin/sdkmanager --install "build-tools;26.0.2"
-* ...android-sdk-linux/tools/bin/sdkmanager --update
-* yes | ...android-sdk-linux/tools/bin/sdkmanager --licenses
-* export ANDROID_HOME=...android-sdk-linux/
-* ionic cordova build --prod android --verbose
-
-## Prioritised list of wanted features
-
-* poll setup, invitation by email
-* basic nonencrypted communication via realtime.co
-* at deadline: poll tally, broadcast result via realtime.co
-* optimized explanations, howtos, guides (using text of different detail and animations)
-* custom uri scheme & file extension
-* standard notification when some bar has changed by more than 5% or some pin's distance to bar end gets below 5% or time gets late
-* invitation and notifications via other messengers
-* "vodle" button for integration in websites, using custom uri + standard webservice interface to open polls
-* integration with slack via slackbot "vodle"
-* extracting lists of potential options from webpages (e.g. movie theatre program) 
-* personal prioritization of polls
-* customized notification options (updates, result)
-* text message broadcast and personal messages
-* observer-only view for stakeholders or public projection 
+  <!--
+  <p align="center">
+    An awesome README template to jumpstart your projects!
+    <br />
+    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
+    ·
+    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
+  </p>
+  -->
+</div>
 
 
-## Implementation notes
 
-### Message retention
+<!-- TABLE OF CONTENTS - ->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
+-->
 
-On the free plan, realtime.co deletes unserved messages after 2 minutes, so an offline user will get only the messages from the last two minutes when reconnecting.
-Hence we must make sure someone sends full rating state data at least every two minutes, 
-so that a reconnecting app will receive at least one such full state together with all subsequent updates.
-The protocol for this is this:
+## Current State & Next Steps
 
-* whenever receiving a full state, the app adds a random number between 1 and 2 minutes to that state's timestamp 
-  and sets this as her "broadcast full state time".
-* when receiving newer full states, a new "broadcast full state time" is set.
-* when reaching the "broadcast full state time" before another full state is received, 
-  the app broadcasts the current full state.
-* to make sure state does not get lost when users are only online sporadically,
-  a central, continuously online maxparc server listens on the same channel, 
-  and when it has not received a full state for longer than, say, 110 seconds, 
-  it computes a new full state and broadcasts it.
-  this could even be done by a cron job executing every, say, 55 seconds.
-* note that with 100 voters and 10 options, a full state is just 1KB of data,
-  so the server only needs that much permanent storage per open poll.
+We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).
+- A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.
+- Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release.* 
 
-Currently, a cloud database is used to store data persistently as JSON documents
+## About the Project
 
+<!--Screenshot slideshow?: [![Product Name Screen Shot][product-screenshot]](https://example.com)-->
 
-### Useful links
+Once released, vodle will help groups make better decisions – fairer, more efficient, more consensus-oriented, interactive, and for free. Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
 
-* http://unhosted.org/ for ideas on decentralization
-* sorting and filtering a list: https://www.djamware.com/post/5a37ceaf80aca7059c142970/ionic-3-and-angular-5-search-and-sort-list-of-data
-* push notifications: https://ionicframework.com/docs/native/push/
-* realtime.co: https://framework.realtime.co/messaging/, http://demos.realtime.co/demos/poll2.aspx, http://messaging-public.realtime.co/documentation/starting-guide/quickstart-js.html
-* possible alternative to realtime.co: http://sockethub.org/
-* ionic and rest webservices: https://www.djamware.com/post/5b5cffaf80aca707dd4f65aa/building-crud-mobile-app-using-ionic-4-angular-6-and-cordova#ch2 
-* ionic and IBM cloudant (for persistance?): 
-    https://console.bluemix.net/docs/services/Cloudant/api/cloudant_query.html#finding-documents-by-using-an-index, 
-    https://ionicframework.com/docs/native/http/, https://ionicacademy.com/http-calls-ionic/,
-    https://console.bluemix.net/docs/services/Cloudant/api/document.html#documents, 
-    https://www.npmjs.com/package/@cloudant/cloudant, 
-    https://www.ibm.com/blogs/bluemix/2016/12/create-feedback-app-ionic-cloudant/, 
-    https://console.bluemix.net/docs/runtimes/nodejs/getting-started.html#getting-started-tutorial
-* app-specific url schemes (use "maxparc"?): 
-    https://developer.apple.com/documentation/uikit/core_app/allowing_apps_and_websites_to_link_to_your_content/defining_a_custom_url_scheme_for_your_app
-    https://stackoverflow.com/questions/2448213/how-to-implement-my-very-own-uri-scheme-on-android
-* file extension "maxparc":
-    https://www.codenameone.com/blog/associating-your-app-with-file-extension-mime-types-iphone-android-windows.html
-    https://stackoverflow.com/questions/3760276/android-intent-filter-associate-app-with-file-extension
-* expandable lists (for mypolls and openpoll pages): https://www.joshmorony.com/creating-an-accordion-list-in-ionic/
-* re-rendering: https://forum.ionicframework.com/t/ionic-refresh-current-page/47167/11, https://forum.ionicframework.com/t/how-to-properly-re-render-a-component-in-ionic-manually/97343?u=hugopetla
-* async functions: https://medium.com/front-end-weekly/callbacks-promises-and-async-await-ad4756e01d90, https://javascript.info/async-await
-* http: https://angular.io/api/common/http/HttpClient, https://blog.angular-university.io/angular-http/
-* trigger svg animation: https://stackoverflow.com/questions/8455773/svg-trigger-animation-with-event
-* charts: https://www.chartjs.org/
-* fullscreen: https://ionicframework.com/docs/native/android-full-screen
+This page is mainly for potential contributors and other people interested in how vodle works under the hood.
+
+We are also building a [Website for end users: vodle.it](http://vodle.it).
+
+### Built With
+
+* [Ionic](https://ionicframework.com/)
+* [Angular](https://angular.io/)
+* [CouchDB](https://couchdb.apache.org/)
+
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 
-### lessons from copan test
+## Getting Started
 
-* many avoid a 100 rating, leading to many abstentions -> add warnings, maybe also add "submit" button?
-* clearer explanations (+ Q&A)
+### I simply want to use it!
+
+The app is not yet ready to be used.
+
+Once the Minimal Viable Product is finished (May or June), you can simply go to [www.vodle.it](http://www.vodle.it) to use vodle as a **web app in your browser**.
+
+Later, when the First Stable Release is ready, you can alternatively install vodle as an **app on your smartphone** via certain app stores.
+
+### I want to learn about the project
+
+You can read about the **scientific basis** for vodle in this [research article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225).
+
+Or you can simply drop me a message to start a **conversation**: [Jobst Heitzig](mailto:heitzig@pik-potsdam.de).
+
+We are currently working towards improving this page to provide you with a detailed documentation of vodle's software architecture.
+
+### I want to set up a vodle database server for my group
+
+While vodle can be used with our central database server, you can get improved performance and privacy if you set up your own database server to be used with vodle in your group. The vodle web app will guide you through the steps required for this. (You will mainly install a standard [CouchDB Docker container](https://hub.docker.com/_/couchdb) on some machine that your group can access)  
+
+### I may want to contribute
+
+You are highly welcome to get involved in any of a number of ways! We have a whole page devoted to this here: [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
