@@ -20,6 +20,9 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
+
+  <h1 align="center"><i><span style="color:#ff0000;">Contributions welcome!</span></i></h1>
+  
   <a href="https://github.com/othneildrew/Best-README-Template">
     <img src="src/assets/topleft_icon.png" alt="Logo" height="80">
   </a>
