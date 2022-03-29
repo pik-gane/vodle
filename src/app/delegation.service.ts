@@ -215,6 +215,7 @@ export class DelegationService {
                 if ((thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
                     + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
                     > environment.delegation.max_weight) {
+                  // TODO: verify that effective delegate herself is counted properly!
                   weight_exceeded = true;
                 }
                 break;

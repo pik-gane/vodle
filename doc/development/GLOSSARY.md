@@ -25,13 +25,27 @@ See [voting interface](#voting-interface).
 When a [voter](#voter) has [delegated](#delegation) to another voter, we say she is the *client* in this relationship, while the other voter is the [(direct) delegate](#direct-delegate). 
 
 ### Closing
-When a [poll](#poll) reaches its [due date](#due-date-and-time), it is *closed*. No-one can change any ratings or delegations from that point on, and a final [tally](#tallying) is performed to determine the [results](#results).
+When a [poll](#poll) reaches its [due date](#due-date-and-time), it is *closed*. No-one can change any ratings or delegations from that point on, and a final [tally](#tallying) is performed to determine the final [results](#results).
 
 ### Delegate
-[direct](#direct-delegate), [indirect](#indirect-delegate), [effective](#effective-delegate), [voter](#voter), [ratings](#rating)
+If a [voter](#voter) acts as a *delegate* for another voter, some or all of her [(proxy) ratings](#rating) are also used as the [proxy ratings](#proxy-rating) of the other voter. 
+
+If *D* is a delegate for *A* then *D* is either *A*'s [direct delegate](#direct-delegate) (if *A* has sent a [delegation request](#delegation-request) to *D* that *D* has accepted),
+or is an [indirect delegate](#indirect-delegate) for *A* (if there is a sequence of direct delegations from *A* to *D* via some intermediate delegates).
+
+See [delegation](#delegation) for more details.
 
 ### Delegation
+Instead of choosing [ratings](#rating) herself, a [voter](#voter) can also ask another voter to act as her [delegate](#delegate) via a [delegation request](#delegation-request). If the prospective delegate agrees to the request, the first voter becomes the [client](#client) and the second voter the [direct delegate](#direct-delegate) in this relationship. As a consequence, some or all of the delegate's ratings will automatically be used as the client's [proxy ratings](#proxy-rating) as well, as long as the client's request is not withdrawn and the delegate's agreement is not revoked. During that time, the client can also switch the delegation on and off for individual [option](#option) via [delegation toggles](#delegation-toggle) and thus control the [effective ratings](#effective-rating) of certain options herself.
 
+The delegate can also delegate her own and her client's ratings further to some third voter. This way, a complex delegation network can emerge in which some voters effectively rate on behalf of a smaller or larger number of other voters. Those voters, who have not themselves delegated, are the [effective delegates](#effective-delegate). 
+
+vodle makes sure that the delegation network has no cycles by preventing that a voter agrees to a delegation request that would create a cycle.
+Also, vodle currently enforces a limit to the number of other voters a voter may have as direct or indirect clients. This limit is currently set at 9.   
+
+### Delegation request
+
+### Delegation toggle
 
 ### did
 
@@ -41,7 +55,7 @@ When a [poll](#poll) reaches its [due date](#due-date-and-time), it is *closed*.
 [poll](#poll), [winner](#winner), [shares](#share)
 
 ### Effective delegate
-[voter](#voter), [delegate](#delegate)
+If a [voter](#voter) *A* has [delegated](#delegation) to some other voter, one can follow the sequence of delegations from *A* forward through all of *A*'s [direct](#direct-delegate) and [indirect delegates](#indirect-delegate) and will arrive at a voter who has not delegated herself to any other voter. That voter voter is *A*'s *effective delegate*. The [ratings](#rating) of *A*'s effective delegate are used as *A*'s [proxy ratings](#proxy-rating) instead of the ratings that *A* might have selected herself before delegating.
 
 ### Effective rating
 
@@ -87,6 +101,8 @@ The ranking determines to which of a [voter](#voter)'s [approved](#approval) opt
 [voter](#voter), [option](#option), [approval](#approval), [effective rating](#effective-rating), [proxy rating](#proxy-rating)
 
 ### Results
+
+### Running
 
 ### Share
 [option](#option)
