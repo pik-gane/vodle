@@ -75,9 +75,9 @@
 
 ## Current State & Next Steps
 
-We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).
-- A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.
-- Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release.* 
+**We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
+- **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
+- **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ## About the Project
 
@@ -112,7 +112,7 @@ Later, when the First Stable Release is ready, you can alternatively install vod
 
 You can read about the **scientific basis** for vodle in this [research article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225).
 
-Or you can simply drop me a message to start a **conversation**: [Jobst Heitzig](mailto:heitzig@pik-potsdam.de).
+Or you can simply **talk to us** by starting a new thread on our [discussions page](https://github.com/pik-gane/vodle/discussions).
 
 We are currently working towards improving this page to provide you with a detailed documentation of vodle's software architecture.
 
