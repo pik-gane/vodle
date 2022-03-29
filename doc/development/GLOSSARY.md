@@ -1,10 +1,6 @@
 # Glossary of terms used in vodle UI and code
 
-{:toc}
-
-[[_TOC_]]
-
-[toc]
+*(If you read this on GitHub, you can access a table of contents via the := button in the top-left corner of this panel)*
 
 ### Abstention
 When a [voter's](#voter) [effective ratings](#effective-rating) for all [options](#option) are zero, that voter *abstains* and thereby does not control any portion of the [share](#share). An abstaining voter is treated completely equivalent to a person who does not participate in the poll at all and does not specify any ratings.
