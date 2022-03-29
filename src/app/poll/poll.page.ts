@@ -403,16 +403,16 @@ export class PollPage implements OnInit {
 
   // The following three handlers prevent the slider from responding when pointer is not on knob:
   
-  onRangePointerdown(oid:string, ev:PointerEvent) {
+  onRangePointerdown(oid:string, ev:Event) {
     this.dragged_oid = oid;
-    const pos = this.get_knob_pos(oid), x = ev.clientX;
+    const pos = this.get_knob_pos(oid), x = (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRangePointerdown", oid, x, pos);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
     }
   }
 
-  onRangePointerup(oid:string, ev:PointerEvent) {
+  onRangePointerup(oid:string, ev:Event) {
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
@@ -431,7 +431,7 @@ export class PollPage implements OnInit {
     }
   }
 
-  onBodyPointerup(ev:PointerEvent) {
+  onBodyPointerup(ev:Event) {
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
       this.onRangePointerup(this.dragged_oid, ev);
