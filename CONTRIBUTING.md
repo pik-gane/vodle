@@ -32,7 +32,7 @@ But other types of contribution will require setting up a development and testin
 
 - Follow [these instructions](https://ionicframework.com/docs/v5/intro/environment) to set up a basic environment for working with Ionic, basically consisting of [Node.js](https://ionicframework.com/docs/v5/reference/glossary#node) and [npm](https://ionicframework.com/docs/v5/reference/glossary#npm).
 - Either fork vodle's git repository [https://github.com/pik-gane/vodle](https://github.com/pik-gane/vodle) or, even better, ask us to grant you write access to it! We are happy to do this since we have protected important branches sufficiently. 
-- Clone the (forked or original) repository to your machine and switch to a new branch for your contribution:
+- Make sure you have at least 2GB free space on your disk. Then clone the (forked or original) repository to your machine and switch to a new branch for your contribution:
   ```
   $ git clone https://github.com/pik-gane/vodle.git
   $ cd vodle
