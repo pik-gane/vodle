@@ -1324,7 +1324,6 @@ export class Poll {
     for (const [oid, value] of eff_rating_changes_map) {
 
       // register change in map and get old eff. rating:
-      this.G.L.error("TEST",JSON.stringify(this.effective_ratings_map), typeof this.effective_ratings_map);
       var effective_ratings_map = this.effective_ratings_map.get(oid);
       if (!effective_ratings_map) {
         effective_ratings_map = new Map();
