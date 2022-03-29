@@ -1,6 +1,34 @@
+# Contributing to vodle
+
+***The vodle team will be very happy if you choose to contribute to vodle!***
+
+You could do so in any number of ways, not just by writing code, for example:
+
+**Make vodle fly after the minimal viable product (MVP) is launched** in summer, by identifying promising groups of potential testers and early users of the MVP (V0.9), finding potential funders for the subsequent development of a first major release (V1.0), and developing vodle's long-term vision further.
+
+**Help making vodle more accessible** by translating it into further languages, improving and completing existing translations, adding a dark, high-contrast, or color-blind-friendly theme, improving accessibility for screen readers, or designing and improving in-app aids such as hints, the FAQ and help texts, or a tutorial, demo, or walkthrough.
+
+**Making vodle more stable and sustainable** by improving its overall documentation, identifying bugs and missing inline documentation, turning cryptic "FIXME" and "TODO" comments into proper issues.
+
+**Improving privacy and security** by reviewing and improving vodle's data handling and use of encryption and designing additional protocols.
+
+Later **assist in project and community management** by prioritizing feature requests and bug reports, moderating discussions, offering user support.
+
+Or simply start and **be a friendly observer, frank commentator and neutral advisor** for the project.
+
+## Getting started
+
+You might begin by just scanning our [end user website](http://vodle.it) and reading some of the top-level documentation texts in the [doc/development](./doc/development/) folder, maybe starting with the description of vodle's overall [architecture](./doc/development/ARCHITECTURE.md) and the extensive [glossary](./doc/development/GLOSSARY.md) of terms used in the app's UI and code.
+
+If you are interested in code-related stuff, you might then continue with browsing the [issue tracker](https://github.com/pik-gane/vodle/issues) and identify a *good first issue* (some are labelled as such).
+
+Some types of contribution can be made without installing a development version of vodle on your own computer, such as documentation-related thinds, code reviews, designing stuff.
+
+But other types of contribution will require setting up a development and testing environment:
+
+## Setting up a development and testing environment
 
 
-You can sign our Contributor License Agreement (CLA) here: [vodle CLA](https://contributoragreements.org/query2form/?_replyto=heitzig@pik-potsdam.de&_subject=Contributor%20License%20Agreement%20E-Signing&_body=Fill%20out%20the%20following%20form,%20then%20sign%20your%20initials%20to%20complete%20the%20Contributor%20License%20Agreement.&agreement-type[]=individual&agreement-type[]=entity&fullname=&title=&company=&email-address=&physical-address=&your-initials=&signed-agreement_s=%3Fyour-date%3D%40_time%26your-name%3D%40fullname%26your-title%3D%40title%26your-address%3D%40email-address%26your-patents%3D%40Patent-IDs-and-Country_t%26process-url%3D%40_processurl%26action%3Dsign-%40agreement-type%26%40u2s&_processurl=@processurl&_action[0]=http://contributoragreements.org/query2email/&_action[1]=http://contributoragreements.org/query2update/&_next=View%20More%20Contributor%20License%20Agreement%20Signers.&_success=Thank%20you%20for%20using%20contributoragreements.org.%20The%20agreement%20has%20been%20signed%20and%20sent%20via%20E-Mail%20and%20will%20not%20be%20stored.&_submit=Sign%20Your%20Contributor%20License%20Agreement.)
 
 <!--
 

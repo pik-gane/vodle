@@ -1,8 +1,13 @@
 {
   "name": "vodle",
-  "version": "0.0.1",
-  "author": "Ionic Framework",
-  "homepage": "https://ionicframework.com/",
+  "version": "0.5",
+  "author": {
+    "name": "Jobst Heitzig",
+    "email": "heitzig@pik-potsdam.de",
+    "url": "https://www.pik-potsdam.de/members/heitzig"
+  },
+  "homepage": "https://github.com/pik-gane/vodle",
+  "description": "vodle is a fair and efficient, interactive, general-purpose group-decision app",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -10,6 +15,14 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e"
+  },
+  "bugs": {
+    "url" : "https://github.com/pik-gane/vodle/issues"
+  },
+  "license" : "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pik-gane/vodle.git"
   },
   "private": true,
   "dependencies": {
@@ -89,6 +102,5 @@
   "browser": {
     "crypto": false,
     "path": false
-  },
-  "description": "An Ionic project"
+  }
 }
