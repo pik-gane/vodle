@@ -17,11 +17,10 @@ import { Poll, Option } from "./poll.service";
 
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
-import BLAKE2s from 'blake2s-js'; // TODO: replace by sodium later
+import BLAKE2s from 'blake2s-js'; // TODO: replace by sodium later?
 
-import * as CryptoJS from 'crypto-js';
-//const crypto_algorithm = 'des-ede3';
-const iv = CryptoJS.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
+import CryptoES from 'crypto-es';
+const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
 
 import * as Sodium from 'libsodium-wrappers';
@@ -147,14 +146,14 @@ const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response
 const textEncoder = new TextEncoder();
 
 function encrypt_deterministically(value, password:string) {
-  const aesEncryptor = CryptoJS.algo.AES.createEncryptor(password, { iv: iv });
+  const aesEncryptor = CryptoES.algo.AES.createEncryptor(CryptoES.enc.Utf8.parse(password), { iv: iv });
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
   return result;
 }
 
 function encrypt(value, password:string): string {
   try {
-    const result = CryptoJS.AES.encrypt(''+value, password).toString(); 
+    const result = CryptoES.AES.encrypt(''+value, password).toString(); 
     return result;
   } catch (error) {
     return null;
@@ -163,9 +162,9 @@ function encrypt(value, password:string): string {
 
 function decrypt(value:string, password:string): string {
   try {
-    const temp = CryptoJS.AES.decrypt(value, password);
+    const temp = CryptoES.AES.decrypt(value, password);
     // FIXME: sometimes we get a malformed UTF-8 error on toString: 
-    const result = temp.toString(CryptoJS.enc.Utf8);
+    const result = temp.toString(CryptoES.enc.Utf8);
     return result;
   } catch (error) {
     return null;
@@ -2452,7 +2451,7 @@ export class DataService implements OnDestroy {
 
   generate_id(length:number): string {
     // generates a random string of requested length
-    return CryptoJS.lib.WordArray.random(length/2).toString();
+    return CryptoES.lib.WordArray.random(length/2).toString();
   }
 
   email_is_valid(email: string): boolean {
