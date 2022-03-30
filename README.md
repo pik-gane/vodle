@@ -83,7 +83,7 @@
 
 A few of them also here:
 
-<img src="https://user-images.githubusercontent.com/22815964/160769162-0bf8b0b5-31c3-40b6-9efb-3fb40df3d54c.png" height="330"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160769828-991c4886-ed87-457c-8099-8975459311dc.png" height="330"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160771224-38f50a63-8278-43bf-a055-7cb1057e0e5b.png" height="330"/>
+<img src="https://user-images.githubusercontent.com/22815964/160769162-0bf8b0b5-31c3-40b6-9efb-3fb40df3d54c.png" height="320"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160769828-991c4886-ed87-457c-8099-8975459311dc.png" height="320"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160771224-38f50a63-8278-43bf-a055-7cb1057e0e5b.png" height="320"/>
 
 ## About the Project
 
