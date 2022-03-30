@@ -79,15 +79,21 @@
 - **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
+### Here's some [gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
+
+A few of them also here:
+
+<img src="https://user-images.githubusercontent.com/22815964/160769162-0bf8b0b5-31c3-40b6-9efb-3fb40df3d54c.png" height="330"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160769828-991c4886-ed87-457c-8099-8975459311dc.png" height="330"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160771224-38f50a63-8278-43bf-a055-7cb1057e0e5b.png" height="330"/>
+
 ## About the Project
 
 <!--Screenshot slideshow?: [![Product Name Screen Shot][product-screenshot]](https://example.com)-->
 
-Once released, vodle will help groups make better decisions – fairer, more efficient, more consensus-oriented, interactive, and for free. Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
+Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
 
 This page is mainly for potential contributors and other people interested in how vodle works under the hood.
 
-We are also building a [Website for end users: vodle.it](http://vodle.it).
+We are also building a [Website for end users: **vodle.it**](http://vodle.it).
 
 ### Built With
 
@@ -102,7 +108,7 @@ We are also building a [Website for end users: vodle.it](http://vodle.it).
 
 ### I simply want to use it!
 
-The app is not yet ready to be used.
+Sadly, the app is not yet ready to be used *([but you can do something about that](CONTRIBUTING.md))*.
 
 Once the Minimal Viable Product is finished (May or June), you can simply go to [www.vodle.it](http://www.vodle.it) to use vodle as a **web app in your browser**.
 
