@@ -21,7 +21,7 @@ At each point in time, each [option](#option) has an *approval score* between 0 
 The approval scores are used to determine the [ranking](#ranking) and thereby influence the [shares](#share). 
 
 ### Ballot
-See [voting interface](#voting-interface).
+Instead of a traditional ballot on which a voter makes some choices once and then submits it, vodle uses an interactive [voting interface](#voting-interface).
 
 ### Client
 When a [voter](#voter) has [delegated](#delegation) to another voter, we say she is the *client* in this relationship, while the other voter is the [(direct) delegate](#direct-delegate).
@@ -76,7 +76,7 @@ A *did* is the unique ID of a [delegation request](#delegation-request).
 If a [voter](#voter) *A* has asked  via a [delegation request](#delegation-request) another voter *D* to act as her [delegate](#delegate), and if *D* has accepted the request, then *D* is *A*'s *direct delegate* and *A* is *D*'s [client](#client).
 
 ### Due date
-When a [poll](#poll) is started, the settings made by the poll's creator determine the exact point in time at which the poll will [close](#closing), which is called the *due date* (and time).
+When a [poll](#poll) is started, the settings made by the poll's creator determine the exact point in time at which the poll will [close](#closing), which is called the *due date* (and time) in the code. In the app, we use the formulation *"the poll closes on ..."* and *"closing date"* instead.
 
 ### Effective delegate
 If a [voter](#voter) *A* has [delegated](#delegation) to some other voter, one can follow the sequence of delegations from *A* forward through all of *A*'s [direct](#direct-delegate) and [indirect delegates](#indirect-delegate) and will arrive at a voter who has not delegated herself to any other voter. That voter voter is *A*'s *effective delegate*. The [ratings](#rating) of *A*'s effective delegate are used as *A*'s [proxy ratings](#proxy-rating) instead of the ratings that *A* might have selected herself before delegating.
@@ -99,32 +99,79 @@ While *A* knows the identity of her [direct delegate](#direct-delegate) *B*, she
 
 In a later release, voters may restrict how long this delegation sequence may get.
 
-### News
-[nid](#nid)
+### News item
+A *news item* is a small message notifying the user about some relevant event. In contrast to other notifications that may occurr immediately as a consequence of the user's actions, such as the notification that a link was copied, news items notify the user about events triggered by other users' actions, such as new options being added to a poll, delegation requests being answered, etc.
+
+News items appear at the top of the *My polls* page and the [voting interface](#voting-interface) as cards that can be dismissed.
+
+Each news item has a unique [ID](#nid).
 
 ### nid
-[news](#news)
+The globally unique ID of a [news item](#news-item).
 
 ### oid
-[option](#option)
+The ID of an [option](#option), unique in the [poll](#poll)'s scope.
 
 ### Opposition
 The opposite of [approval](#approval).
 
 ### Option
-[oid](#oid)
+Options are the entities that [voters](#voter) in a [poll](#poll) collectively decide about.
+
+If the [poll type](#poll-type) is "winner", the options represents mutually exclusive alternatives of which the group must collectively select exactly one. In other words, in a "winner" poll, the question the group faces can be formulated as "either option A or option B or option C ...".  
+
+If the poll type is "share", the options represent possible targets, activities, recipients, etc., between which the group must collectively divide some given budget or resource. So in a "share" poll, the question the group faces can be formulated as "how much for A, how much for B, how much for C ...".
+
+Each option has a unique [option ID](#oid).
 
 ### Own rating
+A [voter](#voter)'s *own rating* of an [option](#option) is the rating she herself gives by adjusting the [rating slider](#rating-slider) of that option. It is only relevant if she has not [delegated](#delegation) her rating of that option to another voter. If she hasn't, her *own rating* also becomes her [proxy rating](#proxy-rating) of the option. Otherwise, her *own rating* is ignored and her [delegate](#delegate)'s proxy rating of the option also becomes her proxy rating of the option.
 
 ### pid
-[poll](#poll)
+The globally unique ID of a [poll](#poll).
 
 ### Poll
-[options](#option), [voters](#voter), [ratings](#rating)
+A *poll* is the central object type in vodle. 
+A poll represents a single decision problem for some group of users. 
+In each poll, there are two or more [options](#option). 
+
+There are several [poll types](#poll-type).
+The poll type determines whether, as the final [result](#results) of the poll, 
+one option will be declared the winner of the poll,
+or whether option will be assigned some share of a certain resource or budget, etc.
+
+During its lifetime, a poll lives through three successive [states](#poll-state): *draft*, *running*, and *closed*.
+
+As soon as a user starts drafting a poll, the poll is "born" in state *draft*. 
+Once the user has finished creating the poll and starts it, is becomes *running*. 
+While it is *running*, [users](#users) who get invited to participate in the poll can take the role of a [voter](#voter) in the poll and use the [voting interface](#voting-interface) to see and influence the intermediate [results](#results) of the poll by [rating](#rating) and/or [delegating](#delegation), and to add further options.
+Once the [due date](#due-date) of the poll is reached, the poll gets [*closed*](#closing) and the final results are determined.
+
+Each poll has a unique [poll ID](#pid).
+
+### Poll cache
+The contents of each [poll database](#poll-database), i.e., the poll's [poll data items](#poll-data-item) and [voter data items](#voter-data-item), are mirrored for performance reasons as key-value pairs in a simple hash table (a typescript object of type Record) called a *poll cache*.
 
 ### Poll database
+For each [poll](#poll), there are three types of relevant data:
+1. data that is only *relevant for one* [voter](#voter) (e.g., a personal note),
+2. data that is *relevant for all* voters of the poll but is *owned by one* voter (e.g., a rating), and
+3. data that is *common to all voters* of the poll (e.g., the poll's title).
+
+The first type of data is stored as [user data items](#user-data-item) in the voter's [user database](#user-database) to allow roaming.
+
+The other two types of data are stored in the form of [voter data items](#voter-data-item) (2.) and [poll data items](#poll-data-item) (3.). 
+Both these types are exchanged between the voters via the poll's *poll database*, 
+which is some CouchDB database that all voters have access to. 
+Several polls might use the same CouchDB database as their poll database without any interference between the different polls.
+Indeed, by default all polls use the same CouchDB database called "vodle central".
 
 ### Poll data item
+A *poll data item* is a data item that is related to a particular [poll](#poll) and is common to all [voters](#voter) in that poll (rather than owned by a single voter, compare [voter data item](#voter-data-item)).
+It is stored as a key-value pair in the [poll database](#poll-database) and the [poll cache](#poll-cache).
+Most poll data items are also implemented as properties of the class `Poll`. 
+Examples of poll data items are the poll's [type](#poll-type), title, description, "read-more"-URL, [due date](#due-date), and [state](#poll-state), and all [option](#option)'s names, descriptions, and "read-more"-URLs.
+A poll data item can be created by any voter in a poll, can be decrypted and thus read by all voters in the same poll by using the [poll password](#poll-password), but can usually neither be updated nor deleted. (Only the [poll state](#poll-state) can be updated according to certain rules.)
 
 ### Poll invitation
 After a [poll](#poll) has been started, its creator is asked to invite participants by sending them a *poll invitation* containing a *poll invitation link* either by email, by her smartphone's share capabilities, or by copying the poll invidation link and sending it to the prospective participants in any other way.
@@ -136,7 +183,23 @@ In the current version, poll invitations are not personalized, so every particip
 In a future release, poll invitations will optionally be personalized with the help of a key distribution server (see [Architecture](ARCHITECTURE.md)).
 
 ### Poll password
-All the [poll data](#poll-data-item) and [voter data](#voter-data-item) of a [poll](#poll) that is stored in its [poll database](#poll-database) is encrypted with a *poll password* that is only known by the poll's [voters](#voter), or, more precisely, by everyone how has access to the [poll invitation link](#poll-invitation). 
+(not to be confused with [user password](#user-password))
+
+All the [poll data](#poll-data-item) and [voter data](#voter-data-item) of a [poll](#poll) that is stored in its [poll database](#poll-database) is encrypted with a poll password that is only known by the poll's [voters](#voter), or, more precisely, by everyone how has access to the [poll invitation link](#poll-invitation). 
+
+So poll passwords are used to restrict who can read a [poll](#poll)'s data, but not who has write access to it. 
+Instead, write access is controlled by document validation functions in the CouchDB server.
+
+### Poll state
+Each [poll](#poll) is first in state *draft*, then *running*, then *closed*. See [poll](#poll) for details.
+
+### Poll type
+Each [poll](#poll) is of either of the following types:
+- In a poll of type "winner", marked by a "trophy" icon in the UI, the group must collectively pick exactly one of several mutually exclusive options (or "alternatives").
+- In a poll of type "share", marked by a "scissors" icon in the UI, the group must collectively divide a certain budget or resource (money, time, space, etc.) among several options (targets, recipients, projects, activities, etc.) 
+In a future release, there might be further types, such as a "fixed number of winners" type in which the group collectively picks a predetermined number (e.g., three) of the options.
+
+The type determines what kind of [results](#results) the poll has and how these are determined in the [tallying](#tallying) procedure and presented in the [voting interface](#voting-interface). 
 
 ### Proxy rating
 A [voter](#voter)'s *proxy rating* of a certain [option](#option) is an intermediate form of rating used in [tallying](#tallying). It is the form of rating that is shown by the [ratings sliders](#rating-slider) in the[voting interface](#voting-interface).
@@ -167,9 +230,15 @@ In a [voter](#voter)'s [voting interface](#voting-interface), each [option](#opt
 ### Results
 
 ### Running
+This is one of the three successive [states](#poll-state) of a [poll](#poll). 
+Once started, a poll is running until its [due date](#due-date) is reached.
+
+While the poll is *running*, [voters](#voter) can [rate](#rating), [delegate](#delegation), add options,
+and immediately see the effect of their and other voters' actions on the intermediate [results](#results),
+which are continuously updated by the [tallying](#tallying) algorithm.
+This interactive process will ideally make the voters' ratings converge to a combination in which a single option receives all or almost all of the [share](#share), or in which the shares are distributed in some other way that is desirable or at least acceptable for all voters. 
 
 ### Share
-[option](#option)
 
 ### Tallying
 
@@ -182,6 +251,9 @@ The *total ratings score* of an [option](#option) equals the sum of all [effecti
 A *user* is a person who uses vodle on one or more devices to initiate or participate in one or more [polls](#poll). A user is identified across devices and sessions by the cryptographic hash value of the combination of her *email address* and [user password](#user-password). This way, no-one except the user herself can infer anyone's email address. 
 
 In each poll the user participates in, she has a poll-specific [voter](#voter) identity that no-one can link to her user identity or to the voter identities she has in other polls.
+
+### User cache
+The contents of the [user database](#user-database) are mirrored for performance reasons as key-value pairs in a simple hash table (a typescript object of type Record) called the *user cache*.
 
 ### User database
 
@@ -199,6 +271,12 @@ The password the [user](#user) specifies together with her email address to be a
 [user](#user), [vid](#vid)
 
 ### Voter data item
+A *voter data item* is a data item that is related to a particular [poll](#poll) and is owned by a particular [voter](#voter) in that poll (rather than being common to all voters, compare [poll data item](#poll-data-item)).
+It is stored as a key-value pair in the [poll database](#poll-database) and the [poll cache](#poll-cache).
+Examples of voter data items are the voter's [ratings](#rating) of all [options](#option), and the voter's [delegation requests](#delegation-request) or responses to others' delegation requests.
+A voter data item can be decrypted and thus read by all voters in the same poll by using the [poll password](#poll-password),
+but can be created, updated or deleted at only by the voter owning the data item.
+Additional restrictions prevent a voter from changing her ratings or delegations after a poll has closed.
 
 ### Voting interface
 

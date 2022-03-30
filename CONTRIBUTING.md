@@ -72,7 +72,7 @@ But other types of contribution will require setting up a development and testin
   ```
 - Then create an instance of the image, and check that it is running:
   ```
-  $ sudo docker run --name vodle-dev-couchdb -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d couchdb
+  $ sudo docker run --name vodle-dev-couchdb -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -m 1G -d couchdb
   $ sudo docker ps -a
   ```
   which should say something like
