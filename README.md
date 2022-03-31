@@ -83,13 +83,15 @@
 
 A few of them also here:
 
-<img src="https://user-images.githubusercontent.com/22815964/160769162-0bf8b0b5-31c3-40b6-9efb-3fb40df3d54c.png" height="310"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160769828-991c4886-ed87-457c-8099-8975459311dc.png" height="310"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160771224-38f50a63-8278-43bf-a055-7cb1057e0e5b.png" height="310"/>
+<img src="https://user-images.githubusercontent.com/22815964/160769162-0bf8b0b5-31c3-40b6-9efb-3fb40df3d54c.png" width="55%"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160769828-991c4886-ed87-457c-8099-8975459311dc.png" width="20%"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://user-images.githubusercontent.com/22815964/160771224-38f50a63-8278-43bf-a055-7cb1057e0e5b.png" width="20%"/>
 
 ## About the Project
 
 <!--Screenshot slideshow?: [![Product Name Screen Shot][product-screenshot]](https://example.com)-->
 
 Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
+
+It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
