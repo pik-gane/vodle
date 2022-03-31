@@ -1,4 +1,4 @@
-# Use cases
+# Use cases for ![vodle](https://github.com/pik-gane/vodle/blob/main/resources/icon_tight24.png) vodle
 
 vodle is for **groups** such as 
 - families
