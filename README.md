@@ -79,7 +79,7 @@
 - **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
-### [See here for possible use cases!](USE_CASES.md). And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
+### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
 
 A few of them also here:
 
