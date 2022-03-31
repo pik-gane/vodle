@@ -139,7 +139,7 @@ But other types of contribution will require setting up a development and testin
 
 ### Setting up a test poll and looking into all corners
 
-1. On the *My polls* page (see here for its [Angular template](./src/app/mypolls/mypolls.page.html) and [Typescript source code](./src/app/mypolls/mypolls.module.ts)), click the **+** button in the bottom right corner to create a new poll, which should bring you to the *[Draft poll](./src/app/draftpoll/)* page.
+1. On the *My polls* page (see here for its [Angular template](./src/app/mypolls/mypolls.page.html) and [Typescript source code](./src/app/mypolls/mypolls.page.ts)), click the **+** button in the bottom right corner to create a new poll, which should bring you to the *[Draft poll](./src/app/draftpoll/)* page.
 2. Choose *select one of several options*, then click the three dots in the top right corner, which should open a [menu](./src/app/draftpoll-kebap/).
 3. Choose *Use an example > Icecream flavour (large test poll)*, which should fill the form with a poll title, description, due date, and some options. Adjust the *Poll will close...* setting to *after one hour* to have enough time for your test. 
 4. Click the bottom right *Ready* button, which should trigger a short notification by your browser that the poll was saved under 'drafts' and then bring you to the *[Please check](./src/app/previewpoll/)* page.
