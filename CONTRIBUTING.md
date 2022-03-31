@@ -1,4 +1,4 @@
-# Contributing to vodle
+# Contributing to ![vodle](https://github.com/pik-gane/vodle/blob/main/resources/icon_tight24.png)  vodle
 
 ***The vodle team will be very happy if you choose to contribute to vodle!***
 
