@@ -79,7 +79,7 @@
 - **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
-### Here's some [gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
+### [See here for possible use cases!](USE_CASES.md). And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
 
 A few of them also here:
 
@@ -90,8 +90,6 @@ A few of them also here:
 <!--Screenshot slideshow?: [![Product Name Screen Shot][product-screenshot]](https://example.com)-->
 
 Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
-
-[See here for possible use case!](USE_CASES.md)
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
