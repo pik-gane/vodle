@@ -196,7 +196,8 @@ Each [poll](#poll) is first in state *draft*, then *running*, then *closed*. See
 ### Poll type
 Each [poll](#poll) is of either of the following types:
 - In a poll of type "winner", marked by a "trophy" icon in the UI, the group must collectively pick exactly one of several mutually exclusive options (or "alternatives").
-- In a poll of type "share", marked by a "scissors" icon in the UI, the group must collectively divide a certain budget or resource (money, time, space, etc.) among several options (targets, recipients, projects, activities, etc.) 
+- In a poll of type "share", marked by a "scissors" icon in the UI, the group must collectively divide a certain budget or resource (money, time, space, etc.) among several options (targets, recipients, projects, activities, etc.)
+ 
 In a future release, there might be further types, such as a "fixed number of winners" type in which the group collectively picks a predetermined number (e.g., three) of the options.
 
 The type determines what kind of [results](#results) the poll has and how these are determined in the [tallying](#tallying) procedure and presented in the [voting interface](#voting-interface). 
