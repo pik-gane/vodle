@@ -182,6 +182,36 @@ In your deserved breaks from vodling, you can stop and later restart your CouchD
   $ sudo docker start vodle-dev-couchdb
   ```
 
+### Building native apps
+
+For most of the time, it is probably most convenient to work with the local web app as described above. In some cases, however, you might want to test a native app version of vodle.
+
+#### Android
+For the android version, you need to install [Android Studio](https://developer.android.com/studio) and [configure it as described here](https://ionicframework.com/docs/v5/developing/android) (in that doc, skip the section on Cordova and continue with the section on Capacitor). Instead of 
+```
+$ ionic capacitor copy android
+``` 
+and starting Android Studio manually, you can also do
+```
+$ ionic capacitor build android
+```
+which will automatically start Android Studio, where you can then do `Run -> run app`.
+
+In some cases, running the app like this only succeeds after doing
+```
+$ adb start-server
+```
+
+#### iOS
+For iOS, we have not tested it yet, but [it should work like this](https://ionicframework.com/docs/v5/developing/ios).
+
+### Other useful commands
+
+- If you need to log into the CouchDB docker container for some reason:
+  ```
+  $ sudo docker exec -it vodle-dev-couchdb bash
+  ```
+
 ## Working on translations
 
 We will soon provide detailed information on this... in the meantime, please look at the JSON files under [src/assets/i18n/](./src/assets/i18n/).
@@ -202,19 +232,6 @@ Lower-level logics are implemented via ***services*** that are used by the page 
 
 
 <!--
-## Useful commands
-
-Running locally:
-* running locally in dev mode: in main directory of git repo: ionic serve
-* running locally in dev mode with external access: in main directory of git repo: ionic serve --external
-* running locally in prod mode with external access: in main directory of git repo: ionic serve --prod --external
-
-CouchDB:
-* logging into container: sudo docker exec -it couch bash
-* sending config option to couchdb: https://docs.couchdb.org/en/stable/config/couchdb.html
-
-Building app:
-* `ionic capacitor build android`, then in Android Studio `Run -> run app`
 
 ## Ideas for publication
 
@@ -245,32 +262,6 @@ Building app:
 * art award money
 * group speaker/rep temporary service time
 * budget, time or other resources for projects
-
-
-# [OLD STUFF, please ignore for now:]
-
-## Building
-
-I did the following to get the unsigned android debug build going:
-
-* sudo npm i -g cordova
-* npm install @ionic-native/push
-* npm install cordova-plugin-ionic@^5.0.0
-* npm install ajv@^6.9.1
-* npm install fsevents@1.2.7
-* sudo apt install openjdk-8-jdk
-* sudo update-alternatives - -config java
-  then select 1.8
-* sudo update-alternatives - -config javac
-  then select 1.8
-* export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-* sudo apt install gradle android-sdk-build-tools
-* ...android-sdk-linux/tools/bin/sdkmanager --install "platforms;android-27"
-* ...android-sdk-linux/tools/bin/sdkmanager --install "build-tools;26.0.2"
-* ...android-sdk-linux/tools/bin/sdkmanager --update
-* yes | ...android-sdk-linux/tools/bin/sdkmanager --licenses
-* export ANDROID_HOME=...android-sdk-linux/
-* ionic cordova build --prod android --verbose
 
 ## Prioritised list of wanted features
 
