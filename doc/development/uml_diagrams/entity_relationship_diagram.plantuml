@@ -1,0 +1,334 @@
+@startuml
+
+hide methods
+hide circle
+hide stereotype
+skinparam classAttributeIconSize 0
+
+abstract class CouchDBServer {
+    url
+    password
+}
+note top
+    (to edit this diagram, edit its .plantuml source and compile it with plantuml)
+    omitted datatypes are string
+end note
+
+abstract class User {
+    *PK email
+    *PK password
+    ---
+    db
+    db_from_pid
+    db_custom_server_url
+    db_custom_password
+    FK db_server_url
+    FK db_password
+    language
+    theme
+    (and further settings)
+}
+
+User "n" --> "1" CouchDBServer : uses
+User "1" --> "n" Voter : acts as 
+
+abstract class Voter {
+    *PK vid
+    ---
+    FK email
+    FK password
+    FK pid
+    ---
+    abstains: boolean
+    FK vote
+}
+
+Voter "n" --> "1" Poll : belongs to
+Voter "1" --> "n" OwnRating : specifies 
+Voter "1" --> "n" DelegationRequest : makes 
+Voter "n" --> "1" Option : has her share go to
+
+abstract class Poll {
+    *PK pid
+    ---
+    type: "winner" | "share"
+    language
+    title
+    description
+    url
+    due_type
+    due_custom: date
+    due: date 
+    creator
+    start_date: date
+    ---
+    state: "draft" | "running" | "closed"
+    ---
+    db
+    db_from_pid
+    db_custom_server_url
+    db_custom_password
+    FK db_server_url
+    FK db_password
+    password
+    ---
+    myvid
+    have_seen: boolean
+    have_acted: boolean
+}
+
+Poll "n" --> "1" CouchDBServer : uses
+Poll "1" --> "n" Option : has
+
+abstract class Option {
+    *PK oid
+    ---
+    FK pid
+    name
+    description
+    url
+    ---
+    approval_score
+    total_ratings_score
+    rank: integer
+    share
+}
+
+abstract class DelegationRequest {
+    *PK did
+    ---
+    FK client_vid
+    delegate_nickname
+    option_spec.type: "+" | "-"
+    option_spec.oids: string[]
+    ---
+    status
+}
+
+DelegationRequest "n" --> "n" Option : regards
+DelegationRequest "1" --> "n" DirectDelegation : may lead to 
+
+abstract class Delegation {
+    *PK did
+    *PK oid
+    ---
+    FK client_vid
+    FK delegate_vid
+}
+
+Delegation "n" --> "1" Option : regards
+Delegation "n" --> "1" Voter : delegates to
+
+abstract class DirectDelegation {}
+DirectDelegation --> Delegation : is a form of
+
+DirectDelegation "n" --> "1" IndirectDelegation : lead to 
+DirectDelegation "n" --> "1" EffectiveDelegation : lead to 
+
+abstract class IndirectDelegation {}
+IndirectDelegation --> Delegation : is a form of
+
+abstract class EffectiveDelegation {}
+EffectiveDelegation --> Delegation : is a form of
+
+EffectiveDelegation "1" --> "1" ProxyRating : leads to
+
+abstract class Rating {
+    *PK vid
+    *PK oid
+    ---
+    value: number (0...100)
+}
+
+Rating "n" --> "1" Option : evaluates
+
+abstract class OwnRating {}
+OwnRating --> Rating : is a form of
+
+OwnRating "1" --> "n" ProxyRating : may be used as
+
+abstract class ProxyRating {}
+ProxyRating --> Rating : is a form of
+
+ProxyRating "n" --> "1" Voter : is used for 
+
+abstract class EffectiveRating {}
+EffectiveRating --> Rating : is a form of
+
+EffectiveRating "1" --> "n" ProxyRating : is based on
+
+abstract class Approval {
+    *PK vid
+    *PK oid
+    ---
+    value: boolean
+}
+
+Approval "n" --> "1" Voter : is calculated for
+Approval "n" --> "1" Option : regards
+
+
+@enduml
+
+
+
+package space <<Rectangle>> {
+
+    note as N1
+        angle = (id + 0.5) / 2 - 360
+        id = (angle + 360) * 2 - 0.5
+    end note
+
+    abstract class latitude {
+        *PK id: smallint >= 0
+        angle: float with remainder 0.25 or 0.75
+    }
+    latitude .. N1
+    
+    abstract class longitude {
+        *PK id: smallint
+        angle: float with remainder 0.25 or 0.75
+    }
+    longitude .. N1
+    
+    abstract class cell {
+        *PK lat_id: smallint
+        *PK lon_id: smallint
+    }
+    cell "n" --* "1" latitude
+    cell "n" --* "1" longitude
+    
+    region "n" --> "n" cell : contains
+    
+    class region {
+        *PK region_id: integer (UN M49 code or other)
+        region_label: varchar(100)
+        --
+    }
+
+}
+
+package time <<Rectangle>> {
+
+    abstract class date {
+        *PK date: date
+    }
+    date "28..31" --* "1" "particular month" : belongs to
+    
+    abstract class "particular month" {
+        *PK year: smallint
+        *PK month: smallint 1...12
+    }
+    "particular month" "12" --* "1" year : belongs to
+    
+    abstract class year {
+        *PK year: smallint
+    }
+    
+    year "4..10" --* "1" interval : belongs to
+    
+    abstract class interval {
+        *PK start_year
+        *PK end_year
+    }
+}
+
+package model <<Rectangle>> {
+
+    abstract class forcing {
+        *PK forcing_id: character
+        forcing: string
+    }
+    note bottom: e.g. forcing "mpi-esm1-2-hr" has id "p"
+    
+    abstract class scenario {
+        *PK scenario_id: character
+        scenario: string or "historical"
+    }
+    note bottom: e.g. scenario "ssp370" has id "3"
+
+    abstract class variable {
+        *PK varname
+        unit
+    }
+    
+    abstract class "physical unit" {
+    }
+    note bottom
+        may require conversion, 
+        e.g. from K to °C or 
+        from kg/m²/s to mm/day 
+    end note
+}
+
+package "raw data" <<Rectangle>> {
+    
+    abstract class "netcdf data cube cell" {
+        *PK netcdf_file
+        *PK time: datetime
+        *PK latitude: float
+        *PK longitude: float
+        value: float
+    }
+    
+    "netcdf data cube cell" "n" --* "1" "netcdf file" : resides in
+    "netcdf data cube cell" "n" --> "1" date
+    "netcdf data cube cell" "n" --> "1" cell
+    
+    abstract class "netcdf file" {
+        *PK filename
+        download_url
+    }
+    note top: typically around 2GB
+    
+    "netcdf file" "n" --o "1" interval 
+    "netcdf file" "n" --o "1" forcing 
+    "netcdf file" "n" --o "1" scenario
+    "netcdf file" "n" --o "1" variable
+    "netcdf file" "n" --> "1" "physical unit"
+   
+}
+
+package weather <<Rectangle>> {
+
+    abstract class "regional weather table" {
+        *PK tablename
+        variable
+    }
+    
+    "regional weather table" "1" --> "n" "netcdf file" : contains spatial average of values of selected cells
+
+}
+
+package climate <<Rectangle>> {
+
+    abstract class "regional climate table" {
+        *PK tablename
+        indicator
+    }
+    
+    "regional climate table" "n" --> "1" indicator : contains spatial average of long-term (e.g. 20 years) running mean of
+
+    abstract class indicator {
+        *PK indicator: string
+        temporal aggregation type: e.g. "mean", "max", "sum", "count"
+        temporal aggregation resolution: e.g. "month", "year"
+        derived_variable
+    }
+    note right
+        e.g. "colddays_by_month" 
+        has temp. agg. type "count" 
+        and res. "month"
+    end note
+
+    indicator "n" --> "1" "derived variable" : is temporal aggregation of
+     
+    abstract class "derived variable" {
+        *PK varname: string
+    }
+    note right: e.g. "coldday"
+
+    "derived variable" "n" --o "1 or n" variable : is based on
+    "derived variable" "n" --> "0..1" "physical unit" : has units of (if not dimensionless, e.g. counters)
+}
+
