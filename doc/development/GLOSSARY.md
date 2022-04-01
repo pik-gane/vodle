@@ -8,13 +8,21 @@ When a [voter's](#voter) [effective ratings](#effective-rating) for all [options
 ### Approval
 At each point in time after a [poll](#poll) has started, each [voter](#voter) either *approves* or does *oppose* (=*not approve*) each [option](#option). Whether she approves an option depends on her current [effective rating](#effective-rating) and on every other non-[abstaining](#abstention) voter's effective rating. If her effective rating is *r*, she approves the option if and only if strictly less than *r* percent of all non-abstaining voters oppose the option. 
 
-Note that this is a recursive definition of "approval" which needs to be solved by a suitable **algorithm.** That algorithm is rather simple: Given all non-abstaining voters and their effective ratings of the option, we find the smallest value *r* such that strictly less than *r* percent of these ratings are smaller than *r*. Everyone with an effective rating at least *r* then approves, the others don't oppose. This procedure is visualized on the app's [ExplainApproval](../../src/app/explain-approval/explain-approval.page.html) page.
+Note that this is a recursive definition of "approval" which needs to be solved by a suitable **algorithm.** That algorithm is rather simple: 
+Given all non-abstaining voters and their effective ratings of the option, we find the smallest value *r* such that strictly less than *r* percent of these ratings are smaller than *r*. This number *r* is called the [approval threshold](#approval-threshold) of the option.
+Everyone with an effective rating at least *r* then approves, the others don't oppose. 
+This procedure is visualized on the app's [ExplainApproval](../../src/app/explain-approval/explain-approval.page.html) page.
 
 We make sure that every non-abstaining voter approves at least one option, see [effective rating](#effective-rating).
 
 Based on everyone's approvals (in combination with the current [ranking](#ranking)), the [shares](#share) of all options are calculated during [tallying](#tallying).
 
 *Note on language:* We say a voter *"approves an option"* and not that she "approves *of* an option" to make clear that this is a formal act rather than an expression of opinion.
+
+### Approval threshold
+The *approval threshold* of an [option](#option) is the smallest [effective rating](#effective-rating) at which the [voters](#voter) [approve](#approval) the option. 
+It is determined during [tallying](#tallying) by finding the smallest number *r* between 0 and 100 for which the percentage of non-[abstaining](#abstention) voters who have an effective rating strictly below *r* is strictly smaller than *r*.
+All voters with an effective rating at least *r* then approve the option, the others [oppose](#opposition) the option.
 
 ### Approval score
 At each point in time, each [option](#option) has an *approval score* between 0 (=0%) and 1 (=100%) which equals the percentage of non-[abstaining](#abstention) [voters](#voter) who currently [approve](#approval) the option. 
@@ -28,7 +36,9 @@ When a [voter](#voter) has [delegated](#delegation) to another voter, we say she
 Only the delegate will know the identity of the client, as soon as the client sends her the delegation request.
 
 ### Closing
-When a [poll](#poll) reaches its [due date](#due-date), it is *closed*. No-one can change any ratings or delegations from that point on, and a final [tally](#tallying) is performed to determine the final [results](#results).
+When a [poll](#poll) reaches its [due date](#due-date), it is *closed*. No-one can change any ratings or delegations from that point on, and a final [tally](#tallying) is performed to determine the final [shares](#share). 
+For polls of [type](#poll-type) "winner", also the [winner](#winner) of the poll is then drawn on the basis of these shares. 
+See also [results](#results).
 
 ### Database username
 We control access to [user data](#user-data-item), [poll data](#poll-data-item) and [voter data](#voter-data-item) in the [user database](#user-database) and [poll databases](#poll-database) by defining several technical *database usernames* in the respective CouchDB servers.
@@ -80,6 +90,7 @@ When a [poll](#poll) is started, the settings made by the poll's creator determi
 
 ### Effective delegate
 If a [voter](#voter) *A* has [delegated](#delegation) to some other voter, one can follow the sequence of delegations from *A* forward through all of *A*'s [direct](#direct-delegate) and [indirect delegates](#indirect-delegate) and will arrive at a voter who has not delegated herself to any other voter. That voter voter is *A*'s *effective delegate*. The [ratings](#rating) of *A*'s effective delegate are used as *A*'s [proxy ratings](#proxy-rating) instead of the ratings that *A* might have selected herself before delegating.
+
 
 ### Effective rating
 A [voter](#voter)'s *effective rating* of an [option](#option) is an auxiliary form of rating used to make sure that every non-[abstaining](#abstention) voter [approves](#approval) at least one option. 
@@ -229,6 +240,24 @@ The procedure that determines the [results](#results) from all ratings is called
 In a [voter](#voter)'s [voting interface](#voting-interface), each [option](#option) has a *rating slider* attached which shows the voter's [proxy rating](#proxy-rating) of that option. If the voter has not delegated any rating, the proxy rating equals the voter's [own rating](#own-rating) of that option, and the voter can use the slider to adjust this rating. If the voter has delegated some ratings but not this one (because she used the [delegation toggle](#delegation-toggle) to regain control), the slider also shows her own rating and, in addition, a dashed line above it shows the proxy rating of her delegate for comparison. If she has delegated her rating of this option, the slider only shows the proxy rating of her delegate (which is then also her own proxy rating) and cannot be adjusted (which is indicated by a smaller knob).
 
 ### Results
+What kind of results a [poll](#poll) has depends on its [type](#poll-type). 
+
+1. For a poll of **type "share"**, the main result is an **allocation of [shares](#share)** to [options](#option), reported in per cent of the budget or resource in question. In other words, each option gets a share between 0% and 100%, and all these shares add up to 100%. So if the result says 70% *X* and 30% *Y*, then option *X* shall get 70% of the budget or resource in question and option *Y* shall get 30%. For this poll type, there is no randomization involved, the formula that turns everyone's effective ratings into option shares is totally deterministic.
+
+2. For a poll of **type "winner"**, the **intermediate results** that are shown while the poll is still *running* are the same as for a poll of type "share". 
+But the reported shares are now representing **winning probabilities** rather than as parts of a budget or resource. 
+After a poll of type "winner" has [*closed*](#closing), the **final result** of the poll is **a single option as the ["winner"](#winner)** of the poll.  
+This option is either the option that received a share of 100%, if such an option exists, or it is determined by drawing from the probability distribution defined by the shares. 
+In other words, the probability that option *X* wins equals *X*'s share. 
+vodle performs this draw only once as soon as the poll is closed. 
+Although there is no central server that does this draw but the draw is performed by each voter's vodle app, we have made sure that all voters see the same winner. 
+This is achieved by using a pseudo-random number generator that is based on the [poll database's](#poll-database) revision number of the poll's ["state" data item](#poll-data-item), which is the same for all voters and cannot be predicted before the poll's state is changed from *running* to *closed*.
+
+In addition to the shares, vodle also shows the voter 
+- for each option the sorted list of [effective ratings](#effective-rating) of this option (on the "explain-approval" page), 
+- all options' resulting [approval scores](#approval-score),
+- which options she herself approves, and
+- which option "her" share goes to. 
 
 ### Running
 This is one of the three successive [states](#poll-state) of a [poll](#poll). 
@@ -240,8 +269,38 @@ which are continuously updated by the [tallying](#tallying) algorithm.
 This interactive process will ideally make the voters' ratings converge to a combination in which a single option receives all or almost all of the [share](#share), or in which the shares are distributed in some other way that is desirable or at least acceptable for all voters. 
 
 ### Share
+As the main part of the intermediate and final [results](#results) of a [poll](#poll), each [option](#option) gets assigned a *share* between 0% and 100%. 
+All options' shares add up to 100%.
+What the share of an option means depends on the [poll type](#poll type):
+- For a poll of type "winner", the share of an option states how likely the option will be drawn as the [winner](#winner) of the poll when the poll [closes](#closing).
+- For a poll of type "share", the share of an option states what part of the budget or resource in question this option gets allocated. For example, if the resource is 40 hours of time and the option's final share is 30%, then 12 hours are allocated to the option.
+
+An option's share equals the percentage of non-[abstaining](#abstention) voters who approve this option but don't approve any higher-[ranked](#ranking) option.
+One can interpret this by saying that each non-abstaining voter "controls" an equal share of 100%/*N*, where *N* is the number of non-abstaining voters.
+Therefore we also say that a "voter's share" goes to a certain option. 
+On the level of the code (but not in the UI), we also call this share the voter's ["vote"](#vote) and say that she "votes for" a certain option. 
 
 ### Tallying
+Whenever a [voter](#voter) changes her [own rating](#own-rating) of some [option](#option) and whenever some [delegation](#delegation) relationship changes, the intermediate [results](#results) of the [poll](#poll) are updated or calculated freshly. 
+This process is called *tallying*.
+
+During the tallying process, the following things are updated or calculated freshly in this order:
+1. For each voter and option:
+    1. if the voter has delegated for this option, find the [effective delegate](#effective-delegate) of that voter for that option.
+    2. calculate the [proxy rating](#proxy-rating) of that voter for that option, based on her or her effective delegate's [own rating](#own-rating), and show it in the [rating slider](#rating-slider).
+2. For each voter: 
+    1. set all her [effective ratings](#effective-rating) based on all her proxy ratings.
+    2. using them, check whether she [abstains](#abstention).
+3. For each option: find its [approval threshold](#approval-threshold), based on the effective ratings of the non-abstaining voters. The voter can see this in the "explain" page.
+4. For each option and non-abstaining voter: check whether she [approves](#approval) the option, based on the option's approval threshold and her effective rating of the option.
+5. For each option:
+    1. calculate its [approval score](#approval-score) on the basis of all non-abstaining voters' approval of the option.
+    2. calculate its [total ratings score](#total-ratings-score) on the basis of all non-abstaining voters' effective ratings of the option.
+6. Determine the options' [ranking](#ranking) based on their approval and total ratings scores.
+7. For each non-abstaining voter: determine which option that "voter's share" goes to, based on the voter's approvals and the options' ranking. In the code, this option is called the voter's ["vote"](#vote).
+8. Finally, for each option: calculate its [share](#share) based on the voters' votes. The voter can see this in the "explain" page.
+
+The details of this algorithm have been very carefully designed to guarantee a number of things such as fairness, neutrality, proportionality, low manipulability, consistent sensitivity to changes, etc. For more details on this, please see the [scientific article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) on the underlying decision method.
 
 ### Total ratings score
 The *total ratings score* of an [option](#option) equals the sum of all [effective ratings](#effective-rating) the option received from all [voters](#voter).
@@ -258,6 +317,7 @@ The contents of the [user database](#user-database) are mirrored for performance
 
 ### User database
 
+
 ### User data item
 
 ### uid
@@ -265,6 +325,8 @@ The contents of the [user database](#user-database) are mirrored for performance
 
 ### User password
 The password the [user](#user) specifies together with her email address to be able to access her [user database](#user-database) from different devices (roaming). Not to be confused with a [poll password](#poll-password). 
+
+### Vote
 
 ### Voter
 (aka participant)

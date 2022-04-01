@@ -20,8 +20,8 @@ type tally_cache_t = { // T is short for "tally data"
   n_not_abstaining: number;
   // for each oid, an array of ascending ratings: 
   effective_ratings_ascending_map: Map<string, Array<number>>;
-  // for each oid, the approval cutoff (rating at and above which option is approved):
-  cutoffs_map: Map<string, number>;
+  // for each oid, the approval threshold (effective rating at and above which option is approved):
+  thresholds_map: Map<string, number>;
   // for each oid and vid, the approval (default: false):
   approvals_map: Map<string, Map<string, boolean>>;
   // for each oid, the approval score:
@@ -970,7 +970,7 @@ export class Poll {
       all_vids_set: new Set(),
       n_not_abstaining: 0,
       effective_ratings_ascending_map: new Map(),
-      cutoffs_map: new Map(),
+      thresholds_map: new Map(),
       approvals_map: new Map(),
       approval_scores_map: new Map(),
       total_effective_ratings_map: new Map(),
@@ -1001,7 +1001,7 @@ export class Poll {
     }
 
 //    this.G.L.trace("Poll.tally_all voters", this._pid, this.T.n_voters, [...this.T.allvids_set]);
-    // calculate cutoffs, approvals, and scores of all options:
+    // calculate thresholds, approvals, and scores of all options:
     const score_factor = this.T.n_not_abstaining * 128;
 //    this.G.L.trace("Poll.tally_all options", this._pid, this._options);
     for (const oid of this.oids) {
@@ -1010,13 +1010,13 @@ export class Poll {
       if (effective_ratings_map) {
         const effective_ratings_ascending = this.update_ratings_ascending(oid, effective_ratings_map);
 //        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
-        this.update_cutoff_and_approvals(oid, effective_ratings_map, effective_ratings_ascending);
+        this.update_threshold_and_approvals(oid, effective_ratings_map, effective_ratings_ascending);
         const [approval_score, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
         this.update_score(oid, approval_score, this.T.total_effective_ratings_map.get(oid), score_factor);
 //        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
       } else {
         this.T.effective_ratings_ascending_map.set(oid, []);
-        this.T.cutoffs_map.set(oid, 100);
+        this.T.thresholds_map.set(oid, 100);
         this.T.approvals_map.set(oid, new Map());
         this.T.approval_scores_map.set(oid, 0);
         this.T.total_effective_ratings_map.set(oid, 0);
@@ -1293,18 +1293,18 @@ export class Poll {
         const my_shares_map = new Map(this.T.shares_map),
               my_votes_map = new Map(this.T.votes_map),
               my_approval_scores_map = new Map(this.T.approval_scores_map),
-              my_cutoffs_map = new Map(this.T.cutoffs_map);
+              my_thresholds_map = new Map(this.T.thresholds_map);
         this.tally_all();
         for (const oid of this.T.shares_map.keys()) {
           /* FIXME: this is really sometimes giving inconsistent results!
           * e.g. when going to abstention, vote is not correctly removed.
-          * it seems that in that case some cutoffs are already wrong (too low)
+          * it seems that in that case some thresholds are already wrong (too low)
           */
           if (this.T.shares_map.get(oid) != my_shares_map.get(oid)) {
             this.G.L.warn("Poll.update_rating produced inconsistent shares:", [...my_shares_map], [...this.T.shares_map]);
             console.log([...my_votes_map], [...this.T.votes_map]);
             console.log([...my_approval_scores_map], [...this.T.approval_scores_map]);
-            console.log([...my_cutoffs_map], [...this.T.cutoffs_map]);
+            console.log([...my_thresholds_map], [...this.T.thresholds_map]);
             return;
           }
         }
@@ -1376,14 +1376,14 @@ export class Poll {
       // update stuff of only the directly affected oids or, if n_changed, all oids:
       const oids = n_changed ? this.oids : eff_rating_changes_map.keys();
       for (const oid of oids) {
-        // cutoff, approvals:
-        const [cutoff, cutoff_changed, oid_others_approvals_changed] = this.update_cutoff_and_approvals(oid, this.effective_ratings_map.get(oid)||new Map(), this.T.effective_ratings_ascending_map.get(oid)||[]);
+        // threshold, approvals:
+        const [threshold, threshold_changed, oid_others_approvals_changed] = this.update_threshold_and_approvals(oid, this.effective_ratings_map.get(oid)||new Map(), this.T.effective_ratings_ascending_map.get(oid)||[]);
 
         let oid_vids_approvals_changed = false;
         const approvals_map = this.T.approvals_map.get(oid);
-        if (!cutoff_changed) {
-          // update vid's approval since it has not been updated automatically by update_cutoff_and_approvals:
-          const approval = (((this.effective_ratings_map.get(oid)||new Map()).get(vid)||0) >= cutoff);
+        if (!threshold_changed) {
+          // update vid's approval since it has not been updated automatically by update_threshold_and_approvals:
+          const approval = (((this.effective_ratings_map.get(oid)||new Map()).get(vid)||0) >= threshold);
           if (approval != approvals_map.get(vid)) {
             approvals_map.set(vid, approval);
             oid_vids_approvals_changed = true;
@@ -1454,18 +1454,18 @@ export class Poll {
     return eff_rs_asc;
   }
 
-  update_cutoff_and_approvals(oid: string, effective_ratings_map: Map<string, number>, effective_ratings_ascending: Array<number>): [number, boolean, boolean] {
-    this.G.L.entry("Poll.update_cutoff_and_approvals", oid, this.T.n_not_abstaining, [...effective_ratings_map], effective_ratings_ascending);
-    // update approval cutoff:
-    let cutoff = 100;
-    const cutoff_factor = 100 / this.T.n_not_abstaining,
+  update_threshold_and_approvals(oid: string, effective_ratings_map: Map<string, number>, effective_ratings_ascending: Array<number>): [number, boolean, boolean] {
+    this.G.L.entry("Poll.update_threshold_and_approvals", oid, this.T.n_not_abstaining, [...effective_ratings_map], effective_ratings_ascending);
+    // update approval threshold:
+    let threshold = 100;
+    const threshold_factor = 100 / this.T.n_not_abstaining,
           offset = this.T.n_not_abstaining - effective_ratings_ascending.length; // accounts for potentially missing leading zeros in array
     for (let index = 0; index < effective_ratings_ascending.length; index++) {
       const rating = effective_ratings_ascending[index];
       // check whether strictly less than r percent have a rating strictly less than r:
-      const pct_less_than_r = cutoff_factor * (index + offset);
+      const pct_less_than_r = threshold_factor * (index + offset);
       if (pct_less_than_r < rating && rating > 0) {
-        cutoff = rating;
+        threshold = rating;
         break;
       }
     }
@@ -1473,24 +1473,24 @@ export class Poll {
       this.T.approvals_map.set(oid, new Map());
     }
     // update approvals:
-    let cutoff_changed = false,
+    let threshold_changed = false,
         approvals_changed = false;
     const approvals_map = this.T.approvals_map.get(oid);
-    if (cutoff != this.T.cutoffs_map.get(oid)) {
-      // cutoff has changed, so update all approvals:
-      this.T.cutoffs_map.set(oid, cutoff);
-      cutoff_changed = true;
-//      this.G.L.trace("Poll.update_cutoff_and_approvals changed to", cutoff);
+    if (threshold != this.T.thresholds_map.get(oid)) {
+      // threshold has changed, so update all approvals:
+      this.T.thresholds_map.set(oid, threshold);
+      threshold_changed = true;
+//      this.G.L.trace("Poll.update_threshold_and_approvals changed to", threshold);
       for (const vid of this.T.all_vids_set) {
         const rating = effective_ratings_map.get(vid) || 0,
-              approval = (rating >= cutoff);
+              approval = (rating >= threshold);
         if (approval != approvals_map.get(vid)) {
           approvals_map.set(vid, approval);
           approvals_changed = true;  
         }
       }
     }
-    return [cutoff, cutoff_changed, approvals_changed];
+    return [threshold, threshold_changed, approvals_changed];
   }
 
   update_approval_score(oid: string, approval_map: Map<string, boolean>): [number, boolean] {
