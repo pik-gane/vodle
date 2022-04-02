@@ -1837,7 +1837,7 @@ export class DataService implements OnDestroy {
     if (cyphertext) {
 
       // extract value:
-      const value = _id.endsWith(':due') ? cyphertext : decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+      const value = _id.endsWith('§due') ? cyphertext : decrypt(cyphertext, this.user_cache[get_poll_key_prefix(pid) + 'password']);
 
       // extract key depending on doc type:
       if (_id.startsWith(poll_doc_prefix)) {

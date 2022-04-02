@@ -64,7 +64,7 @@ export class DelegationDialogPage implements OnInit {
     this.ready = true;
   }
 
-  nickname_changed() {
+  delegate_nickname_changed() {
     const delegate_nickname = this.formGroup.get('delegate_nickname').value;
     this.G.D.setp(this.p.pid, "del_nickname." + this.did, delegate_nickname);
     this.update_request();
@@ -109,7 +109,7 @@ export class DelegationDialogPage implements OnInit {
 
   share_button_clicked() {
     this.G.L.entry("DelegationDialogPage.share_button_clicked");
-    this.nickname_changed();
+    this.delegate_nickname_changed();
     this.from_changed();
     Share.share({
       title: this.message_title,
@@ -127,7 +127,7 @@ export class DelegationDialogPage implements OnInit {
 
   copy_button_clicked() {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
-    this.nickname_changed();
+    this.delegate_nickname_changed();
     this.from_changed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
@@ -151,7 +151,7 @@ export class DelegationDialogPage implements OnInit {
 
   email_button_clicked(ev: MouseEvent) {
     this.G.L.entry("DelegationDialogPage.email_button_clicked");
-    this.nickname_changed();
+    this.delegate_nickname_changed();
     this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     this.parent.update_delegation_info();
