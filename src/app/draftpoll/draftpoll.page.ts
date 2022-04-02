@@ -52,7 +52,7 @@ export class DraftpollPage implements OnInit {
     type?, language?, 
     title?, desc?, url?, 
     due_type?, due_custom?, 
-    db?, db_from_pid?, db_other_server_url?, db_other_password?,
+    db?, db_from_pid?, db_custom_server_url?, db_custom_password?,
     options?: option_data_t[] 
   };
   get n_options() { return (this.pd.options||[]).length; }
@@ -126,7 +126,7 @@ export class DraftpollPage implements OnInit {
           type:p.type, language:p.language,
           title:p.title, desc:p.desc, url:p.url, 
           due_type:p.due_type, due_custom:p.due_custom, 
-          db:p.db, db_from_pid:p.db_from_pid, db_other_server_url:p.db_other_server_url, db_other_password:p.db_other_password,
+          db:p.db, db_from_pid:p.db_from_pid, db_custom_server_url:p.db_custom_server_url, db_custom_password:p.db_custom_password,
           options: [] 
         };
         this.stage = !(!!p.due_custom)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
@@ -154,7 +154,7 @@ export class DraftpollPage implements OnInit {
         poll_due_type: this.pd.due_type||'', 
         poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
       });
-      if (this.pd.language||this.pd.db_from_pid||this.pd.db_other_server_url) {
+      if (this.pd.language||this.pd.db_from_pid||this.pd.db_custom_server_url) {
         this.advanced_expanded = true;
       }
       if (this.pd.desc||this.pd.url) {
@@ -198,8 +198,8 @@ export class DraftpollPage implements OnInit {
       this.select_server.selectServerFormGroup.setValue({
         db: this.pd.db||'',
         db_from_pid: this.pd.db_from_pid||'',
-        db_other_server_url: this.pd.db_other_server_url||'',
-        db_other_password: this.pd.db_other_password||'',
+        db_custom_server_url: this.pd.db_custom_server_url||'',
+        db_custom_password: this.pd.db_custom_password||'',
       });
     }
   }
@@ -236,8 +236,8 @@ export class DraftpollPage implements OnInit {
       p.set_due();
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
-      p.db_other_server_url = this.pd.db_other_server_url;
-      p.db_other_password = this.pd.db_other_password;
+      p.db_custom_server_url = this.pd.db_custom_server_url;
+      p.db_custom_password = this.pd.db_custom_password;
       let oids = [];
       for (let od of this.pd.options) {
         this.G.L.trace(" storing option data", od);
@@ -363,11 +363,11 @@ export class DraftpollPage implements OnInit {
   set_db_from_pid(value: string) {
     this.pd.db_from_pid = value;
   }
-  set_db_other_server_url(value: string) {
-    this.pd.db_other_server_url = value;
+  set_db_custom_server_url(value: string) {
+    this.pd.db_custom_server_url = value;
   }
-  set_db_other_password(value: string) {
-    this.pd.db_other_password = value;
+  set_db_custom_password(value: string) {
+    this.pd.db_custom_password = value;
   }
   
   blur_option_name(i: number, d: boolean) {

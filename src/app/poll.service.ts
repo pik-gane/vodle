@@ -191,8 +191,8 @@ export class Poll {
     this.G.D.delp(this._pid, 'language');
     this.G.D.delp(this._pid, 'db');
     this.G.D.delp(this._pid, 'db_from_pid');
-    this.G.D.delp(this._pid, 'db_other_server_url');
-    this.G.D.delp(this._pid, 'db_other_password');
+    this.G.D.delp(this._pid, 'db_custom_server_url');
+    this.G.D.delp(this._pid, 'db_custom_password');
     this.G.D.delp(this._pid, 'db_server_url');
     this.G.D.delp(this._pid, 'db_password');
     for (const oid of Object.keys(this._options)) {
@@ -233,14 +233,14 @@ export class Poll {
     if (this.state=='draft') this.G.D.setp(this._pid, 'db_from_pid', value); 
   }
 
-  get db_other_server_url(): string { return this.G.D.getp(this._pid, 'db_other_server_url'); }
-  set db_other_server_url(value: string) { 
-    if (this.state=='draft') this.G.D.setp(this._pid, 'db_other_server_url', value); 
+  get db_custom_server_url(): string { return this.G.D.getp(this._pid, 'db_custom_server_url'); }
+  set db_custom_server_url(value: string) { 
+    if (this.state=='draft') this.G.D.setp(this._pid, 'db_custom_server_url', value); 
   }
 
-  get db_other_password(): string { return this.G.D.getp(this._pid, 'db_other_password'); }
-  set db_other_password(value: string) { 
-    if (this.state=='draft') this.G.D.setp(this._pid, 'db_other_password', value); 
+  get db_custom_password(): string { return this.G.D.getp(this._pid, 'db_custom_password'); }
+  set db_custom_password(value: string) { 
+    if (this.state=='draft') this.G.D.setp(this._pid, 'db_custom_password', value); 
   }
 
   // the following will be set only once at publish or join time:
@@ -493,8 +493,8 @@ export class Poll {
       this.db_server_url = this.G.P.polls[this.db_from_pid].db_server_url;
       this.db_password = this.G.P.polls[this.db_from_pid].db_password;
     } else if (this.db=='other') {
-      this.db_server_url = this.db_other_server_url;
-      this.db_password = this.db_other_password;
+      this.db_server_url = this.db_custom_server_url;
+      this.db_password = this.db_custom_password;
     } else if (this.db=='default') {
       this.db_server_url = this.G.S.db_server_url;
       this.db_password = this.G.S.db_password;

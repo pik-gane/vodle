@@ -91,7 +91,6 @@ When a [poll](#poll) is started, the settings made by the poll's creator determi
 ### Effective delegate
 If a [voter](#voter) *A* has [delegated](#delegation) to some other voter, one can follow the sequence of delegations from *A* forward through all of *A*'s [direct](#direct-delegate) and [indirect delegates](#indirect-delegate) and will arrive at a voter who has not delegated herself to any other voter. That voter voter is *A*'s *effective delegate*. The [ratings](#rating) of *A*'s effective delegate are used as *A*'s [proxy ratings](#proxy-rating) instead of the ratings that *A* might have selected herself before delegating.
 
-
 ### Effective rating
 A [voter](#voter)'s *effective rating* of an [option](#option) is an auxiliary form of rating used to make sure that every non-[abstaining](#abstention) voter [approves](#approval) at least one option. 
 It is calculated from her [proxy rating](#proxy-rating) of this option and her proxy ratings of all other options in the following way:
@@ -109,6 +108,19 @@ If a [voter](#voter) *A* has delegated to some other voter *B* who in turn has d
 While *A* knows the identity of her [direct delegate](#direct-delegate) *B*, she won't know the identity of her indirect delegates or her effective delegate.
 
 In a later release, voters may restrict how long this delegation sequence may get.
+
+### JSON document
+Each [user data item](#user-data-item), [poll data item](#poll-data-item), or [voter data item](#voter-data-item)
+in a [user database](#user-database) or [poll database](#poll-database))
+is stored in the form of a separate *JSON document* with the general form
+```
+{ 
+    _id: "~DATABASE_USERNAME:KEY",
+    value: "ENCRYPTED VALUE",
+    due: "DUE_DATE"
+}
+```
+The [due date](#due-date) is included only for data items that may not be modified after the poll has [closed](#closing), to allow the CouchDB server to verify this.
 
 ### News item
 A *news item* is a small message notifying the user about some relevant event. In contrast to other notifications that may occurr immediately as a consequence of the user's actions, such as the notification that a link was copied, news items notify the user about events triggered by other users' actions, such as new options being added to a poll, delegation requests being answered, etc.
@@ -173,7 +185,7 @@ The first type of data is stored as [user data items](#user-data-item) in the vo
 
 The other two types of data are stored in the form of [voter data items](#voter-data-item) (2.) and [poll data items](#poll-data-item) (3.). 
 Both these types are exchanged between the voters via the poll's *poll database*, 
-which is some CouchDB database that all voters have access to. 
+which is some CouchDB database that all voters have access to, by means of [JSON documents](#json-document). 
 Several polls might use the same CouchDB database as their poll database without any interference between the different polls.
 Indeed, by default all polls use the same CouchDB database called "vodle central".
 
@@ -300,6 +312,10 @@ During the tallying process, the following things are updated or calculated fres
 7. For each non-abstaining voter: determine which option that "voter's share" goes to, based on the voter's approvals and the options' ranking. In the code, this option is called the voter's ["vote"](#vote).
 8. Finally, for each option: calculate its [share](#share) based on the voters' votes. The voter can see this in the "explain" page.
 
+(see also [this Figure](./uml_diagrams/tallying.png))
+
+![fig](./uml_diagrams/tallying.png)
+
 The details of this algorithm have been very carefully designed to guarantee a number of things such as fairness, neutrality, proportionality, low manipulability, consistent sensitivity to changes, etc. For more details on this, please see the [scientific article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) on the underlying decision method.
 
 ### Total ratings score
@@ -316,22 +332,39 @@ In each poll the user participates in, she has a poll-specific [voter](#voter) i
 The contents of the [user database](#user-database) are mirrored for performance reasons as key-value pairs in a simple hash table (a typescript object of type Record) called the *user cache*.
 
 ### User database
-
+The *user database* is a CouchDB database that the user has access to.
+It is used to store [user data items](#user-data-item) across sessions and devices (roaming), in the form of [JSON documents](#json-document).
+Many users might use the same CouchDB database as their user database, which might also be used as several polls' poll database, without any interference between them.
+Indeed, by default all users use the same CouchDB database called "vodle central".
 
 ### User data item
+A *user data item* is a data item of a particular [user](#user).
+It is stored as a key-value pair in the user's [user database](#user-database) and her [user cache](#user-cache).
 
-### uid
-[user](#user)
+A user data item might be related to a particular [poll](#poll) and represent private data of the user's [voter](#voter) identity in that poll(e.g., a personal note on the poll or some option) or data needed to get access to the [poll database](#poll-database) (e.g., its URL).
+
+Examples of user data items are the user's preferred language and notification settings, unpublished poll drafts, [poll ID](#pid), URLs and passwords of polls, private notes on polls and options, outgoing [delegation requests](#delegation-request) and responses to incoming ones, and the news items for the user.
+
+User data items in the [user database](#user-database) are encrypted with the [user password](#user-password).
+
+A few user data items are only stored on the local device of the user, in particular those that are needed to *access* the [user database](#user-database), such as the user's email address and [user password](#user-password) and the user database's URL. 
 
 ### User password
 The password the [user](#user) specifies together with her email address to be able to access her [user database](#user-database) from different devices (roaming). Not to be confused with a [poll password](#poll-password). 
 
+### vid
+The unique ID of a [voter](#voter) in a [poll](#poll).
+
 ### Vote
+Unlike in many other group decision methods, the term "vote" is not officially used in the vodle UI, neither as a verb nor as a noun because it might be ambiguous.
+In the code, we use the noun "vote" as a shorthand for "which option a voter's [share](#share) of 100%/*N* goes to".
+In the UI, we rather use language such as "your share goes to ...", "... including your share", etc.
 
 ### Voter
-(aka participant)
+On the code level, a *voter* is a [user](#user) in her role as participant in a certain [poll](#poll).
+In each poll she participates, a user has a different unique [voter ID](#vid).
 
-[user](#user), [vid](#vid)
+Not that, to avoid the association of majority voting, we do *not* (or very rarely) use the term "voter" in the vodle **UI** but rather use the term **"participant"** there. 
 
 ### Voter data item
 A *voter data item* is a data item that is related to a particular [poll](#poll) and is owned by a particular [voter](#voter) in that poll (rather than being common to all voters, compare [poll data item](#poll-data-item)).
@@ -342,11 +375,23 @@ but can be created, updated or deleted at only by the voter owning the data item
 Additional restrictions prevent a voter from changing her ratings or delegations after a poll has closed.
 
 ### Voting interface
-
+Instead of a fixed "ballot", voters use a dynamic user interface to influence a [poll](#poll)'s [results](#results).
+This *voting interface* allows the voter to
+- see the poll's metadata (title, description, URL, [due date](#due-date), [option](#option) names, descriptions, URLs), some statistics (degree of agreement, no. of non-[abstaining](#abstention) voters)
+- manage her outcoming and incoming [delegations](#delegation) for this poll
+- switch delegation on an off for individual options via [delegation toggles](#delegation-toggle),
+- change her [own ratings](#own-rating) of all options via [ratings sliders](#rating-slider),
+- add further options,
+- see all options' [approval score](#approval-score) as a light bar coming in from the right, and their [shares](#share) as a pie chart piece on the left,
+- see which options she [approves](#approval) and which option "her" share goes, and
+- access explanatory animations for approval scores and shares.
 
 ### Winner
-[option](#option), [poll](#poll)
+When a [poll](#poll) of [type](#poll-type) "winner" [closes](#closing), a unique option is declared the "winner" as the final [result](#results) of the poll.
+
+(Polls of type "share" do *not* have winners, their result is simply an allocation of shares).
+
+Note that the term "winner" refers to an option, not a user or voter.
 
 ### Winning probability
-[option](#option), [share](#share)
-
+For a [poll](#poll) of [type](#poll-type) "winner", the *winning probability* of an [option](#option) equals that option's final [share](#share). So the share determines with what probability the option will finally be declared the [winner](#winner).

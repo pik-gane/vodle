@@ -28,30 +28,30 @@
     </ion-item>
     <ion-item>
       <ion-label position="floating" color="primary" [innerHtml]="'db-server-url'|translate"></ion-label>
-      <ion-input style="font-size: smaller;" type="text" formControlName="db_other_server_url" required
-        (ionChange)="set_db_other_server_url()"></ion-input>
+      <ion-input style="font-size: smaller;" type="text" formControlName="db_custom_server_url" required
+        (ionChange)="set_db_custom_server_url()"></ion-input>
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_other_server_url">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_other_server_url').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_other_server_url').dirty || selectServerFormGroup.get('db_other_server_url').touched)" [innerHtml]="validation.message|translate"></div>
+      <ng-container *ngFor="let validation of validation_messages.db_custom_server_url">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_custom_server_url').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_custom_server_url').dirty || selectServerFormGroup.get('db_custom_server_url').touched)" [innerHtml]="validation.message|translate"></div>
       </ng-container>
     </div>
     <ion-item>
       <ion-label position="floating" color="primary" [innerHtml]="'db-pw'|translate"></ion-label>
-      <ion-input style="font-size: smaller;" [type]="showing_db_other_password?'text':'password'" 
-        formControlName="db_other_password" required
-        (keydown.enter)="showing_db_other_password=selectServerFormGroup.get('db_other_password').valid?false:showing_db_other_password;blur()"
-        (keydown.tab)="showing_db_other_password=selectServerFormGroup.get('db_other_password').valid?false:showing_db_other_password;blur()"
-        (ionChange)="set_db_other_password()"></ion-input>
-      <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_other_password=!showing_db_other_password">
-        <ion-icon tabindex="-1" [name]="showing_db_other_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;<span [innerHtml]="(showing_db_other_password?'hide':'show')|translate"></span>
+      <ion-input style="font-size: smaller;" [type]="showing_db_custom_password?'text':'password'" 
+        formControlName="db_custom_password" required
+        (keydown.enter)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
+        (keydown.tab)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
+        (ionChange)="set_db_custom_password()"></ion-input>
+      <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_custom_password=!showing_db_custom_password">
+        <ion-icon tabindex="-1" [name]="showing_db_custom_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;<span [innerHtml]="(showing_db_custom_password?'hide':'show')|translate"></span>
       </ion-button>      
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_other_password">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_other_password').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_other_password').dirty || selectServerFormGroup.get('db_other_password').touched)" [innerHtml]="validation.message|translate"></div>
+      <ng-container *ngFor="let validation of validation_messages.db_custom_password">
+        <div class="error-message" *ngIf="selectServerFormGroup.get('db_custom_password').hasError(validation.type) 
+            && (selectServerFormGroup.get('db_custom_password').dirty || selectServerFormGroup.get('db_custom_password').touched)" [innerHtml]="validation.message|translate"></div>
       </ng-container>
     </div>
   </ng-container>

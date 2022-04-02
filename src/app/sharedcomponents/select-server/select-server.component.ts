@@ -12,7 +12,7 @@ export class SelectServerComponent implements OnInit {
 
   Object = Object;
 
-  showing_db_other_password: boolean;
+  showing_db_custom_password: boolean;
 
   @Input() page: string; // the name of that page provided in its template
   @Input() page_object; // the name of that page provided in its template
@@ -29,21 +29,21 @@ export class SelectServerComponent implements OnInit {
     this.selectServerFormGroup = this.formBuilder.group({
       db: new FormControl(this.page=='settings'?'central':'default', Validators.required),
       db_from_pid: new FormControl('TODO', Validators.required),
-      db_other_server_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
-      db_other_password: new FormControl('', Validators.required), // TODO: validator?
+      db_custom_server_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
+      db_custom_password: new FormControl('', Validators.required), // TODO: validator?
     });
-    this.showing_db_other_password = false;
+    this.showing_db_custom_password = false;
     if (this.page_object) {
       this.page_object.onSelectServerReady(this);
     }
   }
 
   validation_messages = {
-    'db_other_server_url': [
+    'db_custom_server_url': [
       { type: 'required', message: 'validation.db-server-url-required' },
       { type: 'pattern', message: 'validation.db-server-url-pattern' }
     ],
-    'db_other_password': [
+    'db_custom_password': [
       { type: 'required', message: 'validation.db-pw-required' }
     ],
   }
@@ -62,13 +62,13 @@ export class SelectServerComponent implements OnInit {
     let c = this.selectServerFormGroup.get('db_from_pid');
     if (c.valid) this.page_object.set_db_from_pid(c.value);
   }
-  set_db_other_server_url() {
-    let c = this.selectServerFormGroup.get('db_other_server_url');
-    if (c.valid) this.page_object.set_db_other_server_url(c.value);
+  set_db_custom_server_url() {
+    let c = this.selectServerFormGroup.get('db_custom_server_url');
+    if (c.valid) this.page_object.set_db_custom_server_url(c.value);
   }
-  set_db_other_password() {
-    let c = this.selectServerFormGroup.get('db_other_password');
-    if (c.valid) this.page_object.set_db_other_password(c.value);
+  set_db_custom_password() {
+    let c = this.selectServerFormGroup.get('db_custom_password');
+    if (c.valid) this.page_object.set_db_custom_password(c.value);
   }
 
 }

@@ -44,15 +44,15 @@ export class SettingsService {
     this.compute_db_credentials();
   }
 
-  public get db_other_server_url(): string { return this.G.D.getu('db_other_server_url'); }
-  public set db_other_server_url(value: string) { 
-    this.G.D.setu('db_other_server_url', value); 
+  public get db_custom_server_url(): string { return this.G.D.getu('db_custom_server_url'); }
+  public set db_custom_server_url(value: string) { 
+    this.G.D.setu('db_custom_server_url', value); 
     this.compute_db_credentials();
   }
 
-  public get db_other_password(): string { return this.G.D.getu('db_other_password'); }
-  public set db_other_password(value: string) { 
-    this.G.D.setu('db_other_password', value); 
+  public get db_custom_password(): string { return this.G.D.getu('db_custom_password'); }
+  public set db_custom_password(value: string) { 
+    this.G.D.setu('db_custom_password', value); 
     this.compute_db_credentials();
   }
 
@@ -74,8 +74,8 @@ export class SettingsService {
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
-  get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls)!="0"; } // by default, all notifications are on
-  set_notify_of(cls: string, value: boolean) { this.G.D.setu('notify_of_'+cls, value?"1":"0"); }
+  get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls) != "0"; } // by default, all notifications are on
+  set_notify_of(cls: string, value: boolean) { this.G.D.setu('notify_of_'+cls, value ? "1": "0"); }
 
   closing_soon_fraction = 1/7; // TODO: turn into settings option
 
@@ -110,8 +110,8 @@ export class SettingsService {
       url = this.G.P.polls[this.db_from_pid].db_server_url;
       this.db_password = this.G.P.polls[this.db_from_pid].db_password;
     } else if (this.db=='other') {
-      url = this.db_other_server_url;
-      this.db_password = this.db_other_password;
+      url = this.db_custom_server_url;
+      this.db_password = this.db_custom_password;
     }
     this.db_server_url = this.G.D.fix_url(url);
   }

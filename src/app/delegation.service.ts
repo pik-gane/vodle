@@ -280,11 +280,11 @@ export class DelegationService {
 
   // DATA HANDLING:
 
-  get_nickname(pid: string, did: string): string {
+  get_delegate_nickname(pid: string, did: string): string {
     return this.G.D.getp(pid, "del_nickname." + did);
   }
 
-  set_nickname(pid: string, did: string, value: string) {
+  set_delegate_nickname(pid: string, did: string, value: string) {
     this.G.D.setp(pid, "del_nickname." + did, value);
   }
 
@@ -532,26 +532,26 @@ export class DelegationService {
           class: 'delegation_accepted', 
           pid: pid,
           auto_dismiss: true,
-          title: this.translate.instant('news-title.delegation_accepted', {nickname: this.get_nickname(pid, did)}) 
+          title: this.translate.instant('news-title.delegation_accepted', {delegate_nickname: this.get_delegate_nickname(pid, did)}) 
         });
       } else if ((old_status=="declined") && (a.status=="agreed")) {
         this.G.N.add({
           class: 'delegation_accepted', 
           pid: pid,
-          title: this.translate.instant('news-title.delegation_accepted_after_all', {nickname: this.get_nickname(pid, did)}) 
+          title: this.translate.instant('news-title.delegation_accepted_after_all', {delegate_nickname: this.get_delegate_nickname(pid, did)}) 
         });
       } else if ((old_status=="pending") && (a.status=="declined")) {
         this.G.N.add({
           class: 'delegation_declined', 
           pid: pid,
-          title: this.translate.instant('news-title.delegation_declined', {nickname: this.get_nickname(pid, did)}),
+          title: this.translate.instant('news-title.delegation_declined', {delegate_nickname: this.get_delegate_nickname(pid, did)}),
           body: this.translate.instant('news-body.delegation_declined') 
         });
       } else if ((old_status=="agreed") && (a.status=="declined")) {
         this.G.N.add({
           class: 'delegation_declined', 
           pid: pid,
-          title: this.translate.instant('news-title.delegation_revoked', {nickname: this.get_nickname(pid, did)}),
+          title: this.translate.instant('news-title.delegation_revoked', {nickname: this.get_delegate_nickname(pid, did)}),
           body: this.translate.instant('news-body.delegation_declined') 
         });
       }

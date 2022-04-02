@@ -73,7 +73,7 @@ export class ExplainApprovalPage implements OnInit {
           oid = this.oid,
           rs0 = (p.T.effective_ratings_ascending_map||new Map()).get(oid)||[],
           rs = this.rs = [],
-          rmin = this.rmin = p.T.cutoffs_map.get(oid) || 100,
+          rmin = this.rmin = p.T.thresholds_map.get(oid) || 100,
           cs = this.cs = [],
           ts = this.ts = [],
           poss = this.poss = [],

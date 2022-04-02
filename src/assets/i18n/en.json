@@ -18,7 +18,7 @@
     "monthnames": "January, February, March, April, May, June, July, August, September, October, November, December",
     "next": "Next",
     "no": "No",
-    "non-abstaining-voters": "votes",
+    "non-abstaining-voters": "non-abstaining",
     "OK": "OK",
     "options": "Options",
     "password": "Password",
@@ -40,12 +40,12 @@
         "h1": "What is vodle?",
         "p11": "vodle helps a group make fair and good decisions. It finds the <i>maximum partial consensus</i> among any set of options. Truly democratic, it gives everyone the same effective influence.",
         "p12": "For each option, it shows you the current approval as a light bar on the right, and allows you to adjust your ratings in real-time using sliders. When your slider touches the approval bar, it turns green to indicate that you approve that option as well. This way, the group tends to converge to a full or partial consensus that is as broad as possible.",
-        "p13": "When the poll closes, the winning option is determined by a fair but simple algorithm that gives every voter the same influence, not just those voters who happen to be in a majority.",
+        "p13": "When the poll closes, the winning option is determined by a fair but simple algorithm that gives every participant the same influence, not just those participants who happen to be in a majority.",
         "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option wins. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, vodle must sometimes also use a certain amount of chance, similar to a greencard lottery.",
-        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval, and one voter is picked by lot. The top-most option for which that voter's slider is green wins.",
-        "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other options' winning probabilities are at most as large as their approval scores (in percent of all voters who do not abstain).",
+        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participant's slider is green wins.",
+        "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other options' winning probabilities are at most as large as their approval scores (in percent of all participants who do not abstain).",
         "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several targets or recipients), the procedure is similar: If one target is approved by all, you have full consensus, so this target will get the full budget. Otherwise vodle allocates the largest share of the budget to the target with the broadest approval, and smaller shares to the other targets.",
-        "p18": "Exact procedure: Targets are sorted by descending approval. Then each target's share is proportional to the number of voters who have approved this target but no higher-up target.",
+        "p18": "Exact procedure: Targets are sorted by descending approval. Then each target's share is proportional to the number of participants who have approved this target but no higher-up target.",
 
         "h2": "Who's behind it?",
         "p21": "vodle's algorithm (called “maximum partial consensus”) was developed and optimizied for fairness by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Contributors: Marius Amrhein, Adrian Lison.",
@@ -77,8 +77,8 @@
     },
 
     "delegation-request": {
-        "header": "Delegate to some other voter",
-        "intro": "You can ask some other voter to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third voter, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
+        "header": "Delegate to some other participant",
+        "intro": "You can ask some other participant to act as your delegate. The delegate will then control your ratings instead of you. In other words, their ratings will be used as your ratings, too. The delegate can also delegate their and your ratings further to some third participant, and so on. You can revoke the delegation at any time, and can also always choose to still rate some of the options yourself.",
         "nickname-label": "Delegate's nickname:",
         "nickname-placeholder": "The nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
@@ -107,8 +107,8 @@
         "-page-title": "Act as delegate?",
 
         "header": "Would you act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
-        "intro": "Your ratings will then also control the other voter's ratings.",
-        "details": "If you accept, you can still choose whether you want to rate the options yourself or delegate your (and the other voter's) ratings further to some third person.",
+        "intro": "Your ratings will then also control the other participant's ratings.",
+        "details": "If you accept, you can still choose whether you want to rate the options yourself or delegate your (and the other participant's) ratings further to some third person.",
         "check-first": "You can also check your ratings first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline",
@@ -155,7 +155,7 @@
         "desc-label": "Description",
         "desc-placeholder": "Some more information about this poll (optional)",
         "url-label": "“Read more” link",
-        "url-placeholder": "Some webpage with more details when voter clicks “read more” (optional)",
+        "url-placeholder": "Some webpage with more details when participant clicks “read more” (optional)",
 
         "due-type-label": "Poll will close...",
         "due-type-custom": "at a custom date and time",
@@ -188,8 +188,8 @@
         "del-option-confirm-question": "Delete option<br/><b><i>{{name}}</i></b>?",
         "del-target-confirm-question": "Delete target<br/><b><i>{{name}}</i></b>?",
 
-        "please-list-options-explanation": "Please list at least two options. Don't bother about their ordering. Further options can always be added later by the voters as long as the poll is running.",
-        "please-list-targets-explanation": "Please list at least two possible targets. Don't bother about their ordering. Further targets can always be added later by the voters as long as the poll is running.",
+        "please-list-options-explanation": "Please list at least two options. Don't bother about their ordering. Further options can always be added later by the participants as long as the poll is running.",
+        "please-list-targets-explanation": "Please list at least two possible targets. Don't bother about their ordering. Further targets can always be added later by the participants as long as the poll is running.",
         "draft-saved": "Draft saved under<br/>“My polls”",
 
         "send-for-review": "Send for review",
@@ -227,7 +227,7 @@
 
         "title-share": "Share for",
 
-        "all-abstain-line-1":                   "Since all voters abstain, all",
+        "all-abstain-line-1":                   "Since all participants abstain, all",
         "all-abstain-line-2-before-percentage": "options get the same share of ",
         "all-abstain-line-2-after-percentage":  "",
 
@@ -318,12 +318,12 @@
         "p15c2": "<i>shares</i> of a budget, the pie pieces show the shares that will be allocated to each possible target.",
 
         "h2": "How to vote – longer explanation",
-        "p21": "By rating all options, you indicate your <b>“willingness to approve”</b> each option. All voters' ratings then determine which options (or targets) you actually <b>approve</b>. At any moment in time while the poll runs, every voter approves some number of options – zero, one, or more than one. When the poll closes, the approval is used to determine the winner or budget shares in a way explained further down.",
+        "p21": "By rating all options, you indicate your <b>“willingness to approve”</b> each option. All participants' ratings then determine which options (or targets) you actually <b>approve</b>. At any moment in time while the poll runs, every participant approves some number of options – zero, one, or more than one. When the poll closes, the approval is used to determine the winner or budget shares in a way explained further down.",
         "p22": "But first: <i>How does your willingness to approve determine whether you actually approve an opton or not?</i> If you rate an option at 100, it means you definitely approve that option, and if you rate it at zero, you definitely don't approve that option.",
-        "p23": "<i>But what if your rating of some option is somewhere between 0 and 100?</i> The main thing to understand is that whether or not you approve the option then <i>also</i> depends on the <i>other</i>  voters' willingness to approve that option! The main idea is that your “willingness to approve” rating is a kind of promise. By giving an option a rating larger than zero, you promise to approve that option <i>if enough other voters do so as well</i>. How many are “enough”? That depends on how far to the right you move your rating slider. If your rating is at, say, 83, that means you promise to approve the option if less than 83% of the voters <i>dis</i>approve the option – or, equivalently: if more than 17% of the voters <i>do</i> approve the option. In other words, the larger your rating, the fewer voters you require to also approve the option before you are willing to approve it as well.<br/> In the app, you can see very easily whether you currently approve an option, because we show you the percentage of current approvers as a light bar coming in from the right of the screen. If your slider, coming in from the left, meets that bar, then the percentage of voters not approving that option is lower than your rating, so your condition for approval is met and you are counted as approving the option. Your slider then turns from blue to green to indicate that you approve the option.",
-        "p24": "Now that we have understood how approval is calculated, we can turn to the question of how the <b>winning probabilities</b> (budget shares) are found and how the actual winner is determined if the poll is about picking a single option. If exactly one option has 100% approval, it will win for sure (or get all of the budget). If several options each have 100% approval, the one among them that has the largest total rating will win for sure (or get all of the budget). If no option has 100% approval, <i>vodle</i> distributes the winning probability or budget among two or more options. In that case, the option with the largest approval will win most likely or get the largest share. But other options that have at least some approval may then win as well with some smaller probability, or also get some smaller share of the budget. For polls selecting a single option this means that then there is a certain chance element involved to determine the actual winner. This is because we must make sure that no group of voters can simply be ignored by the other voters as it is the case with majority rule. This way, <i>vodle</i> gives every voter the exact same influence and gives every faction an influence that matches its size.",
-        "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One voter is determined by lot, everyone having the same chance of being that voter. Among the options that this voter approves, the one with the largest overall approval is the winner. The pie piece to the left of each option shows the resulting probability that this option wins.",
-        "p26": "If the poll is about allocating a budget, the size of each option's shares is calculated the same way: the share is proportional to the number of voters that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
+        "p23": "<i>But what if your rating of some option is somewhere between 0 and 100?</i> The main thing to understand is that whether or not you approve the option then <i>also</i> depends on the <i>other</i>  participants' willingness to approve that option! The main idea is that your “willingness to approve” rating is a kind of promise. By giving an option a rating larger than zero, you promise to approve that option <i>if enough other participants do so as well</i>. How many are “enough”? That depends on how far to the right you move your rating slider. If your rating is at, say, 83, that means you promise to approve the option if less than 83% of the participants <i>dis</i>approve the option – or, equivalently: if more than 17% of the participants <i>do</i> approve the option. In other words, the larger your rating, the fewer participants you require to also approve the option before you are willing to approve it as well.<br/> In the app, you can see very easily whether you currently approve an option, because we show you the percentage of current approvers as a light bar coming in from the right of the screen. If your slider, coming in from the left, meets that bar, then the percentage of participants not approving that option is lower than your rating, so your condition for approval is met and you are counted as approving the option. Your slider then turns from blue to green to indicate that you approve the option.",
+        "p24": "Now that we have understood how approval is calculated, we can turn to the question of how the <b>winning probabilities</b> (budget shares) are found and how the actual winner is determined if the poll is about picking a single option. If exactly one option has 100% approval, it will win for sure (or get all of the budget). If several options each have 100% approval, the one among them that has the largest total rating will win for sure (or get all of the budget). If no option has 100% approval, <i>vodle</i> distributes the winning probability or budget among two or more options. In that case, the option with the largest approval will win most likely or get the largest share. But other options that have at least some approval may then win as well with some smaller probability, or also get some smaller share of the budget. For polls selecting a single option this means that then there is a certain chance element involved to determine the actual winner. This is because we must make sure that no group of participants can simply be ignored by the other participants as it is the case with majority rule. This way, <i>vodle</i> gives every participant the exact same influence and gives every faction an influence that matches its size.",
+        "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One participant is determined by lot, everyone having the same chance of being that participant. Among the options that this participant approves, the one with the largest overall approval is the winner. The pie piece to the left of each option shows the resulting probability that this option wins.",
+        "p26": "If the poll is about allocating a budget, the size of each option's shares is calculated the same way: the share is proportional to the number of participants that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your “willingness to approve” ratings?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a rating of 100. Give all options which are better than average some rating larger than zero, scaling your ratings according to relative preference. Finally, give all options which are worse than average a rating of zero.</b>"
     },
 
@@ -444,12 +444,12 @@
         "hint-only1positive-1": "You are rating only one option.",
         "hint-only1positive-2": "You should consider rating some possible compromise options as well.",
         "hint-only1approved-1": "You are approving only one of the options you rated positive.",
-        "hint-only1approved-2": "You only approve an option if your rating is larger than the percentage of voters who disapprove the option.",
+        "hint-only1approved-2": "You only approve an option if your rating is larger than the percentage of participants who disapprove the option.",
         "hint-mostapproved-1": "You are not approving the top-most option.",
         "hint-mostapproved-2": "Please check if that option might be acceptable to you.",
 
-        "also-for-other": "Some or all of the ratings below are also used for one other voter, who has delegated to you.",
-        "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other voters, who have directly or indirectly delegated to you.",
+        "also-for-other": "Some or all of the ratings below are also used for one other participant, who has delegated to you.",
+        "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",
         "declined-some": "You have also declined some delegation requests.",
         "declined-all": "You have declined all delegation requests.",
         "have-accepted": "You have <b>accepted</b> delegation by",
@@ -483,8 +483,8 @@
 
     "previewpoll": {
         "-page-title": "Please check",
-        "caution1": "After the poll has started, you cannot change any of the above. However, you and the other voters can always add further options.",
-        "caution2": "Until the set due date, voters will be able to vote and add options, but cannot delete any. Then the poll will automatically be closed. Once started, you can neither shorten nor extend the this deadline.",
+        "caution1": "After the poll has started, you cannot change any of the above. However, you and the other participants can always add further options.",
+        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically be closed. Once started, you can neither shorten nor extend the this deadline.",
         "closes": "Closes",
         "db-label": "Data storage",
         "publish": "Start the poll now",

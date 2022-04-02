@@ -144,11 +144,11 @@ export class SettingsPage implements OnInit {
   set_db_from_pid(value: string) {
     this.G.S.db_from_pid = value;
   }
-  set_db_other_server_url(value: string) {
-    this.G.S.db_other_server_url = value;
+  set_db_custom_server_url(value: string) {
+    this.G.S.db_custom_server_url = value;
   }
-  set_db_other_password(value: string) {
-    this.G.S.db_other_password = value;
+  set_db_custom_password(value: string) {
+    this.G.S.db_custom_password = value;
   }
 
   // OTHER METHODS:
@@ -168,8 +168,8 @@ export class SettingsPage implements OnInit {
     this.select_server.selectServerFormGroup.setValue({
       db: this.G.S.db||'',
       db_from_pid: this.G.S.db_from_pid||'',
-      db_other_server_url: this.G.S.db_other_server_url||'',
-      db_other_password: this.G.S.db_other_password||'',
+      db_custom_server_url: this.G.S.db_custom_server_url||'',
+      db_custom_password: this.G.S.db_custom_password||'',
     });
     for (const cls of this.G.S.notification_classes) {
       this.notify_of[cls] = this.G.S.get_notify_of(cls);

@@ -162,7 +162,7 @@ export class PollPage implements OnInit {
     const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
     this.G.L.trace("PollPage.update_delegation_info did", did);
     if (did) {
-      this.delegate = this.G.Del.get_nickname(this.pid, did);
+      this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
       const agreement = this.G.Del.get_agreement(this.pid, did);
       this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
       this.delegation_status = agreement.status;

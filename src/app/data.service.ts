@@ -56,7 +56,7 @@ import * as Sodium from 'libsodium-wrappers';
  * 
  * Keys are strings that can be hierarchically structures by dots ('.') as separators, 
  * such as 'language' or 'poll.78934865986.db_server_url'.
- * Keys of voter data start with 'voter.' followed by the vid (voter id) and a colon (':'), 
+ * Keys of voter data start with 'voter.' followed by the vid (voter id) and a paragraph sign ("§"), 
  * such as 'voter.968235:option.235896.rating'. Otherwise the colon does not appear in keys.
  * 
  * In the local caches, there is one entry per key, and they key is used without any further prefix.
@@ -69,7 +69,7 @@ import * as Sodium from 'libsodium-wrappers';
  * - poll data documents: { _id: "~vodle.poll.PPP:KEY", value: YYY }
  * - voter data documents: { _id: "~vodle.poll.PPP.voter.VVV:REST_OF_KEY", value: YYY }
  * 
- * In this, UUU is the hash of the user's email address plus ':' plus their password,
+ * In this, UUU is the hash of the user's email address plus "§" plus their password,
  * PPP is a poll id, and VVV is a voter id.
  * KEY the full key, REST_OF_KEY the key without the part "voter.ZZZ:".
  * XXX is a value encrypted with the user's password, and YYY is a value encrypted with the poll password. 
@@ -81,7 +81,7 @@ import * as Sodium from 'libsodium-wrappers';
  * 
  * MAPPING DOCUMENTS TO DATABASE USERS
  * 
- * The part of the document _id between '~' and ':' is the database username that is used to 
+ * The part of the document _id between '~' and "§" is the database username that is used to 
  * create or update the document: 'vodle.user.UUU', 'vodle.poll.PPP', and 'vodle.poll.PPP.voter.VVV'.
  * The database users 'vodle.user.UUU' and 'vodle.poll.PPP.voter.VVV' have the user's password 
  * as their password, while the database user 'vodle.poll.PPP' has the poll password as its password.
@@ -131,12 +131,12 @@ function get_poll_key_prefix(pid:string) {
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
-const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password'];
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password'];
 // some of these trigger a move from one remote user dvb to another when changed:
-const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_other_password'];
+const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_other_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_seen', 'have_acted', 'have_seen_results', 'simulated_ratings'];
+const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_seen', 'have_acted', 'have_seen_results', 'simulated_ratings'];
 
 const poll_keystarts_requiring_due = ['state', 'option'];
 const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response']; 
@@ -336,6 +336,9 @@ export class DataService implements OnDestroy {
       state[a] = this[a];
     }
     this.G.L.exit("DataService.save_state");
+    if (!this.storage) {
+      return null;
+    }
     return this.storage.set('state', state)
   }
 
@@ -775,8 +778,8 @@ export class DataService implements OnDestroy {
               include_docs: true,
               filter: (doc, req) => (
                 // we want poll docs:
-                (poll_doc_id_prefix + pid + ':' <= doc._id 
-                  && doc._id < poll_doc_id_prefix + pid + ';')   // ';' is the ASCII character after ':'
+                (poll_doc_id_prefix + pid + "§" <= doc._id 
+                  && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
                 // and voter docs:
                 || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
                     && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
@@ -1116,11 +1119,11 @@ export class DataService implements OnDestroy {
 
   private test_remote_connection(conn:PouchDB, private_username:string, private_password:string): Promise<boolean> {
     // FIXME: sometimes this gives an
-    // ERROR Error: Uncaught (in promise): {"status":409,"name":"conflict","message":"Document update conflict"}
+    // ERROR Error: Uncaught (in promise): {"status": 409, "name": "conflict", "message": "Document update conflict"}
     return new Promise((resolve, reject) => {
 
       // try creating or updating a timestamp document
-      const _id = "~"+private_username+":timestamp", value = encrypt((new Date()).toISOString(), private_password);
+      const _id = "~"+private_username+"§timestamp", value = encrypt((new Date()).toISOString(), private_password);
 
       // ASYNC:
       conn.get(_id)
@@ -1176,8 +1179,8 @@ export class DataService implements OnDestroy {
         retry: true,
         include_docs: true,
         filter: (doc, req) => (
-          user_doc_id_prefix + email_and_pw_hash + ':' <= doc._id 
-          && doc._id < user_doc_id_prefix + email_and_pw_hash + ';'   // ';' is the ASCII character after ':'
+          user_doc_id_prefix + email_and_pw_hash + "§" <= doc._id 
+          && doc._id < user_doc_id_prefix + email_and_pw_hash + '¨'   // '¨' is the character after "§"
         ),
       }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', () => {
@@ -1224,8 +1227,8 @@ export class DataService implements OnDestroy {
         include_docs: true,
         filter: (doc, req) => (
           // we want poll docs:
-          (poll_doc_id_prefix + pid + ':' <= doc._id 
-            && doc._id < poll_doc_id_prefix + pid + ';')   // ';' is the ASCII character after ':'
+          (poll_doc_id_prefix + pid + "§" <= doc._id 
+            && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
           // and voter docs:
           || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
               && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
@@ -1598,8 +1601,8 @@ export class DataService implements OnDestroy {
 
   private handle_deleted_user_doc(doc): boolean {
     const _id = doc._id;
-    if (_id.includes(':')) {
-      const key = _id.slice(_id.indexOf(':') + 1);
+    if (_id.includes("§")) {
+      const key = _id.slice(_id.indexOf("§") + 1);
       if (key in this.user_cache) {
         this.G.L.trace("DataService.handle_user_db_change deleting", key);
         delete this.user_cache[key];
@@ -1619,13 +1622,13 @@ export class DataService implements OnDestroy {
       const key = _id.slice(_id.indexOf(pid) + pid.length + 1);
       if (key.includes('.del_request.')) {
         const keyfromvid = key.slice('voter.'.length),
-              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
         const did = subkey.slice("del_request.".length);
         this.G.Del.process_deleted_request_from_db(pid, did, vid);
       } else if (key.includes('.rating.')) {
         const keyfromvid = key.slice('voter.'.length),
-              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
         const oid = subkey.slice("rating.".length);
         this.G.P.update_own_rating(pid, vid, oid, 0, false);
@@ -1718,7 +1721,7 @@ export class DataService implements OnDestroy {
 
   private doc2user_cache(doc): [boolean, boolean] {
     // populate user cache with key, value from doc
-    const _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + ':';
+    const _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + "§";
     if (_id.startsWith(prefix)) {
 
       const key = _id.slice(prefix.length, _id.length);
@@ -1807,11 +1810,11 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
 
     const _id = doc._id;
-    if (_id.includes(':timestamp')) {
+    if (_id.includes('§timestamp')) {
       return true;
     }
 
-    const poll_doc_prefix = poll_doc_id_prefix + pid + ':',
+    const poll_doc_prefix = poll_doc_id_prefix + pid + "§",
           voter_doc_prefix = poll_doc_id_prefix + pid + '.',
           cache = this.ensure_poll_cache(pid);
     var key, value_changed;
@@ -1887,7 +1890,7 @@ export class DataService implements OnDestroy {
         key = _id.slice(voter_doc_prefix.length, _id.length);
 
         const keyfromvid = key.slice('voter.'.length),
-              vid = keyfromvid.slice(0, keyfromvid.indexOf(':')),
+              vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
 
         // check if doc should contain a claimed due data for validation:
@@ -2017,7 +2020,7 @@ export class DataService implements OnDestroy {
         // RETURN:
         return false;
       }
-      const _id = user_doc_id_prefix + email_and_pw_hash + ':' + key, 
+      const _id = user_doc_id_prefix + email_and_pw_hash + "§" + key, 
           user_pw = this.user_cache['password'];
 
       // ASYNC:
@@ -2070,12 +2073,12 @@ export class DataService implements OnDestroy {
     var doc;
 
     // see what type of entry it is:
-    if (key.indexOf(":") == -1) {
+    if (key.indexOf("§") == -1) {
 
       // it's a non-voter data item.
 
       // store encrypted and with correct prefix:
-      const _id = poll_doc_id_prefix + pid + ':' + key,
+      const _id = poll_doc_id_prefix + pid + "§" + key,
             poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
       if ((poll_pw=='') || (!poll_pw)) {
         this.G.L.warn("DataService.store_poll_data couldn't set "+key+" in local_poll_DB since poll password is missing!");
@@ -2151,7 +2154,7 @@ export class DataService implements OnDestroy {
       // it's a voter data item.
 
       // check which voter's data this is:
-      const vid_prefix = key.slice(0, key.indexOf(':')),
+      const vid_prefix = key.slice(0, key.indexOf("§")),
             vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true') {
           // it is not allowed to alter other voters' data!
@@ -2248,7 +2251,7 @@ export class DataService implements OnDestroy {
         // RETURN:
         return false;
       }
-      _id = user_doc_id_prefix + email_and_pw_hash + ':' + key;
+      _id = user_doc_id_prefix + email_and_pw_hash + "§" + key;
     }
 
     // ASYNC:
@@ -2284,12 +2287,12 @@ export class DataService implements OnDestroy {
     var _id;
 
     // see what type of entry it is:
-    if (key.indexOf(":") == -1) {
+    if (key.indexOf("§") == -1) {
 
       // it's a non-voter data item.
 
       // use correct prefix:
-      _id = poll_doc_id_prefix + pid + ':' + key;
+      _id = poll_doc_id_prefix + pid + "§" + key;
       if ((poll_pw=='')||(!poll_pw)) {
         this.G.L.warn("DataService.delete_poll_data couldn't delete "+key+" from local_poll_DB since poll password or voter id are missing!");
 
@@ -2302,7 +2305,7 @@ export class DataService implements OnDestroy {
       // it's a voter data item.
 
       // check which voter's data this is:
-      const vid_prefix = key.slice(0, key.indexOf(':')),
+      const vid_prefix = key.slice(0, key.indexOf("§")),
           vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
       if (vid_prefix != 'voter.' + vid) {
           // it is not allowed to alter other voters' data!
@@ -2352,7 +2355,7 @@ export class DataService implements OnDestroy {
   private email_and_pw_hash(): string {
     const email = this.user_cache['email'], pw = this.user_cache['password'];
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
-    const hash = myhash(email + ':' + pw);
+    const hash = myhash(email + "§" + pw);
 //    this.G.L.trace("email_and_pw_hash:", email, pw, hash);
     return hash;
   }
@@ -2438,7 +2441,7 @@ export class DataService implements OnDestroy {
   }
 
   get_voter_key_prefix(pid: string, vid?: string): string {
-    return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + ':';
+    return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + "§";
   }
   
   format_date(date: Date): string {

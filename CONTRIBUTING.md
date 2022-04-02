@@ -16,6 +16,14 @@ Later **assist in project and community management** by prioritizing feature req
 
 Or simply start and **be a friendly observer, frank commentator and neutral advisor** for the project.
 
+### Our commitment
+
+As we are on our way towards a Minimal Viable Product, we currently spend about 15 hours a week on developing vodle. 
+*We commit to reply to your messages in the discussion board within one day.*
+
+If you decide to contribute something, we are very happy to help you get started.
+*So if you get stuck at some point in the following section, don't hesitate to ask on the discussion board!* 
+
 ## Getting started
 
 You might begin by just scanning our [end user website](http://vodle.it) and reading some of the top-level documentation texts in the [doc/development](./doc/development/) folder, maybe starting with the description of vodle's overall [architecture](./doc/development/ARCHITECTURE.md) and the extensive [glossary](./doc/development/GLOSSARY.md) of terms used in the app's UI and code.
@@ -153,8 +161,8 @@ But other types of contribution will require setting up a development and testin
 12. Click the **>** button to the left of *Strawberry* to expand this option's details.
 13. Click the *(explain)* link at the end of that expanded text, which should open an overlay page *Approval for Strawberry* showing an animation that explains how this option's approval score is determined. Try the playback controls at the bottom. Then click the arrow in the top-right corner to switch to another animation that explains how this option's share is determined. Then close the overlay.
 14. Click the **+** button on the bottom left, which should open an overlay for adding another option. Enter some data, click *Add*, and verify that your browser shows a short notification and the new option is now listed last. 
-15. In the main menu, click *Log out*, confirm with *Yes, log out*, and close the browser tab.
-16. Fetch your earlier sent email and click the link contained in it, which should open a new browser tab and get you back to the login page. This time, log in with a different email than before. After logging in, you should see the *[Join a poll](./src/app/joinpoll/)* page. Clicking *OK, let's go* should get you again to the *Poll* page.
+15. In the main menu, click *Log out*, confirm with *Yes, log out*, and log in with a *different* email than before.
+16. Fetch your earlier sent email and click the link contained in it, which should get you to the *[Join a poll](./src/app/joinpoll/)* page. Clicking *OK, let's go* should get you again to the *Poll* page.
 17. This time, click *Delegate* in the top right, which should open a [delegation dialog](./src/app/delegation-dialog/). Enter some nickname for your other persona (the one that set up the poll), e.g. simply the first email address you used. Then click *Compose an email* and again send the email to yourself. The *Poll* page should now note that your other persona has not yet responded to your delegation request.
 18. Open a second, independent browser session that does not share cookies with the first session (In Chrome, you can do this by opening a *New Incognito Window*), and paste the delegation link from the last email into its URL field. This should again ask you to log in. Do so with the email address you used to set up the poll. Now you can simulate both voters simulateneously. After the login, you should see the *[Act as delegate?](./src/app/delrespond/)* page. 
 19. Click *Accept*, which should make your other browser window fire a notification that the delegation request was accepted, and should bring this browser window to the *Poll* page. There you should see a note that "Some of the ratings below are also used for one other voter...".
@@ -181,6 +189,8 @@ In your deserved breaks from vodling, you can stop and later restart your CouchD
   $ sudo docker stop vodle-dev-couchdb
   $ sudo docker start vodle-dev-couchdb
   ```
+
+Please don't forget to frequently `git pull` upstream changes and merge them into your working branch to avoid divergence.
 
 ### Building native apps
 
@@ -229,6 +239,8 @@ Lower-level logics are implemented via ***services*** that are used by the page 
 - The [NewsService](./src/app/news.service.ts) handles news items.
 - The [SettingsService](./src/app/settings.service.ts) manages a user's settings.
 - Finally, the [DataService](./src/app/data.service.ts) handles the bottom-level data management (see [Architecture](./doc/development/ARCHITECTURE.md)).
+
+When coding, please try to stick to the style you see in the existing code. There are only a very few [conventions](./doc/development/CONVENTIONS.md).
 
 
 <!--

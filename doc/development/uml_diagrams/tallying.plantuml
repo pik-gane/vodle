@@ -1,0 +1,121 @@
+@startuml
+
+title 
+    Tallying
+    (compare GLOSSARY.md#Tallying)
+end title
+
+hide methods
+hide circle
+hide stereotype
+skinparam classAttributeIconSize 0
+
+class Note {}
+note right
+    to edit this diagram, edit its .plantuml 
+    source and compile it with plantuml
+end note
+
+class DirectDelegations {
+    client
+    delegate
+}
+note right
+    can be agreed between two voters
+end note
+
+DirectDelegations --> EffectiveDelegations : chain-up to 
+
+abstract class EffectiveDelegations {}
+note right
+    are the end points of delegation chains
+end note
+
+class OwnRatings {
+    number 0...100
+}
+note right
+    are directly specified by the voter
+end note
+
+EffectiveDelegations --> ProxyRatings : lead to
+
+OwnRatings --> ProxyRatings : may be used as
+
+abstract class ProxyRatings {}
+note right
+    equal voter's or effective delegate's OwnRating
+end note
+
+abstract class EffectiveRatings {}
+note right
+    make sure non-abstaining voters approve at least one option
+end note
+
+ProxyRatings --> EffectiveRatings : are adjusted to
+
+abstract class Abstentions {
+    boolean
+}
+
+EffectiveRatings --> Abstentions : determine
+
+abstract class ApprovalThresholds {
+    number
+}
+
+EffectiveRatings --> ApprovalThresholds : are compared to give
+Abstentions --> ApprovalThresholds : are used as filter
+
+abstract class Approvals {
+    boolean
+}
+
+EffectiveRatings --> Approvals : determine
+ApprovalThresholds --> Approvals : are used as criterion in
+
+abstract class ApprovalScores {
+    integer
+}
+
+Approvals --> ApprovalScores : are aggregated into
+
+abstract class TotalRatingsScores {}
+
+EffectiveRatings --> TotalRatingsScores : are aggregated into
+
+abstract class Ranking {
+    ordering
+}
+
+ApprovalScores --> Ranking : determine
+TotalRatingsScores --> Ranking : are used as tie-breaker for
+
+abstract class Votes {
+    options
+}
+
+Approvals --> Votes : determine
+Ranking --> Votes : are used for prioritization
+
+class Shares {
+    percentages 0%...100%
+}
+note right
+    are the main results of a poll
+end note
+
+Votes --> Shares : are aggregated into
+Abstentions --> Shares : are used for normalization of
+
+class Winner {
+    option
+}
+note bottom
+    only for poll type "winner"
+end note
+
+Shares --> Winner : are used as probabilities to draw
+
+@enduml
+

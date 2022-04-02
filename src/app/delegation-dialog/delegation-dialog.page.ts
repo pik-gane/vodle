@@ -52,7 +52,7 @@ export class DelegationDialogPage implements OnInit {
     this.can_use_web_share = (typeof navigator.share === "function");
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
-      nickname: new FormControl('', Validators.required),
+      delegate_nickname: new FormControl('', Validators.required),
       from: new FormControl(this.G.S.email)
     });
     // TODO: what if already some delegation active or pending?
@@ -65,8 +65,8 @@ export class DelegationDialogPage implements OnInit {
   }
 
   nickname_changed() {
-    const nickname = this.formGroup.get('nickname').value;
-    this.G.D.setp(this.p.pid, "del_nickname." + this.did, nickname);
+    const delegate_nickname = this.formGroup.get('delegate_nickname').value;
+    this.G.D.setp(this.p.pid, "del_nickname." + this.did, delegate_nickname);
     this.update_request();
   }
 
@@ -79,7 +79,7 @@ export class DelegationDialogPage implements OnInit {
 
   update_request() {
     this.G.L.entry("DelegationDialogPage.update_request");
-    this.mailto_url = "mailto:" + encodeURIComponent(this.formGroup.get('nickname').value) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
+    this.mailto_url = "mailto:" + encodeURIComponent(this.formGroup.get('delegate_nickname').value) + "?subject=" + encodeURIComponent(this.message_title) + "&body=" + encodeURIComponent(this.message_body); 
   }
 
   ClosePopover()
@@ -88,8 +88,8 @@ export class DelegationDialogPage implements OnInit {
   }
 
   validation_messages = {
-    'nickname': [
-      { type: 'required', message: 'validation.nickname-required' },
+    'delegate_nickname': [
+      { type: 'required', message: 'validation.delegate_nickname-required' },
     ],
     'from': []
   }
@@ -135,7 +135,7 @@ export class DelegationDialogPage implements OnInit {
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
         body: this.translate.instant("delegation-request.notification-copied-link-body", 
-                                     {nickname: this.formGroup.get('nickname').value}),
+                                     {delegate_nickname: this.formGroup.get('delegate_nickname').value}),
         id: null
       }]
     })
