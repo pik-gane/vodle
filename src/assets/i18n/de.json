@@ -415,7 +415,7 @@
         "drafts": "Entwürfe",
 
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
-        "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' weiter unten!"
+        "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' rechts unten!"
     },
 
     "news-title": {
@@ -477,6 +477,7 @@
 
         "approved-by": "<small>es stimmen </small>{{percentage}}%<small> zu</small>",
         "including-you": " (auch Du)",
+        "average-rating": "durchschn. Bewertg. {{average}}",
 
         "explain": "erklären",
 

@@ -414,11 +414,11 @@ export class Poll {
   }
 
   get_my_proxy_rating(oid: string): number {
-    return this.proxy_ratings_map.get(oid).get(this.myvid) || 0;
+    return (this.proxy_ratings_map.get(oid) || new Map()).get(this.myvid) || 0;
   }
 
   get_my_effective_rating(oid: string): number {
-    return this.effective_ratings_map.get(oid).get(this.myvid) || 0;
+    return (this.effective_ratings_map.get(oid) || new Map()).get(this.myvid) || 0;
   }
 
   get remaining_time_fraction(): number {

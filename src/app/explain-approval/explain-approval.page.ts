@@ -81,7 +81,7 @@ export class ExplainApprovalPage implements OnInit {
           n = this.n = p.T.n_not_abstaining,
           offset = n - rs0.length,
           dur = this.tab2 - this.tob1 - this.dtt,
-          a = this.a = (p.T.approval_scores_map.get(oid) / n) || 0;
+          a = this.a = ((n>0) ? (p.T.approval_scores_map.get(oid) / n) : 0) || 0;
     this.optionname = p.options[oid].name;
     this.tob2 = this.tt1 = this.tob1 + dur*(1-a);
     this.tt2 = this.tab1 = this.tt1 + this.dtt;

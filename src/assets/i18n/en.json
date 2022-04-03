@@ -472,6 +472,7 @@
 
         "approved-by": "<small>approved by </small>{{percentage}}%",
         "including-you": " (including you)",
+        "average-rating": "avg. rating {{average}}",
 
         "explain": "explain",
         

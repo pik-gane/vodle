@@ -530,7 +530,14 @@
                         <span style="color:#62a73b" 
                           [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
                           [innerHtml]="'poll.including-you' | translate">
+                        </span><!-- avg. rating: --><span *ngIf="(i>0 && p.T.approval_scores_map.get(oidsorted[i-1]) == p.T.approval_scores_map.get(oidsorted[i])) || (i<oidsorted.length-1 && p.T.approval_scores_map.get(oidsorted[i+1]) == p.T.approval_scores_map.get(oidsorted[i]))" style="color:#9abcbd">,
+                          <span [innerHtml]="
+                            'poll.average-rating' | translate: {average:
+                              Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
+                            }">
+                          </span>
                         </span>
+                        <!-- explanation link: -->
                         <span style="color:#9abcbd">
                           &nbsp;(<a 
                             (click)="explain_approval_dialog(oidsorted[i])"
@@ -567,7 +574,7 @@
                       <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
                       <br/>thresholds_map: {{G.map2str(p.T.thresholds_map)}}
                       <br/>approval_scores_map: {{G.map2str(p.T.approval_scores_map)}}
-                      <br/>total_ratings_map: {{G.map2str(p.T.total_ratings_map)}}
+                      <br/>total_effective_ratings_map: {{G.map2str(p.T.total_effective_ratings_map)}}
                       <br/>votes_map: {{G.map2str(p.T.votes_map)}}
                       <br/>n_votes_map: {{G.map2str(p.T.n_votes_map)}}
                       <br/>shares_map: {{G.map2str(p.T.shares_map)}}
