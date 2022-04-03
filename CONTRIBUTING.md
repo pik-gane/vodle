@@ -38,6 +38,7 @@ But other types of contribution will require setting up a development and testin
 
 ### Setting up Node, Ionic, and the vodle web app
 
+- We assume you have `git` already installed on your system. If you are on Windows, some of the commands below may have to be issued in [`git bash`](https://gitforwindows.org/) instead of the Windows command line.
 - Follow [these instructions](https://ionicframework.com/docs/v5/intro/environment) to set up a basic environment for working with Ionic, basically consisting of [Node.js](https://ionicframework.com/docs/v5/reference/glossary#node) and [npm](https://ionicframework.com/docs/v5/reference/glossary#npm).
 - Either fork vodle's git repository [https://github.com/pik-gane/vodle](https://github.com/pik-gane/vodle) or, even better, ask us to grant you write access to it! We are happy to do this since we have protected important branches sufficiently. 
 - Make sure you have at least 2GB free space on your disk. Then clone the (forked or original) repository to your machine and switch to a new branch for your contribution:
@@ -161,7 +162,7 @@ But other types of contribution will require setting up a development and testin
 12. Click the **>** button to the left of *Strawberry* to expand this option's details.
 13. Click the *(explain)* link at the end of that expanded text, which should open an overlay page *Approval for Strawberry* showing an animation that explains how this option's approval score is determined. Try the playback controls at the bottom. Then click the arrow in the top-right corner to switch to another animation that explains how this option's share is determined. Then close the overlay.
 14. Click the **+** button on the bottom left, which should open an overlay for adding another option. Enter some data, click *Add*, and verify that your browser shows a short notification and the new option is now listed last. 
-15. In the main menu, click *Log out*, confirm with *Yes, log out*, and log in with a *different* email than before.
+15. In the main menu, click *Log out*, confirm with *Yes, log out*, and log in with a *different* email than before. (*Note:* due to a bug, the following does not work properly unless you log in *before* clicking the invite link!)
 16. Fetch your earlier sent email and click the link contained in it, which should get you to the *[Join a poll](./src/app/joinpoll/)* page. Clicking *OK, let's go* should get you again to the *Poll* page.
 17. This time, click *Delegate* in the top right, which should open a [delegation dialog](./src/app/delegation-dialog/). Enter some nickname for your other persona (the one that set up the poll), e.g. simply the first email address you used. Then click *Compose an email* and again send the email to yourself. The *Poll* page should now note that your other persona has not yet responded to your delegation request.
 18. Open a second, independent browser session that does not share cookies with the first session (In Chrome, you can do this by opening a *New Incognito Window*), and paste the delegation link from the last email into its URL field. This should again ask you to log in. Do so with the email address you used to set up the poll. Now you can simulate both voters simulateneously. After the login, you should see the *[Act as delegate?](./src/app/delrespond/)* page. 

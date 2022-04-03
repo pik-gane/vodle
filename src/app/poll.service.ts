@@ -1296,7 +1296,7 @@ export class Poll {
               my_thresholds_map = new Map(this.T.thresholds_map);
         this.tally_all();
         for (const oid of this.T.shares_map.keys()) {
-          /* FIXME: this is really sometimes giving inconsistent results!
+          /* FIXME: this really sometimes giving inconsistent results!
           * e.g. when going to abstention, vote is not correctly removed.
           * it seems that in that case some thresholds are already wrong (too low)
           */
