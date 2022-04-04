@@ -1446,8 +1446,8 @@ export class DataService implements OnDestroy {
   get_example_docs(): Promise<any> {
     const promise = this.remote_user_db.allDocs({
       include_docs: true,
-      startkey: 'examples§¨',
-      endkey: 'examples¨',
+      startkey: 'examples§',
+      endkey: 'examplet',
       inclusive_end: false,
       limit: 50
     });
