@@ -547,11 +547,12 @@ export class PollPage implements OnInit {
   add_option(event: Event) {
     // TODO: also add delegation if ospec.type == "-"
     this.popover.create({
-      event, 
+//      event, 
       component: AddoptionDialogPage, 
       translucent: true,
       showBackdrop: true,
-//      cssClass: 'add-option-class', // TODO: improve positioning
+//      side: 'top', // TODO: use this from Ionic v6 on!
+      cssClass: 'add-option-class',
       componentProps: {parent: this}
     })
     .then((popoverElement)=>{

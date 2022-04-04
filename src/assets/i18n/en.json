@@ -139,7 +139,8 @@
 
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
-        "closed": "Unfortunately, this poll is already closed."
+        "closed": "Unfortunately, this poll is already closed.",
+        "is-self": "This request was created by yourself :-) Please send this link to the person you'd like to ask for delegation!"
     },
 
     "draftpoll": {

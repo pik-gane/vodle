@@ -109,7 +109,7 @@
     "delrespond": {
         "-page-title": "Delegierte:r sein?",
 
-        "header": "Bist Du bereit, Delegierte:r zu sein {{from}} in der Abstimmung <i>„{{poll_title}}“?</i>",
+        "header": "Bist Du bereit, Delegierte:r zu sein für {{from}} in der Abstimmung <i>„{{poll_title}}“?</i>",
         "intro": "Deine Bewertungen kontrollieren dann auch die Bewertungen dieser Person.",
         "details": "Wenn Du zustimmst, kannst Du immer noch entscheiden, ob Du die Optionen selbst bewerten oder die Bewertung an eine dritte Person weiter delegieren willst.",
         "check-first": "Du kannst auch erst einmal Deine Bewertungen überprüfen und dann hierher zurückkehren, um zuzustimmen oder abzulehnen.",
@@ -142,7 +142,8 @@
 
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal.",
-        "closed": "Leider ist diese Abstimmung bereits geschlossen."
+        "closed": "Leider ist diese Abstimmung bereits geschlossen.",
+        "is-self": "Diese Anfrage hast Du selbst erstellt :-) Schicke den Link bitte an die Person, die Du um Delegation bitten möchtest!"
     },
 
     "draftpoll": {

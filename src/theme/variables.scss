@@ -114,11 +114,14 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-color-light-tint: #ccf7f8;
 }
 
+/*
+  TODO: provide a dark scheme later!
+
 @media (prefers-color-scheme: dark) {
   /*
    * Dark Colors
    * -------------------------------------------
-   */
+   * /
 
   body {
     --ion-color-primary: #428cff;
@@ -188,7 +191,7 @@ $font-family-wp-base: "Quicksand Medium";
   /*
    * iOS Dark Theme
    * -------------------------------------------
-   */
+   * /
 
   .ios body {
     --ion-background-color: #000000;
@@ -232,7 +235,7 @@ $font-family-wp-base: "Quicksand Medium";
   /*
    * Material Design Dark Theme
    * -------------------------------------------
-   */
+   * /
 
   .md body {
     --ion-background-color: #121212;

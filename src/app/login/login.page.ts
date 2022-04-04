@@ -170,14 +170,17 @@ export class LoginPage implements OnInit {
 
 
   submit_language() {
+    this.G.go_fullscreen_on_mobile();
     this.router.navigate(['/login/used_before/'+this.then_url]);
   }
 
   ask_used_before_no() {
+    this.G.go_fullscreen_on_mobile();
     this.router.navigate(['/login/fresh_email/'+this.then_url]);
   }
 
   ask_used_before_yes() {
+    this.G.go_fullscreen_on_mobile();
     this.router.navigate(['/login/old_email/'+this.then_url]);
   }
 

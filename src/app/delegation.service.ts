@@ -200,6 +200,9 @@ export class DelegationService {
                 inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
                 myvid = p.myvid,
                 client_vid = agreement.client_vid;
+          if (client_vid == myvid) {
+            return "is-self";
+          }
           let two_way = false, cycle = false, weight_exceeded = false;
           for (let oid of p.oids) {
             if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
@@ -246,12 +249,14 @@ export class DelegationService {
   }
 
   store_incoming_request(pid: string, did: string, from: string, url: string, status: string) {
-    this.G.D.setu("del_incoming."+did, JSON.stringify([from, url, status]));
-    let cache = this.G.D.incoming_dids_caches[pid];
-    if (!cache) {
-      cache = this.G.D.incoming_dids_caches[pid] = new Map();
+    if (status != 'is-self') {
+      this.G.D.setu("del_incoming."+did, JSON.stringify([from, url, status]));
+      let cache = this.G.D.incoming_dids_caches[pid];
+      if (!cache) {
+        cache = this.G.D.incoming_dids_caches[pid] = new Map();
+      }
+      cache.set(did, [from, url, status]);   
     }
-    cache.set(did, [from, url, status]); 
   }
 
   update_incoming_request_status(pid: string, did: string, status: string) {

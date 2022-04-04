@@ -333,4 +333,16 @@
     </ion-button>
   </ng-container>
 
+  <!-- It's ourselves: -->
+
+  <ng-container *ngIf="status=='is-self'">
+    <ion-item [innerHtml]="'delrespond.is-self'|translate">      
+    </ion-item>  
+    <ion-button size="large" color="primary" slot="end"
+        shape="round"
+        (click)="dismiss()">
+      <span [innerHtml]="'OK'|translate"></span>&nbsp;
+    </ion-button>
+  </ng-container>
+  
 </ion-content>
