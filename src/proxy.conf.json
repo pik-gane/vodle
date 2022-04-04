@@ -1,0 +1,11 @@
+{
+    "/couch/*": {
+      "target": "http://localhost:5984/",
+      "changeOrigin": true,
+      "secure": false,
+      "logLevel": "debug",
+      "pathRewrite": {
+        "^/couch": ""
+      }
+    }
+}  

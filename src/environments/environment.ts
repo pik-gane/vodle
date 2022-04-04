@@ -13,7 +13,7 @@ export const environment = {
     ]  
   },
   data_service: {
-    central_db_server_url: "http://localhost:5984/",
+    central_db_server_url: "http://localhost:8100/couch",
     central_db_password: "none",
     pwd_length: 12,
     hash_n_bytes: 8,

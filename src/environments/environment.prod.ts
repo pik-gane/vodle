@@ -9,7 +9,7 @@ export const environment = {
     ]  
   },
   data_service: {
-    central_db_server_url: "http://localhost:5984/",
+    central_db_server_url: "https://sandstorm.pik-potsdam.de/couch",
     central_db_password: "none",
     hash_n_bytes: 32,
     pid_length: 16,
@@ -25,7 +25,7 @@ export const environment = {
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
-  magic_link_base_url: "http://vodle.it/",
+  magic_link_base_url: "https://sandstorm.pik-potsdam.de/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false
