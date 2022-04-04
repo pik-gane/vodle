@@ -147,7 +147,7 @@ export class AddoptionDialogPage implements OnInit {
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
         body: this.translate.instant("delegation-request.notification-copied-link-body", 
-                                     {delegate_nickname: this.formGroup.get('delegate_nickname').value}),
+                                     {nickname: this.formGroup.get('delegate_nickname').value}),
         id: null
       }]
     })
