@@ -161,3 +161,8 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   ```
   $ sudo docker exec -it vodle-dev-couchdb bash
   ```
+- If you want to improve CouchDB performance, you can try limiting number of revisions to 2:
+  ```
+  $ curl -u admin:password -X PUT -d "2" http://localhost:5984/vodle/_revs_limit
+  ```
+  See [here](https://docs.couchdb.org/en/stable/maintenance/performance.html?highlight=performance) for other optimization options.

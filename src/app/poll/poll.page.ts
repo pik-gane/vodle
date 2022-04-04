@@ -391,11 +391,11 @@ export class PollPage implements OnInit {
 
   rating_change_ended(oid: string) {
     // TODO: make sure this is really always called right after releasing the slider!
-    this.G.L.trace("PollPage.rating_change_ended");
-    this.update_order();
+    this.G.L.entry("PollPage.rating_change_ended");
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
+    this.update_order();
     this.G.D.save_state();
   }
 

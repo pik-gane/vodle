@@ -4,7 +4,7 @@ export const environment = {
     logLevels: [
       {
         loggerName: "root",
-        logLevel: "TRACE"
+        logLevel: "INFO"
       },
     ]  
   },
@@ -12,11 +12,11 @@ export const environment = {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch",
     central_db_password: "none",
     hash_n_bytes: 32,
-    pid_length: 16,
+    pid_length: 8,
     pwd_length: 16,
-    oid_length: 16,
-    vid_length: 16,
-    did_length: 16,
+    oid_length: 4,
+    vid_length: 8,
+    did_length: 8,
     nid_length: 8
   },
   delegation: {
