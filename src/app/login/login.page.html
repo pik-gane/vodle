@@ -165,6 +165,7 @@ TODO:
                 <ion-input #input_new_password
                   formControlName="password"
                   [type]="showing_password?'text':'password'" required autofocus="true"
+                  autocomplete="off" autocorrect="off"
                   (ionChange)="set_password()">
                 </ion-input>
               </ion-item>
@@ -192,6 +193,7 @@ TODO:
                 formControlName="confirm_password" 
                 #retype_password 
                 [type]="showing_password?'text':'password'" required
+                autocomplete="off" autocorrect="off"
                 (ionChange)="set_password()"
                 (keydown.enter)="submit_new_password()">
               </ion-input>
@@ -237,6 +239,7 @@ TODO:
                 <ion-input #input_old_password
                   formControlName="password"
                   [type]="showing_password?'text':'password'" required autofocus="true"
+                  autocomplete="off" autocorrect="off"
                   (ionChange)="set_old_password()"
                   (keydown.enter)="submit_old_password()">
                 </ion-input>
