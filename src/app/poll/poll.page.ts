@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, IonContent, IonRouterOutlet } from '@ionic/angular';
+import { LoadingController, IonContent, IonRouterOutlet, IonCol } from '@ionic/angular';
 import { PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
 import { GlobalService } from "../global.service";
@@ -325,6 +325,15 @@ export class PollPage implements OnInit {
       this.needs_refresh = false;
       setTimeout(()=>{
         this.show_stats.bind(this)();
+        // add event listeners to catch pointer events outside knob:
+        for (let i in this.oidsorted) {
+          const col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter);
+          col.addEventListener("pointerdown", this.onRangePointerdown.bind(this), true);
+          col.addEventListener("pointerup", this.onRangePointerdown.bind(this), true);
+          col.addEventListener("touchstart", this.onRangePointerdown.bind(this), true);
+          col.addEventListener("touchup", this.onRangePointerdown.bind(this), true);
+        }  
+        this.G.L.trace("PollPage.update_order registered event listeners");
       }, 100);
     } 
   }
@@ -368,7 +377,8 @@ export class PollPage implements OnInit {
   }
 
   get_slider_value(oid: string) {
-    return Number(this.get_slider(oid).value);
+    const slider = this.get_slider(oid);
+    return !slider ? 0 : Number(slider.value);
   }
 
   apply_sliders_rating(oid: string) {
@@ -405,7 +415,7 @@ export class PollPage implements OnInit {
   
   onRangePointerdown(oid:string, ev:Event) {
     this.dragged_oid = oid;
-    const pos = this.get_knob_pos(oid), x = (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
+    const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRangePointerdown", oid, x, pos);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
@@ -447,15 +457,19 @@ export class PollPage implements OnInit {
     return {left: knob_center_x - 20, right: knob_center_x + 20}
   }
 
-  get_screen_coords(element: HTMLElement) {
+  get_screen_coords(element: HTMLElement): DOMRect {
+    if (!element) return new DOMRect();
     return element.getBoundingClientRect();
   }
 
   swallow_event(ev: Event) {
     this.G.L.trace("swallowing event", ev);
     // FIXME: does not work in Android app and Chrome-simulated mobile devices yet!
-    ev.stopPropagation();
-    ev.preventDefault();
+    if (!!ev) {
+      ev.stopPropagation();
+      ev.stopImmediatePropagation();
+      ev.preventDefault();  
+    }
   }
 
   // only here for debugging purposes:
@@ -473,19 +487,6 @@ export class PollPage implements OnInit {
         translucent: true,
         showBackdrop: true,
         componentProps: {parent: this}
-      })
-      .then((popoverElement)=>{
-        popoverElement.present();
-      })
-  }
-
-  _old_explain_approval_dialog(oid: string) {
-    this.popover.create({
-        component: ExplainApprovalPage, 
-        translucent: true,
-        cssClass: 'explain-approval',
-        showBackdrop: true,
-        componentProps: {parent: this, oid: oid}
       })
       .then((popoverElement)=>{
         popoverElement.present();
