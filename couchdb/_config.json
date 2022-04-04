@@ -1,7 +1,8 @@
 {
   "httpd": {
     "enable_cors": true,
-    "WWW-Authenticate": "Other realm=\"app\"", "-comment": "Basic or Other"
+    "WWW-Authenticate": "Other realm=\"app\"", "-comment": "Basic or Other",
+    "socket_options": "[{nodelay, true}]"
   },
   "chttpd": {
     "require_valid_user": true
@@ -27,6 +28,7 @@
   },
   "couchdb": {
     "max_document_size": 100000,
-    "users_db_security_editable": true
+    "users_db_security_editable": true,
+    "delayed_commits": true
   }
 }
