@@ -216,7 +216,8 @@ a, a:link, a:visited, a:hover, a:active, .externallink {
 .add-option-class .popover-content {
     position: absolute;
     bottom: 20px!important;
-//    left: 10px;
+    height: 600px!important;
+    width: auto!important;
 }
 
 ion-spinner {
