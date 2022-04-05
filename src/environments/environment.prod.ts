@@ -4,7 +4,7 @@ export const environment = {
     logLevels: [
       {
         loggerName: "root",
-        logLevel: "INFO"
+        logLevel: "ERROR"
       },
     ]  
   },
