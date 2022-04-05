@@ -1238,15 +1238,18 @@ export class DataService implements OnDestroy {
       }).on('paused', info => {
         // replication was paused, usually because of a lost connection
         this.G.L.info("DataService pausing poll data sync", pid, info);
+        this.G.P.polls[pid].syncing = false;
       }).on('active', info => {
         // replication was resumed
         this.G.L.info("DataService resuming poll data syncing", pid, info);
+        this.G.P.polls[pid].syncing = true;
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
         this.G.L.error("DataService poll data sync denied", pid, err);
       }).on('complete', info => {
         // handle complete
         this.G.L.info("DataService completed poll data sync", pid, info);
+        this.G.P.polls[pid].syncing = false;
       }).on('error', err => {
         // totally unhandled error (shouldn't happen)
         this.G.L.error("DataService error at poll data sync", pid, err);

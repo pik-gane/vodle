@@ -27,6 +27,9 @@
         [(ngModel)]="running">
       </ion-toggle>
 
+      <!-- SYNCING SIGN -->
+      <ion-spinner *ngIf="!!p && p.syncing" name="crescent" size="small" color="grey"></ion-spinner>
+
       <!-- DELEGATE BUTTON: -->
 
       <ion-button *ngIf="delegation_status!='agreed' && running"

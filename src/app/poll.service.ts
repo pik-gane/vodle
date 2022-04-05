@@ -158,6 +158,7 @@ export class Poll {
 
   private G: GlobalService;
   _state: string;  // cache for state since it is asked very often
+  syncing: boolean = false;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
