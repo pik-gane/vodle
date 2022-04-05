@@ -325,21 +325,37 @@ export class PollPage implements OnInit {
       this.needs_refresh = false;
       setTimeout(()=>{
         this.show_stats.bind(this)();
-        // add event listeners to catch pointer events outside knob:
+        // add event listeners to catch events outside knob also on Android:
         for (let i in this.oidsorted) {
           const oid = this.oidsorted[i],
-                col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter);
-          /*
-          col.addEventListener("pointerdown", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
-          col.addEventListener("pointerup", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
-          col.addEventListener("touchstart", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
-          col.addEventListener("touchup", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
-          */
+                col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter),
+                l1 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
+                l2 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
+                l3 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
+                l4 = ev => { this.onRangePointerdown.bind(this)(oid, ev) };
+          if (this.listeners.has(col)) {
+            this.G.L.trace("PollPage.update_order removing old event listeners");
+            const old = this.listeners.get(col);
+            col.removeEventListener("pointerdown", old[0], true);
+            col.removeEventListener("pointerup", old[1], true);
+            col.removeEventListener("touchstart", old[2], true);
+            col.removeEventListener("touchup", old[3], true);
+          }
+          /**/
+          col.addEventListener("pointerdown", l1, true);
+          col.addEventListener("pointerup", l2, true);
+          col.addEventListener("touchstart", l3 , true);
+          col.addEventListener("touchup", l4, true);
+          this.listeners.set(col, [l1, l2, l3, l4]);
+          /**/
         }  
-        this.G.L.trace("PollPage.update_order registered event listeners");
+        //window.alert("updated");
+        this.G.L.trace("PollPage.update_order registered event listeners", this.sortingcounter);
       }, 100);
     } 
   }
+
+  listeners: Map<any, any[]> = new Map();
 
   set_slider_color(oid: string, value: number) {
     this.slidercolor[oid] = 
@@ -370,6 +386,7 @@ export class PollPage implements OnInit {
   }
 
   get_slider(oid: string) {
+    this.G.L.trace("PollPage.get_slider ", this.sortingcounter);
     return <HTMLInputElement>document.getElementById('slider_'+oid+"_"+this.sortingcounter);
   }
 
@@ -422,7 +439,7 @@ export class PollPage implements OnInit {
   onRangePointerdown(oid: string, ev: Event): boolean {
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
-    this.G.L.entry("onRangePointerdown", oid, x, pos);
+    this.G.L.entry("onRangePointerdown", this.sortingcounter, oid, this.p.options[oid].name, x, pos);
     // window.alert("onRangePointerdown " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
@@ -473,7 +490,7 @@ export class PollPage implements OnInit {
 
   onRangeClick(oid: string, ev: MouseEvent): boolean {
     const pos = this.get_knob_pos(oid), x = ev.clientX;
-    this.G.L.entry("onRangeClick", oid, x, pos);
+    this.G.L.entry("onRangeClick", oid, this.p.options[oid].name, x, pos);
     // window.alert("onRangeClick " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
