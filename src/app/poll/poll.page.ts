@@ -300,8 +300,12 @@ export class PollPage implements OnInit {
   }
 
   listeners: Map<any, any[]> = new Map(); // cache for event listeners used in update_order
-
+  final_rand: number = 0;
+  
   async update_order(force=false) {
+    // DEBUG:
+    this.final_rand = this.p.make_final_rand("umewgfwgemfzgwezfgwefugwfxewgofxiwemhfeoifuhewfiewfumwehxfewmgfgmewfzuwegxzugwef");
+
     // TODO: rather have this triggered by tally function!
     if (this.oidsorted.length != this.p.oids.length) {
       this.needs_refresh = true;

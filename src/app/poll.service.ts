@@ -9,7 +9,7 @@ import { GlobalService } from './global.service';
 
 // TYPES:
 
-type poll_state_t = ""|"draft"|"running"|"closed";
+type poll_state_t = ""|"draft"|"running"|"closing"|"closed";
 type poll_type_t = "winner"|"share";
 type poll_due_type_t = "custom"|"10min"|"hour"|"midnight"|"24hr"|"tomorrow-noon"|"tomorrow-night"
                         |"friday-noon"|"sunday-night"|"week"|"two-weeks"|"four-weeks";
@@ -279,7 +279,8 @@ export class Poll {
           null: ['draft'],
           '': ['draft'], 
           'draft': ['running'], 
-          'running': ['closed']
+          'running': ['closing'],
+          'closing': ['closed']
         }[old_state].includes(new_state)) {
         this.G.D.change_poll_state(this, new_state);
         this._state = new_state;
@@ -1582,6 +1583,62 @@ export class Poll {
     return shares_changed;
   }
 
+  // CLOSING:
+
+  final_rand: number;
+  
+  close() {
+    /** perform everything necessary to close the poll if 
+     *  current state is still "running" but due date has passed.
+     */
+    if (!(this.state == "running" && this.due >= new Date())) {
+      return false;
+    } else {
+      // current state is still "running" but due date has passed.
+      // 1. set state to intermediate state "closing" in order to disable voting:
+      this.state = "closing";
+      // 2. wait some "grace" period for potentially ongoing sync to finish 
+      // and potential clock discrepancies between local and CouchDB server.
+      window.setTimeout(() => {
+        // 3. set state to final state "closed" if no other voter has done so:
+        this.state = "closed";
+        // 4. wait another grace period for this change to sync:
+        window.setTimeout(() => {
+          // 5. tell poll db sync to stop:
+          this.G.D.stop_poll_sync(this.pid);
+          this.G.D.wait_for_poll_db(this.pid);
+          // 6. wait another grace period for this stopping to have happened:
+          window.setTimeout(() => {
+            // 7. perform a one-time replication from the remote poll db
+            // to be absolutely sure that all voters have the exact same ratings and delegation data:
+            this.G.D.replicate_once(this.pid)
+            .then(() => {
+              // 8. perform a final tally:
+              this.tally_all();
+              // 9. get the revision number of the remote poll state doc:
+              this.G.D.get_remote_poll_state_doc(this.pid)
+              .then(doc => {
+                // 10. concatenate it with the pid, the total_ratings of all options, 
+                // and turn the result into a random number:
+                this.final_rand = this.make_final_rand(this.pid + doc._rev);
+              }); 
+            });
+          }, environment.closing.grace_period_3_ms);
+        }, environment.closing.grace_period_2_ms);
+      }, environment.closing.grace_period_1_ms);
+    }
+  }
+
+  make_final_rand(base: string): number {
+    var total = 0;
+    for (const oid of this.oids) {
+      total += this.T.total_effective_ratings_map.get(oid) || 0;
+    }
+    const str = base + (total%100).toString(),
+          rand = this.G.D.str2rand(str);
+    this.G.L.trace("PollService.make_final_rand base total r", base, total, rand);
+    return rand;
+  }
 }
 
 

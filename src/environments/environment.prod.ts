@@ -29,5 +29,10 @@ export const environment = {
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false
+  },
+  closing: {
+    grace_period_1_ms: 2000,
+    grace_period_2_ms: 2000,
+    grace_period_3_ms: 2000
   }
 };

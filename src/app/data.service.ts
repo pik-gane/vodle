@@ -748,6 +748,17 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
+  get_poll_doc_filter(pid: string): Function {
+    return (doc, req) => (
+      // we want poll docs:
+      (poll_doc_id_prefix + pid + "§" <= doc._id 
+        && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
+      // and voter docs:
+      || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
+          && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
+    )
+  }
+
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
     // called at poll initialization or when joining a poll
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication);
@@ -771,19 +782,12 @@ export class DataService implements OnDestroy {
           this.remote_poll_dbs[pid] = db;
   
           // replicate once and wait for it to finish:
-
+        
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
               retry: true,
               include_docs: true,
-              filter: (doc, req) => (
-                // we want poll docs:
-                (poll_doc_id_prefix + pid + "§" <= doc._id 
-                  && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
-                // and voter docs:
-                || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
-                    && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
-              )
+              filter: this.get_poll_doc_filter(pid)
           })/* on('complete') is never called, so we cannot do it this way but must check for 0 pending inside 'change' (see below):
           .on('complete', function () {
 
@@ -909,7 +913,7 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.change_poll_state", pid, new_state);
     const old_state = this.user_cache[prefix + 'state'];
 
-    if (old_state=='draft') {
+    if (old_state == 'draft') {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
@@ -949,11 +953,55 @@ export class DataService implements OnDestroy {
       });
     }
 
-    if (new_state != 'draft') {
+    if (new_state != 'draft' && new_state != 'closing') {
+      // only "running" and "closed" are stored in poll db.
       this._setp_in_polldb(pid, 'state', new_state); 
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
+  }
+
+  replicate_once(pid: string): Promise<boolean> {
+    this.G.L.entry("DataService.replicate_once", pid);
+    return new Promise<boolean>((resolve, reject) => {
+
+      this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
+          retry: true,
+          include_docs: true,
+          filter: this.get_poll_doc_filter(pid)
+      }).on('change', change => {
+
+        this.G.L.trace("DataService.replicate_once received change", change);
+
+        // process incoming docs:
+        this.handle_poll_db_change.bind(this)(pid, change);
+
+        if (change.pending == 0) {
+          // replication completed
+
+          this.G.L.trace("DataService.replicate_once completed", pid);
+
+          this.need_poll_db_replication[pid] = false;
+
+          // RESOLVE:
+          resolve(true);  
+        }
+
+      }).on('error', function (err) {
+
+        this.G.L.warn("DataService.replicate_once failed", pid, err);
+
+        // REJECT:
+        reject(err);
+
+      });
+      this.G.L.trace("DataService.replicate_once started one-time replication", pid);
+    });
+  }
+
+  get_remote_poll_state_doc(pid: string): Promise<any> {
+    const _id = poll_doc_id_prefix + pid + "§state";
+    return this.remote_poll_dbs[pid].get(_id);
   }
 
   // HOOKS FOR PAGES:
@@ -1225,14 +1273,7 @@ export class DataService implements OnDestroy {
         live: true,
         retry: true,
         include_docs: true,
-        filter: (doc, req) => (
-          // we want poll docs:
-          (poll_doc_id_prefix + pid + "§" <= doc._id 
-            && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
-          // and voter docs:
-          || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
-              && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
-        ),
+        filter: this.get_poll_doc_filter(pid)
       }).on('change', change => {
         this.handle_poll_db_change.bind(this)(pid, change);
       }).on('paused', info => {
@@ -1267,6 +1308,12 @@ export class DataService implements OnDestroy {
     }
     this.G.L.exit("DataService.start_poll_sync", pid, result);
     return result;
+  }
+
+  stop_poll_sync(pid: string) {
+    if (pid in this.G.D.poll_db_sync_handlers) {
+      this.G.D.poll_db_sync_handlers[pid].cancel();
+    }
   }
 
   // PUBLIC DATA ACCESS METHODS:
@@ -2384,7 +2431,7 @@ export class DataService implements OnDestroy {
       // stop all syncs:
       this.user_db_sync_handler.cancel();
       for (const pid in this.poll_db_sync_handlers) {
-        this.poll_db_sync_handlers[pid].cancel();
+        this.stop_poll_sync(pid);
       }
       // TODO: wait for all syncs to finish
       // delete all local dbs:
@@ -2539,6 +2586,19 @@ export class DataService implements OnDestroy {
     } catch {
       return undefined;
     }
+  }
+
+  // OTHER METHODS:
+
+  str2rand(str: string): number {
+    const len = str.length,
+          seedstr = (len >= Sodium.crypto_box_SEEDBYTES) 
+                      ? str.slice(str.length - Sodium.crypto_box_SEEDBYTES)
+                      : "_".repeat(Sodium.crypto_box_SEEDBYTES - len) + str,
+          seedbytes = Sodium.from_string(seedstr),
+          randombytes =  Sodium.randombytes_buf_deterministic(4, seedbytes),
+          rand = (((randombytes[0]/256 + randombytes[1])/256 + randombytes[2])/256 + randombytes[3])/256;
+    return rand;
   }
 
 }
