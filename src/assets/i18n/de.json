@@ -445,6 +445,7 @@
 
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
         "closes": "Schließt",
+        "closed": "Geschlossen",
 
         "hint-abstaining-1": "Du enthältst Dich momentan.",
         "hint-abstaining-2": "Du solltest wenigstens Deine Lieblingsoption bewerten oder Deine Bewertungen an jemand delegieren.",
@@ -454,6 +455,8 @@
         "hint-only1approved-2": "Du stimmst einer Option nur zu, wenn Deine Bewertung höher ist als der Prozentsatz an Teilnehmer:innen, die die Option ablehnen.",
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
         "hint-mostapproved-2": "Bitte prüfe, ob diese Option für Dich akzeptabel ist.",
+
+        "final-ratings": "Dies waren Deine Bewertungen am Ende:",
 
         "also-for-other": "Manche oder alle der Bewertungen weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Bewertungen weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
@@ -473,7 +476,9 @@
         "delegate-s": "{{delegate}}s",
 
         "chance-to-win": "{{percentage}}%<small> aktuelle Gewinnchance</small>",
+        "final-chance-to-win": "<small>hatte am Ende </small>{{percentage}}%<small> Gewinnchance</small>",
         "of-the-budget": "<small>bekäme jetzt </small>{{percentage}}%<small> des Budgets</small>",
+        "final-budget": "<small>bekommt </small>{{percentage}}%<small> des Budgets</small>",
         "including-your-share": " (inkl. Deinem Anteil)",
 
         "approved-by": "<small>es stimmen </small>{{percentage}}%<small> zu</small>",

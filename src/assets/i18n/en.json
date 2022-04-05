@@ -439,6 +439,7 @@
 
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Closes",
+        "closed": "Closed",
 
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",
@@ -448,6 +449,8 @@
         "hint-only1approved-2": "You only approve an option if your rating is larger than the percentage of participants who disapprove the option.",
         "hint-mostapproved-1": "You are not approving the top-most option.",
         "hint-mostapproved-2": "Please check if that option might be acceptable to you.",
+
+        "final-ratings": "These were your final ratings:",
 
         "also-for-other": "Some or all of the ratings below are also used for one other participant, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",
@@ -468,7 +471,9 @@
         "delegate-s": "{{delegate}}’s",
 
         "chance-to-win": "{{percentage}}%<small> current chance to win</small>",
-        "of-the-budget": "<small>currently gets </small>{{percentage}}%<small> of the budget</small>",
+        "final-chance-to-win": "<small>had a </small>{{percentage}}%<small> final chance to win</small>",
+        "of-the-budget": "<small>would currently get </small>{{percentage}}%<small> of the budget</small>",
+        "final-budget": "<small>finally gets </small>{{percentage}}%<small> of the budget</small>",
         "including-your-share": " (including your share)",
 
         "approved-by": "<small>approved by </small>{{percentage}}%",
