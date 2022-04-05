@@ -22,11 +22,6 @@
     <ion-title [innerHtml]="'poll.-page-title' | translate"></ion-title>
     <ion-buttons slot="end">
 
-      <!-- only in debug: simulate closing -->
-      <ion-toggle
-        [(ngModel)]="running">
-      </ion-toggle>
-
       <!-- OFFLINE SIGN -->
       <ng-container *ngIf="!window.navigator.onLine">
         <ion-icon name="cloud-offline-outline" color="grey"
@@ -660,5 +655,14 @@
         <small [innerHtml]="'poll.add-option-info' | translate"></small>
       </ion-item>
     </ng-container>
+
+    <ion-item>
+      <ion-buttons slot="end">
+        <!-- only in debug: simulate closing -->
+        <ion-toggle
+          [(ngModel)]="running">
+        </ion-toggle>
+      </ion-buttons>
+    </ion-item>
   </ion-list>
 </ion-content>
