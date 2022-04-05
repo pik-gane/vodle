@@ -29,6 +29,8 @@ export class PollPage implements OnInit {
 
   pid: string;
   p: Poll;
+  running: boolean = true;
+
   delegate: string;
   delegation_status = "none";
 
@@ -72,12 +74,8 @@ export class PollPage implements OnInit {
       private modalController: ModalController,
       public translate: TranslateService,
       public G: GlobalService) {
-    /* this.events.subscribe('updateScreen', () => {
-      this.zone.run(() => {
-        console.log('force update the screen');
-      });
-    }); */
     this.G.L.entry("PollsPage.constructor");
+    // get pid of opened poll:
     this.route.params.subscribe( params => { 
       this.pid = params['pid'];
     } );
@@ -297,6 +295,8 @@ export class PollPage implements OnInit {
     }
   }
 
+  listeners: Map<any, any[]> = new Map(); // cache for event listeners used in update_order
+
   async update_order(force=false) {
     // TODO: rather have this triggered by tally function!
     if (this.oidsorted.length != this.p.oids.length) {
@@ -329,11 +329,13 @@ export class PollPage implements OnInit {
         for (let i in this.oidsorted) {
           const oid = this.oidsorted[i],
                 col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter),
-                l1 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
-                l2 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
-                l3 = ev => { this.onRangePointerdown.bind(this)(oid, ev) },
-                l4 = ev => { this.onRangePointerdown.bind(this)(oid, ev) };
+                // new event listeners:
+                l1 = (ev => { this.onRatingColPointerdown.bind(this)(oid, ev) }),
+                l2 = (ev => { this.onRatingColPointerup.bind(this)(oid, ev) }),
+                l3 = (ev => { this.onRatingColTouchstart.bind(this)(oid, ev) }),
+                l4 = (ev => { this.onRatingColTouchup.bind(this)(oid, ev) });
           if (this.listeners.has(col)) {
+            // remove previous listeners since they might belong to a different oid:
             this.G.L.trace("PollPage.update_order removing old event listeners");
             const old = this.listeners.get(col);
             col.removeEventListener("pointerdown", old[0], true);
@@ -341,21 +343,18 @@ export class PollPage implements OnInit {
             col.removeEventListener("touchstart", old[2], true);
             col.removeEventListener("touchup", old[3], true);
           }
-          /**/
+          // add new listeners for this oid:
           col.addEventListener("pointerdown", l1, true);
           col.addEventListener("pointerup", l2, true);
           col.addEventListener("touchstart", l3 , true);
           col.addEventListener("touchup", l4, true);
           this.listeners.set(col, [l1, l2, l3, l4]);
-          /**/
         }  
         //window.alert("updated");
         this.G.L.trace("PollPage.update_order registered event listeners", this.sortingcounter);
       }, 100);
     } 
   }
-
-  listeners: Map<any, any[]> = new Map();
 
   set_slider_color(oid: string, value: number) {
     this.slidercolor[oid] = 
@@ -367,20 +366,6 @@ export class PollPage implements OnInit {
 
   // controls:
 
-  // TODO: remove these?
-  pause_refresh() {
-    this.refresh_paused = true;
-  }
-
-  unpause_refresh() {
-    this.refresh_paused = false;
-    this.update_order(true);
-  }
-
-  refresh_once() {
-    this.update_order(true);
-  }
-
   expand(oid: string) {
     this.expanded[oid] = !this.expanded[oid];
   }
@@ -391,29 +376,35 @@ export class PollPage implements OnInit {
   }
 
   set_slider_values() {
+    /** update slider knob positions to current proxy ratings from cache */
     for (let oid of this.p.oids) {
       this.get_slider(oid).value = this.p.proxy_ratings_map.get(oid).get(this.p.myvid).toString();
     }
   }
 
   get_slider_value(oid: string) {
+    /** get slider knob position */
     const slider = this.get_slider(oid);
     return !slider ? 0 : Number(slider.value);
   }
 
   apply_sliders_rating(oid: string) {
+    /** update own rating in cache on basis of slider knob position,
+     *  but don't store it in the database yet (see also rating_change_ended()).
+     */
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
-//    this.G.D.save_state();
     this.show_stats();
   }
 
-  onRatingChangeStart(oid: string): boolean {
+  onRatingSliderFocus(oid: string): boolean {
+    /** called as soon as range slider gets focus */
     return true;
   }
 
-  onRatingChange(oid: string): boolean {
+  onRatingSliderChange(oid: string): boolean {
+    /** called whenever a slider is moved */
     var slider = this.get_slider(oid),
         value = Number(slider.value);
     // window.alert("onRatingChange " + value);
@@ -423,6 +414,8 @@ export class PollPage implements OnInit {
   }
 
   rating_change_ended(oid: string) {
+    /** Called right after releasing the slider. 
+     *  Stores slider position in own rating cache AND database. */
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.entry("PollPage.rating_change_ended");
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
@@ -432,15 +425,17 @@ export class PollPage implements OnInit {
     this.G.D.save_state();
   }
 
-  dragged_oid: string = undefined;
+  dragged_oid: string = undefined; // used in onRatingColPointerdown
 
   // The following three handlers prevent the slider from responding when pointer is not on knob:
   
-  onRangePointerdown(oid: string, ev: Event): boolean {
+  onRatingColPointerdown(oid: string, ev: Event): boolean {
+    /** event listener called when user starts clicking slider */
+    if (!this.running) return false;
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
-    this.G.L.entry("onRangePointerdown", this.sortingcounter, oid, this.p.options[oid].name, x, pos);
-    // window.alert("onRangePointerdown " + pos.left + " " + x + " " + pos.right);
+    this.G.L.entry("onRatingColPointerdown", this.sortingcounter, oid, this.p.options[oid].name, x, pos);
+    // window.alert("onRatingColPointerdown " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
       return false;
@@ -448,11 +443,13 @@ export class PollPage implements OnInit {
     return true;
   }
 
-  onRangeTouchstart(oid: string, ev: Event): boolean {
+  onRatingColTouchstart(oid: string, ev: Event): boolean {
+    /** event listener called when user starts touching slider */
+    if (!this.running) return false;
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
-    this.G.L.entry("onRangeTouchstart", oid, x, pos);
-    // window.alert("onRangeTouchstart " + pos.left + " " + x + " " + pos.right);
+    this.G.L.entry("onRatingColTouchstart", oid, x, pos);
+    // window.alert("onRatingColTouchstart " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
       return false;
@@ -460,9 +457,11 @@ export class PollPage implements OnInit {
     return true;
   }
 
-  onRangePointerup(oid: string, ev: Event): boolean {
+  onRatingColPointerup(oid: string, ev: Event): boolean {
+    /** event listener called when user stops clicking slider */
+    if (!this.running) return false;
     // FIXME: not always firing on Android if click is too short
-    this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
+    this.G.L.entry("onRatingColPointerup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
@@ -474,9 +473,11 @@ export class PollPage implements OnInit {
     }
   }
 
-  onRangeTouchup(oid: string, ev: Event): boolean {
+  onRatingColTouchup(oid: string, ev: Event): boolean {
+    /** event listener called when user stops touching slider */
+    if (!this.running) return false;
     // FIXME: not always firing on Android if click is too short
-    this.G.L.entry("onRangeTouchup", oid, this.dragged_oid);
+    this.G.L.entry("onRatingColTouchup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
@@ -488,10 +489,12 @@ export class PollPage implements OnInit {
     }
   }
 
-  onRangeClick(oid: string, ev: MouseEvent): boolean {
+  onRatingColClick(oid: string, ev: MouseEvent): boolean {
+    /** event listener called after clicking or touching slider has ended */
+    if (!this.running) return false;
     const pos = this.get_knob_pos(oid), x = ev.clientX;
-    this.G.L.entry("onRangeClick", oid, this.p.options[oid].name, x, pos);
-    // window.alert("onRangeClick " + pos.left + " " + x + " " + pos.right);
+    this.G.L.entry("onRatingColClick", oid, this.p.options[oid].name, x, pos);
+    // window.alert("onRatingColClick " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
       return false;
@@ -500,14 +503,31 @@ export class PollPage implements OnInit {
   }
 
   onBodyPointerup(ev: Event): boolean {
+    /** event listener called when click ended outside slider area */
+    if (!this.running) return false;
+    // if clicking started in a slider, call that slider's pointerup handler:
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
-      this.onRangePointerup(this.dragged_oid, ev);
+      this.onRatingColPointerup(this.dragged_oid, ev);
     }
     return true;
   }
 
-  get_knob_pos(oid: string){
+  onBodyTouchup(ev: Event): boolean {
+    /** event listener called when touching ended outside slider area */
+    if (!this.running) return false;
+    // if touching started in a slider, call that slider's touchup handler:
+    if (this.dragged_oid) {
+      this.G.L.entry("onBodyTouchup");
+      this.onRatingColTouchup(this.dragged_oid, ev);
+    }
+    return true;
+  }
+
+  get_knob_pos(oid: string) {
+    /** get the slider knob position (left and right pixel coordinates)
+     *  to be able to compare with click/touch coordinate:
+     */
     const slider = this.get_slider(oid), 
           slider_rect = this.get_screen_coords(slider),
           value = this.get_slider_value(oid),
@@ -517,11 +537,14 @@ export class PollPage implements OnInit {
   }
 
   get_screen_coords(element: HTMLElement): DOMRect {
+    /** get the screen coordinates of an HTML element */
     if (!element) return new DOMRect();
     return element.getBoundingClientRect();
   }
 
   swallow_event(ev: Event) {
+    /** Stop any form of propagation of an event. 
+     *  Used to disable slider reaction outside knob. */
     this.G.L.trace("swallowing event", ev);
     // window.alert("swallow 1");
     // FIXME: does not work in Android app and Chrome-simulated mobile devices yet!
@@ -533,15 +556,8 @@ export class PollPage implements OnInit {
     }
   }
 
-  // only here for debugging purposes:
-  simulate_closing() {
-    if (confirm("really close the poll?")) {
-//      this.p.close();
-//      this.router.navigate(["/closedpoll"]);
-    }
-  }
-
   delegate_dialog(event: Event) {
+    /** open the delegation dialog popover */
     this.popover.create({
         event, 
         component: DelegationDialogPage, 
@@ -555,6 +571,7 @@ export class PollPage implements OnInit {
   }
 
   explain_approval_dialog(oid: string) {
+    /** open the explanation dialog modal */
     this.modalController.create({
         component: ExplainApprovalPage, 
 //        translucent: true,
@@ -568,17 +585,9 @@ export class PollPage implements OnInit {
         modalElement.present();
       })
   }
-  /*
-  async presentModal() {
-    const modal = await this.modalController.create({
-      component: ModalPage,
-      cssClass: 'my-custom-class'
-    });
-    return await modal.present();
-  }
-  */
 
   async revoke_delegation_dialog() { 
+    /** open the delegation revokation confirmation dialog alert */
     const confirm = await this.alertCtrl.create({ 
       message: this.translate.instant(
         'poll.revoke_delegation', {nickname: this.delegate}), 
@@ -607,13 +616,14 @@ export class PollPage implements OnInit {
   } 
 
   add_option(event: Event) {
-    // TODO: also add delegation if ospec.type == "-"
+    /** open the add option dialog popover */
+    // TODO: also add delegation if ospec.type == "-"?
     this.popover.create({
-//      event, 
+//      event, // TODO: use this from Ionic v6 on!
+//      side: 'top', // TODO: use this from Ionic v6 on!
       component: AddoptionDialogPage, 
       translucent: true,
       showBackdrop: true,
-//      side: 'top', // TODO: use this from Ionic v6 on!
       cssClass: 'add-option-class',
       componentProps: {parent: this}
     })

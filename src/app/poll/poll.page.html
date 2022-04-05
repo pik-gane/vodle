@@ -12,7 +12,9 @@
 
 <!-- HEADER: -->
 
-<ion-header (pointerup)="onBodyPointerup($event)">
+<ion-header 
+    (pointerup)="onBodyPointerup($event)"
+    (touchup)="onBodyTouchup($event)">
   <ion-toolbar style="padding-right: 11px;">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
@@ -20,14 +22,22 @@
     <ion-title [innerHtml]="'poll.-page-title' | translate"></ion-title>
     <ion-buttons slot="end">
 
+      <!-- only in debug: simulate closing -->
+      <ion-toggle
+        [(ngModel)]="running">
+      </ion-toggle>
+
       <!-- DELEGATE BUTTON: -->
 
       <ion-button *ngIf="delegation_status!='agreed'"
+          [disabled]="!running"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary">
         <span 
           [innerHtml]="'poll.delegate-button' | translate">
-        </span>&nbsp;<ion-button shape="round" fill="solid" color="primary">
+        </span>&nbsp;<ion-button 
+            [disabled]="!running"
+            shape="round" fill="solid" color="primary">
           <ion-icon src="assets/icon/delegate-simple.svg">
           </ion-icon>
         </ion-button>
@@ -272,7 +282,9 @@
           <!-- Revoke delegation button: -->
 
           <ion-col size="auto" class="ion-no-margin">
-            <ion-button fill="clear" (click)="revoke_delegation_dialog()">
+            <ion-button 
+                [disabled]="!running"
+                fill="clear" (click)="revoke_delegation_dialog()">
               <ion-icon name="trash-outline" style="color:black"></ion-icon>
             </ion-button>
           </ion-col>
@@ -412,22 +424,23 @@
                 <ion-col 
                     [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
                     class="ion-no-padding ion-no-margin" 
-                    (click)="onRangeClick(oidsorted[i], $event)" 
-                    (pointerdown)="onRangePointerdown(oidsorted[i], $event)" 
-                    (touchstart)="onRangeTouchstart(oidsorted[i], $event)" 
-                    (touchup)="onRangeTouchup(oidsorted[i], $event)"
-                    (pointerup)="onRangePointerup(oidsorted[i], $event)"
+                    (click)="onRatingColClick(oidsorted[i], $event)" 
+                    (pointerdown)="onRatingColPointerdown(oidsorted[i], $event)" 
+                    (touchstart)="onRatingColTouchstart(oidsorted[i], $event)" 
+                    (touchup)="onRatingColTouchup(oidsorted[i], $event)"
+                    (pointerup)="onRatingColPointerup(oidsorted[i], $event)"
                     >
 
                   <!-- SLIDER: -->
 
                   <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
                   <ion-range 
+                      [disabled]="!running"
                       [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                       [color]="slidercolor[oidsorted[i]]"
                       [value]="p.get_my_proxy_rating(oidsorted[i])" 
-                      (ionFocus)="onRatingChangeStart(oidsorted[i])" 
-                      (ionChange)="onRatingChange(oidsorted[i])" 
+                      (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
+                      (ionChange)="onRatingSliderChange(oidsorted[i])" 
                       pin="true" min="0" max="100"
                       [style]="'--bar-background: rgba(0,0,0,0);'
                         + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
@@ -474,6 +487,7 @@
                     class="ion-no-margin ion-no-padding" 
                     size="auto">&nbsp;&nbsp;&nbsp;
                   <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
+                    [disabled]="!running"
                     (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
                     class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
                     style="position:relative; top:-8px;" 
@@ -594,10 +608,14 @@
     <!-- ADD OPTION BUTTON: -->
 
     <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
-      <ion-fab-button size="small" (click)="add_option($event)" fill="clear" color="primary">
+      <ion-fab-button 
+        [disabled]="!running"
+        size="small" (click)="add_option($event)" fill="clear" color="primary">
         <ion-icon name="add"></ion-icon>
       </ion-fab-button>
-      <ion-button class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
+      <ion-button 
+        [disabled]="!running"
+        class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
         [innerHtml]="'poll.add-option' | translate"> 
       </ion-button>
     </ion-item>

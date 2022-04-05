@@ -10,16 +10,19 @@ We are also very happy to pragmatically deviate from these conventions wherever 
 - functions, methods, variables and attributes are in `lowercase_with_underscores`
 - variables of type Map or Set have `_map` or `_set` in their name (see [below](#data-structures)).
 
-The main exception to this are attributes that are *very frequently used* and *complex*, such as services,
-which are named as follows:
-- `D` for the [DataService](../../src/app/data.service.ts)
-- `Del` for the [DelegationService](../../src/app/delegation.service.ts)
-- `G` for the [GlobalService](../../src/app/global.service.ts)
-- `L` for the Logger
-- `N` for the [NewsService](../../src/app/news.service.ts)
-- `P` for the [PollService](../../src/app/poll.service.ts)
-- `S` for the [SettingsService](../../src/app/settings.service.ts)
-- `T` for a poll's tallying data cache
+There are two main exceptions to this.
+
+1. Methods that override parent class functions or that are in some sense "standard methods" use CamelCase if that is the general convention for such methods. An example of this is `onClick` instead of `on_click`.
+2. Attributes that are *very frequently used* and *complex*, such as services, are named using uppercase letters as follows:
+    - `D` for the [DataService](../../src/app/data.service.ts)
+    - `Del` for the [DelegationService](../../src/app/delegation.service.ts)
+    - `G` for the [GlobalService](../../src/app/global.service.ts)
+    - `L` for the Logger
+    - `N` for the [NewsService](../../src/app/news.service.ts)
+    - `P` for the [PollService](../../src/app/poll.service.ts)
+    - `S` for the [SettingsService](../../src/app/settings.service.ts)
+    - `T` for a poll's tallying data cache
+
 
 ## Data structures
 
