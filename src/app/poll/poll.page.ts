@@ -220,7 +220,7 @@ export class PollPage implements OnInit {
     const totalContentHeight = scrollElement.scrollHeight;
     const viewportHeight = scrollElement.offsetHeight;
   
-    this.scroll_position = scrollPosition / (totalContentHeight - viewportHeight);
+    this.scroll_position = scrollPosition; //  / (totalContentHeight - viewportHeight);
     
   }
 

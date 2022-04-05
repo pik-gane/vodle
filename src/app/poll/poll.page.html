@@ -19,7 +19,10 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title [innerHtml]="'poll.-page-title' | translate"></ion-title>
+    <ion-title *ngIf="scroll_position < 70" 
+      [innerHtml]="'poll.-page-title' | translate">
+    </ion-title>
+    <ion-text *ngIf="scroll_position >= 70" style="font-size: larger;"><i>{{p.title}}</i></ion-text>
     <ion-buttons slot="end">
 
       <!-- OFFLINE SIGN -->
@@ -54,7 +57,11 @@
 
 <!-- SCROLLABLE CONTENT: -->
 
-<ion-content *ngIf="ready" (pointerup)="onBodyPointerup($event)">
+<ion-content *ngIf="ready" 
+    (pointerup)="onBodyPointerup($event)"
+    [scrollEvents]="true"
+    (ionScroll)="onScroll($event)"    
+    >
   <ion-list lines="full">
 
     <!-- NEWS -->
@@ -656,13 +663,14 @@
       </ion-item>
     </ng-container>
 
-    <ion-item>
-      <ion-col><p>Debugging info: state={{p.state}}, 
-        {{final_rand}}
-      </p></ion-col>
+    <ion-item></ion-item>
+    <ion-item class="ion-text-right" lines="none">
+      <ion-col><small><p style="color: grey;">
+        Debugging info: state={{p.state}}. Simulate state (off:closed, on:running): 
+      </p></small></ion-col>
       <ion-buttons slot="end">
         <!-- only in debug: simulate closing -->
-        <ion-toggle
+        <ion-toggle color="light"
           [(ngModel)]="running">
         </ion-toggle>
       </ion-buttons>

@@ -1,0 +1,52 @@
+{
+    "type": "share",
+
+    "language": "en",
+
+    "title": "Where shall Jobst's next donation go?",
+
+    "desc": "After this poll is closed, Jobst will donate EUR 100 in total to some of the charities that the Effective Altruism movement recommends. You collectively control how much of it goes to which charity! At the same time, by participating and testing this app, you help us improving it! If you find some bug, please take a minute to report the issue (via the main menu).",
+    
+    "url": "https://www.givingwhatwecan.org/best-charities-to-donate-to-2022/",
+
+    "due_type": "four-weeks",
+
+    "options": [
+        {
+            "name": "Global Health & Development Fund",
+            "desc": "The Global Health and Development Fund aims to improve the health or economic empowerment of people around the world as effectively as possible.",
+            "url": "https://funds.effectivealtruism.org/funds/global-development"
+        },
+        {
+            "name": "Animal Welfare Fund",
+            "desc": "The Animal Welfare Fund aims to effectively improve the well-being of nonhuman animals, by making grants that focus on one or more of the following: Relatively neglected geographic regions or groups of animals; Promising research into animal advocacy or animal well-being; Activities that could make it easier to help animals in the future; Otherwise best-in-class opportunities.",
+            "url": "https://funds.effectivealtruism.org/funds/animal-welfare"
+        },
+        {
+            "name": "Long-Term Future Fund",
+            "desc": "The Long-Term Future Fund aims to positively influence the long-term trajectory of civilization by making grants that address global catastrophic risks, especially potential risks from advanced artificial intelligence and pandemics. In addition, we seek to promote, implement, and advocate for longtermist ideas, and to otherwise increase the likelihood that future generations will flourish.",
+            "url": "https://funds.effectivealtruism.org/funds/far-future"
+        },
+        {
+            "name": "Eff. Altriusm Infrastructure Fund",
+            "desc": "The Effective Altruism Infrastructure Fund aims to increase the impact of projects that use the principles of effective altruism, by increasing their access to talent, capital, and knowledge.",
+            "url": "https://funds.effectivealtruism.org/funds/ea-community"
+        },
+        {
+            "name": "GiveWell Maximum Impact Fund",
+            "desc": "Donate to the highest-value funding opportunities among GiveWell's recommended charities. (You might also want to add some of those charities as more specific options to this poll)",
+            "url": "https://funds.effectivealtruism.org/partners/givewell"
+        },
+        {
+            "name": "Climate Change Fund",
+            "desc": "The Founders Pledge Climate Change Fund supports highly-impactful, evidence-based solutions to the “triple challenge” of carbon emissions, air pollution, and energy poverty.",
+            "url": "https://funds.effectivealtruism.org/partners/founders-pledge-climate-change-fund"
+        },
+        {
+            "name": "Recommended Animal Charity Fund",
+            "desc": "The Recommended Charity Fund is for anyone who wishes to support Animal Charity Evaluators' (ACE) recommended charities through a single donation, simplifying the process so that you can easily give to effective animal charities. The Fund supports ACE’s current Top Charities and Standout Charities, and its disbursement is determined by ACE’s research team. (You might also want to add some of those charities as more specific options to this poll)",
+            "url": "https://funds.effectivealtruism.org/partners/ace-recommended-charities"
+        }
+    ]
+
+}
