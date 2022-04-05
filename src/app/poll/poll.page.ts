@@ -121,7 +121,7 @@ export class PollPage implements OnInit {
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
     this.ready = true;
-    this.update_order();
+    this.update_order(true);
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
     }
@@ -327,12 +327,13 @@ export class PollPage implements OnInit {
         this.show_stats.bind(this)();
         // add event listeners to catch pointer events outside knob:
         for (let i in this.oidsorted) {
-          const col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter);
+          const oid = this.oidsorted[i],
+                col = document.getElementById('_slider_'+this.oidsorted[i]+"_"+this.sortingcounter);
           /*
-          col.addEventListener("pointerdown", this.onRangePointerdown.bind(this), true);
-          col.addEventListener("pointerup", this.onRangePointerdown.bind(this), true);
-          col.addEventListener("touchstart", this.onRangePointerdown.bind(this), true);
-          col.addEventListener("touchup", this.onRangePointerdown.bind(this), true);
+          col.addEventListener("pointerdown", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
+          col.addEventListener("pointerup", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
+          col.addEventListener("touchstart", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
+          col.addEventListener("touchup", ev => { this.onRangePointerdown.bind(this)(oid, ev) }, true);
           */
         }  
         this.G.L.trace("PollPage.update_order registered event listeners");
@@ -391,15 +392,17 @@ export class PollPage implements OnInit {
     this.show_stats();
   }
 
-  rating_change_begins(oid: string) {
+  onRatingChangeStart(oid: string): boolean {
+    return true;
   }
 
-  rating_changes(oid: string) {
+  onRatingChange(oid: string): boolean {
     var slider = this.get_slider(oid),
         value = Number(slider.value);
-//    window.alert("rating_changes " + value);
+    // window.alert("onRatingChange " + value);
     this.set_slider_color(oid, value);
     this.apply_sliders_rating(oid);
+    return true;
   }
 
   rating_change_ended(oid: string) {
@@ -416,62 +419,75 @@ export class PollPage implements OnInit {
 
   // The following three handlers prevent the slider from responding when pointer is not on knob:
   
-  onRangePointerdown(oid:string, ev:Event) {
+  onRangePointerdown(oid: string, ev: Event): boolean {
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRangePointerdown", oid, x, pos);
-//    window.alert("onRangePointerdown " + pos.left + " " + x + " " + pos.right);
+    // window.alert("onRangePointerdown " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
+      return false;
     }
+    return true;
   }
 
-  onRangeTouchstart(oid:string, ev:Event) {
+  onRangeTouchstart(oid: string, ev: Event): boolean {
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRangeTouchstart", oid, x, pos);
-//    window.alert("onRangeTouchstart " + pos.left + " " + x + " " + pos.right);
+    // window.alert("onRangeTouchstart " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
+      return false;
     }
+    return true;
   }
 
-  onRangePointerup(oid:string, ev:Event) {
+  onRangePointerup(oid: string, ev: Event): boolean {
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRangePointerup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
+      this.dragged_oid = null;
+      return false;
     } else {
       this.rating_change_ended(oid);
+      this.dragged_oid = null;
+      return true;
     }
-    this.dragged_oid = null;
   }
 
-  onRangeTouchup(oid:string, ev:Event) {
+  onRangeTouchup(oid: string, ev: Event): boolean {
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRangeTouchup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
+      this.dragged_oid = null;
+      return false;
     } else {
       this.rating_change_ended(oid);
+      this.dragged_oid = null;
+      return true;
     }
-    this.dragged_oid = null;
   }
 
-  onRangeClick(oid:string, ev:MouseEvent) {
+  onRangeClick(oid: string, ev: MouseEvent): boolean {
     const pos = this.get_knob_pos(oid), x = ev.clientX;
     this.G.L.entry("onRangeClick", oid, x, pos);
-//    window.alert("onRangeClick " + pos.left + " " + x + " " + pos.right);
+    // window.alert("onRangeClick " + pos.left + " " + x + " " + pos.right);
     if ((x < pos.left) || (x > pos.right)) {
       this.swallow_event(ev);
+      return false;
     }
+    return true;
   }
 
-  onBodyPointerup(ev:Event) {
+  onBodyPointerup(ev: Event): boolean {
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
       this.onRangePointerup(this.dragged_oid, ev);
     }
+    return true;
   }
 
   get_knob_pos(oid: string){
@@ -490,10 +506,10 @@ export class PollPage implements OnInit {
 
   swallow_event(ev: Event) {
     this.G.L.trace("swallowing event", ev);
-//    window.alert("swallow 1");
+    // window.alert("swallow 1");
     // FIXME: does not work in Android app and Chrome-simulated mobile devices yet!
     if (!!ev) {
-//      window.alert("swallow 2");
+      // window.alert("swallow 2");
       ev.stopPropagation();
       ev.stopImmediatePropagation();
       ev.preventDefault();  

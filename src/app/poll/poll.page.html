@@ -426,8 +426,8 @@
                       [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                       [color]="slidercolor[oidsorted[i]]"
                       [value]="p.get_my_proxy_rating(oidsorted[i])" 
-                      (ionFocus)="rating_change_begins(oidsorted[i])" 
-                      (ionChange)="rating_changes(oidsorted[i])" 
+                      (ionFocus)="onRatingChangeStart(oidsorted[i])" 
+                      (ionChange)="onRatingChange(oidsorted[i])" 
                       pin="true" min="0" max="100"
                       [style]="'--bar-background: rgba(0,0,0,0);'
                         + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
