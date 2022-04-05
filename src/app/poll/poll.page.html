@@ -27,8 +27,17 @@
         [(ngModel)]="running">
       </ion-toggle>
 
+      <!-- OFFLINE SIGN -->
+      <ng-container *ngIf="!window.navigator.onLine">
+        <ion-icon name="cloud-offline-outline" color="grey"
+          style="position: relative; bottom: -1px;">
+        </ion-icon>
+        <ion-icon name="alert-outline" color="grey">
+        </ion-icon>
+      </ng-container> 
+
       <!-- SYNCING SIGN -->
-      <ion-spinner *ngIf="!!p && p.syncing" name="crescent" size="small" color="grey"></ion-spinner>
+      <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
       <!-- DELEGATE BUTTON: -->
 

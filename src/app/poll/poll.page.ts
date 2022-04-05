@@ -22,6 +22,7 @@ export class PollPage implements OnInit {
   Array = Array;
   Math = Math;
   Object = Object;
+  window = window;
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
@@ -88,6 +89,9 @@ export class PollPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("PollPage.ionViewWillEnter");
     this.G.D.page = this;
+    const f = (ev => { this.changeDetector.detectChanges(); });
+    window.addEventListener('offline', f);
+    window.addEventListener('online', f);
   }
 
   ionViewDidEnter() {

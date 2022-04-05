@@ -1238,10 +1238,12 @@ export class DataService implements OnDestroy {
       }).on('paused', info => {
         // replication was paused, usually because of a lost connection
         this.G.L.info("DataService pausing poll data sync", pid, info);
+        const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = false;
       }).on('active', info => {
         // replication was resumed
         this.G.L.info("DataService resuming poll data syncing", pid, info);
+        const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = true;
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
@@ -1249,6 +1251,7 @@ export class DataService implements OnDestroy {
       }).on('complete', info => {
         // handle complete
         this.G.L.info("DataService completed poll data sync", pid, info);
+        const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = false;
       }).on('error', err => {
         // totally unhandled error (shouldn't happen)
