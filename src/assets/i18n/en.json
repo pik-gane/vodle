@@ -464,7 +464,7 @@
         "have-accepted": "You have <b>accepted</b> delegation by",
         "have-declined": "You have <b>declined</b> delegation by",
 
-        "delegate-not-responded": "has not yes responded to your delegation request.",
+        "delegate-not-responded": "has not yet responded to your delegation request.",
         "delegate-controls-all": "controls all of your ratings as your delegate.",
         "delegate-controls-most": "controls most of your ratings as your delegate.",
         "delegate-controls-some": "controls some of your ratings as your delegate.",
