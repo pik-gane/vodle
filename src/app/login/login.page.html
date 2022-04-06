@@ -284,8 +284,10 @@ TODO:
 
     <ng-container *ngIf="step=='connected'">
       <ion-item class="item-text-wrap" lines="none">
-        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
-        <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
+        <ion-col>
+          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
+          <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
+        </ion-col>
       </ion-item>
       <ion-item lines="none">
         <p><br/><br/><br/></p>
