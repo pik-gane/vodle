@@ -377,9 +377,10 @@
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
         "ask-fresh-password": "Please set a password.",
-        "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them.",
+        "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
-        "ready-to-start": "OK, have fun with vodle!"
+        "ready-to-start": "OK, have fun with vodle!",
+        "ready-to-start-detail": "When you leave, your ratings will be saved automatically. We keep you logged in until you log out."
     },
 
     "logout": {
@@ -440,6 +441,8 @@
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Closes",
         "closed": "Closed",
+        "type-share": "options are assigned shares",
+        "type-winner": "one option wins",
 
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",

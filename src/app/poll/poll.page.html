@@ -90,7 +90,7 @@
     <ion-item color="primary">
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin ion-padding-bottom">
+          <ion-col class="ion-no-padding ion-no-margin">
 
             <!-- NOTIFY OF DIFFERENT LANGUAGE: -->
 
@@ -113,45 +113,46 @@
 
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 
-            <small>
-              <ion-badge *ngIf="running && p.is_closing_soon" 
-                class="ion-no-margin" 
-                style="position: relative; bottom: -6px;" 
-                color="danger" 
-                [innerHtml]="'badges.closing-soon'|translate">
-              </ion-badge>
-              <span *ngIf="running && !p.is_closing_soon"
-                [innerHtml]="'poll.closes' | translate">
-              </span><span *ngIf="!running"
-                [innerHtml]="'poll.closed' | translate">
-              </span>&nbsp;<b 
-                [innerHtml]="G.D.format_date(p.due)">
-              </b>
-            </small>
-            <br/>
+            <p>
+              <small>
+                <ion-badge *ngIf="running && p.is_closing_soon" 
+                  class="ion-no-margin" 
+                  style="position: relative; bottom: -6px;" 
+                  color="danger" 
+                  [innerHtml]="'badges.closing-soon'|translate">
+                </ion-badge>
+                <span *ngIf="running && !p.is_closing_soon"
+                  [innerHtml]="'poll.closes' | translate">
+                </span><span *ngIf="!running"
+                  [innerHtml]="'poll.closed' | translate">
+                </span>&nbsp;<b 
+                  [innerHtml]="G.D.format_date(p.due)">
+                </b>&nbsp;&nbsp;&nbsp;&nbsp;<ion-icon color="light" style="position: relative; top: 2px" [name]="(p.type=='share')?'cut-outline':'trophy-outline'"></ion-icon>&nbsp;<span [innerHtml]="((p.type=='share')?'poll.type-share':'poll.type-winner')|translate"></span>
+              </small>
+              <br/>
 
-            <ion-icon 
-                color="light" style="position: relative; top: 3px" 
-                [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-            </ion-icon>
-            <small style="white-space: nowrap;">
-              <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>&nbsp;&nbsp;&nbsp;&nbsp;
-            </small>
-            <ion-icon 
-                color="light" style="position: relative; top: 3px" 
-                name="people-outline">
-            </ion-icon>&nbsp;<small style="white-space: nowrap;">
-              <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
-            </small><ion-button
-                class="ion-no-padding ion-no-margin" fill="clear" size="small" 
-                style="position: relative; top: -2px"
-                [routerLink]="'/inviteto/'+p.pid" >
               <ion-icon 
-                  class="ion-no-padding ion-no-margin" 
-                  name="share-social-outline" 
-                  color="light">
-              </ion-icon>  
-            </ion-button>
+                  color="light" style="position: relative; top: 3px" 
+                  [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
+              </ion-icon>
+              <small style="white-space: nowrap;">
+                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>&nbsp;&nbsp;&nbsp;&nbsp;
+              </small>
+              <ion-icon 
+                  color="light" style="position: relative; top: 3px" 
+                  name="people-outline">
+              </ion-icon>&nbsp;<small style="white-space: nowrap;">
+                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
+              </small><ion-button
+                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                  [routerLink]="'/inviteto/'+p.pid" >
+                <ion-icon 
+                    class="ion-no-padding ion-no-margin" 
+                    name="share-social-outline" 
+                    color="light">
+                </ion-icon>  
+              </ion-button>
+            </p>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -663,17 +664,23 @@
       </ion-item>
     </ng-container>
 
-    <ion-item></ion-item>
-    <ion-item class="ion-text-right" lines="none">
-      <ion-col><small><p style="color: grey;">
-        Debugging info: state={{p.state}}. Simulate state (off:closed, on:running): 
-      </p></small></ion-col>
-      <ion-buttons slot="end">
-        <!-- only in debug: simulate closing -->
-        <ion-toggle color="light"
-          [(ngModel)]="running">
-        </ion-toggle>
-      </ion-buttons>
-    </ion-item>
+    <!-- DEBUGGING AREA (not in production mode): -->
+
+    <ng-container *ngIf="!environment.production">
+      <ion-item></ion-item>
+      <ion-item class="ion-text-right" lines="none">
+        <ion-col><small><p style="color: grey;">
+          Debugging info: state={{p.state}}, vid={{p.myvid}}. 
+          Simulate state (off:closed, on:running): 
+        </p></small></ion-col>
+        <ion-buttons slot="end">
+          <!-- only in debug: simulate closing -->
+          <ion-toggle color="light"
+            [(ngModel)]="running">
+          </ion-toggle>
+        </ion-buttons>
+      </ion-item>
+    </ng-container>
+
   </ion-list>
 </ion-content>

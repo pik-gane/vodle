@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, IonContent, IonRouterOutlet, IonCol } from '@ionic/angular';
 import { PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
+import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
@@ -23,6 +24,7 @@ export class PollPage implements OnInit {
   Math = Math;
   Object = Object;
   window = window;
+  environment = environment;
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
