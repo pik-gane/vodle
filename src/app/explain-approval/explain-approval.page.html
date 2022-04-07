@@ -135,7 +135,7 @@
               </line>
             </g>
             <!-- threshold vertical: -->
-            <line [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-29" y2="101" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+            <line [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-26" y2="101" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
             <!-- own rating marker: -->
             <ng-container *ngIf="!!myv">
               <line stroke-width="2" 
@@ -145,21 +145,21 @@
             <!-- final annotations: -->
             <g transform="scale(1 -1)" fill="black">
               <g *ngIf="a<1">
-                <text [attr.x]="100*(1-a)" y="12" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="17" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="22" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-3'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="27" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-4'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="10" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="15" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="20" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-3'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="25" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-4'|translate"></tspan>&nbsp;&nbsp;</text>
               </g>
               <g *ngIf="a>0">
-                <text [attr.x]="100*(1-a)" y="12" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-1'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="17" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-2'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="22" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-3'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="27" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-4'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="10" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-1'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="15" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-2'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="20" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-3'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="25" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-4'|translate"></tspan></text>
               </g>
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
                 <ng-container *ngIf="!!myv">
                   <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
-                  <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
+                  <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-2'|translate"></tspan><tspan *ngIf="eff_unequal_proxy">*</tspan>&nbsp;&nbsp;</text>
                 </ng-container>
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
@@ -167,6 +167,10 @@
                   <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
                   <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
+              </g>
+              <g *ngIf="!!myv && eff_unequal_proxy" font-size="4" fill="#808080">
+                <text x="-20" y="31">*<tspan [innerHtml]="'explain.largest-line-1'|translate"></tspan></text>
+                <text x="-20" y="34">&nbsp;<tspan [innerHtml]="'explain.largest-line-2'|translate"></tspan></text>
               </g>
             </g>
           </g>

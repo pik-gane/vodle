@@ -45,6 +45,7 @@ export class ExplainApprovalPage implements OnInit {
   dtt = 1; tt1: number; tt2: number;  // threshold
   tab1: number; tab2 = 7;  // approval bar
   to1 = 8; to2 = 9;  // own status
+  eff_unequal_proxy: boolean;
 
   // data for share animation:
   oids: string[];
@@ -97,6 +98,7 @@ export class ExplainApprovalPage implements OnInit {
       }
     }
     this.myi = rs.indexOf(myr);
+    this.eff_unequal_proxy = (myr != p.get_my_proxy_rating(oid));
 
     this.parent.G.L.trace("ANIMATION:",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);
     this.parent.G.L.trace("ANIMATION:",dur, this.tob2, this.tt2);

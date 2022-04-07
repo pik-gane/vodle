@@ -218,6 +218,8 @@
 
         "your-rating-line-1": "Deine",
         "your-rating-line-2": "Bewertg.",
+        "largest-line-1": "Deine größte Bewertung wird als 100 interpretiert, um",
+        "largest-line-2": "sicherzustellen, dass Du mindestens einer Option zustimmst.",
 
         "threshold-smaller-line-1": "Kleinere",
         "threshold-smaller-line-2": "Bewertungen",

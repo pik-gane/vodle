@@ -215,6 +215,8 @@
 
         "your-rating-line-1": "your",
         "your-rating-line-2": "rating",
+        "largest-line-1": "your largest rating is interpreted as 100",
+        "largest-line-2": "to make sure you approve at least one option",
 
         "threshold-smaller-line-1": "smaller",
         "threshold-smaller-line-2": "ratings",

@@ -344,21 +344,23 @@ export class PollPage implements OnInit {
                 l2 = (ev => { this.onRatingColPointerup.bind(this)(oid, ev) }),
                 l3 = (ev => { this.onRatingColTouchstart.bind(this)(oid, ev) }),
                 l4 = (ev => { this.onRatingColTouchup.bind(this)(oid, ev) });
-          if (this.listeners.has(col)) {
-            // remove previous listeners since they might belong to a different oid:
-            this.G.L.trace("PollPage.update_order removing old event listeners");
-            const old = this.listeners.get(col);
-            col.removeEventListener("pointerdown", old[0], true);
-            col.removeEventListener("pointerup", old[1], true);
-            col.removeEventListener("touchstart", old[2], true);
-            col.removeEventListener("touchup", old[3], true);
+          if (!!col) {
+            if (this.listeners.has(col)) {
+              // remove previous listeners since they might belong to a different oid:
+              this.G.L.trace("PollPage.update_order removing old event listeners");
+              const old = this.listeners.get(col);
+              col.removeEventListener("pointerdown", old[0], true);
+              col.removeEventListener("pointerup", old[1], true);
+              col.removeEventListener("touchstart", old[2], true);
+              col.removeEventListener("touchup", old[3], true);
+            }
+            // add new listeners for this oid:
+            col.addEventListener("pointerdown", l1, true);
+            col.addEventListener("pointerup", l2, true);
+            col.addEventListener("touchstart", l3 , true);
+            col.addEventListener("touchup", l4, true);
+            this.listeners.set(col, [l1, l2, l3, l4]);  
           }
-          // add new listeners for this oid:
-          col.addEventListener("pointerdown", l1, true);
-          col.addEventListener("pointerup", l2, true);
-          col.addEventListener("touchstart", l3 , true);
-          col.addEventListener("touchup", l4, true);
-          this.listeners.set(col, [l1, l2, l3, l4]);
         }  
         //window.alert("updated");
         this.G.L.trace("PollPage.update_order registered event listeners", this.sortingcounter);
