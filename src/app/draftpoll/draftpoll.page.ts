@@ -9,7 +9,7 @@ import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, Abst
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
-import { PopoverController, IonSelect, IonToggle, AlertController } from '@ionic/angular';
+import { PopoverController, IonSelect, IonToggle, AlertController, IonInput, IonDatetime } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
@@ -31,6 +31,7 @@ export class DraftpollPage implements OnInit {
   
   @ViewChild(IonSelect, { static: false, read: ElementRef }) type_select_ref: ElementRef;
   @ViewChild(IonSelect, { static: false }) type_select: IonSelect;
+//  @ViewChild(IonSelect, { static: false }) due_select: IonSelect;
   @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
   @ViewChild(IonToggle, { static: false }) detailstoggle: IonToggle;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
@@ -274,7 +275,6 @@ export class DraftpollPage implements OnInit {
         }
       }
       // send local notification:
-      // TODO: test this!
       LocalNotifications.schedule({
         notifications: [{
           title: this.translate.instant("draftpoll.notification-saved-title"),
@@ -315,41 +315,50 @@ export class DraftpollPage implements OnInit {
     let c = this.formGroup.get('poll_type');
     if (c.valid) this.pd.type = c.value;
   }
+
   set_poll_language() {
     let c = this.formGroup.get('poll_language');
     if (c.valid) this.pd.language = c.value;
   }
+
   set_poll_title() {
     let c = this.formGroup.get('poll_title');
     if (c.valid) this.pd.title = c.value;
   }
+
   set_poll_desc() {
     let c = this.formGroup.get('poll_desc');
     if (c.valid) this.pd.desc = c.value;
   }
+
   set_poll_url() {
     let c = this.formGroup.get('poll_url');
     if (c.valid) this.pd.url = c.value;
   }
+
   set_poll_due_type() {
     let c = this.formGroup.get('poll_due_type');
     if (c.valid) this.pd.due_type = c.value;
   }
+
   set_poll_due_custom() {
     this.G.P.update_ref_date();
     let c = this.formGroup.get('poll_due_custom');
     if (c.valid) this.pd.due_custom = new Date(c.value);
   }
+
   set_option_name(i: number) {
     let c = this.formGroup.get('option_name'+i);
     this.G.L.trace("set_option_name",i,c.value);
     if (c.valid) this.pd.options[i].name = c.value;
     this.G.L.trace("set_option_name result",this.pd.options,this.pd.options[i]);
   }
+
   set_option_desc(i: number) {
     let c = this.formGroup.get('option_desc'+i);
     if (c.valid) this.pd.options[i].desc = c.value;
   }
+
   set_option_url(i: number) {
     let c = this.formGroup.get('option_url'+i);
     if (c.valid) this.pd.options[i].url = c.value;
@@ -360,29 +369,146 @@ export class DraftpollPage implements OnInit {
   set_db(value: string) {
     this.pd.db = value;
   }
+
   set_db_from_pid(value: string) {
     this.pd.db_from_pid = value;
   }
+
   set_db_custom_server_url(value: string) {
     this.pd.db_custom_server_url = value;
   }
+
   set_db_custom_password(value: string) {
     this.pd.db_custom_password = value;
   }
-  
-  blur_option_name(i: number, d: boolean) {
-    if (d) {
-      this.option_stage = this.max(this.option_stage, this.formGroup.get('option_name'+i).valid?1:0);
-      this.expanded[i] = true;
-    } else if (this.formGroup.get('option_name'+i).valid && i==this.n_options-1) {
-      this.next_option(i);
+
+  // focus management:
+
+  set_focus(input_element_id: string) {
+    /** set the focus to a certain IonInput element after 100 ms */
+    setTimeout(() => {
+      const next_input_element = <IonInput><unknown>document.getElementById(input_element_id);
+      if (!!next_input_element) {
+        next_input_element.setFocus();
+      }
+    }, 100);  
+  }
+
+  open_due_select() {
+    // TODO: find a way to open it so that the title is still visible. 
+    /*
+    setTimeout(() => {
+      (<IonSelect><unknown>document.getElementById('due_select')).open(new MouseEvent("click"));
+    }, 100);
+    */
+  }
+
+  open_due_custom() {
+    setTimeout(() => {
+      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
+    }, 100);
+  }
+
+  changed_poll_type() {
+    if (this.stage < 1) {
+      this.stage = Math.max(this.stage, 1);    
+      this.set_focus('input_poll_title');  
     }
-    this.G.L.trace("blur_option_name", d, this.option_stage);
+  }
+
+  blur_poll_title() {
+    if (this.formGroup.get('poll_title').valid) {
+      if (this.stage < 2) {
+        if (this.show_details) {
+          this.stage = 2;
+          this.set_focus('input_poll_desc');
+        } else {
+          this.stage = 4;
+          this.open_due_select();
+        }
+      }
+    } else {
+      this.set_focus('input_poll_title');
+    }
+  }
+
+  blur_poll_desc() {
+    if (this.stage < 3) {
+      this.stage = 3;
+      this.set_focus('input_poll_url');  
+    }
+  }
+
+  blur_poll_url() {
+    if (this.formGroup.get('poll_url').valid) {
+      if (this.stage < 4) {
+        this.stage = Math.max(this.stage, 4);
+        // TODO: open select for due type      
+      }
+    } else {
+      this.set_focus('input_poll_url');
+    }
+  }
+
+  changed_due_type() {
+    if (this.stage < 5) {
+      if (this.formGroup.get('poll_due_type').value == 'custom') {
+        this.stage = 5;
+        this.open_due_custom();
+      } else {
+        this.stage = 6;
+        this.set_focus('input_option_name0');
+      }
+    }
+  }
+
+  changed_poll_due_custom() {
+    if (this.formGroup.get('poll_due_custom').valid) {
+      if (this.stage < 6) {
+        this.stage = 6;
+        this.set_focus('input_option_name0');
+      }  
+    }
+  }
+
+  blur_option_name(i: number, show_details: boolean) {
+    if (this.formGroup.get('option_name'+i).valid) {
+      if (show_details) {
+        this.option_stage = this.max(this.option_stage, 1);
+        this.expanded[i] = true;
+        if (i == this.n_options - 1) {
+          this.set_focus('input_option_desc'+i);
+        }
+      } else if (i == this.n_options - 1) {
+        this.next_option(i);
+      }
+    } else {
+      this.set_focus('input_option_name'+i);
+    }
+    this.G.L.trace("blur_option_name", show_details, this.option_stage);
+  }
+
+  blur_option_desc(i: number) {
+    if (this.formGroup.get('option_desc'+i).valid) {
+      this.option_stage = Math.max(this.option_stage, 2);
+      if (i == this.n_options - 1) {
+        this.set_focus('input_option_url'+i);
+      }
+    } else {
+      this.set_focus('input_option_desc'+i);
+    }
+    this.G.L.trace("blur_option_desc", this.option_stage);
   }
 
   blur_option_url(i: number) {
-    if (this.formGroup.get('option_url'+i).valid && i==this.n_options-1) {
-      this.next_option(i);
+    if (this.formGroup.get('option_url'+i).valid) {
+      if (i == this.n_options - 1) {
+        this.next_option(i);
+      } else {
+        // TODO: what?
+      }
+    } else {
+      this.set_focus('input_option_url'+i);
     }
   }
   
@@ -390,6 +516,7 @@ export class DraftpollPage implements OnInit {
     this.option_stage = this.max(this.option_stage, 3);
     this.expanded[i] = false;
     this.add_option({});
+    this.set_focus('input_option_name'+(i+1));
   }
 
   async del_poll_dialog() { 

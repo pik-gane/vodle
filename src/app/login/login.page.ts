@@ -46,7 +46,7 @@ export class LoginPage implements OnInit {
 
   @ViewChild('input_email', { static: false }) input_email: IonInput;
   @ViewChild('input_new_password', { static: false }) input_new_password: IonInput;
-  @ViewChild('input_retype_password', { static: false }) retype_password: IonInput;
+  @ViewChild('input_retype_password', { static: false }) input_retype_password: IonInput;
   @ViewChild('input_old_password', { static: false }) input_old_password: IonInput;
 
   // LIFECYCLE:

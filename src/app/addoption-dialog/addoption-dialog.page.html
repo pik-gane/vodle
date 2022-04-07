@@ -24,6 +24,7 @@
         </ion-label>
         <ion-input 
           formControlName="option_name" 
+          autofocus="true" #focus_element
           [placeholder]="(p.type == 'winner' 
                           ? 'draftpoll.option-name-placeholder' 
                           : 'draftpoll.target-name-placeholder') | translate"

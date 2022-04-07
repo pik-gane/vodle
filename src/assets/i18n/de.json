@@ -86,7 +86,7 @@
         "header": "Delegiere an eine:n andere:n Teilnehmer:in",
         "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Bewertungen werden auch als Deine Bewertungen verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Optionen weiterhin selbst bewerten.",
         "nickname-label": "Kurzname der/des Delegierten:",
-        "nickname-placeholder": "Dein Kurzname für diese Person (oder ihr voller Name)",
+        "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
 
         "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "request-options-without-share": "Am einfachsten kannst die Person per Email bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",

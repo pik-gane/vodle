@@ -42,7 +42,7 @@
       <ion-input style="font-size: smaller;" 
         [type]="showing_db_custom_password?'text':'password'" 
         formControlName="db_custom_password" required
-        clearOnEdit="false"
+        clearOnEdit="false" clearInput="true"
         (keydown.enter)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
         (keydown.tab)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
         (ionChange)="set_db_custom_password()"></ion-input>

@@ -112,7 +112,7 @@ export class InvitetoPage implements OnInit {
     Share.share({
       title: this.message_title,
       text: this.message_body,
-      url: this.invite_link,
+//      url: this.invite_link, // not added since contained in body, otherwise will appear twice...
       dialogTitle: 'Share vodle invite link',
     }).then(res => {
       this.G.L.info("InvitetoPage.share_button_clicked succeeded", res);

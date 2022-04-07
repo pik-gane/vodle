@@ -26,7 +26,7 @@ export class SettingsPage implements OnInit {
 
   // template components:
 
-  @ViewChild(IonInput, { static: false }) retype_password: IonInput;
+  @ViewChild(IonInput, { static: false }) input_retype_password: IonInput;
   @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
 

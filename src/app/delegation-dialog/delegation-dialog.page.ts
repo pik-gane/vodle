@@ -1,6 +1,6 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ViewChild } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { PopoverController } from '@ionic/angular';
+import { IonInput, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
@@ -64,6 +64,12 @@ export class DelegationDialogPage implements OnInit {
     this.ready = true;
   }
 
+  @ViewChild('focus_element', { static: false }) focus_element: IonInput;
+
+  ionViewDidEnter() {
+    setTimeout(() => this.focus_element.setFocus(), 100);
+  }
+
   delegate_nickname_changed() {
     const delegate_nickname = this.formGroup.get('delegate_nickname').value;
     this.G.D.setp(this.p.pid, "del_nickname." + this.did, delegate_nickname);
@@ -114,7 +120,7 @@ export class DelegationDialogPage implements OnInit {
     Share.share({
       title: this.message_title,
       text: this.message_body,
-      url: this.delegation_link,
+//      url: this.delegation_link, // not added since contained in body, otherwise will appear twice...
       dialogTitle: 'Share vodle delegation link',
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);

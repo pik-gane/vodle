@@ -1,6 +1,6 @@
-import { Component, OnInit, Input, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
-import { PopoverController } from '@ionic/angular';
+import { IonInput, PopoverController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -58,10 +58,13 @@ export class AddoptionDialogPage implements OnInit {
     this.formGroup.addControl('option_desc', new FormControl(""));
     this.formGroup.addControl('option_url', new FormControl("", Validators.pattern(this.G.urlRegex)));
 
-    // TODO
-
-
     this.ready = true;
+  }
+
+  @ViewChild('focus_element', { static: false }) focus_element: IonInput;
+
+  ionViewDidEnter() {
+    setTimeout(() => this.focus_element.setFocus(), 100);
   }
 
   OK_button_clicked() {
@@ -129,7 +132,7 @@ export class AddoptionDialogPage implements OnInit {
     Share.share({
       title: this.message_title,
       text: this.message_body,
-      url: this.poll_link,
+//      url: this.poll_link,
       dialogTitle: 'Share vodle delegation link',
     }).then(res => {
       this.G.L.info("AddoptionDialogPage.share_button_clicked succeeded", res);

@@ -64,11 +64,11 @@
       <ion-grid class="ion-no-padding">
         <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
-            <ion-item>
+            <ion-item lines="none">
               <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
               <ion-input 
                 formControlName="password"
-                clearOnEdit="false"
+                clearOnEdit="false" clearInput="true"
                 [readonly]="!editing_password"
                 [type]="showing_password?'text':'password'" required 
                 [style]="editing_password
@@ -109,9 +109,9 @@
           <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
           <ion-input 
             formControlName="confirm_password" 
-            #retype_password 
+            #input_retype_password 
             [disabled]="!editing_password"
-            clearOnEdit="false"
+            clearOnEdit="false" clearInput="true"
             [type]="showing_password?'text':'password'"required 
             [style]="editing_password
               ?'pointer-events:;'
