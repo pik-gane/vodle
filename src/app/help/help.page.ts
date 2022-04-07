@@ -14,8 +14,8 @@ export class HelpPage implements OnInit {
   e_q = [];
 
   faqs = [
-["How to pronounce 'vodle'?", `
-Like 'yodel'! (not like 'model' or 'noodle').
+["How to pronounce ‘vodle’?", `
+Like ‘yodel’! (not like ‘model’ or ‘noodle’).
 `],
 ["What does a rating of, say, 37 mean?", `
 If you rate an option at 37 you promise to approve that option if less than 37% of all voters disapprove it.
@@ -63,7 +63,7 @@ But if instead ratings would simply be summed up,
 then the 55% A-voters could rate A at 100 and rate B and C at 0. 
 Then A would wins for sure, no matter what the ratings of the other 45% are.
 So those 45% would have no influence on the result at all, and the potential consensus option would not have a chance of winning.<br/>
-With vodle however, the same "noncooperative" ratings would guarantee A only a winning probability of 55% rather than 100%
+With vodle however, the same “noncooperative” ratings would guarantee A only a winning probability of 55% rather than 100%
 since every group of voters can only control a share of the winning probability that equals their share of voters.
 If C is a potential consensus, those 55% would prefer getting C for sure rather than getting A with only 55% probability and getting B with 45% probability.
 So with vodle, the 55% would give C a positive rating, and so would the other 45%.
@@ -88,13 +88,13 @@ By doing so, you indicate that you would agree to transfer the share of winning 
 from your favourite option to the consensus option if other voters do so as well. 
 `],
 ["Which options should get a positive rating?", `
-A good rule of thumb is to give an option a positive rating if it is "better than average".
+A good rule of thumb is to give an option a positive rating if it is “better than average”.
 `],
 ['What does "better than average" mean?', `
-Imagine one voter was drawn by lot and could decide on their own. Let's call this the "random dictator lottery".
+Imagine one voter was drawn by lot and could decide on their own. Letʼs call this the “random dictator lottery”.
 Now for each option, you ask yourself: would I rather have this option for sure than having the random dictator lottery performed?
-If the answer is yes, this option is "better than average" and should get a positive rating.<br/>
-If you have no idea about the other voters' preferences, 
+If the answer is yes, this option is “better than average” and should get a positive rating.<br/>
+If you have no idea about the other votersʼ preferences, 
 you could assume that every option has roughly the same approval among voters.
 As the poll evolves, you can watch the approval each option gets
 and thus improve your estimate of what the random dictator lottery would bring.
@@ -103,7 +103,7 @@ and thus improve your estimate of what the random dictator lottery would bring.
 If you have an idea about the views of the other voters,
 you should set your rating in the following way.
 First, you estimate what percentage of the voters finds this option worse than average.
-Let's say you think 37% of voters find the option worse than average.
+Letʼs say you think 37% of voters find the option worse than average.
 Then you add some safety margin (giving something like 40 in this example).
 This should be your rating.<br/>
 <i>Why?</i> Because if all voters who find the option better than average use the same logic, 
@@ -124,7 +124,7 @@ you indicate that you will approve this option only if enough other voters do so
 This way, you give other voters an incentive to also give that option a positive rating.
 If you gave the option a rating of 100, other voters could simply rate it at 0.
 The result could be that your share of the winning probability would be transferred from your favourite option to the compromise option,
-but the other voters' shares would remain with their favourite options. 
+but the other votersʼ shares would remain with their favourite options. 
 This would be no compromise but would only be to your disadvantage.
 Only giving a rating properly between 0 and 100 can ensure that you and other voters <i>collectively</i> 
 transfer your shares from your various favourite options to the compromise option.
@@ -139,7 +139,7 @@ If there really is no option with almost full consensus potential,
 there might still be one that at least appeal to, say, 80 percent.
 In that case, these 80% should give it a rating of 100 – 80 = 20, 
 plus some safety margin, so maybe a rating of 25.
-This way, this broad "partial" consensus option wins with a very large probability of 80%,
+This way, this broad “partial” consensus option wins with a very large probability of 80%,
 and the remaining 20% winning probability remain under the control of the minority 20% 
 who cannot agree to that consensus, which is only fair.
 `],
@@ -149,6 +149,11 @@ Whenever that happens, we do use their total ratings as a tie-breaker to decide 
 So, if option A is approved by 60% but options B and C are both approved by 100%, 
 and if the total ratings are 345 for A, 123 for B, and 234 for C, then C has the largest total rating among those options who have 100% approval, 
 so C wins in that case, even though A has a larger total rating (but is not approved by everyone). 
+`],
+["What does x% agreement mean?", `
+We calculate agreement as follows: For each option, we multiply its approval score with its share. Then we sum all these numbers up.
+An agreement level of 100% means that the total share goes to an option that is approved by all non-abstaining participants.
+For a poll that selects a single option, the resulting agreement level can be interpreted as follows: When you take a thousand polls each of which had, say, 23% agreement, and look at the approval scores the winning options got, the average approval score will be approximately 23%.
 `],
 /*
 ["", `
