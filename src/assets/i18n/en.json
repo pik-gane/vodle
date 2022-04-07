@@ -1,4 +1,9 @@
 {
+    "_ENGLISH_CONVENTIONS_": [
+        "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
+        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
+    ],
+
     "add": "Add",
     "add-option": "Add option",
     "add-target": "Add option",
@@ -57,6 +62,7 @@
     "addoption": {
         "header": "Add another option",
         "intro": "Please make sure the new option is not already covered by the existing options.",
+        "different-language": "This poll is in a different language ({{language}}). If possible, please try using that language in your texts below, or use some other language the poll participants understand.",
         "info": "Once added, the option cannot be edited or removed again.",
         "notification-added-title": "Option added"
     },
@@ -366,6 +372,7 @@
         "p3": "You can express your opinion about the suggested options by <i>rating</i> them. You can give each option a rating between 0 (don't approve) and 100 (approve for sure).",
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those ratings to someone you trust. In that case, that person's ratings of these options counts for you as well. If you don't have the time to think about the options at all, you can also delegate all of your ratings to someone else.",
         "p5": "You can change your ratings or delegations at any time until the poll closes. In fact, it often makes sense to monitor the poll's development over time, adjust your ratings to what you see, rate additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
+        "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the ratings are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
 

@@ -6,7 +6,10 @@
         <ion-col class="ion-no-padding ion-no-margin">
           <h1 [innerHtml]="'addoption.header'|translate"></h1> 
           <p [innerHtml]="'addoption.intro'|translate"></p> 
-        </ion-col>      
+          <small *ngIf="(!!p.language) && (p.language != G.S.language)">
+            <p [innerHtml]="'addoption.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
+          </small>
+          </ion-col>      
       </ion-item>
 
       <!-- NAME: -->

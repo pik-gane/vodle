@@ -68,6 +68,7 @@
               <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
               <ion-input 
                 formControlName="password"
+                clearOnEdit="false"
                 [readonly]="!editing_password"
                 [type]="showing_password?'text':'password'" required 
                 [style]="editing_password
@@ -110,6 +111,7 @@
             formControlName="confirm_password" 
             #retype_password 
             [disabled]="!editing_password"
+            clearOnEdit="false"
             [type]="showing_password?'text':'password'"required 
             [style]="editing_password
               ?'pointer-events:;'
