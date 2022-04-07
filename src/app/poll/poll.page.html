@@ -429,30 +429,24 @@
 
             <ion-grid class="ion-no-padding ion-no-margin">
 
-              <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px;">
-
-                <!-- Button for expanding details: -->
-
-                <ion-col size="auto" class="ion-no-padding ion-no-margin">
-                  <ion-button 
-                      (click)="expand(oidsorted[i])" 
-                      fill="clear" style="position:relative; left:-5px; z-index:1;"
-                      class="ion-no-padding ion-no-margin">
-                    <ion-icon 
-                        [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
-                        size="small" class="ion-no-padding ion-no-margin" 
-                        style="color:black; z-index:10;"
-                        slot="icon-only">
-                    </ion-icon><!--FIXME: improve consistent placement in various browsers-->
-                  </ion-button>
-                </ion-col>
-
-                <!-- OPTION NAME: -->
-
+              <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px; cursor: pointer; position: relative; left: -6px; z-index:20; "
+                  (click)="expand(oidsorted[i])">
                 <ion-col class="ion-no-padding ion-no-margin">
-                  <ion-label class="ion-no-padding ion-no-margin" style="padding-top: 4px;">
-                    <b><i>{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
+
+  
+                  <ion-label class="ion-no-padding ion-no-margin">
+  
+                    <ion-icon 
+                      [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                      size="small" class="ion-no-margin" 
+                      style="color:black; position: relative; top: 3px;">
+                    </ion-icon>
+
+                    <!-- OPTION NAME: -->
+  
+                    <b><i>&nbsp;{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
                   </ion-label>
+  
                 </ion-col>
               </ion-row>
 
