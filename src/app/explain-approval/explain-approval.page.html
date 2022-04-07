@@ -8,7 +8,11 @@
   <ion-item class="ion-no-margin ion-no-padding">
     <ion-buttons>
       &nbsp;&nbsp;
-      <ion-button shape="round" fill="clear"
+      <ion-button *ngIf="tab=='approval'" shape="round" fill="clear"
+          (click)="back()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+      <ion-button *ngIf="tab=='share'" shape="round" fill="clear"
           (click)="back()">
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
