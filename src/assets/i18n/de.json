@@ -53,7 +53,7 @@
         "p18": "Genaue Prozedur: Die Optionen werden nach absteigender Zustimmung sortiert. Dann bekommt jede Option einen Anteil proportional zur Anzahl Teilnehmer:innen, die dieser Option aber keiner höherplatzierten Option zugestimmt haben.",
 
         "h2": "Wer steckt dahinter?",
-        "p21": "vodle's Algorithmus (genannt “maximaler Teil-Konsens”) wurde entwickelt und auf Fairness optimiert vom Mathematiker Jobst Heitzig in Zusammenarbeit mit Forest W. Simmons. Er ist inspiriert vom „Schwellwert-Modell“ des berühmten Soziologen Mark Granovetter. Diese App ist open-source, der Programmcode liegt auf <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Hauptentwickler: Jobst Heitzig. Beiträge von: Marius Amrhein, Adrian Lison.",
+        "p21": "vodles Algorithmus (genannt “maximaler Teil-Konsens”) wurde entwickelt und auf Fairness optimiert vom Mathematiker Jobst Heitzig in Zusammenarbeit mit Forest W. Simmons. Er ist inspiriert vom „Schwellwert-Modell“ des berühmten Soziologen Mark Granovetter. Diese App ist open-source, der Programmcode liegt auf <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Hauptentwickler: Jobst Heitzig. Beiträge von: Marius Amrhein, Adrian Lison.",
 
         "h3": "Unterstütze vodle!",
         "p31": "Da wir und verpflichtet haben, dass vodle frei nutzbar für alle bleibt, brauchen wir weiterhin Hilfe. Wenn Du Nerd, Kreative:r, Influencer:in, Wissenschaftler:in, Philantrop:in, Aktivist:in oder Politiker:in bist, an die Zukunft von fairen &amp; effizienten Konsens-Entscheidungen glaubst und ein wenig beitragen möchtest, dann haben wir ein paar Ideen, <a href=\"{{support_vodle_url}}\" target=\"_blank\">wie Du uns helfen kannst!</a>"
@@ -422,7 +422,7 @@
         "drafts": "Entwürfe",
 
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
-        "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf '+' rechts unten!"
+        "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf ‚+‘ rechts unten!"
     },
 
     "news-title": {
