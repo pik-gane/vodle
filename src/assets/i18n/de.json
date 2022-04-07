@@ -549,6 +549,7 @@
         "poll-url-valid": "Bitte gib eine gültige URL ein.",
         "poll-due-type-required": "Bitte wähle aus.",
         "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
+        "delegate-nickname-required": "Ein Kurzname wird benötigt.",
         "option-name-required": "Ein Name wird benötigt.",
         "option-url-valid": "Bitte gib eine gültige URL ein."
     }

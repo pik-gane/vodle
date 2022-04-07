@@ -95,7 +95,7 @@ export class DelegationDialogPage implements OnInit {
 
   validation_messages = {
     'delegate_nickname': [
-      { type: 'required', message: 'validation.delegate_nickname-required' },
+      { type: 'required', message: 'validation.delegate-nickname-required' },
     ],
     'from': []
   }

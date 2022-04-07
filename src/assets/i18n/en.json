@@ -550,7 +550,7 @@
         "poll-url-valid": "Please enter a valid URL.",
         "poll-due-type-required": "Please select.",
         "poll-due-future": "This date and time is in the past.",
-        "nickname-required": "Nickname is required",
+        "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
         "option-url-valid": "Please enter a valid URL."
     }
