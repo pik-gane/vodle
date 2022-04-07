@@ -369,16 +369,19 @@ export class PollPage implements OnInit {
   set_slider_color(oid: string, value: number) {
     this.slidercolor[oid] = 
       (value == 0) ? 'vodlered' : 
+      (this.votedfor == oid) ? 'vodledarkgreen' :
       (value + ((this.p.T.approval_scores_map.get(oid) / this.p.T.n_not_abstaining) || 0) * 100 <= 100) ? 'vodleblue' : 
-      (this.votedfor != oid) ? 'vodlegreen' : 
-      'vodledarkgreen';
+      'vodlegreen';
   }
 
-  // controls:
+  // CONTROLS:
 
   expand(oid: string) {
     this.expanded[oid] = !this.expanded[oid];
   }
+
+  // rating slider:
+  // TODO: 1 second after any change to a rating, wait another second if the pointer/mouse is currently down, else call rating_change_ended().
 
   get_slider(oid: string) {
     this.G.L.trace("PollPage.get_slider ", this.sortingcounter);
@@ -410,6 +413,7 @@ export class PollPage implements OnInit {
 
   onRatingSliderFocus(oid: string): boolean {
     /** called as soon as range slider gets focus */
+    this.G.L.entry("PollPage.onRatingSliderFocus");
     return true;
   }
 
@@ -420,6 +424,13 @@ export class PollPage implements OnInit {
     // window.alert("onRatingChange " + value);
     this.set_slider_color(oid, value);
     this.apply_sliders_rating(oid);
+    return true;
+  }
+
+  onRatingSliderBlur(oid: string): boolean {
+    /** called when the slider loses focus */
+    this.G.L.entry("PollPage.onRatingSliderBlur");
+    this.rating_change_ended(oid);
     return true;
   }
 
@@ -565,6 +576,8 @@ export class PollPage implements OnInit {
       ev.preventDefault();  
     }
   }
+
+  // DIALOGS:
 
   delegate_dialog(event: Event) {
     /** open the delegation dialog popover */

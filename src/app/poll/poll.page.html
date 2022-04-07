@@ -480,6 +480,7 @@
                       [value]="p.get_my_proxy_rating(oidsorted[i])" 
                       (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                       (ionChange)="onRatingSliderChange(oidsorted[i])" 
+                      (ionBlur)="onRatingSliderBlur(oidsorted[i])"
                       pin="true" min="0" max="100"
                       [style]="'--bar-background: rgba(0,0,0,0);'
                         + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
