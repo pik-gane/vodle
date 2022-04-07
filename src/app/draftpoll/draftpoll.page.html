@@ -84,7 +84,7 @@
           [placeholder]="'draftpoll.title-placeholder'|translate"
           tabindex="0" type="text" required inputmode="text"
           style="font-weight: bold; font-style: italic; font-size: larger;"
-          (ionChange)="set_poll_title();"
+          (ionChange)="set_poll_title();" debounce="100"
           (ionBlur)="blur_poll_title()">
         </ion-input>      
       </ion-item>
@@ -114,7 +114,7 @@
           [placeholder]="'draftpoll.desc-placeholder'|translate"
           autofocus tabindex="0" rows="1" auto-grow type="text" inputmode="text" 
           style="font-style: italic;"
-          (ionChange)="set_poll_desc()"
+          (ionChange)="set_poll_desc()" debounce="100"
           (ionBlur)="blur_poll_desc()">
         </ion-textarea>
         <ion-button 
@@ -147,7 +147,7 @@
           formControlName="poll_url" clearInput="true"
           [placeholder]="'draftpoll.url-placeholder'|translate"
           tabindex="0" type="text" inputmode="url" style="font-size:smaller;word-wrap:normal;"
-          (ionChange)="set_poll_url()"
+          (ionChange)="set_poll_url()" debounce="100"
           (ionBlur)="blur_poll_url()">
         </ion-input>
         <ion-button 
@@ -302,7 +302,7 @@
                             : 'draftpoll.target-name-placeholder') | translate"
             type="text" required tabindex="0" 
             style="font-weight: bold; font-style: italic;"
-            (ionChange)="set_option_name(i)"
+            (ionChange)="set_option_name(i)" debounce="100"
             (ionBlur)="blur_option_name(i, show_details)">
           </ion-input>      
           <ion-button 
@@ -342,7 +342,7 @@
               [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
               rows="1" auto-grow type="text" 
               style="font-style: italic;"
-              (ionChange)="set_option_desc(i)"
+              (ionChange)="set_option_desc(i)" debounce="100"
               (ionBlur)="blur_option_desc(i)">
             </ion-textarea>
             <ion-button 
@@ -376,7 +376,7 @@
               [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
               type="text"  tabindex="0"  clearInput="true"
               style="font-size: smaller;"
-              (ionChange)="set_option_url(i)"
+              (ionChange)="set_option_url(i)" debounce="100"
               (ionBlur)="blur_option_url(i)">
             </ion-input>
             <ion-button 

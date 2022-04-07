@@ -119,7 +119,7 @@ TODO:
                 <ion-input #input_email
                   formControlName="email" 
                   type="text" inputmode="email" required autofocus="true"
-                  (ionChange)="set_email()"
+                  (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input>
               </ion-item>
@@ -170,7 +170,7 @@ TODO:
                   clearOnEdit="false" clearInput="true"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
-                  (ionChange)="set_password()">
+                  (ionChange)="set_password()" debounce="100">
                 </ion-input>
               </ion-item>
             </ion-col>
@@ -199,7 +199,7 @@ TODO:
                 clearOnEdit="false" clearInput="true"
                 [type]="showing_password?'text':'password'" required
                 autocomplete="off" autocorrect="off"
-                (ionChange)="set_password()"
+                (ionChange)="set_password()" debounce="100"
                 (keydown.enter)="submit_new_password()">
               </ion-input>
             </ion-item>
@@ -246,7 +246,7 @@ TODO:
                   clearOnEdit="false" clearInput="true"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
-                  (ionChange)="set_old_password()"
+                  (ionChange)="set_old_password()" debounce="100"
                   (keydown.enter)="submit_old_password()">
                 </ion-input>
               </ion-item>

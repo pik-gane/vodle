@@ -36,7 +36,8 @@
                     :'pointer-events:none;font-size:smaller;'"
               (keydown.enter)="editing_email=!formGroup.get('email').valid"
               (keydown.tab)="editing_email=!formGroup.get('email').valid"
-              (ionChange)="set_email()"></ion-input>
+              (ionChange)="set_email()" debounce="100">
+            </ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
         </ion-col>
@@ -74,7 +75,7 @@
                 [style]="editing_password
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
-                (ionChange)="set_password()">
+                (ionChange)="set_password()" debounce="100">
               </ion-input>
             </ion-item>
           </ion-col>
@@ -118,7 +119,7 @@
               :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
-            (ionChange)="set_password()">
+            (ionChange)="set_password()" debounce="100">
           </ion-input>
         </ion-item>
         <div class="validation-errors">
