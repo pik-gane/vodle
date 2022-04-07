@@ -17,7 +17,7 @@ export const environment = {
     oid_length: 4,
     vid_length: 8,
     did_length: 8,
-    nid_length: 8
+    nid_length: 4
   },
   delegation: {
     max_weight: 10

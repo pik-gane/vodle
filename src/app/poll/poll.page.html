@@ -387,29 +387,6 @@
 
     <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
 
-      <!-- Possible alternative placement of expansion button, not preferred just now:
-      <ion-button 
-          (click)="expand(oidsorted[i])" 
-          fill="clear"
-          class="ion-no-padding ion-no-margin"
-          style="position:absolute; left:-4px; top:5px; z-index:1;">
-        <ion-icon 
-            [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
-            size="small" class="ion-no-padding ion-no-margin" 
-            style="color:black; z-index:10;"
-            slot="icon-only">
-        </ion-icon>
-      </ion-button>
-      -->
-
-      <!-- PIE CHART WITH WINNING PROBABILITY: - ->
-
-      <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px" style="position:relative; top:14px;">
-        <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
-        <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
-      </svg>
-      <!---->
-
       <!-- ALWAYS VISIBLE STUFF: -->
 
       <ion-grid class="ion-no-padding ion-no-margin">
@@ -419,7 +396,7 @@
           <!-- PIE CHART WITH WINNING PROBABILITY: -->
 
           <ion-col size="auto" class="ion-no-padding ion-no-margin">
-            <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px" style="position:relative; top:14px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px" style="position:relative; top:12px;">
               <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
               <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
             </svg>

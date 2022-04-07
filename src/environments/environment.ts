@@ -19,7 +19,7 @@ export const environment = {
     hash_n_bytes: 8,
     pid_length: 6,
     oid_length: 4,
-    vid_length: 2,
+    vid_length: 4,
     did_length: 4,
     nid_length: 4
   },
