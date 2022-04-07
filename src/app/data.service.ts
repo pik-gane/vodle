@@ -1311,7 +1311,7 @@ export class DataService implements OnDestroy {
   }
 
   stop_poll_sync(pid: string) {
-    if (pid in this.G.D.poll_db_sync_handlers) {
+    if (pid in this.G.D.poll_db_sync_handlers && !!this.G.D.poll_db_sync_handlers[pid]) {
       this.G.D.poll_db_sync_handlers[pid].cancel();
     }
   }
@@ -2429,7 +2429,7 @@ export class DataService implements OnDestroy {
     this._ready = false;
     return new Promise((resolve, reject) => {
       // stop all syncs:
-      this.user_db_sync_handler.cancel();
+      if (!!this.user_db_sync_handler) this.user_db_sync_handler.cancel();
       for (const pid in this.poll_db_sync_handlers) {
         this.stop_poll_sync(pid);
       }
@@ -2440,15 +2440,20 @@ export class DataService implements OnDestroy {
         this.local_synced_user_db.destroy()
         .then(() => {
           for (let pid in this.local_poll_dbs) {
-            this.local_poll_dbs[pid].destroy();
+            if (!!this.local_poll_dbs[pid]) this.local_poll_dbs[pid].destroy();
           }
           // delete ionic local storage:
-          this.storage.clear()
-          .then(() => {
-            this.storage = null;
-            // DONE. 
-            resolve(true);
-          }).catch(reject);
+          if (!this.storage) {
+              // DONE. 
+              resolve(true);
+          } else {
+            this.storage.clear()
+            .then(() => {
+              this.storage = null;
+              // DONE. 
+              resolve(true);
+            }).catch(reject);  
+          }
         }).catch(reject);
       }).catch(reject);
     });

@@ -81,7 +81,8 @@ export class SettingsService {
 
   // other data:
   
-  public password_regexp = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$';
+//  public password_regexp = '^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]+$';
+  public password_regexp = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm;
 
   public passwords_match(control: AbstractControl): ValidationErrors | null {
     // password validation function to be used in forms

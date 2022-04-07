@@ -170,7 +170,8 @@ TODO:
                   clearOnEdit="false" clearInput="true"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
-                  (ionChange)="set_password()" debounce="100">
+                  (ionChange)="set_password()" debounce="100"
+                  (ionBlur)="blur_password()">
                 </ion-input>
               </ion-item>
             </ion-col>

@@ -155,19 +155,21 @@ export class LoginPage implements OnInit {
     let c = this.languageFormGroup.get('language');
     if (c.valid) this.G.S.language = c.value;
   }
+
   set_email() {
     let c = this.emailFormGroup.get('email');
     if (c.valid) this.G.S.email = c.value; 
   }
+
   set_password() {
     let fg = this.passwordFormGroup.get('pw');
     if (fg.valid) this.G.S.password = fg.get('password').value; 
   }
+
   set_old_password() {
     let fg = this.oldPasswordFormGroup.get('pw');
     if (fg.valid) this.G.S.password = fg.get('password').value; 
   }
-
 
   submit_language() {
     this.G.go_fullscreen_on_mobile();
@@ -192,6 +194,12 @@ export class LoginPage implements OnInit {
         this.router.navigate(['/login/old_password/'+this.then_url]);
       }
     }
+  }
+
+  blur_password() {
+    setTimeout(() => {
+      this.input_retype_password.setFocus();
+    }, 100);
   }
 
   submit_new_password() {
