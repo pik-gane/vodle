@@ -748,15 +748,22 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
-  get_poll_doc_filter(pid: string): Function {
-    return (doc, req) => (
-      // we want poll docs:
-      (poll_doc_id_prefix + pid + "§" <= doc._id 
-        && doc._id < poll_doc_id_prefix + pid + '¨')   // '¨' is the character after "§"
-      // and voter docs:
-      || (poll_doc_id_prefix + pid + '.voter.' <= doc._id 
-          && doc._id < poll_doc_id_prefix + pid + '.voter/')  // '/' is the ASCII character after '.'
-    )
+  get_user_doc_query_params(email_and_pw_hash: string): any {
+    return { 
+      start1: user_doc_id_prefix + email_and_pw_hash + "§",
+      end1: user_doc_id_prefix + email_and_pw_hash + '¨',
+      start2: "",
+      end2: ""
+    }
+  }
+
+  get_poll_doc_query_params(pid: string): any {
+    return { 
+      start1: poll_doc_id_prefix + pid + "§",
+      end1: poll_doc_id_prefix + pid + '¨',
+      start2: poll_doc_id_prefix + pid + '.voter.',
+      end2: poll_doc_id_prefix + pid + '.voter/'
+    }
   }
 
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
@@ -784,10 +791,13 @@ export class DataService implements OnDestroy {
           // replicate once and wait for it to finish:
         
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
+          // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
               retry: true,
               include_docs: true,
-              filter: this.get_poll_doc_filter(pid)
+//              filter: this.get_poll_doc_filter(pid)
+              filter: 'vodle/filter_2_id_spans',
+              query_params: this.get_poll_doc_query_params(pid)
           })/* on('complete') is never called, so we cannot do it this way but must check for 0 pending inside 'change' (see below):
           .on('complete', function () {
 
@@ -807,7 +817,7 @@ export class DataService implements OnDestroy {
             this.G.L.trace("DataService.connect_to_remote_poll_db one-time replication received change", change);
 
             // process incoming docs:
-            this.handle_poll_db_change.bind(this)(pid, change);
+            this.handle_poll_db_change.bind(this)(pid, change, false);
 
             if (change.pending == 0) {
               // replication completed
@@ -965,16 +975,19 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.replicate_once", pid);
     return new Promise<boolean>((resolve, reject) => {
 
+      // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
           retry: true,
           include_docs: true,
-          filter: this.get_poll_doc_filter(pid)
+//          filter: this.get_poll_doc_filter(pid)
+          filter: 'vodle/filter_2_id_spans',
+          query_params: this.get_poll_doc_query_params(pid)
       }).on('change', change => {
 
         this.G.L.trace("DataService.replicate_once received change", change);
 
         // process incoming docs:
-        this.handle_poll_db_change.bind(this)(pid, change);
+        this.handle_poll_db_change.bind(this)(pid, change, false);
 
         if (change.pending == 0) {
           // replication completed
@@ -1226,10 +1239,8 @@ export class DataService implements OnDestroy {
         live: true,
         retry: true,
         include_docs: true,
-        filter: (doc, req) => (
-          user_doc_id_prefix + email_and_pw_hash + "§" <= doc._id 
-          && doc._id < user_doc_id_prefix + email_and_pw_hash + '¨'   // '¨' is the character after "§"
-        ),
+        filter: 'vodle/filter_2_id_spans',
+        query_params: this.get_user_doc_query_params(email_and_pw_hash)
       }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', () => {
         // replication was paused, usually because of a lost connection
@@ -1273,7 +1284,9 @@ export class DataService implements OnDestroy {
         live: true,
         retry: true,
         include_docs: true,
-        filter: this.get_poll_doc_filter(pid)
+//        filter: this.get_poll_doc_filter(pid)
+        filter: 'vodle/filter_2_id_spans',
+        query_params: this.get_poll_doc_query_params(pid)
       }).on('change', change => {
         this.handle_poll_db_change.bind(this)(pid, change);
       }).on('paused', info => {
@@ -1752,7 +1765,10 @@ export class DataService implements OnDestroy {
 
     // notifty all running polls that they might need to tally:
     for (const [pid, p] of Object.entries(this.G.P.polls)) {
+      this.G.L.trace("DataService.after_changes telling poll to tally", pid);
+      p.ratings_have_changed = true;
       p.after_incoming_changes(tally);
+      p.update_ordering();
     }
 
     this.save_state();
@@ -1775,6 +1791,10 @@ export class DataService implements OnDestroy {
   private doc2user_cache(doc): [boolean, boolean] {
     // populate user cache with key, value from doc
     const _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + "§";
+    if (_id.includes('§timestamp') || _id === '_design/vodle') {
+      return [false, false];
+    }
+
     if (_id.startsWith(prefix)) {
 
       const key = _id.slice(prefix.length, _id.length);
@@ -1863,8 +1883,8 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.doc2poll_cache", pid, doc._id);
 
     const _id = doc._id;
-    if (_id.includes('§timestamp')) {
-      return true;
+    if (_id.includes('§timestamp') || _id === '_design/vodle') {
+      return false;
     }
 
     const poll_doc_prefix = poll_doc_id_prefix + pid + "§",
