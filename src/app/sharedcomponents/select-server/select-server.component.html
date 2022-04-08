@@ -1,7 +1,7 @@
 <form [formGroup]="selectServerFormGroup">
   <ion-item>
     <ion-label position="floating" color="primary" [innerHtml]="(page=='settings'?'settings.db-label':'draftpoll.db-label')|translate"></ion-label>
-    <ion-select interface="popover" formControlName="db" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
+    <ion-select formControlName="db" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
         [style]="page!='settings'?'font-size: smaller;':''"
         (ionChange)="set_db()">
       <ion-select-option *ngIf="page!='settings'" value="default" [innerHtml]="'select-server.same-as-personal'|translate"></ion-select-option>
@@ -13,7 +13,7 @@
   <ng-container *ngIf="selectServerFormGroup.get('db').value=='poll'">
     <ion-item>
       <ion-label position="floating" color="primary" [innerHtml]="(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate"></ion-label>
-      <ion-select interface="popover" formControlName="db_from_pid" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
+      <ion-select formControlName="db_from_pid" [cancelText]="'select-cancel'|translate" [okText]="'OK'|translate" 
           style="font-size: smaller;"
           (ionChange)="set_db_from_pid()">
         <ng-container *ngFor="let pid of Object.keys(G.P.polls)">

@@ -43,6 +43,7 @@ export class LoginPage implements OnInit {
 
   showing_password: boolean;
   advanced_expanded: boolean;
+  terms_expanded = false;
 
   @ViewChild('input_email', { static: false }) input_email: IonInput;
   @ViewChild('input_new_password', { static: false }) input_new_password: IonInput;

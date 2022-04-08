@@ -20,6 +20,10 @@ import { SelectServerComponent } from '../sharedcomponents/select-server/select-
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
+function is_forward_key(ev: KeyboardEvent) {
+  return (ev.key == "Tab" || ev.key == "Enter") && !ev.ctrlKey && !ev.shiftKey && !ev.metaKey && !ev.altKey;
+}
+
 @Component({
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
@@ -31,7 +35,7 @@ export class DraftpollPage implements OnInit {
   
   @ViewChild(IonSelect, { static: false, read: ElementRef }) type_select_ref: ElementRef;
   @ViewChild(IonSelect, { static: false }) type_select: IonSelect;
-//  @ViewChild(IonSelect, { static: false }) due_select: IonSelect;
+  @ViewChild(IonSelect, { static: false }) due_select: IonSelect;
   @ViewChild(SelectServerComponent, { static: false }) select_server: SelectServerComponent;
   @ViewChild(IonToggle, { static: false }) detailstoggle: IonToggle;
   @ViewChildren(IonSelect) ionSelects: QueryList<IonSelect>;
@@ -396,11 +400,11 @@ export class DraftpollPage implements OnInit {
 
   open_due_select() {
     // TODO: find a way to open it so that the title is still visible. 
-    /*
+    /**/
     setTimeout(() => {
       (<IonSelect><unknown>document.getElementById('due_select')).open(new MouseEvent("click"));
     }, 100);
-    */
+    /**/
   }
 
   open_due_custom() {
@@ -417,36 +421,56 @@ export class DraftpollPage implements OnInit {
   }
 
   blur_poll_title() {
-    if (this.formGroup.get('poll_title').valid) {
-      if (this.stage < 2) {
-        if (this.show_details) {
-          this.stage = 2;
-          this.set_focus('input_poll_desc');
-        } else {
-          this.stage = 4;
-          this.open_due_select();
-        }
-      }
-    } else {
+    if (!this.formGroup.get('poll_title').valid) {
       this.set_focus('input_poll_title');
     }
   }
 
+  poll_title_onKeydown(ev: KeyboardEvent) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('poll_title').valid) {
+        if (this.stage < 2) {
+          this.stage = this.show_details ? 2 : 4;
+        }
+        if (this.show_details) {
+          this.set_focus('input_poll_desc');
+        } else {
+          this.open_due_select();
+        }
+      } else {
+        this.set_focus('input_poll_title');
+      }  
+    }
+  }
+
   blur_poll_desc() {
-    if (this.stage < 3) {
-      this.stage = 3;
-      this.set_focus('input_poll_url');  
+  }
+
+  poll_desc_onKeydown(ev: KeyboardEvent) {
+    if (is_forward_key(ev)) {
+      if (this.stage < 3) {
+        this.stage = 3;
+        this.set_focus('input_poll_url');  
+      }  
     }
   }
 
   blur_poll_url() {
-    if (this.formGroup.get('poll_url').valid) {
-      if (this.stage < 4) {
-        this.stage = Math.max(this.stage, 4);
-        // TODO: open select for due type      
-      }
-    } else {
+    if (!this.formGroup.get('poll_url').valid) {
       this.set_focus('input_poll_url');
+    }
+  }
+
+  poll_url_onKeydown(ev: KeyboardEvent) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('poll_url').valid) {
+        if (this.stage < 4) {
+          this.stage = Math.max(this.stage, 4);
+        }
+        this.open_due_select(); // TODO: open select for due type      
+      } else {
+        this.set_focus('input_poll_url');
+      }  
     }
   }
 
@@ -471,47 +495,65 @@ export class DraftpollPage implements OnInit {
     }
   }
 
-  blur_option_name(i: number, show_details: boolean) {
-    if (this.formGroup.get('option_name'+i).valid) {
-      if (show_details) {
-        this.option_stage = this.max(this.option_stage, 1);
-        this.expanded[i] = true;
-        if (i == this.n_options - 1) {
-          this.set_focus('input_option_desc'+i);
-        }
-      } else if (i == this.n_options - 1) {
-        this.next_option(i);
-      }
-    } else {
+  blur_option_name(i: number) {
+    if (!this.formGroup.get('option_name'+i).valid) {
       this.set_focus('input_option_name'+i);
     }
-    this.G.L.trace("blur_option_name", show_details, this.option_stage);
+  }
+
+  option_name_onKeydown(ev: KeyboardEvent, i: number, show_details: boolean) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('option_name'+i).valid) {
+        if (show_details) {
+          this.option_stage = this.max(this.option_stage, 1);
+          this.expanded[i] = true;
+          this.set_focus('input_option_desc'+i);
+        } else if (i == this.n_options - 1) {
+          this.next_option(i);
+        }
+      } else {
+        this.set_focus('input_option_name'+i);
+      }  
+    }
   }
 
   blur_option_desc(i: number) {
-    if (this.formGroup.get('option_desc'+i).valid) {
-      this.option_stage = Math.max(this.option_stage, 2);
-      if (i == this.n_options - 1) {
-        this.set_focus('input_option_url'+i);
-      }
-    } else {
+    if (!this.formGroup.get('option_desc'+i).valid) {
       this.set_focus('input_option_desc'+i);
     }
-    this.G.L.trace("blur_option_desc", this.option_stage);
+  }
+
+  option_desc_onKeydown(ev: KeyboardEvent, i: number) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('option_desc'+i).valid) {
+        this.option_stage = Math.max(this.option_stage, 2);
+        this.set_focus('input_option_url'+i);
+      } else {
+        this.set_focus('input_option_desc'+i);
+      }  
+    }
   }
 
   blur_option_url(i: number) {
-    if (this.formGroup.get('option_url'+i).valid) {
-      if (i == this.n_options - 1) {
-        this.next_option(i);
-      } else {
-        // TODO: what?
-      }
-    } else {
+    if (!this.formGroup.get('option_url'+i).valid) {
       this.set_focus('input_option_url'+i);
     }
   }
   
+  option_url_onKeydown(ev: KeyboardEvent, i: number) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('option_url'+i).valid) {
+        if (i == this.n_options - 1) {
+          this.next_option(i);
+        } else {
+          this.set_focus('input_option_name'+(i+1));
+        }
+      } else {
+        this.set_focus('input_option_url'+i);
+      }  
+    }
+  }
+
   next_option(i: number) {
     this.option_stage = this.max(this.option_stage, 3);
     this.expanded[i] = false;

@@ -536,8 +536,8 @@
 
     "validation": {
         "db-pw-required": "Database password is required.",
-        "db-url-required": "Database URL is required.",
-        "db-url-pattern": "Please enter a valid URL.",
+        "db-server-url-required": "Database URL is required.",
+        "db-server-url-pattern": "Please enter a valid URL.",
         "db-user-required": "Database username is required.",
         "email-required": "Email address is required.",
         "email-valid": "Please enter a valid email address.",
