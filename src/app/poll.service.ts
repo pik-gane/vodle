@@ -572,10 +572,12 @@ export class Poll {
     }
   }
 
-  after_incoming_changes() {
+  after_incoming_changes(tally=true) {
     if ((this.state == 'running') && (this.ratings_have_changed)) {
       this.ratings_have_changed = false;
-      this.tally_all();
+      if (tally) {
+        this.tally_all();
+      }
     }
   }
 

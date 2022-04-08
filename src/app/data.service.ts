@@ -1616,7 +1616,7 @@ export class DataService implements OnDestroy {
 
   pending_changes = 0; // used for debugging
 
-  private handle_poll_db_change(pid, change) {
+  private handle_poll_db_change(pid, change, tally=true) {
     // called by PouchDB sync and replicate
 //    change = JSON.parse(JSON.stringify(change));
     this.G.L.entry("DataService.handle_poll_db_change", pid, this.pending_changes);
@@ -1644,7 +1644,7 @@ export class DataService implements OnDestroy {
       }
     }
     if (local_changes) {
-      this.after_changes();
+      this.after_changes(tally);
       if (this.page.onDataChange) {
         this.page.onDataChange();
       }
@@ -1695,7 +1695,7 @@ export class DataService implements OnDestroy {
     return false;
   }
 
-  private after_changes() {
+  private after_changes(tally=true) {
     this.G.L.entry("DataService.after_changes");
     const lang = this.getu('language');
     this.translate.use(lang!=''?lang:environment.default_lang);
@@ -1752,7 +1752,7 @@ export class DataService implements OnDestroy {
 
     // notifty all running polls that they might need to tally:
     for (const [pid, p] of Object.entries(this.G.P.polls)) {
-      p.after_incoming_changes();
+      p.after_incoming_changes(tally);
     }
 
     this.save_state();
