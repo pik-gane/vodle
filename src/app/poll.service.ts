@@ -515,6 +515,7 @@ export class Poll {
 //          month = due.getMonth(), // 0=January!
 //          dayofmonth = due.getDate(), 
           dayofweek = due.getDay(),
+          hour = due.getHours(),
           due_as_ms = due.getTime();
       if (this.due_type=='midnight') {
         due.setHours(23, 59, 59, 999); // almost midnight on the same day according to local time
@@ -531,8 +532,13 @@ export class Poll {
         due = new Date(due_as_ms + 24*60*60*1000);
         due.setHours(23, 59, 59, 999); 
       } else if (this.due_type=='friday-noon') {
-        due = new Date(due_as_ms + ((5-dayofweek)%7)*24*60*60*1000);
-        due.setHours(12, 0, 0, 0); 
+        if (hour < 12 || dayofweek != 5) {
+          due = new Date(due_as_ms + ((5-dayofweek)%7)*24*60*60*1000);
+        } else {
+          // it's Friday afternoon, so take next Friday:
+          due = new Date(due_as_ms + 7*24*60*60*1000);
+        }
+        due.setHours(12, 0, 0, 0);   
       } else if (this.due_type=='sunday-night') {
         due = new Date(due_as_ms + ((7-dayofweek)%7)*24*60*60*1000);
         due.setHours(23, 59, 59, 999); 
