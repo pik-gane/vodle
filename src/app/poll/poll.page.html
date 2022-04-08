@@ -22,7 +22,7 @@
     <ion-title *ngIf="scroll_position < 70" 
       [innerHtml]="'poll.-page-title' | translate">
     </ion-title>
-    <ion-text *ngIf="scroll_position >= 70" style="font-size: larger;"><i>{{p.title}}</i></ion-text>
+    <ion-text *ngIf="scroll_position >= 70" style="font-size: larger;"><i [innerHtml]="p.title"></i></ion-text>
     <ion-buttons slot="end">
 
       <!-- OFFLINE SIGN -->
@@ -100,8 +100,8 @@
 
             <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
 
-            <h3><b><i>{{p.title}}</i></b></h3>
-            <i *ngIf="(p.desc||'')!=''">{{p.desc}}&nbsp;</i>
+            <h3><b><i [innerHtml]="p.title"></i></b></h3>
+            <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>&nbsp;
             <small *ngIf="(p.url||'') != ''">
               (<ion-text 
                 class="externallink" 
@@ -205,7 +205,7 @@
       </ion-item>
       <ion-item color="danger">
         <p>
-          <b>The winner is <i>{{p.options[oidsorted[0]].name}}</i></b>
+          <b>The winner is <i [innerHtml]="p.options[oidsorted[0]].name"></i></b>
         </p>
       </ion-item>
       <ion-item color="light">
@@ -421,7 +421,7 @@
 
                     <!-- OPTION NAME: -->
   
-                    <b><i>&nbsp;{{p.options[oidsorted[i]].name}}&nbsp;</i></b>
+                    <b><i>&nbsp;<span [innerHtml]="p.options[oidsorted[i]].name"></span>&nbsp;</i></b>
                   </ion-label>
   
                 </ion-col>
@@ -577,7 +577,7 @@
                       <br/>
                     </span>
                     <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
-                      <i>{{p.options[oidsorted[i]].desc}}&nbsp;&nbsp;</i>
+                      <i><span [innerHtml]="p.options[oidsorted[i]].desc"></span>&nbsp;&nbsp;</i>
                     </span>
                     <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
                       <small>
