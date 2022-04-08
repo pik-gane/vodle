@@ -1768,7 +1768,6 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.after_changes telling poll to tally", pid);
       p.ratings_have_changed = true;
       p.after_incoming_changes(tally);
-      p.update_ordering();
     }
 
     this.save_state();
@@ -1871,6 +1870,9 @@ export class DataService implements OnDestroy {
       if (!this._pid_oids[pid].has(oid)) {
         this.G.L.trace("DataService found new option", pid, oid);
         this._pid_oids[pid].add(oid);
+        if (pid in this.G.P.polls) {
+          const o = new Option(this.G, this.G.P.polls[pid], oid);              
+        }
       }
 
     }
@@ -1947,6 +1949,9 @@ export class DataService implements OnDestroy {
           if (!this._pid_oids[pid].has(oid)) {
             this.G.L.trace("DataService.doc2poll_cache found new option", pid, oid);
             this._pid_oids[pid].add(oid);
+            if (pid in this.G.P.polls) {
+              const o = new Option(this.G, this.G.P.polls[pid], oid);              
+            }
           }
 
         }

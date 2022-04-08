@@ -1015,8 +1015,8 @@ export class Poll {
         const effective_ratings_ascending = this.update_ratings_ascending(oid, effective_ratings_map);
 //        this.G.L.trace("Poll.tally_all rsasc", this._pid, oid, [...rs_map], [...rsasc]);
         this.update_threshold_and_approvals(oid, effective_ratings_map, effective_ratings_ascending);
-        const [approval_score, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid));
-        this.update_score(oid, approval_score, this.T.total_effective_ratings_map.get(oid), score_factor);
+        const [approval_score, _dummy] = this.update_approval_score(oid, this.T.approvals_map.get(oid) || new Map());
+        this.update_score(oid, approval_score, this.T.total_effective_ratings_map.get(oid) || 0, score_factor);
 //        this.G.L.trace("Poll.tally_all aps, apsc, sc", this._pid, oid, this.T.approvals_map.get(oid), apsc, this.T.scores_map.get(oid));
       } else {
         this.T.effective_ratings_ascending_map.set(oid, []);

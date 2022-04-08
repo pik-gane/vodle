@@ -129,7 +129,10 @@ export class PollPage implements OnInit {
     for (let oid of this.oidsorted) {
       this.expanded[oid] = false;
     }
-    window.setTimeout(this.show_stats.bind(this), 100);
+    window.setTimeout(() => {
+      this.update_order.bind(this)(true);
+      this.show_stats.bind(this)();
+    }, 200);
     this.update_delegation_info();
     this.on_delegate_toggle_change();
     this.p.have_seen = true;
