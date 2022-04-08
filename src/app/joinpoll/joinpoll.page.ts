@@ -12,6 +12,8 @@ import { Poll } from '../poll.service';
 })
 export class JoinpollPage implements OnInit {
 
+  window = window;
+
   help_link_start = '<a href="/help">';
   help_link_end = '</a>';
 

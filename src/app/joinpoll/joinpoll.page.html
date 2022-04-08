@@ -4,18 +4,39 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title [innerHtml]="'joinpoll.-page-title'|translate"></ion-title>
+    <ion-buttons slot="end">
+
+      <!-- OFFLINE SIGN -->
+      <ng-container *ngIf="!window.navigator.onLine">
+        <ion-icon name="cloud-offline-outline" color="grey"
+          style="position: relative; bottom: -1px;">
+        </ion-icon>
+        <ion-icon name="alert-outline" color="grey">
+        </ion-icon>
+      </ng-container> 
+
+      <!-- SYNCING SIGN -->
+      <ion-spinner *ngIf="window.navigator.onLine && !ready" name="crescent" color="grey"></ion-spinner>
+
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content *ngIf="!ready">
   <ion-item class="ion-text-center">
-    <span [innerHtml]="'joinpoll.fetching'|translate"></span>
+    <h1>
+      <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
+      <ion-spinner name="crescent" size="large"></ion-spinner>
+    </h1>
   </ion-item>
 </ion-content>
 
 <ion-content *ngIf="ready && !p">
   <ion-item class="ion-text-center">
-    <span [innerHtml]="'joinpoll.initializing'|translate"></span>
+    <h1>
+      <i [innerHtml]="'joinpoll.initializing'|translate"></i>&nbsp;
+      <ion-spinner name="crescent" size="large"></ion-spinner>
+    </h1>
   </ion-item>
 </ion-content>
 
