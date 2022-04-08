@@ -361,7 +361,7 @@
 
     "joinpoll": {
         "-page-title": "Einer Abstimmung beitreten",
-        "fetching": "Einen Moment bitte, ich hole die Daten zu dieser Abstimmung...",
+        "fetching": "Einen Moment bitte, ich hole die Daten zu dieser Abstimmung... (da ich noch eine Testversion bin, könnte das eine Minute dauern)",
         "initializing": "Einen Moment bitte, ich initialisiere diese Abstimmung...",
         "header": "Willkommen zur interaktiven Abstimmung<br/><i>„{{poll_title}}“!</i>",
         "p1-winner": "Es geht darum, bis <b>{{due}}</b> zwischen mehreren Optionen zu wählen. Am Ende wird genau eine Option gewinnen.",

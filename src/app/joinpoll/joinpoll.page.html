@@ -23,20 +23,20 @@
 </ion-header>
 
 <ion-content *ngIf="!ready">
-  <ion-item class="ion-text-center">
-    <h1>
+  <ion-item class="ion-text-center" lines="none">
+    <h3>
       <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
       <ion-spinner name="crescent" size="large"></ion-spinner>
-    </h1>
+    </h3>
   </ion-item>
 </ion-content>
 
 <ion-content *ngIf="ready && !p">
-  <ion-item class="ion-text-center">
-    <h1>
+  <ion-item class="ion-text-center" lines="none">
+    <h3>
       <i [innerHtml]="'joinpoll.initializing'|translate"></i>&nbsp;
       <ion-spinner name="crescent" size="large"></ion-spinner>
-    </h1>
+    </h3>
   </ion-item>
 </ion-content>
 

@@ -363,7 +363,7 @@
 
     "joinpoll": {
         "-page-title": "Join a poll",
-        "fetching": "Just a moment please, Iʼm fetching this pollʼs data...",
+        "fetching": "Just a moment please, Iʼm fetching this pollʼs data... (since I'm still a test version, this may take a minute)",
         "initializing": "Just a moment please, Iʼm initializing the poll...",
         "header": "Welcome to the interactive poll<br/><i>“{{poll_title}}”!</i>",
         "p1-winner": "This poll is about deciding between a number of options until <b>{{due}}.</b> In the end, exactly one option will win.",
