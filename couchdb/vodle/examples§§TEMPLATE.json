@@ -1,5 +1,5 @@
 {
-    ":COMMENT": "Template for example polls. Duplicate file, remove one of the two paragraph signs §§, and rename it adequately to examples:whatever.json",
+    ":COMMENT": "Template for example polls. Duplicate file, remove one of the two paragraph signs §§, and rename it adequately to examples§whatever.json",
 
     "type": "Poll type: winner|share",
 

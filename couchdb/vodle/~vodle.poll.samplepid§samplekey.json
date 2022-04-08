@@ -1,3 +1,4 @@
 {
-    "value": "samplevalue encrypted with poll password"
+    "value": "sample poll data value encrypted with poll password",
+    "due": "optional plain due date for authorization of updates"
 }
