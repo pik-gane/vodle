@@ -1,5 +1,18 @@
 {
-    "_KONVENTIONEN_": [
+    "_WELCOME_TO_TRANSLATORS_": [
+        "Thank you for helping translate vodle!",
+        "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
+        "Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
+        "In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+    ],
+
+    "_OVERALL_CONVENTIONS_": [
+        "Please use gender-neutral language.",
+        "Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
+        "Please use the correct whitespacing with exclamation marks and question marks for your language."
+    ],
+
+    "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "Wir gendern alles mit : , z.B. 'Teilnehmer:innen'.",
         "Wir verwenden korrekte Bindestriche -, Gedankenstriche –, Minuszeichen −, Bereichsstriche –, Apostrophe ʼ und Anführungszeichen ‚‘ und „“ statt Fußzeichen ' und Zollzeichen"
     ],
@@ -28,7 +41,7 @@
     "options": "Optionen",
     "password": "Passwort",
     "possible-targets": "Mögliche Optionen",
-    "read-more": "mehr lesen",
+    "read-more": "Mehr lesen",
     "ready": "Bereit",
     "retype-password": "Passwort wiederholen",
     "select-cancel": "Abbrechen",
@@ -493,7 +506,7 @@
         "including-you": " (auch Du)",
         "average-rating": "durchschn. Bewertg. {{average}}",
 
-        "explain": "erklären",
+        "explain": "Erklären",
 
         "add-option": "Option hinzufügen",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",

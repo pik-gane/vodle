@@ -1,5 +1,18 @@
 {
-    "_ENGLISH_CONVENTIONS_": [
+    "_WELCOME_TO_TRANSLATORS_": [
+        "Thank you for helping translate vodle!",
+        "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
+        "Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
+        "In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+    ],
+
+    "_OVERALL_CONVENTIONS_": [
+        "Please use gender-neutral language.",
+        "Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
+        "Please use the correct whitespacing with exclamation marks and question marks for your language."
+    ],
+
+    "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
         "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
     ],
@@ -452,8 +465,8 @@
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Closes",
         "closed": "Closed",
-        "type-share": "options are assigned shares",
-        "type-winner": "one option wins",
+        "type-share": "Options are assigned shares",
+        "type-winner": "One option wins",
 
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",
@@ -494,7 +507,7 @@
         "including-you": " (including you)",
         "average-rating": "avg. rating {{average}}",
 
-        "explain": "explain",
+        "explain": "Explain",
         
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
