@@ -539,24 +539,22 @@
                   <ion-col class="ion-no-padding ion-no-margin">
                     <b>
                       <!-- Winning chance/budget share: -->
-                      <span style="color:#769596">
-                        <span [innerHtml]="
+                      <span style="color:#769596;">
+                        <span style="white-space: nowrap;" [innerHtml]="
                           (p.type == 'winner' 
                               ? (running?'poll.chance-to-win':'poll.final-chance-to-win') 
                               : (running?'poll.of-the-budget':'poll.final-budget')) 
                           | translate: {percentage: 
                             Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
                           }">
-                        </span>
-                        <small>
-                          <span style="color:#4c822e" 
+                        </span><small>&#0020;<span style="color:#4c822e;" 
                             [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                             [innerHtml]="'poll.including-your-share' | translate">
                           </span>,
                         </small>
-                      </span>
+                      </span><small>&#0020;</small>
                       <!-- Approval: -->
-                      <span style="color:#9abcbd">
+                      <span style="color:#9abcbd; white-space: nowrap;">
                         <span [innerHtml]="
                           'poll.approved-by' | translate: {percentage:
                             Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10
@@ -567,21 +565,31 @@
                         <span style="color:#62a73b" 
                           [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
                           [innerHtml]="'poll.including-you' | translate">
-                        </span><!-- avg. rating: --><span *ngIf="(i>0 && p.T.approval_scores_map.get(oidsorted[i-1]) == p.T.approval_scores_map.get(oidsorted[i])) || (i<oidsorted.length-1 && p.T.approval_scores_map.get(oidsorted[i+1]) == p.T.approval_scores_map.get(oidsorted[i]))" style="color:#9abcbd">,
-                          <span [innerHtml]="
-                            'poll.average-rating' | translate: {average:
-                              Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
-                            }">
-                          </span>
-                        </span>
-                        <!-- explanation link: -->
-                        <span style="color:#9abcbd">
-                          &nbsp;(<a 
-                            (click)="explain_approval_dialog(oidsorted[i])"
-                            [innerHtml]="'poll.explain' | translate">
-                          </a>)
                         </span>
                       </small>
+                      <small>
+                      <!-- avg. rating: -->
+                      <span *ngIf="(i>0 
+                                && p.T.approval_scores_map.get(oidsorted[i-1]) 
+                                == p.T.approval_scores_map.get(oidsorted[i])) 
+                            || (i<oidsorted.length-1 
+                                && p.T.approval_scores_map.get(oidsorted[i+1]) 
+                                == p.T.approval_scores_map.get(oidsorted[i]))" 
+                            style="color:#9abcbd">,
+                        <span style="white-space: nowrap;" [innerHtml]="
+                          'poll.average-rating' | translate: {average:
+                            Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
+                          }">
+                        </span>
+                      </span>&nbsp;
+                      <!-- explanation link: -->
+                      <span style="color:#9abcbd; white-space: nowrap;">
+                        (<a 
+                          (click)="explain_approval_dialog(oidsorted[i])"
+                          [innerHtml]="'poll.explain' | translate">
+                        </a>)
+                      </span>
+                    </small>
                     </b>
                     <span [style.display]="(!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url) ? 'inline' : 'none'">
                       <br/>
