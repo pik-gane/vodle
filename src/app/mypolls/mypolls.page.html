@@ -80,8 +80,8 @@
             <span [innerHtml]="'mypolls.request-by'|translate:{from:r.from}"></span>
           </ion-label>
           <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
-            <ion-badge *ngIf="r.status=='can-accept'" class="ion-no-margin" style="margin-left:5px;" color="primary" [innerHtml]="'badges.can-accept'|translate"></ion-badge>
-            <ion-badge *ngIf="(r.status=='two-way')||(r.status=='cycle')" class="ion-no-margin" style="margin-left:5px;" color="secondary" [innerHtml]="'badges.please-check'|translate"></ion-badge>
+            <ion-badge *ngIf="r.status=='can-accept'" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="primary" [innerHtml]="'badges.can-accept'|translate"></ion-badge>
+            <ion-badge *ngIf="(r.status=='two-way')||(r.status=='cycle')" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="secondary" [innerHtml]="'badges.please-check'|translate"></ion-badge>
           </ion-buttons>
         </ion-item>
       </ng-container>
@@ -102,14 +102,14 @@
           <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i [innerHtml]="p.title"></i>
         </ion-label>
-        <ion-buttons slot="end" class="ion-no-padding ion-no-margin">
+        <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
 
           <!-- Badges: -->
 
-          <ion-badge *ngIf="!p.have_seen" class="ion-no-margin" style="margin-left:5px;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          <ion-badge *ngIf="p.is_closing_soon" class="ion-no-margin" style="margin-left:5px;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
-          <ion-badge *ngIf="p.have_seen && p.am_abstaining" class="ion-no-margin" style="margin-left:5px;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
-          <ion-badge *ngIf="p.have_delegated" class="ion-no-margin" style="margin-left:5px;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+          <ion-badge *ngIf="!p.have_seen" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+          <ion-badge *ngIf="p.is_closing_soon" size="small" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+          <ion-badge *ngIf="p.have_seen && p.am_abstaining" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
+          <ion-badge *ngIf="p.have_delegated" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
 
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
 -->
@@ -117,7 +117,6 @@
           <!-- Invite-to button: -->
 
           <ion-button *ngIf="can_invite(p)" fill="clear" 
-              style="position: relative; right: -10px;"
               class="ion-no-padding ion-no-margin"
               [routerLink]="'/inviteto/'+p.pid">
             <ion-icon name="share-social-outline" slot="icon-only" color="primary"></ion-icon>
@@ -189,8 +188,10 @@
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [innerHtml]="p.title"></i>
           </ion-label>
-          <ion-buttons slot="end">
-            <ion-badge class="ion-no-margin" style="margin-left:5px;" color="light" [innerHtml]="'badges.draft'|translate"></ion-badge>
+          <ion-buttons slot="end" 
+              style="position: relative; right: -10px;"
+              class="ion-no-padding ion-no-margin">
+            <ion-badge class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="light" [innerHtml]="'badges.draft'|translate"></ion-badge>
             <ion-button fill="clear">
               <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
             </ion-button>
