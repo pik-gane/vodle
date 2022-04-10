@@ -16,7 +16,7 @@
       style="font-weight: bold; font-size: larger;"
       [innerHtml]="'poll.-page-title' | translate">
     </ion-text>
-    <ion-text *ngIf="scroll_position >= 70" style="font-size: larger;"><i [innerHtml]="p.title"></i></ion-text>
+    <ion-text *ngIf="scroll_position >= 70"><b><i [innerHtml]="p.title"></i></b></ion-text>
     <ion-buttons slot="end">
 
       <!-- OFFLINE SIGN -->
@@ -36,7 +36,7 @@
       <ion-button *ngIf="delegation_status!='agreed' && running"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary">
-        <span 
+        <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
         </span>&nbsp;<ion-button 
             shape="round" fill="solid" color="primary">
@@ -56,7 +56,7 @@
     [scrollEvents]="true"
     (ionScroll)="onScroll($event)"    
     >
-  <ion-list lines="full">
+  <ion-list lines="full" class="ion-no-margin ion-no-padding">
 
     <!-- NEWS -->
 
@@ -81,7 +81,7 @@
 
     <!-- GENERAL POLL INFORMATION -->
 
-    <ion-item color="primary">
+    <ion-item color="primary" class="ion-no-margin">
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
