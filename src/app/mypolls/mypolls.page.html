@@ -4,11 +4,31 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title [innerHtml]="'mypolls.-page-title'|translate"></ion-title>
-    <ion-thumbnail slot="end">
-      <ion-img src="/assets/topright_icon.png"></ion-img>
-    </ion-thumbnail>
+    <ion-buttons slot="end">
+
+      <!-- OFFLINE SIGN -->
+      <ng-container *ngIf="!window.navigator.onLine">
+        <ion-icon name="cloud-offline-outline" color="grey"
+          style="position: relative; bottom: -1px;">
+        </ion-icon>
+        <ion-icon name="alert-outline" color="grey">
+        </ion-icon>
+      </ng-container> 
+
+      <!-- SYNCING SIGN -->
+      <ion-spinner *ngIf="G.show_spinner || !window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+      <ion-thumbnail *ngIf="!(G.show_spinner || !window.navigator.onLine)">
+        <ion-img src="/assets/topright_icon.png"></ion-img>
+      </ion-thumbnail>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
+
+<!--
+  TODO:
+    - show spinner when busy!
+    - make bg image align bottom of screen when too few polls to fill screen.
+-->
 
 <!--
   <ion-icon name="star-outline"></ion-icon>
@@ -65,7 +85,7 @@
           </ion-buttons>
         </ion-item>
       </ng-container>
-      <ng-container *ngIf="Object.keys(G.P.running_polls).length==0">
+      <ng-container *ngIf="Object.keys(G.P.running_polls).length==0 && !G.show_spinner">
         <ion-item><p [innerHtml] ="'mypolls.no-running-polls'|translate"></p></ion-item>
       </ng-container>  
     </ng-container>
@@ -106,7 +126,7 @@
         </ion-buttons>
       </ion-item>
     </ng-container>
-    <ng-container *ngIf="Object.keys(G.P.running_polls).length==0">
+    <ng-container *ngIf="Object.keys(G.P.running_polls).length==0 && !G.show_spinner">
       <ion-item>
         <ion-col class="ion-no-padding ion-no-margin">
           <p [innerHtml] ="'mypolls.no-running-polls-1'|translate"></p>
@@ -130,7 +150,7 @@
           </ion-label>
         </ion-item>
       </ng-container>
-      <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0">
+      <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0 && !G.show_spinner">
         <ion-item>
           <ion-col class="ion-no-padding ion-no-margin">
             <p [innerHtml] ="'mypolls.no-recently-closed-polls-1'|translate"></p>
@@ -177,7 +197,7 @@
           </ion-buttons>
         </ion-item>
       </ng-container>
-      <ng-container *ngIf="Object.keys(G.P.draft_polls).length==0">
+      <ng-container *ngIf="Object.keys(G.P.draft_polls).length==0 && !G.show_spinner">
         <ion-item>
           <ion-col class="ion-no-padding ion-no-margin">
             <p [innerHtml] ="'mypolls.no-draft-polls-1'|translate"></p>

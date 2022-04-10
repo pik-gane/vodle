@@ -19,6 +19,8 @@ export class GlobalService implements OnDestroy {
 
   L: Logger;
 
+  show_spinner = false;
+
   // constants or session-specific data:
 
   _urlRegex = /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
@@ -124,4 +126,24 @@ export class GlobalService implements OnDestroy {
       }*/
     }
   }
+
+  spinning_reasons = new Set();
+
+  add_spinning_reason(reason: string) {
+    this.spinning_reasons.add(reason);
+    this.show_spinner = true;
+    this.L.trace("GlobalService.add_spinning_reason reasons", [...this.spinning_reasons.entries()])
+  }
+
+  remove_spinning_reason(reason: string) {
+    if (this.spinning_reasons.has(reason)) {
+      this.spinning_reasons.delete(reason);
+      if (this.spinning_reasons.size == 0) {
+        this.show_spinner = false; 
+      }
+    }
+    this.L.trace("GlobalService.remove_spinning_reason reasons", [...this.spinning_reasons.entries()])
+  }
+
+
 }

@@ -13,6 +13,7 @@ import { Poll } from "../poll.service";
 export class MypollsPage implements OnInit {
 
   Object = Object;
+  window = window;
 
   news: Set<news_t> = new Set();
 

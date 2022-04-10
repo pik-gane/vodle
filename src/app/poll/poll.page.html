@@ -1,13 +1,6 @@
 <!--
   TODO: 
-  - show winning prob. as percentage in circle?
-  - show avg. rating if necessary as tiebreaker (how?)
-  - extend expanded rows to below circle
-
-  <ion-icon name="people-outline"></ion-icon>
-  <ion-icon name="arrow-redo-outline"></ion-icon>
-  <ion-icon name="navigate-outline"></ion-icon>
-  <ion-icon name="open-outline"></ion-icon>
+  - "fix" slider element's absolute vertical position on screen while using it, even when note above it changes height. achieve this by automatically "scrolling" to compensate such layout changes.  
 -->
 
 <!-- HEADER: -->
@@ -547,6 +540,7 @@
                           | translate: {percentage: 
                             Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
                           }">
+                          <!--FIXME: &#0020; not showing as space but as box with an x in android app:-->
                         </span><small>&#0020;<span style="color:#4c822e;" 
                             [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                             [innerHtml]="'poll.including-your-share' | translate">

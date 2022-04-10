@@ -1294,11 +1294,13 @@ export class DataService implements OnDestroy {
         this.G.L.info("DataService pausing poll data sync", pid, info);
         const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = false;
+        this.G.remove_spinning_reason(pid);
       }).on('active', info => {
         // replication was resumed
         this.G.L.info("DataService resuming poll data syncing", pid, info);
         const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = true;
+        this.G.add_spinning_reason(pid);
       }).on('denied', err => {
         // a document failed to replicate (e.g. due to permissions)
         this.G.L.error("DataService poll data sync denied", pid, err);

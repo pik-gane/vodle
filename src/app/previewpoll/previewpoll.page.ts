@@ -82,7 +82,9 @@ export class PreviewpollPage implements OnInit {
 
   publish_button_clicked() {
     this.G.L.entry("PreviewpollPage.publish_button_clicked");
-    // TODO: again check that due is in future!
+    // TODO: 
+    // - again check that due is in future!
+    // - show spinner while busy!
     // fix db credentials:
     this.p.set_db_credentials();
     // generate a random poll password:
