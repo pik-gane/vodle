@@ -8,12 +8,12 @@
 <ion-header 
     (pointerup)="onBodyPointerup($event)"
     (touchup)="onBodyTouchup($event)">
-  <ion-toolbar style="padding-right: 11px;">
-    <ion-buttons slot="start">
-      <ion-menu-button></ion-menu-button>
+  <ion-toolbar style="padding-right: 11px; padding-left: 16px;">
+    <ion-buttons slot="start" style="margin-right: 0px; margin-left: 0px; padding-left: 0px; padding-right: 0px;">
+      <ion-menu-button style="padding-left: 0px!important; padding-right: 0px!important; position: relative; left: -9px;"></ion-menu-button>
     </ion-buttons>
     <ion-text *ngIf="scroll_position < 70" 
-      style="font-weight: bold; font-size: larger;"
+      style="font-weight: bold; font-size: larger; padding-left: 0px;"
       [innerHtml]="'poll.-page-title' | translate">
     </ion-text>
     <ion-text *ngIf="scroll_position >= 70"><b><i [innerHtml]="p.title"></i></b></ion-text>
@@ -95,7 +95,7 @@
             <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
 
             <h3><b><i [innerHtml]="p.title"></i></b></h3>
-            <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i>&nbsp;
+            <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
             <small *ngIf="(p.url||'') != ''">
               (<ion-text 
                 class="externallink" 
