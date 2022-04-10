@@ -306,3 +306,20 @@ app-logout {
     --background: transparent;
   }
 }
+app-mypolls {
+  background: url(../assets/img/bg_hands_closeup.png) no-repeat;
+  background-position: bottom;
+  background-size: 100% auto;
+  --ion-background-color: transparent;
+  ion-header {
+    ion-toolbar {
+      --background: white;
+    }
+  }
+  ion-content {
+    --background: transparent;
+  }
+  ion-list ion-item {
+    --background: #ffffffbb;
+  }
+}
