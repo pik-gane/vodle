@@ -33,7 +33,7 @@ TODO:
     - if yes: ask for old conn. info or recovery file, ...
 -->
 <ion-content *ngIf="ready">
-  <ion-grid class="center-grid">
+  <ion-grid>
 
     <ng-container *ngIf="step=='language'||step=='start'">
         <ion-item lines="none">
@@ -72,9 +72,6 @@ TODO:
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
           </ion-button>
         </ion-item>
-        <ion-item lines="none">
-          <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
-        </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='used_before'">
@@ -82,24 +79,14 @@ TODO:
         <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-used-before'|translate"></h1>
       </ion-item>
       <ion-item lines="none">
-      </ion-item>
-      <ion-item lines="none">
         <ion-button slot="end" size="large" color="primary" shape="round" 
           (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
         </ion-button>
       </ion-item>
       <ion-item lines="none">
-      </ion-item>
-      <ion-item lines="none">
         <ion-button slot="end" size="large" color="primary" shape="round" 
           (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
         </ion-button>
-      </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/><br/><br/><br/><br/></p>
-      </ion-item>
-      <ion-item class="item-text-wrap" lines="none">
-        <small><p class="ion-text-center" style="width:100%;" [innerHtml]="'login.cookie-banner'|translate"></p></small>
       </ion-item>
     </ng-container>
 
@@ -136,9 +123,6 @@ TODO:
         </ng-container>
         </div>  
         <ion-item lines="none">
-          <p><br/><br/></p>
-        </ion-item>
-        <ion-item lines="none">
           <ion-button type="submit" size="larger" color="primary" slot="end" [disabled]="!emailFormGroup.valid" 
               shape="round"
               (click)="submit_email()">
@@ -147,8 +131,8 @@ TODO:
           </ion-button>
         </ion-item>
       </form>    
-      <ion-item lines="none">
-        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
+      <ion-item class="item-text-wrap" lines="none">
+        <small><p class="ion-text-center" style="width:100%;" [innerHtml]="'login.cookie-banner'|translate"></p></small>
       </ion-item>
     </ng-container>
 
@@ -227,9 +211,6 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
-      </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='old_password'">
@@ -281,9 +262,6 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
-      </ion-item>
     </ng-container>
 
     <ng-container *ngIf="step=='connected'">
@@ -304,9 +282,6 @@ TODO:
           <span [innerHtml]="'start'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
-      </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/></p>
       </ion-item>
       <ion-item *ngIf="terms_expanded">
       </ion-item>

@@ -167,6 +167,11 @@ export class ExplainApprovalPage implements OnInit {
     }
   }
 
+  ionViewWillEnter() {
+    this.tab = "approval";
+    this.seen_tabs = new Set([this.tab]);
+  }
+  
   ionViewDidEnter() {
     this.ready = true;
     window.setTimeout(this.restart, 100);

@@ -58,6 +58,8 @@ fdroid build --on-server it.vodle
 - fdroid update --verbose
 - fdroid gpgsign
 
+### https://f-droid.org/en/docs/Setup_an_F-Droid_App_Repo/#real-world-setup
+- ?
 
 ## Necessary meta-data
 

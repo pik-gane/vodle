@@ -19,9 +19,10 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
-    <ion-title *ngIf="scroll_position < 70" 
+    <ion-text *ngIf="scroll_position < 70" 
+      style="font-weight: bold; font-size: larger;"
       [innerHtml]="'poll.-page-title' | translate">
-    </ion-title>
+    </ion-text>
     <ion-text *ngIf="scroll_position >= 70" style="font-size: larger;"><i [innerHtml]="p.title"></i></ion-text>
     <ion-buttons slot="end">
 

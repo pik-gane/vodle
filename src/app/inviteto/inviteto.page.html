@@ -88,6 +88,16 @@
         <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
       </ion-button>
     </ion-item>
+
+    <ion-item lines="none" class="ion-text-center">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+    </ion-item>  
+
+
   </ion-list>
 
 </ion-content>
