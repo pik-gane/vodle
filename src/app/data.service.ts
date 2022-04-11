@@ -594,6 +594,7 @@ export class DataService implements OnDestroy {
       .then(success => {
 
         if (this.router.url.includes('/login')) {
+          this.G.remove_spinning_reason("login");
           this.router.navigate(['/login/connected/' + ((!!this.page) ? this.page.then_url || '' : '')]);
         } 
 
@@ -1072,6 +1073,7 @@ export class DataService implements OnDestroy {
     if ((this.user_cache['db']||'')=='') {
       this.G.S.db = 'central';
     }
+    this.G.add_spinning_reason("login");
     this.email_and_password_exist();
   }
 

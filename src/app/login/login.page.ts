@@ -32,6 +32,8 @@ import { GlobalService } from "../global.service";
 })
 export class LoginPage implements OnInit {
 
+  window = window;
+  
   // ATTRIBUTES:
 
   languageFormGroup: FormGroup;

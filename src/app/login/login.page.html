@@ -4,9 +4,23 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title [innerHtml]="'login.-page-title'|translate"></ion-title>
-    <ion-thumbnail slot="end">
-      <ion-img src="/assets/topright_icon.png"></ion-img>
-    </ion-thumbnail>
+    <ion-buttons slot="end">
+
+      <!-- OFFLINE SIGN -->
+      <ng-container *ngIf="!window.navigator.onLine">
+        <ion-icon name="cloud-offline-outline" color="grey"
+          style="position: relative; bottom: -1px;">
+        </ion-icon>
+        <ion-icon name="alert-outline" color="grey">
+        </ion-icon>
+      </ng-container> 
+
+      <!-- SYNCING SIGN -->
+      <ion-spinner *ngIf="G.show_spinner || !window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+      <ion-thumbnail *ngIf="!(G.show_spinner || !window.navigator.onLine)">
+        <ion-img src="/assets/topright_icon.png" ></ion-img>
+      </ion-thumbnail>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <!--
