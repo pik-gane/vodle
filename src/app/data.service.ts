@@ -462,6 +462,7 @@ export class DataService implements OnDestroy {
     // access locally stored data and get some statistics about it:
     this.local_only_user_DB = new PouchDB('local_only_user', {auto_compaction: true});
 
+    /* deactivated for performance:
     this.local_only_user_DB.info()
     .then(doc => { 
 
@@ -472,9 +473,11 @@ export class DataService implements OnDestroy {
       this.G.L.error("DataService local_only_user_DB error", err);
 
     });
+    */
 
     this.local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
 
+    /* deactivated for performance:
     this.local_synced_user_db.info()
     .then(doc => { 
 
@@ -485,6 +488,7 @@ export class DataService implements OnDestroy {
       this.G.L.error("DataService local_synced_user_DB error", err);
 
     });
+    */
 
     this.uninitialized_pids = new Set();
     this.local_poll_dbs = {};
@@ -748,6 +752,35 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
   }
 
+  get_user_doc_selector(email_and_pw_hash: string): any {
+    return { 
+      "_id": {
+        "$gte": user_doc_id_prefix + email_and_pw_hash + "§",
+        "$lt": user_doc_id_prefix + email_and_pw_hash + '¨'
+      }
+    }
+  }
+
+  get_poll_doc_selector(pid: string): any {
+    return { 
+      "$or": [
+        {
+          "_id": {
+            "$gte": poll_doc_id_prefix + pid + "§",
+            "$lt": poll_doc_id_prefix + pid + '¨'
+          }
+        },
+        {
+          "_id": {
+            "$gte": poll_doc_id_prefix + pid + '.voter.',
+            "$lt": poll_doc_id_prefix + pid + '.voter/'
+          }
+        }
+      ]
+    }
+  }
+
+  /*
   get_user_doc_query_params(email_and_pw_hash: string): any {
     return { 
       start1: user_doc_id_prefix + email_and_pw_hash + "§",
@@ -765,6 +798,7 @@ export class DataService implements OnDestroy {
       end2: poll_doc_id_prefix + pid + '.voter/'
     }
   }
+  */
 
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
     // called at poll initialization or when joining a poll
@@ -793,11 +827,16 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
+//              since: this.poll_caches[pid]['last_seq'] || 0,
               retry: true,
+              batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
-//              filter: this.get_poll_doc_filter(pid)
+              selector: this.get_poll_doc_selector(pid),
+              /*
+      //              filter: this.get_poll_doc_filter(pid)
               filter: 'vodle/filter_2_id_spans',
               query_params: this.get_poll_doc_query_params(pid)
+              */
           })/* on('complete') is never called, so we cannot do it this way but must check for 0 pending inside 'change' (see below):
           .on('complete', function () {
 
@@ -908,10 +947,12 @@ export class DataService implements OnDestroy {
   // HOOKS FOR OTHER SERVICES:
 
   wait_for_user_db(): Promise<any> {
+    // TODO: is there a better way for doing this?
     return this.local_synced_user_db.info();
   }
 
   wait_for_poll_db(pid: string): Promise<any> {
+    // TODO: is there a better way for doing this?
     return this.local_poll_dbs[pid].info();
   }
 
@@ -977,11 +1018,16 @@ export class DataService implements OnDestroy {
 
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
+//          since: this.poll_caches[pid]['last_seq'] || 0,
           retry: true,
+          batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
-//          filter: this.get_poll_doc_filter(pid)
+          selector: this.get_poll_doc_selector(pid),
+          /*
+  //          filter: this.get_poll_doc_filter(pid)
           filter: 'vodle/filter_2_id_spans',
           query_params: this.get_poll_doc_query_params(pid)
+          */
       }).on('change', change => {
 
         this.G.L.trace("DataService.replicate_once received change", change);
@@ -1183,6 +1229,11 @@ export class DataService implements OnDestroy {
     // ERROR Error: Uncaught (in promise): {"status": 409, "name": "conflict", "message": "Document update conflict"}
     return new Promise((resolve, reject) => {
 
+      // testing is currently deactivated to speed up performance, 
+      // so we simply:
+      resolve(true);
+
+      /*
       // try creating or updating a timestamp document
       const _id = "~"+private_username+"§timestamp", value = encrypt((new Date()).toISOString(), private_password);
 
@@ -1218,7 +1269,7 @@ export class DataService implements OnDestroy {
         });
 
       });
-
+      */
     });
   }
 
@@ -1231,19 +1282,29 @@ export class DataService implements OnDestroy {
 
     if (this.remote_user_db) { 
       const email_and_pw_hash = this.email_and_pw_hash();
-      this.G.L.info("DataService starting user data sync");
+      this.G.L.info("DataService starting user data sync with last_seq", this.user_cache['user_last_seq'] || 0);
 
       // ASYNC:
       this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
-        since: 0,
+        // see options here: https://pouchdb.com/api.html#replication
+//        since: this.user_cache['user_last_seq'] || 0,
         live: true,
         retry: true,
+        batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
+        // TODO: if the following works, also use it for poll dbs: 
+        style: "main_only", // apparently not used
+        seq_interval: 1000, // "  // apparently not used
+        revs: false,
+        // (until here)
         include_docs: true,
+        selector: this.get_user_doc_selector(email_and_pw_hash),
+        /*
         filter: 'vodle/filter_2_id_spans',
         query_params: this.get_user_doc_query_params(email_and_pw_hash)
+        */
       }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', () => {
-        // replication was paused, usually because of a lost connection
+        // replication was paused
         this.G.L.info("DataService pausing user data sync");
       }).on('active', () => {
         // replication was resumed
@@ -1276,17 +1337,21 @@ export class DataService implements OnDestroy {
     var result: boolean;
 
     if (this.remote_poll_dbs[pid]) { 
-      this.G.L.info("DataService starting poll data sync", pid);
+      this.G.L.info("DataService starting poll data sync with last_seq", pid, this.poll_caches[pid]['last_seq'] || 0);
 
       // ASYNC:
       this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-        since: 0,
+//        since: this.poll_caches[pid]['last_seq'] || 0,
         live: true,
         retry: true,
+        batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
         include_docs: true,
+        selector: this.get_poll_doc_selector(pid),
+        /*
 //        filter: this.get_poll_doc_filter(pid)
         filter: 'vodle/filter_2_id_spans',
         query_params: this.get_poll_doc_query_params(pid)
+        */
       }).on('change', change => {
         this.handle_poll_db_change.bind(this)(pid, change);
       }).on('paused', info => {
@@ -1606,11 +1671,12 @@ export class DataService implements OnDestroy {
   private handle_user_db_change(change) {
     // called by PouchDB sync and replicate
 //    change = JSON.parse(JSON.stringify(change));
-    this.G.L.trace("DataService.handle_user_db_change");
+    this.G.L.entry("DataService.handle_user_db_change", change);
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);
     } else if (!change.direction || change.direction == 'pull') {
+      // sometimes the actual change doc is one level deeper:
       if (change.change) {
         change = change.change;
       }
@@ -1623,10 +1689,20 @@ export class DataService implements OnDestroy {
         }
       }
     }
+    // sometimes the actual change doc is one level deeper:
+    if (change.change) {
+      change = change.change;
+    }
+    if (change.last_seq) {
+      // store last_seq in local storage as reference point for next session's "since" value:
+      this.user_cache['user_last_seq'] = change.last_seq;
+      this.G.L.trace("DataService.handle_user_db_change stored last_seq", change.last_seq);
+    }
     if (local_changes) {
       this.after_changes();
       if (this.page.onDataChange) this.page.onDataChange();
     }
+    this.G.L.exit("DataService.handle_user_db_change");
   }
 
   pending_changes = 0; // used for debugging
@@ -1642,7 +1718,6 @@ export class DataService implements OnDestroy {
     } else if (!change.direction || change.direction == 'pull') {
       this.G.L.trace("DataService.handle_poll_db_change handling incoming");
       if (change.change) {
-        this.G.L.trace("DataService.handle_poll_db_change one deeper");
         change = change.change;
       }
       this.G.L.trace("DataService.handle_poll_db_change n_docs, change:", change.docs.length, change);
@@ -1657,6 +1732,15 @@ export class DataService implements OnDestroy {
           this.pending_changes -= 1;
         }
       }
+    }
+    // sometimes the actual change doc is one level deeper:
+    if (change.change) {
+      change = change.change;
+    }
+    if (change.last_seq) {
+      // store last_seq in local storage as reference point for next session's "since" value:
+      this.poll_caches[pid]['last_seq'] = change.last_seq;
+      this.G.L.trace("DataService.handle_poll_db_change stored last_seq", change.last_seq);
     }
     if (local_changes) {
       this.after_changes(tally);
