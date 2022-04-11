@@ -828,7 +828,7 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-              since: this.poll_caches[pid]['last_seq'] || 0,
+//              since: this.poll_caches[pid]['last_seq'] || 0,
               retry: true,
               batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
@@ -1019,7 +1019,7 @@ export class DataService implements OnDestroy {
 
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-          since: this.poll_caches[pid]['last_seq'] || 0,
+//          since: this.poll_caches[pid]['last_seq'] || 0,
           retry: true,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
@@ -1289,7 +1289,7 @@ export class DataService implements OnDestroy {
       // ASYNC:
       this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
         // see options here: https://pouchdb.com/api.html#replication
-        since: this.user_cache['user_last_seq'] || 0,
+//        since: this.user_cache['user_last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1343,7 +1343,7 @@ export class DataService implements OnDestroy {
 
       // ASYNC:
       this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-        since: this.poll_caches[pid]['last_seq'] || 0,
+//        since: this.poll_caches[pid]['last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
