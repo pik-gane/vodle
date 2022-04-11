@@ -827,7 +827,7 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-//              since: this.poll_caches[pid]['last_seq'] || 0,
+              since: this.poll_caches[pid]['last_seq'] || 0,
               retry: true,
               batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
@@ -1018,7 +1018,7 @@ export class DataService implements OnDestroy {
 
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-//          since: this.poll_caches[pid]['last_seq'] || 0,
+          since: this.poll_caches[pid]['last_seq'] || 0,
           retry: true,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
@@ -1287,7 +1287,7 @@ export class DataService implements OnDestroy {
       // ASYNC:
       this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
         // see options here: https://pouchdb.com/api.html#replication
-//        since: this.user_cache['user_last_seq'] || 0,
+        since: this.user_cache['user_last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1341,7 +1341,7 @@ export class DataService implements OnDestroy {
 
       // ASYNC:
       this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-//        since: this.poll_caches[pid]['last_seq'] || 0,
+        since: this.poll_caches[pid]['last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1688,15 +1688,11 @@ export class DataService implements OnDestroy {
           [local_changes, dummy] = this.doc2user_cache(doc);
         }
       }
-    }
-    // sometimes the actual change doc is one level deeper:
-    if (change.change) {
-      change = change.change;
-    }
-    if (change.last_seq) {
-      // store last_seq in local storage as reference point for next session's "since" value:
-      this.user_cache['user_last_seq'] = change.last_seq;
-      this.G.L.trace("DataService.handle_user_db_change stored last_seq", change.last_seq);
+      if (change.last_seq) {
+        // store last_seq in local storage as reference point for next session's "since" value:
+        this.user_cache['user_last_seq'] = change.last_seq;
+        this.G.L.trace("DataService.handle_user_db_change stored last_seq", change.last_seq);
+      }
     }
     if (local_changes) {
       this.after_changes();
@@ -1709,8 +1705,7 @@ export class DataService implements OnDestroy {
 
   private handle_poll_db_change(pid, change, tally=true) {
     // called by PouchDB sync and replicate
-//    change = JSON.parse(JSON.stringify(change));
-    this.G.L.entry("DataService.handle_poll_db_change", pid, this.pending_changes);
+    this.G.L.entry("DataService.handle_poll_db_change", pid, this.pending_changes, change);
     let local_changes = false;
     if (change.deleted){
       this.G.L.trace("DataService.handle_poll_db_change handling deleted");
@@ -1732,15 +1727,11 @@ export class DataService implements OnDestroy {
           this.pending_changes -= 1;
         }
       }
-    }
-    // sometimes the actual change doc is one level deeper:
-    if (change.change) {
-      change = change.change;
-    }
-    if (change.last_seq) {
-      // store last_seq in local storage as reference point for next session's "since" value:
-      this.poll_caches[pid]['last_seq'] = change.last_seq;
-      this.G.L.trace("DataService.handle_poll_db_change stored last_seq", change.last_seq);
+      if (change.last_seq) {
+        // store last_seq in local storage as reference point for next session's "since" value:
+        this.poll_caches[pid]['last_seq'] = change.last_seq;
+        this.G.L.trace("DataService.handle_poll_db_change stored last_seq", change.last_seq);
+      }
     }
     if (local_changes) {
       this.after_changes(tally);
