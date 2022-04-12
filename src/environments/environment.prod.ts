@@ -25,7 +25,8 @@ export const environment = {
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
-  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
+//  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
+  magic_link_base_url: "https://pik-gane.github.io/vodle/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false
