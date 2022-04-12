@@ -223,9 +223,9 @@ export class LoginPage implements OnInit {
     this.G.D.init_notifications(true);
     const target = decodeURIComponent(((!!this.then_url) && !this.then_url.includes('logout')) ? this.then_url : "");
     this.G.L.trace("LoginPage redirecting to", this.then_url, target);
-    if (target != "/") {
+    if (target != "") {
       // DIRTY FIX to make sure data is loaded properly:
-      window.location.replace(target);
+      window.location.replace("./"+target);
     } else {
       // in principle, we would rather want to do this instead:
       this.router.navigate([target]);
