@@ -22,7 +22,6 @@ npm-debug.log*
 .gradle/
 .idea/
 coverage/
-www/
 node_modules/
 tmp/
 temp/
