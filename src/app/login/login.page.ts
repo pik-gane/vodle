@@ -228,7 +228,7 @@ export class LoginPage implements OnInit {
       window.location.replace("./"+target);
     } else {
       // in principle, we would rather want to do this instead:
-      this.router.navigate([target]);
+      this.router.navigate(["./"+target]);
     }
   }
 
