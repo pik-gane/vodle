@@ -13,7 +13,9 @@ export const environment = {
     ]  
   },
   data_service: {
-    central_db_server_url: "http://localhost:8100/couch",
+    central_db_server_url: "http://localhost:5984/", // use this if you want to use your local couchdb on localhost:5984 without proxy 
+//    central_db_server_url: "http://localhost/couch/", // use this when you have an nginx docker container running that forwards requests to localhost/couch/ to localhost:5984 
+//    central_db_server_url: "http://localhost:8100/couch/",  // use this when you don't have an nginx docker container doing that. in this case the angular dev server running on 8100 will do the forwarding to localhost:5984
     central_db_password: "none",
     pwd_length: 12,
     hash_n_bytes: 8,
@@ -28,7 +30,7 @@ export const environment = {
   },
   db_put_retry_delay_ms: 100,
   default_lang: "en",
-  github_url: "https://github.com/pik-gane/vodle",
+  github_url: "https://github.com/pik-gane/vodle/",
   magic_link_base_url: "http://localhost:8100/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
