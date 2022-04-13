@@ -57,7 +57,7 @@ import * as Sodium from 'libsodium-wrappers';
  * Keys are strings that can be hierarchically structures by dots ('.') as separators, 
  * such as 'language' or 'poll.78934865986.db_server_url'.
  * Keys of voter data start with 'voter.' followed by the vid (voter id) and a paragraph sign ("§"), 
- * such as 'voter.968235:option.235896.rating'. Otherwise the colon does not appear in keys.
+ * such as 'voter.968235§option.235896.rating'. Otherwise the colon does not appear in keys.
  * 
  * In the local caches, there is one entry per key, and they key is used without any further prefix.
  * 
@@ -65,13 +65,13 @@ import * as Sodium from 'libsodium-wrappers';
  * MAPPING KEYS TO DOCUMENTS
  * 
  * In the local PouchDBs and remote CouchDBs, there is one document per key that has the following structure:
- * - user data documents: { _id: "~vodle.user.UUU:KEY", value: XXX }
- * - poll data documents: { _id: "~vodle.poll.PPP:KEY", value: YYY }
- * - voter data documents: { _id: "~vodle.poll.PPP.voter.VVV:REST_OF_KEY", value: YYY }
+ * - user data documents: { _id: "~vodle.user.UUU§KEY", value: XXX }
+ * - poll data documents: { _id: "~vodle.poll.PPP§KEY", value: YYY }
+ * - voter data documents: { _id: "~vodle.poll.PPP.voter.VVV§REST_OF_KEY", value: YYY }
  * 
  * In this, UUU is the hash of the user's email address plus "§" plus their password,
  * PPP is a poll id, and VVV is a voter id.
- * KEY the full key, REST_OF_KEY the key without the part "voter.ZZZ:".
+ * KEY the full key, REST_OF_KEY the key without the part "voter.ZZZ§".
  * XXX is a value encrypted with the user's password, and YYY is a value encrypted with the poll password. 
  * In this way, no-one can infer the actual owner of a document 
  * and no unauthorized person can read the actual values.
@@ -114,11 +114,10 @@ import * as Sodium from 'libsodium-wrappers';
  */
 
 /** TODO:
-- verify that we DO NOT need a db user vodle.poll.PPP after all!
 - ignore vids that have not provided a valid signature document
 - if voter keys are individualized (not at first), ignore vids that use a signature some other vid uses as well
 - at poll creation, write a pubkey document for each valid voter key, giving each key a random key id
-- a valid signature document has _id ~vodle.voter.<vid>.signature-<key id> and value signed(key id)
+- a valid signature document has _id ~vodle.voter.<vid>§signature_<key id> and value signed(key id)
 */
 
 
@@ -136,7 +135,14 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
-const poll_keystarts_in_user_db = ['creator', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'password', 'myvid', 'del_private_key', 'del_nickname', 'del_from', 'have_seen', 'have_acted', 'have_seen_results', 'simulated_ratings'];
+const poll_keystarts_in_user_db = [
+  'creator', 
+  'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 
+  'password', 'myvid', 
+  'del_private_key', 'del_nickname', 'del_from', 
+  'have_seen', 'have_acted', 'have_seen_results', 
+  'poll_page',
+  'simulated_ratings'];
 
 const poll_keystarts_requiring_due = ['state', 'option'];
 const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response']; 
@@ -346,6 +352,8 @@ export class DataService implements OnDestroy {
 
   /** Initialization process overview
       -------------------------------
+
+    TODO: update this overview comment to the actual process and to renamed method names!
 
   init()
   `–– try restoring caches from storage 
@@ -781,26 +789,6 @@ export class DataService implements OnDestroy {
     }
   }
 
-  /*
-  get_user_doc_query_params(email_and_pw_hash: string): any {
-    return { 
-      start1: user_doc_id_prefix + email_and_pw_hash + "§",
-      end1: user_doc_id_prefix + email_and_pw_hash + '¨',
-      start2: "",
-      end2: ""
-    }
-  }
-
-  get_poll_doc_query_params(pid: string): any {
-    return { 
-      start1: poll_doc_id_prefix + pid + "§",
-      end1: poll_doc_id_prefix + pid + '¨',
-      start2: poll_doc_id_prefix + pid + '.voter.',
-      end2: poll_doc_id_prefix + pid + '.voter/'
-    }
-  }
-  */
-
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
     // called at poll initialization or when joining a poll
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication);
@@ -832,12 +820,7 @@ export class DataService implements OnDestroy {
               retry: true,
               batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
-              selector: this.get_poll_doc_selector(pid),
-              /*
-      //              filter: this.get_poll_doc_filter(pid)
-              filter: 'vodle/filter_2_id_spans',
-              query_params: this.get_poll_doc_query_params(pid)
-              */
+              selector: this.get_poll_doc_selector(pid)
           })/* on('complete') is never called, so we cannot do it this way but must check for 0 pending inside 'change' (see below):
           .on('complete', function () {
 
@@ -1023,12 +1006,7 @@ export class DataService implements OnDestroy {
           retry: true,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
-          selector: this.get_poll_doc_selector(pid),
-          /*
-  //          filter: this.get_poll_doc_filter(pid)
-          filter: 'vodle/filter_2_id_spans',
-          query_params: this.get_poll_doc_query_params(pid)
-          */
+          selector: this.get_poll_doc_selector(pid)
       }).on('change', change => {
 
         this.G.L.trace("DataService.replicate_once received change", change);
@@ -1299,11 +1277,7 @@ export class DataService implements OnDestroy {
         revs: false,
         // (until here)
         include_docs: true,
-        selector: this.get_user_doc_selector(email_and_pw_hash),
-        /*
-        filter: 'vodle/filter_2_id_spans',
-        query_params: this.get_user_doc_query_params(email_and_pw_hash)
-        */
+        selector: this.get_user_doc_selector(email_and_pw_hash)
       }).on('change', this.handle_user_db_change.bind(this)
       ).on('paused', () => {
         // replication was paused
@@ -1348,12 +1322,7 @@ export class DataService implements OnDestroy {
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
         include_docs: true,
-        selector: this.get_poll_doc_selector(pid),
-        /*
-//        filter: this.get_poll_doc_filter(pid)
-        filter: 'vodle/filter_2_id_spans',
-        query_params: this.get_poll_doc_query_params(pid)
-        */
+        selector: this.get_poll_doc_selector(pid)
       }).on('change', change => {
         this.handle_poll_db_change.bind(this)(pid, change);
       }).on('paused', info => {
