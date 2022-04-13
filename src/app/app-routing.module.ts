@@ -4,7 +4,7 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 const routes: Routes = [
   {
     path: '',
-    redirectTo: 'mypolls',
+    redirectTo: '/mypolls',
     pathMatch: 'full'
   },
   {
@@ -94,6 +94,10 @@ const routes: Routes = [
   {
     path: 'explain-approval',
     loadChildren: () => import('./explain-approval/explain-approval.module').then( m => m.ExplainApprovalPageModule)
+  },
+  {
+    path: '*',
+    redirectTo: '/mypolls'
   },
 ];
 

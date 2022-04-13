@@ -81,7 +81,7 @@
 
     <!-- GENERAL POLL INFORMATION -->
 
-    <ion-item color="primary" class="ion-no-margin">
+    <ion-item color="primary" class="ion-no-margin" lines="none">
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
@@ -92,22 +92,50 @@
               <p [innerHtml]="'poll.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
             </small>
 
-            <!-- POLL TITLE, DESCRIPTION, "READ MORE" LINK -->
+            <!-- POLL TITLE -->
 
             <h3><b><i [innerHtml]="p.title"></i></b></h3>
-            <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
-            <small *ngIf="(p.url||'') != ''">
-              (<ion-text 
-                class="externallink" 
-                (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
-                [innerHtml]="'read-more' | translate">
-              </ion-text>)
-            </small>
-            <br *ngIf="(p.desc||'')!='' || (p.url||'') != ''"/>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+    <ion-item *ngIf="(p.desc||'')!='' || (p.url||'') != ''"
+        color="primary" class="ion-padding-left ion-padding-right" 
+        style="cursor: pointer; --min-height: 0!important;" lines="none"
+        (click)="details_expanded =! details_expanded">
+      <ion-grid class="ion-no-padding ion-padding-bottom ion-no-margin" style="width: 100%;">
+        <ion-row class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin">
+
+            <!-- POLL DESCRIPTION, "READ MORE" LINK -->
+
+            <div [style]="
+                details_expanded
+                ? 'white-space: normal; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
+                : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
+                ">
+              <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
+              <small *ngIf="(p.url||'') != ''">
+                (<ion-text 
+                  class="externallink" 
+                  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
+                  [innerHtml]="'read-more' | translate">
+                </ion-text>)
+              </small>
+            </div>
+
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+    <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right">
+      <ion-grid class="ion-no-padding ion-no-margin">
+        <ion-row class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin">
 
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 
-            <p>
+            <!--<p>-->
               <small>
                 <span style="white-space: nowrap;">
                   <ion-badge *ngIf="running && p.is_closing_soon" 
@@ -155,7 +183,7 @@
                   </ion-icon>  
                 </ion-button>
               </span>
-            </p>
+            <!--</p>-->
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -230,9 +258,15 @@
 
         <ion-row 
             class="ion-no-padding ion-no-margin" 
-            style="padding-top: 5px; padding-bottom: 6px;">
+            style="padding-top: 5px; padding-bottom: 6px; cursor: pointer;"
+            (click)="incoming_delegation_expanded =! incoming_delegation_expanded">
           <ion-col class="ion-no-margin ion-padding-right" >
             <small>
+              <ion-icon 
+                [name]="(incoming_delegation_expanded) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                size="smaller" class="ion-no-margin" 
+                style="color:black; position: relative; left: -2px; top: 2px;">
+              </ion-icon>
               <span *ngIf="accepted_requests.length > 0" 
                 [innerHtml]="
                   ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
@@ -244,15 +278,6 @@
                 [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
               </span>
               &nbsp;
-              <ion-button
-                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
-                  style="position: relative; top: -4px"
-                  (click)="incoming_delegation_expanded =! incoming_delegation_expanded">
-                <ion-icon 
-                    class="ion-no-padding ion-no-margin" 
-                    name="ellipsis-vertical">
-                </ion-icon>  
-              </ion-button>
             </small>
           </ion-col>
         </ion-row>
@@ -417,7 +442,7 @@
                   <ion-label class="ion-no-padding ion-no-margin">
   
                     <ion-icon 
-                      [name]="(expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                      [name]="(option_expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
                       size="small" class="ion-no-margin" 
                       style="color:black; position: relative; top: 3px;">
                     </ion-icon>
@@ -527,7 +552,7 @@
               <!-- EXPANDABLE OPTION DETAILS -->
 
               <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" 
-                  [expanded]="expanded[oidsorted[i]]">
+                  [expanded]="option_expanded[oidsorted[i]]">
                 <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
                   <ion-col class="ion-no-padding ion-no-margin">
                     <b>
