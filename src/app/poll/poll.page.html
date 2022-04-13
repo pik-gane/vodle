@@ -40,7 +40,7 @@
           [innerHtml]="'poll.delegate-button' | translate">
         </span>&nbsp;<ion-button 
             shape="round" fill="solid" color="primary">
-          <ion-icon src="assets/icon/delegate-simple.svg">
+          <ion-icon src="./assets/icon/delegate-simple.svg">
           </ion-icon>
         </ion-button>
       </ion-button>
@@ -120,6 +120,13 @@
                   class="externallink" 
                   (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
                   [innerHtml]="'read-more' | translate">
+                </ion-text>)
+              </small>
+              <small>
+                &nbsp;
+                (<ion-text 
+                  class="externallink" 
+                  [innerHtml]="'hide' | translate">
                 </ion-text>)
               </small>
             </div>
@@ -565,13 +572,12 @@
                           | translate: {percentage: 
                             Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
                           }">
-                          <!--FIXME: &#0020; not showing as space but as box with an x in android app:-->
-                        </span><small>&#0020;<span style="color:#4c822e;" 
+                        </span><small><wbr> <span style="color:#4c822e;" 
                             [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                             [innerHtml]="'poll.including-your-share' | translate">
                           </span>,
                         </small>
-                      </span><small>&#0020;</small>
+                      </span><small><wbr> </small>
                       <!-- Approval: -->
                       <span style="color:#9abcbd; white-space: nowrap;">
                         <span [innerHtml]="
