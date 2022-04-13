@@ -67,7 +67,7 @@ export class LoginPage implements OnInit {
     this.route.params.subscribe(params => { 
       this.then_url = params['then'];
       const step = this.step = params['step'] || 'start';
-      this.G.L.info("LoginPage going to step", step);
+      this.G.L.info("LoginPage going to step", step, this.then_url);
       if (['start','language','used_before',
            'fresh_email','old_email','fresh_password','old_password',
            'connected'].includes(step)) {
@@ -221,14 +221,14 @@ export class LoginPage implements OnInit {
 
   connected_dismissed() {
     this.G.D.init_notifications(true);
-    const target = decodeURIComponent(((!!this.then_url) && !this.then_url.includes('logout')) ? this.then_url : "");
+    const target = "./#/"+decodeURIComponent(((!!this.then_url) && !this.then_url.includes('logout')) ? this.then_url : "");
     this.G.L.trace("LoginPage redirecting to", this.then_url, target);
     if (target != "") {
       // DIRTY FIX to make sure data is loaded properly:
-      window.location.replace("./"+target);
+      window.location.replace(target);
     } else {
       // in principle, we would rather want to do this instead:
-      this.router.navigate(["./"+target]);
+      this.router.navigate([target]);
     }
   }
 

@@ -37,7 +37,6 @@ export class PollPage implements OnInit {
   delegate: string;
   delegation_status = "none";
 
-  incoming_delegation_expanded = false;
   n_indirect_clients = 1;
   accepted_requests = [];
   declined_requests = [];
@@ -47,7 +46,13 @@ export class PollPage implements OnInit {
 
   approved = {}; // whether option is approved by me
   votedfor = null; // oid my prob. share goes to
-  expanded = {};
+
+  // gui layout choices by user:
+  details_expanded = true;
+  incoming_delegation_expanded = false;
+  option_expanded = {};
+
+  // other:
 
   pieradius = 20;
   two_pi = 2*Math.PI; 
@@ -94,6 +99,12 @@ export class PollPage implements OnInit {
     const f = (ev => { this.changeDetector.detectChanges(); });
     window.addEventListener('offline', f);
     window.addEventListener('online', f);
+    // get gui state:
+    const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page")) || {};
+    this.details_expanded = (specs['details_expanded'] != false);
+    this.incoming_delegation_expanded = (specs['incoming_delegation_expanded'] == true);
+    this.option_expanded = specs['option_expanded'] || {};
+    this.G.L.exit("PollPage.ionViewWillEnter", specs);
   }
 
   ionViewDidEnter() {
@@ -126,9 +137,11 @@ export class PollPage implements OnInit {
     this.oidsorted = [...this.p.T.oids_descending]; 
     this.ready = true;
     this.update_order(true);
+    /*
     for (let oid of this.oidsorted) {
-      this.expanded[oid] = false;
+      this.option_expanded[oid] = false;
     }
+    */
     window.setTimeout(() => {
       this.update_order.bind(this)(true);
       this.show_stats.bind(this)();
@@ -207,6 +220,14 @@ export class PollPage implements OnInit {
         this.G.N.dismiss(news.key);
       }
     }
+    // store gui state:
+    const specs = {
+      'details_expanded': this.details_expanded,
+      'incoming_delegation_expanded': this.incoming_delegation_expanded,
+      'option_expanded': this.option_expanded
+    }
+    this.G.D.setp(this.pid, "poll_page", JSON.stringify(specs));
+    this.G.L.exit("PollPage.ionViewWillLeave", specs);
   }
 
   ionViewDidLeave() {
@@ -216,6 +237,9 @@ export class PollPage implements OnInit {
   }
 
   async onScroll(ev) {
+    // TODO: figure out what this is for... 
+    // maybe for making sure the page does not scroll away under a "held" slider?
+    // if so, this.scroll_position needs to be used somehow to adjust the window's actual scroll position in that case...
     const elem = this.content; //  document.getElementById("ion-content-id");
   
     // the ion content has its own associated scrollElement
@@ -382,7 +406,7 @@ export class PollPage implements OnInit {
   // CONTROLS:
 
   expand(oid: string) {
-    this.expanded[oid] = !this.expanded[oid];
+    this.option_expanded[oid] = !this.option_expanded[oid];
   }
 
   // rating slider:
