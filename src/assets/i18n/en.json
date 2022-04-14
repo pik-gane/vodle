@@ -29,6 +29,7 @@
     "db-pw": "Database password",
     "edit": "Edit",
     "email": "Email",
+    "favourite": "Favourite",
     "go-to-poll": "Go to poll",
     "hide": "Hide",
     "language": "Language",
@@ -49,6 +50,7 @@
     "show": "Show",
     "skip": "Skip",
     "start": "Start",
+    "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",
     "yes": "Yes",
 
@@ -78,6 +80,16 @@
         "different-language": "This poll is in a different language ({{language}}). If possible, please try using that language in your texts below, or use some other language the poll participants understand.",
         "info": "Once added, the option cannot be edited or removed again.",
         "notification-added-title": "Option added"
+    },
+
+    "assist": {
+        "-page-title": "Let's set your ratings",
+
+        "-step-1-title": "Favourite option",
+
+        "favourite-intro": "Which option would you most prefer?",
+
+        "-step-2-title": "Acceptable options"
     },
 
     "badges": {

@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, IonContent, IonRouterOutlet, IonCol } from '@ionic/angular';
+import { LoadingController, IonContent, IonRouterOutlet } from '@ionic/angular';
 import { PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
 import { environment } from '../../environments/environment';
@@ -10,6 +10,7 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { AssistPage } from '../assist/assist.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
 
@@ -28,7 +29,7 @@ export class PollPage implements OnInit {
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
-  page = "previewpoll";
+  page = "poll";
 
   pid: string;
   p: Poll;
@@ -162,6 +163,35 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.onDataChange");
   }
 
+  ionViewWillLeave() {
+    // make sure current slider values are really stored in database:
+    for (let oid of this.oidsorted) {
+      if (!this.delegate || this.rate_yourself_toggle[oid]) {
+        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+      }
+    }
+    // dismiss auto-dismissing news:
+    for (const news of this.news) {
+      if (news.auto_dismiss) {
+        this.G.N.dismiss(news.key);
+      }
+    }
+    // store gui state:
+    const specs = {
+      'details_expanded': this.details_expanded,
+      'incoming_delegation_expanded': this.incoming_delegation_expanded,
+      'option_expanded': this.option_expanded
+    }
+    this.G.D.setp(this.pid, "poll_page", JSON.stringify(specs));
+    this.G.L.exit("PollPage.ionViewWillLeave", specs);
+  }
+
+  ionViewDidLeave() {
+    this.G.L.entry("PollPage.ionViewDidLeave");
+    this.G.D.save_state();
+    this.G.L.exit("PollPage.ionViewDidLeave");
+  }
+
   update_delegation_info() {
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
@@ -207,50 +237,22 @@ export class PollPage implements OnInit {
     }
   }
 
-  ionViewWillLeave() {
-    // make sure current slider values are really stored in database:
-    for (let oid of this.oidsorted) {
-      if (!this.delegate || this.rate_yourself_toggle[oid]) {
-        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
-      }
-    }
-    // dismiss auto-dismissing news:
-    for (const news of this.news) {
-      if (news.auto_dismiss) {
-        this.G.N.dismiss(news.key);
-      }
-    }
-    // store gui state:
-    const specs = {
-      'details_expanded': this.details_expanded,
-      'incoming_delegation_expanded': this.incoming_delegation_expanded,
-      'option_expanded': this.option_expanded
-    }
-    this.G.D.setp(this.pid, "poll_page", JSON.stringify(specs));
-    this.G.L.exit("PollPage.ionViewWillLeave", specs);
-  }
-
-  ionViewDidLeave() {
-    this.G.L.entry("PollPage.ionViewDidLeave");
-    this.G.D.save_state();
-    this.G.L.exit("PollPage.ionViewDidLeave");
-  }
-
   async onScroll(ev) {
-    // TODO: figure out what this is for... 
-    // maybe for making sure the page does not scroll away under a "held" slider?
+    /** find scroll position to be able to react to it */ 
+    // TODO: make sure the page does not scroll away under a "held" slider?
     // if so, this.scroll_position needs to be used somehow to adjust the window's actual scroll position in that case...
-    const elem = this.content; //  document.getElementById("ion-content-id");
+    /*
+    const elem = this.content;
   
     // the ion content has its own associated scrollElement
     const scrollElement = await ( elem as any).getScrollElement();
   
-    const scrollPosition = ev.detail.scrollTop;
     const totalContentHeight = scrollElement.scrollHeight;
     const viewportHeight = scrollElement.offsetHeight;
-  
-    this.scroll_position = scrollPosition; //  / (totalContentHeight - viewportHeight);
-    
+    const scrollPosition = ev.detail.scrollTop;
+    this.scroll_position = scrollPosition;
+    */
+    this.scroll_position = ev.detail.scrollTop;      
   }
 
   on_rate_yourself_toggle_change(oid:string) {
@@ -608,6 +610,8 @@ export class PollPage implements OnInit {
 
   // DIALOGS:
 
+  currentModal = null;
+
   delegate_dialog(event: Event) {
     /** open the delegation dialog popover */
     this.popover.create({
@@ -622,6 +626,22 @@ export class PollPage implements OnInit {
       })
   }
 
+  async assist_dialog() {
+    /** open the assist modal */
+    const modal = await this.modalController.create({
+        component: AssistPage, 
+//        translucent: true,
+//        cssClass: 'assist',
+//        showBackdrop: true,
+        componentProps: {P: this},
+//        swipeToClose: true,
+//        presentingElement: this.routerOutlet.nativeEl
+    });
+    modal.present();
+
+    this.currentModal = modal;
+  }
+  
   explain_approval_dialog(oid: string) {
     /** open the explanation dialog modal */
     this.modalController.create({

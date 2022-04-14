@@ -206,6 +206,10 @@
             <span [innerHtml]="'poll.hint-abstaining-2'|translate"></span>
           </p>
         </small>
+        <ion-button slot="end" (click)="assist_dialog()" color="success">
+          <ion-icon name="color-wand-outline"></ion-icon>&nbsp;
+          <ion-label>Assist me</ion-label>
+        </ion-button>
       </ion-item>
       <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
         <small>

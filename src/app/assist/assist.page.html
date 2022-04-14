@@ -1,0 +1,233 @@
+<ion-header>
+
+  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
+    <ion-toolbar style="padding-left: 16px;">
+      <ion-text *ngIf="scroll_position < 1000" 
+        style="font-weight: bold; font-size: larger;"
+        [innerHtml]="'assist.-page-title' | translate">
+      </ion-text>
+      <ion-text *ngIf="scroll_position >= 1000"><b><i [innerHtml]="P.p.title"></i></b></ion-text>
+      <ion-buttons slot="end">
+
+        <!-- OFFLINE SIGN -->
+        <ng-container *ngIf="!window.navigator.onLine">
+          <ion-icon name="cloud-offline-outline" color="grey"
+            style="position: relative; bottom: -1px;">
+          </ion-icon>
+          <ion-icon name="alert-outline" color="grey">
+          </ion-icon>
+        </ng-container> 
+
+        <!-- SYNCING SIGN -->
+        <ion-spinner *ngIf="!!P.p && P.p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+        <ion-button fill="clear" (click)="close()">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+    
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-item>
+
+  <!-- NAVIGATION -->
+
+  <ion-item class="ion-no-margin ion-padding-left ion-text-center">
+    <ng-container *ngIf="step > 1">
+      <ion-button slot="start" fill="clear" class="ion-no-margin ion-no-padding"
+          (click)="back()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+      &nbsp;
+    </ng-container>
+    <ion-label>
+      <small>
+        <b>
+          <span [innerHtml]="'step-i-of-n'|translate:{i:Math.floor(step), n:n_steps}"></span>:
+
+          <span [innerHtml]="'assist.-step-'+Math.floor(step)+'-title'|translate"></span>    
+        </b>
+      </small>
+    </ion-label>
+    <ng-container *ngIf="step < steps_reached && !changes">
+      &nbsp;
+      <ion-button slot="end" fill="clear" class="ion-no-margin ion-no-padding"
+          (click)="forward()">
+        <ion-icon slot="icon-only" name="arrow-forward-outline"></ion-icon>
+      </ion-button>
+    </ng-container>
+  </ion-item>
+
+</ion-header>
+
+<!-- SCROLLABLE CONTENT: -->
+
+<ion-content *ngIf="P.ready">
+
+  <!-- STEP 1: FAVOURITE OPTION: -->
+
+  <!-- selection: -->
+  <ng-container *ngIf="step == 1">
+    <ion-item color="light">
+      <p>
+        <span [innerHtml]="'assist.favourite-intro'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-radio-group [(ngModel)]="favourite" (ngModelChange)="favourite_change()">
+      <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
+        <ion-radio slot="start" [value]="P.oidsorted[i]"></ion-radio>
+        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>
+      </ion-item>  
+    </ion-radio-group>
+    <ion-item lines="none">
+      <ion-button slot="end" [disabled]="!favourite"
+          (click)="submit_favourite()">
+        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+
+  <!-- explanation: -->
+  <ng-container *ngIf="step == 1.1">
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.favourite-explanation-1'|translate:{favourite: P.p.options[favourite].name}"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.favourite-explanation-2'|translate:{favourite: P.p.options[favourite].name}"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.favourite-explanation-3'|translate:{favourite: P.p.options[favourite].name}"></span>
+      </p>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-button slot="end" (click)="understood_favourite()">
+        <ion-label [innerHtml]="'next'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+  
+  <!-- STEP 2: ACCEPTABLE OPTIONS -->
+
+  <!-- selection: -->
+  <ng-container *ngIf="step == 2">
+    <ion-item color="light">
+      <p>
+        <span [innerHtml]="'assist.acceptable-intro'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
+      <ng-container *ngIf="P.oidsorted[i] == favourite">
+        <ion-checkbox slot="start" checked="true" disabled="true" style="margin-right:30px;"></ion-checkbox>
+        <ion-text color="black"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
+      </ng-container>
+      <ng-container *ngIf="P.oidsorted[i] != favourite">
+        <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 
+          slot="start"></ion-checkbox>
+        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>  
+      </ng-container>
+    </ion-item>  
+    <ion-item lines="none">
+      <ion-button slot="end" (click)="submit_acceptable()">
+        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+
+  <!-- explanation: -->
+  <ng-container *ngIf="step == 2.1">
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-1'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-2'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-3'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-4'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-5'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-button slot="end" (click)="understood_acceptable()">
+        <ion-label [innerHtml]="'next'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+
+  <!-- STEP 3: ESTIMATED APPROVAL FOR ACCEPTABLE OPTIONS: -->
+
+  <!-- selection: -->
+  <ng-container *ngIf="step == 3">
+    <ion-item color="light">
+      <p>
+        <span [innerHtml]="'assist.estimates-intro'|translate"></span>
+      </p>
+    </ion-item>
+    <ng-container *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
+      <ion-item *ngIf="acceptable[P.oidsorted[i]] && P.oidsorted[i] != favourite">
+        <ng-container *ngIf="P.oidsorted[i] != favourite">
+          <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
+          <ion-buttons slot="end">
+            <ion-input inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" [(ngModel)]="estimates[P.oidsorted[i]]" step="5"></ion-input>&nbsp;%
+          </ion-buttons>
+        </ng-container>
+      </ion-item>  
+    </ng-container>
+    <ion-item lines="none">
+      <ion-button slot="end" (click)="submit_estimates()">
+        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+
+  <!-- explanation: -->
+  <ng-container *ngIf="step == 3.1">
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.estimates-explanation-1'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-2'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-3'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-4'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.acceptable-explanation-5'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-button slot="end" (click)="understood_acceptable()">
+        <ion-label [innerHtml]="'next'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+  </ng-container>
+
+</ion-content>

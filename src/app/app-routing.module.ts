@@ -99,6 +99,10 @@ const routes: Routes = [
     path: '*',
     redirectTo: '/mypolls'
   },
+  {
+    path: 'assist',
+    loadChildren: () => import('./assist/assist.module').then( m => m.AssistPageModule)
+  },
 ];
 
 @NgModule({

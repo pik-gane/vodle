@@ -29,6 +29,7 @@
     "db-pw": "Datenbank-Passwort",
     "edit": "Bearbeiten",
     "email": "Email",
+    "favourite": "Lieblingsoption",
     "go-to-poll": "zur Abstimmung",
     "hide": "Verbergen",
     "language": "Sprache",
@@ -49,6 +50,7 @@
     "show": "Anzeigen",
     "skip": "Überspringen",
     "start": "Los",
+    "step-i-of-n": "Schritt {{i}} von {{n}}",
     "test": "Testen",
     "yes": "Ja",
 
@@ -78,6 +80,39 @@
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}). Wenn möglich, versuche bitte diese Sprache für die Texte hier zu verwenden, oder eine andere Sprache, die die Abstimmungs-Teinehmer:innen verstehen.",
         "info": "Einmal hinzugefügte Optionen kann niemand mehr verändern oder löschen.",
         "notification-added-title": "Option hinzugefügt"
+    },
+
+    "assist": {
+        "-page-title": "Wir setzen Deine Bewertungen",
+
+        "-step-1-title": "Lieblingsoption",
+
+        "favourite-intro": "Welche Option würdest Du am meisten bevorzugen?",
+
+        "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> eine Bewertung von <b>100</b>.",
+        
+        "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Bewertungen der anderen Teilnehmer:innen sind.",
+
+        "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
+
+        "-step-2-title": "Akzeptable Optionen",
+
+        "acceptable-intro": "Welche Optionen findest Du auch noch akzeptabel?<br/>Du kannst beliebig viele (oder auch keine) auswählen.",
+
+        "acceptable-explanation-1": "Wir geben den Optionen, die Du <b>nicht akzeptabel</b> findest, eine Bewertung von <b>0</b>.",
+        
+        "acceptable-explanation-2": "Das bedeutet, dass Du diesen Optionen <i>auf keinen Fall zustimmst,</i> egal, wie die Bewertungen der anderen Teilnehmer:innen sind.",
+
+        "acceptable-explanation-3": "Den Optionen, die Du <b>akzeptabel</b> findest, geben wir eine Bewertung <b>zwischen 0 und 100</b>",
+
+        "acceptable-explanation-4": "Das bedeutet, dass Du diesen Optionen <i>möglicherweise zustimmst,</i> nämlich abhängig davon, wie die Bewertungen der anderen Teilnehmer:innen sind.",
+
+        "acceptable-explanation-5": "Um diese Bewertungen genauer festzulegen, solltest Du als Nächstes überlegen, wie viele <i>andere</i> Teilnehmer:innen diesen Optionen möglicherweise auch zustimmen würden.",
+
+        "-step-3-title": "Geschätzte Zustimmung durch andere",
+
+        "estimates-intro": "Bitte schätze für jede der folgenden Optionen ein, welcher Prozentsatz an Teilnehmer:innen dieser Option möglicherweise auch zustimmen würde.<br/>Wenn Du nicht sicher bist, schätze die Prozentzahl lieber etwas kleiner ein."
+
     },
 
     "badges": {
