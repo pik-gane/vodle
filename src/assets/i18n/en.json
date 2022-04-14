@@ -482,6 +482,7 @@
 
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",
+        "assist-me": "Assist me",
         "hint-only1positive-1": "You are rating only one option.",
         "hint-only1positive-2": "You should consider rating some possible compromise options as well.",
         "hint-only1approved-1": "You are approving only one of the options you rated positive.",

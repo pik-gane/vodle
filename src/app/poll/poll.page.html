@@ -31,8 +31,14 @@
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
-      <!-- DELEGATE BUTTON: -->
+      <!-- optionally also show the assist me button here? -- >
+      <ion-button slot="end" (click)="assist_dialog()" color="success">
+        <ion-icon name="color-wand-outline"></ion-icon>&nbsp;
+        <ion-label>Assist me</ion-label>
+      </ion-button>
+      <!---->
 
+      <!-- DELEGATE BUTTON: -->
       <ion-button *ngIf="delegation_status!='agreed' && running"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary">
@@ -208,7 +214,7 @@
         </small>
         <ion-button slot="end" (click)="assist_dialog()" color="success">
           <ion-icon name="color-wand-outline"></ion-icon>&nbsp;
-          <ion-label>Assist me</ion-label>
+          <ion-label [innerHtml]="'poll.assist-me'|translate"></ion-label>
         </ion-button>
       </ion-item>
       <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">

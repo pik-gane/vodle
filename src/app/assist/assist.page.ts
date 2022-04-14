@@ -20,17 +20,24 @@ export class AssistPage implements OnInit {
   Object = Object;
   window = window;
   environment = environment;
+  JSON = JSON;
 
   page = "assist";
 
   step = 1;
   steps_reached = 1;
-  n_steps = 3;
+  n_steps = 5;
   changes = false;
+  current_index = 0;
 
   favourite = "";
   acceptable = {};
+  acceptable_oids = [];
   estimates = {};
+  thresholded_oids = [];
+  threshold_answer = {};
+  thresholds = {};
+  ratings = {};
 
   // LIFECYCLE:
 
@@ -71,6 +78,11 @@ export class AssistPage implements OnInit {
     this.G.D.save_state();
   }
 
+  set_rating(oid: string, rating: number) {
+    this.ratings[oid] = rating;
+    this.P.p.set_my_own_rating(oid, rating, true);
+  }
+
   // UI:
 
   close() {
@@ -80,6 +92,7 @@ export class AssistPage implements OnInit {
   back() {
     if (this.step > 1) {
       this.step = Math.ceil(this.step) - 1;
+      this.changes = false;
     }
   }
 
@@ -89,9 +102,16 @@ export class AssistPage implements OnInit {
     }
   }
 
-  go_step(i: number) {
-    this.steps_reached = Math.max(this.steps_reached, i);
-    this.step = i;
+  go_step(step: number) {
+    if (step == 4) {
+      this.thresholded_oids = []
+      for (const oid of this.acceptable_oids) {
+        if (oid != this.favourite) this.thresholded_oids.push(oid);
+      }
+      this.go_index(0);
+    }
+    this.steps_reached = Math.max(this.steps_reached, step);
+    this.step = step;
   }
 
   favourite_change() {
@@ -100,15 +120,15 @@ export class AssistPage implements OnInit {
   
   submit_favourite() {
     this.G.L.entry("AssistPage.submit_favourite", this.favourite);
-    for (const oid of this.P.p.oids) {
+    for (const oid of this.P.oidsorted) {
       if (oid == this.favourite) {
         this.G.L.trace("AssistPage.submit_favourite favourite", oid, 100);
-        this.P.p.set_my_own_rating(oid, 100, true);
+        this.set_rating(oid, 100);
       } else {
         // make sure it is the sole favourite:
         const r = Math.min(99, this.P.p.get_my_own_rating(oid));
         this.G.L.trace("AssistPage.submit_favourite other", oid, r);
-        this.P.p.set_my_own_rating(oid, r, true);
+        this.set_rating(oid, r);
       }
     }
     this.G.D.save_state();
@@ -126,31 +146,100 @@ export class AssistPage implements OnInit {
   }
 
   submit_acceptable() {
-    for (const oid of this.P.p.oids) {
+    this.acceptable_oids = [];
+    for (const oid of this.P.oidsorted) {
       if (this.acceptable[oid]) {
-        this.estimates[oid] = 0;
+        this.acceptable_oids.push(oid);
+        if (!(oid in this.estimates)) this.estimates[oid] = 0;
         if (oid != this.favourite) {
           // at least give it a rating of one:
           const r = Math.max(1, this.P.p.get_my_own_rating(oid));
           this.G.L.trace("AssistPage.submit_acceptable other", oid, r);
-          this.P.p.set_my_own_rating(oid, r, true);
+          this.set_rating(oid, r);
         }
       } else {
           // give it a rating of zero:
           this.G.L.trace("AssistPage.submit_acceptable other", oid, 0);
-          this.P.p.set_my_own_rating(oid, 0, true);
+          this.set_rating(oid, 0);
       }
     }
     this.changes = false;
-    this.step = 2.1;
+    if (this.acceptable_oids.length > 1) {
+      this.step = 2.1;
+    } else {
+      this.go_step(5);
+    }
   }
 
   understood_acceptable() {
     this.go_step(3);
   }
 
-  submit_estimates() {
+  estimate_change() {
+    this.changes = true;
+  }
 
+  submit_estimates() {
+    for (const oid of this.acceptable_oids) {
+      if (!(oid in this.thresholds)) this.thresholds[oid] = 100;
+    }
+    this.changes = false;
+    this.step = 3.1;
+  }
+
+  understood_estimates() {
+    this.go_step(4);
+  }
+
+  go_index(i: number) {
+    this.current_index = i;
+  }
+
+  threshold_yes() {
+    const oid = this.thresholded_oids[this.current_index];
+    if (this.threshold_answer[oid] != true){
+      this.threshold_answer[oid] = true;
+      this.thresholds[oid] = Math.max(0, Math.min(100, this.thresholds[oid], this.estimates[oid]));
+      this.changes = true;
+    }
+  }
+
+  threshold_no() {
+    const oid = this.thresholded_oids[this.current_index];
+    if (this.threshold_answer[oid] != false) {
+      this.threshold_answer[oid] = false;
+      this.thresholds[oid] = Math.min(100, Math.max(0, this.thresholds[oid], this.estimates[oid]+1));
+      this.changes = true;  
+    }
+  }
+
+  threshold_change() {
+    this.changes = true;
+  }
+
+  submit_threshold() {
+    if (this.current_index+1 < this.thresholded_oids.length) {
+      const oid = this.thresholded_oids[this.current_index];
+      this.current_index++;
+      this.threshold_answer[oid] = null;
+    } else {
+      this.set_thresholded_ratings();
+      this.changes = false;
+      this.go_step(5);
+    }
+  }
+
+  set_thresholded_ratings() {
+    /** set all ratings based on thresholds: */
+    for (const oid of this.thresholded_oids) {
+      const r = Math.max(0, Math.min(100, 101-this.thresholds[oid]));
+      this.G.L.trace("AssistPage.set_ratings", oid, r);
+      this.set_rating(oid, r);
+    }
+  }
+
+  understood_ratings() {
+    this.close();
   }
 
   // deal with scrolling:

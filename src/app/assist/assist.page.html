@@ -78,10 +78,14 @@
       </ion-item>  
     </ion-radio-group>
     <ion-item lines="none">
-      <ion-button slot="end" [disabled]="!favourite"
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          [disabled]="!favourite"
           (click)="submit_favourite()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
       </ion-button>
+    </ion-item>
+    <ion-item lines="none">
+      <small [innerHtml]="'assist.add-option-info' | translate"></small>
     </ion-item>
   </ng-container>
 
@@ -103,7 +107,8 @@
       </p>
     </ion-item>
     <ion-item lines="none">
-      <ion-button slot="end" (click)="understood_favourite()">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="understood_favourite()">
         <ion-label [innerHtml]="'next'|translate"></ion-label>
       </ion-button>
     </ion-item>
@@ -130,7 +135,8 @@
       </ng-container>
     </ion-item>  
     <ion-item lines="none">
-      <ion-button slot="end" (click)="submit_acceptable()">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="submit_acceptable()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
       </ion-button>
     </ion-item>
@@ -164,7 +170,8 @@
       </p>
     </ion-item>
     <ion-item lines="none">
-      <ion-button slot="end" (click)="understood_acceptable()">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="understood_acceptable()">
         <ion-label [innerHtml]="'next'|translate"></ion-label>
       </ion-button>
     </ion-item>
@@ -184,13 +191,14 @@
         <ng-container *ngIf="P.oidsorted[i] != favourite">
           <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
           <ion-buttons slot="end">
-            <ion-input inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" [(ngModel)]="estimates[P.oidsorted[i]]" step="5"></ion-input>&nbsp;%
+            <ion-input inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" [(ngModel)]="estimates[P.oidsorted[i]]" step="5" (ngModelChange)="estimate_change()"></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
       </ion-item>  
     </ng-container>
     <ion-item lines="none">
-      <ion-button slot="end" (click)="submit_estimates()">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="submit_estimates()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
       </ion-button>
     </ion-item>
@@ -198,36 +206,125 @@
 
   <!-- explanation: -->
   <ng-container *ngIf="step == 3.1">
-    <ion-item color="success">
+    <ion-item color="light">
       <p>
         <span [innerHtml]="'assist.estimates-explanation-1'|translate"></span>
       </p>
     </ion-item>
     <ion-item>
       <p>
-        <span [innerHtml]="'assist.acceptable-explanation-2'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item color="success">
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-3'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-4'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-5'|translate"></span>
+        <span [innerHtml]="'assist.estimates-explanation-2'|translate"></span>
       </p>
     </ion-item>
     <ion-item lines="none">
-      <ion-button slot="end" (click)="understood_acceptable()">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="understood_estimates()">
         <ion-label [innerHtml]="'next'|translate"></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
+
+  <!-- STEP 4: SINCERE APPROVAL THRESHOLDS FOR ACCEPTABLE OPTIONS: -->
+
+  <!-- selection: -->
+  <ng-container *ngIf="step == 4">
+    <ion-item *ngFor="let item of [].constructor(current_index); let i = index" color="secondary"
+        (click)="go_index(i)" style="cursor: pointer;">
+      <ion-label>
+        <b><i [innerHtml]="P.p.options[thresholded_oids[i]].name"></i></b>
+      </ion-label>
+    </ion-item>
+    <ion-item color="primary">
+      <ion-label>
+        <b><i [innerHtml]="P.p.options[thresholded_oids[current_index]].name"></i></b>
+      </ion-label>
+    </ion-item>
+    <ion-item color="light">
+      <p>
+        <span [innerHtml]="'assist.thresholds-intro'|translate:{estimate:estimates[thresholded_oids[current_index]], option:P.p.options[thresholded_oids[current_index]].name}"></span>
+      </p>
+    </ion-item>
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.thresholds-question-1'|translate:{estimate:estimates[thresholded_oids[current_index]], option:P.p.options[thresholded_oids[current_index]].name}"></span>
+      </p>
+      <ion-buttons slot="end">
+        <ion-button [innerHtml]="'yes'|translate" (click)="threshold_yes()" fill="solid"
+          [color]="threshold_answer[thresholded_oids[current_index]]==true?'success':'light'"></ion-button>
+        <ion-button [innerHtml]="'no'|translate" (click)="threshold_no()" fill="solid"
+          [color]="threshold_answer[thresholded_oids[current_index]]==false?'warning':'light'"></ion-button>
+      </ion-buttons>
+    </ion-item>
+    <ion-item *ngIf="threshold_answer[thresholded_oids[current_index]] == false">
+      <p>
+        <span [innerHtml]="'assist.thresholds-question-2'|translate"></span>
+      </p>
+      <ion-buttons slot="end">
+        <ion-input inputmode="numeric" maxlength="3" size="3" type="number" [min]="estimates[thresholded_oids[current_index]]" max="100" step="5" 
+          [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()">
+        </ion-input>&nbsp;%
+      </ion-buttons>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="submit_threshold()" [disabled]="threshold_answer[thresholded_oids[current_index]] != true && threshold_answer[thresholded_oids[current_index]] != false">
+        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+    <ion-item *ngFor="let item of [].constructor(thresholded_oids.length-1-current_index); let j = index" color="secondary"
+        (click)="go_index(current_index+1+j)" style="cursor: pointer;">
+      <ion-label>
+        <b><i [innerHtml]="P.p.options[thresholded_oids[current_index+1+j]].name"></i></b>
+      </ion-label>
+    </ion-item>
+    <!-- debugging info:
+    <ion-item>
+      {{thresholded_oids}}, {{threshold_answer}}, {{JSON.stringify(thresholds)}}
+    </ion-item>
+    -->
+  </ng-container>
+
+  <!-- STEP 5: RESULTING RATINGS: -->
+
+  <!-- selection: -->
+  <ng-container *ngIf="step == 5">
+    <ion-item color="success">
+      <p>
+        <span [innerHtml]="'assist.ratings-intro'|translate"></span>
+      </p>
+    </ion-item>
+    <ion-item  *ngFor="let item of [].constructor(acceptable_oids.length); let i = index">
+      <ion-text *ngIf="acceptable_oids[i] == favourite">
+        <p>
+          <b><i [innerHtml]="P.p.options[favourite].name"></i></b>
+        </p>
+        <p [innerHtml]="'assist.ratings-favourite'|translate:{threshold:thresholds[acceptable_oids[i]], rating:ratings[acceptable_oids[i]]}"></p>
+      </ion-text>
+      <ion-text *ngIf="acceptable_oids[i] != favourite">
+        <p>
+          <b><i [innerHtml]="P.p.options[acceptable_oids[i]].name"></i></b>
+        </p>
+        <p [innerHtml]="'assist.ratings-acceptable'|translate:{threshold:thresholds[acceptable_oids[i]], rating:ratings[acceptable_oids[i]]}"></p>
+      </ion-text>
+    </ion-item>
+    <ion-item>
+      <p [innerHtml]="'assist.ratings-other'|translate"></p>
+    </ion-item>
+    <ion-item color="light">
+      <p [innerHtml]="'assist.ratings-extro'|translate"></p>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+          (click)="understood_ratings()">
+        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+      </ion-button>
+    </ion-item>
+    <!-- debugging info: -- >
+    <ion-item>
+      {{thresholded_oids}}, {{JSON.stringify(ratings)}}
+    </ion-item>
+    <!---->
+  </ng-container>
+
 
 </ion-content>
