@@ -202,15 +202,15 @@
       <ion-item *ngIf="p.am_abstaining" color="danger">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-abstaining-1'|translate"></span>&nbsp; 
-            <span [innerHtml]="'poll.hint-abstaining-2'|translate"></span>
+            <span style="font-size: medium" [innerHtml]="'poll.hint-abstaining-1'|translate"></span>&nbsp;<wbr/>
+            <span [innerHtml]="'poll.hint-abstaining-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-abstaining-2-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-abstaining-2-after-wap'|translate"></span>
           </p>
         </small>
       </ion-item>
       <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1'|translate"></span>&nbsp; 
+            <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
             <span [innerHtml]="'poll.hint-only1positive-2'|translate"></span>
           </p>
         </small>
@@ -218,8 +218,8 @@
       <ion-item *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1" color="secondary">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1'|translate"></span>&nbsp; 
-            <span [innerHtml]="'poll.hint-only1approved-2'|translate"></span>
+            <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-before-approving'|translate"></span><wbr/><span (click)="glossary('approve')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1approved-1-approving'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-after-approving'|translate"></span>&nbsp;<wbr/>
+            <span [innerHtml]="'poll.hint-only1approved-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-only1approved-2-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-only1approved-2-after-wap'|translate"></span>
           </p>
         </small>
       </ion-item>
@@ -419,18 +419,17 @@
     </ion-item>
 
     <!-- TABLE HEADER: -->
-    <!-- TODO: make click show popups with short explanations -->
 
     <ion-item class="ion-no-padding ion-no-margin" lines="none"
           style="--min-height: 0px!important; font-weight: bold;">
-      <small style="padding-top: 8px!important;padding-left: 16px; width: 74px!important; color: #769596;">
+      <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 16px; width: 74px!important; color: #769596;">
 <!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'share'|translate"></span>
       </small>
-      <small style="padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
+      <small (click)="glossary('wap')" style="padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
 <!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
       </small>
       <!-- TODO: make padding robustly correct accross devices: -->
-      <small [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+      <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
         <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
         <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
       </small>
@@ -722,7 +721,7 @@
 
     <!-- DEBUGGING AREA (not in production mode): -->
 
-    <ng-container *ngIf="!environment.production">
+    <ng-container *ngIf="false && !environment.production">
       <ion-item></ion-item>
       <ion-item class="ion-text-right" lines="none">
         <ion-col><small><p style="color: grey;">
@@ -740,3 +739,17 @@
 
   </ion-list>
 </ion-content>
+
+<!-- OPTIONAL GLOSSARY: -->
+
+<ion-footer *ngIf="show_glossary">
+  <ion-item color="light">
+    <ion-text>
+    <ion-button (click)="dismiss_glossary()" fill="clear" class="ion-float-right ion-margin-right ion-margin-left ion-no-padding"
+        style="position: relative; right: -6px;">
+      <ion-icon class="ion-no-margin ion-no-padding" slot="icon-only" name="close" color="primary"></ion-icon>
+    </ion-button>
+    <small [innerHtml]="'glossary.'+glossary_key|translate"></small>
+  </ion-text>
+  </ion-item>
+</ion-footer>

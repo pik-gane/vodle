@@ -1,8 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, IonContent, IonRouterOutlet, IonCol } from '@ionic/angular';
-import { PopoverController, AlertController, ModalController } from '@ionic/angular'; 
+import { LoadingController, IonContent, IonRouterOutlet, PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
@@ -633,9 +632,9 @@ export class PollPage implements OnInit {
         swipeToClose: true,
         presentingElement: this.routerOutlet.nativeEl
     })
-      .then((modalElement)=>{
-        modalElement.present();
-      })
+    .then((modalElement)=>{
+      modalElement.present();
+    })
   }
 
   async revoke_delegation_dialog() { 
@@ -683,4 +682,18 @@ export class PollPage implements OnInit {
       popoverElement.present();
     })
   }
+
+  // Glossary buttons:
+
+  show_glossary = false;
+  glossary_key: string;
+
+  glossary(key: string) {
+    this.glossary_key = key;
+    this.show_glossary = true;
+  }
+  dismiss_glossary() {
+    this.show_glossary=false;
+  }
+
 }

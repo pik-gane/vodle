@@ -471,12 +471,25 @@
         "type-share": "Options are assigned shares",
         "type-winner": "One option wins",
 
+        "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
+
         "hint-abstaining-1": "You are abstaining.",
-        "hint-abstaining-2": "You may want to give at least your favourite a positive wap (drag the red knob right), or delegate your ratings to someone you trust.",
-        "hint-only1positive-1": "You are giving only one option a positive wap.",
+        "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
+        "hint-abstaining-2-wap": "wap",
+        "hint-abstaining-2-after-wap": " (drag the red knob right), or delegate your waps to someone you trust.",
+
+        "hint-only1positive-1-before-wap": "You are giving only one option a positive ",
+        "hint-only1positive-1-wap": "wap",
+        "hint-only1positive-1-after-wap": ".",
         "hint-only1positive-2": "You should consider giving some possible compromise options a positive wap as well.",
-        "hint-only1approved-1": "You are approving only one of the options you gave a positive wap.",
-        "hint-only1approved-2": "You only approve an option if your wap peeks into the bar.",
+
+        "hint-only1approved-1-before-approving": "You are ",
+        "hint-only1approved-1-approving": "approving",
+        "hint-only1approved-1-after-approving": " only one option.",
+        "hint-only1approved-2-before-wap": "You approve an option if it has received your largest ",
+        "hint-only1approved-2-wap": "wap",
+        "hint-only1approved-2-after-wap": " or your wap overlaps with the bar.",
+
         "hint-mostapproved-1": "You are not approving the top-most option.",
 
         "final-ratings": "These were your final waps:",
