@@ -68,7 +68,9 @@ TODO:
               <ion-icon name="language-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'language'|translate"></span>
             </ion-label>
-            <ion-select #ionSelects interface="popover" formControlName="language" (ionChange)="set_language()">
+            <ion-select #ionSelects interface="popover" formControlName="language" 
+                [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+                (ionChange)="set_language()">
               <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
             </ion-select>
           </ion-item>

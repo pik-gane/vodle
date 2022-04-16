@@ -100,7 +100,7 @@
 
     "delegation-request": {
         "header": "Delegiere an eine:n andere:n Teilnehmer:in",
-        "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Waps werden auch als Deine Waps verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Optionen weiterhin selbst bewerten.",
+        "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Waps werden auch als Deine Waps verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Waps weiterhin selbst einstellen.",
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
 
@@ -128,7 +128,7 @@
 
         "header": "Bist Du bereit, Delegierte:r zu sein für {{from}} in der Abstimmung <i>„{{poll_title}}“?</i>",
         "intro": "Deine Waps kontrollieren dann auch die Waps dieser Person.",
-        "details": "Wenn Du zustimmst, kannst Du immer noch entscheiden, ob Du die Optionen selbst bewerten oder das Wap an eine dritte Person weiter delegieren willst.",
+        "details": "Wenn Du zustimmst, kannst Du immer noch entscheiden, ob Du einer Option selbst ein Wap geben willst oder das Wap an eine dritte Person weiter delegieren willst.",
         "check-first": "Du kannst auch erst einmal Deine Waps überprüfen und dann hierher zurückkehren, um zuzustimmen oder abzulehnen.",
         "accept": "Stimme zu",
         "decline": "Lehne ab",
@@ -233,8 +233,8 @@
         "vertical-approval-label": "Zustimmung",
         "horizontal-approval-label": "Zustimmung",
 
-        "your-rating-line-1": "Deine",
-        "your-rating-line-2": "Bewertg.",
+        "your-rating-line-1": "Dein",
+        "your-rating-line-2": "Wap",
         "largest-line-1": "Deine größtes Wap wird als 100 interpretiert, um",
         "largest-line-2": "sicherzustellen, dass Du mindestens einer Option zustimmst.",
 
@@ -337,7 +337,7 @@
         "p11a": "Wähle eine Abstimmung aus", 
         "p11b": "Meine Abstimmungen",
         "p11c": "oder klicke auf einen Abstimmungs-Link, der Dir geschickt wurde.",
-        "p12a": "Benutze die Schieberegler, um die Optionen zu <b>bewerten</b>. <i>Vodle</i> interpretiert Dein Wap einer Option als Deine „<b>Bereitschaft</b>“, dieser Option „<b>zuzustimmen</b>“.",
+        "p12a": "Benutze die Schieberegler, um den Optionen <b>Waps</b> zu geben. <i>vodle</i> interpretiert Dein Wap einer Option als Deine „<b>Bereitschaft</b>“, dieser Option „<b>zuzustimmen</b>“.",
         "p12b": "Bewerte Deine <b>Favouriten-</b>Option mit <b>100</b> (zieh den Regler ganz nach rechts). Damit stimmst Du dieser Option auf jeden Fall zu.",
         "p12c": "Gib allen <b>überdurchschnittlich</b> guten Optionen ein Wap <b>größer als Null</b> (der Regler wird blau oder grün). Das bedeutet, dass Du diesen Optionen unter Umständen zustimmen würdest.",
         "p12d": "Lass alle <b>unterdurchschnittlichen</b> Optionen auf Null (Regler ist ein roter Punkt). Damit stimmst Du diesen Optionen auf keinen Fall zu.",
@@ -396,7 +396,7 @@
         "p2": "Einige Optionen sind bereits vorgeschlagen worden. Jede:r Teilnehmer:in kann jederzeit weitere Optionen vorschlagen, bis zum Ende.",
         "p3": "Du kannst Deine Meinung zu den Optionen ausdrücken, in dem Du sie <i>bewertest</i>. Du kannst jeder Option ein Wap zwischen 0 (keine Zustimmung) und 100 (sichere Zustimmung) geben.",
         "p4": "Wenn Du unsicher über eine oder mehrere Optionen bist, kannst Du deren Wap auch an eine:n andere:n Teilnehmer:in Deines Vertrauens <i>delegieren.</i> Dann zählen deren Waps dieser Optionen auch als Deine.Wenn Du gar keine Zeit hast, über die Optionen nachzudenken, kannst Du auch alle Waps an jemand anderes delegieren.",
-        "p5": "Du kannst Deine Waps und Delegationen jederzeit ändern, bis zum Ende. Es ist sogar sinnvoll, den Abstimmungs-Verlauf über die Zeit zu verfolgen, Deine Waps an das, was Du siehst, anzupassen, neu vorgeschlagene Optionen zu bewerten, oder selbst welche vorzuschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen.",
+        "p5": "Du kannst Deine Waps und Delegationen jederzeit ändern, bis zum Ende. Es ist sogar sinnvoll, den Abstimmungs-Verlauf über die Zeit zu verfolgen, Deine Waps an das, was Du siehst, anzupassen, neu vorgeschlagenen Optionen Waps zu geben, oder selbst welche vorzuschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen.",
         "lets-go-button": "Also los!",
         "p6": "Wenn Du wissen willst, wie vodle die Waps verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}."
     },
@@ -528,7 +528,7 @@
 
         "approved-by": "<small>es stimmen </small>{{percentage}}%<small> zu</small>",
         "including-you": " (auch Du)",
-        "average-rating": "durchschn. Bewertg. {{average}}",
+        "average-rating": "durchschn. Wap {{average}}",
 
         "explain": "Erklären",
 
