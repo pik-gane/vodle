@@ -20,6 +20,7 @@
     "add": "Hinzufügen",
     "add-option": "Option hinzufügen",
     "add-target": "Option hinzufügen",
+    "approval": "Zustimmung",
     "cancel": "Abbrechen",
     "choose-file": "Datei auswählen",
     "continue": "Weiter",
@@ -46,10 +47,12 @@
     "retype-password": "Passwort wiederholen",
     "select-cancel": "Abbrechen",
     "server": "Server",
+    "share": "Anteil",
     "show": "Anzeigen",
     "skip": "Überspringen",
     "start": "Los",
     "test": "Testen",
+    "wap": "Wap",
     "yes": "Ja",
 
     "about": {
@@ -469,13 +472,12 @@
         "type-winner": "Eine Option gewinnt",
 
         "hint-abstaining-1": "Du enthältst Dich momentan.",
-        "hint-abstaining-2": "Du solltest wenigstens Deine Lieblingsoption bewerten oder Deine Bewertungen an jemand delegieren.",
-        "hint-only1positive-1": "Du bewertest momentan nur eine Option.",
-        "hint-only1positive-2": "Du solltest überlegen, auch mögliche Kompromiss-Optionen zu bewerten.",
-        "hint-only1approved-1": "Du stimmst momentan nur einer der von Dir bewerteten Optionen zu.",
-        "hint-only1approved-2": "Du stimmst einer Option nur zu, wenn Deine Bewertung höher ist als der Prozentsatz an Teilnehmer:innen, die die Option ablehnen.",
+        "hint-abstaining-2": "Du solltest wenigstens Deiner Lieblingsoption ein positives Wap geben (den roten Knopf nach rechts schieben) oder Deine Waps an jemand delegieren.",
+        "hint-only1positive-1": "Du gibts momentan nur einer Option ein positives Wap.",
+        "hint-only1positive-2": "Du solltest überlegen, auch möglichen Kompromiss-Optionen ein positives Wap zu geben.",
+        "hint-only1approved-1": "Du stimmst momentan nur einer Option zu.",
+        "hint-only1approved-2": "Du stimmst einer Option nur zu, wenn Dein Wap in den Balken ragt.",
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
-        "hint-mostapproved-2": "Bitte prüfe, ob diese Option für Dich akzeptabel ist.",
 
         "final-ratings": "Dies waren Deine Bewertungen am Ende:",
 

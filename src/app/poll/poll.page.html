@@ -226,8 +226,8 @@
       <ion-item *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)" color="light">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-mostapproved-1'|translate"></span>&nbsp;
-            <span [innerHtml]="'poll.hint-mostapproved-2'|translate"></span>
+            <span [innerHtml]="'poll.hint-mostapproved-1'|translate"></span><!--&nbsp;
+            <span [innerHtml]="'poll.hint-mostapproved-2'|translate"></span>-->
           </p>
         </small>
       </ion-item>
@@ -418,6 +418,24 @@
       </ion-grid>
     </ion-item>
 
+    <!-- TABLE HEADER: -->
+    <!-- TODO: make click show popups with short explanations -->
+
+    <ion-item class="ion-no-padding ion-no-margin" lines="none"
+          style="--min-height: 0px!important; font-weight: bold;">
+      <small style="padding-top: 8px!important;padding-left: 16px; width: 74px!important; color: #769596;">
+<!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'share'|translate"></span>
+      </small>
+      <small style="padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
+<!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
+      </small>
+      <!-- TODO: make padding robustly correct accross devices: -->
+      <small [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+        <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
+        <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
+      </small>
+    </ion-item>
+
     <!-- OPTIONS: -->
 
     <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
@@ -431,9 +449,12 @@
           <!-- PIE CHART WITH WINNING PROBABILITY: -->
 
           <ion-col size="auto" class="ion-no-padding ion-no-margin">
-            <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="50px" style="position:relative; top:12px;">
+            <div style="width: 60px!important"></div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
               <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
               <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
+              <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
+                x1="21" y1="48" x2="21" y2="60" stroke="#769596" stroke-width="1" stroke-dasharray="1 1"></line>
             </svg>
           </ion-col>
 
@@ -487,8 +508,9 @@
                       (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                       (ionChange)="onRatingSliderChange(oidsorted[i])" 
                       (ionBlur)="onRatingSliderBlur(oidsorted[i])"
-                      pin="true" min="0" max="100"
-                      [style]="'--bar-background: rgba(0,0,0,0);'
+                      mode="md" pin="true" pinFormatter="(v)=>100-v"
+                      min="0" max="100" step="1" snaps="true" ticks="false"
+                      [style]="''
                         + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
                         ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                         : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
@@ -507,8 +529,27 @@
                           <rect [id]="'bar_' + oidsorted[i]" 
                             x="100%" width="0%" y="8" height="18" 
                             fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
-                          <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="3" />
-                          <rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />
+                          <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
+                          <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
+                        </svg>
+                      </div>
+
+                      <!-- Numerical annotations when expanded: -->
+
+                      <div style="position: absolute; bottom: 0px; right: 11px; z-index: 10; width: 100%; padding-left: 11px; pointer-events: none;">
+                        <svg [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'" 
+                            xmlns="http://www.w3.org/2000/svg" width="100%" height="45px">
+                          <!--
+                          <text x="0%" y="20" 
+                            style="font-weight: bold; font-size: 12px;" fill="slidercolor[oidsorted[i]]" 
+                            [innerHtml]="p.get_my_proxy_rating(oidsorted[i])">
+                          </text>
+                          -->
+                          <text x="100%" y="15" 
+                            style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="#9abcbd" [innerHtml]="
+                              Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10 + '%&nbsp;&nbsp;'
+                            ">
+                          </text>
                         </svg>
                       </div>
 
