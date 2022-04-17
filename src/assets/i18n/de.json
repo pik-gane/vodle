@@ -403,16 +403,22 @@
 
     "login": {
         "-page-title": "Login",
+
         "welcome": "Willkommen bei",
         "ask-language": "Welche Sprache möchtest Du verwenden?",
+
         "ask-used-before": "Hast Du vodle schon einmal auf irgendeinem Gerät verwendet?",
+
         "ask-fresh-email": "Bitte gib Deine Email-Adresse ein, die Du für vodle verwenden möchtest.", 
         "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem.",
         "ask-old-email": "Bitte gib die Email-Adresse ein, die Du für vodle verwendest.", 
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
+        "consent-cookies": "Ich stimme der Verwendung von technischen Cookies zu.",
+
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
+
         "ready-to-start": "OK, viel Spaß mit vodle!",
         "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst.",
 

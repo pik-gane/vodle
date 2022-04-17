@@ -405,16 +405,22 @@
 
     "login": {
         "-page-title": "Login",
+
         "welcome": "Welcome to",
         "ask-language": "Which language do you want to use?",
+
         "ask-used-before": "Have you used vodle before on any device?",
+
         "ask-fresh-email": "Please enter your email address you want to use with vodle.",
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one.",
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
+        "consent-cookies": "I consent to the use of technical cookies.",
+
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
+
         "ready-to-start": "OK, have fun with vodle!",
         "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out.",
 
