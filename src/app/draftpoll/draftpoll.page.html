@@ -54,7 +54,7 @@
           formControlName="poll_type" 
           text-wrap autofocus tabindex="0" 
           #ionSelects #type_select  
-          cancelText="Cancel" okText="OK" 
+          [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           (ionChange)="set_poll_type();changed_poll_type()">
         <ion-select-option text-wrap value="winner" [innerHtml]="'draftpoll.type-winner'|translate"></ion-select-option>
         <ion-select-option text-wrap value="share" [innerHtml]="'draftpoll.type-share'|translate"></ion-select-option>
@@ -261,7 +261,8 @@
         <span [innerHtml]="'draftpoll.language'|translate"></span>
       </ion-label>
       <ion-select #ionSelects formControlName="poll_language" (ionChange)="set_poll_language()"
-          style="font-size: smaller">
+        [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+        style="font-size: smaller">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>

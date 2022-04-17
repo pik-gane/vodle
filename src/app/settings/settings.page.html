@@ -154,13 +154,17 @@
         <ion-icon name="language-outline"></ion-icon>&nbsp;
         <span [innerHtml]="'language'|translate"></span>
       </ion-label>
-      <ion-select #ionSelects formControlName="language" (ionChange)="set_language()">
+      <ion-select #ionSelects formControlName="language" 
+          [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
+          (ionChange)="set_language()">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>
       <ion-label position="floating" color="primary">Theme</ion-label>
-      <ion-select formControlName="theme" cancelText="Cancel" okText="OK">
+      <ion-select formControlName="theme" 
+          [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+          >
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>

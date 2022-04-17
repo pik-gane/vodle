@@ -17,6 +17,7 @@
     <!--the actual select item is hidden so that the appearance is that of a button:-->
     <ion-select #ionSelects #select_example interface="popover" 
         (ionChange)="use_example()" display="none"
+        [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
         style="font-size: smaller">
       <ion-select-option value="-" [innerHtml]="'draftpoll.use-example-from-db-none'|translate"></ion-select-option>
       <ion-select-option *ngFor="let doc of examples" [value]="doc" [innerHtml]="JSON.parse(doc)['title']"></ion-select-option>
