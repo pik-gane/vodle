@@ -1,6 +1,6 @@
 Currently the workflow is still manual
 1. Push to remote main
-2. On github, merge in to github-pages-test
+2. On github, merge into github-pages-test
 3. Pull to local github-pages-test: `git switch github-pages-test; git pull`
 4. Build web page locally with `ionic capacitor build browser --prod`
 5. If all seems fine, `rm -rf docs; cp -r www docs`

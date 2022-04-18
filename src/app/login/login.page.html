@@ -136,15 +136,20 @@ TODO:
           </div>
         </ng-container>
         </div>  
-        <ion-item lines="none">
-          <ion-button type="submit" size="larger" color="primary" slot="end" [disabled]="!emailFormGroup.valid" 
-              shape="round"
-              (click)="submit_email()">
-            <span [innerHtml]="'next'|translate"></span>
-            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-          </ion-button>
-        </ion-item>
       </form>    
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_cookies"></ion-checkbox>
+        <ion-label [innerHtml]="'login.consent-cookies'|translate"></ion-label>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-button type="submit" size="larger" color="primary" slot="end" 
+            [disabled]="!emailFormGroup.valid || !accept_cookies" 
+            shape="round"
+            (click)="submit_email()">
+          <span [innerHtml]="'next'|translate"></span>
+          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
       <ion-item class="item-text-wrap" lines="none">
         <small><p class="ion-text-center" style="width:100%;" [innerHtml]="'login.cookie-banner'|translate"></p></small>
       </ion-item>

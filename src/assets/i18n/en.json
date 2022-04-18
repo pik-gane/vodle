@@ -13,6 +13,7 @@
     ],
 
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
+        "We use British English: favourite, colour, centre, etc.",
         "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
         "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
     ],
@@ -30,6 +31,7 @@
     "db-pw": "Database password",
     "edit": "Edit",
     "email": "Email",
+    "favourite": "Favourite",
     "go-to-poll": "Go to poll",
     "hide": "Hide",
     "language": "Language",
@@ -51,6 +53,7 @@
     "show": "Show",
     "skip": "Skip",
     "start": "Start",
+    "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",
     "wap": "Wap",
     "yes": "Yes",
@@ -82,6 +85,45 @@
         "info": "Once added, the option cannot be edited or removed again.",
         "notification-added-title": "Option added"
     },
+
+    "assist": {
+        "-page-title": "Let's set your waps",
+
+        "-step-1-title": "Favourite option",
+
+        "favourite-intro": "Which option would you most prefer?",
+        "add-option-info": "If you think an important option is still missing, you can add it on the page with the sliders.",
+        "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
+        "favourite-explanation-2": "This means that you <i>definitely approve</i> the option, no matter what the waps of the other participants are.",
+        "favourite-explanation-3": "It may however be that <i>“{{favourite}}”</i> will not get enough approval in the end to win. Even if a majority approves this option, it is not certain that it wins. Therefore it is important to also think about possible compromise options next.",
+
+        "-step-2-title": "Acceptable options",
+        "acceptable-intro": "Which options do you find acceptable as well?<br/>You can select as many as you want (or none).",
+        "acceptable-explanation-1": "We are giving the options that you <b>didn't mark as acceptable</b> a wap of <b>0</b>.",
+        "acceptable-explanation-2": "This means that you <i>definitely don't approve</i> these options, no matter what the waps of the other participants are.",
+        "acceptable-explanation-3": "Those options you marked as <b>acceptable</b> we'll give a wap <b>between 1 and 99</b>.",
+        "acceptable-explanation-4": "This means that you <i>potentially approve</i> these options, depending on what the waps of the other participants are.",
+        "acceptable-explanation-5": "To help us set these waps more specifically, you should now consider how many <i>other</i> participants would potentially approve these options as well.",
+
+        "-step-3-title": "Estimated approval by others",
+        "estimates-intro": "Please estimate for each option which percentage of participants would potentially approve it.<br/>If you are unsure, better give a slightly lower estimate.",
+        "estimates-explanation-1": "We'll now go through all acceptable options. For each of them, please decide how much approval by other participants is needed before <b>you yourself</> would approve the option.",
+        "estimates-explanation-2": "This might be the same percentage that you estimated just now. But you could also say that you would approve an option only if even more participants approve than you estimated..",
+
+        "-step-4-title": "From when on would you approve?",
+        "thresholds-intro": "For the option <b><i>“{{option}}”</i></b> you have estimated that <b>{{estimate}}%</b> of the participants would potentially approve it.",
+        "thresholds-question-1": "If indeed {{estimate}}% approve the option, would you yourself then approve the option as well?",
+        "thresholds-question-2": "Then how many participants would need to approve this option before you would approve it, too?",
+
+        "-step-5-title": "Summary",
+        "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
+        "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
+        "ratings-favourite": "This is your <b>favourite</b> option. I have given it a wap of <b>100</b> because you want to approve it for sure.",
+        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
+        "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
+        "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
+    },
+
 
     "badges": {
         "abstaining": "Abstaining",
@@ -405,16 +447,22 @@
 
     "login": {
         "-page-title": "Login",
+
         "welcome": "Welcome to",
         "ask-language": "Which language do you want to use?",
+
         "ask-used-before": "Have you used vodle before on any device?",
+
         "ask-fresh-email": "Please enter your email address you want to use with vodle.",
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one.",
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
+        "consent-cookies": "I consent to the use of technical cookies.",
+
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
+
         "ready-to-start": "OK, have fun with vodle!",
         "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out.",
 
@@ -481,6 +529,8 @@
         "closed": "Closed",
         "type-share": "Options are assigned shares",
         "type-winner": "One option wins",
+
+        "assist-me": "Assist me",
 
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
