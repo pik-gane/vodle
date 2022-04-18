@@ -87,6 +87,7 @@ export class AssistPage implements OnInit {
 
   close() {
     this.modalController.dismiss();
+    this.P.update_order();
   }
 
   back() {

@@ -19,7 +19,7 @@ Status: trying to find out how this works by reading
     - contains PRIVATE information (keystore.p12 and config.yml)
     - used for signing the apk (and publishing it?) 
 
-## Progress
+## Setting up build environment
 
 ### https://f-droid.org/en/docs/Submitting_to_F-Droid_Quick_Start_Guide/
 - forked fdroiddata, switched to branche it.vodle
@@ -60,6 +60,12 @@ fdroid build --on-server it.vodle
 
 ### https://f-droid.org/en/docs/Setup_an_F-Droid_App_Repo/#real-world-setup
 - ?
+
+## Building new version
+
+- in it.vodle.yml:
+    - add increased versionName, incremented versionCode
+    - adjust CurrentVersion, CurrentVersionCode to those values 
 
 ## Necessary meta-data
 
