@@ -2,6 +2,7 @@
 
 import { Injectable, HostListener, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
 import { Storage } from '@ionic/storage-angular';
 import { Logger, LoggingService } from "ionic-logging-service";
@@ -36,7 +37,8 @@ export class GlobalService implements OnDestroy {
       public P: PollService,
       public S: SettingsService,
       public Del: DelegationService,
-      public N: NewsService
+      public N: NewsService,
+      public translate: TranslateService
       ) {
     this.L = loggingService.getLogger("VODLE");
     this.L.entry("GlobalService.constructor");
@@ -144,6 +146,5 @@ export class GlobalService implements OnDestroy {
     }
     this.L.trace("GlobalService.remove_spinning_reason reasons", [...this.spinning_reasons.entries()])
   }
-
 
 }

@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { ModalController, PopoverController } from '@ionic/angular';
+import { ModalController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";
@@ -62,7 +62,6 @@ export class ExplainApprovalPage implements OnInit {
   text_end = '</text>'; 
 
   constructor(
-    private popover: PopoverController,
     private modalController: ModalController,
     translate: TranslateService,
     G: GlobalService) { 
@@ -202,7 +201,6 @@ export class ExplainApprovalPage implements OnInit {
   close()
   {
     this.modalController.dismiss();
-//    this.popover.dismiss();
   }
 
   // bottom-row controls:
