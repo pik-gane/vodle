@@ -2,14 +2,15 @@
 
   <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
     <ion-toolbar style="padding-left: 16px;">
-      <ion-text *ngIf="scroll_position < 1000" 
+
+      <ion-icon slot="start" name="color-wand-outline"></ion-icon>&nbsp;
+      <ion-text 
         style="font-weight: bold; font-size: larger;"
         [innerHtml]="'assist.-page-title' | translate">
       </ion-text>
-      <ion-text *ngIf="scroll_position >= 1000"><b><i [innerHtml]="P.p.title"></i></b></ion-text>
       <ion-buttons slot="end">
 
-        <!-- OFFLINE SIGN -->
+        <!-- OFFLINE SIGN -- >
         <ng-container *ngIf="!window.navigator.onLine">
           <ion-icon name="cloud-offline-outline" color="grey"
             style="position: relative; bottom: -1px;">
@@ -17,9 +18,12 @@
           <ion-icon name="alert-outline" color="grey">
           </ion-icon>
         </ng-container> 
+        <!---->
 
-        <!-- SYNCING SIGN -->
+        <!-- SYNCING SIGN: -->
         <ion-spinner *ngIf="!!P.p && P.p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+
+        <!-- CLOSE BUTTON: -->
         <ion-button fill="clear" (click)="close()">
           <ion-icon slot="icon-only" name="close-outline"></ion-icon>
         </ion-button>
@@ -290,21 +294,27 @@
   <ng-container *ngIf="step == 5">
     <ion-item color="success">
       <p>
-        <span [innerHtml]="'assist.ratings-intro'|translate"></span>
+        <span [innerHtml]="'assist.ratings-intro-1'|translate"></span>
       </p>
     </ion-item>
+    <ion-item color="light">
+      <p>
+        <span [innerHtml]="'assist.ratings-intro-2'|translate"></span>
+      </p>
+    </ion-item>
+
     <ion-item  *ngFor="let item of [].constructor(acceptable_oids.length); let i = index">
       <ion-text *ngIf="acceptable_oids[i] == favourite">
         <p>
           <b><i [innerHtml]="P.p.options[favourite].name"></i></b>
         </p>
-        <p [innerHtml]="'assist.ratings-favourite'|translate:{threshold:thresholds[acceptable_oids[i]], rating:ratings[acceptable_oids[i]]}"></p>
+        <p [innerHtml]="'assist.ratings-favourite'|translate:{threshold:thresholds[acceptable_oids[i]], wap:ratings[acceptable_oids[i]]}"></p>
       </ion-text>
       <ion-text *ngIf="acceptable_oids[i] != favourite">
         <p>
           <b><i [innerHtml]="P.p.options[acceptable_oids[i]].name"></i></b>
         </p>
-        <p [innerHtml]="'assist.ratings-acceptable'|translate:{threshold:thresholds[acceptable_oids[i]], rating:ratings[acceptable_oids[i]]}"></p>
+        <p [innerHtml]="'assist.ratings-acceptable'|translate:{threshold:thresholds[acceptable_oids[i]], wap:ratings[acceptable_oids[i]], more_than:100-ratings[acceptable_oids[i]]}"></p>
       </ion-text>
     </ion-item>
     <ion-item>
@@ -313,7 +323,7 @@
     <ion-item color="light">
       <p [innerHtml]="'assist.ratings-extro'|translate"></p>
     </ion-item>
-    <ion-item lines="none">
+    <ion-item lines="none" style="padding-bottom: 10px!important;">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="understood_ratings()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>

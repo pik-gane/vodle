@@ -86,39 +86,40 @@
     },
 
     "assist": {
-        "-page-title": "Wir setzen Deine Bewertungen",
+        "-page-title": "Wir setzen Deine Waps",
 
         "-step-1-title": "Lieblingsoption",
         "favourite-intro": "Welche Option würdest Du am meisten bevorzugen?",
-        "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> eine Bewertung von <b>100</b>.",
-        "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Bewertungen der anderen Teilnehmer:innen sind.",
-        "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern hinzufügen.",
+        "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> ein Wap von <b>100</b>.",
+        "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Waps der anderen Teilnehmer:innen sind.",
+        "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
 
         "-step-2-title": "Akzeptable Optionen",
         "acceptable-intro": "Welche Optionen findest Du auch noch akzeptabel?<br/>Du kannst beliebig viele (oder auch keine) auswählen.",
-        "acceptable-explanation-1": "Wir geben den Optionen, die Du <b>nicht akzeptabel</b> findest, eine Bewertung von <b>0</b>.",
-        "acceptable-explanation-2": "Das bedeutet, dass Du diesen Optionen <i>auf keinen Fall zustimmst,</i> egal, wie die Bewertungen der anderen Teilnehmer:innen sind.",
-        "acceptable-explanation-3": "Den Optionen, die Du <b>akzeptabel</b> findest, geben wir eine Bewertung <b>zwischen 0 und 100</b>",
-        "acceptable-explanation-4": "Das bedeutet, dass Du diesen Optionen <i>möglicherweise zustimmst,</i> nämlich abhängig davon, wie die Bewertungen der anderen Teilnehmer:innen sind.",
-        "acceptable-explanation-5": "Um diese Bewertungen genauer festzulegen, solltest Du als Nächstes überlegen, wie viele <i>andere</i> Teilnehmer:innen diesen Optionen möglicherweise auch zustimmen würden.",
+        "acceptable-explanation-1": "Wir geben den Optionen, die Du <b>nicht als akzeptabel</b> markiert hast, ein Wap von <b>0</b>.",
+        "acceptable-explanation-2": "Das bedeutet, dass Du diesen Optionen <i>auf keinen Fall zustimmst,</i> egal, wie die Waps der anderen Teilnehmer:innen sind.",
+        "acceptable-explanation-3": "Den Optionen, die Du als <b>akzeptabel</b> markiert hast, geben wir ein Wap <b>zwischen 1 und 99</b>.",
+        "acceptable-explanation-4": "Das bedeutet, dass Du diesen Optionen <i>möglicherweise zustimmst,</i> abhängig davon, wie die Waps der anderen Teilnehmer:innen sind.",
+        "acceptable-explanation-5": "Demit wir diese Waps genauer festzulegen können, solltest Du als Nächstes überlegen, wie viele <i>andere</i> Teilnehmer:innen diesen Optionen möglicherweise auch zustimmen würden.",
 
         "-step-3-title": "Geschätzte Zustimmung durch andere",
-        "estimates-intro": "Bitte schätze für jede der folgenden Optionen ein, welcher Prozentsatz an Teilnehmer:innen dieser Option möglicherweise auch zustimmen würde.<br/>Wenn Du nicht sicher bist, schätze die Prozentzahl lieber etwas kleiner ein.",
-        "estimates-explanation-1": "Wir gehen jetzt die akzeptablen Optionen durch und legen jeweils fest, ab welchem Prozentsatz an Zustimmung durch andere Teilnehmer:innen <b>Du selbst</b> der Option auch zustimmen würdest.",
+        "estimates-intro": "Bitte schätze für jede Option ein, welcher Prozentsatz an Teilnehmer:innen ihr möglicherweise auch zustimmen würde.<br/>Wenn Du nicht sicher bist, schätze die Prozentzahl lieber etwas kleiner ein.",
+        "estimates-explanation-1": "Wir gehen jetzt die akzeptablen Optionen durch. Bitte lege jeweils fest, wie viel Zustimmung durch andere Teilnehmer:innen nötig ist, bevor <b>Du selbst</b> der Option auch zustimmen würdest.",
         "estimates-explanation-2": "Das kann der selbe Prozentsatz sein, den Du eben geschätzt hast. Du kannst aber auch sagen, dass Du einer Option erst zustimmen würdest, wenn noch mehr Teilnehmer:innen zustimmen als geschätzt.",
 
-        "-step-4-title": "An wann würdest Du zustimmen?",
+        "-step-4-title": "Ab wann würdest Du zustimmen?",
         "thresholds-intro": "Für die Option <b><i>„{{option}}“</i></b> hast Du geschätzt, dass <b>{{estimate}}%</b> der Teilnehmer:innen möglicherweise zustimmen würden.",
         "thresholds-question-1": "Wenn tatsächlich {{estimate}}% der Option zustimmen, würdest Du der Option dann selbst auch zustimmen?",
-        "thresholds-question-2": "Ab welchem Prozentsatz an Zustimmung durch andere Teilnehmer:innen würdest Du dieser Option dann zustimmen?",
+        "thresholds-question-2": "Wie wiele Teilnehmer:innen müssten dann der Option zustimmen, bevor Du ihr auch zustimmen würdest?",
 
         "-step-5-title": "Zusammenfassung",
-        "ratings-intro": "Danke! Ich stelle jetzt Deine Bewertungen der akzeptablen Optionen wie folgt ein:",
-        "ratings-favourite": "Dies ist Deine <b>Lieblingsoption.</b> Wir geben Ihr die Bewertung <b>100</b>, weil Du Ihr auf jeden Fall zustimmen willst",
-        "ratings-acceptable": "Dieser Option willst Du zustimmen, wenn mindestens {{threshold}}% der Teilnehmer:innen zustimmen. Also wenn weniger als {{rating}}% <i>nicht</i> zustimmen. Deshalb geben wir ihr die Bewertung <b>{{rating}}</b>.",
+        "ratings-intro-1": "Danke! Ich habe jetzt Deine Waps so eingestellt, dass sie Deiner Zustimmbereitschaft entsprechen.",
+        "ratings-intro-2": "Waps funktionieren so: Wenn man ein Wap von <i>X</i> einstellt, dann stimmt man zu, wenn mehr als 100% minus <i>X</i> der Teilnehmer:innen zustimmen. Deshalb habe ich Deine Waps wie folgt eingestellt:",
+        "ratings-favourite": "Dies ist Deine <b>Lieblingsoption.</b> Ich habe Ihr ein Wap von <b>100</b> gegeben, weil Du Ihr auf jeden Fall zustimmen willst.",
+        "ratings-acceptable": "Dieser Option willst Du zustimmen, wenn mindestens {{threshold}}% der Teilnehmer:innen zustimmen. Ich habe einen sehr kleinen Unsicherheitsbereich von einem Prozent hinzugefügt und der Option ein Wap von <b>{{wap}}</b> gegeben. Das sorgt dafür, dass Du der Option zustimmst, wenn mehr als {{more_than}}% zustimmen.",
         "ratings-other": "Alle anderen Optionen bekommen <b>0</b>, da Du ihnen auf keinen Fall zustimmen willst.",
-        "ratings-extro": "Du kannst Deine Bewertungen jederzeit über die Schieberegler anpassen, um z.B. auf die Entwicklung der Zustimmungswerte zu reagieren. Die aktuelle Zustimmung wird als heller Balken angezeigt."
+        "ratings-extro": "Du kannst Deine Waps jederzeit über die Schieberegler anpassen, um z.B. auf die Entwicklung der tatsächlichen Zustimmungswerte zu reagieren. Die aktuelle Zustimmung wird immer als heller Balken angezeigt. Weitere Informationen bekommst Du über die unterstrichenen Wörter auf der Abstimmungsseite."
     },
 
     "badges": {
@@ -361,7 +362,7 @@
 
         "_COMMENT_": "These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
 
-        "wap": "<p>In vodle stimmst Du ab, indem Du jeder Option ein <b>Wap</b> gibst. Das ist eine Zahl <b>zwischen 0 und 100</b>. Du kannst Sie mit den farbigen <b>Schiebereglern</b> einstellen.<!--Du kannst Dir dabei helfen lassen, wenn Du auf „Assistiere mir“ klickst.--></p><p>Ein Wap ist keine Bewertung im üblichen Sinn! Stattdessen gibt es an, unter welchen Bedingungen Du der Option <b>zustimmst</b>.</p><p>Am Anfang sind alle Deine Waps Null und die Schieberegler sind rote Knöpfe. Ein Wap von <b>Null</b> bedeutet, dass Du der Option <b>auf keinen Fall</b> zustimmst.</p><p>Wenn Du den Regler ganz nach rechts schiebst, gibst Du ein Wap von <b>100</b>. Das bedeutet, dass Du der Option <b>auf jeden Fall</b> zustimmst. Der Schieberegler ist dann grün.</p><p>Du kannst auch ein Wap <b>zwischen 1 und 99</b> einstellen. Dann stimmst Du der Option nur zu, wenn <b>genügend andere</b> auch zustimmen. Je weiter rechts der Regler, desto eher stimmst Du zu. Wenn Du z.B. ein Wap von 30 einstellst, stimmst Du zu, wenn mehr als 70% aller Teilnehmer:innen zustimmen. Wenn Du ein Wap von <b><i>X</i></b> einstellst, stimmst Du zu, wenn mehr als <b>100% minus <i>X</i></b> zustimmen.</p>",
+        "wap": "<p>In vodle stimmst Du ab, indem Du jeder Option ein <b>Wap</b> gibst. Das ist eine Zahl <b>zwischen 0 und 100</b>. Du kannst Sie mit den farbigen <b>Schiebereglern</b> einstellen. vodle kann Dir dabei helfen, dafür ist der grüne Zauberstab.</p><p>Ein Wap ist keine Bewertung im üblichen Sinn! Stattdessen gibt es an, unter welchen Bedingungen Du der Option <b>zustimmst</b>.</p><p>Am Anfang sind alle Deine Waps Null und die Schieberegler sind rote Knöpfe. Ein Wap von <b>Null</b> bedeutet, dass Du der Option <b>auf keinen Fall</b> zustimmst.</p><p>Wenn Du den Regler ganz nach rechts schiebst, gibst Du ein Wap von <b>100</b>. Das bedeutet, dass Du der Option <b>auf jeden Fall</b> zustimmst. Der Schieberegler ist dann grün.</p><p>Du kannst auch ein Wap <b>zwischen 1 und 99</b> einstellen. Dann stimmst Du der Option nur zu, wenn <b>genügend andere</b> auch zustimmen. Je weiter rechts der Regler, desto eher stimmst Du zu. Wenn Du z.B. ein Wap von 30 einstellst, stimmst Du zu, wenn mehr als 70% aller Teilnehmer:innen zustimmen. Wenn Du ein Wap von <b><i>X</i></b> einstellst, stimmst Du zu, wenn mehr als <b>100% minus <i>X</i></b> zustimmen.</p>",
 
         "approve": "<p><b>Ob Du einer Option zustimmst, hängt von Deinem Wap und den Waps aller anderen Teilnehmer:innen ab.</b></p><p>Wenn z.B. mehr als 70% der Teilnehmer:innen der Option ein Wap von 30 oder mehr angeben, stimmen diese Teilnehmer:innen alle der Option zu. Wenn mehr als <i>X%</i> ein Wap von 100 minus <i>X</i> oder mehr angeben, stimmen sie alle zu.</p><p>Wie viele Teilnehmer:innen gerade zustimmen, zeigt der helle Zustimmungs-Balken, der von rechts kommt. Wenn Du wissen willst, wie die momentane Zustimmung zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p><p>Ob Du selbst einer Option momentan zustimmst, kannst Du an der Farbe Deines Wap-Reglers sehen. Ragt der Regler in den Balken, ist er grün und Du stimmst zu.</p><p>Wenn keines Deiner Waps in einen Balken ragt, dann stimmst Du der Option mit dem größten Wap zu. So stimmst Du immer mindestens einer Option zu. Häufig stimmt man seiner Lieblingsoption und einer oder mehreren weiteren akzeptablen Optionen zu.</p>",
 
@@ -525,6 +526,10 @@
         "closed": "Geschlossen",
         "type-share": "Optionen bekommen Anteile",
         "type-winner": "Eine Option gewinnt",
+
+        "assist-me": "Assistiere mir",
+
+        "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
         "hint-abstaining-1": "Du enthältst Dich momentan.",
         "hint-abstaining-2-before-wap": "Du solltest wenigstens Deiner Lieblingsoption ein positives ",

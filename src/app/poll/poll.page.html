@@ -35,22 +35,16 @@
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
-      <!-- optionally also show the assist me button here? -- >
-      <ion-button slot="end" (click)="assist_dialog()" color="success">
-        <ion-icon name="color-wand-outline"></ion-icon>&nbsp;
-        <ion-label>Assist me</ion-label>
-      </ion-button>
-      <!---->
-
       <!-- DELEGATE BUTTON: -->
       <ion-button *ngIf="delegation_status!='agreed' && running"
           (click)="delegate_dialog($event)" 
-          shape="round" size="large" color="primary">
+          shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
-        </span>&nbsp;<ion-button 
+        </span><ion-button class="ion-no-margin ion-no-padding"
+            style="position: relative; right: -4px;"
             shape="round" fill="solid" color="primary">
-          <ion-icon src="./assets/icon/delegate-simple.svg">
+          <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
           </ion-icon>
         </ion-button>
       </ion-button>
@@ -152,55 +146,62 @@
 
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 
-            <!--<p>-->
-              <small>
-                <span style="white-space: nowrap;">
-                  <ion-badge *ngIf="running && p.is_closing_soon" 
-                    class="ion-no-margin" 
-                    style="position: relative; bottom: -6px;" 
-                    color="danger" 
-                    [innerHtml]="'badges.closing-soon'|translate">
-                  </ion-badge>
-                  <span *ngIf="running && !p.is_closing_soon"
-                    [innerHtml]="'poll.closes' | translate">
-                  </span><span *ngIf="!running"
-                    [innerHtml]="'poll.closed' | translate">
-                  </span>&nbsp;<b 
-                    [innerHtml]="G.D.format_date(p.due)">
-                  </b>
-                </span>&nbsp;&nbsp;&nbsp;&nbsp;
-                <span style="white-space: nowrap;">
-                  <ion-icon color="light" style="position: relative; top: 2px" [name]="(p.type=='share')?'cut-outline':'trophy-outline'"></ion-icon>&nbsp;<span [innerHtml]="((p.type=='share')?'poll.type-share':'poll.type-winner')|translate"></span>
-                </span>
-              </small>
-              <br/>
-
+            <small>
               <span style="white-space: nowrap;">
-                <ion-icon 
-                    color="light" style="position: relative; top: 3px" 
-                    [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-                </ion-icon>
-                <small style="white-space: nowrap;">
-                  <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>
-                </small>
-              </span>&nbsp;&nbsp;&nbsp;
+                <ion-badge *ngIf="running && p.is_closing_soon" 
+                  class="ion-no-margin" 
+                  style="position: relative; bottom: -6px;" 
+                  color="danger" 
+                  [innerHtml]="'badges.closing-soon'|translate">
+                </ion-badge>
+                <span *ngIf="running && !p.is_closing_soon"
+                  [innerHtml]="'poll.closes' | translate">
+                </span><span *ngIf="!running"
+                  [innerHtml]="'poll.closed' | translate">
+                </span>&nbsp;<b 
+                  [innerHtml]="G.D.format_date(p.due)">
+                </b>
+              </span>&nbsp;&nbsp;&nbsp;&nbsp;
               <span style="white-space: nowrap;">
-                <ion-icon 
-                    color="light" style="position: relative; top: 3px" 
-                    name="people-outline">
-                </ion-icon>&nbsp;<small style="white-space: nowrap;">
-                  <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
-                </small><ion-button
-                    class="ion-no-padding ion-no-margin" fill="clear" size="small" 
-                    [routerLink]="'/inviteto/'+p.pid" >
-                  <ion-icon 
-                      class="ion-no-padding ion-no-margin" 
-                      name="share-social-outline" 
-                      color="light">
-                  </ion-icon>  
-                </ion-button>
+                <ion-icon color="light" style="position: relative; top: 2px" [name]="(p.type=='share')?'cut-outline':'trophy-outline'"></ion-icon>&nbsp;<span [innerHtml]="((p.type=='share')?'poll.type-share':'poll.type-winner')|translate"></span>
               </span>
-            <!--</p>-->
+            </small>
+            <br/>
+
+            <!-- ASSIST BUTTON: -->
+
+            <ion-button shape="round" class="ion-float-right ion-no-padding ion-no-margin" (click)="assist_dialog()" color="success" style="position: absolute; top: 6px; right: 10px;">
+              <ion-icon name="color-wand-outline" slot="icon-only" 
+                style="margin: 5px;"></ion-icon>
+            </ion-button>
+    
+            <!-- STATISTICS: -->
+
+            <span style="white-space: nowrap;">
+              <ion-icon 
+                  color="light" style="position: relative; top: 3px" 
+                  [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
+              </ion-icon>
+              <small style="white-space: nowrap;">
+                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>
+              </small>
+            </span>&nbsp;&nbsp;&nbsp;
+            <span style="white-space: nowrap;">
+              <ion-icon 
+                  color="light" style="position: relative; top: 3px" 
+                  name="people-outline">
+              </ion-icon>&nbsp;<small style="white-space: nowrap;">
+                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
+              </small><ion-button
+                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                  [routerLink]="'/inviteto/'+p.pid" >
+                <ion-icon 
+                    class="ion-no-padding ion-no-margin" 
+                    name="share-social-outline" 
+                    color="light">
+                </ion-icon>  
+              </ion-button>
+            </span>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -213,27 +214,44 @@
         <small>
           <p>
             <span style="font-size: medium" [innerHtml]="'poll.hint-abstaining-1'|translate"></span>&nbsp;<wbr/>
-            <span [innerHtml]="'poll.hint-abstaining-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-abstaining-2-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-abstaining-2-after-wap'|translate"></span>
+            <span [innerHtml]="'poll.hint-abstaining-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-abstaining-2-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-abstaining-2-after-wap'|translate"></span>
+            <!-- assist link: -->
+            &nbsp;<span style="white-space: nowrap;">
+              (<a 
+                (click)="assist_dialog()"
+                [innerHtml]="'poll.assist-me' | translate">
+              </a>)
+            </span>
           </p>
         </small>
-        <ion-button slot="end" (click)="assist_dialog()" color="success">
-          <ion-icon name="color-wand-outline"></ion-icon>&nbsp;
-          <ion-label [innerHtml]="'poll.assist-me'|translate"></ion-label>
-        </ion-button>
       </ion-item>
       <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
+            <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
             <span [innerHtml]="'poll.hint-only1positive-2'|translate"></span>
+            <!-- assist link: -->
+            &nbsp;<span style="white-space: nowrap;">
+              (<a 
+                (click)="assist_dialog()"
+                [innerHtml]="'poll.assist-me' | translate">
+              </a>)
+            </span>
           </p>
         </small>
       </ion-item>
       <ion-item *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1" color="secondary">
         <small>
           <p>
-            <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-before-approving'|translate"></span><wbr/><span (click)="glossary('approve')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1approved-1-approving'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-after-approving'|translate"></span>&nbsp;<wbr/>
-            <span [innerHtml]="'poll.hint-only1approved-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-only1approved-2-wap'|translate"></span><ion-icon name="help-circle" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-only1approved-2-after-wap'|translate"></span>
+            <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-before-approving'|translate"></span><wbr/><span (click)="glossary('approve')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1approved-1-approving'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-after-approving'|translate"></span>&nbsp;<wbr/>
+            <span [innerHtml]="'poll.hint-only1approved-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-only1approved-2-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-only1approved-2-after-wap'|translate"></span>
+            <!-- assist link: -->
+            &nbsp;<span style="white-space: nowrap;">
+              (<a 
+                (click)="assist_dialog()"
+                [innerHtml]="'poll.assist-me' | translate">
+              </a>)
+            </span>
           </p>
         </small>
       </ion-item>
@@ -437,15 +455,15 @@
     <ion-item class="ion-no-padding ion-no-margin" lines="none"
           style="--min-height: 0px!important; font-weight: bold;">
       <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 16px; width: 74px!important; color: #769596;">
-<!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'share'|translate"></span>
+<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'share'|translate"></span>
       </small>
       <small (click)="glossary('wap')" style="padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
-<!--        <ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
+<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
       </small>
       <!-- TODO: make padding robustly correct accross devices: -->
       <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
         <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
-        <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
+        <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
       </small>
     </ion-item>
 
@@ -728,8 +746,8 @@
           [innerHtml]="'poll.add-option' | translate"> 
         </ion-button>
       </ion-item>
-      <ion-item lines="none">
-        <small [innerHtml]="'poll.add-option-info' | translate"></small><br/>
+      <ion-item lines="none" style="padding-bottom: 10px!important;">
+        <small [innerHtml]="'poll.add-option-info' | translate"></small>
       </ion-item>
     </ng-container>
 
