@@ -157,6 +157,10 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
 
 ### Other useful commands
 
+- See the CouchDB logs:
+  ```
+  $ sudo docker logs my-couchdb
+  ```
 - If you need to log into the CouchDB docker container for some reason:
   ```
   $ sudo docker exec -it vodle-dev-couchdb bash

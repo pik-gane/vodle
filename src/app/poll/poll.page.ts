@@ -249,7 +249,7 @@ export class PollPage implements OnInit {
     const totalContentHeight = scrollElement.scrollHeight;
     const viewportHeight = scrollElement.offsetHeight;
     const scrollPosition = ev.detail.scrollTop;
-    this.scroll_position = scrollPosition;
+    this.scroll_position = scrollPosition / (totalContentHeight - viewportHeight);
     */
     this.scroll_position = ev.detail.scrollTop;      
   }
@@ -633,6 +633,7 @@ export class PollPage implements OnInit {
 //        cssClass: 'assist',
 //        showBackdrop: true,
         componentProps: {P: this},
+        backdropDismiss​: false
 //        swipeToClose: true,
 //        presentingElement: this.routerOutlet.nativeEl
     });
