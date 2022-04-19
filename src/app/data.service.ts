@@ -2095,6 +2095,8 @@ export class DataService implements OnDestroy {
 
     if (local_only_user_keys.includes(key)) {
 
+      // TODO: store encrypted! don't store password here (only in storage, and only if consented)
+
       // ASYNC:
       // simply use key as doc id and don't encrypt:
       this.local_only_user_DB.get(key)
