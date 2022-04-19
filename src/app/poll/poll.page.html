@@ -1,9 +1,24 @@
 <!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<!--
   TODO: 
-  - rating -> willingness?
-  - small info buttons upon first visit, shown until at least viewed once
-  - rewording of assistance texts
-  - additional explanations in assistance texts
   - "fix" slider element's absolute vertical position on screen while using it, even when note above it changes height. achieve this by automatically "scrolling" to compensate such layout changes.  
 -->
 
@@ -630,6 +645,7 @@
 
               <!-- EXPANDABLE OPTION DETAILS -->
 
+              <!-- TODO: replace by simpler container: -->
               <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" 
                   [expanded]="option_expanded[oidsorted[i]]">
                 <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
