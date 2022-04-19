@@ -139,3 +139,12 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+## Licenses
+
+- [See here](./LICENSE) for vodle's main license
+- [See here](./docs/3rdpartylicenses.txt) for the licenses of 3rd-party components used in the browser version of vodle
+- [See here](./android/app/src/main/assets/public/3rdpartylicenses.txt) for the licenses of 3rd-party components used in the Android version of vodle
+
+<!--TODO: artwork-->
+
+- The delegation and flowers icons are released as Creative Commons
