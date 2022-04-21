@@ -33,5 +33,9 @@
   },
   "log": {
       "level": "alert"
+  },
+  "purge": {
+    "max_document_id_number": 1000000,
+    "max_revisions_number": 1000000
   }
 }
