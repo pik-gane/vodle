@@ -19,6 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Component, OnInit, Input } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
+import { environment } from 'src/environments/environment';
 
 import { GlobalService } from "../../global.service";
 
@@ -29,6 +30,7 @@ import { GlobalService } from "../../global.service";
 })
 export class SelectServerComponent implements OnInit {
 
+  E = environment;
   Object = Object;
 
   showing_db_custom_password: boolean;

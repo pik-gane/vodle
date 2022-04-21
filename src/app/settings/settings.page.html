@@ -53,7 +53,7 @@ TODO:
             <ion-input 
               formControlName="email" 
               [placeholder]="'settings.email-placeholder'|translate"
-              type="text" inputmode="email" required
+              type="text" inputmode="email" required [maxlength]="E.max_len.name"
               [readonly]="!editing_email"
               [style]="editing_email
                     ?'pointer-events:;'
@@ -92,7 +92,7 @@ TODO:
             <ion-item lines="none">
               <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
               <ion-input 
-                formControlName="password"
+                formControlName="password" [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [readonly]="!editing_password"
                 [type]="showing_password?'text':'password'" required 
@@ -137,7 +137,7 @@ TODO:
             #input_retype_password 
             [disabled]="!editing_password"
             clearOnEdit="false" clearInput="true"
-            [type]="showing_password?'text':'password'"required 
+            [type]="showing_password?'text':'password'" required [maxlength]="E.max_len.name" 
             [style]="editing_password
               ?'pointer-events:;'
               :'pointer-events:none;font-size:smaller;'"

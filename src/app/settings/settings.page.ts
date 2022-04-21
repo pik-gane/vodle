@@ -25,6 +25,7 @@ import { IonInput, IonSelect } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
+import { environment } from 'src/environments/environment';
 
 /*
 TODO:
@@ -43,6 +44,8 @@ export class SettingsPage implements OnInit {
 
   // ATTRIBUTES:
 
+  E = environment;
+  
   // template components:
 
   @ViewChild(IonInput, { static: false }) input_retype_password: IonInput;
