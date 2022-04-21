@@ -69,7 +69,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
         </ion-label>
         <ion-textarea 
-          formControlName="option_desc"
+          formControlName="option_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
           rows="1" auto-grow type="text" 
           style="font-style: italic;">
