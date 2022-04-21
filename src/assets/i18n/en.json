@@ -449,8 +449,8 @@
         "p1-share": "This poll is about dividing some resource or budget between a number of options until <b>{{due}}.</b>",
         "p2": "Some options have already been suggested. Any participant in the poll can suggest further options at any time, until the poll closes.",
         "p3": "You can express your willingness to approve the suggested options by <i>giving them “waps”</i>. You can give each option a wap from 0 (donʼt approve) to 100 (approve for sure).",
-        "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust. In that case, that personʼs waps of these options counts for you as well. If you donʼt have the time to think about the options at all, you can also delegate all of your waps to someone else.",
-        "p5": "You can change your waps or delegations at any time until the poll closes. In fact, it often makes sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
+        "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
+        "p5": "You can use the “assist me” button to set your initial waps. You can change your waps or delegations at any time until the poll closes. It may make sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
         "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
