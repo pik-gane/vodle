@@ -17,6 +17,13 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+/*
+TODO:
+- encrypt ALL data, also email address, in local storage and pouchdbs except password, but allow for backwards compat.
+- only store password when checked
+- store emailandpasswordhash for performance
+*/
+
 import { Injectable, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';

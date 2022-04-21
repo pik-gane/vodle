@@ -20,6 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 <!--
   TODO: 
   - "fix" slider element's absolute vertical position on screen while using it, even when note above it changes height. achieve this by automatically "scrolling" to compensate such layout changes.  
+  - show "assist me" next to wand if details are expanded
 -->
 
 <!-- HEADER: -->
@@ -159,6 +160,37 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
 
+            <!-- ASSIST BUTTON: -->
+
+<!--
+      <ion-button *ngIf="delegation_status!='agreed' && running"
+          (click)="delegate_dialog($event)" 
+          shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
+        <span *ngIf="scroll_position < 70"
+          [innerHtml]="'poll.delegate-button' | translate">
+        </span><ion-button class="ion-no-margin ion-no-padding"
+            style="position: relative; right: -4px;"
+            shape="round" fill="solid" color="primary">
+          <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
+          </ion-icon>
+        </ion-button>
+      </ion-button>
+
+-->
+
+            <ion-button *ngIf="running"
+                (click)="assist_dialog()" 
+                shape="round" size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
+                style="position: relative; top: 6px; right: 10px; margin-left:20px;">
+              <span *ngIf="details_expanded" style="color:white;"
+                [innerHtml]="'poll.assist-me' | translate">
+              </span>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" 
+                  (click)="assist_dialog()" color="success">
+                <ion-icon name="color-wand-outline" slot="icon-only" 
+                  style="margin: 5px;"></ion-icon>
+              </ion-button>
+            </ion-button>
+
             <!-- CLOSING DATE, CLOSING SOON BADGE: -->
 
             <small>
@@ -183,13 +215,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </small>
             <br/>
 
-            <!-- ASSIST BUTTON: -->
-
-            <ion-button shape="round" class="ion-float-right ion-no-padding ion-no-margin" (click)="assist_dialog()" color="success" style="position: absolute; top: 6px; right: 10px;">
-              <ion-icon name="color-wand-outline" slot="icon-only" 
-                style="margin: 5px;"></ion-icon>
-            </ion-button>
-    
             <!-- STATISTICS: -->
 
             <span style="white-space: nowrap;">
@@ -206,7 +231,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                   color="light" style="position: relative; top: 3px" 
                   name="people-outline">
               </ion-icon>&nbsp;<small style="white-space: nowrap;">
-                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
+                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span class="externallink" (click)="glossary('non-abstaining')" [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
               </small><ion-button
                   class="ion-no-padding ion-no-margin" fill="clear" size="small" 
                   [routerLink]="'/inviteto/'+p.pid" >
@@ -231,7 +256,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <span style="font-size: medium" [innerHtml]="'poll.hint-abstaining-1'|translate"></span>&nbsp;<wbr/>
             <span [innerHtml]="'poll.hint-abstaining-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-abstaining-2-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-abstaining-2-after-wap'|translate"></span>
             <!-- assist link: -->
-            &nbsp;<span style="white-space: nowrap;">
+            &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
                 [innerHtml]="'poll.assist-me' | translate">
@@ -246,7 +271,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
             <span [innerHtml]="'poll.hint-only1positive-2'|translate"></span>
             <!-- assist link: -->
-            &nbsp;<span style="white-space: nowrap;">
+            &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
                 [innerHtml]="'poll.assist-me' | translate">
@@ -261,7 +286,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-before-approving'|translate"></span><wbr/><span (click)="glossary('approve')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1approved-1-approving'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-after-approving'|translate"></span>&nbsp;<wbr/>
             <span [innerHtml]="'poll.hint-only1approved-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-only1approved-2-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-only1approved-2-after-wap'|translate"></span>
             <!-- assist link: -->
-            &nbsp;<span style="white-space: nowrap;">
+            &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
                 [innerHtml]="'poll.assist-me' | translate">
@@ -576,6 +601,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                             x="100%" width="0%" y="8" height="18" 
                             fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
                           <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
+                          <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="1 1" />
                           <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
                         </svg>
                       </div>

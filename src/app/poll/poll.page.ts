@@ -119,7 +119,7 @@ export class PollPage implements OnInit {
     window.addEventListener('offline', f);
     window.addEventListener('online', f);
     // get gui state:
-    const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page")) || {};
+    const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page") || "{}");
     this.details_expanded = (specs['details_expanded'] != false);
     this.incoming_delegation_expanded = (specs['incoming_delegation_expanded'] == true);
     this.option_expanded = specs['option_expanded'] || {};

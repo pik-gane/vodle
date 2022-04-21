@@ -30,5 +30,8 @@
     "max_document_size": 100000,
     "users_db_security_editable": true,
     "delayed_commits": true
+  },
+  "log": {
+      "level": "alert"
   }
 }

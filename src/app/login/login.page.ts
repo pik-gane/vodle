@@ -19,9 +19,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { IonInput } from '@ionic/angular';
+import { IonButton, IonInput } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 
@@ -66,11 +66,13 @@ export class LoginPage implements OnInit {
   advanced_expanded: boolean;
   terms_expanded = false;
   accept_cookies = false;
-
+  save_password = false;
+  
   @ViewChild('input_email', { static: false }) input_email: IonInput;
   @ViewChild('input_new_password', { static: false }) input_new_password: IonInput;
   @ViewChild('input_retype_password', { static: false }) input_retype_password: IonInput;
   @ViewChild('input_old_password', { static: false }) input_old_password: IonInput;
+  @ViewChild('dismiss_button', { static: false }) dismiss_button: IonButton;
 
   // LIFECYCLE:
 
@@ -130,17 +132,11 @@ export class LoginPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("LoginPage.ionViewWillEnter");
     this.G.D.page = this;
-    setTimeout(() => {
-      var el = this.input_email||this.input_new_password||this.input_old_password;
-      if (el) {
-        el.setFocus();
-      }
-    }, 300);
   }
 
   ionViewDidEnter() {
     this.G.L.entry("LoginPage.ionViewDidEnter");
-    var default_lang = navigator.language.slice(0,2);
+    const default_lang = navigator.language.slice(0,2);
     this.languageFormGroup.get('language').setValue(
       this.G.S.language||((this.translate.langs.includes(default_lang))?default_lang:''));
     // browser might have prefilled fields, so check this:
@@ -149,7 +145,19 @@ export class LoginPage implements OnInit {
     this.set_password();
     this.set_old_password();
     if (this.G.D.ready && !this.ready) this.onDataReady();
+    setTimeout(() => {
+      const el = this.input_email||this.input_new_password||this.input_old_password;
+      if (el) {
+        el.setFocus();
+      } else {
+        const el = document.getElementById("dismiss_button");
+        if (el) {
+          el.focus();
+        }
+      }
+    }, 300);
   }
+
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
@@ -195,8 +203,10 @@ export class LoginPage implements OnInit {
   }
 
   submit_language() {
-    this.G.go_fullscreen_on_mobile();
-    this.router.navigate(['/login/used_before/'+this.then_url]);
+    if (this.languageFormGroup.valid) {
+      this.G.go_fullscreen_on_mobile();
+      this.router.navigate(['/login/used_before/'+this.then_url]);  
+    }
   }
 
   ask_used_before_no() {
@@ -210,7 +220,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_email() {
-    if (this.emailFormGroup.get('email').valid) {
+    if (this.emailFormGroup.get('email').valid && this.accept_cookies) {
       if (this.step == 'fresh_email') {
         this.router.navigate(['/login/fresh_password/'+this.then_url]);
       } else {

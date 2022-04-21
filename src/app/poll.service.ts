@@ -466,7 +466,7 @@ export class Poll {
     /** whether or not I'm currently abstaining */
     if (!!this.T.votes_map) {
       const myvote = this.T.votes_map.get(this.myvid);
-      return !myvote || myvote == "";
+      return myvote === undefined;
     } else {
       return false;
     }
@@ -1555,7 +1555,7 @@ export class Poll {
   }
 
   update_vote(vid: string, oids_descending: Array<string>): boolean {
-    let vote = "", vote_changed = false;
+    let vote = undefined, vote_changed = false;
     for (const oid of oids_descending) {
       if ((this.T.approvals_map.get(oid)||new Map()).get(vid)) {
         vote = oid;

@@ -377,6 +377,8 @@
 
         "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the colourful <b>sliders</b>.<!-- You can let vodle help you in this by clicking on “Assist me”.--></p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>In the beginning, all your waps are zero and the sliders are red knobs. A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option. The slider is green then.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.",
 
+        "non-abstaining": "This is the number of participants who have given <b>at least one option a positive wap</b>. Participants who give all options a zero wap are abstaining and excert no influence on the result.",
+
         "approve": "<p><b>Whether you approve an option depends on your wap and all other participantsʼ waps.</b></p><p>If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p><p>How many participants currently approve is shown by the light bar coming in from the right. If you want to know how the current approval comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p>",
 
         "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>"
@@ -470,6 +472,8 @@
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
+        "store-password": "Store my password between sessions.",
+        "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
 
         "ready-to-start": "OK, have fun with vodle!",
         "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out.",
@@ -480,7 +484,7 @@
     "logout": {
         "-page-title": "Log out",
         "confirm-header": "Really log out?",
-        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device. Please be sure to remember the email address and password you are using with vodle before logging out.",
+        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device. Please be sure to remember the email address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
         "failed": "Could not log out for some reason"
     },
@@ -545,7 +549,7 @@
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
         "hint-abstaining-2-wap": "wap",
-        "hint-abstaining-2-after-wap": " (drag the red knob right), or delegate your waps to someone you trust.",
+        "hint-abstaining-2-after-wap": " <b>(drag the red knob right)</b>, or delegate your waps to someone you trust.",
 
         "hint-only1positive-1-before-wap": "You are giving only one option a positive ",
         "hint-only1positive-1-wap": "wap",

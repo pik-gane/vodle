@@ -372,6 +372,8 @@
 
         "wap": "<p>In vodle stimmst Du ab, indem Du jeder Option ein <b>Wap</b> gibst. Das ist eine Zahl <b>zwischen 0 und 100</b>. Du kannst Sie mit den farbigen <b>Schiebereglern</b> einstellen. vodle kann Dir dabei helfen, dafür ist der grüne Zauberstab.</p><p>Ein Wap ist keine Bewertung im üblichen Sinn! Stattdessen gibt es an, unter welchen Bedingungen Du der Option <b>zustimmst</b>.</p><p>Am Anfang sind alle Deine Waps Null und die Schieberegler sind rote Knöpfe. Ein Wap von <b>Null</b> bedeutet, dass Du der Option <b>auf keinen Fall</b> zustimmst.</p><p>Wenn Du den Regler ganz nach rechts schiebst, gibst Du ein Wap von <b>100</b>. Das bedeutet, dass Du der Option <b>auf jeden Fall</b> zustimmst. Der Schieberegler ist dann grün.</p><p>Du kannst auch ein Wap <b>zwischen 1 und 99</b> einstellen. Dann stimmst Du der Option nur zu, wenn <b>genügend andere</b> auch zustimmen. Je weiter rechts der Regler, desto eher stimmst Du zu. Wenn Du z.B. ein Wap von 30 einstellst, stimmst Du zu, wenn mehr als 70% aller Teilnehmer:innen zustimmen. Wenn Du ein Wap von <b><i>X</i></b> einstellst, stimmst Du zu, wenn mehr als <b>100% minus <i>X</i></b> zustimmen.</p>",
 
+        "non-abstaining": "DIes ist die Anzahl an Teilnehmer:innen, die <b>mindestens einer Option ein positives Wap</b> gegeben haben. Teilnehmer:innen, die allen Optionen ein Wap von Null geben, enthalten sich und üben keinen Einfluss auf das Ergebnis aus.",
+
         "approve": "<p><b>Ob Du einer Option zustimmst, hängt von Deinem Wap und den Waps aller anderen Teilnehmer:innen ab.</b></p><p>Wenn z.B. mehr als 70% der Teilnehmer:innen der Option ein Wap von 30 oder mehr angeben, stimmen diese Teilnehmer:innen alle der Option zu. Wenn mehr als <i>X%</i> ein Wap von 100 minus <i>X</i> oder mehr angeben, stimmen sie alle zu.</p><p>Wie viele Teilnehmer:innen gerade zustimmen, zeigt der helle Zustimmungs-Balken, der von rechts kommt. Wenn Du wissen willst, wie die momentane Zustimmung zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p><p>Ob Du selbst einer Option momentan zustimmst, kannst Du an der Farbe Deines Wap-Reglers sehen. Ragt der Regler in den Balken, ist er grün und Du stimmst zu.</p><p>Wenn keines Deiner Waps in einen Balken ragt, dann stimmst Du der Option mit dem größten Wap zu. So stimmst Du immer mindestens einer Option zu. Häufig stimmt man seiner Lieblingsoption und einer oder mehreren weiteren akzeptablen Optionen zu.</p>",
 
         "share": "<p>Jede Option bekommt einen <b>Anteil</b> in Prozent. Alle Anteile zusammen ergeben 100%.</p><p>Wenn es bei der Abstimmung um die Verteilung eines Budgets oder einer Ressource geht, bekommt am Ende jede Option ihren Anteil davon. Wenn bei der Abstimmung stattdessen eine einzige Option gewählt werden soll, dann bestimmt der Anteil, mit welcher <b>Wahrscheinlichkeit</b> die Option am Ende gewinnt.</p><p>Die Anteile werden aus den Zustimmungs-Werten berechnet: Die Option, die am höchsten gelistet ist, bekommt einen Anteil, der genau so groß ist wie ihre Zustimmung. (Wenn alle ihr zustimmen, gewinnt sie also mit Sicherheit oder bekommt das gesamte Budget.) Die anderen Optionen bekommen kleinere Anteile oder nichts. Optionen ohne Zustimmung bekommen keinen Anteil.</p><p>Die genaue Formel ist: Der Anteil einer Option entspricht dem Prozentsatz an Teilnehmer:innen, die dieser Option aber keiner höher gelisteten Option zustimmen. Anders gesagt: „Dein“ Anteil geht immer an eine Option, der Du zustimmst, und zwar an die mit der größten Gesamt-Zustimmung.</p><p>Wenn Du wissen willst, wie der momentane Anteil zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p>"
@@ -477,7 +479,7 @@
     "logout": {
         "-page-title": "Abmelden",
         "confirm-header": "Wirklich abmelden?",
-        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht. Bitte versichere Dich, dass Du die Email-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest.",
+        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht. Bitte versichere Dich, dass Du die Email-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest. Wenn Du sie vergisst, können sie nicht wiederhergestellt werden, da wir sie nirgendwo speichern.",
         "confirm-button": "Ja, abmelden",
         "failed": "Abmelden fehlgeschlagen"
     },
@@ -542,7 +544,7 @@
         "hint-abstaining-1": "Du enthältst Dich momentan.",
         "hint-abstaining-2-before-wap": "Du solltest wenigstens Deiner Lieblingsoption ein positives ",
         "hint-abstaining-2-wap": "Wap",
-        "hint-abstaining-2-after-wap": " geben (den roten Knopf nach rechts schieben) oder Deine Waps an jemand delegieren.",
+        "hint-abstaining-2-after-wap": " geben <b>(den roten Knopf nach rechts schieben)</b> oder Deine Waps an jemand delegieren.",
 
         "hint-only1positive-1-before-wap": "Du gibts momentan nur einer Option ein positives ",
         "hint-only1positive-1-wap": "Wap",

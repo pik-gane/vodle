@@ -17,6 +17,11 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
 
+<!--
+TODO:
+- checkbox "store password" with caution
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -237,6 +242,10 @@ TODO:
           </ng-container>
         </div>
       </form>    
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+        <ion-label [innerHtml]="'login.store-password'|translate"></ion-label>
+      </ion-item>
       <ion-item lines="none">
         <p><br/><br/></p>
       </ion-item>
@@ -288,8 +297,12 @@ TODO:
           </div>
         </div>
       </form>    
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+        <ion-label [innerHtml]="'login.store-password'|translate"></ion-label>
+      </ion-item>
       <ion-item lines="none">
-        <p><br/><br/><br/></p>
+        <p><br/><br/></p>
       </ion-item>
       <ion-item lines="none">
         <ion-button size="larger" color="primary" slot="end" [disabled]="!oldPasswordFormGroup.valid" 
@@ -311,15 +324,17 @@ TODO:
       <ion-item lines="none">
         <p><br/><br/><br/></p>
       </ion-item>
-      <ion-item lines="none">
-        <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
-        <ion-button size="larger" color="primary" slot="end"
-            shape="round" type="submit"
-            (click)="connected_dismissed()">
-          <span [innerHtml]="'start'|translate"></span>
-          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
+      <form>
+        <ion-item lines="none">
+          <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
+          <ion-button size="larger" color="primary" slot="end"
+              shape="round" type="submit" id="dismiss_button" 
+              (click)="connected_dismissed()">
+            <span [innerHtml]="'start'|translate"></span>
+            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </form>
       <ion-item *ngIf="terms_expanded">
       </ion-item>
     </ng-container>
