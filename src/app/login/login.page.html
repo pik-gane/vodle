@@ -141,7 +141,7 @@ TODO:
               <ion-item>
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input #input_email
-                  formControlName="email" 
+                  formControlName="email" [maxlength]="E.max_len.name"
                   type="text" inputmode="email" required autofocus="true"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
@@ -193,7 +193,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 <ion-input #input_new_password
                   formControlName="password"
-                  clearOnEdit="false" clearInput="true"
+                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   (ionChange)="set_password()" debounce="100"
@@ -222,7 +222,7 @@ TODO:
               <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
               <ion-input 
                 formControlName="confirm_password" 
-                #input_retype_password 
+                #input_retype_password  [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [type]="showing_password?'text':'password'" required
                 autocomplete="off" autocorrect="off"
@@ -273,7 +273,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 <ion-input #input_old_password
                   formControlName="password"
-                  clearOnEdit="false" clearInput="true"
+                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   (ionChange)="set_old_password()" debounce="100"

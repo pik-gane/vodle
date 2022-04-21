@@ -30,6 +30,7 @@ import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-delegation-dialog',
@@ -38,6 +39,8 @@ import { del_agreement_t, del_request_t } from '../data.service';
 })
 export class DelegationDialogPage implements OnInit {
 
+  E = environment;
+  
   @Input() parent: PollPage;
 
   ready = false;

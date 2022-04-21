@@ -47,7 +47,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [placeholder]="(p.type == 'winner' 
                           ? 'draftpoll.option-name-placeholder' 
                           : 'draftpoll.target-name-placeholder') | translate"
-          type="text" required 
+          type="text" required [maxlength]="E.max_len.name" 
           style="font-weight: bold; font-style: italic;">
         </ion-input>      
       </ion-item>
@@ -95,7 +95,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ion-input 
           formControlName="option_url" 
           [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          type="text"
+          type="text" inputmode="url" [maxlength]="E.max_len.url"
           style="font-size: smaller;">
         </ion-input>
         <ion-button 

@@ -29,7 +29,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 <ion-content *ngIf="ready && (p!=null)">
   <ion-list lines="full">
     <ion-item color="warning">
-      <ion-col class="ion-no-padding ion-no-margin" [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></ion-col>
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></p>
+      </ion-col>
     </ion-item>
 <!--
     <ion-item (click)="details_expanded=!details_expanded">

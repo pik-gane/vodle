@@ -54,5 +54,11 @@ export const environment = {
     grace_period_1_ms: 2000,
     grace_period_2_ms: 2000,
     grace_period_3_ms: 2000
+  },
+  max_len: {
+    title: 200,
+    name: 100,
+    desc: 1000,
+    url: 200
   }
 };

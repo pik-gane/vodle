@@ -37,6 +37,7 @@ import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';
 import { GlobalService } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
+import { environment } from 'src/environments/environment';
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
@@ -51,6 +52,8 @@ function is_forward_key(ev: KeyboardEvent) {
 })
 export class DraftpollPage implements OnInit {
 
+  E = environment;
+  
   // page template elements:
   
   @ViewChild(IonSelect, { static: false, read: ElementRef }) type_select_ref: ElementRef;

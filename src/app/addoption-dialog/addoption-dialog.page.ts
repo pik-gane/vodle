@@ -27,7 +27,7 @@ import { Capacitor } from '@capacitor/core';
 //import { Share } from '@capacitor/share';
 //import { LocalNotifications } from '@capacitor/local-notifications';
 
-//import { environment } from '../../environments/environment';
+import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll, Option } from '../poll.service';
@@ -39,6 +39,8 @@ import { Poll, Option } from '../poll.service';
 })
 export class AddoptionDialogPage implements OnInit {
 
+  E = environment;
+  
   @Input() parent: PollPage;
 
   ready = false;

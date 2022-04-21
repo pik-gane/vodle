@@ -24,6 +24,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { IonButton, IonInput } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
+import { environment } from 'src/environments/environment';
 
 /*
 - if no conn. info in local db:
@@ -51,6 +52,7 @@ import { GlobalService } from "../global.service";
 })
 export class LoginPage implements OnInit {
 
+  E = environment;
   window = window;
   
   // ATTRIBUTES:
@@ -157,7 +159,6 @@ export class LoginPage implements OnInit {
       }
     }, 300);
   }
-
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
