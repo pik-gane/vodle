@@ -180,11 +180,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
             <ion-button *ngIf="running"
                 (click)="assist_dialog()" 
-                shape="round" size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
-                style="position: relative; top: 6px; right: 10px; margin-left:20px;">
-              <span *ngIf="details_expanded" style="color:white;"
+                size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
+                style="position: relative; top: 5px; right: 10px; margin-left:20px;">
+              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right;"
                 [innerHtml]="'poll.assist-me' | translate">
-              </span>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" 
+              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" 
                   (click)="assist_dialog()" color="success">
                 <ion-icon name="color-wand-outline" slot="icon-only" 
                   style="margin: 5px;"></ion-icon>
