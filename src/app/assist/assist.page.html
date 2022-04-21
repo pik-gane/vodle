@@ -221,7 +221,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ng-container *ngIf="P.oidsorted[i] != favourite">
           <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
           <ion-buttons slot="end">
-            <ion-input inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" [(ngModel)]="estimates[P.oidsorted[i]]" step="5" (ngModelChange)="estimate_change()"></ion-input>&nbsp;%
+            <ion-input 
+              inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
+              [(ngModel)]="estimates[P.oidsorted[i]]" 
+              debounce="100" (ngModelChange)="estimate_change()"
+            ></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
       </ion-item>  
@@ -290,8 +294,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <span [innerHtml]="'assist.thresholds-question-2'|translate"></span>
       </p>
       <ion-buttons slot="end">
-        <ion-input inputmode="numeric" maxlength="3" size="3" type="number" [min]="estimates[thresholded_oids[current_index]]" max="100" step="5" 
-          [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()">
+        <ion-input 
+          inputmode="numeric" maxlength="3" size="3" type="number" 
+          [min]="estimates[thresholded_oids[current_index]]" max="100" step="5" 
+          [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()"
+          debounce="100">
         </ion-input>&nbsp;%
       </ion-buttons>
     </ion-item>
