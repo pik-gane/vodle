@@ -449,7 +449,7 @@
 
     "joinpoll": {
         "-page-title": "Join a poll",
-        "fetching": "Just a moment please, Iʼm fetching this pollʼs data... (Since I'm still a test version, this may take a minute. If after a minute nothing shows, please reload this page. If it then takes again more than one minute, please log out and in again via the menu on the top left.)",
+        "fetching": "Just a moment please, Iʼm fetching this pollʼs data...<br/><br/>(Since I'm still a test version, this may take a minute. If after a minute nothing shows, please reload this page. If it then takes again more than one minute, please log out and in again via the menu on the top left.)<br/><br/>",
         "initializing": "Just a moment please, Iʼm initializing the poll...",
         "header": "Welcome to the interactive poll<br/><i>“{{poll_title}}”!</i>",
         "p1-winner": "This poll is about deciding between a number of options until <b>{{due}}.</b> In the end, exactly one option will win.",
@@ -457,7 +457,7 @@
         "p2": "Some options have already been suggested. Any participant in the poll can suggest further options at any time, until the poll ends.",
         "p3": "You can express your willingness to approve the suggested options by <i>giving them “waps”</i>. You can give each option a wap from 0 (donʼt approve) to 100 (approve for sure).",
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
-        "p5": "You can use the “assist me” button to set your initial waps. You can change your waps or delegations at any time until the poll ends. It may make sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
+        "p5": "You can use the “assist me” button to set your initial waps. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. It may make sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
         "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
@@ -619,6 +619,10 @@
         "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will"
+    },
+
+    "privacy": {
+        "-page-title": "Privacy"
     },
 
     "select-server": {

@@ -1,0 +1,38 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<!-- TODO: add powered by ionic icon -->
+
+<ion-header>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title [innerHtml]="'privacy.-page-title'|translate"></ion-title>
+    <ion-thumbnail slot="end">
+        <ion-img src="./assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <iframe width="100%" height="100%" frameBorder="0"
+    [src]="E.privacy_statement_url|safe">
+  </iframe>
+</ion-content>

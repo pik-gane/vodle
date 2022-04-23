@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 export const environment = {
   production: true,
-  privacy_statement_url: "./assets/datenschutz.html",
+  privacy_statement_url: "http://privacy.vodle.it",
   logging: {
     logLevels: [
       {

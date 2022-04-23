@@ -48,6 +48,11 @@ export class AppComponent {
       icon: 'information-circle'
     },
     {
+      title: 'privacy.-page-title',
+      url: '/privacy',
+      icon: 'shield-checkmark-outline'
+    },
+    {
       title: 'logout.-page-title',
       url: '/logout',
       icon: 'log-out-outline'
