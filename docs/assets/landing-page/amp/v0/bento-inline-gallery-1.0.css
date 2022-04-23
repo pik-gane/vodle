@@ -1,0 +1,2 @@
+bento-inline-gallery,bento-inline-gallery-pagination,bento-inline-gallery-thumbnails{display:block}bento-inline-gallery{contain:layout}bento-inline-gallery-pagination,bento-inline-gallery-thumbnails{overflow:hidden;position:relative}bento-inline-gallery-pagination:not(.i-amphtml-built)>:not([placeholder]):not([slot=i-amphtml-svc]),bento-inline-gallery-thumbnails:not(.i-amphtml-built)>:not([placeholder]):not([slot=i-amphtml-svc]){display:none;content-visibility:hidden}
+/*# sourceURL=/src/bento/components/bento-inline-gallery/1.0/bento-inline-gallery.css*/
