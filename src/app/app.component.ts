@@ -40,7 +40,7 @@ export class AppComponent {
     {
       title: 'help.-page-title',
       url: '/help',
-      icon: 'help'
+      icon: 'help-circle'
     },
     {
       title: 'about.-page-title',
