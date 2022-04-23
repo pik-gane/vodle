@@ -1,5 +1,24 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+/*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
+import { Component, OnInit, Input, ViewChild } from '@angular/core';
+import { ModalController, IonContent } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from '../../environments/environment';
@@ -14,11 +33,13 @@ import { PollPage } from '../poll/poll.module';
 export class AssistPage implements OnInit {
 
   @Input() P: PollPage;
+  @ViewChild(IonContent, { static: false }) content: IonContent;
 
   Array = Array;
   Math = Math;
   Object = Object;
   window = window;
+  document = document;
   environment = environment;
   JSON = JSON;
 
@@ -59,6 +80,7 @@ export class AssistPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("AssistPage.ionViewDidEnter");
+    this.onScroll();
   }
 
   onDataReady() {
@@ -87,6 +109,7 @@ export class AssistPage implements OnInit {
 
   close() {
     this.modalController.dismiss();
+    this.P.update_order();
   }
 
   back() {
@@ -244,10 +267,34 @@ export class AssistPage implements OnInit {
 
   // deal with scrolling:
 
-  scroll_position = 0;
+  show_up = false;
+  show_down = false;
 
-  async onScroll(ev) {
+  async onScroll() {
     /** find scroll position to be able to react to it */  
-    this.scroll_position = ev.detail.scrollTop;  
+    const elem = this.content;
+  
+    // the ion content has its own associated scrollElement
+    const scrollElement = await (elem as any).getScrollElement();
+    const totalContentHeight = scrollElement.scrollHeight;
+    const viewportHeight = scrollElement.offsetHeight;
+    const scrollPosition = scrollElement.scrollTop;
+    if (totalContentHeight > viewportHeight) {
+      const rel_scroll_position = scrollPosition / (totalContentHeight - viewportHeight);    
+      this.show_down = rel_scroll_position < 1;
+      this.show_up = rel_scroll_position > 0;
+    } else {
+      this.show_down = this.show_up = false;
+    }
   }
+
+  async scroll_to_top() {
+    const scrollElement = await (this.content as any).getScrollElement();
+    scrollElement.scrollTo(0, 0);
+  }
+  async scroll_to_bottom() {
+    const scrollElement = await (this.content as any).getScrollElement();
+    scrollElement.scrollTo(0, scrollElement.scrollHeight);
+  }
+
 }

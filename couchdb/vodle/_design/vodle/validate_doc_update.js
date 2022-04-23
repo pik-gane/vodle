@@ -1,5 +1,6 @@
 function (newDoc, savedDoc, userCtx) {
     if (!(userCtx.name == "admin")) {
+        // restrict what others than "admin" can do:
         const userprefix = "~vodle.user.", pollprefix = "~vodle.poll.";
         let _id = newDoc._id;
         if (_id.startsWith(userprefix)) {
@@ -23,23 +24,6 @@ function (newDoc, savedDoc, userCtx) {
                 }
             } else {
                 // it's a poll doc.
-                /*
-                // is it the combi doc due+state?
-                if (_id.endsWith("due_and_state")) {
-                    // yes, so make sure due is not changed and state is changed in accordance to due:
-                    if (savedDoc && (newDoc.due != savedDoc.due)) {
-                        throw ({forbidden: 'Noone may update or delete due dates.'})
-                    } else if ((newDoc.due||'') != '') {
-                        let now = new Date();
-                        let due = new Date(newDoc.due);
-                        if (newDoc.state != 'closed' && now > due) {
-                            throw ({forbidden: 'Attempt to set state to not closed after due date.'})
-                        } else if (newDoc.state == 'closed' && now < due) {
-                            throw ({forbidden: 'Attempt to set state to closed before due date.'})
-                        }
-                    }
-                }
-                */
                 if (_id.endsWith(".state")) {
                     // It's a state doc. Make sure state is changed in accordance to due:
                     if ((newDoc.due||'') != '') {
@@ -70,6 +54,9 @@ function (newDoc, savedDoc, userCtx) {
                     }
                 }
             }
+        } else {
+            // it's not a vodle doc, so reject:
+            throw ({forbidden: 'Attempt to write non-vodle document.'})
         }
     }
 }

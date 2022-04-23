@@ -1,5 +1,25 @@
 /*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
+/*
 TODO:
+- fix next field not showing in android app
 - fix wrong option_stage when returning, make "skip" button work properly
 - make tab key autofocus work properly
 */
@@ -17,6 +37,7 @@ import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';
 import { GlobalService } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
+import { environment } from 'src/environments/environment';
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
@@ -31,6 +52,8 @@ function is_forward_key(ev: KeyboardEvent) {
 })
 export class DraftpollPage implements OnInit {
 
+  E = environment;
+  
   // page template elements:
   
   @ViewChild(IonSelect, { static: false, read: ElementRef }) type_select_ref: ElementRef;
@@ -691,7 +714,7 @@ export class DraftpollPage implements OnInit {
       poll_desc: new FormControl(''),
       poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
       poll_due_type: new FormControl('', Validators.required),
-      poll_due_custom: new FormControl('', this.is_in_future.bind(this)),
+      poll_due_custom: new FormControl('', this.allowed_date.bind(this)),
     });
     this.G.P.update_ref_date();
   }
@@ -777,15 +800,27 @@ export class DraftpollPage implements OnInit {
 
   now() { return new Date(); }
 
-  private is_in_future(control: AbstractControl): ValidationErrors | null {
+  private allowed_date(control: AbstractControl): ValidationErrors | null {
     if (control && control.value) {
-      let controlValue = new Date(control.value);
-      if (this.G.P.ref_date >= controlValue)
+      const value = new Date(control.value);
+      // check whether in past:
+      if (this.G.P.ref_date >= value)
       {
           return {past: true};
       }
+      // check whether too far in future:
+      if (this.get_max_due() < value)
+      {
+          return {too_late: true};
+      }
       return null;
     }
+  }
+
+  get_max_due() {
+    const last = new Date(this.G.P.ref_date.valueOf());
+    last.setDate(last.getDate() + this.E.polls.max_duration_days);
+    return last;
   }
 
   // CONSTANTS:

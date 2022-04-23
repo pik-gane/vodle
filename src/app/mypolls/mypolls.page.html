@@ -1,3 +1,27 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<!--
+TODO:
+- after logging back in, we see wrong "abstaining" badges
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -98,14 +122,23 @@
 
           <!-- Badges: -->
 
-          <ion-badge *ngIf="!p.have_seen" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          <ion-badge *ngIf="p.is_closing_soon" size="small" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
-          <ion-badge *ngIf="p.have_seen && p.am_abstaining" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
-          <ion-badge *ngIf="p.have_delegated" class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+          <div style="display: flex; flex-direction: column;">
+          <div *ngIf="!p.have_seen" style="display: flex;flex-direction: row-reverse;">
+            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+          </div>
+          <div *ngIf="p.is_closing_soon" style="display: flex;flex-direction: row-reverse;">
+            <ion-badge size="small" class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+          </div>
+          <div *ngIf="p.have_seen && p.am_abstaining" style="display: flex;flex-direction: row-reverse;">
+            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
+          </div>
+          <div *ngIf="p.have_delegated" style="display: flex;flex-direction: row-reverse;">
+            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+          </div>
 
 <!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
 -->
-
+</div>
           <!-- Invite-to button: -->
 
           <ion-button *ngIf="can_invite(p)" fill="clear" 

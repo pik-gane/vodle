@@ -1,4 +1,23 @@
 /*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
+/*
  * App Global CSS
  * ----------------------------------------------------------------------------
  * Put style rules here that you want to apply globally. These styles are for
@@ -217,6 +236,7 @@ a, a:link, a:visited, a:hover, a:active, .externallink {
     position: absolute;
     bottom: 20px!important;
     height: 600px!important;
+    left: 20px!important;
     width: auto!important;
 }
 

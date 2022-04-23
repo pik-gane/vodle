@@ -1,3 +1,22 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -80,7 +99,7 @@
         </ion-label>
         <ion-input  
           id="input_poll_title"
-          formControlName="poll_title" 
+          formControlName="poll_title" [maxlength]="E.max_len.title"
           [placeholder]="'draftpoll.title-placeholder'|translate"
           tabindex="0" type="text" required inputmode="text"
           style="font-weight: bold; font-style: italic; font-size: larger;"
@@ -111,7 +130,7 @@
         <!--TODO: textarea too large (mostly white) in Firefox when desc is long -->
         <ion-textarea 
           id="input_poll_desc"
-          formControlName="poll_desc" 
+          formControlName="poll_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.desc-placeholder'|translate"
           autofocus tabindex="0" rows="1" auto-grow type="text" inputmode="text" 
           style="font-style: italic;"
@@ -146,9 +165,10 @@
         </ion-label>
         <ion-input 
           id="input_poll_url"
-          formControlName="poll_url" clearInput="true"
+          formControlName="poll_url"
           [placeholder]="'draftpoll.url-placeholder'|translate"
-          tabindex="0" type="text" inputmode="url" style="font-size:smaller;word-wrap:normal;"
+          tabindex="0" type="text" inputmode="url" [maxlength]="E.max_len.url"
+          style="font-size:smaller;word-wrap:normal;"
           (ionChange)="set_poll_url()" debounce="100"
           (keydown)="poll_url_onKeydown($event)"
           (ionBlur)="blur_poll_url()">
@@ -162,8 +182,8 @@
             *ngIf="formGroup.get('poll_url').valid && ![null,''].includes(formGroup.get('poll_url').value)" 
             tabindex="-1" fill="clear" slot="end" class="skip-button" 
             (click)="G.open_url_in_new_tab(formGroup.get('poll_url').value)">
-          <ion-icon name="open-outline"></ion-icon>&nbsp;
-          <span [innerHtml]="'test'|translate"></span>
+          <span [innerHtml]="'test'|translate"></span>&nbsp;
+          <ion-icon name="open-outline"></ion-icon>
         </ion-button>
       </ion-item>
       <div class="validation-errors">
@@ -222,6 +242,7 @@
             pickerFormat="DD MMM YY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
             [min]="G.P.ref_date.toISOString()"
+            [max]="get_max_due().toISOString()"
             (ionClick)="G.P.update_ref_date();"
             (ionChange)="set_poll_due_custom();changed_poll_due_custom()"
             [dayNames]="'daynames-sunday-to-saturday'|translate"
@@ -306,7 +327,7 @@
             [placeholder]="(formGroup.get('poll_type').value == 'winner' 
                             ? 'draftpoll.option-name-placeholder' 
                             : 'draftpoll.target-name-placeholder') | translate"
-            type="text" required tabindex="0" 
+            type="text" required tabindex="0" [maxlength]="E.max_len.name"
             style="font-weight: bold; font-style: italic;"
             (ionChange)="set_option_name(i)" debounce="100"
             (keydown)="option_name_onKeydown($event, i, show_details)"
@@ -347,7 +368,7 @@
               [id]="'input_option_desc'+i"
               [formControlName]="'option_desc'+i" tabindex="0" 
               [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
-              rows="1" auto-grow type="text" 
+              rows="1" auto-grow type="text" [maxlength]="E.max_len.desc"
               style="font-style: italic;"
               (ionChange)="set_option_desc(i)" debounce="100"
               (keydown)="option_desc_onKeydown($event, i)"
@@ -382,7 +403,7 @@
               [id]="'input_option_url'+i"
               [formControlName]="'option_url'+i" 
               [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
-              type="text"  tabindex="0"  clearInput="true"
+              type="text" inputmode="url" tabindex="0" [maxlength]="E.max_len.url"
               style="font-size: smaller;"
               (ionChange)="set_option_url(i)" debounce="100"
               (keydown)="option_url_onKeydown($event, i)"
@@ -397,8 +418,8 @@
                 *ngIf="formGroup.get('option_url'+i).valid && ![null,''].includes(formGroup.get('option_url'+i).value)" 
                 fill="clear" slot="end" class="skip-button" tabindex="-1" 
                 (click)="G.open_url_in_new_tab(formGroup.get('option_url'+i).value)">
-              <ion-icon name="open-outline"></ion-icon>&nbsp;
-              <span [innerHtml]="'test'|translate"></span>
+              <span [innerHtml]="'test'|translate"></span>&nbsp;
+              <ion-icon name="open-outline"></ion-icon>
             </ion-button>
           </ion-item>
           <div class="validation-errors">

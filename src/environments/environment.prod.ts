@@ -1,5 +1,25 @@
+/*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
 export const environment = {
   production: true,
+  privacy_statement_url: "http://privacy.vodle.it",
   logging: {
     logLevels: [
       {
@@ -35,5 +55,14 @@ export const environment = {
     grace_period_1_ms: 2000,
     grace_period_2_ms: 2000,
     grace_period_3_ms: 2000
+  },
+  max_len: {
+    title: 200,
+    name: 100,
+    desc: 1000,
+    url: 200
+  },
+  polls: {
+    max_duration_days: 31,
   }
 };

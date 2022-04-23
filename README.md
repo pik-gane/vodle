@@ -139,3 +139,15 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+## Licenses
+
+- [See here](./LICENSE) for vodle's main license
+- [See here](./docs/3rdpartylicenses.txt) for the licenses of 3rd-party components used
+
+<!--TODO: artwork-->
+
+- The AMP runtime used in the landing page is licensed under the CC-BY-4.0 lincense
+- The used google fonts Quicksand and Comfortaa are lincensed under the [Open Font License](https://scripts.sil.org/OFL) 
+- The delegation and flowers icons are also lincensed under CC-BY lincenses
+- The outstretched arms background image is modified from https://pixabay.com/vectors/businessman-silhouette-2873115/ which has a Pixabay license https://pixabay.com/service/license/
+
