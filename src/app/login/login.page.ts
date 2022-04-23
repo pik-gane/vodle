@@ -107,7 +107,7 @@ export class LoginPage implements OnInit {
     });
     this.emailFormGroup = this.formBuilder.group({
       email: new FormControl('', Validators.compose([
-//        Validators.required, 
+//        Validators.required,  // TODO: uncomment once the problem is solved that the privacy link does not work properly when field left empty
         Validators.email
       ])),
     });
