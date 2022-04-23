@@ -658,7 +658,7 @@
         "poll-title-required": "Poll title is required.",
         "poll-url-valid": "Please enter a valid URL.",
         "poll-due-type-required": "Please select.",
-        "poll-due-future": "This date and time is in the past.",
+        "poll-due-future": "This date and time is in the past or too far in the future.",
         "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
         "option-url-valid": "Please enter a valid URL."

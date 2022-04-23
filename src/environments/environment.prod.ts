@@ -61,5 +61,8 @@ export const environment = {
     name: 100,
     desc: 1000,
     url: 200
+  },
+  polls: {
+    max_duration_days: 31,
   }
 };

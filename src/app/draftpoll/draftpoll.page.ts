@@ -714,7 +714,7 @@ export class DraftpollPage implements OnInit {
       poll_desc: new FormControl(''),
       poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
       poll_due_type: new FormControl('', Validators.required),
-      poll_due_custom: new FormControl('', this.is_in_future.bind(this)),
+      poll_due_custom: new FormControl('', this.allowed_date.bind(this)),
     });
     this.G.P.update_ref_date();
   }
@@ -800,15 +800,27 @@ export class DraftpollPage implements OnInit {
 
   now() { return new Date(); }
 
-  private is_in_future(control: AbstractControl): ValidationErrors | null {
+  private allowed_date(control: AbstractControl): ValidationErrors | null {
     if (control && control.value) {
-      let controlValue = new Date(control.value);
-      if (this.G.P.ref_date >= controlValue)
+      const value = new Date(control.value);
+      // check whether in past:
+      if (this.G.P.ref_date >= value)
       {
           return {past: true};
       }
+      // check whether too far in future:
+      if (this.get_max_due() < value)
+      {
+          return {too_late: true};
+      }
       return null;
     }
+  }
+
+  get_max_due() {
+    const last = new Date(this.G.P.ref_date.valueOf());
+    last.setDate(last.getDate() + this.E.polls.max_duration_days);
+    return last;
   }
 
   // CONSTANTS:

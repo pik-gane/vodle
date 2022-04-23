@@ -242,6 +242,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             pickerFormat="DD MMM YY HH mm"
             displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
             [min]="G.P.ref_date.toISOString()"
+            [max]="get_max_due().toISOString()"
             (ionClick)="G.P.update_ref_date();"
             (ionChange)="set_poll_due_custom();changed_poll_due_custom()"
             [dayNames]="'daynames-sunday-to-saturday'|translate"
