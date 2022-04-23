@@ -132,7 +132,6 @@
         "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },
 
-
     "badges": {
         "abstaining": "Abstaining",
         "can-accept": "Can accept",
@@ -273,6 +272,12 @@
         "use-example-from-db-none": "(Donʼt use an example)",
 
         "notification-saved-title": "Draft saved under “My polls”."
+    },
+
+    "external-link": {
+        "copy-link": "Copy link",
+        "notification-copied-link-title": "External link copied to clipboard.",
+        "notification-copied-link-body": ""
     },
 
     "explain": {

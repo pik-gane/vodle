@@ -23,6 +23,9 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { Storage } from '@ionic/storage-angular';
 import { Logger, LoggingService } from "ionic-logging-service";
+import { AlertController } from '@ionic/angular';
+
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DataService } from './data.service';
 import { SettingsService } from './settings.service';
@@ -55,7 +58,8 @@ export class GlobalService implements OnDestroy {
       public S: SettingsService,
       public Del: DelegationService,
       public N: NewsService,
-      public translate: TranslateService
+      public translate: TranslateService,
+      public alertCtrl: AlertController,
       ) {
     this.L = loggingService.getLogger("VODLE");
     this.L.entry("GlobalService.constructor");
@@ -107,17 +111,57 @@ export class GlobalService implements OnDestroy {
   }
 
   // TODO: use this consistently wherever an external page is accessed:
-  open_url_in_new_tab(url: string) {
-    /* 
-      instead of window.open(url,'_blank');
-      we do this workaround to prevent the opened page from access to the current session:
-    */ 
-    const a = document.createElement('a');
-    a.href = this.D.fix_url(url);
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  async open_url_in_new_tab(dirty_url: string) {
+    const url = this.D.fix_url(dirty_url);
+    const confirm = await this.alertCtrl.create({ 
+      message: this.translate.instant(
+        "external-link.confirm", {url: url}), 
+      buttons: [
+        { 
+          text: this.translate.instant('no'), 
+          role: 'Cancel',
+          handler: () => { 
+          } 
+        },
+        { 
+          text: this.translate.instant('external-link.copy-link'),
+          handler: () => { 
+            this.copy_link_to_clipboard(url);
+          } 
+        },
+        { 
+          text: this.translate.instant('yes'),
+          role: 'Ok', 
+          handler: () => {
+          /* 
+            instead of window.open(url,'_blank');
+            we do this workaround to prevent the opened page from access to the current session:
+          */ 
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  }
+
+  copy_link_to_clipboard(url: string) {
+    window.navigator.clipboard.writeText(url);
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.translate.instant("external-link.notification-copied-link-title"),
+        body: this.translate.instant("external-link.notification-copied-link-body"),
+        id: null
+      }]
+    })
+    .then(res => {
+    }).catch(err => {
+    });
   }
 
   map2str(map: Map<any, any>): string {

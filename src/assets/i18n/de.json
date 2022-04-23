@@ -270,7 +270,14 @@
 
         "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
     },
-    
+
+    "external-link": {
+        "confirm": "Dieser Link auf die externe Webseite<br/><br/><b>{{url}}</b><br/><br/>wurde von einer/einem vodle-Nutzer:in eingetragen und nicht von vodle geprüft.<br/><br/>Möchtest Du ihn trotz der damit verbundenen Risiken öffnen?",
+        "copy-link": "Link kopieren",
+        "notification-copied-link-title": "Externer Link in die Zwischenablage kopiert.",
+        "notification-copied-link-body": ""
+    },
+
     "explain": {
         "title-approval": "Zustimmung für",
 

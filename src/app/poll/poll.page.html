@@ -136,11 +136,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 ">
               <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
               <small *ngIf="(p.url||'') != ''">
-                (<ion-text 
-                  class="externallink" 
-                  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" 
+                (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text 
+                  class="externallink"  
                   [innerHtml]="'read-more' | translate">
-                </ion-text>)
+                </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
               </small>
               <small>
                 &nbsp;
@@ -741,8 +740,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                         (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))"><ion-text 
                             class="externallink"  
                             [innerHtml]="'read-more' | translate">
-                        </ion-text>&nbsp;
-                        <ion-icon name="open-outline"></ion-icon></span>)
+                        </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
                       </small>
                     </span>
 
