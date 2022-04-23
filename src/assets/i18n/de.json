@@ -419,6 +419,10 @@
         "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
     },
 
+    "imprint": {
+        "-page-title": "Impressum"
+    },
+
     "inviteto": {
         "-page-title": "Leute zur Abstimmung einladen",
         "first-intro": "Die Abstimmung hat begonnen. Bitte lade jetzt die Teilnehmer:innen ein!",

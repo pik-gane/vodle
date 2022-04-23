@@ -30,7 +30,7 @@ export class AppComponent {
     {
       title: 'mypolls.-page-title',
       url: '/mypolls',
-      icon: 'list'
+      icon: 'home'
     },
     {
       title: 'settings.-page-title',
@@ -45,12 +45,17 @@ export class AppComponent {
     {
       title: 'about.-page-title',
       url: '/about',
-      icon: 'information-circle'
+      icon: 'information-circle-outline'
     },
     {
       title: 'privacy.-page-title',
       url: '/privacy',
       icon: 'shield-checkmark-outline'
+    },
+    {
+      title: 'imprint.-page-title',
+      url: '/imprint',
+      icon: 'at-outline'
     },
     {
       title: 'logout.-page-title',

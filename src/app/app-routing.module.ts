@@ -101,6 +101,10 @@ const routes: Routes = [
     loadChildren: () => import('./privacy/privacy.module').then( m => m.PrivacyPageModule)
   },
   {
+    path: 'imprint',
+    loadChildren: () => import('./imprint/imprint.module').then( m => m.ImprintPageModule)
+  },
+  {
     path: '*',
     redirectTo: '/mypolls'
   },

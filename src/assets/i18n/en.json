@@ -422,6 +422,10 @@
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practise?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
     },
 
+    "imprint": {
+        "-page-title": "Imprint"
+    },
+
     "inviteto": {
         "-page-title": "Invite poll participants",
         "first-intro": "Your poll has started. Please invite your participants now!",
