@@ -275,7 +275,9 @@
     },
 
     "external-link": {
+        "confirm": "This link to the external web page<br/><br/><b>{{url}}</b><br/><br/>was provided by a vodle user and was not examined by vodle.<br/><br/>Do you want to open it despite the potential risks involved?",
         "copy-link": "Copy link",
+        "yes": "Yes, open it",
         "notification-copied-link-title": "External link copied to clipboard.",
         "notification-copied-link-body": ""
     },

@@ -130,7 +130,7 @@ export class GlobalService implements OnDestroy {
           } 
         },
         { 
-          text: this.translate.instant('yes'),
+          text: this.translate.instant('external-link.yes'),
           role: 'Ok', 
           handler: () => {
           /* 
