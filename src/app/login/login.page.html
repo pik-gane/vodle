@@ -142,7 +142,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input #input_email
                   formControlName="email" [maxlength]="E.max_len.name"
-                  type="text" inputmode="email" required autofocus="true"
+                  type="text" inputmode="email" autofocus="true"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input>
@@ -159,22 +159,21 @@ TODO:
           </div>
         </ng-container>
         </div>  
-      </form>    
+      </form>
       <ion-item lines="none" class="item-text-wrap">
-        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_cookies"></ion-checkbox>
-        <ion-label [innerHtml]="'login.consent-cookies'|translate"></ion-label>
+        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
+        <ion-label>
+          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span>&nbsp;<a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a>&nbsp;<span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+        </ion-label>
       </ion-item>
       <ion-item lines="none">
         <ion-button type="submit" size="larger" color="primary" slot="end" 
-            [disabled]="!emailFormGroup.valid || !accept_cookies" 
+            [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''" 
             shape="round"
             (click)="submit_email()">
           <span [innerHtml]="'next'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
-      </ion-item>
-      <ion-item class="item-text-wrap" lines="none">
-        <small><p class="ion-text-center" style="width:100%;" [innerHtml]="'login.cookie-banner'|translate"></p></small>
       </ion-item>
     </ng-container>
 

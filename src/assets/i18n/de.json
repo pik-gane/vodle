@@ -37,7 +37,7 @@
     "db-user": "Datenbank-Nutzername",
     "db-pw": "Datenbank-Passwort",
     "edit": "Bearbeiten",
-    "email": "Email",
+    "email": "E-Mail",
     "favourite": "Lieblingsoption",
     "go-to-poll": "zur Abstimmung",
     "hide": "Verbergen",
@@ -97,8 +97,9 @@
         "-page-title": "Wir setzen Deine Waps",
 
         "-step-1-title": "Lieblingsoption",
-        "favourite-intro": "Welche Option würdest Du am meisten bevorzugen?",
-        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern hinzufügen.",
+        "favourite-intro-1": "Die folgenden Fragen sollen Dir den Einstieg erleichtern und Deine anfänglichen Waps setzen. Du kannst sie später jederzeit ändern.",
+        "favourite-intro-2": "Welche Option würdest Du am meisten bevorzugen?",
+        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern ganz unten hinzufügen.",
         "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> ein Wap von <b>100</b>.",
         "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Waps der anderen Teilnehmer:innen sind.",
         "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
@@ -151,11 +152,11 @@
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
 
-        "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
-        "request-options-without-share": "Am einfachsten kannst die Person per Email bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "request-options-without-share": "Am einfachsten kannst die Person per E-Mail bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
 
         "share": "Teilen",
-        "compose-email": "Email schreiben",
+        "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Delegierungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn nun Deiner/Deinem Delegierten, {{nickname}}.",
@@ -414,12 +415,12 @@
         "-page-title": "Leute zur Abstimmung einladen",
         "first-intro": "Die Abstimmung hat begonnen. Bitte lade jetzt die Teilnehmer:innen ein!",
         "later-intro": "Hier kannst Du Teilnehmer:innen einladen zur Abstimmung:",
-        "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
-        "caution-without-share1": "Am einfachsten kannst Du Leute per Email einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "caution-without-share1": "Am einfachsten kannst Du Leute per E-Mail einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution2": "Der Einladungs-Link enthält die Abstimmungs-ID und ein Passwort. Jede Person, die den Link bekommt, egal ob direkt von Dir oder von jemandem weitergeleitet, kann abstimmen. Stell also bitte sicher, dass Du und die Teilnehmer:innen den Link nur berechtigten Leuten schicken.",
 
         "share": "Teilen",
-        "compose-email": "Email schreiben",
+        "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Einladungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn jetzt Deinen Teilnehmer:innen!"
@@ -458,28 +459,27 @@
 
         "ask-used-before": "Hast Du vodle schon einmal auf irgendeinem Gerät verwendet?",
 
-        "ask-fresh-email": "Bitte gib Deine Email-Adresse ein, die Du für vodle verwenden möchtest.", 
-        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem.",
-        "ask-old-email": "Bitte gib die Email-Adresse ein, die Du für vodle verwendest.", 
+        "ask-fresh-email": "Bitte gib Deine E-Mail-Adresse ein, die Du für vodle verwenden möchtest.", 
+        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem. Wir senden Dir auch keine Emails.",
+        "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.", 
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
-        "consent-cookies": "Ich stimme der Verwendung von technischen Cookies zu.",
+
+        "consent-privacy-before-privacy": "Ja, ich habe die",
+        "consent-privacy-privacy": "Datenschutzerklärung",
+        "consent-privacy-after-privacy": "zur Kenntnis genommen und stimme ihr zu.",
 
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
 
         "ready-to-start": "OK, viel Spaß mit vodle!",
-        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst.",
-
-        "cookie-banner": "<b>Cookies:</b> Diese Webseite verwendet ausschließlich technische Cookies. Wir verwenden Cookies, um lokal auf Deinem Rechner Daten zu Abstimmungen zu speichern, an denen Du teilnimmst. Manche dieser Daten (z.B. deine Waps der Optionen in einer Abstimmung) verlassen auch Deinen Rechner und werden in einer Datenbank Deiner Wahl gespeichert, um so mit den anderen Teilnehmer:innen der selben Abstimmung kommunizieren zu können. Wenn dies geschieht, dann nur in anonymisierter und verschlüsselter Form, so dass nur Du und die anderen Teilnehmer:innen der selben Abstimmung sie mit Hilfe des richtigen Passworts entschlüsseln können, aber niemand sonst, auch keine Mitarbeiter:innen von vodle, und so, dass niemand daraus Rückschlüsse auf Deine Identität ziehen kann. <b>Durch die Eingabe einer Email-Adressse auf der Anmeldeseite stimmst Du dem zu.</b>",
-        "-cookie-banner-2": "Detaillierte Informationen findest Du in unserer Datenschutzerklärung."
-
+        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst."
     },
 
     "logout": {
         "-page-title": "Abmelden",
         "confirm-header": "Wirklich abmelden?",
-        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht. Bitte versichere Dich, dass Du die Email-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest. Wenn Du sie vergisst, können sie nicht wiederhergestellt werden, da wir sie nirgendwo speichern.",
+        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht (aber nicht vom verwendeten Datenbankserver). Bitte versichere Dich, dass Du die E-Mail-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest. Wenn Du sie vergisst, können sie nicht wiederhergestellt werden, da wir sie nirgendwo speichern.",
         "confirm-button": "Ja, abmelden",
         "failed": "Abmelden fehlgeschlagen"
     },

@@ -2244,7 +2244,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-          if (decrypt(doc.value, poll_pw) != value) {
+        if ((key != 'due') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2254,7 +2254,8 @@ export class DataService implements OnDestroy {
 
         // now update:
         if (enforce || decrypt(doc['value'], poll_pw) != value) {
-          doc['value'] = (key == 'due') ? value: enc_value;
+          // only due value is stored unencrypted:
+          doc['value'] = (key == 'due') ? value : enc_value;
           if (add_due) {
             doc['due'] = this.poll_caches[pid]['due'];
           }

@@ -88,17 +88,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     (ionScroll)="onScroll()"    
     >
 
-  <!-- STEP 0: INTRO: -->
-
-  <!-- TODO! -->
-
   <!-- STEP 1: FAVOURITE OPTION: -->
 
   <!-- selection: -->
   <ng-container *ngIf="step == 1">
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.favourite-intro-1'|translate"></span>
+      </p>
+    </ion-item>
     <ion-item color="light">
       <p>
-        <span [innerHtml]="'assist.favourite-intro'|translate"></span>
+        <span [innerHtml]="'assist.favourite-intro-2'|translate"></span>
       </p>
     </ion-item>
     <ion-radio-group [(ngModel)]="favourite" (ngModelChange)="favourite_change()">

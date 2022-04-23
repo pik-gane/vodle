@@ -67,7 +67,7 @@ export class LoginPage implements OnInit {
   showing_password: boolean;
   advanced_expanded: boolean;
   terms_expanded = false;
-  accept_cookies = false;
+  accept_privacy = false;
   save_password = false;
   
   @ViewChild('input_email', { static: false }) input_email: IonInput;
@@ -106,7 +106,10 @@ export class LoginPage implements OnInit {
       language: new FormControl('', Validators.required),
     });
     this.emailFormGroup = this.formBuilder.group({
-      email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
+      email: new FormControl('', Validators.compose([
+//        Validators.required, 
+        Validators.email
+      ])),
     });
     this.passwordFormGroup = this.formBuilder.group({
       pw: this.formBuilder.group({
@@ -221,7 +224,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_email() {
-    if (this.emailFormGroup.get('email').valid && this.accept_cookies) {
+    if (this.emailFormGroup.get('email').valid && this.accept_privacy) {
       if (this.step == 'fresh_email') {
         this.router.navigate(['/login/fresh_password/'+this.then_url]);
       } else {

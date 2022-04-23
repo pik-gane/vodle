@@ -23,6 +23,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 export const environment = {
   production: false,
+  privacy_statement_url: "./assets/datenschutz.html",
   logging: {
     logLevels: [
       {

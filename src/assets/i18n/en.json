@@ -98,9 +98,9 @@
         "-page-title": "Let's set your waps",
 
         "-step-1-title": "Favourite option",
-
-        "favourite-intro": "Which option would you most prefer?",
-        "add-option-info": "If you think an important option is still missing, you can add it on the page with the sliders.",
+        "favourite-intro-1": "The following questions are only to get you started and set your initial waps. You can always change them later.",
+        "favourite-intro-2": "Which option would you most prefer?",
+        "add-option-info": "If you think an important option is still missing, you can add it on the bottom of the page with the sliders.",
         "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
         "favourite-explanation-2": "This means that you <i>definitely approve</i> the option, no matter what the waps of the other participants are.",
         "favourite-explanation-3": "It may however be that <i>“{{favourite}}”</i> will not get enough approval in the end to win. Even if a majority approves this option, it is not certain that it wins. Therefore it is important to also think about possible compromise options next.",
@@ -464,10 +464,13 @@
         "ask-used-before": "Have you used vodle before on any device?",
 
         "ask-fresh-email": "Please enter your email address you want to use with vodle.",
-        "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one.",
+        "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one. We will also not send you any emails.",
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
-        "consent-cookies": "I consent to the use of technical cookies.",
+
+        "consent-privacy-before-privacy": "Yes, I have read the",
+        "consent-privacy-privacy": "data protection declaration",
+        "consent-privacy-after-privacy": "and agree to it.",
 
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
@@ -476,15 +479,13 @@
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
 
         "ready-to-start": "OK, have fun with vodle!",
-        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out.",
-
-        "cookie-banner": "<b>Cookies:</b> This website only uses technical cookies. We use cookies to store data locally on your computer about votes in which you participate. Some of this data (e.g. your waps of the options in a poll) also leaves your computer and is stored in a database of your choice so that we can communicate with the other participants in the same vote. If this happens, it will be anonymised and encrypted so that only you and the other participants in the same vote can decrypt it using the correct password, but no one else, not even vodle staff, and in such a way that no one can draw conclusions about your identity. <b>By entering an email address during login you consent to this.</b>"
+        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out."
     },
 
     "logout": {
         "-page-title": "Log out",
         "confirm-header": "Really log out?",
-        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device. Please be sure to remember the email address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
+        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the email address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
         "failed": "Could not log out for some reason"
     },
