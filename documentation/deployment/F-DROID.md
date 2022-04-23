@@ -80,7 +80,7 @@ fdroid build --on-server it.vodle
 
 ## Building new version
 
-- in android/app/build.gradle, android/app/release/output-metadata.json, and and package-lock.json, increase versionName and increment versionCode
+- in android/app/build.gradle, android/app/release/output-metadata.json, and package-lock.json, increase versionName and increment versionCode
 - commit and push these changes, note the commit id
 - in it.vodle.yml:
     - add above versionName, versionCode and commit id as new entry under Builds
