@@ -161,10 +161,10 @@
         "notification-copied-link-title": "Delegierungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn nun Deiner/Deinem Delegierten, {{nickname}}.",
 
-        "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung schließt {{due}})",
+        "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung endet {{due}})",
         "message-body-greeting": "Liebe:r Teilnehmer:in,",
         "message-body-before-title": "ich möchte Dich gerne bitten, mein:e Delegierte:r zu sein in der vodle-Abstimmung",
-        "message-body-closes": "(Die Abstimmung schließt am {{due}}.)",
+        "message-body-closes": "(Die Abstimmung endet am {{due}}.)",
         "message-body-explanation": "Wenn Du zustimmst, wird vodle Deine Waps automatisch verwenden, um auch meine Waps festzulegen, ohne dass Dir zusätzliche Arbeit entsteht.",
         "message-body-before-link": "Um meiner Bitte zuzustimmen oder sie abzulehnen, verwende bitte diesen Link:",
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
@@ -226,7 +226,7 @@
         "url-label": "„Mehr lesen“-Link",
         "url-placeholder": "Eine Webseite mit mehr Details, wenn die Teilnehmer:in „mehr lesen“ anklickt (optional)",
 
-        "due-type-label": "Die Abstimmung schließt...",
+        "due-type-label": "Die Abstimmung endet...",
         "due-type-custom": "an einem bestimmten Datum und Uhrzeit",
         "due-type-10min": "nach 10 Minuten",
         "due-type-hour": "nach einer Stunde",
@@ -239,7 +239,7 @@
         "due-type-week": "nach einer Woche",
         "due-type-two-weeks": "nach zwei Wochen",
         "due-type-four-weeks": "nach vier Wochen",
-        "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung schließt",
+        "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung endet",
 
         "advanced-settings": "Erweiterte Einstellungen",
         "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
@@ -435,10 +435,10 @@
     },
 
     "invite-email": {
-        "subject": "Einladung zur Abstimmung (schließt {{due}})",
+        "subject": "Einladung zur Abstimmung (endet {{due}})",
         "body-greeting": "Liebe:r Teilnehmer:in,",
         "body-before-title": "ich lade Dich ein, an einer interaktiven Abstimmung teilzunehmen unter der Überschrift",
-        "body-closes": "Die Abstimmung schließt am {{due}}.",
+        "body-closes": "Die Abstimmung endet am {{due}}.",
         "body-before-link": "Um teilzunehmen, verwende bitte diesen Link:",
         "body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "body-regards": "Mit besten Grüßen"
