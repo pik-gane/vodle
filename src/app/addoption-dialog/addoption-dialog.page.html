@@ -102,8 +102,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 
             fill="clear" slot="end" class="skip-button" tabindex="-1" 
             (click)="G.open_url_in_new_tab(formGroup.get('option_url').value)">
-          <ion-icon name="open-outline"></ion-icon>&nbsp;
-          <span [innerHtml]="'test'|translate"></span>
+          <span [innerHtml]="'test'|translate"></span>&nbsp;
+          <ion-icon name="open-outline"></ion-icon>
         </ion-button>
       </ion-item>
       <div class="validation-errors">

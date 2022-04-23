@@ -738,11 +738,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                     </span>
                     <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
                       <small>
-                        (<ion-text 
-                            class="externallink" 
-                            (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))" 
+                        (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))"><ion-text 
+                            class="externallink"  
                             [innerHtml]="'read-more' | translate">
-                        </ion-text>)
+                        </ion-text>&nbsp;
+                        <ion-icon name="open-outline"></ion-icon></span>)
                       </small>
                     </span>
 

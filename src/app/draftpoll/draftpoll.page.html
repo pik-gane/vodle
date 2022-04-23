@@ -165,7 +165,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </ion-label>
         <ion-input 
           id="input_poll_url"
-          formControlName="poll_url" clearInput="true"
+          formControlName="poll_url"
           [placeholder]="'draftpoll.url-placeholder'|translate"
           tabindex="0" type="text" inputmode="url" [maxlength]="E.max_len.url"
           style="font-size:smaller;word-wrap:normal;"
@@ -182,8 +182,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             *ngIf="formGroup.get('poll_url').valid && ![null,''].includes(formGroup.get('poll_url').value)" 
             tabindex="-1" fill="clear" slot="end" class="skip-button" 
             (click)="G.open_url_in_new_tab(formGroup.get('poll_url').value)">
-          <ion-icon name="open-outline"></ion-icon>&nbsp;
-          <span [innerHtml]="'test'|translate"></span>
+          <span [innerHtml]="'test'|translate"></span>&nbsp;
+          <ion-icon name="open-outline"></ion-icon>
         </ion-button>
       </ion-item>
       <div class="validation-errors">
@@ -402,7 +402,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               [id]="'input_option_url'+i"
               [formControlName]="'option_url'+i" 
               [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
-              type="text" inputmode="url" tabindex="0" clearInput="true" [maxlength]="E.max_len.url"
+              type="text" inputmode="url" tabindex="0" [maxlength]="E.max_len.url"
               style="font-size: smaller;"
               (ionChange)="set_option_url(i)" debounce="100"
               (keydown)="option_url_onKeydown($event, i)"
@@ -417,8 +417,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 *ngIf="formGroup.get('option_url'+i).valid && ![null,''].includes(formGroup.get('option_url'+i).value)" 
                 fill="clear" slot="end" class="skip-button" tabindex="-1" 
                 (click)="G.open_url_in_new_tab(formGroup.get('option_url'+i).value)">
-              <ion-icon name="open-outline"></ion-icon>&nbsp;
-              <span [innerHtml]="'test'|translate"></span>
+              <span [innerHtml]="'test'|translate"></span>&nbsp;
+              <ion-icon name="open-outline"></ion-icon>
             </ion-button>
           </ion-item>
           <div class="validation-errors">

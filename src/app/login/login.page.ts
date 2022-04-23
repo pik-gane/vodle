@@ -145,10 +145,12 @@ export class LoginPage implements OnInit {
     this.languageFormGroup.get('language').setValue(
       this.G.S.language||((this.translate.langs.includes(default_lang))?default_lang:''));
     // browser might have prefilled fields, so check this:
+    /*
     this.set_language();
     this.set_email();
     this.set_password();
     this.set_old_password();
+    */
     if (this.G.D.ready && !this.ready) this.onDataReady();
     setTimeout(() => {
       const el = this.input_email||this.input_new_password||this.input_old_password;
@@ -207,6 +209,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_language() {
+    this.set_language();
     if (this.languageFormGroup.valid) {
       this.G.go_fullscreen_on_mobile();
       this.router.navigate(['/login/used_before/'+this.then_url]);  
@@ -224,6 +227,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_email() {
+    this.set_email();
     if (this.emailFormGroup.get('email').valid && this.accept_privacy) {
       if (this.step == 'fresh_email') {
         this.router.navigate(['/login/fresh_password/'+this.then_url]);
@@ -240,6 +244,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_new_password() {
+    this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
       this.G.D.login_submitted();
@@ -247,6 +252,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_old_password() {
+    this.set_old_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password!
     if (this.oldPasswordFormGroup.get('pw').valid) {
       this.G.D.login_submitted();
