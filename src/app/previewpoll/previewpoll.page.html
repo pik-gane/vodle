@@ -1,3 +1,22 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -26,10 +45,7 @@
         <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
           <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [innerHtml]="p.desc"></i></ion-text>
           <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary"><span *ngIf="((p.desc||'')!='')&&((p.url||'')!='')">&nbsp;</span>
-            (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))" [innerHtml]="'read-more'|translate"></ion-text>)
-            <!--(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
-              <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-            </a>)-->
+            (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
           </ion-text>
         </p>
         <p>
@@ -66,10 +82,7 @@
           <ion-text color="primary"><b><i [innerHtml]="o.name"></i></b></ion-text>
           <ion-text *ngIf="(o.desc||'')!=''" color="primary"><br/><i [innerHtml]="o.desc"></i></ion-text>
           <ion-text *ngIf="(o.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
-            (<ion-text class="externallink" (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))" [innerHtml]="'read-more'|translate"></ion-text>)
-            <!--(<a [href]="G.D.fix_url(o.url)" target="_blank" rel="noopener noreferrer">
-              <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-            </a>)-->
+            (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
           </ion-text>            
         </p>
       </ion-col>

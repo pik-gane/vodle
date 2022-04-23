@@ -1,3 +1,27 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<!--
+TODO:
+- checkbox "store password" with caution
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -27,7 +51,6 @@
 
 TODO:
   - hitting enter should submit
-  - show spinner when busy!
 
 - if no conn. info in local db:
   - apparently user new on this device. ask if has used vodle before
@@ -118,11 +141,11 @@ TODO:
               <ion-item>
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input #input_email
-                  formControlName="email" 
-                  type="text" inputmode="email" required autofocus="true"
+                  formControlName="email" [maxlength]="E.max_len.name"
+                  type="text" inputmode="email" autofocus="true"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
-                </ion-input>
+                </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
               </ion-item>
             </ion-col>
           </ion-row>
@@ -136,22 +159,21 @@ TODO:
           </div>
         </ng-container>
         </div>  
-      </form>    
+      </form>
       <ion-item lines="none" class="item-text-wrap">
-        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_cookies"></ion-checkbox>
-        <ion-label [innerHtml]="'login.consent-cookies'|translate"></ion-label>
+        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
+        <ion-label>
+          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span>&nbsp;<a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a>&nbsp;<span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+        </ion-label>
       </ion-item>
       <ion-item lines="none">
         <ion-button type="submit" size="larger" color="primary" slot="end" 
-            [disabled]="!emailFormGroup.valid || !accept_cookies" 
+            [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''" 
             shape="round"
             (click)="submit_email()">
           <span [innerHtml]="'next'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
-      </ion-item>
-      <ion-item class="item-text-wrap" lines="none">
-        <small><p class="ion-text-center" style="width:100%;" [innerHtml]="'login.cookie-banner'|translate"></p></small>
       </ion-item>
     </ng-container>
 
@@ -170,7 +192,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 <ion-input #input_new_password
                   formControlName="password"
-                  clearOnEdit="false" clearInput="true"
+                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   (ionChange)="set_password()" debounce="100"
@@ -199,7 +221,7 @@ TODO:
               <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
               <ion-input 
                 formControlName="confirm_password" 
-                #input_retype_password 
+                #input_retype_password  [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [type]="showing_password?'text':'password'" required
                 autocomplete="off" autocorrect="off"
@@ -219,6 +241,12 @@ TODO:
           </ng-container>
         </div>
       </form>    
+      <!--
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+        <ion-label [innerHtml]="'login.store-password'|translate"></ion-label>
+      </ion-item>
+      -->
       <ion-item lines="none">
         <p><br/><br/></p>
       </ion-item>
@@ -244,7 +272,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 <ion-input #input_old_password
                   formControlName="password"
-                  clearOnEdit="false" clearInput="true"
+                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   (ionChange)="set_old_password()" debounce="100"
@@ -270,8 +298,14 @@ TODO:
           </div>
         </div>
       </form>    
+      <!--
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+        <ion-label [innerHtml]="'login.store-password'|translate"></ion-label>
+      </ion-item>
+      -->
       <ion-item lines="none">
-        <p><br/><br/><br/></p>
+        <p><br/><br/></p>
       </ion-item>
       <ion-item lines="none">
         <ion-button size="larger" color="primary" slot="end" [disabled]="!oldPasswordFormGroup.valid" 
@@ -293,15 +327,17 @@ TODO:
       <ion-item lines="none">
         <p><br/><br/><br/></p>
       </ion-item>
-      <ion-item lines="none">
-        <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
-        <ion-button size="larger" color="primary" slot="end"
-            shape="round" type="submit"
-            (click)="connected_dismissed()">
-          <span [innerHtml]="'start'|translate"></span>
-          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
+      <form>
+        <ion-item lines="none">
+          <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
+          <ion-button size="larger" color="primary" slot="end"
+              shape="round" type="submit" id="dismiss_button" 
+              (click)="connected_dismissed()">
+            <span [innerHtml]="'start'|translate"></span>
+            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+      </form>
       <ion-item *ngIf="terms_expanded">
       </ion-item>
     </ng-container>

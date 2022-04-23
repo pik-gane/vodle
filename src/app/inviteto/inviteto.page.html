@@ -1,3 +1,22 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -10,7 +29,9 @@
 <ion-content *ngIf="ready && (p!=null)">
   <ion-list lines="full">
     <ion-item color="warning">
-      <ion-col class="ion-no-padding ion-no-margin" [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></ion-col>
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></p>
+      </ion-col>
     </ion-item>
 <!--
     <ion-item (click)="details_expanded=!details_expanded">

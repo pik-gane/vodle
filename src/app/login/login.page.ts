@@ -1,10 +1,30 @@
+/*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { IonInput } from '@ionic/angular';
+import { IonButton, IonInput } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
+import { environment } from 'src/environments/environment';
 
 /*
 - if no conn. info in local db:
@@ -32,6 +52,7 @@ import { GlobalService } from "../global.service";
 })
 export class LoginPage implements OnInit {
 
+  E = environment;
   window = window;
   
   // ATTRIBUTES:
@@ -46,12 +67,14 @@ export class LoginPage implements OnInit {
   showing_password: boolean;
   advanced_expanded: boolean;
   terms_expanded = false;
-  accept_cookies = false;
-
+  accept_privacy = false;
+  save_password = false;
+  
   @ViewChild('input_email', { static: false }) input_email: IonInput;
   @ViewChild('input_new_password', { static: false }) input_new_password: IonInput;
   @ViewChild('input_retype_password', { static: false }) input_retype_password: IonInput;
   @ViewChild('input_old_password', { static: false }) input_old_password: IonInput;
+  @ViewChild('dismiss_button', { static: false }) dismiss_button: IonButton;
 
   // LIFECYCLE:
 
@@ -83,7 +106,10 @@ export class LoginPage implements OnInit {
       language: new FormControl('', Validators.required),
     });
     this.emailFormGroup = this.formBuilder.group({
-      email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
+      email: new FormControl('', Validators.compose([
+//        Validators.required,  // TODO: uncomment once the problem is solved that the privacy link does not work properly when field left empty
+        Validators.email
+      ])),
     });
     this.passwordFormGroup = this.formBuilder.group({
       pw: this.formBuilder.group({
@@ -111,25 +137,32 @@ export class LoginPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("LoginPage.ionViewWillEnter");
     this.G.D.page = this;
-    setTimeout(() => {
-      var el = this.input_email||this.input_new_password||this.input_old_password;
-      if (el) {
-        el.setFocus();
-      }
-    }, 300);
   }
 
   ionViewDidEnter() {
     this.G.L.entry("LoginPage.ionViewDidEnter");
-    var default_lang = navigator.language.slice(0,2);
+    const default_lang = navigator.language.slice(0,2);
     this.languageFormGroup.get('language').setValue(
       this.G.S.language||((this.translate.langs.includes(default_lang))?default_lang:''));
     // browser might have prefilled fields, so check this:
+    /*
     this.set_language();
     this.set_email();
     this.set_password();
     this.set_old_password();
+    */
     if (this.G.D.ready && !this.ready) this.onDataReady();
+    setTimeout(() => {
+      const el = this.input_email||this.input_new_password||this.input_old_password;
+      if (el) {
+        el.setFocus();
+      } else {
+        const el = document.getElementById("dismiss_button");
+        if (el) {
+          el.focus();
+        }
+      }
+    }, 300);
   }
 
   onDataReady() {
@@ -176,8 +209,11 @@ export class LoginPage implements OnInit {
   }
 
   submit_language() {
-    this.G.go_fullscreen_on_mobile();
-    this.router.navigate(['/login/used_before/'+this.then_url]);
+    this.set_language();
+    if (this.languageFormGroup.valid) {
+      this.G.go_fullscreen_on_mobile();
+      this.router.navigate(['/login/used_before/'+this.then_url]);  
+    }
   }
 
   ask_used_before_no() {
@@ -191,7 +227,8 @@ export class LoginPage implements OnInit {
   }
 
   submit_email() {
-    if (this.emailFormGroup.get('email').valid) {
+    this.set_email();
+    if (this.emailFormGroup.get('email').valid && this.accept_privacy) {
       if (this.step == 'fresh_email') {
         this.router.navigate(['/login/fresh_password/'+this.then_url]);
       } else {
@@ -207,6 +244,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_new_password() {
+    this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
       this.G.D.login_submitted();
@@ -214,6 +252,7 @@ export class LoginPage implements OnInit {
   }
 
   submit_old_password() {
+    this.set_old_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password!
     if (this.oldPasswordFormGroup.get('pw').valid) {
       this.G.D.login_submitted();

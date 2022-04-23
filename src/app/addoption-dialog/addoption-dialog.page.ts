@@ -1,3 +1,22 @@
+/*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
 import { Component, OnInit, Input, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
@@ -8,7 +27,7 @@ import { Capacitor } from '@capacitor/core';
 //import { Share } from '@capacitor/share';
 //import { LocalNotifications } from '@capacitor/local-notifications';
 
-//import { environment } from '../../environments/environment';
+import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll, Option } from '../poll.service';
@@ -20,6 +39,8 @@ import { Poll, Option } from '../poll.service';
 })
 export class AddoptionDialogPage implements OnInit {
 
+  E = environment;
+  
   @Input() parent: PollPage;
 
   ready = false;

@@ -1,3 +1,27 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<!--
+TODO:
+- save password option
+-->
+
 <ion-header>
   <ion-toolbar style="padding-right:11px;">
     <ion-buttons slot="start">
@@ -29,7 +53,7 @@
             <ion-input 
               formControlName="email" 
               [placeholder]="'settings.email-placeholder'|translate"
-              type="text" inputmode="email" required
+              type="text" inputmode="email" required [maxlength]="E.max_len.name"
               [readonly]="!editing_email"
               [style]="editing_email
                     ?'pointer-events:;'
@@ -68,7 +92,7 @@
             <ion-item lines="none">
               <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
               <ion-input 
-                formControlName="password"
+                formControlName="password" [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [readonly]="!editing_password"
                 [type]="showing_password?'text':'password'" required 
@@ -113,7 +137,7 @@
             #input_retype_password 
             [disabled]="!editing_password"
             clearOnEdit="false" clearInput="true"
-            [type]="showing_password?'text':'password'"required 
+            [type]="showing_password?'text':'password'" required [maxlength]="E.max_len.name" 
             [style]="editing_password
               ?'pointer-events:;'
               :'pointer-events:none;font-size:smaller;'"

@@ -1,6 +1,27 @@
 /*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
+/*
 TODO:
-- profile in Chrome using ... more tools -> javascript profiler
+- encrypt ALL data, also email address, in local storage and pouchdbs except password, but allow for backwards compat.
+- only store password when checked
+- store emailandpasswordhash for performance
 */
 
 import { Injectable, OnDestroy } from '@angular/core';
@@ -2095,6 +2116,8 @@ export class DataService implements OnDestroy {
 
     if (local_only_user_keys.includes(key)) {
 
+      // TODO: store encrypted! don't store password here (only in storage, and only if consented)
+
       // ASYNC:
       // simply use key as doc id and don't encrypt:
       this.local_only_user_DB.get(key)
@@ -2221,7 +2244,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-          if (decrypt(doc.value, poll_pw) != value) {
+        if ((key != 'due') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2231,7 +2254,8 @@ export class DataService implements OnDestroy {
 
         // now update:
         if (enforce || decrypt(doc['value'], poll_pw) != value) {
-          doc['value'] = (key == 'due') ? value: enc_value;
+          // only due value is stored unencrypted:
+          doc['value'] = (key == 'due') ? value : enc_value;
           if (add_due) {
             doc['due'] = this.poll_caches[pid]['due'];
           }

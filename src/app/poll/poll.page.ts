@@ -1,3 +1,22 @@
+/*
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+*/
+
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
@@ -100,7 +119,7 @@ export class PollPage implements OnInit {
     window.addEventListener('offline', f);
     window.addEventListener('online', f);
     // get gui state:
-    const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page")) || {};
+    const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page") || "{}");
     this.details_expanded = (specs['details_expanded'] != false);
     this.incoming_delegation_expanded = (specs['incoming_delegation_expanded'] == true);
     this.option_expanded = specs['option_expanded'] || {};
@@ -249,7 +268,7 @@ export class PollPage implements OnInit {
     const totalContentHeight = scrollElement.scrollHeight;
     const viewportHeight = scrollElement.offsetHeight;
     const scrollPosition = ev.detail.scrollTop;
-    this.scroll_position = scrollPosition;
+    this.scroll_position = scrollPosition / (totalContentHeight - viewportHeight);
     */
     this.scroll_position = ev.detail.scrollTop;      
   }
@@ -633,6 +652,7 @@ export class PollPage implements OnInit {
 //        cssClass: 'assist',
 //        showBackdrop: true,
         componentProps: {P: this},
+        backdropDismiss​: false
 //        swipeToClose: true,
 //        presentingElement: this.routerOutlet.nativeEl
     });

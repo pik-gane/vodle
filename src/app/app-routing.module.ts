@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+import { environment } from 'src/environments/environment';
 
 const routes: Routes = [
   {
@@ -94,6 +95,14 @@ const routes: Routes = [
   {
     path: 'explain-approval',
     loadChildren: () => import('./explain-approval/explain-approval.module').then( m => m.ExplainApprovalPageModule)
+  },
+  {
+    path: 'privacy',
+    loadChildren: () => import('./privacy/privacy.module').then( m => m.PrivacyPageModule)
+  },
+  {
+    path: 'imprint',
+    loadChildren: () => import('./imprint/imprint.module').then( m => m.ImprintPageModule)
   },
   {
     path: '*',

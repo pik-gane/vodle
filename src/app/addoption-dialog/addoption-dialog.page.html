@@ -1,3 +1,22 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <ion-content *ngIf="ready">
   <form [formGroup]="formGroup">
     <ion-list lines="full">
@@ -28,7 +47,7 @@
           [placeholder]="(p.type == 'winner' 
                           ? 'draftpoll.option-name-placeholder' 
                           : 'draftpoll.target-name-placeholder') | translate"
-          type="text" required 
+          type="text" required [maxlength]="E.max_len.name" 
           style="font-weight: bold; font-style: italic;">
         </ion-input>      
       </ion-item>
@@ -50,7 +69,7 @@
           </span>
         </ion-label>
         <ion-textarea 
-          formControlName="option_desc"
+          formControlName="option_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
           rows="1" auto-grow type="text" 
           style="font-style: italic;">
@@ -76,15 +95,15 @@
         <ion-input 
           formControlName="option_url" 
           [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          type="text"
+          type="text" inputmode="url" [maxlength]="E.max_len.url"
           style="font-size: smaller;">
         </ion-input>
         <ion-button 
             *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 
             fill="clear" slot="end" class="skip-button" tabindex="-1" 
             (click)="G.open_url_in_new_tab(formGroup.get('option_url').value)">
-          <ion-icon name="open-outline"></ion-icon>&nbsp;
-          <span [innerHtml]="'test'|translate"></span>
+          <span [innerHtml]="'test'|translate"></span>&nbsp;
+          <ion-icon name="open-outline"></ion-icon>
         </ion-button>
       </ion-item>
       <div class="validation-errors">

@@ -35,7 +35,7 @@ If you decide to contribute something, we are very happy to help you get started
 
 ## 2. Getting started
 
-You might begin by just scanning our [End user website](http://vodle.it) and reading some of the top-level documentation texts in the [doc/development](./doc/development/) folder, maybe starting with the description of vodle's overall [Architecture](./doc/development/ARCHITECTURE.md) and the ["poll" entry](./doc/development/GLOSSARY.md#poll) in the extensive cross-linked [Glossary](./doc/development/GLOSSARY.md) of the terms and concepts used in the app's UI and code.
+You might begin by just scanning our [End user website](http://vodle.it) and reading some of the top-level documentation texts in the [./documentation/development](./documentation/development/) folder, maybe starting with the description of vodle's overall [Architecture](./documentation/development/ARCHITECTURE.md) and the ["poll" entry](./documentation/development/GLOSSARY.md#poll) in the extensive cross-linked [Glossary](./documentation/development/GLOSSARY.md) of the terms and concepts used in the app's UI and code.
 
 If you are interested in code-related stuff, you might then continue with browsing the [Code](#finding-your-way-around-the-code) and the [Issue tracker](https://github.com/pik-gane/vodle/issues) to identify a *good first issue* (some are labelled as such). While the issue tracker is used to report bugs and list enhancements that are ready to implement, our [Discussions page](https://github.com/pik-gane/vodle/discussions) is the place for feature requests, ideas, questions, and the like. There you can see what we're currently thinking about. 
 
@@ -45,7 +45,7 @@ Some types of contribution can be made without installing a development version 
 
 But other types of contribution will require *setting up a development and testing environment* – that is described in [INSTALL.md](./INSTALL.md).
 
-In any case, it might be a good idea to take a short tour as described [here](./doc/development/BASIC_MANUAL_TEST_TOUR.md). 
+In any case, it might be a good idea to take a short tour as described [here](./documentation/development/BASIC_MANUAL_TEST_TOUR.md). 
 
 ## 3. Finding your way around the code
 
@@ -55,13 +55,13 @@ while the top-level logics is coded in a Typescript file `*.page.ts`.
 
 Lower-level logics are implemented via ***services*** that are used by the page components. Each service is coded in a Typescript file `*.service.ts` inside [src/](./src/):
 - The [GlobalService](./src/app/global.service.ts) is the entry point for all services. 
-- The [PollService](./src/app/poll.service.ts) defines classes for [polls](./doc/development/GLOSSARY.md#poll) and [options](./doc/development/GLOSSARY.md#option) and handles the [tallying](./doc/development/GLOSSARY.md#tallying) of [results](./doc/development/GLOSSARY.md#results).
-- The [DelegationService](./src/app/delegation.service.ts) handles everything related to [delegation](./doc/development/GLOSSARY.md#delegation).
-- The [NewsService](./src/app/news.service.ts) handles [news items](./doc/development/GLOSSARY.md#news-item).
-- The [SettingsService](./src/app/settings.service.ts) manages a [user](./doc/development/GLOSSARY.md#user)'s settings.
-- Finally, the [DataService](./src/app/data.service.ts) handles the bottom-level [data management](./doc/development/GLOSSARY.md#user-data-item) (see [Architecture](./doc/development/ARCHITECTURE.md)).
+- The [PollService](./src/app/poll.service.ts) defines classes for [polls](./documentation/development/GLOSSARY.md#poll) and [options](./documentation/development/GLOSSARY.md#option) and handles the [tallying](./documentation/development/GLOSSARY.md#tallying) of [results](./documentation/development/GLOSSARY.md#results).
+- The [DelegationService](./src/app/delegation.service.ts) handles everything related to [delegation](./documentation/development/GLOSSARY.md#delegation).
+- The [NewsService](./src/app/news.service.ts) handles [news items](./documentation/development/GLOSSARY.md#news-item).
+- The [SettingsService](./src/app/settings.service.ts) manages a [user](./documentation/development/GLOSSARY.md#user)'s settings.
+- Finally, the [DataService](./src/app/data.service.ts) handles the bottom-level [data management](./documentation/development/GLOSSARY.md#user-data-item) (see [Architecture](./documentation/development/ARCHITECTURE.md)).
 
-When coding, please try to stick to the style you see in the existing code. There are only a very few [conventions](./doc/development/CONVENTIONS.md).
+When coding, please try to stick to the style you see in the existing code. There are only a very few [conventions](./documentation/development/CONVENTIONS.md).
 
 ## 4. Working on translations
 

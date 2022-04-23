@@ -1,4 +1,12 @@
 {
+    "_HEADER_": [
+        "Copyright Contributors to the vodle project.",
+        "This file is part of vodle.",  
+        "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
+        "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
+        "You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
+    ],
+    
     "_WELCOME_TO_TRANSLATORS_": [
         "Thank you for helping translate vodle!",
         "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
@@ -29,7 +37,7 @@
     "db-user": "Datenbank-Nutzername",
     "db-pw": "Datenbank-Passwort",
     "edit": "Bearbeiten",
-    "email": "Email",
+    "email": "E-Mail",
     "favourite": "Lieblingsoption",
     "go-to-poll": "zur Abstimmung",
     "hide": "Verbergen",
@@ -89,8 +97,9 @@
         "-page-title": "Wir setzen Deine Waps",
 
         "-step-1-title": "Lieblingsoption",
-        "favourite-intro": "Welche Option würdest Du am meisten bevorzugen?",
-        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern hinzufügen.",
+        "favourite-intro-1": "Die folgenden Fragen sollen Dir den Einstieg erleichtern und Deine anfänglichen Waps setzen. Du kannst sie später jederzeit ändern.",
+        "favourite-intro-2": "Welche Option würdest Du am meisten bevorzugen?",
+        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern ganz unten hinzufügen.",
         "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> ein Wap von <b>100</b>.",
         "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Waps der anderen Teilnehmer:innen sind.",
         "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
@@ -143,19 +152,19 @@
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
 
-        "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
-        "request-options-without-share": "Am einfachsten kannst die Person per Email bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "request-options-without-share": "Am einfachsten kannst die Person per E-Mail bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
 
         "share": "Teilen",
-        "compose-email": "Email schreiben",
+        "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Delegierungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn nun Deiner/Deinem Delegierten, {{nickname}}.",
 
-        "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung schließt {{due}})",
+        "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung endet {{due}})",
         "message-body-greeting": "Liebe:r Teilnehmer:in,",
         "message-body-before-title": "ich möchte Dich gerne bitten, mein:e Delegierte:r zu sein in der vodle-Abstimmung",
-        "message-body-closes": "(Die Abstimmung schließt am {{due}}.)",
+        "message-body-closes": "(Die Abstimmung endet am {{due}}.)",
         "message-body-explanation": "Wenn Du zustimmst, wird vodle Deine Waps automatisch verwenden, um auch meine Waps festzulegen, ohne dass Dir zusätzliche Arbeit entsteht.",
         "message-body-before-link": "Um meiner Bitte zuzustimmen oder sie abzulehnen, verwende bitte diesen Link:",
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
@@ -217,7 +226,7 @@
         "url-label": "„Mehr lesen“-Link",
         "url-placeholder": "Eine Webseite mit mehr Details, wenn die Teilnehmer:in „mehr lesen“ anklickt (optional)",
 
-        "due-type-label": "Die Abstimmung schließt...",
+        "due-type-label": "Die Abstimmung endet...",
         "due-type-custom": "an einem bestimmten Datum und Uhrzeit",
         "due-type-10min": "nach 10 Minuten",
         "due-type-hour": "nach einer Stunde",
@@ -230,7 +239,7 @@
         "due-type-week": "nach einer Woche",
         "due-type-two-weeks": "nach zwei Wochen",
         "due-type-four-weeks": "nach vier Wochen",
-        "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung schließt",
+        "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung endet",
 
         "advanced-settings": "Erweiterte Einstellungen",
         "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
@@ -261,7 +270,15 @@
 
         "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
     },
-    
+
+    "external-link": {
+        "confirm": "Dieser Link auf die externe Webseite<br/><br/><b>{{url}}</b><br/><br/>wurde von einer/einem vodle-Nutzer:in eingetragen und nicht von vodle geprüft.<br/><br/>Möchtest Du ihn trotz der damit verbundenen Risiken öffnen?",
+        "copy-link": "Link kopieren",
+        "yes": "Ja, öffnen",
+        "notification-copied-link-title": "Externer Link in die Zwischenablage kopiert.",
+        "notification-copied-link-body": ""
+    },
+
     "explain": {
         "title-approval": "Zustimmung für",
 
@@ -364,6 +381,8 @@
 
         "wap": "<p>In vodle stimmst Du ab, indem Du jeder Option ein <b>Wap</b> gibst. Das ist eine Zahl <b>zwischen 0 und 100</b>. Du kannst Sie mit den farbigen <b>Schiebereglern</b> einstellen. vodle kann Dir dabei helfen, dafür ist der grüne Zauberstab.</p><p>Ein Wap ist keine Bewertung im üblichen Sinn! Stattdessen gibt es an, unter welchen Bedingungen Du der Option <b>zustimmst</b>.</p><p>Am Anfang sind alle Deine Waps Null und die Schieberegler sind rote Knöpfe. Ein Wap von <b>Null</b> bedeutet, dass Du der Option <b>auf keinen Fall</b> zustimmst.</p><p>Wenn Du den Regler ganz nach rechts schiebst, gibst Du ein Wap von <b>100</b>. Das bedeutet, dass Du der Option <b>auf jeden Fall</b> zustimmst. Der Schieberegler ist dann grün.</p><p>Du kannst auch ein Wap <b>zwischen 1 und 99</b> einstellen. Dann stimmst Du der Option nur zu, wenn <b>genügend andere</b> auch zustimmen. Je weiter rechts der Regler, desto eher stimmst Du zu. Wenn Du z.B. ein Wap von 30 einstellst, stimmst Du zu, wenn mehr als 70% aller Teilnehmer:innen zustimmen. Wenn Du ein Wap von <b><i>X</i></b> einstellst, stimmst Du zu, wenn mehr als <b>100% minus <i>X</i></b> zustimmen.</p>",
 
+        "non-abstaining": "DIes ist die Anzahl an Teilnehmer:innen, die <b>mindestens einer Option ein positives Wap</b> gegeben haben. Teilnehmer:innen, die allen Optionen ein Wap von Null geben, enthalten sich und üben keinen Einfluss auf das Ergebnis aus.",
+
         "approve": "<p><b>Ob Du einer Option zustimmst, hängt von Deinem Wap und den Waps aller anderen Teilnehmer:innen ab.</b></p><p>Wenn z.B. mehr als 70% der Teilnehmer:innen der Option ein Wap von 30 oder mehr angeben, stimmen diese Teilnehmer:innen alle der Option zu. Wenn mehr als <i>X%</i> ein Wap von 100 minus <i>X</i> oder mehr angeben, stimmen sie alle zu.</p><p>Wie viele Teilnehmer:innen gerade zustimmen, zeigt der helle Zustimmungs-Balken, der von rechts kommt. Wenn Du wissen willst, wie die momentane Zustimmung zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p><p>Ob Du selbst einer Option momentan zustimmst, kannst Du an der Farbe Deines Wap-Reglers sehen. Ragt der Regler in den Balken, ist er grün und Du stimmst zu.</p><p>Wenn keines Deiner Waps in einen Balken ragt, dann stimmst Du der Option mit dem größten Wap zu. So stimmst Du immer mindestens einer Option zu. Häufig stimmt man seiner Lieblingsoption und einer oder mehreren weiteren akzeptablen Optionen zu.</p>",
 
         "share": "<p>Jede Option bekommt einen <b>Anteil</b> in Prozent. Alle Anteile zusammen ergeben 100%.</p><p>Wenn es bei der Abstimmung um die Verteilung eines Budgets oder einer Ressource geht, bekommt am Ende jede Option ihren Anteil davon. Wenn bei der Abstimmung stattdessen eine einzige Option gewählt werden soll, dann bestimmt der Anteil, mit welcher <b>Wahrscheinlichkeit</b> die Option am Ende gewinnt.</p><p>Die Anteile werden aus den Zustimmungs-Werten berechnet: Die Option, die am höchsten gelistet ist, bekommt einen Anteil, der genau so groß ist wie ihre Zustimmung. (Wenn alle ihr zustimmen, gewinnt sie also mit Sicherheit oder bekommt das gesamte Budget.) Die anderen Optionen bekommen kleinere Anteile oder nichts. Optionen ohne Zustimmung bekommen keinen Anteil.</p><p>Die genaue Formel ist: Der Anteil einer Option entspricht dem Prozentsatz an Teilnehmer:innen, die dieser Option aber keiner höher gelisteten Option zustimmen. Anders gesagt: „Dein“ Anteil geht immer an eine Option, der Du zustimmst, und zwar an die mit der größten Gesamt-Zustimmung.</p><p>Wenn Du wissen willst, wie der momentane Anteil zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p>"
@@ -400,26 +419,30 @@
         "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
     },
 
+    "imprint": {
+        "-page-title": "Impressum"
+    },
+
     "inviteto": {
         "-page-title": "Leute zur Abstimmung einladen",
         "first-intro": "Die Abstimmung hat begonnen. Bitte lade jetzt die Teilnehmer:innen ein!",
         "later-intro": "Hier kannst Du Teilnehmer:innen einladen zur Abstimmung:",
-        "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine Email schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
-        "caution-without-share1": "Am einfachsten kannst Du Leute per Email einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
+        "caution-without-share1": "Am einfachsten kannst Du Leute per E-Mail einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution2": "Der Einladungs-Link enthält die Abstimmungs-ID und ein Passwort. Jede Person, die den Link bekommt, egal ob direkt von Dir oder von jemandem weitergeleitet, kann abstimmen. Stell also bitte sicher, dass Du und die Teilnehmer:innen den Link nur berechtigten Leuten schicken.",
 
         "share": "Teilen",
-        "compose-email": "Email schreiben",
+        "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Einladungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn jetzt Deinen Teilnehmer:innen!"
     },
 
     "invite-email": {
-        "subject": "Einladung zur Abstimmung (schließt {{due}})",
+        "subject": "Einladung zur Abstimmung (endet {{due}})",
         "body-greeting": "Liebe:r Teilnehmer:in,",
         "body-before-title": "ich lade Dich ein, an einer interaktiven Abstimmung teilzunehmen unter der Überschrift",
-        "body-closes": "Die Abstimmung schließt am {{due}}.",
+        "body-closes": "Die Abstimmung endet am {{due}}.",
         "body-before-link": "Um teilzunehmen, verwende bitte diesen Link:",
         "body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "body-regards": "Mit besten Grüßen"
@@ -433,9 +456,9 @@
         "p1-winner": "Es geht darum, bis <b>{{due}}</b> zwischen mehreren Optionen zu wählen. Am Ende wird genau eine Option gewinnen.",
         "p1-share": "Es geht darum, bis <b>{{due}}</b> eine Ressource oder ein Budget zwischen verschiedenen Optionen aufzuteilen.",
         "p2": "Einige Optionen sind bereits vorgeschlagen worden. Jede:r Teilnehmer:in kann jederzeit weitere Optionen vorschlagen, bis zum Ende.",
-        "p3": "Du kannst Deine Meinung zu den Optionen ausdrücken, in dem Du sie <i>bewertest</i>. Du kannst jeder Option ein Wap zwischen 0 (keine Zustimmung) und 100 (sichere Zustimmung) geben.",
-        "p4": "Wenn Du unsicher über eine oder mehrere Optionen bist, kannst Du deren Wap auch an eine:n andere:n Teilnehmer:in Deines Vertrauens <i>delegieren.</i> Dann zählen deren Waps dieser Optionen auch als Deine.Wenn Du gar keine Zeit hast, über die Optionen nachzudenken, kannst Du auch alle Waps an jemand anderes delegieren.",
-        "p5": "Du kannst Deine Waps und Delegationen jederzeit ändern, bis zum Ende. Es ist sogar sinnvoll, den Abstimmungs-Verlauf über die Zeit zu verfolgen, Deine Waps an das, was Du siehst, anzupassen, neu vorgeschlagenen Optionen Waps zu geben, oder selbst welche vorzuschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen.",
+        "p3": "Du kannst Deine Meinung zu den Optionen ausdrücken, in dem Du sie <i>bewertest</i>. Du kannst jeder Option ein Wap von 0 (keine Zustimmung) bis 100 (sichere Zustimmung) geben.",
+        "p4": "Wenn Du unsicher über eine oder mehrere Optionen bist, kannst Du deren Wap auch an eine:n andere:n Teilnehmer:in Deines Vertrauens <i>delegieren.</i>",
+        "p5": "Du kannst den „Assistiere mir“-Knopf verwenden, um Deine anfänglichen Waps zu setzen. Du kannst Deine Waps und Delegationen jederzeit ändern, bis zum Ende. Sie werden immer sofort gespeichert, Du muss keinen „Speichern“-Knopf drüclen. Es ist oft sinnvoll, den Abstimmungs-Verlauf über die Zeit zu verfolgen, Deine Waps an das, was Du siehst, anzupassen, neu vorgeschlagenen Optionen Waps zu geben, oder selbst welche vorzuschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen.",
         "lets-go-button": "Also los!",
         "p6": "Wenn Du wissen willst, wie vodle die Waps verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}."
     },
@@ -448,28 +471,27 @@
 
         "ask-used-before": "Hast Du vodle schon einmal auf irgendeinem Gerät verwendet?",
 
-        "ask-fresh-email": "Bitte gib Deine Email-Adresse ein, die Du für vodle verwenden möchtest.", 
-        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem.",
-        "ask-old-email": "Bitte gib die Email-Adresse ein, die Du für vodle verwendest.", 
+        "ask-fresh-email": "Bitte gib Deine E-Mail-Adresse ein, die Du für vodle verwenden möchtest.", 
+        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem. Wir senden Dir auch keine Emails.",
+        "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.", 
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
-        "consent-cookies": "Ich stimme der Verwendung von technischen Cookies zu.",
+
+        "consent-privacy-before-privacy": "Ja, ich habe die",
+        "consent-privacy-privacy": "Datenschutzerklärung",
+        "consent-privacy-after-privacy": "zur Kenntnis genommen und stimme ihr zu.",
 
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
 
         "ready-to-start": "OK, viel Spaß mit vodle!",
-        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst.",
-
-        "cookie-banner": "<b>Cookies:</b> Diese Webseite verwendet ausschließlich technische Cookies. Wir verwenden Cookies, um lokal auf Deinem Rechner Daten zu Abstimmungen zu speichern, an denen Du teilnimmst. Manche dieser Daten (z.B. deine Waps der Optionen in einer Abstimmung) verlassen auch Deinen Rechner und werden in einer Datenbank Deiner Wahl gespeichert, um so mit den anderen Teilnehmer:innen der selben Abstimmung kommunizieren zu können. Wenn dies geschieht, dann nur in anonymisierter und verschlüsselter Form, so dass nur Du und die anderen Teilnehmer:innen der selben Abstimmung sie mit Hilfe des richtigen Passworts entschlüsseln können, aber niemand sonst, auch keine Mitarbeiter:innen von vodle, und so, dass niemand daraus Rückschlüsse auf Deine Identität ziehen kann. <b>Durch die Eingabe einer Email-Adressse auf der Anmeldeseite stimmst Du dem zu.</b>",
-        "-cookie-banner-2": "Detaillierte Informationen findest Du in unserer Datenschutzerklärung."
-
+        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst."
     },
 
     "logout": {
         "-page-title": "Abmelden",
         "confirm-header": "Wirklich abmelden?",
-        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht. Bitte versichere Dich, dass Du die Email-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest.",
+        "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht (aber nicht vom verwendeten Datenbankserver). Bitte versichere Dich, dass Du die E-Mail-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest. Wenn Du sie vergisst, können sie nicht wiederhergestellt werden, da wir sie nirgendwo speichern.",
         "confirm-button": "Ja, abmelden",
         "failed": "Abmelden fehlgeschlagen"
     },
@@ -527,14 +549,14 @@
         "type-share": "Optionen bekommen Anteile",
         "type-winner": "Eine Option gewinnt",
 
-        "assist-me": "Assistiere mir",
+        "assist-me": "Assistiere<br/>mir",
 
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
         "hint-abstaining-1": "Du enthältst Dich momentan.",
         "hint-abstaining-2-before-wap": "Du solltest wenigstens Deiner Lieblingsoption ein positives ",
         "hint-abstaining-2-wap": "Wap",
-        "hint-abstaining-2-after-wap": " geben (den roten Knopf nach rechts schieben) oder Deine Waps an jemand delegieren.",
+        "hint-abstaining-2-after-wap": " geben <b>(den roten Knopf nach rechts schieben)</b> oder Deine Waps an jemand delegieren.",
 
         "hint-only1positive-1-before-wap": "Du gibts momentan nur einer Option ein positives ",
         "hint-only1positive-1-wap": "Wap",
@@ -597,6 +619,10 @@
         "type-label": "In dieser Abstimmung wird die Gruppe"
     },
 
+    "privacy": {
+        "-page-title": "Datenschutz"
+    },
+
     "select-server": {
         "same-as-personal": "wie für meine persönlichen Daten (siehe ‘Einstellungen’)",
         "central": "in der vodle-Cloud",
@@ -634,7 +660,7 @@
         "poll-title-required": "Eine Überschrift wird benötigt.",
         "poll-url-valid": "Bitte gib eine gültige URL ein.",
         "poll-due-type-required": "Bitte wähle aus.",
-        "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit.",
+        "poll-due-future": "Diese Kombination von Datum und Uhrzeit liegt in der Vergangenheit oder zu weit in der Zukunft.",
         "delegate-nickname-required": "Ein Kurzname wird benötigt.",
         "option-name-required": "Ein Name wird benötigt.",
         "option-url-valid": "Bitte gib eine gültige URL ein."

@@ -1,0 +1,1 @@
+{"requests":{"pageview":"https://bcp.crwdcntrl.net/amp?c=${account}&pv=y"},"triggers":{"track pageview":{"on":"visible","request":"pageview"}},"transport":{"beacon":false,"xhrpost":false,"image":true}}

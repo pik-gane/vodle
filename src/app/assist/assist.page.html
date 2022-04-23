@@ -1,3 +1,22 @@
+<!--
+Copyright Contributors to the vodle project.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
 <ion-header>
 
   <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
@@ -64,15 +83,23 @@
 
 <!-- SCROLLABLE CONTENT: -->
 
-<ion-content *ngIf="P.ready">
+<ion-content *ngIf="P.ready"
+    [scrollEvents]="true"
+    (ionScroll)="onScroll()"    
+    >
 
   <!-- STEP 1: FAVOURITE OPTION: -->
 
   <!-- selection: -->
   <ng-container *ngIf="step == 1">
+    <ion-item>
+      <p>
+        <span [innerHtml]="'assist.favourite-intro-1'|translate"></span>
+      </p>
+    </ion-item>
     <ion-item color="light">
       <p>
-        <span [innerHtml]="'assist.favourite-intro'|translate"></span>
+        <span [innerHtml]="'assist.favourite-intro-2'|translate"></span>
       </p>
     </ion-item>
     <ion-radio-group [(ngModel)]="favourite" (ngModelChange)="favourite_change()">
@@ -195,7 +222,11 @@
         <ng-container *ngIf="P.oidsorted[i] != favourite">
           <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
           <ion-buttons slot="end">
-            <ion-input inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" [(ngModel)]="estimates[P.oidsorted[i]]" step="5" (ngModelChange)="estimate_change()"></ion-input>&nbsp;%
+            <ion-input 
+              inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
+              [(ngModel)]="estimates[P.oidsorted[i]]" 
+              debounce="100" (ngModelChange)="estimate_change()"
+            ></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
       </ion-item>  
@@ -264,8 +295,11 @@
         <span [innerHtml]="'assist.thresholds-question-2'|translate"></span>
       </p>
       <ion-buttons slot="end">
-        <ion-input inputmode="numeric" maxlength="3" size="3" type="number" [min]="estimates[thresholded_oids[current_index]]" max="100" step="5" 
-          [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()">
+        <ion-input 
+          inputmode="numeric" maxlength="3" size="3" type="number" 
+          [min]="estimates[thresholded_oids[current_index]]" max="100" step="5" 
+          [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()"
+          debounce="100">
         </ion-input>&nbsp;%
       </ion-buttons>
     </ion-item>
@@ -336,5 +370,15 @@
     <!---->
   </ng-container>
 
+  <ion-fab *ngIf="show_up" vertical="top" horizontal="end" slot="fixed" size="small" class="ion-no-margin ion-no-padding">
+    <ion-fab-button size="small" color="light" (click)="scroll_to_top();">
+      <ion-icon name="chevron-up-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+  <ion-fab *ngIf="show_down" vertical="bottom" horizontal="end" slot="fixed" size="small" class="ion-no-margin ion-no-padding">
+    <ion-fab-button size="small" color="light" (click)="scroll_to_bottom();">
+      <ion-icon name="chevron-down-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
 
 </ion-content>
