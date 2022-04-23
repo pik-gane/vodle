@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+<!-- AMP Web Push Permission Dialog -->
+
+<head>
+  <meta charset="utf-8">
+
+  <!-- Do not edit styles in this section -->
+  <style builtin>
+    /* Do not edit styles in this section. Add custom styles in the next
+       style section */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Default loading spinner */
+    .spinner,
+    .spinner:after {
+      border-radius: 50%;
+      width: 10em;
+      height: 10em;
+    }
+    .spinner {
+      margin: 60px auto;
+      font-size: 10px;
+      position: relative;
+      text-indent: -9999em;
+      border-top: 1.1em solid rgba(140, 140, 140, 0.2);
+      border-right: 1.1em solid rgba(140, 140, 140, 0.2);
+      border-bottom: 1.1em solid rgba(140, 140, 140, 0.2);
+      border-left: 1.1em solid rgb(140, 140, 140);
+      -webkit-transform: translateZ(0);
+      -ms-transform: translateZ(0);
+      transform: translateZ(0);
+      -webkit-animation: spinner 1.1s infinite linear;
+      animation: spinner 1.1s infinite linear;
+    }
+    @-webkit-keyframes spinner {
+      0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+      }
+      100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+      }
+    }
+    @keyframes spinner {
+      0% {
+        -webkit-transform: rotate(0deg);
+        transform: rotate(0deg);
+      }
+      100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Horizontally and vertically center items */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+    }
+
+    /* Page message text styles */
+    .message {
+      font-size: 22px;
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    /* Close icon styles */
+    #close {
+      position: fixed;
+      right: 32px;
+      top: 32px;
+      width: 32px;
+      height: 32px;
+      opacity: 0.5;
+      cursor: pointer;
+    }
+    #close:before, #close:after {
+      position: fixed;
+      right: 48px;
+      content: ' ';
+      height: 33px;
+      width: 3px;
+      background-color: #333;
+    }
+    #close:before {
+      transform: rotate(45deg);
+    }
+    #close:after {
+      transform: rotate(-45deg);
+    }
+
+    /* Used to hide the preload and postload sections */
+    .invisible {
+      display: none;
+    }
+  </style>
+
+  <!-- Optional: Add custom styles here -->
+  <style custom>
+    /* Add custom styles here */
+  </style>
+</head>
+<body>
+  <div id="preload">
+    <!-- Anything in this section will be shown before the main script
+          runs, and will be hidden after -->
+    <div class="spinner"></div>
+  </div>
+  <div id="postload" class="invisible">
+    <span id="close"></span>
+    <div permission="default">
+      <p class="message">
+        <!--
+        Customize the subscribing message here
+            (e.g. "Click Allow to receive notifications")
+        -->
+        Click Allow to receive notifications.
+      </p>
+    </div>
+    <div permission="denied">
+      <!--
+        Customize the unblocking message here
+            (e.g. "Please unblock notifications in your browser settings
+                    to receive notifications from this website.")
+        -->
+      <p class="message">
+        Please unblock notifications in your browser settings to receive notifications from this website.
+      </p>
+    </div>
+  </div>
+  <script>;
+!function(){Array.isArray;var t=Object.prototype;function i(t){var i=Object.create(null);return t&&Object.assign(i,t),i}t.hasOwnProperty,t.toString;var n=/(\0)|^(-)$|([\x01-\x1f\x7f]|^-?[0-9])|([\x80-\uffff0-9a-zA-Z_-]+)|[^]/g;function e(t,i,n,e,r){return r||(i?"�":e?t.slice(0,-1)+"\\"+t.slice(-1).charCodeAt(0).toString(16)+" ":"\\"+t)}var r=/(?:^[#?]?|&)([^=&]+)(?:=([^&]*))?/g;function s(t){var i=arguments.length>1&&void 0!==arguments[1]?arguments[1]:"";try{return decodeURIComponent(t)}catch(t){return i}}var o="amp-web-push";function a(t,i){for(var n=0;n<i.length;n++){var e=i[n];e.enumerable=e.enumerable||!1,e.configurable=!0,"value"in e&&(e.writable=!0),Object.defineProperty(t,e.key,e)}}var c=self.AMP_CONFIG||{},h=("string"==typeof c.thirdPartyFrameRegex?new RegExp(c.thirdPartyFrameRegex):c.thirdPartyFrameRegex,("string"==typeof c.cdnProxyRegex?new RegExp(c.cdnProxyRegex):c.cdnProxyRegex)||/^https:\/\/([a-zA-Z0-9_-]+\.)?cdn\.ampproject\.org$/);function u(t){if(!self.document||!self.document.head)return null;if(self.location&&h.test(self.location.origin))return null;var i=self.document.head.querySelector('meta[name="'.concat(t,'"]'));return i&&i.getAttribute("content")||null}c.thirdPartyUrl,c.thirdPartyFrameHost,c.cdnUrl||u("runtime-host"),c.errorReportingUrl,c.betaErrorReportingUrl,c.localDev,c.geoApiUrl||u("amp-geo-api"),self.__AMP_LOG=self.__AMP_LOG||{user:null,dev:null,userForEmbed:null};var f=self.__AMP_LOG;function l(){return f.dev||(f.dev=function(t,i){throw new Error("failed to call initLogConstructor")}())}function d(t){return t.data}var v,p,w=function(){function t(t){this.St=t,this.It=0,this.Ct=0,this.Ot=i()}var n=t.prototype;return n.has=function(t){return!!this.Ot[t]},n.get=function(t){var i=this.Ot[t];if(i)return i.access=++this.Ct,i.payload},n.put=function(t,i){this.has(t)||this.It++,this.Ot[t]={payload:i,access:this.Ct},this.Rt()},n.Rt=function(){if(!(this.It<=this.St)){var t,i=this.Ot,n=this.Ct+1;for(var e in i){var r=i[e].access;r<n&&(n=r,t=e)}void 0!==t&&(delete i[t],this.It--)}},t}();function g(t,i){return v||(v=self.document.createElement("a"),p=self.__AMP_URL_CACHE||(self.__AMP_URL_CACHE=new w(100))),function(t,i,n){if(n&&n.has(i))return n.get(i);t.href=i,t.protocol||(t.href=t.href);var e,r={href:t.href,protocol:t.protocol,host:t.host,hostname:t.hostname,port:"0"==t.port?"":t.port,pathname:t.pathname,search:t.search,hash:t.hash,origin:null};"/"!==r.pathname[0]&&(r.pathname="/"+r.pathname),("http:"==r.protocol&&80==r.port||"https:"==r.protocol&&443==r.port)&&(r.port="",r.host=r.hostname),e=t.origin&&"null"!=t.origin?t.origin:"data:"!=r.protocol&&r.host?r.protocol+"//"+r.host:r.href,r.origin=e;var s=r;return n&&n.put(i,s),s}(v,t,i?null:p)}new Set(["c","v","a","ad"]);var m=function(){function t(t){t||(t={debug:!1,windowContext:window}),this.et={},this._r={},this.Nr=t.debug,this.Wr=!1,this.Dr=!1,this.Fr=!1,this.$r=null,this.zr=null,this.Hr=null,this.Vr=null,this.Gr=null,this.Kr=t.windowContext||window}var i,n,e=t.prototype;return e.listen=function(i){var n=this;return new Promise((function(t,e){n.Fr?e(new Error("Already connected.")):n.Wr?e(new Error("Already listening for connections.")):Array.isArray(i)?(n.Hr=n.qr.bind(n,i,t,e),n.Kr.addEventListener("message",n.Hr),n.Nr&&l().fine(o,"Listening for a connection message...")):e(new Error("allowedOrigins should be a string array of allowed origins to accept messages from. Got:",i))})).then((function(){n.send(t.Topics.CONNECT_HANDSHAKE,null),n.Fr=!0}))},e.Jr=function(t,i){for(var n=g(t).origin,e=0;e<i.length;e++)if(g(i[e]).origin===n)return!0;return!1},e.qr=function(i,n,e,r){var s=d(r),a=r.origin,c=r.ports;this.Nr&&l().fine(o,"Window message for listen() connection received:",s),this.Jr(a,i)?s&&s.topic===t.Topics.CONNECT_HANDSHAKE?(l().fine(o,"Received expected connection handshake message:",s),this.Kr.removeEventListener("message",this.Hr),this.zr=c[0],this.Gr=this.Zr.bind(this),this.zr.addEventListener("message",this.Gr,!1),this.zr.start(),n()):l().fine(o,"Discarding connection message because it did not contain our expected handshake:",s):l().fine(o,"Discarding connection message from ".concat(a," ")+"because it isn't an allowed origin:",s," (allowed  origins are)",i)},e.connect=function(i,n){var e=this;return new Promise((function(r,s){i||s(new Error("Provide a valid Window context to connect to.")),n||s(new Error("Provide an expected origin for the remote Window or provide the wildcard *.")),e.Fr?s(new Error("Already connected.")):e.Dr?s(new Error("Already connecting.")):(e.$r=new MessageChannel,e.zr=e.$r.port1,e.Vr=e.Br.bind(e,e.zr,n,r),e.zr.addEventListener("message",e.Vr),e.zr.start(),i.postMessage({topic:t.Topics.CONNECT_HANDSHAKE},"*"===n?"*":g(n).origin,[e.$r.port2]),l().fine(o,"Opening channel to ".concat(n,"...")))}))},e.Br=function(t,i,n){this.Fr=!0,this.Nr&&l().fine(o,"Messenger channel to ".concat(i," established.")),t.removeEventListener("message",this.Vr),this.Gr=this.Zr.bind(this),t.addEventListener("message",this.Gr,!1),n()},e.Zr=function(t){var i=d(t);if(this.et[i.id]&&i.isReply){var n=this.et[i.id];delete this.et[i.id];var e=n.promiseResolver;n.message=i.data,this.Nr&&l().fine(o,"Received reply for topic '%s': %s",i.topic,i.data),e([i.data,this.Qr.bind(this,i.id,n.topic)])}else{var r=this._r[i.topic];if(!r)return;this.Nr&&l().fine(o,"Received new message for "+"topic '".concat(i.topic,"': ").concat(i.data));for(var s=0;s<r.length;s++)(0,r[s])(i.data,this.Qr.bind(this,i.id,i.topic))}},e.on=function(t,i){this._r[t]?this._r[t].push(i):this._r[t]=[i]},e.off=function(t,i){if(i){var n=this._r[t].indexOf(i);-1!==n&&this._r[t].splice(n,1)}else this._r[t]&&delete this._r[t]},e.Qr=function(t,i,n){var e=this,r={id:t,topic:i,data:n,isReply:!0};return this.zr.postMessage(r),new Promise((function(t){e.et[r.id]={message:n,topic:i,promiseResolver:t}}))},e.send=function(t,i){var n=this,e={id:crypto.getRandomValues(new Uint8Array(10)).join(""),topic:t,data:i};return this.Nr&&l().fine(o,"Sending %s: %s",t,i),this.zr.postMessage(e),new Promise((function(r){n.et[e.id]={message:i,topic:t,promiseResolver:r}}))},i=t,(n=[{key:"Topics",get:function(){return{CONNECT_HANDSHAKE:"topic-connect-handshake",NOTIFICATION_PERMISSION_STATE:"topic-notification-permission-state",SERVICE_WORKER_STATE:"topic-service-worker-state",SERVICE_WORKER_REGISTRATION:"topic-service-worker-registration",SERVICE_WORKER_QUERY:"topic-service-worker-query",STORAGE_GET:"topic-storage-get"}}}])&&a(i,n),t}(),E=function(){function t(t){this.Nr=t&&t.debug,this.Kr=t.windowContext||window,this.Xr=new m({debug:this.Nr,windowContext:this.Kr})}var o=t.prototype;return o.isCurrentDialogPopup=function(){return!!this.Kr.opener&&this.Kr.opener!==this.Kr},o.requestNotificationPermission=function(){var t=this;return new Promise((function(i,n){try{t.Kr.Notification.requestPermission((function(t){return i(t)}))}catch(t){n(t)}}))},o.run=function(){this.tw(),this.iw(),this.nw(),this.ew(),"denied"!==this.Kr.Notification.permission?this.rw():this.sw()},o.tw=function(){var t=this,i=this.Kr.document.querySelector("#close");i&&i.addEventListener("click",(function(){t.closeDialog()}))},o.closeDialog=function(){if(this.isCurrentDialogPopup())this.Kr.close();else{var t=function(t){var n,e=i();if(!t)return e;for(;n=r.exec(t);){var o=s(n[1],n[1]),a=n[2]?s(n[2].replace(/\+/g," "),n[2]):"";e[o]=a}return e}((this.Kr.fakeLocation||this.Kr.location).search);if(!t.return)throw new Error("Missing required parameter.");var n=s(t.return);this.redirectToUrl(n)}},o.sw=function(){var t=this;navigator.permissions.query({name:"notifications"}).then((function(i){i.onchange=function(){switch(t.iw(),t.Kr.Notification.permission){case"default":case"granted":t.rw()}}}))},o.iw=function(){this.Kr.localStorage.setItem("amp-web-push-notification-permission",this.Kr.Notification.permission)},o.nw=function(){for(var t=this.Kr.document.querySelectorAll("[permission]"),i=0;i<t.length;i++){var r=t[i];this.ow(r,!1)}var s,o=this.Kr.document.querySelector("[permission=".concat((s=this.Kr.Notification.permission,String(s).replace(n,e)),"]"));o&&this.ow(o,!0)},o.ew=function(){var t=this.Kr.document.querySelector("#preload"),i=this.Kr.document.querySelector("#postload");t&&i&&(this.ow(t,!1),this.ow(i,!0))},o.ow=function(t,i){if(t){var n="invisible";i?t.classList.remove(n):t.classList.add(n)}},o.rw=function(){var t=this;return this.requestNotificationPermission().then((function(i){if(t.iw(),t.isCurrentDialogPopup())return t.Xr.connect(opener,"*"),t.Xr.send(m.Topics.NOTIFICATION_PERMISSION_STATE,i).then((function(i){var n=i[0];n&&n.closeFrame&&t.closeDialog()}));t.closeDialog()}))},o.redirectToUrl=function(t){var i=g(t);!i||"http:"!==i.protocol&&"https:"!==i.protocol||(this.Kr.location.href=t)},t}();window._ampWebPushPermissionDialog=new E({debug:!1}),window._ampWebPushPermissionDialog.run()}();
+/*! https://mths.be/cssescape v1.5.1 by @mathias | MIT license */
+//# sourceMappingURL=amp-web-push-permission-dialog.js.map</script>
+</body>
+</html>
