@@ -20,7 +20,38 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 <!--
   TODO: 
   - "fix" slider element's absolute vertical position on screen while using it, even when note above it changes height. achieve this by automatically "scrolling" to compensate such layout changes.  
-  - show "assist me" next to wand if details are expanded
+-->
+
+<!--
+Suggestion
+
+vodle suggests that you look for a possible compromise between
+Y
+and Z.
+
+Why?
+
+Y currently gets the share of A% of the participants, including yours.
+Either: You don't approve Z, but it gets the share of B% of the participants.
+Or: The share of another B% goes to Z.
+Together, you might be able to agree on a better compromise with all these participants.
+
+How?
+
+Try to find some other option X that appeals to both groups.
+Maybe this option is already on the list, or you might have to add it.
+Then suggest that all participants whose share now goes to Y or Z 
+consider giving option X a wap of more than 100-C.
+If they all do so, then they all approve X.
+The share of all these participants will then move to X.
+You yourself would have to give X a wap of more than 100-C as well, of course. 
+Your share will then also move to X, 
+but only if the others approve X as well.
+
+Instead of having A% Y plus B% Z, you would then have C% X (or more, if even more approve X).
+
+[Diagram: Pie A + Pie B -> Pie C for some other option X?]
+
 -->
 
 <!-- HEADER: -->
@@ -50,6 +81,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+
+      <!-- TRANSMITTED SIGN -->
+      <ion-button *ngIf="!!p && p.have_acted && !p.syncing && window.navigator.onLine" class="ion-no-margin ion-no-padding" fill="clear" (click)="checkmark_clicked()">
+        <ion-icon size="large" name="checkmark" color="grey" slot="icon-only"></ion-icon>
+      </ion-button>
 
       <!-- DELEGATE BUTTON: -->
       <ion-button *ngIf="delegation_status!='agreed' && running"
@@ -136,12 +172,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 ">
               <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
               <small *ngIf="(p.url||'') != ''">
-                (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text 
+                (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url));details_expanded=!details_expanded"><ion-text 
                   class="externallink"  
                   [innerHtml]="'read-more' | translate">
                 </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
               </small>
-              <small>
+              <small *ngIf="details_expanded">
                 &nbsp;
                 (<ion-text 
                   class="externallink" 
@@ -161,30 +197,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
             <!-- ASSIST BUTTON: -->
 
-<!--
-      <ion-button *ngIf="delegation_status!='agreed' && running"
-          (click)="delegate_dialog($event)" 
-          shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
-        <span *ngIf="scroll_position < 70"
-          [innerHtml]="'poll.delegate-button' | translate">
-        </span><ion-button class="ion-no-margin ion-no-padding"
-            style="position: relative; right: -4px;"
-            shape="round" fill="solid" color="primary">
-          <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
-          </ion-icon>
-        </ion-button>
-      </ion-button>
-
--->
-
             <ion-button *ngIf="running"
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px;">
-              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right;"
-                [innerHtml]="'poll.assist-me' | translate">
-              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" 
-                  (click)="assist_dialog()" color="success">
+              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right; font-size: 11.5px;"
+                [innerHtml]="'poll.assist-me-button' | translate">
+              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
                 <ion-icon name="color-wand-outline" slot="icon-only" 
                   style="margin: 5px;"></ion-icon>
               </ion-button>
@@ -196,7 +215,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <span style="white-space: nowrap;">
                 <ion-badge *ngIf="running && p.is_closing_soon" 
                   class="ion-no-margin" 
-                  style="position: relative; bottom: -6px;" 
+                  style="position: relative; bottom: -5.5px; font-size: 11.5px;" 
                   color="danger" 
                   [innerHtml]="'badges.closing-soon'|translate">
                 </ion-badge>
@@ -222,7 +241,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                   [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
               </ion-icon>
               <small style="white-space: nowrap;">
-                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>
+                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
               </small>
             </span>&nbsp;&nbsp;&nbsp;
             <span style="white-space: nowrap;">
@@ -258,7 +277,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -273,7 +292,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -288,7 +307,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -825,3 +844,4 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-text>
   </ion-item>
 </ion-footer>
+

@@ -425,9 +425,6 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
-    if (value != 0) {
-      this.have_acted = true;
-    }
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }

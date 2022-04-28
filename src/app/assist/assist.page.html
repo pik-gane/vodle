@@ -97,6 +97,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <span [innerHtml]="'assist.favourite-intro-1'|translate"></span>
       </p>
     </ion-item>
+    <ion-item color="warning" *ngIf="P.p.have_acted">
+      <p>
+        <span [innerHtml]="'assist.favourite-warn-change'|translate"></span>
+      </p>
+    </ion-item>
     <ion-item color="light">
       <p>
         <span [innerHtml]="'assist.favourite-intro-2'|translate"></span>

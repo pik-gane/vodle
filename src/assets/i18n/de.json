@@ -98,6 +98,7 @@
 
         "-step-1-title": "Lieblingsoption",
         "favourite-intro-1": "Die folgenden Fragen sollen Dir den Einstieg erleichtern und Deine anfänglichen Waps setzen. Du kannst sie später jederzeit ändern.",
+        "favourite-warn-change": "Du hast schon einige Waps gesetzt. Wenn Du hier weitergehst, werden diese möglicherweise verändert.",
         "favourite-intro-2": "Welche Option würdest Du am meisten bevorzugen?",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch, kannst Du sie auf der Seite mit den Schiebereglern ganz unten hinzufügen.",
         "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> ein Wap von <b>100</b>.",
@@ -385,7 +386,9 @@
 
         "approve": "<p><b>Ob Du einer Option zustimmst, hängt von Deinem Wap und den Waps aller anderen Teilnehmer:innen ab.</b></p><p>Wenn z.B. mehr als 70% der Teilnehmer:innen der Option ein Wap von 30 oder mehr angeben, stimmen diese Teilnehmer:innen alle der Option zu. Wenn mehr als <i>X%</i> ein Wap von 100 minus <i>X</i> oder mehr angeben, stimmen sie alle zu.</p><p>Wie viele Teilnehmer:innen gerade zustimmen, zeigt der helle Zustimmungs-Balken, der von rechts kommt. Wenn Du wissen willst, wie die momentane Zustimmung zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p><p>Ob Du selbst einer Option momentan zustimmst, kannst Du an der Farbe Deines Wap-Reglers sehen. Ragt der Regler in den Balken, ist er grün und Du stimmst zu.</p><p>Wenn keines Deiner Waps in einen Balken ragt, dann stimmst Du der Option mit dem größten Wap zu. So stimmst Du immer mindestens einer Option zu. Häufig stimmt man seiner Lieblingsoption und einer oder mehreren weiteren akzeptablen Optionen zu.</p>",
 
-        "share": "<p>Jede Option bekommt einen <b>Anteil</b> in Prozent. Alle Anteile zusammen ergeben 100%.</p><p>Wenn es bei der Abstimmung um die Verteilung eines Budgets oder einer Ressource geht, bekommt am Ende jede Option ihren Anteil davon. Wenn bei der Abstimmung stattdessen eine einzige Option gewählt werden soll, dann bestimmt der Anteil, mit welcher <b>Wahrscheinlichkeit</b> die Option am Ende gewinnt.</p><p>Die Anteile werden aus den Zustimmungs-Werten berechnet: Die Option, die am höchsten gelistet ist, bekommt einen Anteil, der genau so groß ist wie ihre Zustimmung. (Wenn alle ihr zustimmen, gewinnt sie also mit Sicherheit oder bekommt das gesamte Budget.) Die anderen Optionen bekommen kleinere Anteile oder nichts. Optionen ohne Zustimmung bekommen keinen Anteil.</p><p>Die genaue Formel ist: Der Anteil einer Option entspricht dem Prozentsatz an Teilnehmer:innen, die dieser Option aber keiner höher gelisteten Option zustimmen. Anders gesagt: „Dein“ Anteil geht immer an eine Option, der Du zustimmst, und zwar an die mit der größten Gesamt-Zustimmung.</p><p>Wenn Du wissen willst, wie der momentane Anteil zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p>"
+        "share": "<p>Jede Option bekommt einen <b>Anteil</b> in Prozent. Alle Anteile zusammen ergeben 100%.</p><p>Wenn es bei der Abstimmung um die Verteilung eines Budgets oder einer Ressource geht, bekommt am Ende jede Option ihren Anteil davon. Wenn bei der Abstimmung stattdessen eine einzige Option gewählt werden soll, dann bestimmt der Anteil, mit welcher <b>Wahrscheinlichkeit</b> die Option am Ende gewinnt.</p><p>Die Anteile werden aus den Zustimmungs-Werten berechnet: Die Option, die am höchsten gelistet ist, bekommt einen Anteil, der genau so groß ist wie ihre Zustimmung. (Wenn alle ihr zustimmen, gewinnt sie also mit Sicherheit oder bekommt das gesamte Budget.) Die anderen Optionen bekommen kleinere Anteile oder nichts. Optionen ohne Zustimmung bekommen keinen Anteil.</p><p>Die genaue Formel ist: Der Anteil einer Option entspricht dem Prozentsatz an Teilnehmer:innen, die dieser Option aber keiner höher gelisteten Option zustimmen. Anders gesagt: „Dein“ Anteil geht immer an eine Option, der Du zustimmst, und zwar an die mit der größten Gesamt-Zustimmung.</p><p>Wenn Du wissen willst, wie der momentane Anteil zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p>",
+
+        "level-of-agreement": "<p>Der Grad an <b>Einigung</b> zeigt Dir, wie nah an vollem Konsens Ihr seid. 100% bedeutet, dass der volle Anteil an eine einzige Option geht und alle dieser Option zustimmen.</p><p>Anderenfalls ist der Einigungs-Grad gleich dem Prozentsatz an Teilnehmer:innen, die den Gewinner-Optionen zustimmen, gemittelt über alle Optionen, die einen positiven Anteil bekommen, und unter Berücksichtigung dieses Anteils.</p><p>Genauer gesagt berechnet vodle den Grad an Einigung so: Es multipliziert den Zustimmungswert jeder Option mit dem Anteil dieser Option, geteilt durch 100, und summiert dann alle diese Zahlen auf.</p>"
     },
 
     "help": {
@@ -541,6 +544,8 @@
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",
 
+        "checkmark-clicked": "Deine Änderungen werden immer sofort gesendet wenn Du online bist. Du musst nichts extra anklicken dafür. Das Häkchen zeigt, dass Deine Änderungen erfolgreich übermittelt wurden.",
+
         "delegate-button": "Delegieren",
 
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
@@ -549,7 +554,8 @@
         "type-share": "Optionen bekommen Anteile",
         "type-winner": "Eine Option gewinnt",
 
-        "assist-me": "Assistiere<br/>mir",
+        "assist-me-inline": "Assistiere mir",
+        "assist-me-button": "Assistiere<br/>mir",
 
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
@@ -616,7 +622,8 @@
         "closes": "Schließt",
         "db-label": "Datenspeicherung",
         "publish": "Abstimmung starten",
-        "type-label": "In dieser Abstimmung wird die Gruppe"
+        "type-label": "In dieser Abstimmung wird die Gruppe",
+        "is-in-past": "Das Enddatum liegt mittlerweile in der Vergangenheit. Bitte ändere es erst."
     },
 
     "privacy": {

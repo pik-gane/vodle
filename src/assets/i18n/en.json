@@ -99,6 +99,7 @@
 
         "-step-1-title": "Favourite option",
         "favourite-intro-1": "The following questions are only to get you started and set your initial waps. You can always change them later.",
+        "favourite-warn-change": "You have already set some waps. If you proceed here, this may change them.",
         "favourite-intro-2": "Which option would you most prefer?",
         "add-option-info": "If you think an important option is still missing, you can add it on the bottom of the page with the sliders.",
         "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
@@ -388,7 +389,9 @@
 
         "approve": "<p><b>Whether you approve an option depends on your wap and all other participantsʼ waps.</b></p><p>If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p><p>How many participants currently approve is shown by the light bar coming in from the right. If you want to know how the current approval comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p>",
 
-        "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>"
+        "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>",
+
+        "level-of-agreement": "<p>The level of <b>agreement</b> shows you how close to full consensus you are. 100% means the whole share goes to a single option and that option is approved by all.</p><p>Otherwise, the agreement level equals the percentage of participants who approve the winning options, averaged over all options that get a positive share, and taking the size of those shares into account.</p><p>More precisely, vodle computes the level of agreement as follows: it multiplies each optionʼs approval score with that optionʼs share divided by 100, and then sums all these numbers up.</p>"
     },
 
     "help": {
@@ -546,6 +549,8 @@
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
 
+        "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
+
         "delegate-button": "Delegate",
 
         "different-language": "This poll is in a different language ({{language}}).",
@@ -554,7 +559,8 @@
         "type-share": "Options are assigned shares",
         "type-winner": "One option wins",
 
-        "assist-me": "Assist<br/>me",
+        "assist-me-inline": "Assist me",
+        "assist-me-button": "Assist<br/>me",
 
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
@@ -622,7 +628,8 @@
         "closes": "Ends",
         "db-label": "Data storage",
         "publish": "Start the poll now",
-        "type-label": "In this poll, the group will"
+        "type-label": "In this poll, the group will",
+        "is-in-past": "The end date is in the past by now. Please change it first."
     },
 
     "privacy": {
