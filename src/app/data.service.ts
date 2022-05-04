@@ -2556,6 +2556,13 @@ export class DataService implements OnDestroy {
     });
   }
 
+  delete_all(): Promise<any> {
+    /** TODO: delete as much data as possible */
+    return new Promise((resolve, reject) => {
+      resolve(true);
+    });
+  }
+
   init_notifications(prompt:boolean) {
     LocalNotifications.requestPermissions().then(async res => {
       const state = res['display'];

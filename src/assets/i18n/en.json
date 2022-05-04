@@ -175,6 +175,16 @@
         "message-body-regards": "Best regards"
     },
 
+    "delete-all": {
+        "-page-title": "Delete my data",
+        "confirm-header": "Really delete your data?",
+        "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private data from the remote database that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll database servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
+        "confirm-button": "Yes, delete my data",
+        "success-title": "Your data was deleted.",
+        "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
+        "failed": "Could not delete all data for some reason"
+    },
+
     "delrespond": {
         "-page-title": "Act as delegate?",
 

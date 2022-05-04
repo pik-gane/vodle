@@ -58,11 +58,16 @@ export class AppComponent {
       icon: 'at-outline'
     },
     {
+      title: 'delete-all.-page-title',
+      url: '/delete-all',
+      icon: 'trash-outline'
+    },
+    {
       title: 'logout.-page-title',
       url: '/logout',
-      icon: 'log-out-outline'
+      icon: 'log-out'
     }
-    ];
+  ];
 
 
   constructor(translate: TranslateService) {

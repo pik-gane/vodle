@@ -105,6 +105,10 @@ const routes: Routes = [
     loadChildren: () => import('./imprint/imprint.module').then( m => m.ImprintPageModule)
   },
   {
+    path: 'delete-all',
+    loadChildren: () => import('./delete-all/delete-all.module').then( m => m.DeleteAllPageModule)
+  },
+  {
     path: '*',
     redirectTo: '/mypolls'
   },

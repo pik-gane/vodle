@@ -190,10 +190,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-row>
       </ion-grid>
     </ion-item>
-    <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right">
+    <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right" >
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin" style="padding-bottom: 8px">
 
             <!-- ASSIST BUTTON: -->
 
@@ -235,42 +235,42 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <!-- STATISTICS: -->
 
-            <span style="white-space: nowrap;">
-              <ion-icon 
-                  color="light" style="position: relative; top: 4px" 
-                  name="people-outline">
-              </ion-icon>&nbsp;<small style="white-space: nowrap;">
-                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span class="externallink" (click)="glossary('non-abstaining')" [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;&nbsp;&nbsp;
-<!--              <ion-button
-                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
-                  [routerLink]="'/inviteto/'+p.pid" >
+            <small style="white-space: nowrap;">
+              <span style="white-space: nowrap;">
                 <ion-icon 
-                    class="ion-no-padding ion-no-margin" 
-                    style="font-size: 14px; position: relative; top: -1px"
-                    name="share-social-outline" 
-                    color="light">
-                </ion-icon>
-              </ion-button>&nbsp;<span class="externallink" [routerLink]="'/inviteto/'+p.pid">Mehr einladen</span>-->
-              <br/></small>
-            </span>
-            <span style="white-space: nowrap;">
-              <ion-icon 
-                  color="light" style="position: relative; top: 3px" 
-                  [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-              </ion-icon>
-              <small style="white-space: nowrap;">
-                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
-              </small>
-            </span>&nbsp;&nbsp;&nbsp;
-            <ion-badge
-                  class="ion-no-margin" 
-                  style="position: relative; bottom: -5.5px; font-size: 11.5px;" 
-                  color="success" 
-                  >
-              <ion-icon name="bulb-outline" class="ion-no-padding ion-no-margin"
-                style="position: relative; top: 1.5px;"></ion-icon>&nbsp;
-              <span [innerHtml]="'<b>3</b> suggestions'"></span> 
-            </ion-badge>
+                    color="light" style="position: relative; top: 2px" 
+                    name="people-outline">
+                </ion-icon>&nbsp;<b>{{p.T.n_not_abstaining}}</b>&nbsp;<span class="externallink" (click)="glossary('non-abstaining')" [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;&nbsp;&nbsp;
+  <!--              <ion-button
+                    class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                    [routerLink]="'/inviteto/'+p.pid" >
+                  <ion-icon 
+                      class="ion-no-padding ion-no-margin" 
+                      style="font-size: 14px; position: relative; top: -1px"
+                      name="share-social-outline" 
+                      color="light">
+                  </ion-icon>
+                </ion-button>&nbsp;<span class="externallink" [routerLink]="'/inviteto/'+p.pid">Mehr einladen</span>-->
+                <br/>
+              </span>
+            </small>
+            <small style="white-space: nowrap;">
+              <span style="white-space: nowrap;">
+                <ion-icon 
+                    color="light" style="position: relative; top: 2px" 
+                    [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
+                </ion-icon><b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
+              </span>&nbsp;&nbsp;&nbsp;
+              <ion-badge
+                    class="ion-no-margin" 
+                    style="position: absolute; right:10px; bottom:7px; font-size: 11.5px; padding-top:2px" 
+                    color="success" 
+                    >
+                <ion-icon name="bulb-outline" class="ion-no-padding ion-no-margin"
+                  style="position: relative; top: 1.5px;"></ion-icon>&nbsp;
+                <span [innerHtml]="'<b>3</b> suggestions'"></span> 
+              </ion-badge>
+            </small>
           </ion-col>
         </ion-row>
       </ion-grid>
