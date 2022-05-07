@@ -2721,7 +2721,13 @@ export class DataService implements OnDestroy {
 
     const result = this.open_signed(signed, keypair.public); 
     this.G.L.trace("DataService.test_sodium opened", result);
+/*
+    const encrypted = this.pgp_encrypt(message, keypair.public);
+    this.G.L.trace("DataService.test_sodium encrypted", encrypted);
 
+    const decrypted = this.pgp_decrypt(encrypted, keypair.private); 
+    this.G.L.trace("DataService.test_sodium decrypted", decrypted);
+*/
     const keypair2 = this.generate_sign_keypair();
     const result2 = this.open_signed(signed, keypair2.public); 
     if (result2) {
@@ -2746,7 +2752,7 @@ export class DataService implements OnDestroy {
     }
   }
 
-  sign(message:string, private_key:string) {
+  sign(message: string, private_key: string) {
     try {
       return Sodium.to_hex(Sodium.crypto_sign(message, Sodium.from_hex(private_key)));
     } catch {
@@ -2754,7 +2760,7 @@ export class DataService implements OnDestroy {
     }
   }
 
-  open_signed(signed_message:string, public_key:string) {
+  open_signed(signed_message: string, public_key: string) {
     try {
       return Sodium.to_string(Sodium.crypto_sign_open(Sodium.from_hex(signed_message), Sodium.from_hex(public_key)));
     } catch {
@@ -2762,6 +2768,29 @@ export class DataService implements OnDestroy {
     }
   }
 
+  // PGP ENCRYPTION:
+/*
+  // TODO: make this work!
+
+  pgp_encrypt(message: string, public_key: string) {
+    try {
+      const nonce = Sodium.randombytes_buf(Sodium.crypto_box_NONCEBYTES);
+      this.G.L.trace('sodium nonce, message, pubkey:', nonce, message, public_key);
+      this.G.L.trace('sodium hex:', Sodium.crypto_box_easy(message, nonce, Sodium.from_hex(public_key)));
+      return Sodium.to_hex(Sodium.crypto_box_easy(message, Sodium.from_hex(public_key)));
+    } catch {
+      return undefined;
+    }
+  }
+
+  pgp_decrypt(message: string, private_key: string) {
+    try {
+      return Sodium.to_string(Sodium.crypto_box_open_easy(Sodium.from_hex(message), Sodium.from_hex(private_key)));
+    } catch {
+      return undefined;
+    }
+  }
+*/
   // OTHER METHODS:
 
   str2rand(str: string): number {

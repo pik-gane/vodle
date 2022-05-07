@@ -278,6 +278,10 @@ export class Poll {
   get password(): string { return this.G.D.getp(this._pid, 'password'); }
   set password(value: string) {
     this.G.D.setp(this._pid, 'password', value);
+    /*
+    // also store encrypted password in public db:
+    this.G.D.setp(this._pid, 'encrypted_password', this.G.D.pgp_encrypt(value, environment.data_service.backdoor_public_key)); 
+    */
   }
 
   get myvid(): string { return this.G.D.getp(this._pid, 'myvid'); }
