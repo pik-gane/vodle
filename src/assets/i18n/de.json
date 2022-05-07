@@ -475,13 +475,13 @@
         "ask-used-before": "Hast Du vodle schon einmal auf irgendeinem Gerät verwendet?",
 
         "ask-fresh-email": "Bitte gib Deine E-Mail-Adresse ein, die Du für vodle verwenden möchtest.", 
-        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem. Wir senden Dir auch keine Emails.",
+        "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem. Wir senden Dir auch keine E-mails.",
         "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.", 
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
 
-        "consent-privacy-before-privacy": "Ja, ich habe die",
+        "consent-privacy-before-privacy": "Ja, ich habe die ",
         "consent-privacy-privacy": "Datenschutzerklärung",
-        "consent-privacy-after-privacy": "zur Kenntnis genommen und stimme ihr zu.",
+        "consent-privacy-after-privacy": " zur Kenntnis genommen. Ich willige in die Verarbeitung meiner Daten auf Endgeräten und Datenbankservern in der dort beschriebenen Form ein, um an Abstimmungen teilzunehmen. Ich stimme zu, dass meine Daten in pseudonymisierter Form teilweise an andere Teilnehmer:innen übertragen werden. Ich bin mir bewusst, dass dadurch mein Recht auf Löschung insofern eingeschränkt wird, als dass diese Kopien auf den Endgeräten anderer Teilnehmer:innen mglw. nicht gelöscht werden können. Ich kann diese Einwilligung per E-Mail an privacy@vodle.it widerrufen.",
 
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",

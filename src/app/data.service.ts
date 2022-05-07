@@ -25,6 +25,7 @@ TODO:
 */
 
 import { Injectable, OnDestroy } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
@@ -45,6 +46,7 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 
 import * as Sodium from 'libsodium-wrappers';
+import { HttpRequest } from '@angular/common/http';
 
 
 /** DATA STORAGE DESIGN
@@ -336,7 +338,7 @@ export class DataService implements OnDestroy {
       public alertCtrl: AlertController,
       public translate: TranslateService,
       public storage: Storage,
-      ) { 
+      private http: HttpClient) { 
   }
 
   ionViewWillLeave() {
@@ -1873,7 +1875,7 @@ export class DataService implements OnDestroy {
       if (cyphertext) {
 
         // extract value and store in cache if changed:
-        const value = decrypt(cyphertext, this.user_cache['password']);
+        const value = (key == 'consent') ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
@@ -2177,8 +2179,10 @@ export class DataService implements OnDestroy {
       .then(doc => {
 
         // key existed in db, so update:
-        const value = dict[dict_key], enc_value = encrypt(value, user_pw);
-        if (decrypt(doc.value, user_pw) != value) {
+        const value = dict[dict_key], 
+              enc_value = (key == 'consent') ? value : encrypt(value, user_pw),
+              old_value = (key == 'consent') ? doc.value : decrypt(doc.value, user_pw);
+        if (old_value != value) {
           doc.value = enc_value;
           this.local_synced_user_db.put(doc)
           .then(response => {
@@ -2195,7 +2199,8 @@ export class DataService implements OnDestroy {
       }).catch(err => {
 
         // key did not exist in db, so add:
-        const value = dict[dict_key], enc_value = encrypt(value, user_pw);
+        const value = dict[dict_key], 
+              enc_value = (key == 'consent') ? value : encrypt(value, user_pw);
         doc = {
           '_id': _id, 
           'value': enc_value,
@@ -2532,12 +2537,14 @@ export class DataService implements OnDestroy {
       }
       // TODO: wait for all syncs to finish
       // delete all local dbs:
-      this.local_only_user_DB.destroy()
+      this.local_synced_user_db.destroy()
       .then(() => {
-        this.local_synced_user_db.destroy()
+        this.local_only_user_DB.destroy()
         .then(() => {
           for (let pid in this.local_poll_dbs) {
-            if (!!this.local_poll_dbs[pid]) this.local_poll_dbs[pid].destroy();
+            if (!!this.local_poll_dbs[pid]) {
+              this.local_poll_dbs[pid].destroy();
+            }
           }
           // delete ionic local storage:
           if (!this.storage) {
@@ -2557,10 +2564,68 @@ export class DataService implements OnDestroy {
   }
 
   delete_all(): Promise<any> {
-    /** TODO: delete as much data as possible */
     return new Promise((resolve, reject) => {
-      resolve(true);
+      // decline all not yet declined delegation requests:
+      for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
+        if (cache) {
+          for (const [did, [from, url, status]] of cache) {
+            if (!status.startsWith('declined')) {
+              this.G.L.trace("DataService.delete_all declining request", did);
+              this.G.Del.decline(pid, did);
+            }
+          }
+        }
+      }
+      // withdraw all own delegation requests:
+      for (const [pid, cache] of Object.entries(this.G.D.outgoing_dids_caches)) {
+        if (cache) {
+          for (const [oid, did] of cache) {
+            if (did) {
+              this.G.L.trace("DataService.delete_all revoking request", did);
+              this.G.Del.revoke_delegation(pid, did, oid);
+            }
+          }
+        }
+      }
+      // set all waps to zero:
+      for (const [pid, p] of Object.entries(this.G.P.polls)) {
+        this.G.L.trace("DataService.delete_all setting zero waps for", pid);
+        for (const oid of p.oids) {
+          p.set_my_own_rating(oid, 0, true);
+        }
+      }
+      // purge all in remote_user_db:
+      this.purge_remote()
+      .then(() => {
+        // do same as when logging out:
+        this.clear_all_local()
+        .catch(reject);
+      })
+      .catch(reject);
     });
+  }
+
+  purge_remote(): Promise<any> {
+    const pwd = this.getu('db_password'), 
+          token = 'TODO!',
+          url = this.G.D.getu('db_server_url');
+    // TODO: get all docs
+    return new Promise((resolve, reject) => {
+      this.remote_user_db.allDocs(
+        // TODO!
+      ).then(docs => {
+        const purge_url = url + "/vodle/_purge",
+        obs = this.http.post<any>(purge_url, JSON.stringify({
+          // TODO: id: [revs]
+        }), {
+          headers: {
+            "content-type": "application/json",
+            "authorization": 'Basic '+ token,
+          }
+        });
+      })
+      .catch(reject);
+    })
   }
 
   init_notifications(prompt:boolean) {

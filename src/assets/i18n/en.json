@@ -38,7 +38,7 @@
     "db-user": "Database username",
     "db-pw": "Database password",
     "edit": "Edit",
-    "email": "Email",
+    "email": "E-mail",
     "favourite": "Favourite",
     "go-to-poll": "Go to poll",
     "hide": "Hide",
@@ -154,13 +154,13 @@
         "nickname-label": "Delegateʼs nickname:",
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
-        "from-placeholder": "Enter your own email address, name or nickname",
+        "from-placeholder": "Enter your own e-mail address, name or nickname",
 
-        "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an email. Or you copy the delegation link and send it to them in any way you like.",
-        "request-options-without-share": "The simplest way to ask that person to act as your delegate is via email. Or you copy the delegation link and send it to them in any way you like.",
+        "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
+        "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
 
         "share": "Use a messenger app",
-        "compose-email": "Compose an email",
+        "compose-email": "Compose an e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Delegation link copied to clipboard.",
         "notification-copied-link-body": "Please send it now to your delegate, {{nickname}}!",
@@ -443,12 +443,12 @@
         "-page-title": "Invite poll participants",
         "first-intro": "Your poll has started. Please invite your participants now!",
         "later-intro": "Here you can invite participants for the poll:",
-        "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an email. Or you copy the invite link and distribute it in any way you like.",
-        "caution-without-share1": "The simplest way to invite participants is via email. Or you copy the invite link and distribute it in any way you like.",
+        "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an e-mail. Or you copy the invite link and distribute it in any way you like.",
+        "caution-without-share1": "The simplest way to invite participants is via e-mail. Or you copy the invite link and distribute it in any way you like.",
         "caution2": "The invite link contains the poll id and a poll password. Anyone who gets the link either directly or because someone forwarded it to them will be able to participate in the poll. So please make sure you and your participants only send it to authorized people.",
 
         "share": "Share",
-        "compose-email": "Compose email",
+        "compose-email": "Compose e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Invite link copied to clipboard.",
         "notification-copied-link-body": "Please send it to your participants now!"
@@ -487,14 +487,14 @@
 
         "ask-used-before": "Have you used vodle before on any device?",
 
-        "ask-fresh-email": "Please enter your email address you want to use with vodle.",
+        "ask-fresh-email": "Please enter your e-mail address you want to use with vodle.",
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one. We will also not send you any emails.",
-        "ask-old-email": "Please enter the email address that you are using with vodle.",
+        "ask-old-email": "Please enter the e-mail address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
 
-        "consent-privacy-before-privacy": "Yes, I have read the",
+        "consent-privacy-before-privacy": "Yes, I have read the ",
         "consent-privacy-privacy": "data protection declaration",
-        "consent-privacy-after-privacy": "and agree to it.",
+        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it widerrufen.",
 
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
@@ -509,7 +509,7 @@
     "logout": {
         "-page-title": "Log out",
         "confirm-header": "Really log out?",
-        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the email address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
+        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
         "failed": "Could not log out for some reason"
     },
@@ -660,8 +660,8 @@
     "settings": {
         "-page-title": "Settings",
         "data-storage": "Personal data",
-        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
-        "email-placeholder": "Please specify the email address you want to use with vodle",
+        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an e-mail address and set a password.",
+        "email-placeholder": "Please specify the e-mail address you want to use with vodle",
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",
         "appearance": "Appearance",
@@ -673,8 +673,8 @@
         "db-server-url-required": "Database URL is required.",
         "db-server-url-pattern": "Please enter a valid URL.",
         "db-user-required": "Database username is required.",
-        "email-required": "Email address is required.",
-        "email-valid": "Please enter a valid email address.",
+        "email-required": "E-mail address is required.",
+        "email-valid": "Please enter a valid e-mail address.",
         "password-length": "Password must be at least 8 characters long.",
         "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
         "password-required": "Password is required.",

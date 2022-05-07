@@ -218,7 +218,7 @@ export class PollPage implements OnInit {
     this.accepted_requests = [];
     this.declined_requests = [];
     if (cache) {
-      for (let [did, [from, url, status]] of cache) {
+      for (const [did, [from, url, status]] of cache) {
         if (status == 'agreed') {
           this.accepted_requests.push({from:from, url:url});
         } else if (status.startsWith('declined')) {
