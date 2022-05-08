@@ -31,14 +31,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-content *ngIf="translate.currentLang=='de'" class="ion-padding">
 
-  <h1>Datenschutz</h1>
-
-  <p><b>
-    A&nbsp;&nbsp;Formale Datenschutzerklärung
-  </b></p>
-  <p><b>
-    B&nbsp;&nbsp;In Kurzform: Was – warum – wie?
-  </b></p>
+  <ion-item color="primary">
+    <ion-label>
+      Datenschutzerklärung und Allgemeine Geschäftsbedingungen
+    </ion-label>
+  </ion-item>
 
   <br/>
 
@@ -46,9 +43,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     [src]="E.privacy_statement_url|safe">
   </iframe>
 
-  <h2><b>
-    B&nbsp;&nbsp;Was – warum – wie?
-  </b></h2>
+  <br/>
+  <br/>
+
+  <ion-item color="primary">
+    <ion-label>
+      Kurzform: Was – warum – wie?
+    </ion-label>
+  </ion-item>
 
   <p>
     Den Entwickler:innen und Betreiber:innen von vodle ist der Schutz Deiner Daten sehr wichtig. Dieser Text beschreibt allgemeinverständlich, welche Daten wir verwenden, wie wir sie schützen, und was Du zur Wahrnehmung Deiner Rechte tun kannst. Die rechtlich verbindliche vollständige Datenschutzerklärung findest Du weiter oben unter A.
@@ -364,16 +366,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-content *ngIf="translate.currentLang!='de'" class="ion-padding">
 
-  <h1>
-    Privacy
-  </h1>
-
-  <p><b>
-    A&nbsp;&nbsp;Formal data protection statement (in German)
-  </b></p>
-  <p><b>
-    B&nbsp;&nbsp;In brief: What – why – how? 
-  </b></p>
+  <ion-item color="primary">
+    <ion-label>
+      Data protection statement and terms of use (in German)
+    </ion-label>
+  </ion-item>
 
   <br/>
 
@@ -381,10 +378,15 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     [src]="E.privacy_statement_url|safe">
   </iframe>
 
-  <h2><b>
-    B&nbsp;&nbsp;What – why – how? 
-  </b></h2>
+  <br/>
+  <br/>
 
+  <ion-item color="primary">
+    <ion-label>
+      In brief: What – why – how? 
+    </ion-label>
+  </ion-item>
+  
   <p>
     The protection of your data is very important to the developers and operators of vodle. This text describes in general terms what data we use, how we protect it and what you can do to exercise your rights. The legally binding complete data protection statement can be found above under A.
   </p>

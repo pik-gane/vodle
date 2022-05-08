@@ -495,8 +495,8 @@
         "ask-old-email-2": "This way you can access your existing data.",
 
         "consent-privacy-before-privacy": "Yes, I have read the ",
-        "consent-privacy-privacy": "data protection declaration",
-        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it widerrufen.",
+        "consent-privacy-privacy": "data protection declaration and terms of use",
+        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
 
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
@@ -645,7 +645,7 @@
     },
 
     "privacy": {
-        "-page-title": "Privacy"
+        "-page-title": "Privacy & Terms"
     },
 
     "select-server": {
