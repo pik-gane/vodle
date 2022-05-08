@@ -20,7 +20,38 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 <!--
   TODO: 
   - "fix" slider element's absolute vertical position on screen while using it, even when note above it changes height. achieve this by automatically "scrolling" to compensate such layout changes.  
-  - show "assist me" next to wand if details are expanded
+-->
+
+<!--
+Suggestion
+
+vodle suggests that you look for a possible compromise between
+Y
+and Z.
+
+Why?
+
+Y currently gets the share of A% of the participants, including yours.
+Either: You don't approve Z, but it gets the share of B% of the participants.
+Or: The share of another B% goes to Z.
+Together, you might be able to agree on a better compromise with all these participants.
+
+How?
+
+Try to find some other option X that appeals to both groups.
+Maybe this option is already on the list, or you might have to add it.
+Then suggest that all participants whose share now goes to Y or Z 
+consider giving option X a wap of more than 100-C.
+If they all do so, then they all approve X.
+The share of all these participants will then move to X.
+You yourself would have to give X a wap of more than 100-C as well, of course. 
+Your share will then also move to X, 
+but only if the others approve X as well.
+
+Instead of having A% Y plus B% Z, you would then have C% X (or more, if even more approve X).
+
+[Diagram: Pie A + Pie B -> Pie C for some other option X?]
+
 -->
 
 <!-- HEADER: -->
@@ -50,6 +81,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+
+      <!-- TRANSMITTED SIGN -->
+      <ion-button *ngIf="!!p && p.have_acted && !p.syncing && window.navigator.onLine" class="ion-no-margin ion-no-padding" fill="clear" (click)="checkmark_clicked()">
+        <ion-icon size="large" name="checkmark" color="grey" slot="icon-only"></ion-icon>
+      </ion-button>
 
       <!-- DELEGATE BUTTON: -->
       <ion-button *ngIf="delegation_status!='agreed' && running"
@@ -136,12 +172,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 ">
               <i *ngIf="(p.desc||'')!=''" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
               <small *ngIf="(p.url||'') != ''">
-                (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text 
+                (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url));details_expanded=!details_expanded"><ion-text 
                   class="externallink"  
                   [innerHtml]="'read-more' | translate">
                 </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
               </small>
-              <small>
+              <small *ngIf="details_expanded">
                 &nbsp;
                 (<ion-text 
                   class="externallink" 
@@ -154,37 +190,20 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </ion-row>
       </ion-grid>
     </ion-item>
-    <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right">
+    <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right" >
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin">
+          <ion-col class="ion-no-padding ion-no-margin" style="padding-bottom: 8px">
 
             <!-- ASSIST BUTTON: -->
-
-<!--
-      <ion-button *ngIf="delegation_status!='agreed' && running"
-          (click)="delegate_dialog($event)" 
-          shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
-        <span *ngIf="scroll_position < 70"
-          [innerHtml]="'poll.delegate-button' | translate">
-        </span><ion-button class="ion-no-margin ion-no-padding"
-            style="position: relative; right: -4px;"
-            shape="round" fill="solid" color="primary">
-          <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
-          </ion-icon>
-        </ion-button>
-      </ion-button>
-
--->
 
             <ion-button *ngIf="running"
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px;">
-              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right;"
-                [innerHtml]="'poll.assist-me' | translate">
-              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" 
-                  (click)="assist_dialog()" color="success">
+              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right; font-size: 11.5px;"
+                [innerHtml]="'poll.assist-me-button' | translate">
+              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
                 <ion-icon name="color-wand-outline" slot="icon-only" 
                   style="margin: 5px;"></ion-icon>
               </ion-button>
@@ -196,7 +215,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <span style="white-space: nowrap;">
                 <ion-badge *ngIf="running && p.is_closing_soon" 
                   class="ion-no-margin" 
-                  style="position: relative; bottom: -6px;" 
+                  style="position: relative; bottom: -5.5px; font-size: 11.5px;" 
                   color="danger" 
                   [innerHtml]="'badges.closing-soon'|translate">
                 </ion-badge>
@@ -216,31 +235,41 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
             <!-- STATISTICS: -->
 
-            <span style="white-space: nowrap;">
-              <ion-icon 
-                  color="light" style="position: relative; top: 3px" 
-                  [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-              </ion-icon>
-              <small style="white-space: nowrap;">
-                <b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span [innerHtml]="'level-of-agreement'|translate"></span>
-              </small>
-            </span>&nbsp;&nbsp;&nbsp;
-            <span style="white-space: nowrap;">
-              <ion-icon 
-                  color="light" style="position: relative; top: 3px" 
-                  name="people-outline">
-              </ion-icon>&nbsp;<small style="white-space: nowrap;">
-                <b>{{p.T.n_not_abstaining}}</b>&nbsp;<span class="externallink" (click)="glossary('non-abstaining')" [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;
-              </small><ion-button
-                  class="ion-no-padding ion-no-margin" fill="clear" size="small" 
-                  [routerLink]="'/inviteto/'+p.pid" >
+            <small style="white-space: nowrap;">
+              <span style="white-space: nowrap;">
                 <ion-icon 
-                    class="ion-no-padding ion-no-margin" 
-                    name="share-social-outline" 
-                    color="light">
-                </ion-icon>  
-              </ion-button>
-            </span>
+                    color="light" style="position: relative; top: 2px" 
+                    name="people-outline">
+                </ion-icon>&nbsp;<b>{{p.T.n_not_abstaining}}</b>&nbsp;<span class="externallink" (click)="glossary('non-abstaining')" [innerHtml]="'non-abstaining-voters'|translate"></span>&nbsp;&nbsp;&nbsp;
+  <!--              <ion-button
+                    class="ion-no-padding ion-no-margin" fill="clear" size="small" 
+                    [routerLink]="'/inviteto/'+p.pid" >
+                  <ion-icon 
+                      class="ion-no-padding ion-no-margin" 
+                      style="font-size: 14px; position: relative; top: -1px"
+                      name="share-social-outline" 
+                      color="light">
+                  </ion-icon>
+                </ion-button>&nbsp;<span class="externallink" [routerLink]="'/inviteto/'+p.pid">Mehr einladen</span>-->
+                <br/>
+              </span>
+            </small>
+            <small style="white-space: nowrap;">
+              <span style="white-space: nowrap;">
+                <ion-icon 
+                    color="light" style="position: relative; top: 2px" 
+                    [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
+                </ion-icon><b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
+              </span>&nbsp;&nbsp;&nbsp;
+              <ion-badge
+                    class="ion-no-margin" 
+                    style="position: absolute; right:10px; bottom:7px; font-size: 11.5px; padding-top:2px" 
+                    color="success" 
+                    >
+                <ion-icon name="bulb-outline" class="ion-no-padding ion-no-margin"
+                  style="position: relative; top: 1.5px;"></ion-icon>&nbsp;<span [innerHtml]="'<b>3</b> suggestions'"></span> 
+              </ion-badge>
+            </small>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -258,7 +287,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -273,7 +302,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -288,7 +317,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             &nbsp;<wbr/><span style="white-space: nowrap;">
               (<a 
                 (click)="assist_dialog()"
-                [innerHtml]="'poll.assist-me' | translate">
+                [innerHtml]="'poll.assist-me-inline' | translate">
               </a>)
             </span>
           </p>
@@ -297,11 +326,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-item *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)" color="light">
         <small>
           <p>
-            <span [innerHtml]="'poll.hint-mostapproved-1'|translate"></span><!--&nbsp;
-            <span [innerHtml]="'poll.hint-mostapproved-2'|translate"></span>-->
+            <span [innerHtml]="'poll.hint-mostapproved-1'|translate"></span>
           </p>
         </small>
       </ion-item>
+      
     </ng-container>
 
     <!-- FINAL RESULTS (if closed): -->
@@ -493,10 +522,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
     <ion-item class="ion-no-padding ion-no-margin" lines="none"
           style="--min-height: 0px!important; font-weight: bold;">
-      <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 16px; width: 74px!important; color: #769596;">
-<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'share'|translate"></span>
+      <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
+<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
       </small>
-      <small (click)="glossary('wap')" style="padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
+      <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
 <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
       </small>
       <!-- TODO: make padding robustly correct accross devices: -->
@@ -600,7 +629,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                             x="100%" width="0%" y="8" height="18" 
                             fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
                           <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
-                          <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="1 1" />
+                          <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
                           <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
                         </svg>
                       </div>
@@ -825,3 +854,4 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-text>
   </ion-item>
 </ion-footer>
+

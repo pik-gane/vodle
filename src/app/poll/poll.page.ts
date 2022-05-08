@@ -218,7 +218,7 @@ export class PollPage implements OnInit {
     this.accepted_requests = [];
     this.declined_requests = [];
     if (cache) {
-      for (let [did, [from, url, status]] of cache) {
+      for (const [did, [from, url, status]] of cache) {
         if (status == 'agreed') {
           this.accepted_requests.push({from:from, url:url});
         } else if (status.startsWith('declined')) {
@@ -488,6 +488,7 @@ export class PollPage implements OnInit {
      *  Stores slider position in own rating cache AND database. */
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.entry("PollPage.rating_change_ended");
+    this.p.have_acted = true;
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
@@ -629,6 +630,22 @@ export class PollPage implements OnInit {
   // DIALOGS:
 
   currentModal = null;
+
+  async checkmark_clicked() {
+    const confirm = await this.alertCtrl.create({ 
+      message: this.translate.instant(
+        'poll.checkmark-clicked'), 
+      buttons: [
+        { 
+          text: this.translate.instant('OK'),
+          role: 'Ok', 
+          handler: () => {
+          } 
+        } 
+      ] 
+    }); 
+    await confirm.present(); 
+  }
 
   delegate_dialog(event: Event) {
     /** open the delegation dialog popover */
