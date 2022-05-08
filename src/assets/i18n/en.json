@@ -23,7 +23,9 @@
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "We use British English: favourite, colour, centre, etc.",
         "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
-        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
+        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
+        "We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
+        "We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
 
     "add": "Add",

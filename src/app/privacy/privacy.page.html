@@ -29,7 +29,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content *ngIf="translate.currentLang=='de'" class="ion-padding">
 
   <h1>Datenschutz</h1>
 
@@ -355,6 +355,340 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ul>
   <p>
     Wenn Du die hier beschriebenen Übermittlungen Deiner IP-Adresse verhindern willst, kannst Du Maßnahmen zum anonymen Surfen ergreifen, z.B. einen Proxyserver verwenden. 
+  </p>
+
+</ion-content>
+
+
+<!-- ENGLISH: -->
+
+<ion-content *ngIf="translate.currentLang!='de'" class="ion-padding">
+
+  <h1>
+    Privacy
+  </h1>
+
+  <p><b>
+    A&nbsp;&nbsp;Formal data protection statement (in German)
+  </b></p>
+  <p><b>
+    B&nbsp;&nbsp;In brief: What – why – how? 
+  </b></p>
+
+  <br/>
+
+  <iframe width="100%" height="60%" frameBorder="5"
+    [src]="E.privacy_statement_url|safe">
+  </iframe>
+
+  <h2><b>
+    B&nbsp;&nbsp;What – why – how? 
+  </b></h2>
+
+  <p>
+    The protection of your data is very important to the developers and operators of vodle. This text describes in general terms what data we use, how we protect it and what you can do to exercise your rights. The legally binding complete data protection statement can be found above under A.
+  </p>
+
+  <h3>
+    Summary: How is my data protected?
+  </h3>
+
+  <p>
+    vodle protects your information in several ways:
+  </p>
+  
+  <ul>
+    <li><p>
+      Only data that is necessary for the purposes of the software is stored (see sections 1 and 2 below).
+    </p>
+    <li><p>
+      Data is only stored where it is needed for processing or data exchange between devices or participants (see section 3 below).
+    </p>
+    <li><p>
+      Data is stored in encrypted form where it is not needed in unencrypted form so that no one can read it (see section 3).
+    </p>
+    <li><p>
+      Data is stored pseudonymously where it is not needed in person-identified form, so that no one can attribute it directly to your person (see section 3).
+    </p>
+    <li><p>
+      Only persons who need access to the data are granted access (see section 4).
+    </p>
+    <li><p>
+      The data will only be stored as long as necessary (see section 5). 
+    </p>
+  </ul>
+
+
+  <h2>
+    1. What personal data does vodle use?  
+  </h2>
+
+  <p>
+    Three types of personal data are used in vodle: user data, poll data and your IP address.
+  </p>
+
+  <h3>
+    1.1. User data
+  </h3>
+
+  <p>
+    Your user data is your business and is only exchanged between your own end devices in encrypted form (see below). User data are:
+  </p>
+
+  <ul>
+    <li><p>
+      Your e-mail address (but <i>no</i> other identifying characteristics such as name, address or telephone number).  
+    </p>
+    <li><p>
+      A password chosen by you
+    </p>
+    <li><p>
+      The polls you have been invited to, the polls you participate in, and the polls you have created yourself
+    </p>
+    <li><p>
+      Nicknames you choose for people you delegate to (but <i>no</i> other identifying characteristics such as email address, address or phone number).
+    </p>
+    <li><p>
+      Settings you can make on the settings page, in particular: preferred language, colour scheme, desired notifications
+    </p>
+    <li><p>
+      Texts and settings in drafts of polls that you have not yet started, in particular: type, language and end date of the poll, headings, names of options, description texts and addresses of external websites.
+    </p>
+    <li><p>
+      If you have specified a database server other than the central vodle database server as the storage location of your encrypted user data (see below), vodle will also store the address and password of this database server. 
+    </p>
+  </ul>
+
+
+  <h3>
+    1.2. Poll data
+  </h3>
+
+  <p>
+    Poll data is data that is necessary for conducting polls. It therefore concerns all participants and is therefore exchanged with them in pseudonymised and encrypted form (see below). Poll data are:  
+  </p>
+  <p><b>
+    Modifiable poll data:  
+  </b></p>
+  <ul>
+    <li><p>
+      The position of the sliders with which you signal your willingness to approve the individual options in a poll (“Waps”).
+    </p>
+    <li><p>
+      Which requests for delegation you have made to other persons, which of these have been accepted or rejected, and the position of the switches with which you can switch the delegation of individual options on and off.
+    </p>
+    <li><p>
+      Which requests for delegation from other persons you yourself have accepted or rejected. 
+    </p>
+  </ul>
+  <p><b>
+    Unchangeable poll data:  
+  </b></p>
+  <ul>
+    <li><p>
+      Texts and settings that you have entered when creating new polls or options, in particular: type, language and end date of the poll, headings, names of options, description texts and addresses of external websites.
+    </p>
+    <li><p>
+      If you have specified a database server other than the central vodle database server as the storage location of the encrypted poll data (see below), then this also includes the address and password of this database server. 
+    </p>
+  </ul>
+
+  <h3>
+    1.3. Your IP address
+  </h3>
+  <p>
+    See section 6 below.
+  </p>
+
+
+  <h2>
+    2. What does vodle use this data for?  
+  </h2>
+
+  <p>
+    vodle uses your user data...
+  </p>
+  <ul>
+    <li><p>
+      so that you can participate in vodle polls and initiate vodle polls yourself
+    </p>
+    <li><p>
+      so that you can track, modify and adapt your poll data across multiple vodle sessions (in the browser or in the vodle app) and across multiple devices
+    </p>
+    <li><p>
+      so that you can delegate your waps to other participants and respond to their delegation requests.    
+    </p>
+    <li><p>
+      so that you can adapt the vodle app to your needs 
+    </p>
+  </ul>
+  <p>
+    vodle uses your poll data...
+  </p>
+  <ul>
+    <li><p>
+      so that other people can participate in polls you have initiated and see options you have proposed
+    </p>
+    <li><p>
+      so that the current status of the poll and the final poll results can be calculated and checked for consistency by all participants     
+    </p>
+  </ul>
+
+
+  <h2>
+    3. Where does vodle store my data?
+  </h2>
+
+  <p>
+    vodle stores user and poll data on your device and in encrypted form also on one or more database server(s) selected by you.
+  </p>
+  <p>
+    Your poll data will also be stored in pseudonymised form on the devices of other participants. This is necessary so that all participants can determine the poll results and check their validity.
+  </p>
+  <p>
+    Other than that, vodle does <u>not</u> send any data to other third parties, in particular not to providers of fonts, images or other content, services for user tracking or usage analysis, advertisers or similar.  
+  </p>
+
+
+  <h3><b>
+    3.1. Own devices
+  </b></h3>
+
+  <p>
+    On your device, the data is stored in unencrypted form as long as you are logged in. It will be completely deleted as soon as you log out. vodle does not use any cookies. Instead, vodle stores the data in the so-called “local storage” of the browser or the vodle app.  
+  </p>
+
+
+  <h3>
+    3.2. Database server
+  </h3>
+
+  <p>
+    The database server can be the standard server provided by the Potsdam Institute for Climate Impact Research (“vodle cloud”) or any other database server suitable for vodle, provided by yourself or by third parties.
+  </p>
+  <p>
+    If you do not select a different server under “Settings”, vodle will use the central server “vodle cloud” for your user data. For your poll data, the server that was selected when the poll was created will be used. If nothing else has been set there, this is also the central server “vodle cloud”.
+  </p>
+  <p>
+    On this or these database server(s), the data is only stored in pseudonymised and encrypted form.
+  </p>
+  <p>
+    To <b>encrypt</b> your user data, the password you choose is used. Your poll data is encrypted by an automatically generated poll password which is known to all participants in the poll.  </p>
+  <p>
+    Only the end date of a poll is stored unencrypted. This is necessary so that the database server can use the end date to check whether desired changes to poll data are permitted, because changes after the end date are not permitted.  
+  </p>
+  <p>
+    To <b>pseudonymise</b> your user data, we use a key. This key is generated from your e-mail address and your password, but neither your e-mail address nor your password can be inferred from it. This ensures that neither the encrypted nor the decrypted data can be directly attributed to your person, unless they know both your e-mail address and your password. An individual key is used to pseudonymise your poll data. This key is randomly generated the first time you enter the poll and is stored in your user data.
+  </p>
+
+
+  <h3>
+    3.3. End devices of other participants
+  </h3>
+
+  <p>
+    On the devices of other participants your poll data will be stored unencrypted but pseudonymised, so that without the pseudonymisation key no direct allocation to your person is possible.
+  </p>
+
+
+  <h2>
+    4. Who has access to my data and who can attribute my data to my person?
+  </h2>
+
+  <p>
+    As long as you are logged in to vodle in your browser or vodle app, anyone who can open your browser or vodle app has access to your data, can also change it and attribute it to your person via your e-mail address.
+  </p>
+  <p><i>
+    You should therefore always log out of vodle between sessions on shared or insufficiently protected end devices!
+  </i></p>
+  <p>
+    The operators of database servers and other persons who have access to the database servers only have access to the pseudonymised and encrypted data. They can therefore neither decrypt it nor attribute it directly to you, unless they know your e-mail address or password. <i>You should therefore never give your password to the operators of database servers!</i>
+  </p>
+
+
+  <h3>
+    4.1. User data
+  </h3>
+
+  <p>
+    If you are logged out of vodle, no one has access to your user data unless they know your e-mail address, your password, the server you use for your user data and the server password.
+  </p>
+
+
+  <h3>
+    4.2. Poll data
+  </h3>
+
+  <p>
+    If you are logged out of vodle, no one other than the participants of a poll will have access to your poll data for that poll unless they know your e-mail address, password, the server you are using for your user data and the server password.
+  </p>
+  <p>
+    The participants in a poll can only see your voting data in pseudonymised form, but cannot change it. If a participant of a poll is logged in, every person who can open the browser or the vodle app of this person can also see your poll data of this poll in pseudonymised form, but cannot change it.  
+  </p>
+  <p>
+    As long as you do not make a delegation request to another participant or accept such a request from another person, no one can attribute your poll data directly to your person.
+  </p>
+  <p>
+    <b>Disclosure in case of delegation.</b> 
+    However, if you make a delegation request to or accept a delegation request from another person, that person will be able to attribute your poll data directly to you. Conversely, you can then also attribute the poll data of this person directly to this person. If the person is logged in, any other person who can open that person's browser or vodle app may also be able to associate your poll data directly with that person.
+  </p>
+  <p><i>
+    So you should only ask for delegation from trusted people or accept their delegation requests!
+  </i></p>
+
+
+  <h2>
+    5. How long will my data be stored?
+  </h2>
+
+  <h3>
+    5.1. User data
+  </h3>
+
+  <p>
+    Your user data is stored on your end device until you change it or delete all data completely.
+  </p>
+  <p>
+    Your user data will be stored on the database server used until you change it on your device or delete all data completely and the browser or the vodle app has been able to communicate this change or deletion to the server. An internet connection is required for this.
+  </p>
+
+
+  <h3>
+    5.2. Poll data 
+  </h3>
+
+  <p>
+    On your end device, your poll data is stored until you change it or delete all data completely. However, changes are only possible on changeable poll data, and only before the end date of the poll.
+  </p>
+  <p>
+    On the database server used, your poll data is stored until you change it on your end device and the browser or vodle app has been able to communicate this change to the server. An internet connection is required for this.  
+  </p>
+  <p>
+    <b>Please note:</b>
+    Even if you completely delete all data on your end device, your poll data will still be stored in pseudonymised form on the database server and the end devices of the other participants until they are deleted by the database or the vodle app of the participants after a sufficiently long check period after the end of the poll. This is necessary to ensure the uniqueness of the poll results and to enable all participants to check their validity. However, this extended storage only affects your poll data, not your user data.
+  </p>
+
+
+  <h2>
+    6. Your IP address
+  </h2>
+
+  <ul>
+    <li><p>
+      <b>Web server.</b>
+      If you use vodle in the browser instead of the vodle app, your IP address will be sent to the central vodle web server at the Potsdam Institute for Climate Impact Research at the beginning of each vodle session in order to load the vodle software including all fonts and images into your browser. However, the web server does <i>not</i> store your IP address. vodle does <i>not</i> send your IP address to third parties such as providers of fonts, images or software components.    
+    </p>
+    <li><p>
+      <b>Database server.</b>
+      When data is exchanged between your device and the database servers used, your IP address is transmitted to these database servers. The database server “vodle cloud” provided by the Potsdam Institute for Climate Impact Research does <i>not</i> store your IP address. If you use your own database server and configure it as described in vodle, it will store IP addresses but could store IP addresses.
+    </p>
+    <li><p>
+      <b>External websites.</b>
+      The descriptions of polls in vodle may contain links to external websites if the creators of the poll have entered such links. When you click on such a link, your device may send your IP address to the external website to retrieve the external content. However, this retrieval takes place in a separate browser session, so that the external website does not have access to session data of your vodle session. 
+    </p>
+  </ul>
+  <p>
+    If you want to prevent the transmission of your IP address described here, you can take measures to surf anonymously, e.g. use a proxy server. 
   </p>
 
 </ion-content>
