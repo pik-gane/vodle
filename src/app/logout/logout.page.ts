@@ -19,7 +19,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Location } from '@angular/common'
-import { Router } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 import { AlertController } from '@ionic/angular';
 
@@ -40,7 +39,6 @@ export class LogoutPage implements OnInit {
 
   constructor(      
       private location: Location,
-      private router: Router,
       public alertCtrl: AlertController,
       public translate: TranslateService,
       public G: GlobalService) { 
@@ -96,10 +94,11 @@ export class LogoutPage implements OnInit {
             this.G.D.clear_all_local().then(() => {
               // now reload page, which will reinit the app and redirect us to the login page
               // (at least in browsers – what about native apps?):
-              LocalNotifications.schedule({ notifications: [{ id: null,
+/*              LocalNotifications.schedule({ notifications: [{ id: null,
                 title: "Reloading...",
                 body: null
               }]});
+*/
               window.location.reload();
             }).catch(error => {
               LocalNotifications.schedule({ notifications: [{ id: null,

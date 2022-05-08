@@ -162,9 +162,9 @@ TODO:
       </form>
       <ion-item lines="none" class="item-text-wrap">
         <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
-        <ion-label>
-          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span>&nbsp;<a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a>&nbsp;<span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
-        </ion-label>
+        <small><p>
+          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+        </p></small>
       </ion-item>
       <ion-item lines="none">
         <ion-button type="submit" size="larger" color="primary" slot="end" 

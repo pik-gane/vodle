@@ -80,7 +80,7 @@ fdroid build --on-server it.vodle
 
 ## Building new version
 
-- in android/app/build.gradle, android/app/release/output-metadata.json, and and package-lock.json, increase versionName and increment versionCode
+- in android/app/build.gradle, android/app/release/output-metadata.json, and package-lock.json, increase versionName and increment versionCode
 - commit and push these changes, note the commit id
 - in it.vodle.yml:
     - add above versionName, versionCode and commit id as new entry under Builds
@@ -90,8 +90,8 @@ fdroid build --on-server it.vodle
 ```
 sudo docker run --rm -itu vagrant --entrypoint /bin/bash \
 -v /usr/bin/apksigner:/usr/bin/apksigner:ro \
--v ~/git/fdroiddata:/build:z \
--v ~/git/fdroidserver:/home/vagrant/fdroidserver:Z \
+-v ~/fdroiddata:/build:z \
+-v ~/fdroidserver:/home/vagrant/fdroidserver:Z \
 registry.gitlab.com/fdroid/fdroidserver:buildserver
 ```
 - in container (takes about 10 minutes):
@@ -103,17 +103,17 @@ fdroid readmeta
 #fdroid rewritemeta it.vodle
 fdroid checkupdates it.vodle
 fdroid lint it.vodle
-fdroid build --on-server it.vodle
+fdroid build --verbose --on-server it.vodle
 ```
 - then sign it:
 ```
 cd ~/fdroid
-cp ~/git/fdroiddata/unsigned/it.vodle_xxx.apk ~/fdroid/unsigned/
+cp ~/fdroiddata/unsigned/it.vodle_xxx.apk ~/fdroid/unsigned/
 fdroid publish --verbose
 fdroid update --verbose
 fdroid gpgsign
 ```
-- WHAT THEN? copy signed apk from repo back into fdroiddata (where?) and commit it?
+- WHAT THEN? just commit fdroiddata?
 
 ## Necessary meta-data
 

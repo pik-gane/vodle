@@ -294,8 +294,11 @@ export class DelegationService {
     this.set_my_signed_response(pid, did, signed_response);
   }
 
-  decline(pid: string, did: string, private_key: string) {
+  decline(pid: string, did: string, private_key?: string) {
     /** decline a delegation request, store response in db */
+    if (!private_key) {
+      private_key = this.get_private_key(pid, did);
+    }
     const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);

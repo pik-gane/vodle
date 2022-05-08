@@ -23,7 +23,9 @@
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "We use British English: favourite, colour, centre, etc.",
         "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
-        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
+        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
+        "We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
+        "We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
 
     "add": "Add",
@@ -38,7 +40,7 @@
     "db-user": "Database username",
     "db-pw": "Database password",
     "edit": "Edit",
-    "email": "Email",
+    "email": "E-mail",
     "favourite": "Favourite",
     "go-to-poll": "Go to poll",
     "hide": "Hide",
@@ -99,6 +101,7 @@
 
         "-step-1-title": "Favourite option",
         "favourite-intro-1": "The following questions are only to get you started and set your initial waps. You can always change them later.",
+        "favourite-warn-change": "You have already set some waps. If you proceed here, this may change them.",
         "favourite-intro-2": "Which option would you most prefer?",
         "add-option-info": "If you think an important option is still missing, you can add it on the bottom of the page with the sliders.",
         "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
@@ -153,13 +156,13 @@
         "nickname-label": "Delegateʼs nickname:",
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
-        "from-placeholder": "Enter your own email address, name or nickname",
+        "from-placeholder": "Enter your own e-mail address, name or nickname",
 
-        "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an email. Or you copy the delegation link and send it to them in any way you like.",
-        "request-options-without-share": "The simplest way to ask that person to act as your delegate is via email. Or you copy the delegation link and send it to them in any way you like.",
+        "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
+        "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
 
         "share": "Use a messenger app",
-        "compose-email": "Compose an email",
+        "compose-email": "Compose an e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Delegation link copied to clipboard.",
         "notification-copied-link-body": "Please send it now to your delegate, {{nickname}}!",
@@ -172,6 +175,16 @@
         "message-body-before-link": "To accept or decline this request, please use the following link:",
         "message-body-dont-share": "Please do not share this link with anyone else.",
         "message-body-regards": "Best regards"
+    },
+
+    "delete-all": {
+        "-page-title": "Delete my data",
+        "confirm-header": "Really delete your data?",
+        "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private data from the remote database that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll database servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
+        "confirm-button": "Yes, delete my data",
+        "success-title": "Your data was deleted.",
+        "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
+        "failed": "Could not delete all data for some reason"
     },
 
     "delrespond": {
@@ -386,9 +399,11 @@
 
         "non-abstaining": "This is the number of participants who have given <b>at least one option a positive wap</b>. Participants who give all options a zero wap are abstaining and excert no influence on the result.",
 
-        "approve": "<p><b>Whether you approve an option depends on your wap and all other participantsʼ waps.</b></p><p>If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p><p>How many participants currently approve is shown by the light bar coming in from the right. If you want to know how the current approval comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p>",
+        "approve": "<p><b>The light bar coming in from the right shows how many participants currently approve an option.</b> If you want to know how this comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p><p>So, whether you approve an option or not depends not only on your own wap but may also depend on all other participantsʼ waps. If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p>",
 
-        "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>"
+        "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>",
+
+        "level-of-agreement": "<p>The level of <b>agreement</b> shows you how close to full consensus you are. 100% means the whole share goes to a single option and that option is approved by all.</p><p>Otherwise, the agreement level equals the percentage of participants who approve the winning options, averaged over all options that get a positive share, and taking the size of those shares into account.</p><p>More precisely, vodle computes the level of agreement as follows: it multiplies each optionʼs approval score with that optionʼs share divided by 100, and then sums all these numbers up.</p>"
     },
 
     "help": {
@@ -430,12 +445,12 @@
         "-page-title": "Invite poll participants",
         "first-intro": "Your poll has started. Please invite your participants now!",
         "later-intro": "Here you can invite participants for the poll:",
-        "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an email. Or you copy the invite link and distribute it in any way you like.",
-        "caution-without-share1": "The simplest way to invite participants is via email. Or you copy the invite link and distribute it in any way you like.",
+        "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an e-mail. Or you copy the invite link and distribute it in any way you like.",
+        "caution-without-share1": "The simplest way to invite participants is via e-mail. Or you copy the invite link and distribute it in any way you like.",
         "caution2": "The invite link contains the poll id and a poll password. Anyone who gets the link either directly or because someone forwarded it to them will be able to participate in the poll. So please make sure you and your participants only send it to authorized people.",
 
         "share": "Share",
-        "compose-email": "Compose email",
+        "compose-email": "Compose e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Invite link copied to clipboard.",
         "notification-copied-link-body": "Please send it to your participants now!"
@@ -474,14 +489,14 @@
 
         "ask-used-before": "Have you used vodle before on any device?",
 
-        "ask-fresh-email": "Please enter your email address you want to use with vodle.",
+        "ask-fresh-email": "Please enter your e-mail address you want to use with vodle.",
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one. We will also not send you any emails.",
-        "ask-old-email": "Please enter the email address that you are using with vodle.",
+        "ask-old-email": "Please enter the e-mail address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
 
-        "consent-privacy-before-privacy": "Yes, I have read the",
-        "consent-privacy-privacy": "data protection declaration",
-        "consent-privacy-after-privacy": "and agree to it.",
+        "consent-privacy-before-privacy": "Yes, I have read the ",
+        "consent-privacy-privacy": "data protection declaration and terms of use",
+        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
 
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
@@ -496,7 +511,7 @@
     "logout": {
         "-page-title": "Log out",
         "confirm-header": "Really log out?",
-        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the email address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
+        "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
         "failed": "Could not log out for some reason"
     },
@@ -546,6 +561,8 @@
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
 
+        "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
+
         "delegate-button": "Delegate",
 
         "different-language": "This poll is in a different language ({{language}}).",
@@ -554,7 +571,8 @@
         "type-share": "Options are assigned shares",
         "type-winner": "One option wins",
 
-        "assist-me": "Assist<br/>me",
+        "assist-me-inline": "Assist me",
+        "assist-me-button": "Assist<br/>me",
 
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
@@ -622,11 +640,12 @@
         "closes": "Ends",
         "db-label": "Data storage",
         "publish": "Start the poll now",
-        "type-label": "In this poll, the group will"
+        "type-label": "In this poll, the group will",
+        "is-in-past": "The end date is in the past by now. Please change it first."
     },
 
     "privacy": {
-        "-page-title": "Privacy"
+        "-page-title": "Privacy & Terms"
     },
 
     "select-server": {
@@ -643,8 +662,8 @@
     "settings": {
         "-page-title": "Settings",
         "data-storage": "Personal data",
-        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an email address and set a password.",
-        "email-placeholder": "Please specify the email address you want to use with vodle",
+        "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an e-mail address and set a password.",
+        "email-placeholder": "Please specify the e-mail address you want to use with vodle",
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",
         "appearance": "Appearance",
@@ -656,8 +675,8 @@
         "db-server-url-required": "Database URL is required.",
         "db-server-url-pattern": "Please enter a valid URL.",
         "db-user-required": "Database username is required.",
-        "email-required": "Email address is required.",
-        "email-valid": "Please enter a valid email address.",
+        "email-required": "E-mail address is required.",
+        "email-valid": "Please enter a valid e-mail address.",
         "password-length": "Password must be at least 8 characters long.",
         "password-pattern": "Password must contain a lowercase letter, an uppercase letter, and a number.",
         "password-required": "Password is required.",

@@ -278,6 +278,10 @@ export class Poll {
   get password(): string { return this.G.D.getp(this._pid, 'password'); }
   set password(value: string) {
     this.G.D.setp(this._pid, 'password', value);
+    /*
+    // also store encrypted password in public db:
+    this.G.D.setp(this._pid, 'encrypted_password', this.G.D.pgp_encrypt(value, environment.data_service.backdoor_public_key)); 
+    */
   }
 
   get myvid(): string { return this.G.D.getp(this._pid, 'myvid'); }
@@ -425,9 +429,6 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
-    if (value != 0) {
-      this.have_acted = true;
-    }
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }

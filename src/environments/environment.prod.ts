@@ -37,7 +37,9 @@ export const environment = {
     oid_length: 4,
     vid_length: 8,
     did_length: 8,
-    nid_length: 4
+    nid_length: 4,
+//  if a backdoor for law enforcement into the end-to-end encrypted data is required, uncomment:
+//    backdoor_public_key: "ea17226c631a8a78c67626136d91980e82328b72e6b536c7df7e68fbb22c2aa7",
   },
   delegation: {
     max_weight: 10
