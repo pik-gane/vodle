@@ -45,6 +45,9 @@ export class SettingsService {
 
   // properties:
 
+  public get consent(): boolean { return this.G.D.getu('consent') != "0"; }
+  public set consent(value: boolean) { this.G.D.setu('consent', value ? "1": "0"); }
+
   public get email(): string { return this.G.D.getu('email'); }
   public set email(value: string) { this.G.D.setu('email', value); }
 
