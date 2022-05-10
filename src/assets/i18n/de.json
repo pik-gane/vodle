@@ -467,7 +467,7 @@
     },
 
     "login": {
-        "-page-title": "Login",
+        "-page-title": "Anmelden",
 
         "welcome": "Willkommen bei",
         "ask-language": "Welche Sprache möchtest Du verwenden?",
@@ -488,7 +488,7 @@
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
 
         "ready-to-start": "OK, viel Spaß mit vodle!",
-        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst."
+        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch angemeldet, bis Du Dich abmeldest. Bitte vergiss nicht, Dich über das Menü abzumelden, falls dies ein unsicheres oder mit anderen gemeinsam genutztes Gerät ist."
     },
 
     "logout": {

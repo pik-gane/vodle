@@ -505,7 +505,7 @@
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
 
         "ready-to-start": "OK, have fun with vodle!",
-        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out."
+        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared."
     },
 
     "logout": {
