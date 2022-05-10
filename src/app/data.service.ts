@@ -165,6 +165,8 @@ const poll_keystarts_in_user_db = [
   'poll_page',
   'simulated_ratings'];
 
+const user_keys_unencrypted = ['consent', 'last_access'];
+
 const poll_keystarts_requiring_due = ['state', 'option'];
 const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response']; 
 
@@ -694,6 +696,10 @@ export class DataService implements OnDestroy {
         // start synchronisation asynchronously:
         this.start_user_sync();
 
+        // store login month:
+        const now = new Date();
+        this.setu('last_access', ''+now.getUTCFullYear()+'/'+String(now.getUTCMonth()+1).padStart(2, '0'));
+
         // RESOLVE:
         resolve(true);
 
@@ -836,7 +842,6 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-//              since: this.poll_caches[pid]['last_seq'] || 0,
               retry: true,
               batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
@@ -1289,12 +1294,11 @@ export class DataService implements OnDestroy {
 
     if (this.remote_user_db) { 
       const email_and_pw_hash = this.get_email_and_pw_hash();
-      this.G.L.info("DataService starting user data sync with last_seq", this.user_cache['user_last_seq'] || 0);
+      this.G.L.info("DataService starting user data sync");
 
       // ASYNC:
       this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
         // see options here: https://pouchdb.com/api.html#replication
-//        since: this.user_cache['user_last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1340,11 +1344,10 @@ export class DataService implements OnDestroy {
     var result: boolean;
 
     if (this.remote_poll_dbs[pid]) { 
-      this.G.L.info("DataService starting poll data sync with last_seq", pid, this.poll_caches[pid]['last_seq'] || 0);
+      this.G.L.info("DataService starting poll data sync", pid);
 
       // ASYNC:
       this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-//        since: this.poll_caches[pid]['last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1879,7 +1882,7 @@ export class DataService implements OnDestroy {
       if (cyphertext) {
 
         // extract value and store in cache if changed:
-        const value = (key == 'consent') ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
+        const value = user_keys_unencrypted.includes(key) ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
@@ -2124,8 +2127,6 @@ export class DataService implements OnDestroy {
 
     if (local_only_user_keys.includes(key)) {
 
-      // TODO: store encrypted! don't store password here (only in storage, and only if consented)
-
       // ASYNC:
       // simply use key as doc id and don't encrypt:
       this.local_only_user_DB.get(key)
@@ -2186,8 +2187,8 @@ export class DataService implements OnDestroy {
 
         // key existed in db, so update:
         const value = dict[dict_key], 
-              enc_value = (key == 'consent') ? value : encrypt(value, user_pw),
-              old_value = (key == 'consent') ? doc.value : decrypt(doc.value, user_pw);
+              enc_value = user_keys_unencrypted.includes(key) ? value : encrypt(value, user_pw),
+              old_value = user_keys_unencrypted.includes(key) ? doc.value : decrypt(doc.value, user_pw);
         if (old_value != value) {
           doc.value = enc_value;
           this.local_synced_user_db.put(doc)
@@ -2206,7 +2207,7 @@ export class DataService implements OnDestroy {
 
         // key did not exist in db, so add:
         const value = dict[dict_key], 
-              enc_value = (key == 'consent') ? value : encrypt(value, user_pw);
+              enc_value = user_keys_unencrypted.includes(key) ? value : encrypt(value, user_pw);
         doc = {
           '_id': _id, 
           'value': enc_value,
