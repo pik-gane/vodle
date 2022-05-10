@@ -1,3 +1,5 @@
 files:
   - source: /src/assets/i18n/en.json
     translation: /src/assets/i18n/%two_letters_code%.json
+    update_option: update_as_unapproved
+    skip_untranslated_strings: true
