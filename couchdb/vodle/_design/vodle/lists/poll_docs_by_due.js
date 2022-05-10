@@ -4,7 +4,8 @@
  * between from (inclusive, optional) and before (exclusive).
  * 
  * REQUEST PARAMETERS:
- * from, before: strings of the form "YYYY-MM-DD"
+ * from (optional), before (optional): strings of the form "YYYY-MM-DD"
+ * older_than (optional): integer (days)
  * 
  * USAGE:
  * on the command line:
@@ -19,16 +20,23 @@ function (head, req) {
     if (req.query.include_docs != 'true') {
       start({'code': 400, headers: headers});
       result = {'error': 'I require include_docs=true'};
-    } else if (!req.query.before) {
+    } else if (!req.query.before && !req.query.older_than) {
       start({'code': 400, headers: headers});
-      result = {'error': 'I require before=YYYY-MM-DD'};
+      result = {'error': 'I require before=YYYY-MM-DD or older_than=X'};
     } else {
       start({'headers': headers});
+      var before2 = null;
+      if (req.query.older_than) {
+        var now_as_ms = (new Date()).getTime(),
+            before_as_ms = now_as_ms - req.query.older_than*24*60*60*1000;
+        before2 = (new Date(before_as_ms)).toISOString();
+      }
       result = {};
       while(row = getRow()) {
         if (row.doc && row.doc.value) {
             if (req.query.from && row.doc.value < req.query.from) continue;
-            if (row.doc.value >= req.query.before) continue;
+            if (req.query.before && row.doc.value >= req.query.before) continue;
+            if (req.query.older_than && row.doc.value >= before2) continue;
             result[row.id] = [row.key]; // row.key contains the _rev of the doc!
         }
       }
