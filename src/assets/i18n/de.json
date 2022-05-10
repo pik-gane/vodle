@@ -172,6 +172,16 @@
         "message-body-regards": "Mit besten Grüßen"
     },
 
+    "delete-all": {
+        "-page-title": "Meine Daten löschen",
+        "confirm-header": "Wirklich alle Daten löschen?",
+        "confirm-intro": "<p><b>Dies löscht sämtliche vodle-Daten von diesem Gerät. Es löscht auch Deine privaten vodle-Daten vom Daten-Server, den Du momentan verwendest.</b></p><p>Es löscht allerdings <i>keine</i> Daten von anderen Geräten. Es löscht auch <i>nicht</i> Deine Waps oder Delegations-Daten</p><p>Für noch laufende Abstimmungen setzt es stattdessen alle Deine Waps auf Null, widerruft alle Deine Delegationsanfragen und lehnt alle Delegationsanfragen an Dich ab. Für bereits beendete Abstimmungen lässt es Deine Waps und Delegationsdaten unverändert, damit Abstimmungsergebnisse überprüfbar und unverändert bleiben. Auf den meisten Daten-Servern werden diese Daten schließlich nach einiger Zeit gelöscht, aber anonymisierte Kopien können auf den Geräten anderer Teilnehmer:innen zurückbleiben.</p><p><b>Wenn Du dies tust, können Deine Daten nicht wiederhergestellt werden!</b></p>",
+        "confirm-button": "Ja, lösche meine Daten",
+        "success-title": "Deine Daten wurden gelöscht.",
+        "success-body": "vodle hofft, Dich bald wiederzusehen, auch wenn es sich nicht an Dich erinnern wird :-)",
+        "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden."
+    },
+
     "delrespond": {
         "-page-title": "Delegierte:r sein?",
 
