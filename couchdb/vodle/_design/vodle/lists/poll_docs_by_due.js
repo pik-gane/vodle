@@ -1,7 +1,7 @@
 /**
  * List function that returns a json doc that can be passed to _purge 
  * in order to purge all poll docs whose poll has a due date 
- * between from (inclusive, optional) and before (exclusive).
+ * between from (inclusive, optional) and before (exclusive) or older_than days old.
  * 
  * REQUEST PARAMETERS:
  * from (optional), before (optional): strings of the form "YYYY-MM-DD"
@@ -34,9 +34,9 @@ function (head, req) {
       result = {};
       while(row = getRow()) {
         if (row.doc && row.doc.value) {
-            if (req.query.from && row.doc.value < req.query.from) continue;
-            if (req.query.before && row.doc.value >= req.query.before) continue;
-            if (req.query.older_than && row.doc.value >= before2) continue;
+            if (!!req.query.from && row.doc.value < req.query.from) continue;
+            if (!!req.query.before && row.doc.value >= req.query.before) continue;
+            if (!!req.query.older_than && row.doc.value >= before2) continue;
             result[row.id] = [row.key]; // row.key contains the _rev of the doc!
         }
       }
