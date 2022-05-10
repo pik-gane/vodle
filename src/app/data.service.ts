@@ -1791,36 +1791,63 @@ export class DataService implements OnDestroy {
     const lang = this.getu('language');
     this.translate.use(lang!=''?lang:environment.default_lang);
 
-    // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs:
-    for (const pid of this._pids) {
+    // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs,
+    // or if due is long over, delete:
+    for (const pid of new Set(this._pids)) {
       this.G.L.info("DataService.after_changes processing poll", pid);
-      if (!(pid in this.G.P.polls)) {
-        // poll object does not exist yet, so create it:
-        this.G.L.debug("DataService.after_changes creating poll object", pid);
-        const p = new Poll(this.G, pid);
-      }
-      if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
-        // try syncing with remote db:
-        // check if db credentials are set:
-        if (this.poll_has_db_credentials(pid)) {
-          this.G.L.trace("DataService.after_changes found remote poll db credentials");
-
-          // ASYNC:
-          // connect to remote and start sync:
-          this.connect_to_remote_poll_db(pid, this.need_poll_db_replication[pid] || false)
-          .catch(err => {
-
-            this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);
-            // TODO: react somehow?
-
-          });
-
-        } else {
-
-          this.G.L.warn("DataService.after_changes couldn't find remote poll db credentials", pid);
-          // TODO: react somehow?
-
+      // get due:
+      const due_str = this.G.D.getp(pid, 'due'),
+            deletion_date = (due_str == '') ? null : 
+              new Date((new Date(due_str)).getTime() + environment.polls.delete_after_days*24*60*60*1000);
+      if (!!deletion_date && (new Date()) >= deletion_date) {
+        // poll data shall be deleted locally
+        this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
+        this.stop_poll_sync(pid);
+        const lpdb = this.get_local_poll_db(pid);
+        if (!!lpdb) {
+          lpdb.destroy();
         }
+        delete this.local_poll_dbs[pid];
+        if (pid in this.remote_poll_dbs) {
+          delete this.remote_poll_dbs[pid];
+        }
+        if (pid in this._pid_oids) {
+          delete this._pid_oids[pid];
+        }
+        for (const key of poll_keystarts_in_user_db) {
+          this.delp(pid, key);
+        }
+        this._pids.delete(pid);
+      } else {
+        // poll data shall not be deleted.
+        if (!(pid in this.G.P.polls)) {
+          // poll object does not exist yet, so create it:
+          this.G.L.debug("DataService.after_changes creating poll object", pid);
+          const p = new Poll(this.G, pid);
+        }
+        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
+          // try syncing with remote db:
+          // check if db credentials are set:
+          if (this.poll_has_db_credentials(pid)) {
+            this.G.L.trace("DataService.after_changes found remote poll db credentials");
+  
+            // ASYNC:
+            // connect to remote and start sync:
+            this.connect_to_remote_poll_db(pid, this.need_poll_db_replication[pid] || false)
+            .catch(err => {
+  
+              this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);
+              // TODO: react somehow?
+  
+            });
+  
+          } else {
+  
+            this.G.L.warn("DataService.after_changes couldn't find remote poll db credentials", pid);
+            // TODO: react somehow?
+  
+          }
+        }  
       }
     }
 
@@ -2435,7 +2462,7 @@ export class DataService implements OnDestroy {
     }).catch(err => {
 
       // key did not exist in db:
-      this.G.L.warn("DataService.delete_user_data no need to delete nonexistent key", key, err);
+      this.G.L.trace("DataService.delete_user_data no need to delete nonexistent key", key, err);
 
     });
 

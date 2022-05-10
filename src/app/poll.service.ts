@@ -360,7 +360,7 @@ export class Poll {
 
   get due(): Date {
     const due_str = this.G.D.getp(this._pid, 'due'); 
-    return due_str==''?null:new Date(due_str); 
+    return (due_str == '') ? null : new Date(due_str); 
   }
   set due(value: Date) { 
     this.G.D.setp(this._pid, 'due', 
