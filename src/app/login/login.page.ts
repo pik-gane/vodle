@@ -99,8 +99,9 @@ export class LoginPage implements OnInit {
       }
       if (step == 'connected') {
         // store privacy consent in database:
-        this.G.D.setu('consent', 'Yes, I have read the data protection declaration. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices.');
+        this.G.D.setu('consent', 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.');
       }
+
     });
   }
 
