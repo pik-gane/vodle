@@ -1,5 +1,5 @@
 /*
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see AUTHORS.md.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see CODEOWNERS file.
 
 This file is part of vodle.
 
