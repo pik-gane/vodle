@@ -82,7 +82,7 @@
         "p18": "Exact procedure: Options are sorted by descending approval. Then each optionʼs share is proportional to the number of participants who have approved this option but no higher-up option.",
 
         "h2": "Whoʼs behind it?",
-        "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Contributors: Marius Amrhein, Adrian Lison.",
+        "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
 
         "h3": "Support vodle!",
         "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
