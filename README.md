@@ -91,13 +91,15 @@ A few of them also here:
 
 <!--Screenshot slideshow?: [![Product Name Screen Shot][product-screenshot]](https://example.com)-->
 
+vodle is developed by the [FutureLab on Game Theory and Networks of Interacting Agents](https://www.pik-potsdam.de/en/institute/futurelabs/gane) at the [Potsdam Institute for Climate Impact Research](https://www.pik-potsdam.de/), with contributions from the open-source community. 
+
 Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
 
 It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
-We are also building a [Website for end users: **vodle.it**](http://vodle.it).
+We are also building a [Website for end users: **vodle.it**](http://vodle.it), currently under construction.
 
 ### Built With 
 
