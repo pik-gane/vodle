@@ -153,3 +153,4 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 - The delegation and flowers icons are also lincensed under CC-BY lincenses
 - The outstretched arms background image is modified from https://pixabay.com/vectors/businessman-silhouette-2873115/ which has a Pixabay license https://pixabay.com/service/license/
 
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see [AUTHORS](AUTHORS).
