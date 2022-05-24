@@ -588,6 +588,7 @@
 
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
 
+        "results": "Ergebnis:",
         "winner-is": "Gewonnen hat <i>{{winner}}</i>",
         "final-ratings": "Details & endgültige Waps",
 

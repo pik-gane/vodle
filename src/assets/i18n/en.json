@@ -650,6 +650,7 @@
 
         "hint-mostapproved-1": "You are not approving the top-most option.",
 
+        "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
         "final-ratings": "Details & final waps",
 

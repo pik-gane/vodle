@@ -339,14 +339,13 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <ng-container *ngIf="p.has_results && !!p.winner">
       <ion-item color="light">
-        <p>
-          Results:
+        <p [innerHtml]="'poll.results'|translate">
         </p>
       </ion-item>
       <ion-item color="danger">
-        <p>
+        <h3>
           <b [innerHtml]="'poll.winner-is'|translate:{winner:p.options[p.winner].name}"></b>
-        </p>
+        </h3>
       </ion-item>
     </ng-container>
 
