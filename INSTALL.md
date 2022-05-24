@@ -185,10 +185,10 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
 
 - If you want to delete old documents from the CouchDB based on the respective user's last_access dates, use
   ```
-  $ curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&before=YYYY/MM" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
+  $ curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&before=YYYY/MM" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
   ```
   where `YYYY-MM-DD` is the first last_access date you want to *keep*, or
   ```
-  $ curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&older_than=X" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
+  $ curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&older_than=X" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
   ```
   where `X` is the number of months the last_access date must be over to be deleted. Note that this will NOT delete these docs from any user device, since the purge is not replicated to these devices!

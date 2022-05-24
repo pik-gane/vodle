@@ -1,5 +1,5 @@
 /*
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see AUTHORS file.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -18,6 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Injectable } from '@angular/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
@@ -178,6 +179,8 @@ export class Poll {
   private G: GlobalService;
   _state: string;  // cache for state since it is asked very often
   syncing: boolean = false;
+  allow_voting: boolean = false;
+  has_results: boolean = true;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
@@ -198,7 +201,94 @@ export class Poll {
     } else if (!(this._state in [null, '', 'draft'])) {
       this.tally_all();
     }
+
+    if (this._state == 'running') {
+      this.set_timeouts();
+    } 
+
     G.L.exit("Poll.constructor", pid);
+  }
+
+  set_timeouts(start_date?: Date) {
+    /** set timeouts for ending soon and ending events */
+    const has_just_ended = this.end_if_past_due();
+    if (!has_just_ended) {
+      this.allow_voting = true;
+      this.has_results = false;
+      const now_ms = (new Date()).getTime(), 
+            due = this.due;
+      if (!!due) {
+        const due_ms = due.getTime(),
+              time_left_ms = due_ms - now_ms;
+        // set timeout for ending:
+        window.setTimeout(this.end.bind(this), time_left_ms);
+        this.G.L.trace("Poll.set_timeouts: end scheduled", this._pid, time_left_ms);
+        const started = start_date || this.start_date;
+        this.G.L.trace("Poll.set_timeouts start_date", this._pid, started);
+        if (!!started) {
+          const started_ms = started.getTime(),
+                total_time_ms = due_ms - started_ms,
+                notify_time_ms = due_ms - this.G.S.closing_soon_fraction * total_time_ms,
+                time_to_notify_ms = notify_time_ms - now_ms;
+          if (time_to_notify_ms > 0) {
+            window.setTimeout(this.notify_closing_soon.bind(this), time_to_notify_ms);
+            this.G.L.trace("Poll.set_timeouts: notify_closing_soon scheduled", this._pid, time_to_notify_ms);
+          } 
+        }
+      }
+    }
+  }
+
+  end_if_past_due(): boolean  {
+    const now = new Date(), 
+          due = this.due, 
+          past_due = !!due && now > due;
+    if (past_due && this._state == 'running') {
+      this.end();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  end() {
+    this.G.L.entry("Poll.end", this._pid);
+    this.allow_voting = false;
+    this.state = 'closing';
+
+    // TODO!!
+
+    this.state = 'closed';
+    this.has_results = true;
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
+        body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("Poll.end localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("Poll.end localNotifications.schedule failed:", err);
+    });
+  }
+
+  notify_closing_soon() {
+    this.G.L.entry("Poll.notify_closing_soon", this._pid);
+    const dummy = this.is_closing_soon;
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.G.translate.instant('notifications.closing-soon-title', {title:this.title}),
+        body: this.G.translate.instant('notifications.closing-soon-body', {title:this.title, due:this.due_string}),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("Poll.notify_closing_soon localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("Poll.notify_closing_soon localNotifications.schedule failed:", err);
+    });
   }
 
   delete() {
@@ -307,6 +397,9 @@ export class Poll {
         }[old_state].includes(new_state)) {
         this.G.D.change_poll_state(this, new_state);
         this._state = new_state;
+        if (new_state == 'running') {
+          this.set_timeouts(new Date());
+        }
     } else {
       this.G.L.error("Poll invalid state transition from "+old_state+" to "+new_state);
     }

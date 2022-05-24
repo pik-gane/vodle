@@ -1,5 +1,5 @@
 <!--
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see AUTHORS file.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -88,7 +88,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-button>
 
       <!-- DELEGATE BUTTON: -->
-      <ion-button *ngIf="delegation_status!='agreed' && running"
+      <ion-button *ngIf="!!p && delegation_status!='agreed' && p.allow_voting"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"
@@ -107,7 +107,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
 <!-- SCROLLABLE CONTENT: -->
 
-<ion-content *ngIf="ready" 
+<ion-content *ngIf="ready && !!p" 
     (pointerup)="onBodyPointerup($event)"
     [scrollEvents]="true"
     (ionScroll)="onScroll($event)"    
@@ -197,7 +197,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <!-- ASSIST BUTTON: -->
 
-            <ion-button *ngIf="running"
+            <ion-button *ngIf="p.allow_voting"
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px;">
@@ -213,15 +213,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <small>
               <span style="white-space: nowrap;">
-                <ion-badge *ngIf="running && p.is_closing_soon" 
+                <ion-badge *ngIf="p.allow_voting && p.is_closing_soon" 
                   class="ion-no-margin" 
                   style="position: relative; bottom: -5.5px; font-size: 11.5px;" 
                   color="danger" 
                   [innerHtml]="'badges.closing-soon'|translate">
                 </ion-badge>
-                <span *ngIf="running && !p.is_closing_soon"
+                <span *ngIf="p.allow_voting && !p.is_closing_soon"
                   [innerHtml]="'poll.closes' | translate">
-                </span><span *ngIf="!running"
+                </span><span *ngIf="!p.allow_voting"
                   [innerHtml]="'poll.closed' | translate">
                 </span>&nbsp;<b 
                   [innerHtml]="G.D.format_date(p.due)">
@@ -277,7 +277,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- VOTE STATUS BANNER: -->
 
-    <ng-container *ngIf="running">
+    <ng-container *ngIf="p.allow_voting">
       <ion-item *ngIf="p.am_abstaining" color="danger">
         <small>
           <p>
@@ -333,9 +333,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       
     </ng-container>
 
-    <!-- FINAL RESULTS (if closed): -->
+    <!-- FINAL RESULTS (if ended and results are ready): -->
 
-    <ng-container *ngIf="!running">
+    <!-- TODO!! -->
+
+    <ng-container *ngIf="p.has_results">
       <ion-item color="light">
         <p>
           Results:
@@ -346,478 +348,491 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           <b>The winner is <i [innerHtml]="p.options[oidsorted[0]].name"></i></b>
         </p>
       </ion-item>
-      <ion-item color="light">
-        <p>
-          <small>
-            <span [innerHtml]="'poll.final-ratings'|translate"></span>
-          </small>
-        </p>
-      </ion-item>
     </ng-container>
+
+    <!-- FINAL WAPS EXPANDER (if ended): -->
+
+    <ion-item *ngIf="!p.allow_voting" 
+        color="light"
+        (click)="final_expanded=!final_expanded"
+        style="cursor: pointer;">
+      <ion-icon 
+        [name]="final_expanded?'caret-down-outline':'caret-forward-outline'" 
+        size="small" color="primary">
+      </ion-icon>&nbsp;&nbsp;<ion-label>
+        <span [innerHtml]="'poll.final-ratings'|translate"></span>
+      </ion-label>
+    </ion-item>
     
-    <!-- INCOMING DELEGATIONS BANNER: -->
+    <!-- POTENTIALLY HIDDEN CONTENT: -->
 
-    <ion-item *ngIf="(accepted_requests.length > 0) || (declined_requests.length > 0)"
-        color="light">
-      <ion-grid class="ion-no-padding ion-no-margin">
+    <ng-container *ngIf="p.allow_voting || final_expanded">
 
-        <!-- SUMMARY: -->
+      <!-- INCOMING DELEGATIONS BANNER: -->
 
-        <ion-row 
-            class="ion-no-padding ion-no-margin" 
-            style="padding-top: 5px; padding-bottom: 6px; cursor: pointer;"
-            (click)="incoming_delegation_expanded =! incoming_delegation_expanded">
-          <ion-col class="ion-no-margin ion-padding-right" >
-            <small>
-              <ion-icon 
-                [name]="(incoming_delegation_expanded) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
-                size="smaller" class="ion-no-margin" 
-                style="color:black; position: relative; left: -2px; top: 2px;">
-              </ion-icon>
-              <span *ngIf="accepted_requests.length > 0" 
-                [innerHtml]="
-                  ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
-                  | translate: {n_others: n_indirect_clients})
-                  + ' '
-                ">
-              </span>
-              <span *ngIf="declined_requests.length > 0" 
-                [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
-              </span>
-              &nbsp;
-            </small>
-          </ion-col>
-        </ion-row>
+      <ion-item *ngIf="(accepted_requests.length > 0) || (declined_requests.length > 0)"
+          color="light">
+        <ion-grid class="ion-no-padding ion-no-margin">
 
-        <!-- EXPANDABLE DETAILS: -->
+          <!-- SUMMARY: -->
 
-        <!-- Accepted requests: -->
-
-        <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length > 0">
-          <ion-col class="ion-text-right">
-            <small>
-              <span [innerHtml]="'poll.have-accepted' | translate"></span>
-              <ion-chip *ngFor="let r of accepted_requests" 
-                  [routerLink]="r.url" 
-                  outline="true">
+          <ion-row 
+              class="ion-no-padding ion-no-margin" 
+              style="padding-top: 5px; padding-bottom: 6px; cursor: pointer;"
+              (click)="incoming_delegation_expanded =! incoming_delegation_expanded">
+            <ion-col class="ion-no-margin ion-padding-right" >
+              <small>
                 <ion-icon 
-                  name="mail-open-outline"
-                  style="color:grey" size="small">
+                  [name]="(incoming_delegation_expanded) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                  size="smaller" class="ion-no-margin" 
+                  style="color:black; position: relative; left: -2px; top: 2px;">
                 </ion-icon>
-                <small>{{r.from}}</small>
-              </ion-chip>
-            </small>
-          </ion-col>
-        </ion-row>
-
-        <!-- Declined requests: -->
-
-        <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length > 0">
-          <ion-col class="ion-text-right">
-            <small>
-              <span [innerHtml]="'poll.have-declined' | translate"></span>
-              <ion-chip *ngFor="let r of declined_requests" 
-                  [routerLink]="r.url" 
-                  outline="true">
-                <ion-icon 
-                  name="mail-open-outline"
-                  style="color:grey" size="small">
-                </ion-icon>
-                <small>{{r.from}}</small>
-              </ion-chip>
-            </small>
-          </ion-col>
-        </ion-row>
-
-      </ion-grid>
-    </ion-item>
-
-    <!-- OUTGOING DELEGATION BANNER: -->
-
-    <ion-item *ngIf="delegation_status=='pending'" 
-        color="warning"> 
-      <ion-grid class="ion-no-padding ion-no-margin">
-        <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
-
-          <!-- Info about how many ratings the delegate controls: -->
-
-          <ion-col class="ion-no-margin ion-padding-right">
-            <small>
-              <p>
-                <span style="font-size: medium;">{{delegate}}</span>&nbsp;
-                <span [innerHtml]="
-                  'poll.delegate-not-responded' | translate
+                <span *ngIf="accepted_requests.length > 0" 
+                  [innerHtml]="
+                    ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
+                    | translate: {n_others: n_indirect_clients})
+                    + ' '
                   ">
                 </span>
-              </p>
-            </small>
-          </ion-col>
-
-          <!-- Revoke delegation button: -->
-
-          <ion-col size="auto" class="ion-no-margin">
-            <ion-button 
-                [disabled]="!running"
-                fill="clear" (click)="revoke_delegation_dialog()">
-              <ion-icon name="trash-outline" style="color:black"></ion-icon>
-            </ion-button>
-          </ion-col>
-
-        </ion-row>
-      </ion-grid>
-    </ion-item>
-
-    <ion-item *ngIf="delegation_status=='agreed'" 
-        color="warning"> 
-      <ion-grid class="ion-no-padding ion-no-margin">
-        <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
-
-          <!-- Info about how many ratings the delegate controls: -->
-
-          <ion-col class="ion-no-margin ion-padding-right">
-            <small>
-              <p>
-                <span style="font-size: medium;">{{delegate}}</span>&nbsp;
-                <span [innerHtml]="
-                  'poll.delegate-controls-' 
-                  + (n_delegated == oidsorted.length ? 'all' 
-                     : 2*n_delegated > oidsorted.length ? 'most' 
-                     : n_delegated > 0 ? 'some' : 'none'
-                    ) | translate
-                  ">
+                <span *ngIf="declined_requests.length > 0" 
+                  [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
                 </span>
-              </p>
-            </small>
-          </ion-col>
+                &nbsp;
+              </small>
+            </ion-col>
+          </ion-row>
 
-          <!-- Revoke delegation button: -->
+          <!-- EXPANDABLE DETAILS: -->
 
-          <ion-col size="auto" class="ion-no-margin">
-            <ion-button fill="clear" (click)="revoke_delegation_dialog()">
-              <ion-icon name="trash-outline" style="color:black"></ion-icon>
-            </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          </ion-col>
+          <!-- Accepted requests: -->
 
-          <!-- Help text for delegation toggles: -->
+          <ion-row *ngIf="incoming_delegation_expanded && accepted_requests.length > 0">
+            <ion-col class="ion-text-right">
+              <small>
+                <span [innerHtml]="'poll.have-accepted' | translate"></span>
+                <ion-chip *ngFor="let r of accepted_requests" 
+                    [routerLink]="r.url" 
+                    outline="true">
+                  <ion-icon 
+                    name="mail-open-outline"
+                    style="color:grey" size="small">
+                  </ion-icon>
+                  <small>{{r.from}}</small>
+                </ion-chip>
+              </small>
+            </ion-col>
+          </ion-row>
 
-          <ion-col 
-              size="auto" 
-              class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
-              style="padding-bottom:3px;">
-            <small>
-              <p>
-                <span [innerHtml]="'poll.choose-whose-ratings' | translate"></span>&nbsp;
-                <ion-icon 
-                  name="arrow-down-outline" 
-                  style="position:relative;top:3px;">
-                </ion-icon>
-              </p>
-            </small>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-    </ion-item>
+          <!-- Declined requests: -->
 
-    <!-- TABLE HEADER: -->
+          <ion-row *ngIf="incoming_delegation_expanded && declined_requests.length > 0">
+            <ion-col class="ion-text-right">
+              <small>
+                <span [innerHtml]="'poll.have-declined' | translate"></span>
+                <ion-chip *ngFor="let r of declined_requests" 
+                    [routerLink]="r.url" 
+                    outline="true">
+                  <ion-icon 
+                    name="mail-open-outline"
+                    style="color:grey" size="small">
+                  </ion-icon>
+                  <small>{{r.from}}</small>
+                </ion-chip>
+              </small>
+            </ion-col>
+          </ion-row>
 
-    <ion-item class="ion-no-padding ion-no-margin" lines="none"
-          style="--min-height: 0px!important; font-weight: bold;">
-      <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
-<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
-      </small>
-      <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
-<!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
-      </small>
-      <!-- TODO: make padding robustly correct accross devices: -->
-      <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
-        <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
-        <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
-      </small>
-    </ion-item>
+        </ion-grid>
+      </ion-item>
 
-    <!-- OPTIONS: -->
+      <!-- OUTGOING DELEGATION BANNER: -->
 
-    <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
+      <ion-item *ngIf="delegation_status=='pending'" 
+          color="warning"> 
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
 
-      <!-- ALWAYS VISIBLE STUFF: -->
+            <!-- Info about how many ratings the delegate controls: -->
 
-      <ion-grid class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-margin ion-padding-right">
+              <small>
+                <p>
+                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                  <span [innerHtml]="
+                    'poll.delegate-not-responded' | translate
+                    ">
+                  </span>
+                </p>
+              </small>
+            </ion-col>
 
-        <ion-row class="ion-no-padding ion-no-margin">
+            <!-- Revoke delegation button: -->
 
-          <!-- PIE CHART WITH WINNING PROBABILITY: -->
+            <ion-col size="auto" class="ion-no-margin">
+              <ion-button 
+                  [disabled]="!p.allow_voting"
+                  fill="clear" (click)="revoke_delegation_dialog()">
+                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+              </ion-button>
+            </ion-col>
 
-          <ion-col size="auto" class="ion-no-padding ion-no-margin">
-            <div style="width: 60px!important"></div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
-              <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
-              <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
-              <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
-                x1="21" y1="48" x2="21" y2="60" stroke="#769596" stroke-width="1" stroke-dasharray="1 1"></line>
-            </svg>
-          </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
 
-          <ion-col>
+      <ion-item *ngIf="delegation_status=='agreed'" 
+          color="warning"> 
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
 
-            <ion-grid class="ion-no-padding ion-no-margin">
+            <!-- Info about how many ratings the delegate controls: -->
 
-              <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px; cursor: pointer; position: relative; left: -6px; z-index:20; "
-                  (click)="expand(oidsorted[i])">
-                <ion-col class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-margin ion-padding-right">
+              <small>
+                <p>
+                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                  <span [innerHtml]="
+                    'poll.delegate-controls-' 
+                    + (n_delegated == oidsorted.length ? 'all' 
+                      : 2*n_delegated > oidsorted.length ? 'most' 
+                      : n_delegated > 0 ? 'some' : 'none'
+                      ) | translate
+                    ">
+                  </span>
+                </p>
+              </small>
+            </ion-col>
 
-  
-                  <ion-label class="ion-no-padding ion-no-margin">
-  
-                    <ion-icon 
-                      [name]="(option_expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
-                      size="small" class="ion-no-margin" 
-                      style="color:black; position: relative; top: 3px;">
-                    </ion-icon>
+            <!-- Revoke delegation button: -->
 
-                    <!-- OPTION NAME: -->
-  
-                    <b><i>&nbsp;<span [innerHtml]="p.options[oidsorted[i]].name"></span>&nbsp;</i></b>
-                  </ion-label>
-  
-                </ion-col>
-              </ion-row>
+            <ion-col size="auto" class="ion-no-margin">
+              <ion-button fill="clear" (click)="revoke_delegation_dialog()">
+                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+              </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </ion-col>
 
-              <!-- RATING CONTROLS: -->
+            <!-- Help text for delegation toggles: -->
 
-              <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col 
+                size="auto" 
+                class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
+                style="padding-bottom:3px;">
+              <small>
+                <p>
+                  <span [innerHtml]="'poll.choose-whose-ratings' | translate"></span>&nbsp;
+                  <ion-icon 
+                    name="arrow-down-outline" 
+                    style="position:relative;top:3px;">
+                  </ion-icon>
+                </p>
+              </small>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
 
-                <ion-col 
-                    [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
-                    class="ion-no-padding ion-no-margin" 
-                    (click)="onRatingColClick(oidsorted[i], $event)" 
-                    (pointerdown)="onRatingColPointerdown(oidsorted[i], $event)" 
-                    (touchstart)="onRatingColTouchstart(oidsorted[i], $event)" 
-                    (touchup)="onRatingColTouchup(oidsorted[i], $event)"
-                    (pointerup)="onRatingColPointerup(oidsorted[i], $event)"
-                    >
+      <!-- TABLE HEADER: -->
 
-                  <!-- SLIDER: -->
+      <ion-item class="ion-no-padding ion-no-margin" lines="none"
+            style="--min-height: 0px!important; font-weight: bold;">
+        <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
+  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
+        </small>
+        <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
+  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
+        </small>
+        <!-- TODO: make padding robustly correct accross devices: -->
+        <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+          <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
+          <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
+        </small>
+      </ion-item>
 
-                  <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
-                  <ion-range 
-                      [disabled]="!running"
-                      [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
-                      [color]="slidercolor[oidsorted[i]]"
-                      [value]="p.get_my_proxy_rating(oidsorted[i])" 
-                      (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
-                      (ionChange)="onRatingSliderChange(oidsorted[i])" 
-                      (ionBlur)="onRatingSliderBlur(oidsorted[i])"
-                      mode="md" pin="true" pinFormatter="(v)=>100-v"
-                      min="0" max="100" step="1" snaps="true" ticks="false"
-                      [style]="''
-                        + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
-                        ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
-                        : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
-                      class="ion-no-padding ion-no-margin">
+      <!-- OPTIONS: -->
 
-                    <ion-label 
-                        slot="end" 
-                        class="ion-no-padding ion-no-margin" 
-                        style="margin-right:12px;">
-                        <!--don't do width:100% in ion-label since otherwise the slider is not working properly!-->
+      <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
 
-                      <!-- APPROVAL BAR: -->
+        <!-- ALWAYS VISIBLE STUFF: -->
 
-                      <div style="position: absolute; bottom: 0px; right: 11px; z-index: -10; width: 100%; padding-left: 11px">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                          <rect [id]="'bar_' + oidsorted[i]" 
-                            x="100%" width="0%" y="8" height="18" 
-                            fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
-                          <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
-                          <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
-                          <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
-                        </svg>
-                      </div>
+        <ion-grid class="ion-no-padding ion-no-margin">
 
-                      <!-- Numerical annotations when expanded: -->
+          <ion-row class="ion-no-padding ion-no-margin">
 
-                      <div style="position: absolute; bottom: 0px; right: 11px; z-index: 10; width: 100%; padding-left: 11px; pointer-events: none;">
-                        <svg [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'" 
-                            xmlns="http://www.w3.org/2000/svg" width="100%" height="45px">
-                          <!--
-                          <text x="0%" y="20" 
-                            style="font-weight: bold; font-size: 12px;" fill="slidercolor[oidsorted[i]]" 
-                            [innerHtml]="p.get_my_proxy_rating(oidsorted[i])">
-                          </text>
-                          -->
-                          <text x="100%" y="15" 
-                            style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="#9abcbd" [innerHtml]="
-                              Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10 + '%&nbsp;&nbsp;'
-                            ">
-                          </text>
-                        </svg>
-                      </div>
+            <!-- PIE CHART WITH WINNING PROBABILITY: -->
 
-                      <!-- DELEGATE'S RATING -->
+            <ion-col size="auto" class="ion-no-padding ion-no-margin">
+              <div style="width: 60px!important"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
+                <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
+                <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
+                <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
+                  x1="21" y1="48" x2="21" y2="60" stroke="#769596" stroke-width="1" stroke-dasharray="1 1"></line>
+              </svg>
+            </ion-col>
 
-                      <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
-                          [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
-                          <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="#9abcbd" stroke-width="2" stroke-dasharray="3 2" />
-                          <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="#9abcbd" stroke="none"/>
-                          <!--FIXME: circle is cropped when close to either endpoint. how to avoid this?-->
-                        </svg>
-                      </div>
+            <ion-col>
 
-                    </ion-label>
-                  </ion-range>
-                </ion-col>
+              <ion-grid class="ion-no-padding ion-no-margin">
 
-                <!-- DELEGATION TOGGLE: -->
-
-                <ion-col *ngIf="delegation_status=='agreed'" 
-                    class="ion-no-margin ion-no-padding" 
-                    size="auto">&nbsp;&nbsp;&nbsp;
-                  <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
-                    [disabled]="!running"
-                    (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
-                    class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                    style="position:relative; top:-8px;" 
-                    [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
-                  </ion-toggle>
-                  <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
-                    <small [innerHtml]="
-                      rate_yourself_toggle[oidsorted[i]] 
-                      ? ('poll.my-own' | translate) 
-                      : ('poll.delegate-s' | translate: {delegate: delegate})
-                      " >
-                    </small>
-                  </div>
-                </ion-col>  
-              </ion-row>
-            </ion-grid>
-          </ion-col>
-        </ion-row>
-        <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin">
-            <ion-grid class="ion-no-padding ion-no-margin">
-
-              <!-- EXPANDABLE OPTION DETAILS -->
-
-              <!-- TODO: replace by simpler container: -->
-              <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" 
-                  [expanded]="option_expanded[oidsorted[i]]">
-                <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
+                <ion-row class="ion-no-padding ion-no-margin" style="padding-top: 8px; cursor: pointer; position: relative; left: -6px; z-index:20; "
+                    (click)="expand(oidsorted[i])">
                   <ion-col class="ion-no-padding ion-no-margin">
-                    <b>
-                      <!-- Winning chance/budget share: -->
-                      <span style="color:#769596;">
-                        <span style="white-space: nowrap;" [innerHtml]="
-                          (p.type == 'winner' 
-                              ? (running?'poll.chance-to-win':'poll.final-chance-to-win') 
-                              : (running?'poll.of-the-budget':'poll.final-budget')) 
-                          | translate: {percentage: 
-                            Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
-                          }">
-                        </span><small><wbr> <span style="color:#4c822e;" 
-                            [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
-                            [innerHtml]="'poll.including-your-share' | translate">
-                          </span>,
-                        </small>
-                      </span><small><wbr> </small>
-                      <!-- Approval: -->
-                      <span style="color:#9abcbd; white-space: nowrap;">
-                        <span [innerHtml]="
-                          'poll.approved-by' | translate: {percentage:
-                            Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10
-                          }">
-                        </span>
-                      </span>
-                      <small>
-                        <span style="color:#62a73b" 
-                          [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
-                          [innerHtml]="'poll.including-you' | translate">
-                        </span>
-                      </small>
-                      <small>
-                      <!-- avg. rating: -->
-                      <span *ngIf="(i>0 
-                                && p.T.approval_scores_map.get(oidsorted[i-1]) 
-                                == p.T.approval_scores_map.get(oidsorted[i])) 
-                            || (i<oidsorted.length-1 
-                                && p.T.approval_scores_map.get(oidsorted[i+1]) 
-                                == p.T.approval_scores_map.get(oidsorted[i]))" 
-                            style="color:#9abcbd">,
-                        <span style="white-space: nowrap;" [innerHtml]="
-                          'poll.average-rating' | translate: {average:
-                            Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
-                          }">
-                        </span>
-                      </span>&nbsp;
-                      <!-- explanation link: -->
-                      <span style="color:#9abcbd; white-space: nowrap;">
-                        (<a 
-                          (click)="explain_approval_dialog(oidsorted[i])"
-                          [innerHtml]="'poll.explain' | translate">
-                        </a>)
-                      </span>
-                    </small>
-                    </b>
-                    <span [style.display]="(!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url) ? 'inline' : 'none'">
-                      <br/>
-                    </span>
-                    <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
-                      <i><span [innerHtml]="p.options[oidsorted[i]].desc"></span>&nbsp;&nbsp;</i>
-                    </span>
-                    <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
-                      <small>
-                        (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))"><ion-text 
-                            class="externallink"  
-                            [innerHtml]="'read-more' | translate">
-                        </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
-                      </small>
-                    </span>
 
-                    <!-- debugging info: - ->
+                    <ion-input style="display: none;"></ion-input><!--this is needed so that the following ion-label is not greyed out when the ion-range below is disabled!-->
+                    <ion-label class="ion-no-padding ion-no-margin">
+    
+                      <ion-icon 
+                        [name]="(option_expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+                        size="small" class="ion-no-margin" 
+                        style="color:black; position: relative; top: 3px;">
+                      </ion-icon>
 
-                    <small>
-                      <br/>direct_delegation_map: {{G.map2str(p.direct_delegation_map.get(oidsorted[i]))}}
-                      <br/>inv_direct_delegation_map: {{G.map2str(p.inv_direct_delegation_map.get(oidsorted[i]))}}
-                      <br/>indirect_delegation_map: {{G.map2str(p.indirect_delegation_map.get(oidsorted[i]))}}
-                      <br/>inv_indirect_delegation_map: {{G.map2str(p.inv_indirect_delegation_map.get(oidsorted[i]))}}
-                      <br/>effective_delegation_map: {{G.map2str(p.effective_delegation_map.get(oidsorted[i]))}}
-                      <br/>inv_effective_delegation_map: {{G.map2str(p.inv_effective_delegation_map.get(oidsorted[i]))}}
-                      <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
-                      <br/>thresholds_map: {{G.map2str(p.T.thresholds_map)}}
-                      <br/>approval_scores_map: {{G.map2str(p.T.approval_scores_map)}}
-                      <br/>total_effective_ratings_map: {{G.map2str(p.T.total_effective_ratings_map)}}
-                      <br/>votes_map: {{G.map2str(p.T.votes_map)}}
-                      <br/>n_votes_map: {{G.map2str(p.T.n_votes_map)}}
-                      <br/>shares_map: {{G.map2str(p.T.shares_map)}}
-                    </small>
-                    <!---->
-                    
+                      <!-- OPTION NAME: -->
+    
+                      <b><i>&nbsp;<span [innerHtml]="p.options[oidsorted[i]].name"></span>&nbsp;</i></b>
+                    </ion-label>
+    
                   </ion-col>
                 </ion-row>
-              </app-expandable>
-            </ion-grid>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
 
-    </ion-item>
+                <!-- RATING CONTROLS: -->
 
-    <!-- ADD OPTION BUTTON: -->
+                <ion-row class="ion-no-padding ion-no-margin">
 
-    <ng-container *ngIf="running">
-      <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
-        <ion-fab-button 
-          size="small" (click)="add_option($event)" fill="clear" color="primary">
-          <ion-icon name="add"></ion-icon>
-        </ion-fab-button>
-        <ion-button 
-          class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
-          [innerHtml]="'poll.add-option' | translate"> 
-        </ion-button>
+                  <ion-col 
+                      [id]="'_slider_'+oidsorted[i]+'_'+sortingcounter"
+                      class="ion-no-padding ion-no-margin" 
+                      (click)="onRatingColClick(oidsorted[i], $event)" 
+                      (pointerdown)="onRatingColPointerdown(oidsorted[i], $event)" 
+                      (touchstart)="onRatingColTouchstart(oidsorted[i], $event)" 
+                      (touchup)="onRatingColTouchup(oidsorted[i], $event)"
+                      (pointerup)="onRatingColPointerup(oidsorted[i], $event)"
+                      >
+
+                    <!-- SLIDER: -->
+
+                    <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
+                    <ion-range 
+                        [disabled]="!p.allow_voting"
+                        [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
+                        [color]="slidercolor[oidsorted[i]]"
+                        [value]="p.get_my_proxy_rating(oidsorted[i])" 
+                        (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
+                        (ionChange)="onRatingSliderChange(oidsorted[i])" 
+                        (ionBlur)="onRatingSliderBlur(oidsorted[i])"
+                        mode="md" pin="true" pinFormatter="(v)=>100-v"
+                        min="0" max="100" step="1" snaps="true" ticks="false"
+                        [style]="''
+                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
+                          ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
+                          : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
+                        class="ion-no-padding ion-no-margin">
+
+                      <ion-label 
+                          slot="end" 
+                          class="ion-no-padding ion-no-margin" 
+                          style="margin-right:12px;">
+                          <!--don't do width:100% in ion-label since otherwise the slider is not working properly!-->
+
+                        <!-- APPROVAL BAR: -->
+
+                        <div style="position: absolute; bottom: 0px; right: 11px; z-index: -10; width: 100%; padding-left: 11px">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                            <rect [id]="'bar_' + oidsorted[i]" 
+                              x="100%" width="0%" y="8" height="18" 
+                              fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
+                            <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
+                            <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
+                            <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
+                          </svg>
+                        </div>
+
+                        <!-- Numerical annotations when expanded: -->
+
+                        <div style="position: absolute; bottom: 0px; right: 11px; z-index: 10; width: 100%; padding-left: 11px; pointer-events: none;">
+                          <svg [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'" 
+                              xmlns="http://www.w3.org/2000/svg" width="100%" height="45px">
+                            <!--
+                            <text x="0%" y="20" 
+                              style="font-weight: bold; font-size: 12px;" fill="slidercolor[oidsorted[i]]" 
+                              [innerHtml]="p.get_my_proxy_rating(oidsorted[i])">
+                            </text>
+                            -->
+                            <text x="100%" y="15" 
+                              style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="#9abcbd" [innerHtml]="
+                                Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10 + '%&nbsp;&nbsp;'
+                              ">
+                            </text>
+                          </svg>
+                        </div>
+
+                        <!-- DELEGATE'S RATING -->
+
+                        <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
+                            [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
+                            <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="#9abcbd" stroke-width="2" stroke-dasharray="3 2" />
+                            <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="#9abcbd" stroke="none"/>
+                            <!--FIXME: circle is cropped when close to either endpoint. how to avoid this?-->
+                          </svg>
+                        </div>
+
+                      </ion-label>
+                    </ion-range>
+                  </ion-col>
+
+                  <!-- DELEGATION TOGGLE: -->
+
+                  <ion-col *ngIf="delegation_status=='agreed'" 
+                      class="ion-no-margin ion-no-padding" 
+                      size="auto">&nbsp;&nbsp;&nbsp;
+                    <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
+                      [disabled]="!p.allow_voting"
+                      (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
+                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
+                      style="position:relative; top:-8px;" 
+                      [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
+                    </ion-toggle>
+                    <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+                      <small [innerHtml]="
+                        rate_yourself_toggle[oidsorted[i]] 
+                        ? ('poll.my-own' | translate) 
+                        : ('poll.delegate-s' | translate: {delegate: delegate})
+                        " >
+                      </small>
+                    </div>
+                  </ion-col>  
+                </ion-row>
+              </ion-grid>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-no-padding ion-no-margin">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <ion-grid class="ion-no-padding ion-no-margin">
+
+                <!-- EXPANDABLE OPTION DETAILS -->
+
+                <!-- TODO: replace by simpler container: -->
+                <app-expandable [id]="'expander_'+oidsorted[i]+'_'+sortingcounter" 
+                    [expanded]="option_expanded[oidsorted[i]]">
+                  <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
+                    <ion-col class="ion-no-padding ion-no-margin">
+                      <b>
+                        <!-- Winning chance/budget share: -->
+                        <span style="color:#769596;">
+                          <span style="white-space: nowrap;" [innerHtml]="
+                            (p.type == 'winner' 
+                                ? (p.allow_voting?'poll.chance-to-win':'poll.final-chance-to-win') 
+                                : (p.allow_voting?'poll.of-the-budget':'poll.final-budget')) 
+                            | translate: {percentage: 
+                              Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
+                            }">
+                          </span><small><wbr> <span style="color:#4c822e;" 
+                              [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
+                              [innerHtml]="'poll.including-your-share' | translate">
+                            </span>,
+                          </small>
+                        </span><small><wbr> </small>
+                        <!-- Approval: -->
+                        <span style="color:#9abcbd; white-space: nowrap;">
+                          <span [innerHtml]="
+                            'poll.approved-by' | translate: {percentage:
+                              Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10
+                            }">
+                          </span>
+                        </span>
+                        <small>
+                          <span style="color:#62a73b" 
+                            [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
+                            [innerHtml]="'poll.including-you' | translate">
+                          </span>
+                        </small>
+                        <small>
+                        <!-- avg. rating: -->
+                        <span *ngIf="(i>0 
+                                  && p.T.approval_scores_map.get(oidsorted[i-1]) 
+                                  == p.T.approval_scores_map.get(oidsorted[i])) 
+                              || (i<oidsorted.length-1 
+                                  && p.T.approval_scores_map.get(oidsorted[i+1]) 
+                                  == p.T.approval_scores_map.get(oidsorted[i]))" 
+                              style="color:#9abcbd">,
+                          <span style="white-space: nowrap;" [innerHtml]="
+                            'poll.average-rating' | translate: {average:
+                              Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
+                            }">
+                          </span>
+                        </span>&nbsp;
+                        <!-- explanation link: -->
+                        <span style="color:#9abcbd; white-space: nowrap;">
+                          (<a 
+                            (click)="explain_approval_dialog(oidsorted[i])"
+                            [innerHtml]="'poll.explain' | translate">
+                          </a>)
+                        </span>
+                      </small>
+                      </b>
+                      <span [style.display]="(!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url) ? 'inline' : 'none'">
+                        <br/>
+                      </span>
+                      <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
+                        <i><span [innerHtml]="p.options[oidsorted[i]].desc"></span>&nbsp;&nbsp;</i>
+                      </span>
+                      <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
+                        <small>
+                          (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))"><ion-text 
+                              class="externallink"  
+                              [innerHtml]="'read-more' | translate">
+                          </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
+                        </small>
+                      </span>
+
+                      <!-- debugging info: - ->
+
+                      <small>
+                        <br/>direct_delegation_map: {{G.map2str(p.direct_delegation_map.get(oidsorted[i]))}}
+                        <br/>inv_direct_delegation_map: {{G.map2str(p.inv_direct_delegation_map.get(oidsorted[i]))}}
+                        <br/>indirect_delegation_map: {{G.map2str(p.indirect_delegation_map.get(oidsorted[i]))}}
+                        <br/>inv_indirect_delegation_map: {{G.map2str(p.inv_indirect_delegation_map.get(oidsorted[i]))}}
+                        <br/>effective_delegation_map: {{G.map2str(p.effective_delegation_map.get(oidsorted[i]))}}
+                        <br/>inv_effective_delegation_map: {{G.map2str(p.inv_effective_delegation_map.get(oidsorted[i]))}}
+                        <br/>ratings_ascending_map: {{G.map2str(p.T.ratings_ascending_map)}}
+                        <br/>thresholds_map: {{G.map2str(p.T.thresholds_map)}}
+                        <br/>approval_scores_map: {{G.map2str(p.T.approval_scores_map)}}
+                        <br/>total_effective_ratings_map: {{G.map2str(p.T.total_effective_ratings_map)}}
+                        <br/>votes_map: {{G.map2str(p.T.votes_map)}}
+                        <br/>n_votes_map: {{G.map2str(p.T.n_votes_map)}}
+                        <br/>shares_map: {{G.map2str(p.T.shares_map)}}
+                      </small>
+                      <!---->
+                      
+                    </ion-col>
+                  </ion-row>
+                </app-expandable>
+              </ion-grid>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
       </ion-item>
-      <ion-item lines="none" style="padding-bottom: 10px!important;">
-        <small [innerHtml]="'poll.add-option-info' | translate"></small>
-      </ion-item>
+
+      <!-- ADD OPTION BUTTON: -->
+
+      <ng-container *ngIf="p.allow_voting">
+        <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
+          <ion-fab-button 
+            size="small" (click)="add_option($event)" fill="clear" color="primary">
+            <ion-icon name="add"></ion-icon>
+          </ion-fab-button>
+          <ion-button 
+            class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
+            [innerHtml]="'poll.add-option' | translate"> 
+          </ion-button>
+        </ion-item>
+        <ion-item lines="none" style="padding-bottom: 10px!important;">
+          <small [innerHtml]="'poll.add-option-info' | translate"></small>
+        </ion-item>
+      </ng-container>
+
     </ng-container>
 
     <!-- DEBUGGING AREA (not in production mode): -->
@@ -832,7 +847,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-buttons slot="end">
           <!-- only in debug: simulate closing -->
           <ion-toggle color="light"
-            [(ngModel)]="running">
+            [(ngModel)]="p.allow_voting">
           </ion-toggle>
         </ion-buttons>
       </ion-item>

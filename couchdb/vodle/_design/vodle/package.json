@@ -1,4 +1,4 @@
 {
     "name": "vodle",
-    "description": "vodle CouchDB logics: contains validation functions for hashed-passwords-based authorization and parameterized filter functions for accessing user, poll, and voter db parts"
+    "description": "vodle CouchDB logics: validation functions"
 }

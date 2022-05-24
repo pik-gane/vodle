@@ -9,10 +9,10 @@
  * 
  * USAGE:
  * on the command line:
- * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&before=YYYY/MM" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
+ * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&before=YYYY/MM" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
  * where `YYYY/MM` is the first month you want to *keep*,
  * or 
- * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&older_than=X" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
+ * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&older_than=X" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
  * where `X` is the number of months you want to keep user data.
  * 
  * Note that this will NOT delete these docs from any user device, since the purge is not replicated to these devices!

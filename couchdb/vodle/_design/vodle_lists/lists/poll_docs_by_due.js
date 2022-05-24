@@ -9,7 +9,7 @@
  * 
  * USAGE:
  * on the command line:
- * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle/_list/poll_docs_by_due/poll_due_doc_by_doc_id?include_docs=true&before=YYYY-MM-DD" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
+ * curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/poll_docs_by_due/poll_due_doc_by_doc_id?include_docs=true&before=YYYY-MM-DD" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
  *  where `YYYY-MM-DD` is the first due date you want to *keep*.
  * 
  * Note that this will NOT delete these docs from any user device, since the purge is not replicated to these devices!
