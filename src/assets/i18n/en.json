@@ -1,31 +1,32 @@
 {
+    "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
     "_HEADER_": [
-        "(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see AUTHORS file.",
-        "This file is part of vodle.",  
-        "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
-        "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
-        "You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
+        "[COMMENT] (C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see AUTHORS file.",
+        "[COMMENT] This file is part of vodle.",  
+        "[COMMENT] vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
+        "[COMMENT] vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
+        "[COMMENT] You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
     ],
     
     "_WELCOME_TO_TRANSLATORS_": [
-        "Thank you for helping translate vodle!",
-        "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
-        "Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
-        "In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+        "[COMMENT] Thank you for helping translate vodle!",
+        "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
+        "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
+        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
     ],
 
     "_OVERALL_CONVENTIONS_": [
-        "Please use gender-neutral language.",
-        "Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
-        "Please use the correct whitespacing with exclamation marks and question marks for your language."
+        "[COMMENT] Please use gender-neutral language.",
+        "[COMMENT] Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
+        "[COMMENT] Please use the correct whitespacing with exclamation marks and question marks for your language."
     ],
 
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
-        "We use British English: favourite, colour, centre, etc.",
-        "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
-        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
-        "We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
-        "We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
+        "[COMMENT EN] We use British English: favourite, colour, centre, etc.",
+        "[COMMENT EN] We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
+        "[COMMENT EN] We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
+        "[COMMENT EN] We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
+        "[COMMENT EN] We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
 
     "add": "Add",
@@ -393,7 +394,7 @@
 
     "glossary": {
 
-        "_COMMENT_": "These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
+        "_COMMENT_": "[COMMENT] These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
 
         "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the colourful <b>sliders</b>.<!-- You can let vodle help you in this by clicking on “Assist me”.--></p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>In the beginning, all your waps are zero and the sliders are red knobs. A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option. The slider is green then.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.",
 
@@ -574,7 +575,7 @@
         "assist-me-inline": "Assist me",
         "assist-me-button": "Assist<br/>me",
 
-        "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
+        "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
 
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
