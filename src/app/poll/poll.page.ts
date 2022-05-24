@@ -352,9 +352,6 @@ export class PollPage implements OnInit {
   final_rand: number = 0;
   
   async update_order(force=false) {
-    // DEBUG:
-    this.final_rand = this.p.make_final_rand("umewgfwgemfzgwezfgwefugwfxewgofxiwemhfeoifuhewfiewfumwehxfewmgfgmewfzuwegxzugwef");
-
     // TODO: rather have this triggered by tally function!
     if (this.oidsorted.length != this.p.oids.length) {
       this.needs_refresh = true;
@@ -368,14 +365,16 @@ export class PollPage implements OnInit {
       }  
     }
     if (force || (this.needs_refresh && !(this.refresh_paused))) {
-      // link displayed sorting to poll's sorting:
-      const loadingElement = await this.loadingController.create({
-        message: this.translate.instant('poll.sorting'),
-        spinner: 'crescent',
-        duration: 100
-      });
-      await loadingElement.present();
-      await loadingElement.onDidDismiss();
+      if (!force) {
+        // link displayed sorting to poll's sorting:
+        const loadingElement = await this.loadingController.create({
+          message: this.translate.instant('poll.sorting'),
+          spinner: 'crescent',
+          duration: 100
+        });
+        await loadingElement.present();
+        await loadingElement.onDidDismiss();
+      }
       // now actually tell html to use the new ordering:
       this.oidsorted = [...this.p.T.oids_descending];
       this.sortingcounter++;

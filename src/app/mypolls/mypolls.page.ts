@@ -124,4 +124,12 @@ export class MypollsPage implements OnInit {
       .filter((p) => p.state=='running')
       .sort((p1, p2) => p1.remaining_time_fraction - p2.remaining_time_fraction);
   } 
+
+  get closed_polls(): Poll[] {
+    // return polls sorted by due:
+    return Object.values(this.G.P.polls)
+      .filter((p) => p.state=='closed')
+      .sort((p1, p2) => p2.due.getTime() - p1.due.getTime());
+  } 
+
 }

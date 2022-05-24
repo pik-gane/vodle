@@ -261,7 +261,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
                 </ion-icon><b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
               </span>&nbsp;&nbsp;&nbsp;
-              <ion-badge
+              <ion-badge *ngIf="false"
                     class="ion-no-margin" 
                     style="position: absolute; right:10px; bottom:7px; font-size: 11.5px; padding-top:2px" 
                     color="success" 
@@ -337,7 +337,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- TODO!! -->
 
-    <ng-container *ngIf="p.has_results">
+    <ng-container *ngIf="p.has_results && !!p.winner">
       <ion-item color="light">
         <p>
           Results:
@@ -345,7 +345,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-item>
       <ion-item color="danger">
         <p>
-          <b>The winner is <i [innerHtml]="p.options[oidsorted[0]].name"></i></b>
+          <b [innerHtml]="'poll.winner-is'|translate:{winner:p.options[p.winner].name}"></b>
         </p>
       </ion-item>
     </ng-container>
@@ -366,7 +366,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     
     <!-- POTENTIALLY HIDDEN CONTENT: -->
 
-    <ng-container *ngIf="p.allow_voting || final_expanded">
+    <div [style.display]="p.allow_voting || final_expanded ? 'block' : 'none'">
 
       <!-- INCOMING DELEGATIONS BANNER: -->
 
@@ -833,7 +833,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-item>
       </ng-container>
 
-    </ng-container>
+    </div>
 
     <!-- DEBUGGING AREA (not in production mode): -->
 

@@ -163,7 +163,9 @@ const poll_keystarts_in_user_db = [
   'del_private_key', 'del_nickname', 'del_from', 
   'have_seen', 'have_acted', 'have_seen_results', 
   'poll_page',
-  'simulated_ratings'];
+  'simulated_ratings',
+  'final_rand', 'winner'
+];
 
 const user_keys_unencrypted = ['consent', 'last_access'];
 
@@ -870,12 +872,16 @@ export class DataService implements OnDestroy {
             if (change.pending == 0) {
               // replication completed
 
-              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
+              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
 
               this.need_poll_db_replication[pid] = false;
 
-              // now start synchronisation asynchronously:
-              this.start_poll_sync.bind(this)(pid);
+              if (this.poll_caches[pid]['state'] == 'closed') {
+                this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
+              } else {
+                // now start synchronisation asynchronously:
+                this.start_poll_sync.bind(this)(pid);
+              }
       
               // RESOLVE:
               resolve(true);  
@@ -916,9 +922,13 @@ export class DataService implements OnDestroy {
   
           this.remote_poll_dbs[pid] = db;
   
-          // start synchronisation asynchronously:
-          this.start_poll_sync(pid);
-  
+          if (this.poll_caches[pid]['state'] == 'closed') {
+            this.G.L.trace("DataService.connect_to_remote_poll_db no more syncing of closed poll", pid);
+          } else {
+            // start synchronisation asynchronously:
+            this.start_poll_sync(pid);
+          }
+
           // RESOLVE:
           resolve(true);
   
@@ -1032,6 +1042,15 @@ export class DataService implements OnDestroy {
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
           selector: this.get_poll_doc_selector(pid)
+      }).on('complete', msg => {
+
+        this.G.L.trace("DataService.replicate_once completed", pid, msg);
+
+        this.need_poll_db_replication[pid] = false;
+
+        // RESOLVE:
+        resolve(true);  
+
       }).on('change', change => {
 
         this.G.L.trace("DataService.replicate_once received change", change);

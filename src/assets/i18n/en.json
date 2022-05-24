@@ -650,7 +650,8 @@
 
         "hint-mostapproved-1": "You are not approving the top-most option.",
 
-        "final-ratings": "Your final waps",
+        "winner-is": "The winner is <i>{{winner}}</i>",
+        "final-ratings": "Details & final waps",
 
         "also-for-other": "Some or all of the waps below are also used for one other participant, who has delegated to you.",
         "also-for-others": "Some or all of the waps below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",

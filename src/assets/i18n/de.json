@@ -588,7 +588,8 @@
 
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
 
-        "final-ratings": "Deine Waps am Ende",
+        "winner-is": "Gewonnen hat <i>{{winner}}</i>",
+        "final-ratings": "Details & endgültige Waps",
 
         "also-for-other": "Manche oder alle der Waps weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Waps weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",

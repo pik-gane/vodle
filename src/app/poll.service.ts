@@ -239,41 +239,6 @@ export class Poll {
     }
   }
 
-  end_if_past_due(): boolean  {
-    const now = new Date(), 
-          due = this.due, 
-          past_due = !!due && now > due;
-    if (past_due && this._state == 'running') {
-      this.end();
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  end() {
-    this.G.L.entry("Poll.end", this._pid);
-    this.allow_voting = false;
-    this.state = 'closing';
-
-    // TODO!!
-
-    this.state = 'closed';
-    this.has_results = true;
-    LocalNotifications.schedule({
-      notifications: [{
-        title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
-        body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
-        id: null
-      }]
-    })
-    .then(res => {
-      this.G.L.trace("Poll.end localNotifications.schedule succeeded:", res);
-    }).catch(err => {
-      this.G.L.warn("Poll.end localNotifications.schedule failed:", err);
-    });
-  }
-
   notify_closing_soon() {
     this.G.L.entry("Poll.notify_closing_soon", this._pid);
     const dummy = this.is_closing_soon;
@@ -379,6 +344,18 @@ export class Poll {
     this.G.D.setp(this._pid, 'myvid', value);
   }
 
+  // final rand and winner are only stored in user db:
+
+  get final_rand(): number { return Number.parseFloat(this.G.D.getp(this._pid, 'final_rand')); }
+  set final_rand(value: number) { 
+    this.G.D.setp(this._pid, 'final_rand', value.toString()); 
+  }
+
+  get winner(): string { return this.G.D.getp(this._pid, 'winner')}
+  set winner(value: string) { 
+    this.G.D.setp(this._pid, 'winner', value); 
+  }
+
   // state is stored both in user's and in poll's (if not draft) database:
 
   get state(): poll_state_t { 
@@ -392,8 +369,7 @@ export class Poll {
           null: ['draft'],
           '': ['draft'], 
           'draft': ['running'], 
-          'running': ['closing'],
-          'closing': ['closed']
+          'running': ['closed']
         }[old_state].includes(new_state)) {
         this.G.D.change_poll_state(this, new_state);
         this._state = new_state;
@@ -622,11 +598,10 @@ export class Poll {
     if (this.due_type=='custom') {
       this.due = this.due_custom;
     } else {
+      // get current time rounded downwards to full minutes:
       var due = new Date();
+      due.setSeconds(0, 0);
       const
-//          year = due.getFullYear(), 
-//          month = due.getMonth(), // 0=January!
-//          dayofmonth = due.getDate(), 
           dayofweek = due.getDay(),
           hour = due.getHours(),
           due_as_ms = due.getTime();
@@ -1705,52 +1680,100 @@ export class Poll {
   }
 
   // CLOSING:
-
-  final_rand: number;
-  
-  close() {
-    /** perform everything necessary to close the poll if 
-     *  current state is still "running" but due date has passed.
-     */
-    if (!(this.state == "running" && this.due >= new Date())) {
-      return false;
+ 
+  end_if_past_due(): boolean  {
+    const now = new Date(), 
+          due = this.due, 
+          past_due = !!due && now > due;
+    if (past_due && this._state == 'running') {
+      this.end();
+      return true;
     } else {
-      // current state is still "running" but due date has passed.
-      // 1. set state to intermediate state "closing" in order to disable voting:
-      this.state = "closing";
-      // 2. wait some "grace" period for potentially ongoing sync to finish 
-      // and potential clock discrepancies between local and CouchDB server.
-      window.setTimeout(() => {
-        // 3. set state to final state "closed" if no other voter has done so:
-        this.state = "closed";
-        // 4. wait another grace period for this change to sync:
-        window.setTimeout(() => {
-          // 5. tell poll db sync to stop:
-          this.G.D.stop_poll_sync(this.pid);
-          this.G.D.wait_for_poll_db(this.pid);
-          // 6. wait another grace period for this stopping to have happened:
-          window.setTimeout(() => {
-            // 7. perform a one-time replication from the remote poll db
-            // to be absolutely sure that all voters have the exact same ratings and delegation data:
-            this.G.D.replicate_once(this.pid)
-            .then(() => {
-              // 8. perform a final tally:
-              this.tally_all();
-              // 9. get the revision number of the remote poll state doc:
-              this.G.D.get_remote_poll_state_doc(this.pid)
-              .then(doc => {
-                // 10. concatenate it with the pid, the total_ratings of all options, 
-                // and turn the result into a random number:
-                this.final_rand = this.make_final_rand(this.pid + doc._rev);
-              }); 
-            });
-          }, environment.closing.grace_period_3_ms);
-        }, environment.closing.grace_period_2_ms);
-      }, environment.closing.grace_period_1_ms);
+      return false;
     }
   }
 
-  make_final_rand(base: string): number {
+  end() {
+    this.G.L.entry("Poll.end", this._pid);
+    // 1. disable voting:
+    this.allow_voting = false;
+    // 2. wait some "grace" period for potentially ongoing sync to finish 
+    // and potential clock discrepancies between local and CouchDB server.
+    window.setTimeout(() => {
+      // 3. set state to final state "closed" if no other voter has done so:
+      this.G.L.trace("Poll.end setting state to closed", this._pid);
+      this.state = "closed";
+      // 4. wait another grace period for this change to sync:
+      window.setTimeout(() => {
+        // 5. tell poll db sync to stop:
+        this.G.L.trace("Poll.end stopping sync", this._pid);
+        this.G.D.stop_poll_sync(this.pid);
+        this.G.D.wait_for_poll_db(this.pid);
+        // 6. wait another grace period for this stopping to have happened:
+        window.setTimeout(() => {
+          // 7. perform a one-time replication from the remote poll db
+          // to be absolutely sure that all voters have the exact same ratings and delegation data:
+          this.G.L.trace("Poll.end replicating a last time", this._pid);
+          this.G.D.replicate_once(this.pid)
+          .then(() => {
+            // 8. perform a final tally:
+            this.G.L.trace("Poll.end tally a last time", this._pid);
+            this.tally_all();
+            if (this.type == 'winner') {
+              // 9. get the revision number of the remote poll state doc:
+              this.G.L.trace("Poll.end getting state doc revision", this._pid);
+              this.G.D.get_remote_poll_state_doc(this.pid)
+              .then(doc => {
+                // 10. concatenate it with the pid 
+                // and turn the result into a random number:
+                this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
+                this.make_final_rand(this.pid + doc._rev);
+                this.make_winner();
+                this.notify_of_end();
+              }); 
+            } else {
+              this.notify_of_end();
+            }
+          });
+        }, environment.closing.grace_period_3_ms);
+      }, environment.closing.grace_period_2_ms);
+    }, environment.closing.grace_period_1_ms);
+  }
+
+  make_winner() {
+    /** determine the winner based on oids_descending, shares, and final_rand */
+    if (!!this.final_rand) {
+      this.G.L.entry("Poll.make_winner", this.final_rand, [...this.T.shares_map.entries()]);
+      // sum up the cumulative share of options from top to bottom until it exceeds the random number:
+      var cumshare = 0;
+      for (const oid of this.T.oids_descending) {
+        cumshare += this.T.shares_map.get(oid);
+        if (cumshare >= this.final_rand) {
+          this.G.L.trace("Poll.make_winner returning", this._pid, oid);
+          this.winner = oid;
+          return;
+        }
+      }
+    } 
+  }
+
+  notify_of_end() {
+    this.has_results = true;
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
+        body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
+    });
+  }
+
+  make_final_rand(base: string) {
     var total = 0;
     for (const oid of this.oids) {
       total += this.T.total_effective_ratings_map.get(oid) || 0;
@@ -1758,8 +1781,10 @@ export class Poll {
     const str = base + (total%100).toString(),
           rand = this.G.D.str2rand(str);
     this.G.L.trace("PollService.make_final_rand base total r", base, total, rand);
-    return rand;
+    this.final_rand = rand;
   }
+
+
 }
 
 

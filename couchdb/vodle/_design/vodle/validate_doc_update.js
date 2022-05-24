@@ -25,6 +25,7 @@ function (newDoc, savedDoc, userCtx) {
             } else {
                 // it's a poll doc.
                 if (_id.endsWith("§state")) {
+                    /* the following would only work if state is stored unencrypted:
                     // It's a state doc. Make sure state is changed in accordance to due:
                     if ((newDoc.due||'') != '') {
                         let now = new Date();
@@ -35,6 +36,7 @@ function (newDoc, savedDoc, userCtx) {
                             throw ({forbidden: 'Attempt to set state to closed before due date.'})
                         }
                     }
+                    */
                 } else {
                     // if doc already exists, let noone update or delete it:
                     if (savedDoc) {
