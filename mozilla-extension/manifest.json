@@ -1,0 +1,32 @@
+{
+
+    "manifest_version": 2,
+    "name": "vodle poll from web page",
+    "version": "0.1",
+  
+    "description": "Set up a vodle poll related to the content on the current web page, using options shown on the current page.",
+
+    "homepage_url": "https://github.com/pik-gane/vodle",
+  
+    "icons": {
+      "48": "icons/border-48.png"
+    },
+  
+    "permissions": [
+      "activeTab"
+    ],
+
+    "browser_action": {
+      "default_icon": "icons/border-48.png",
+      "default_title": "vodle this",
+      "default_popup": "popup/default.html"
+    },
+
+    "web_accessible_resources": [
+      "beasts/frog.jpg",
+      "beasts/turtle.jpg",
+      "beasts/snake.jpg"
+    ]
+  
+  }
+  

@@ -379,7 +379,7 @@ export class PollPage implements OnInit {
       this.oidsorted = [...this.p.T.oids_descending];
       this.sortingcounter++;
       this.needs_refresh = false;
-      setTimeout(()=>{
+      setTimeout(() => {
         this.show_stats.bind(this)();
         // add event listeners to catch events outside knob also on Android:
         for (let i in this.oidsorted) {
@@ -408,7 +408,6 @@ export class PollPage implements OnInit {
             this.listeners.set(col, [l1, l2, l3, l4]);  
           }
         }  
-        //window.alert("updated");
         this.G.L.trace("PollPage.update_order registered event listeners", this.sortingcounter);
       }, 100);
     } 
