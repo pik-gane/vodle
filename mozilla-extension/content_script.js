@@ -1,3 +1,17 @@
+/*
+TODO:
+- ask to click first option name.
+- after first click, highlight option name, say "so the first option is ...", allow "back / try again".
+- ask to click last option name.
+- after second click, check that length of path matches, else error message. 
+- highlight all found options, say "so the last option is ...", allow "back / try again" or "ok".
+- ask to click last option description or allow to "skip", highlight all found descriptions
+- if name or option contains a unique link, use that as url
+- otherwise ask to click last option link or allow to "skip"
+- summarize, allow to "set up vodle poll" or "cancel" or "back / try again"
+- open vodle in new tab
+*/
+
 (function() {
  
     function getDomPath(el) {
@@ -22,7 +36,7 @@
           }
           var nodeName = el.nodeName.toLowerCase();
           if (el.className) {
-            nodeName += "." + el.className.replace(/ /g, '.');
+            nodeName += "." + el.className.trim().replace(/  /g, ' ').replace(/ /g, '.');
           }
           if (isShadow) {
             nodeName += "::shadow";
@@ -79,6 +93,8 @@
         switch (window.vodle_stage) {
             case 0:
                 window.vodle_first_name_el = el;
+                window.vodle_first_name_el_bg = el.style.backgroundColor;
+                el.style.backgroundColor = "#ff0";
                 window.vodle_stage++;
                 wait_for_click();
                 break;
@@ -114,7 +130,9 @@
             }
             if (in_range) {
                 option_els.push(el);
-                console.log("found option name " + el.innerHTML);
+                // TODO: save bg
+                el.style.backgroundColor = "#ff0";
+                console.log("found option name " + el.textContent.trim());
             }
             if (el == window.vodle_last_name_el) {
                 break;
