@@ -25,7 +25,6 @@ TODO:
 */
 
 import { Injectable, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
@@ -46,7 +45,6 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 
 import * as Sodium from 'libsodium-wrappers';
-import { HttpRequest } from '@angular/common/http';
 
 
 /** DATA STORAGE DESIGN
@@ -166,6 +164,8 @@ const poll_keystarts_in_user_db = [
   'have_seen', 'have_acted', 'have_seen_results', 
   'poll_page',
   'simulated_ratings'];
+
+const user_keys_unencrypted = ['consent', 'last_access'];
 
 const poll_keystarts_requiring_due = ['state', 'option'];
 const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response']; 
@@ -337,8 +337,7 @@ export class DataService implements OnDestroy {
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
       public translate: TranslateService,
-      public storage: Storage,
-      private http: HttpClient) { 
+      public storage: Storage) { 
   }
 
   ionViewWillLeave() {
@@ -683,7 +682,7 @@ export class DataService implements OnDestroy {
     // called at initialization and whenever db credentials were changed
     this.G.L.entry("DataService.connect_to_remote_user_db");
     const user_password = this.user_cache['password'];
-    const user_db_private_username = "vodle.user." + this.email_and_pw_hash();
+    const user_db_private_username = "vodle.user." + this.get_email_and_pw_hash();
 
     const promise = new Promise((resolve, reject) => {
 
@@ -696,6 +695,10 @@ export class DataService implements OnDestroy {
         this.remote_user_db = db;
         // start synchronisation asynchronously:
         this.start_user_sync();
+
+        // store login month:
+        const now = new Date();
+        this.setu('last_access', ''+now.getUTCFullYear()+'/'+String(now.getUTCMonth()+1).padStart(2, '0'));
 
         // RESOLVE:
         resolve(true);
@@ -839,7 +842,6 @@ export class DataService implements OnDestroy {
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
           this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
-//              since: this.poll_caches[pid]['last_seq'] || 0,
               retry: true,
               batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
               include_docs: true,
@@ -1075,6 +1077,13 @@ export class DataService implements OnDestroy {
       this.G.S.db = 'central';
     }
     this.G.add_spinning_reason("login");
+    const language = this.G.S.language,
+          email = this.G.S.email,
+          password = this.G.S.password;
+    this.G.S.language = this.G.S.email = this.G.S.password = "";
+    this.G.S.language = language;
+    this.G.S.email = email;
+    this.G.S.password = password;
     this.email_and_password_exist();
   }
 
@@ -1284,13 +1293,12 @@ export class DataService implements OnDestroy {
     var result: boolean;
 
     if (this.remote_user_db) { 
-      const email_and_pw_hash = this.email_and_pw_hash();
-      this.G.L.info("DataService starting user data sync with last_seq", this.user_cache['user_last_seq'] || 0);
+      const email_and_pw_hash = this.get_email_and_pw_hash();
+      this.G.L.info("DataService starting user data sync");
 
       // ASYNC:
       this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
         // see options here: https://pouchdb.com/api.html#replication
-//        since: this.user_cache['user_last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1336,11 +1344,10 @@ export class DataService implements OnDestroy {
     var result: boolean;
 
     if (this.remote_poll_dbs[pid]) { 
-      this.G.L.info("DataService starting poll data sync with last_seq", pid, this.poll_caches[pid]['last_seq'] || 0);
+      this.G.L.info("DataService starting poll data sync", pid);
 
       // ASYNC:
       this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-//        since: this.poll_caches[pid]['last_seq'] || 0,
         live: true,
         retry: true,
         batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
@@ -1860,7 +1867,7 @@ export class DataService implements OnDestroy {
 
   private doc2user_cache(doc): [boolean, boolean] {
     // populate user cache with key, value from doc
-    const _id = doc._id, prefix = user_doc_id_prefix + this.email_and_pw_hash() + "§";
+    const _id = doc._id, prefix = user_doc_id_prefix + this.get_email_and_pw_hash() + "§";
     if (_id.includes('§timestamp') || _id === '_design/vodle') {
       return [false, false];
     }
@@ -1875,7 +1882,7 @@ export class DataService implements OnDestroy {
       if (cyphertext) {
 
         // extract value and store in cache if changed:
-        const value = (key == 'consent') ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
+        const value = user_keys_unencrypted.includes(key) ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
           this.user_cache[key] = value;
           value_changed = true;
@@ -2116,9 +2123,9 @@ export class DataService implements OnDestroy {
     this.G.L.trace("DataService.store_user_data", key, dict[dict_key]);
     var doc;
 
-    if (local_only_user_keys.includes(key)) {
+    if (!this.G.S.consent) return false;
 
-      // TODO: store encrypted! don't store password here (only in storage, and only if consented)
+    if (local_only_user_keys.includes(key)) {
 
       // ASYNC:
       // simply use key as doc id and don't encrypt:
@@ -2164,7 +2171,7 @@ export class DataService implements OnDestroy {
     } else {
 
       // store encrypted with suitable owner prefix in doc id:
-      const email_and_pw_hash = this.email_and_pw_hash();
+      const email_and_pw_hash = this.get_email_and_pw_hash();
       if (!email_and_pw_hash) {
         this.G.L.warn("DataService.store_user_data couldn't set "+key+" since email or password are missing!");
 
@@ -2180,8 +2187,8 @@ export class DataService implements OnDestroy {
 
         // key existed in db, so update:
         const value = dict[dict_key], 
-              enc_value = (key == 'consent') ? value : encrypt(value, user_pw),
-              old_value = (key == 'consent') ? doc.value : decrypt(doc.value, user_pw);
+              enc_value = user_keys_unencrypted.includes(key) ? value : encrypt(value, user_pw),
+              old_value = user_keys_unencrypted.includes(key) ? doc.value : decrypt(doc.value, user_pw);
         if (old_value != value) {
           doc.value = enc_value;
           this.local_synced_user_db.put(doc)
@@ -2200,7 +2207,7 @@ export class DataService implements OnDestroy {
 
         // key did not exist in db, so add:
         const value = dict[dict_key], 
-              enc_value = (key == 'consent') ? value : encrypt(value, user_pw);
+              enc_value = user_keys_unencrypted.includes(key) ? value : encrypt(value, user_pw);
         doc = {
           '_id': _id, 
           'value': enc_value,
@@ -2225,6 +2232,8 @@ export class DataService implements OnDestroy {
     // stores key and value in poll database. 
     this.G.L.trace("DataService.store_poll_data", pid, key, dict[dict_key]);
     var doc;
+
+    if (!this.G.S.consent) return false;
 
     // see what type of entry it is:
     if (key.indexOf("§") == -1) {
@@ -2399,7 +2408,7 @@ export class DataService implements OnDestroy {
     } else {
       db = this.local_synced_user_db;
       // compose id:
-      const email_and_pw_hash = this.email_and_pw_hash();
+      const email_and_pw_hash = this.get_email_and_pw_hash();
       if (!email_and_pw_hash) {
         this.G.L.warn("DataService.delete_user_data couldn't delete "+key+" since email or password are missing!");
 
@@ -2507,7 +2516,7 @@ export class DataService implements OnDestroy {
 
   }
 
-  private email_and_pw_hash(): string {
+  private get_email_and_pw_hash(): string {
     const email = this.user_cache['email'], pw = this.user_cache['password'];
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
     const hash = myhash(email + "§" + pw);
@@ -2527,16 +2536,21 @@ export class DataService implements OnDestroy {
 
   clear_all_local(): Promise<any> {
     // called at logout.
+    this.G.L.entry("DataService.clear_all_local");
     // TODO: disable user interaction
     this._ready = false;
     return new Promise((resolve, reject) => {
       // stop all syncs:
-      if (!!this.user_db_sync_handler) this.user_db_sync_handler.cancel();
+      this.G.L.info("Stopping database synchronisation...");
+      if (!!this.user_db_sync_handler) {
+        this.user_db_sync_handler.cancel();
+      }
       for (const pid in this.poll_db_sync_handlers) {
         this.stop_poll_sync(pid);
       }
       // TODO: wait for all syncs to finish
       // delete all local dbs:
+      this.G.L.info("Deleting local databases...");
       this.local_synced_user_db.destroy()
       .then(() => {
         this.local_only_user_DB.destroy()
@@ -2547,6 +2561,7 @@ export class DataService implements OnDestroy {
             }
           }
           // delete ionic local storage:
+          this.G.L.info("Deleting local storage...");
           if (!this.storage) {
               // DONE. 
               resolve(true);
@@ -2554,6 +2569,7 @@ export class DataService implements OnDestroy {
             this.storage.clear()
             .then(() => {
               this.storage = null;
+              this.G.L.info("...done!");
               // DONE. 
               resolve(true);
             }).catch(reject);  
@@ -2594,8 +2610,12 @@ export class DataService implements OnDestroy {
           p.set_my_own_rating(oid, 0, true);
         }
       }
-      // purge all in remote_user_db:
-      this.purge_remote()
+      // stop syncing:
+      if (!!this.user_db_sync_handler) {
+        this.user_db_sync_handler.cancel();
+      }
+      // delete all in remote_user_db:
+      this.delete_remote()
       .then(() => {
         // do same as when logging out:
         this.clear_all_local()
@@ -2605,23 +2625,28 @@ export class DataService implements OnDestroy {
     });
   }
 
-  purge_remote(): Promise<any> {
-    const pwd = this.getu('db_password'), 
-          token = 'TODO!',
-          url = this.G.D.getu('db_server_url');
-    // TODO: get all docs
+  delete_remote(): Promise<any> {
+    const email_and_pw_hash = this.get_email_and_pw_hash();
     return new Promise((resolve, reject) => {
-      this.remote_user_db.allDocs(
-        // TODO!
-      ).then(docs => {
-        const purge_url = url + "/vodle/_purge",
-        obs = this.http.post<any>(purge_url, JSON.stringify({
-          // TODO: id: [revs]
-        }), {
-          headers: {
-            "content-type": "application/json",
-            "authorization": 'Basic '+ token,
-          }
+      this.remote_user_db.allDocs({
+        include_docs: false,
+        startkey: user_doc_id_prefix + email_and_pw_hash + "§",
+        endkey: user_doc_id_prefix + email_and_pw_hash + '¨',
+        inclusive_end: false
+      }).then(res => {
+        const bulkDocs = [];
+        for (const row of res.rows) {
+          bulkDocs.push({_id: row.id, _rev: row.value.rev, _deleted: true})
+        }
+        this.G.L.trace("DataService.delete_remote trying to delete", bulkDocs);
+        this.remote_user_db.bulkDocs(bulkDocs)
+        .then(res => {
+          this.G.L.trace("DataService.delete_remote succeeded", res);
+          resolve(true);
+        })
+        .catch(err => {
+          this.G.L.error("DataService.delete_remote failed", err);
+          reject(err);
         });
       })
       .catch(reject);

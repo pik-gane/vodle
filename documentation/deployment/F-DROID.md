@@ -126,7 +126,6 @@ fdroid gpgsign
 
 ### Only use acceptably licensed components
 - see https://forum.f-droid.org/t/nativescript-apache-cordova-ionic-framework-apps/9442
-- @capacitor/local-notifications: MIT
 
 
 
