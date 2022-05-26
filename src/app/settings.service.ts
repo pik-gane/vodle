@@ -144,7 +144,8 @@ export class SettingsService {
   language_names = {
     de: 'Deutsch',
     en: 'English',
-    fr: "Français",
+    fr: 'Français',
+    ko: '한국어',
 //    zh: '中文'
   };
 
