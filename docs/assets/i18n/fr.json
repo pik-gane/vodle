@@ -1,19 +1,33 @@
 {
     "_HEADER_": [
         "Copyright Contributors to the vodle project.",
-        "This file is part of vodle.",  
-        "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
-        "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
+        "This file is part of vodle.",
+        "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
+        "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",
         "You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
     ],
-    
-    "_ENGLISH_CONVENTIONS_": [
+    "_WELCOME_TO_TRANSLATORS_": [
+        "Merci d'avoir aidé à traduire vodle!",
+        "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
+        "Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
+        "In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+    ],
+    "_OVERALL_CONVENTIONS_": [
+        "Please use gender-neutral language.",
+        "Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
+        "Please use the correct whitespacing with exclamation marks and question marks for your language."
+    ],
+    "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
+        "We use British English: favourite, colour, centre, etc.",
         "We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
-        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches"
+        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
+        "We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
+        "We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
     "add": "Ajouter",
     "add-option": "Ajouter une option",
     "add-target": "Ajouter une option",
+    "approval": "Approval",
     "cancel": "Abandonner",
     "choose-file": "Choisir un fichier",
     "continue": "Continuez",
@@ -23,6 +37,7 @@
     "db-pw": "Mot de passe de base de données",
     "edit": "Editer",
     "email": "E-mail",
+    "favourite": "Favourite",
     "go-to-poll": "aller au sondage",
     "hide": "Cacher",
     "language": "Langue",
@@ -40,10 +55,13 @@
     "retype-password": "Retapez le mot de passe",
     "select-cancel": "Abandonner",
     "server": "Serveur",
+    "share": "Share",
     "show": "Voir",
     "skip": "Passer",
     "start": "Démarrer",
+    "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Tester",
+    "wap": "Wap",
     "yes": "Oui",
     "about": {
         "-page-title": "À propos de vodle",
@@ -67,6 +85,39 @@
         "different-language": "Ce sondage est dans une langue différente ({{language}}). Si possible, essayez d'utiliser cette langue dans vos textes ci-dessous, ou utilisez une autre langue que les participants au sondage comprennent.",
         "info": "Une fois ajoutée, l'option ne peut plus être modifiée ou retirée.",
         "notification-added-title": "Option ajoutée"
+    },
+    "assist": {
+        "-page-title": "Let's set your waps",
+        "-step-1-title": "Favourite option",
+        "favourite-intro-1": "The following questions are only to get you started and set your initial waps. You can always change them later.",
+        "favourite-warn-change": "You have already set some waps. If you proceed here, this may change them.",
+        "favourite-intro-2": "Which option would you most prefer?",
+        "add-option-info": "If you think an important option is still missing, you can add it on the bottom of the page with the sliders.",
+        "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
+        "favourite-explanation-2": "This means that you <i>definitely approve</i> the option, no matter what the waps of the other participants are.",
+        "favourite-explanation-3": "It may however be that <i>“{{favourite}}”</i> will not get enough approval in the end to win. Even if a majority approves this option, it is not certain that it wins. Therefore it is important to also think about possible compromise options next.",
+        "-step-2-title": "Acceptable options",
+        "acceptable-intro": "Which options do you find acceptable as well?<br/>You can select as many as you want (or none).",
+        "acceptable-explanation-1": "We are giving the options that you <b>didn't mark as acceptable</b> a wap of <b>0</b>.",
+        "acceptable-explanation-2": "This means that you <i>definitely don't approve</i> these options, no matter what the waps of the other participants are.",
+        "acceptable-explanation-3": "Those options you marked as <b>acceptable</b> we'll give a wap <b>between 1 and 99</b>.",
+        "acceptable-explanation-4": "This means that you <i>potentially approve</i> these options, depending on what the waps of the other participants are.",
+        "acceptable-explanation-5": "To help us set these waps more specifically, you should now consider how many <i>other</i> participants would potentially approve these options as well.",
+        "-step-3-title": "Estimated approval by others",
+        "estimates-intro": "Please estimate for each option which percentage of participants would potentially approve it.<br/>If you are unsure, better give a slightly lower estimate.",
+        "estimates-explanation-1": "We'll now go through all acceptable options. For each of them, please decide how much approval by other participants is needed before <b>you yourself</> would approve the option.",
+        "estimates-explanation-2": "This might be the same percentage that you estimated just now. But you could also say that you would approve an option only if even more participants approve than you estimated..",
+        "-step-4-title": "From when on would you approve?",
+        "thresholds-intro": "For the option <b><i>“{{option}}”</i></b> you have estimated that <b>{{estimate}}%</b> of the participants would potentially approve it.",
+        "thresholds-question-1": "If indeed {{estimate}}% approve the option, would you yourself then approve the option as well?",
+        "thresholds-question-2": "Then how many participants would need to approve this option before you would approve it, too?",
+        "-step-5-title": "Summary",
+        "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
+        "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
+        "ratings-favourite": "This is your <b>favourite</b> option. I have given it a wap of <b>100</b> because you want to approve it for sure.",
+        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
+        "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
+        "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },
     "badges": {
         "abstaining": "Abstention",
@@ -103,6 +154,15 @@
         "message-body-before-link": "Pour accepter ou refuser cette demande, veuillez utiliser le lien suivant :",
         "message-body-dont-share": "Veuillez ne pas partager ce lien avec qui que ce soit d'autre.",
         "message-body-regards": "Cordialement"
+    },
+    "delete-all": {
+        "-page-title": "Delete my data",
+        "confirm-header": "Really delete your data?",
+        "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private data from the remote database that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll database servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
+        "confirm-button": "Yes, delete my data",
+        "success-title": "Your data was deleted.",
+        "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
+        "failed": "Could not delete all data for some reason"
     },
     "delrespond": {
         "-page-title": "Agir comme délégué ?",
@@ -188,6 +248,13 @@
         "use-example-from-db-none": "(Non utiliser un exemple)",
         "notification-saved-title": "Brouillon enregistré sous « Mes sondages »."
     },
+    "external-link": {
+        "confirm": "This link to the external web page<br/><br/><b>{{url}}</b><br/><br/>was provided by a vodle user and was not examined by vodle.<br/><br/>Do you want to open it despite the potential risks involved?",
+        "copy-link": "Copy link",
+        "yes": "Yes, open it",
+        "notification-copied-link-title": "External link copied to clipboard.",
+        "notification-copied-link-body": ""
+    },
     "explain": {
         "title-approval": "Approbation pour",
         "all-ratings": "toutes les évaluations pour cette option",
@@ -260,6 +327,14 @@
         "nothing-left-line-2-before-optionname": "for ",
         "nothing-left-line-2-after-optionname": "."
     },
+    "glossary": {
+        "_COMMENT_": "These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
+        "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the colourful <b>sliders</b>.<!-- You can let vodle help you in this by clicking on “Assist me”.--></p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>In the beginning, all your waps are zero and the sliders are red knobs. A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option. The slider is green then.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.",
+        "non-abstaining": "This is the number of participants who have given <b>at least one option a positive wap</b>. Participants who give all options a zero wap are abstaining and excert no influence on the result.",
+        "approve": "<p><b>The light bar coming in from the right shows how many participants currently approve an option.</b> If you want to know how this comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p><p>So, whether you approve an option or not depends not only on your own wap but may also depend on all other participantsʼ waps. If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p>",
+        "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>",
+        "level-of-agreement": "<p>The level of <b>agreement</b> shows you how close to full consensus you are. 100% means the whole share goes to a single option and that option is approved by all.</p><p>Otherwise, the agreement level equals the percentage of participants who approve the winning options, averaged over all options that get a positive share, and taking the size of those shares into account.</p><p>More precisely, vodle computes the level of agreement as follows: it multiplies each optionʼs approval score with that optionʼs share divided by 100, and then sums all these numbers up.</p>"
+    },
     "help": {
         "-page-title": "Help",
         "h1": "How to vote – short version",
@@ -287,6 +362,9 @@
         "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One participant is determined by lot, everyone having the same chance of being that participant. Among the options that this participant approves, the one with the largest overall approval is the winner. (In case of a tie, the average rating is used to break the tie.) The pie piece to the left of each option shows the resulting probability that this option wins.",
         "p26": "If the poll is about allocating a budget, the size of each optionʼs shares is calculated the same way: the share is proportional to the number of participants that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your “willingness to approve” ratings in practise?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a rating of 100. Give all options which are better than average some rating larger than zero, scaling your ratings according to relative preference. Finally, give all options which are worse than average a rating of zero.</b>"
+    },
+    "imprint": {
+        "-page-title": "Imprint"
     },
     "inviteto": {
         "-page-title": "Invite poll participants",
@@ -333,12 +411,16 @@
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one.",
         "ask-old-email": "Please enter the email address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
+        "consent-privacy-before-privacy": "Yes, I have read the ",
+        "consent-privacy-privacy": "data protection declaration and terms of use",
+        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
+        "store-password": "Store my password between sessions.",
+        "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, have fun with vodle!",
-        "ready-to-start-detail": "When you leave, your ratings will be saved automatically. We keep you logged in until you log out.",
-        "cookie-banner": "<b>Cookies:</b> This website only uses technical cookies. We use cookies to store data locally on your computer about votes in which you participate. Some of this data (e.g. your ratings of the options in a poll) also leaves your computer and is stored in a database of your choice so that we can communicate with the other participants in the same vote. If this happens, it will be anonymised and encrypted so that only you and the other participants in the same vote can decrypt it using the correct password, but no one else, not even vodle staff, and in such a way that no one can draw conclusions about your identity. <b>By entering an email address during login you consent to this.</b>"
+        "ready-to-start-detail": "When you leave, your ratings will be saved automatically. We keep you logged in until you log out."
     },
     "logout": {
         "-page-title": "Log out",
@@ -380,20 +462,31 @@
     "poll": {
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
+        "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
         "delegate-button": "Delegate",
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Closes",
         "closed": "Closed",
         "type-share": "options are assigned shares",
         "type-winner": "one option wins",
+        "assist-me-inline": "Assist me",
+        "assist-me-button": "Assist<br/>me",
+        "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
         "hint-abstaining-1": "You are abstaining.",
-        "hint-abstaining-2": "You may want to rate at least your favourite or delegate your ratings to someone you trust.",
-        "hint-only1positive-1": "You are rating only one option.",
+        "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
+        "hint-abstaining-2-wap": "wap",
+        "hint-abstaining-2-after-wap": " <b>(drag the red knob right)</b>, or delegate your waps to someone you trust.",
+        "hint-only1positive-1-before-wap": "You are giving only one option a positive ",
+        "hint-only1positive-1-wap": "wap",
+        "hint-only1positive-1-after-wap": ".",
         "hint-only1positive-2": "You should consider rating some possible compromise options as well.",
-        "hint-only1approved-1": "You are approving only one of the options you rated positive.",
-        "hint-only1approved-2": "You only approve an option if your rating is larger than the percentage of participants who disapprove the option.",
+        "hint-only1approved-1-before-approving": "You are ",
+        "hint-only1approved-1-approving": "approving",
+        "hint-only1approved-1-after-approving": " only one option.",
+        "hint-only1approved-2-before-wap": "You approve an option if it has received your largest ",
+        "hint-only1approved-2-wap": "wap",
+        "hint-only1approved-2-after-wap": " or your wap overlaps with the bar.",
         "hint-mostapproved-1": "You are not approving the top-most option.",
-        "hint-mostapproved-2": "Please check if that option might be acceptable to you.",
         "final-ratings": "These were your final ratings:",
         "also-for-other": "Some or all of the ratings below are also used for one other participant, who has delegated to you.",
         "also-for-others": "Some or all of the ratings below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",
@@ -430,7 +523,11 @@
         "closes": "Closes",
         "db-label": "Data storage",
         "publish": "Start the poll now",
-        "type-label": "In this poll, the group will"
+        "type-label": "In this poll, the group will",
+        "is-in-past": "The end date is in the past by now. Please change it first."
+    },
+    "privacy": {
+        "-page-title": "Privacy & Terms"
     },
     "select-server": {
         "same-as-personal": "like my personal data (see ‘Settings’)",
