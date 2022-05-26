@@ -1,5 +1,5 @@
 /*
-Copyright Contributors to the vodle project.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -67,5 +67,6 @@ export const environment = {
   },
   polls: {
     max_duration_days: 31,
+    delete_after_days: 31
   }
 };
