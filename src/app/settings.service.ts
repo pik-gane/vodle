@@ -1,5 +1,5 @@
 /*
-Copyright Contributors to the vodle project.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -144,7 +144,8 @@ export class SettingsService {
   language_names = {
     de: 'Deutsch',
     en: 'English',
-    fr: "Français",
+    fr: 'Français',
+    ko: '한국어',
 //    zh: '中文'
   };
 

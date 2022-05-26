@@ -1,5 +1,5 @@
 /*
-Copyright Contributors to the vodle project.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -51,7 +51,6 @@ export class PollPage implements OnInit {
 
   pid: string;
   p: Poll;
-  running: boolean = true;
 
   delegate: string;
   delegation_status = "none";
@@ -67,6 +66,7 @@ export class PollPage implements OnInit {
   votedfor = null; // oid my prob. share goes to
 
   // gui layout choices by user:
+  final_expanded = false;
   details_expanded = true;
   incoming_delegation_expanded = false;
   option_expanded = {};
@@ -352,9 +352,6 @@ export class PollPage implements OnInit {
   final_rand: number = 0;
   
   async update_order(force=false) {
-    // DEBUG:
-    this.final_rand = this.p.make_final_rand("umewgfwgemfzgwezfgwefugwfxewgofxiwemhfeoifuhewfiewfumwehxfewmgfgmewfzuwegxzugwef");
-
     // TODO: rather have this triggered by tally function!
     if (this.oidsorted.length != this.p.oids.length) {
       this.needs_refresh = true;
@@ -368,14 +365,16 @@ export class PollPage implements OnInit {
       }  
     }
     if (force || (this.needs_refresh && !(this.refresh_paused))) {
-      // link displayed sorting to poll's sorting:
-      const loadingElement = await this.loadingController.create({
-        message: this.translate.instant('poll.sorting'),
-        spinner: 'crescent',
-        duration: 100
-      });
-      await loadingElement.present();
-      await loadingElement.onDidDismiss();
+      if (!force) {
+        // link displayed sorting to poll's sorting:
+        const loadingElement = await this.loadingController.create({
+          message: this.translate.instant('poll.sorting'),
+          spinner: 'crescent',
+          duration: 100
+        });
+        await loadingElement.present();
+        await loadingElement.onDidDismiss();
+      }
       // now actually tell html to use the new ordering:
       this.oidsorted = [...this.p.T.oids_descending];
       this.sortingcounter++;
@@ -502,7 +501,8 @@ export class PollPage implements OnInit {
   
   onRatingColPointerdown(oid: string, ev: Event): boolean {
     /** event listener called when user starts clicking slider */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRatingColPointerdown", this.sortingcounter, oid, this.p.options[oid].name, x, pos);
@@ -516,7 +516,8 @@ export class PollPage implements OnInit {
 
   onRatingColTouchstart(oid: string, ev: Event): boolean {
     /** event listener called when user starts touching slider */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     this.dragged_oid = oid;
     const pos = this.get_knob_pos(oid), x = !ev ? 0 : (ev instanceof PointerEvent) ? (<PointerEvent>ev).clientX : (<TouchEvent>ev).touches[0].clientX;
     this.G.L.entry("onRatingColTouchstart", oid, x, pos);
@@ -530,7 +531,8 @@ export class PollPage implements OnInit {
 
   onRatingColPointerup(oid: string, ev: Event): boolean {
     /** event listener called when user stops clicking slider */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRatingColPointerup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
@@ -546,7 +548,8 @@ export class PollPage implements OnInit {
 
   onRatingColTouchup(oid: string, ev: Event): boolean {
     /** event listener called when user stops touching slider */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     // FIXME: not always firing on Android if click is too short
     this.G.L.entry("onRatingColTouchup", oid, this.dragged_oid);
     if (oid != this.dragged_oid) {
@@ -562,7 +565,8 @@ export class PollPage implements OnInit {
 
   onRatingColClick(oid: string, ev: MouseEvent): boolean {
     /** event listener called after clicking or touching slider has ended */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     const pos = this.get_knob_pos(oid), x = ev.clientX;
     this.G.L.entry("onRatingColClick", oid, this.p.options[oid].name, x, pos);
     // window.alert("onRatingColClick " + pos.left + " " + x + " " + pos.right);
@@ -575,7 +579,8 @@ export class PollPage implements OnInit {
 
   onBodyPointerup(ev: Event): boolean {
     /** event listener called when click ended outside slider area */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     // if clicking started in a slider, call that slider's pointerup handler:
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
@@ -586,7 +591,8 @@ export class PollPage implements OnInit {
 
   onBodyTouchup(ev: Event): boolean {
     /** event listener called when touching ended outside slider area */
-    if (!this.running) return false;
+    this.p.end_if_past_due();
+    if (!this.p.allow_voting) return false;
     // if touching started in a slider, call that slider's touchup handler:
     if (this.dragged_oid) {
       this.G.L.entry("onBodyTouchup");
@@ -649,7 +655,9 @@ export class PollPage implements OnInit {
 
   delegate_dialog(event: Event) {
     /** open the delegation dialog popover */
-    this.popover.create({
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      this.popover.create({
         event, 
         component: DelegationDialogPage, 
         translucent: true,
@@ -658,24 +666,28 @@ export class PollPage implements OnInit {
       })
       .then((popoverElement)=>{
         popoverElement.present();
-      })
+      });
+    }
   }
 
   async assist_dialog() {
     /** open the assist modal */
-    const modal = await this.modalController.create({
-        component: AssistPage, 
-//        translucent: true,
-//        cssClass: 'assist',
-//        showBackdrop: true,
-        componentProps: {P: this},
-        backdropDismiss​: false
-//        swipeToClose: true,
-//        presentingElement: this.routerOutlet.nativeEl
-    });
-    modal.present();
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      const modal = await this.modalController.create({
+          component: AssistPage, 
+  //        translucent: true,
+  //        cssClass: 'assist',
+  //        showBackdrop: true,
+          componentProps: {P: this},
+          backdropDismiss​: false
+  //        swipeToClose: true,
+  //        presentingElement: this.routerOutlet.nativeEl
+      });
+      modal.present();
 
-    this.currentModal = modal;
+      this.currentModal = modal;
+    }
   }
   
   explain_approval_dialog(oid: string) {
@@ -696,48 +708,54 @@ export class PollPage implements OnInit {
 
   async revoke_delegation_dialog() { 
     /** open the delegation revokation confirmation dialog alert */
-    const confirm = await this.alertCtrl.create({ 
-      message: this.translate.instant(
-        'poll.revoke_delegation', {nickname: this.delegate}), 
-      buttons: [
-        { 
-          text: this.translate.instant('cancel'), 
-          role: 'Cancel',
-          handler: () => { 
-            console.log('Confirm Cancel.');  
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      const confirm = await this.alertCtrl.create({ 
+        message: this.translate.instant(
+          'poll.revoke_delegation', {nickname: this.delegate}), 
+        buttons: [
+          { 
+            text: this.translate.instant('cancel'), 
+            role: 'Cancel',
+            handler: () => { 
+              console.log('Confirm Cancel.');  
+            } 
+          },
+          { 
+            text: this.translate.instant('OK'),
+            role: 'Ok', 
+            handler: () => {
+              this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
+              this.delegate = null;
+              this.delegation_status = 'none';
+              this.update_delegation_info();
+              this.G.D.save_state();
+            } 
           } 
-        },
-        { 
-          text: this.translate.instant('OK'),
-          role: 'Ok', 
-          handler: () => {
-            this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
-            this.delegate = null;
-            this.delegation_status = 'none';
-            this.update_delegation_info();
-            this.G.D.save_state();
-          } 
-        } 
-      ] 
-    }); 
-    await confirm.present(); 
+        ] 
+      }); 
+      await confirm.present(); 
+    }
   } 
 
   add_option(event: Event) {
     /** open the add option dialog popover */
-    // TODO: also add delegation if ospec.type == "-"?
-    this.popover.create({
-//      event, // TODO: use this from Ionic v6 on!
-//      side: 'top', // TODO: use this from Ionic v6 on!
-      component: AddoptionDialogPage, 
-      translucent: true,
-      showBackdrop: true,
-      cssClass: 'add-option-class',
-      componentProps: {parent: this}
-    })
-    .then((popoverElement)=>{
-      popoverElement.present();
-    })
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      // TODO: also add delegation if ospec.type == "-"?
+      this.popover.create({
+  //      event, // TODO: use this from Ionic v6 on!
+  //      side: 'top', // TODO: use this from Ionic v6 on!
+        component: AddoptionDialogPage, 
+        translucent: true,
+        showBackdrop: true,
+        cssClass: 'add-option-class',
+        componentProps: {parent: this}
+      })
+      .then((popoverElement)=>{
+        popoverElement.present();
+      });
+    }
   }
 
   // Glossary buttons:

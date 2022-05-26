@@ -24,7 +24,8 @@ function (newDoc, savedDoc, userCtx) {
                 }
             } else {
                 // it's a poll doc.
-                if (_id.endsWith(".state")) {
+                if (_id.endsWith("§state")) {
+                    /* the following would only work if state is stored unencrypted:
                     // It's a state doc. Make sure state is changed in accordance to due:
                     if ((newDoc.due||'') != '') {
                         let now = new Date();
@@ -35,6 +36,7 @@ function (newDoc, savedDoc, userCtx) {
                             throw ({forbidden: 'Attempt to set state to closed before due date.'})
                         }
                     }
+                    */
                 } else {
                     // if doc already exists, let noone update or delete it:
                     if (savedDoc) {
@@ -48,7 +50,10 @@ function (newDoc, savedDoc, userCtx) {
                     // check whether doc contains a due date:
                     if (newDoc.due) {
                         // reject if past due:
-                        if (new Date() > new Date(newDoc.due)) {
+                        var now_ms = (new Date()).getTime(),
+                            due_ms = (new Date(newDoc.due)).getTime();
+                        if (now_ms > due_ms + 1000) {
+                            // allowing a grace period of one second
                             throw ({forbidden: 'Attempt to change voting data after due date.'})
                         }
                     }

@@ -1,5 +1,5 @@
 /*
-Copyright Contributors to the vodle project.
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
 
 This file is part of vodle.
 
@@ -163,7 +163,9 @@ const poll_keystarts_in_user_db = [
   'del_private_key', 'del_nickname', 'del_from', 
   'have_seen', 'have_acted', 'have_seen_results', 
   'poll_page',
-  'simulated_ratings'];
+  'simulated_ratings',
+  'final_rand', 'winner'
+];
 
 const user_keys_unencrypted = ['consent', 'last_access'];
 
@@ -870,12 +872,16 @@ export class DataService implements OnDestroy {
             if (change.pending == 0) {
               // replication completed
 
-              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid);
+              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
 
               this.need_poll_db_replication[pid] = false;
 
-              // now start synchronisation asynchronously:
-              this.start_poll_sync.bind(this)(pid);
+              if (this.poll_caches[pid]['state'] == 'closed') {
+                this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
+              } else {
+                // now start synchronisation asynchronously:
+                this.start_poll_sync.bind(this)(pid);
+              }
       
               // RESOLVE:
               resolve(true);  
@@ -916,9 +922,13 @@ export class DataService implements OnDestroy {
   
           this.remote_poll_dbs[pid] = db;
   
-          // start synchronisation asynchronously:
-          this.start_poll_sync(pid);
-  
+          if (this.poll_caches[pid]['state'] == 'closed') {
+            this.G.L.trace("DataService.connect_to_remote_poll_db no more syncing of closed poll", pid);
+          } else {
+            // start synchronisation asynchronously:
+            this.start_poll_sync(pid);
+          }
+
           // RESOLVE:
           resolve(true);
   
@@ -1032,6 +1042,15 @@ export class DataService implements OnDestroy {
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
           selector: this.get_poll_doc_selector(pid)
+      }).on('complete', msg => {
+
+        this.G.L.trace("DataService.replicate_once completed", pid, msg);
+
+        this.need_poll_db_replication[pid] = false;
+
+        // RESOLVE:
+        resolve(true);  
+
       }).on('change', change => {
 
         this.G.L.trace("DataService.replicate_once received change", change);
@@ -1791,36 +1810,63 @@ export class DataService implements OnDestroy {
     const lang = this.getu('language');
     this.translate.use(lang!=''?lang:environment.default_lang);
 
-    // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs:
-    for (const pid of this._pids) {
+    // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs,
+    // or if due is long over, delete:
+    for (const pid of new Set(this._pids)) {
       this.G.L.info("DataService.after_changes processing poll", pid);
-      if (!(pid in this.G.P.polls)) {
-        // poll object does not exist yet, so create it:
-        this.G.L.debug("DataService.after_changes creating poll object", pid);
-        const p = new Poll(this.G, pid);
-      }
-      if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
-        // try syncing with remote db:
-        // check if db credentials are set:
-        if (this.poll_has_db_credentials(pid)) {
-          this.G.L.trace("DataService.after_changes found remote poll db credentials");
-
-          // ASYNC:
-          // connect to remote and start sync:
-          this.connect_to_remote_poll_db(pid, this.need_poll_db_replication[pid] || false)
-          .catch(err => {
-
-            this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);
-            // TODO: react somehow?
-
-          });
-
-        } else {
-
-          this.G.L.warn("DataService.after_changes couldn't find remote poll db credentials", pid);
-          // TODO: react somehow?
-
+      // get due:
+      const due_str = this.G.D.getp(pid, 'due'),
+            deletion_date = (due_str == '') ? null : 
+              new Date((new Date(due_str)).getTime() + environment.polls.delete_after_days*24*60*60*1000);
+      if (!!deletion_date && (new Date()) >= deletion_date) {
+        // poll data shall be deleted locally
+        this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
+        this.stop_poll_sync(pid);
+        const lpdb = this.get_local_poll_db(pid);
+        if (!!lpdb) {
+          lpdb.destroy();
         }
+        delete this.local_poll_dbs[pid];
+        if (pid in this.remote_poll_dbs) {
+          delete this.remote_poll_dbs[pid];
+        }
+        if (pid in this._pid_oids) {
+          delete this._pid_oids[pid];
+        }
+        for (const key of poll_keystarts_in_user_db) {
+          this.delp(pid, key);
+        }
+        this._pids.delete(pid);
+      } else {
+        // poll data shall not be deleted.
+        if (!(pid in this.G.P.polls)) {
+          // poll object does not exist yet, so create it:
+          this.G.L.debug("DataService.after_changes creating poll object", pid);
+          const p = new Poll(this.G, pid);
+        }
+        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
+          // try syncing with remote db:
+          // check if db credentials are set:
+          if (this.poll_has_db_credentials(pid)) {
+            this.G.L.trace("DataService.after_changes found remote poll db credentials");
+  
+            // ASYNC:
+            // connect to remote and start sync:
+            this.connect_to_remote_poll_db(pid, this.need_poll_db_replication[pid] || false)
+            .catch(err => {
+  
+              this.G.L.warn("DataService.after_changes couldn't start poll db syncing", pid, err);
+              // TODO: react somehow?
+  
+            });
+  
+          } else {
+  
+            this.G.L.warn("DataService.after_changes couldn't find remote poll db credentials", pid);
+            // TODO: react somehow?
+  
+          }
+        }  
       }
     }
 
@@ -2258,7 +2304,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        if ((key != 'due') && (decrypt(doc.value, poll_pw) != value)) {
+        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2435,7 +2481,7 @@ export class DataService implements OnDestroy {
     }).catch(err => {
 
       // key did not exist in db:
-      this.G.L.warn("DataService.delete_user_data no need to delete nonexistent key", key, err);
+      this.G.L.trace("DataService.delete_user_data no need to delete nonexistent key", key, err);
 
     });
 
