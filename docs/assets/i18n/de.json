@@ -1,30 +1,36 @@
 {
     "_HEADER_": [
+<<<<<<< HEAD
         "(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.",
         "This file is part of vodle.",  
         "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
         "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
+=======
+        "Copyright Contributors to the vodle project.",
+        "This file is part of vodle.",
+        "vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
+        "vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",
+>>>>>>> 91efd588cc722d2de3258b663927bdbbae2df997
         "You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
     ],
-    
     "_WELCOME_TO_TRANSLATORS_": [
         "Thank you for helping translate vodle!",
         "Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
         "In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
     ],
-
     "_OVERALL_CONVENTIONS_": [
         "Please use gender-neutral language.",
         "Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
         "Please use the correct whitespacing with exclamation marks and question marks for your language."
     ],
-
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "Wir gendern alles mit : , z.B. 'Teilnehmer:innen'.",
-        "Wir verwenden korrekte Bindestriche -, Gedankenstriche –, Minuszeichen −, Bereichsstriche –, Apostrophe ʼ und Anführungszeichen ‚‘ und „“ statt Fußzeichen ' und Zollzeichen"
+        "Wir verwenden korrekte Bindestriche -, Gedankenstriche –, Minuszeichen −, Bereichsstriche –, Apostrophe ʼ und Anführungszeichen ‚‘ und „“ statt Fußzeichen ' und Zollzeichen",
+        "We use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and quotation marks ‘’ and “” instead of foot ' and inches",
+        "We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
+        "We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
-
     "add": "Hinzufügen",
     "add-option": "Option hinzufügen",
     "add-target": "Option hinzufügen",
@@ -64,10 +70,8 @@
     "test": "Testen",
     "wap": "Wap",
     "yes": "Ja",
-
     "about": {
         "-page-title": "Über vodle",
-
         "h1": "Was ist vodle?",
         "p11": "vodle hilft Gruppen, faire und gute Entscheidungen zu treffen. Es findet den <i>größten Teilkonsens</i> in einer Menge von Optionen. In echt demokratischer Weise gibt es jeder Person den selben effektiven Einfluß.",
         "p12": "Es zeigt Dir für jede Option die momentane Zustimmung als hellen Balken auf der rechten Seite, und erlaubt Dir, Deine Waps mit Hilfe von Schiebereglern in Echtzeit anzupassen. Wenn Dein Schieberegler den Zustimmungs-Balken berührt, wird er grün, um anzuzeigen, dass Du dieser Option ebenfalls zustimmst. Auf diese Weise kann die Gruppe zu einem vollen oder teilweisen Konsens finden, der so breit wie möglich ist.",
@@ -77,14 +81,11 @@
         "p16": "Auf diese Weise hat die Option mit der meisten Zustimmung die bei Weitem größte Wahrscheinlichkeit, zu gewinnen. Die Gewinnwahrscheinlichkeiten der anderen Optionen sind höchstens so groß wie ihr Zustimmungswert (in Prozent aller Teilnehmer:innen, die sich nicht vollständig enthalten haben).",
         "p17": "Bei <b>Verteilungs-Abstimmungen</b> (bei denen die Gruppe irgendein <i>Budget verteilen</i> in <i>Anteile</i> für verschiedene Optionen aufteilen muss), ist das Verfahren ähnlich: Wenn eine Option Zustimmung von allen bekommt, gibt es vollen Konsens, also bekommt diese Option das ganze Budget. Anderenfalls teilt vodle den größten Anteil des Budgets der Option mit der größten Zustimmung zu, und den anderen Optionen kleinere Anteile.",
         "p18": "Genaue Prozedur: Die Optionen werden nach absteigender Zustimmung sortiert. Dann bekommt jede Option einen Anteil proportional zur Anzahl Teilnehmer:innen, die dieser Option aber keiner höherplatzierten Option zugestimmt haben.",
-
         "h2": "Wer steckt dahinter?",
         "p21": "vodles Algorithmus (genannt “maximaler Teil-Konsens”) wurde entwickelt und auf Fairness optimiert vom Mathematiker Jobst Heitzig in Zusammenarbeit mit Forest W. Simmons. Er ist inspiriert vom „Schwellwert-Modell“ des berühmten Soziologen Mark Granovetter. Diese App ist open-source, der Programmcode liegt auf <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Hauptentwickler: Jobst Heitzig. Beiträge von: Marius Amrhein, Adrian Lison.",
-
         "h3": "Unterstütze vodle!",
         "p31": "Da wir und verpflichtet haben, dass vodle frei nutzbar für alle bleibt, brauchen wir weiterhin Hilfe. Wenn Du Nerd, Kreative:r, Influencer:in, Wissenschaftler:in, Philantrop:in, Aktivist:in oder Politiker:in bist, an die Zukunft von fairen &amp; effizienten Konsens-Entscheidungen glaubst und ein wenig beitragen möchtest, dann haben wir ein paar Ideen, <a href=\"{{support_vodle_url}}\" target=\"_blank\">wie Du uns helfen kannst!</a>"
     },
-    
     "addoption": {
         "header": "Option hinzufügen",
         "intro": "Bitte stelle sicher, dass die neue Option noch nicht von den vorhandenen Optionen abgedeckt ist.",
@@ -92,10 +93,8 @@
         "info": "Einmal hinzugefügte Optionen kann niemand mehr verändern oder löschen.",
         "notification-added-title": "Option hinzugefügt"
     },
-
     "assist": {
         "-page-title": "Wir setzen Deine Waps",
-
         "-step-1-title": "Lieblingsoption",
         "favourite-intro-1": "Die folgenden Fragen sollen Dir den Einstieg erleichtern und Deine anfänglichen Waps setzen. Du kannst sie später jederzeit ändern.",
         "favourite-warn-change": "Du hast schon einige Waps gesetzt. Wenn Du hier weitergehst, werden diese möglicherweise verändert.",
@@ -104,7 +103,6 @@
         "favourite-explanation-1": "Wir geben der Option <i>„{{favourite}}“</i> ein Wap von <b>100</b>.",
         "favourite-explanation-2": "Das bedeutet, dass Du dieser Option <i>auf jeden Fall zustimmst,</i> egal, wie die Waps der anderen Teilnehmer:innen sind.",
         "favourite-explanation-3": "Es kann aber sein, dass <i>„{{favourite}}“</i> am Ende nicht genug Zustimmung bekommt, um zu gewinnen. Selbst wenn eine Mehrheit dieser Option zustimmt, ist nicht sicher, dass sie gewinnt. Deshalb ist es wichtig, als Nächstes auch über mögliche Kompromiss-Optionen nachzudenken.",
-
         "-step-2-title": "Akzeptable Optionen",
         "acceptable-intro": "Welche Optionen findest Du auch noch akzeptabel?<br/>Du kannst beliebig viele (oder auch keine) auswählen.",
         "acceptable-explanation-1": "Wir geben den Optionen, die Du <b>nicht als akzeptabel</b> markiert hast, ein Wap von <b>0</b>.",
@@ -112,17 +110,14 @@
         "acceptable-explanation-3": "Den Optionen, die Du als <b>akzeptabel</b> markiert hast, geben wir ein Wap <b>zwischen 1 und 99</b>.",
         "acceptable-explanation-4": "Das bedeutet, dass Du diesen Optionen <i>möglicherweise zustimmst,</i> abhängig davon, wie die Waps der anderen Teilnehmer:innen sind.",
         "acceptable-explanation-5": "Demit wir diese Waps genauer festzulegen können, solltest Du als Nächstes überlegen, wie viele <i>andere</i> Teilnehmer:innen diesen Optionen möglicherweise auch zustimmen würden.",
-
         "-step-3-title": "Geschätzte Zustimmung durch andere",
         "estimates-intro": "Bitte schätze für jede Option ein, welcher Prozentsatz an Teilnehmer:innen ihr möglicherweise auch zustimmen würde.<br/>Wenn Du nicht sicher bist, schätze die Prozentzahl lieber etwas kleiner ein.",
         "estimates-explanation-1": "Wir gehen jetzt die akzeptablen Optionen durch. Bitte lege jeweils fest, wie viel Zustimmung durch andere Teilnehmer:innen nötig ist, bevor <b>Du selbst</b> der Option auch zustimmen würdest.",
         "estimates-explanation-2": "Das kann der selbe Prozentsatz sein, den Du eben geschätzt hast. Du kannst aber auch sagen, dass Du einer Option erst zustimmen würdest, wenn noch mehr Teilnehmer:innen zustimmen als geschätzt.",
-
         "-step-4-title": "Ab wann würdest Du zustimmen?",
         "thresholds-intro": "Für die Option <b><i>„{{option}}“</i></b> hast Du geschätzt, dass <b>{{estimate}}%</b> der Teilnehmer:innen möglicherweise zustimmen würden.",
         "thresholds-question-1": "Wenn tatsächlich {{estimate}}% der Option zustimmen, würdest Du der Option dann selbst auch zustimmen?",
         "thresholds-question-2": "Wie wiele Teilnehmer:innen müssten dann der Option zustimmen, bevor Du ihr auch zustimmen würdest?",
-
         "-step-5-title": "Zusammenfassung",
         "ratings-intro-1": "Danke! Ich habe jetzt Deine Waps so eingestellt, dass sie Deiner Zustimmbereitschaft entsprechen.",
         "ratings-intro-2": "Waps funktionieren so: Wenn man ein Wap von <i>X</i> einstellt, dann stimmt man zu, wenn mehr als 100% minus <i>X</i> der Teilnehmer:innen zustimmen. Deshalb habe ich Deine Waps wie folgt eingestellt:",
@@ -131,7 +126,6 @@
         "ratings-other": "Alle anderen Optionen bekommen <b>0</b>, da Du ihnen auf keinen Fall zustimmen willst.",
         "ratings-extro": "Du kannst Deine Waps jederzeit über die Schieberegler anpassen, um z.B. auf die Entwicklung der tatsächlichen Zustimmungswerte zu reagieren. Die aktuelle Zustimmung wird immer als heller Balken angezeigt. Weitere Informationen bekommst Du über die unterstrichenen Wörter auf der Abstimmungsseite."
     },
-
     "badges": {
         "abstaining": "Enthaltung",
         "can-accept": "Zustimmung möglich",
@@ -141,27 +135,24 @@
         "new": "Neu",
         "please-check": "Bitte prüfen"
     },
-
     "data": {
         "notifications-permission-header": "Darf vodle Dir Benachrichtigungen zeigen?",
         "notifications-permission-intro": "Wenn Du es erlaubst, kann vodle Dich an Abstimmungs-Fristen, Delegations-Anfragen und Ähnliches erinnern. Auf der Einstellungs-Seite kannst Du kontrollieren, welche Benachrichtigungen Du bekommen möchtest."
     },
-
     "delegation-request": {
         "header": "Delegiere an eine:n andere:n Teilnehmer:in",
         "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Waps werden auch als Deine Waps verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Waps weiterhin selbst einstellen.",
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
-
+        "from-label": "Die/Der Delegierte:r wird folgendes als Absender:in dieser Anfrage sehen:",
+        "from-placeholder": "Enter your own e-mail address, name or nickname",
         "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "request-options-without-share": "Am einfachsten kannst die Person per E-Mail bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
-
         "share": "Teilen",
         "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Delegierungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn nun Deiner/Deinem Delegierten, {{nickname}}.",
-
         "message-subject": "Bitte, als Delegierte:r zu agieren (Abstimmung endet {{due}})",
         "message-body-greeting": "Liebe:r Teilnehmer:in,",
         "message-body-before-title": "ich möchte Dich gerne bitten, mein:e Delegierte:r zu sein in der vodle-Abstimmung",
@@ -171,50 +162,49 @@
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "message-body-regards": "Mit besten Grüßen"
     },
-
+    "delete-all": {
+        "-page-title": "Delete my data",
+        "confirm-header": "Really delete your data?",
+        "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private data from the remote database that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll database servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
+        "confirm-button": "Yes, delete my data",
+        "success-title": "Your data was deleted.",
+        "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
+        "failed": "Could not delete all data for some reason"
+    },
     "delrespond": {
         "-page-title": "Delegierte:r sein?",
-
         "header": "Bist Du bereit, Delegierte:r zu sein für {{from}} in der Abstimmung <i>„{{poll_title}}“?</i>",
         "intro": "Deine Waps kontrollieren dann auch die Waps dieser Person.",
         "details": "Wenn Du zustimmst, kannst Du immer noch entscheiden, ob Du einer Option selbst ein Wap geben willst oder das Wap an eine dritte Person weiter delegieren willst.",
         "check-first": "Du kannst auch erst einmal Deine Waps überprüfen und dann hierher zurückkehren, um zuzustimmen oder abzulehnen.",
         "accept": "Stimme zu",
         "decline": "Lehne ab",
-
         "cycle-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>„{{poll_title}}“.</i>",
         "two-way-intro": "Allerdings hast Du selbst Deine Waps an genau diese Person, {{from}}, delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
         "cycle-intro": "Allerdings hat Dein:e eigene:r Delegierte:r für diese Abstimmung das Wap bereits direkt oder indirekt an {{from}} delegiert. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
         "cycle-details": "Andernfalls ergäbe dies einen Delegierungs-Kreis, und vodle wüsste nicht, wessen Waps verwendet werden sollen.",
         "cycle-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
-
         "weight-exceeded-header": "{{from}} bittet Dich, ihr:e oder sein:e Delegierte:r zu sein in der Abstimmung <i>„{{poll_title}}“.</i>",
         "weight-exceeded-intro": "Allerdings würde das Dir oder der Person, an die Du selbst delegiert hast, ein Stimmgewicht geben, das größer ist als das Maximum {{limit}}. So lange das so ist, kannst Du der Bitte nicht zustimmen.",
         "weight-exceeded-details": "Anderenfalls würdest Du oder dein:e Delegierte:r zu mächtig in dieser Abstimmung werden.",
         "weight-exceeded-revoke-first": "Wenn Du der Bitte dennoch zustimmen willst, erwäge bitte zunächst, eine andere Bitte um Delegation, der Du bereits zugestimmt hast, doch abzulehnen oder Deine eigene Delegierung zurückzuziehen, und komme dann hierher zurück.",
-
         "accepted-header": "Du hast dieser Bitte von {{from}} zugestimmt.",
         "accepted-intro": "Deine Waps kontrollieren also momentan die Waps dieser Person in der Abstimmung <i>„{{poll_title}}“.</i>",
         "accepted-details": "Wenn Du Deine Zustimmung widerrufen möchtest, kannst Du dies tun. Solange die andere Person ihre Bitte nicht zurückzieht, kannst Du ihr auch später wieder zustimmen.",
         "keep": "Beibehalten",
         "revoke": "Widerrufen",
-
         "declined-header": "Du hast diese Bitte von {{from}} abgelehnt.",
         "declined-intro": "Deine Waps kontrollieren also momentan <i>nicht</i> die Waps dieser Person in der Abstimmung <i>„{{poll_title}}“.</i>",
         "declined-details": "Wenn Du nun aber zustimmen willst, kannst Du dies tun. Du kannst die Zustimmung später immer noch wieder zurückziehen.",
         "no-change": "Keine Änderung",
-
         "declined-impossible-details": "Du kannst der Bitte momentan nicht zustimmen, da das einen Delegations-Kreis oder ein zu großes Stimmgewicht ergäbe.",
-
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal.",
         "closed": "Leider ist diese Abstimmung bereits geschlossen.",
         "is-self": "Diese Anfrage hast Du selbst erstellt :-) Schicke den Link bitte an die Person, die Du um Delegation bitten möchtest!"
     },
-
     "draftpoll": {
         "-page-title": "Abstimmung bearbeiten",
-
         "del-poll-confirm-question": "Entwurf endgültig löschen?<br/>(Das kann nicht rückgängig gemacht werden!)",
         "general-information": "Allgemeine Daten",
         "type-label": "In dieser Abstimmung wird die Gruppe...",
@@ -226,7 +216,6 @@
         "desc-placeholder": "Etwas mehr Informationen zu dieser Abstimmung (optional)",
         "url-label": "„Mehr lesen“-Link",
         "url-placeholder": "Eine Webseite mit mehr Details, wenn die Teilnehmer:in „mehr lesen“ anklickt (optional)",
-
         "due-type-label": "Die Abstimmung endet...",
         "due-type-custom": "an einem bestimmten Datum und Uhrzeit",
         "due-type-10min": "nach 10 Minuten",
@@ -241,11 +230,9 @@
         "due-type-two-weeks": "nach zwei Wochen",
         "due-type-four-weeks": "nach vier Wochen",
         "due-datetime-label": "Datum und Uhrzeit, zu der die Abstimmung endet",
-
         "advanced-settings": "Erweiterte Einstellungen",
         "db-label": "Wo soll vodle die Abstimmungs-Daten verschlüsselt ablegen?",
         "language": "Sprache der Abstimmungs-Texte",
-
         "option-name-label": "Name der Option",
         "target-name-label": "Name der Option",
         "option-name-placeholder": "Ein kurzer Name für diese Option",
@@ -257,21 +244,17 @@
         "option-url-placeholder": "Eine Webseite mit mehr Details zu „{{name}}“",
         "del-option-confirm-question": "Option<br/><b><i>{{name}}</i></b><br/>löschen?",
         "del-target-confirm-question": "Option<br/><b><i>{{name}}</i></b><br/>löschen?",
-
         "please-list-options-explanation": "Bitte gib mindestens zwei Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Teilnehmer:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "please-list-targets-explanation": "Bitte gib mindestens zwei mögliche Optionen an. Kümmere Dich nicht um die Reihenfolge. Weitere Optionen können später jederzeit durch die Teilnehmer:innen hinzugefügt werden, so lange die Abstimmung läuft.",
         "draft-saved": "Entwurf gespeichert unter<br/>„Meine Abstimmungen“",
-
         "send-for-review": "Zum Korrekturlesen teilen",
         "import-options-from-file": "Optionen aus Datei importieren",
         "import-options-header": "Optionen aus Datei importieren",
         "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>",
         "use-example-from-db": "Ein Beispiel verwenden:",
         "use-example-from-db-none": "(Kein Beispiel verwenden)",
-
         "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
     },
-
     "external-link": {
         "confirm": "Dieser Link auf die externe Webseite<br/><br/><b>{{url}}</b><br/><br/>wurde von einer/einem vodle-Nutzer:in eingetragen und nicht von vodle geprüft.<br/><br/>Möchtest Du ihn trotz der damit verbundenen Risiken öffnen?",
         "copy-link": "Link kopieren",
@@ -279,123 +262,90 @@
         "notification-copied-link-title": "Externer Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": ""
     },
-
     "explain": {
         "title-approval": "Zustimmung für",
-
         "all-ratings": "Alle Waps dieser Option",
         "large-to-small": "sortiert von groß zu klein",
-
         "opposition": "Opposition",
         "vertical-approval-label": "Zustimmung",
         "horizontal-approval-label": "Zustimmung",
-
         "your-rating-line-1": "Dein",
         "your-rating-line-2": "Wap",
         "largest-line-1": "Deine größtes Wap wird als 100 interpretiert, um",
         "largest-line-2": "sicherzustellen, dass Du mindestens einer Option zustimmst.",
-
         "threshold-smaller-line-1": "Kleinere",
         "threshold-smaller-line-2": "Waps",
         "threshold-smaller-line-3": "stimmen",
         "threshold-smaller-line-4": "nicht zu",
-
         "threshold-larger-line-1": "Größere",
         "threshold-larger-line-2": "Waps",
         "threshold-larger-line-3": "stimmen",
         "threshold-larger-line-4": "zu",
-
         "title-share": "Anteil für",
-
-        "all-abstain-line-1":                   "Weil alle sich enthalten, bekommen",
+        "all-abstain-line-1": "Weil alle sich enthalten, bekommen",
         "all-abstain-line-2-before-percentage": "alle Optionen den gleichen Anteil von ",
-        "all-abstain-line-2-after-percentage":  "",
-
+        "all-abstain-line-2-after-percentage": "",
         "share-intro-line-1": "Der von einer Person kontrollierte Anteil geht",
         "share-intro-line-2": "zur höchst-gelisteten Option, der sie zustimmt.",
-
         "zero-line-1": "Niemand stimmt dieser Option zu,",
         "zero-line-2": "also bekommt sie keinen Anteil.",
-
         "no-one-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
         "no-one-line-2": "stimmt keine:r einer höher gelisteten Option zu.",
-
         "all-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
         "all-line-2": "stimmen alle auch einer höher gelisteten Option zu.",
-
         "some-line-1": "Von den {{percentage}}%, die dieser Option zustimmen,",
         "some-line-2": "stimmen manche einer höher gelisteten Option zu.",
-
         "only-higher-line-1-before-optionname": "{{percentage}}% stimmen ",
-        "only-higher-line-1-after-optionname": "",
+        "only-higher-line-1-after-optionname": " ",
         "only-higher-line-2": "zu, also geht ihr Anteil zu dieser Option.",
-
         "only-higher-incl-you-line-1-before-optionname": "{{percentage}}% (inkl. Dir) stimmen ",
-        "only-higher-incl-you-line-1-after-optionname": "",
+        "only-higher-incl-you-line-1-after-optionname": " ",
         "only-higher-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
-
         "among-them-line-1-before-optionname": "{{percentage}}% stimmen ",
-        "among-them-line-1-after-optionname": "",
+        "among-them-line-1-after-optionname": " ",
         "among-them-line-2": "zu, also geht ihr Anteil zu dieser Option.",
-
         "among-them-incl-you-line-1-before-optionname": "{{percentage}}% (inkl. Dir) stimmen ",
-        "among-them-incl-you-line-1-after-optionname": "",
+        "among-them-incl-you-line-1-after-optionname": " ",
         "among-them-incl-you-line-2": "zu, also geht ihr Anteil zu dieser Option.",
-
         "another-line-1-before-optionname": "Weitere {{percentage}}% stimmen ",
         "another-line-1-after-optionname": "",
         "another-line-2": "zu, aber keiner höher-gelisteten Option.",
-
         "another-incl-you-line-1-before-optionname": "Weitere {{percentage}}% (inkl. Dir) stimmen ",
         "another-incl-you-line-1-after-optionname": "",
         "another-incl-you-line-2": "zu, aber keiner höher-gelisteten Option.",
-
         "whole-share-line-1-before-percentage": "Also geht der ganze Anteil von ",
         "whole-share-line-1-after-percentage": "",
         "whole-share-line-2-before-optionname": "an ",
         "whole-share-line-2-after-optionname": ".",
-
         "whole-share-incl-you-line-1-before-percentage": "Also geht der ganze Anteil von ",
         "whole-share-incl-you-line-1-after-percentage": " (inkl.",
         "whole-share-incl-you-line-2-before-optionname": "Deinem) an ",
         "whole-share-incl-you-line-2-after-optionname": ".",
-
         "remaining-line-1-before-percentage": "Der Anteil der übrigen ",
         "remaining-line-1-after-percentage": "",
         "remaining-line-2-before-optionname": "geht an ",
         "remaining-line-2-after-optionname": ".",
-
         "remaining-incl-you-line-1-before-percentage": "Der Anteil der übrigen ",
         "remaining-incl-you-line-1-after-percentage": " (inkl. Deinem)",
         "remaining-incl-you-line-2-before-optionname": "geht an ",
         "remaining-incl-you-line-2-after-optionname": ".",
-
         "nothing-left-line-1-before-percentage": "Damit bleiben ",
         "nothing-left-line-1-after-percentage": "",
         "nothing-left-line-2-before-optionname": "für ",
         "nothing-left-line-2-after-optionname": "."
     },
-
     "glossary": {
-
         "_COMMENT_": "These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
-
         "wap": "<p>In vodle stimmst Du ab, indem Du jeder Option ein <b>Wap</b> gibst. Das ist eine Zahl <b>zwischen 0 und 100</b>. Du kannst Sie mit den farbigen <b>Schiebereglern</b> einstellen. vodle kann Dir dabei helfen, dafür ist der grüne Zauberstab.</p><p>Ein Wap ist keine Bewertung im üblichen Sinn! Stattdessen gibt es an, unter welchen Bedingungen Du der Option <b>zustimmst</b>.</p><p>Am Anfang sind alle Deine Waps Null und die Schieberegler sind rote Knöpfe. Ein Wap von <b>Null</b> bedeutet, dass Du der Option <b>auf keinen Fall</b> zustimmst.</p><p>Wenn Du den Regler ganz nach rechts schiebst, gibst Du ein Wap von <b>100</b>. Das bedeutet, dass Du der Option <b>auf jeden Fall</b> zustimmst. Der Schieberegler ist dann grün.</p><p>Du kannst auch ein Wap <b>zwischen 1 und 99</b> einstellen. Dann stimmst Du der Option nur zu, wenn <b>genügend andere</b> auch zustimmen. Je weiter rechts der Regler, desto eher stimmst Du zu. Wenn Du z.B. ein Wap von 30 einstellst, stimmst Du zu, wenn mehr als 70% aller Teilnehmer:innen zustimmen. Wenn Du ein Wap von <b><i>X</i></b> einstellst, stimmst Du zu, wenn mehr als <b>100% minus <i>X</i></b> zustimmen.</p>",
-
         "non-abstaining": "DIes ist die Anzahl an Teilnehmer:innen, die <b>mindestens einer Option ein positives Wap</b> gegeben haben. Teilnehmer:innen, die allen Optionen ein Wap von Null geben, enthalten sich und üben keinen Einfluss auf das Ergebnis aus.",
-
         "approve": "<p><b>Der helle Balken, der von rechts kommt, zeigt, wie viele Teilnehmer:innen gerade einer Option zustimmen.</b> Wenn Du wissen willst, wie das zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p><p>Ob Du selbst einer Option momentan zustimmst, kannst Du an der Farbe Deines Wap-Reglers sehen. Ragt der Regler in den Balken, ist er grün und Du stimmst zu.</p><p>Wenn keines Deiner Waps in einen Balken ragt, dann stimmst Du der Option mit dem größten Wap zu. So stimmst Du immer mindestens einer Option zu. Häufig stimmt man seiner Lieblingsoption und einer oder mehreren weiteren akzeptablen Optionen zu.</p><p>Ob Du einer Option zustimmst, hängt also nicht nur von Deinem eigenen Wap sondern möglicherweise auch von den Waps aller anderen Teilnehmer:innen ab. Wenn z.B. mehr als 70% der Teilnehmer:innen der Option ein Wap von 30 oder mehr angeben, stimmen diese Teilnehmer:innen alle der Option zu. Wenn mehr als <i>X%</i> ein Wap von 100 minus <i>X</i> oder mehr angeben, stimmen sie alle zu.</p>",
-
         "share": "<p>Jede Option bekommt einen <b>Anteil</b> in Prozent. Alle Anteile zusammen ergeben 100%.</p><p>Wenn es bei der Abstimmung um die Verteilung eines Budgets oder einer Ressource geht, bekommt am Ende jede Option ihren Anteil davon. Wenn bei der Abstimmung stattdessen eine einzige Option gewählt werden soll, dann bestimmt der Anteil, mit welcher <b>Wahrscheinlichkeit</b> die Option am Ende gewinnt.</p><p>Die Anteile werden aus den Zustimmungs-Werten berechnet: Die Option, die am höchsten gelistet ist, bekommt einen Anteil, der genau so groß ist wie ihre Zustimmung. (Wenn alle ihr zustimmen, gewinnt sie also mit Sicherheit oder bekommt das gesamte Budget.) Die anderen Optionen bekommen kleinere Anteile oder nichts. Optionen ohne Zustimmung bekommen keinen Anteil.</p><p>Die genaue Formel ist: Der Anteil einer Option entspricht dem Prozentsatz an Teilnehmer:innen, die dieser Option aber keiner höher gelisteten Option zustimmen. Anders gesagt: „Dein“ Anteil geht immer an eine Option, der Du zustimmst, und zwar an die mit der größten Gesamt-Zustimmung.</p><p>Wenn Du wissen willst, wie der momentane Anteil zustandekommt, kannst Du auf den Namen der Option und danach auf „<b>Erklären</b>“ klicken.</p>",
-
         "level-of-agreement": "<p>Der Grad an <b>Einigung</b> zeigt Dir, wie nah an vollem Konsens Ihr seid. 100% bedeutet, dass der volle Anteil an eine einzige Option geht und alle dieser Option zustimmen.</p><p>Anderenfalls ist der Einigungs-Grad gleich dem Prozentsatz an Teilnehmer:innen, die den Gewinner-Optionen zustimmen, gemittelt über alle Optionen, die einen positiven Anteil bekommen, und unter Berücksichtigung dieses Anteils.</p><p>Genauer gesagt berechnet vodle den Grad an Einigung so: Es multipliziert den Zustimmungswert jeder Option mit dem Anteil dieser Option, geteilt durch 100, und summiert dann alle diese Zahlen auf.</p>"
     },
-
     "help": {
         "-page-title": "Hilfe",
-
         "h1": "Wie stimmt man ab? – kurze Version",
-        "p11a": "Wähle eine Abstimmung aus", 
+        "p11a": "Wähle eine Abstimmung aus",
         "p11b": "Meine Abstimmungen",
         "p11c": "oder klicke auf einen Abstimmungs-Link, der Dir geschickt wurde.",
         "p12a": "Benutze die Schieberegler, um den Optionen <b>Waps</b> zu geben. <i>vodle</i> interpretiert Dein Wap einer Option als Deine „<b>Bereitschaft</b>“, dieser Option „<b>zuzustimmen</b>“.",
@@ -407,11 +357,10 @@
         "p13c": "Wenn Du denkst, eine Option könnte ein akzeptabler <b>Kompromiss</b> oder sogar ein möglicher <b>Konsens</b> sein, dann <b>erhöhe Deine „Zustimm-Bereitschaft“</b> bis der Regler in den Balken ragt und grün wird. <small>(Wenn er bereit weit in den Balken hineinragt, kannst Du ihn auch wieder etwas nach links schieben, bis er nur noch etwas hineinragt.)</small>",
         "p14": "Die Optionen sind <b>nach absteigender Zustimmung geordnet</b>, die Option mit der meisten Zustimmung ist immer oben.",
         "p15a": "<b>Die Tortendiagramme links bestimmen das Ergebnis der Abstimmung, sobald sie endet:</b>",
-        "p15b1": "Bei Abstimmungen, in der eine", 
+        "p15b1": "Bei Abstimmungen, in der eine",
         "p15b2": "<i>einzelne Option</i> gewählt wird, zeigt jedes Tortenstück, wie wahrscheinlich es ist, dass diese Option gewinnt.",
         "p15c1": "Bei Abstimmungen, in der ein",
         "p15c2": "<i>Budget aufgeteilt</i> wird, zeigen die Tortenstücke die Budget-Anteile, die den möglichen Optionen zugewiesen werden.",
-
         "h2": "Wie stimmt man ab? – längere Version",
         "p21": "Indem Du alle Optionen bewertest, drückst Du Deine <b>„Zustimm-Bereitschaft“</b> zu den Optionen aus. Die Waps aller Teilnehmer:innen bestimmen dann, welchen Optionen du tatsächlich <b>zustimmst</b>. Zu jedem Zeitpunkt während der Abstimmung stimmt jede:r Teilnehmer:in einer beliebigen Anzahl an Optionen zu – keiner, einer, oder mehr als einer. Wenn die Abstimmung endet, bestimmen diese Zustimmungen, welche Option gewinnt oder wie das Budget auf die möglichen Optionen aufgeteilt wird. Wie genau, beschreiben wir gleich.",
         "p22": "Aber zunächst: <i>Wie bestimmt Deine „Zustimm-Bereitschaft“ für eine Option, ob Du dieser Option tatsächlich zustimmst oder nicht?</i> Wenn Du der Option eine 100 gibst, bedeutet das, dass Du ihr auf jeden Fall zustimmst. Wenn Du ihr hingegen eine Null gibst, stimmst Du ihr auf keinen Fall zu. (Wenn Du mindestens einer Option mehr als Null aber keiner Option 100 gibst, stimmst Du der Option zu, der Du am meisten gegeben hast.)",
@@ -421,11 +370,9 @@
         "p26": "Wenn hingegen bei der Abstimmung ein Budget verteilt werden soll, dann wird der Anteil des Budgets für jede mögliche Option auf genau die gleiche Weise berechnet. Der Anteil für eine Option entspricht der Anzahl an Teilnehmer:innen, die (i) dieser Option zugestimmt haben, aber (ii) keiner anderen Option zugestimmt haben, das insgesamt mehr Zustimmung hat.",
         "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
     },
-
     "imprint": {
         "-page-title": "Impressum"
     },
-
     "inviteto": {
         "-page-title": "Leute zur Abstimmung einladen",
         "first-intro": "Die Abstimmung hat begonnen. Bitte lade jetzt die Teilnehmer:innen ein!",
@@ -433,14 +380,12 @@
         "caution-with-share1": "Am einfachsten kannst Du Leute über den Teilen-Knopf einladen. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution-without-share1": "Am einfachsten kannst Du Leute per E-Mail einladen. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "caution2": "Der Einladungs-Link enthält die Abstimmungs-ID und ein Passwort. Jede Person, die den Link bekommt, egal ob direkt von Dir oder von jemandem weitergeleitet, kann abstimmen. Stell also bitte sicher, dass Du und die Teilnehmer:innen den Link nur berechtigten Leuten schicken.",
-
         "share": "Teilen",
         "compose-email": "E-Mail schreiben",
         "copy-link": "Link kopieren",
         "notification-copied-link-title": "Einladungs-Link in die Zwischenablage kopiert.",
         "notification-copied-link-body": "Bitte sende ihn jetzt Deinen Teilnehmer:innen!"
     },
-
     "invite-email": {
         "subject": "Einladung zur Abstimmung (endet {{due}})",
         "body-greeting": "Liebe:r Teilnehmer:in,",
@@ -450,7 +395,6 @@
         "body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "body-regards": "Mit besten Grüßen"
     },
-
     "joinpoll": {
         "-page-title": "Einer Abstimmung beitreten",
         "fetching": "Einen Moment bitte, ich hole die Daten zu dieser Abstimmung... (Da ich noch eine Testversion bin, könnte das eine Minute dauern. Falls nach einer Minute hier nichts erscheint, lade die Seite bitte erneut. Falls es dann wieder länger als eine Minute dauert, logge Dich bitte über das Menü links oben aus und wieder ein und probiere es dann erneut.)",
@@ -465,32 +409,26 @@
         "lets-go-button": "Also los!",
         "p6": "Wenn Du wissen willst, wie vodle die Waps verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}."
     },
-
     "login": {
-        "-page-title": "Login",
-
+        "-page-title": "Anmelden",
         "welcome": "Willkommen bei",
         "ask-language": "Welche Sprache möchtest Du verwenden?",
-
         "ask-used-before": "Hast Du vodle schon einmal auf irgendeinem Gerät verwendet?",
-
-        "ask-fresh-email": "Bitte gib Deine E-Mail-Adresse ein, die Du für vodle verwenden möchtest.", 
+        "ask-fresh-email": "Bitte gib Deine E-Mail-Adresse ein, die Du für vodle verwenden möchtest.",
         "ask-fresh-email-2": "Wir speichern sie nur verschlüsselt ab und geben sie niemandem. Wir senden Dir auch keine E-mails.",
-        "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.", 
+        "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.",
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
-
         "consent-privacy-before-privacy": "Ja, ich habe die ",
         "consent-privacy-privacy": "Datenschutzerklärung und Allgemeinen Geschäftsbedingungen",
         "consent-privacy-after-privacy": " zur Kenntnis genommen. Ich willige in die Verarbeitung meiner Daten auf Endgeräten und Datenbankservern in der dort beschriebenen Form ein, um an Abstimmungen teilzunehmen. Ich stimme zu, dass meine Daten in pseudonymisierter Form teilweise an andere Teilnehmer:innen übertragen werden. Ich bin mir bewusst, dass dadurch mein Recht auf Löschung insofern eingeschränkt wird, als dass diese Kopien auf den Endgeräten anderer Teilnehmer:innen mglw. nicht gelöscht werden können. Ich kann diese Einwilligung per E-Mail an privacy@vodle.it widerrufen.",
-
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",
         "ask-old-password": "Bitte gib Dein bisheriges vodle-Passwort ein.",
-
+        "store-password": "Store my password between sessions.",
+        "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, viel Spaß mit vodle!",
         "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch eingeloggt, bis Du Dich ausloggst."
     },
-
     "logout": {
         "-page-title": "Abmelden",
         "confirm-header": "Wirklich abmelden?",
@@ -498,123 +436,93 @@
         "confirm-button": "Ja, abmelden",
         "failed": "Abmelden fehlgeschlagen"
     },
-
     "mypolls": {
         "-page-title": "Meine Abstimmungen",
         "please-respond": "Bitte beantworten:",
         "request-by": "Bitte um Delegation von {{from}}",
-
         "running": "Offene Abstimmungen",
-
         "no-running-polls-1": "Momentan kennt vodle keine offenen Abstimmungen, an denen Du teilnehmen kannst.",
         "no-running-polls-2": "Wenn Du eine Einladung zu einer Abstimmung erhalten hast, klick bitte auf den Link in der Einladung!",
-
         "recently-closed": "Abgeschlossen",
-
-        "no-recently-closed-polls-2": "Vodle kennt keine abgeschlossenen Abstimmungen, an denen Du teilgenommen hast.",
         "no-recently-closed-polls-1": "Wenn Du eine alte Einladung zu einer bereits abgeschlossenen Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.",
-
+        "no-recently-closed-polls-2": "Vodle kennt keine abgeschlossenen Abstimmungen, an denen Du teilgenommen hast.",
         "older": "Älter",
-
         "drafts": "Entwürfe",
-
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
         "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf ‚+‘ rechts unten!"
     },
-
     "news-title": {
         "delegation_accepted": "{{nickname}} hat Deiner Bitte um Delegation zugestimmt.",
         "delegation_declined": "Leider hat {{nickname}} Deine Bitte um Delegation abgelehnt.",
         "delegation_accepted_after_all": "{{nickname}} hat Deiner Bitte um Delegation jetzt doch zugestimmt.",
-        "delegation_revoked": "Leider hat {{nickname}} Deine Bitte um Delegation jetzt doch abgelehnt."  
+        "delegation_revoked": "Leider hat {{nickname}} Deine Bitte um Delegation jetzt doch abgelehnt."
     },
-
     "news-body": {
         "delegation_declined": "Vielleicht möchtest Du eine andere Person als Delegierte:n anfragen."
     },
-
     "notify_of": {
         "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
         "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
         "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
         "poll_closed": "Eine Abstimmung wurde geschlossen"
     },
-
     "poll": {
         "-page-title": "Abstimmung",
         "-page-title-running": "Laufende Abstimmung",
-
         "checkmark-clicked": "Deine Änderungen werden immer sofort gesendet wenn Du online bist. Du musst nichts extra anklicken dafür. Das Häkchen zeigt, dass Deine Änderungen erfolgreich übermittelt wurden.",
-
         "delegate-button": "Delegieren",
-
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
         "closes": "Schließt",
         "closed": "Geschlossen",
         "type-share": "Optionen bekommen Anteile",
         "type-winner": "Eine Option gewinnt",
-
         "assist-me-inline": "Assistiere mir",
         "assist-me-button": "Assistiere<br/>mir",
-
         "_COMMENT_HINTS": "Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
-
         "hint-abstaining-1": "Du enthältst Dich momentan.",
         "hint-abstaining-2-before-wap": "Du solltest wenigstens Deiner Lieblingsoption ein positives ",
         "hint-abstaining-2-wap": "Wap",
         "hint-abstaining-2-after-wap": " geben <b>(den roten Knopf nach rechts schieben)</b> oder Deine Waps an jemand delegieren.",
-
         "hint-only1positive-1-before-wap": "Du gibts momentan nur einer Option ein positives ",
         "hint-only1positive-1-wap": "Wap",
         "hint-only1positive-1-after-wap": ".",
         "hint-only1positive-2": "Du solltest überlegen, auch möglichen Kompromiss-Optionen ein positives Wap zu geben.",
-
         "hint-only1approved-1-before-approving": "Du stimmst momentan nur einer Option ",
         "hint-only1approved-1-approving": "zu",
         "hint-only1approved-1-after-approving": ".",
         "hint-only1approved-2-before-wap": "Du stimmst einer Option zu, wenn sie Dein höchstes ",
         "hint-only1approved-2-wap": "Wap",
         "hint-only1approved-2-after-wap": " bekommen hat oder Dein Wap in den Balken ragt.",
-
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
-
         "final-ratings": "Dies waren Deine Waps am Ende:",
-
         "also-for-other": "Manche oder alle der Waps weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Waps weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
         "declined-some": "Du hast auch einige Bitten um Delegation abgelehnt.",
         "declined-all": "Du hast alle Bitten um Delegation abgelehnt.",
         "have-accepted": "Du hast <b>zugestimmt</b>, Delegierte:r zu sein für",
         "have-declined": "Du hast <b>abgelehnt</b>, Delegierte:r zu sein für",
-
         "delegate-not-responded": "hat Deine Bitte um Delegation noch nicht beantwortet.",
         "delegate-controls-all": "kontrolliert alle Deine Waps als Dein:e Delegierte:r.",
         "delegate-controls-most": "kontrolliert die meisten Deiner Waps als Dein:e Delegierte:r.",
         "delegate-controls-some": "kontrolliert einige Deiner Waps als Dein:e Delegierte:r.",
         "delegate-controls-none": "kontrolliert momentan <i>keine</i> Deiner Waps als Dein:e Delegierte:r.",
-
+        "revoke_delegation": "Willst Du wirklich Deine Delegation zu {{nickname}} widerrufen? Wenn ja, kannst Du später eine neue Delegations-Anfrage an jemand Anderes oder wieder an {{nickname}} senden. Wenn nein, kannst Du trotzdem die Kontrolle über einige Deiner Waps über die Schalter auf der rechten Seite übernehmen.",
         "choose-whose-ratings": "Wessen<br/>Wap<br/>nehmen?",
         "my-own": "meine",
         "delegate-s": "{{delegate}}s",
-
         "chance-to-win": "{{percentage}}%<small> aktuelle Gewinnchance</small>",
         "final-chance-to-win": "<small>hatte am Ende </small>{{percentage}}%<small> Gewinnchance</small>",
         "of-the-budget": "<small>bekäme jetzt </small>{{percentage}}%<small> des Budgets</small>",
         "final-budget": "<small>bekommt </small>{{percentage}}%<small> des Budgets</small>",
         "including-your-share": " (inkl. Deinem Anteil)",
-
         "approved-by": "<small>es stimmen </small>{{percentage}}%<small> zu</small>",
         "including-you": " (auch Du)",
         "average-rating": "durchschn. Wap {{average}}",
-
         "explain": "Erklären",
-
         "add-option": "Option hinzufügen",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
-
         "sorting": "Optionen werden neu sortiert..."
     },
-
     "previewpoll": {
         "-page-title": "Bitte prüfen",
         "caution1": "Sobald die Abstimmung startet, kannst Du die obigen Angaben nicht mehr ändern. Allerdings können Du und die anderen Teilnehmer:innen jederzeit weitere Optionen hinzufügen.",
@@ -625,11 +533,9 @@
         "type-label": "In dieser Abstimmung wird die Gruppe",
         "is-in-past": "Das Enddatum liegt mittlerweile in der Vergangenheit. Bitte ändere es erst."
     },
-
     "privacy": {
         "-page-title": "Datenschutz & AGB"
     },
-
     "select-server": {
         "same-as-personal": "wie für meine persönlichen Daten (siehe ‘Einstellungen’)",
         "central": "in der vodle-Cloud",
@@ -640,7 +546,6 @@
         "which-other-poll": "Den Speicherort von welcher anderen Abstimmung möchtest Du auch für diese verwenden?",
         "please-enter-couchdb": "Bitte gib die URL, den Benutzernamen und das Password des CouchDB-Datenservers ein:"
     },
-
     "settings": {
         "-page-title": "Einstellungen",
         "data-storage": "Persönliche Daten",
@@ -651,7 +556,6 @@
         "appearance": "Aussehen",
         "notifications": "Benachrichtigungen"
     },
-    
     "validation": {
         "db-pw-required": "Ein Datenbank-Password wird benötigt.",
         "db-server-url-required": "Eine Datenbank-URL wird benötigt.",
