@@ -373,11 +373,11 @@
         "p24": "승인 여부가 어떻게 결정되었는지 살펴보았으니, 이제 <b>채택 확률</b> 또는 <b>예산 지분</b>이 어떻게 계산되며, 1개의 선택지를 고르는 투표의 경우 어떻게 선택지가 선택되는지를 알아보겠습니다. 단 한 가지의 선택지가 100% 승인을 받는다면, 확실히 채택됩니다 (또는 모든 지분을 가집니다). 여러 개의 선택지가 각각 100% 승인을 받았다면, 그중 평균 승인율이 가장 높은 선택지가 무조건 채택됩니다 (또는 모든 지분을 가집니다). <br/>100% 승인을 가진 선택지가 없다면, <i>vodle</i>이 2개 이상의 선택지들에 대한 채택 확률 또는 지분율을 분배합니다. 이 경우, 승인이 가장 많은 선택지가 더 높은 확률로 채택되거나 가장 큰 지분을 가집니다. 하지만 다른 선택지들도 작은 확률로 채택되거나, 지분의 일부분을 배정 받습니다. <br/>이는 한 가지의 선택지를 고르는 투표의 경우 선택지를 채택하는 결정에 있어서 확률적인 요소가 있다는 뜻입니다. 이는 다수결 투표처럼 소수의 참가자가 다른 참가자들에게 그저 간단히 무시되는 현상을 막기 위해서입니다. 이렇게 함으로써, <i>vodle</i>은 모든 참가자에게 정확하게 같은 수준의 영향력을 배분하며 모든 집단에 그들의 크기에 어울리는 영향력을 나눠줍니다.",
         "p25": "투표가 하나의 선택지를 고르는 형식이며, 어떠한 선택지도 100%의 승인을 가지지 않을 경우, 매우 간단한 과정으로 선택지를 채택합니다. 한 명의 참가자가 무작위로 선택됩니다. 이때 모든 참가자는 선택된 확률이 같습니다. 이 참가자가 승인하는 선택지 중, 가장 전체적인 승인이 높은 선택지가 채택됩니다. (무승부의 경우 평균 승인율을 사용하여 결정합니다) 각 선택지 좌측의 파이 조각이 그 선택지의 채택 확률을 보여줍니다.",
         "p26": "어떠한 예산을 분배하는 투표의 경우, 각 선택지의 지분은 같은 방식으로 계산됩니다: 각 선택지의 지분은 이 선택지를 승인하지만, 이보다 더 높은 전체적인 승인을 가진 선택지를 승인하지 않는 참가자의 수에 비례합니다.",
-        "p27": "채택하는 방법, 또는 지분을 분배하는 법에 대해 알아보았습니다. <b><i>하지만 실제로 승인율을 설정하는 것은 어떻게 해야 할까요?</i></b> 대체로 다음과 같은 방법이 좋은 합의점을 찾는데 상당히 효과적입니다: <b>가장 마음에 드는 선택지에 100의 승인율을 주십시오. 평균보다는 나아 보이는 선택지들에도 양수의 승인율을 상대적인 선호도에 따라 배정해 주십시오. 마지막으로, 평균보다 나빠 보이는 선택지는 승인율을 0으로 설정하십시오.</b>"
+        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
-        "-page-title": "Imprint"
+        "-page-title": "Legal / Imprint"
     },
     "inviteto": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Invite Poll Participants page:",
