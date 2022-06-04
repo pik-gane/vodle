@@ -337,7 +337,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- TODO!! -->
 
-    <ng-container *ngIf="p.has_results && !!p.winner">
+    <!-- winner exists: -->
+    <ng-container *ngIf="p.has_results && p.type=='winner'">
       <ion-item color="light">
         <p [innerHtml]="'poll.results'|translate">
         </p>
@@ -346,6 +347,48 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <h3>
           <b [innerHtml]="'poll.winner-is'|translate:{winner:p.options[p.winner].name}"></b>
         </h3>
+      </ion-item>
+      <ion-item color="warning">
+        <p>
+          <b [innerHtml]="'poll.reason'|translate"></b>&nbsp;
+          <span 
+            *ngIf="p.T.n_not_abstaining == 0" 
+            [innerHtml]="'poll.reason-all-abstained'|translate:{}"></span>
+          <span 
+            *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) < p.T.n_not_abstaining" 
+            [innerHtml]="'poll.reason-full-consensus-unique'|translate:{}"></span>
+          <span 
+            *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) == p.T.n_not_abstaining" 
+            [innerHtml]="'poll.reason-full-consensus-highest'|translate:{}"></span>
+          <span 
+            *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner == oidsorted[0]" 
+            [innerHtml]="'poll.reason-largest-approval'|translate:{
+              approval:Math.round(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*1000)/10,
+              disapproval:100-Math.round(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*1000)/10}"></span>
+          <span 
+            *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner != oidsorted[0]" 
+            [innerHtml]="'poll.reason-smaller-approval'|translate:{
+              share:Math.round(p.T.shares_map.get(p.winner)*1000)/10}"></span>
+        </p>
+      </ion-item>
+    </ng-container>
+
+    <!-- shares exist: -->
+    <ng-container *ngIf="p.has_results && p.type=='share'">
+      <ion-item color="light">
+        <p [innerHtml]="'poll.results'|translate">
+        </p>
+      </ion-item>
+      <ion-item color="danger">
+        <ion-text>
+          <ng-container *ngFor="let item of [].constructor(oidsorted.length); let i = index">
+            <ng-container *ngIf="p.T.shares_map.get(oidsorted[i]) > 0">
+                <h3><b>
+                  <span [innerHtml]="'poll.of-the-budget-go-to'|translate:{share:Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10, option:p.options[oidsorted[i]].name}"></span>
+                </b></h3> 
+            </ng-container>
+          </ng-container>
+        </ion-text>   
       </ion-item>
     </ng-container>
 

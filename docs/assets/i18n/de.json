@@ -578,6 +578,15 @@
 
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
 
+        "results": "Ergebnis:",
+        "winner-is": "Es gewinnt <i>{{winner}}</i>",
+        "reason": "Why?",
+        "reason-all-abstained": "All participants abstained. So vodle had to draw a lot. This option won.",
+        "reason-full-consensus-unique": "This is the only option that all non-abstaining participants have approved. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-full-consensus-highest": "Among those options that all non-abstaining participants have approved, this one had the highest average wap. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-largest-approval": "This option has been approved by the largest number of non-abstaining participants, {{approval}}%. Still, {{disapproval}}% of the non-abstaining participants have not approved it. Therefore, vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{approval}}% of the lots were on this option. The lot that was drawn was one of those, so this option won.",
+        "reason-smaller-approval": "There is no option that all non-abstaining participants have approved. So vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{share}}% of the lots were on this option. This is because {{share}}% of the non-abstaining participants have approved this option but have not approved any option that was higher in the ranking. So their share of the winning probability went to this option. The lot that was drawn was one of those lots, so this option won.",
+        "of-the-budget-go-to": "{{share}}% des Budgets gehen an <i>{{option}}</i>",
         "final-ratings": "Dies waren Deine Waps am Ende:",
 
         "also-for-other": "Manche oder alle der Waps weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",

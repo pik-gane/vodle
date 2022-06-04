@@ -180,7 +180,7 @@ export class Poll {
   _state: string;  // cache for state since it is asked very often
   syncing: boolean = false;
   allow_voting: boolean = false;
-  has_results: boolean = true;
+  has_results: boolean = false;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
