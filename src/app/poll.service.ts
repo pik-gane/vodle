@@ -208,7 +208,7 @@ export class Poll {
       if (this.type == 'share' || !!this.winner) {
         this.has_results = true;
       } else {
-        // this.end();
+        this.end();
       }
     }
 
@@ -1691,8 +1691,10 @@ export class Poll {
     const now = new Date(), 
           due = this.due, 
           past_due = !!due && now > due;
-    if (past_due && this._state == 'running') {
-      this.end();
+    if (past_due) {
+      if (this._state == "running" || (this.type == "winner" && this.winner == "")) {
+        this.end();
+      }
       return true;
     } else {
       return false;
@@ -1764,21 +1766,19 @@ export class Poll {
   }
 
   notify_of_end() {
-    if (this._state == "closed") {
-      this.has_results = true;
-      LocalNotifications.schedule({
-        notifications: [{
-          title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
-          body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
-          id: null
-        }]
-      })
-      .then(res => {
-        this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
-      }).catch(err => {
-        this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
-      });
-    }
+    this.has_results = true;
+    LocalNotifications.schedule({
+      notifications: [{
+        title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
+        body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
+        id: null
+      }]
+    })
+    .then(res => {
+      this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
+    }).catch(err => {
+      this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
+    });
   }
 
   make_final_rand(base: string) {
