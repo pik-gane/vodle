@@ -248,18 +248,20 @@ export class Poll {
   notify_closing_soon() {
     this.G.L.entry("Poll.notify_closing_soon", this._pid);
     const dummy = this.is_closing_soon;
-    LocalNotifications.schedule({
-      notifications: [{
-        title: this.G.translate.instant('notifications.closing-soon-title', {title:this.title}),
-        body: this.G.translate.instant('notifications.closing-soon-body', {title:this.title, due:this.due_string}),
-        id: null
-      }]
-    })
-    .then(res => {
-      this.G.L.trace("Poll.notify_closing_soon localNotifications.schedule succeeded:", res);
-    }).catch(err => {
-      this.G.L.warn("Poll.notify_closing_soon localNotifications.schedule failed:", err);
-    });
+    if (this.G.S.get_notify_of("poll_closing_soon")) {
+      LocalNotifications.schedule({
+        notifications: [{
+          title: this.G.translate.instant('notifications.closing-soon-title', {title:this.title}),
+          body: this.G.translate.instant('notifications.closing-soon-body', {title:this.title, due:this.due_string}),
+          id: null
+        }]
+      })
+      .then(res => {
+        this.G.L.trace("Poll.notify_closing_soon localNotifications.schedule succeeded:", res);
+      }).catch(err => {
+        this.G.L.warn("Poll.notify_closing_soon localNotifications.schedule failed:", err);
+      });
+    }
   }
 
   delete() {
@@ -1767,18 +1769,20 @@ export class Poll {
 
   notify_of_end() {
     this.has_results = true;
-    LocalNotifications.schedule({
-      notifications: [{
-        title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
-        body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
-        id: null
-      }]
-    })
-    .then(res => {
-      this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
-    }).catch(err => {
-      this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
-    });
+    if (this.G.S.get_notify_of("poll_closed")) {
+      LocalNotifications.schedule({
+        notifications: [{
+          title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
+          body: this.G.translate.instant('notifications.was-closed-body', {title:this.title, due:this.due_string}),
+          id: null
+        }]
+      })
+      .then(res => {
+        this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
+      }).catch(err => {
+        this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
+      });  
+    }
   }
 
   make_final_rand(base: string) {
