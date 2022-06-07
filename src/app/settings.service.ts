@@ -32,6 +32,7 @@ export class SettingsService {
     'delegation_accepted',
     'delegation_declined',
     'new_option',
+    'poll_closing_soon',
     'poll_closed'
   ];
 
