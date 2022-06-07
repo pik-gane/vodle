@@ -29,7 +29,7 @@ export const environment = {
     ]  
   },
   data_service: {
-    central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",
+    central_db_server_url: "https://92.205.108.148/couch",
     central_db_password: "none",
     hash_n_bytes: 32,
     pid_length: 8,
