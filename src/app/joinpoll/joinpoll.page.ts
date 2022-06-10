@@ -94,6 +94,8 @@ export class JoinpollPage implements OnInit {
     } else {
       this.G.L.info("JoinpollPage called for unknown pid, trying to connect", this.pid);
       this.p = new Poll(this.G, this.pid);
+      this.p._state = "running";
+      this.p.allow_voting = true;
       this.p.db_server_url = this.db_server_url;
       this.p.db_password = this.db_password;
       this.p.password = this.poll_password;

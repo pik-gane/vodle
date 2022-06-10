@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 export const environment = {
   production: true,
-  privacy_statement_url: "https://sandstorm.pik-potsdam.de/assets/datenschutz.html",
+  privacy_statement_url: "https://mensch72.github.io/assets/datenschutz.html",
   logging: {
     logLevels: [
       {

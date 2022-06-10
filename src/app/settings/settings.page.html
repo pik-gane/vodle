@@ -211,6 +211,9 @@ TODO:
     <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_declined'|translate"></ion-label>
   </ion-item>
   <ion-item>
+    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closing_soon" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closing_soon'|translate"></ion-label>
+  </ion-item>
+  <ion-item>
     <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closed'|translate"></ion-label>
   </ion-item>
   <!--and:

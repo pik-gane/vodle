@@ -72,7 +72,7 @@
         "p12": "For each option, it shows you the current approval as a light bar on the right, and allows you to adjust your waps in real-time using sliders. When your slider touches the approval bar, it turns green to indicate that you approve that option as well. This way, the group tends to converge to a full or partial consensus that is as broad as possible.",
         "p13": "When the poll ends, the winning option is determined by a fair but simple algorithm that gives every participant the same influence, not just those participants who happen to be in a majority.",
         "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option wins. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, vodle must sometimes also use a certain amount of chance, similar to a greencard lottery.",
-        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
+        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has ended, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
         "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other optionsʼ winning probabilities are at most as large as their approval scores (in percent of all participants who do not abstain).",
         "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several options), the procedure is similar: If one option is approved by all, you have full consensus, so this option will get the full budget. Otherwise vodle allocates the largest share of the budget to the option with the broadest approval, and smaller shares to the other options.",
         "p18": "Exact procedure: Options are sorted by descending approval. Then each optionʼs share is proportional to the number of participants who have approved this option but no higher-up option.",
@@ -152,7 +152,7 @@
         "copy-link": "Copy link",
         "notification-copied-link-title": "Delegation link copied to clipboard.",
         "notification-copied-link-body": "Please send it now to your delegate, {{nickname}}!",
-        "message-subject": "Request to act as delegate in poll (closing {{due}})",
+        "message-subject": "Request to act as delegate in poll (ending {{due}})",
         "message-body-greeting": "Dear fellow poll participant,",
         "message-body-before-title": "Iʼd like to ask you to act as my delegate in the vodle poll titled",
         "message-body-closes": "(This poll ends on {{due}}.)",
@@ -201,7 +201,7 @@
         "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle or a too large voting weight.",
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
-        "closed": "Unfortunately, this poll is already closed.",
+        "closed": "Unfortunately, this poll has already ended.",
         "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!"
     },
     "draftpoll": {
@@ -373,11 +373,11 @@
         "p24": "Now that we have understood how approval is calculated, we can turn to the question of how the <b>winning probabilities</b> or <b>budget shares</b>  are found and how the actual winner is determined if the poll is about picking a single option. If exactly one option has 100% approval, it will win for sure (or get all of the budget). If several options each have 100% approval, the one among them that has the largest average wap will win for sure (or get all of the budget). <br/>If no option has 100% approval, <i>vodle</i> distributes the winning probability or budget among two or more options. In that case, the option with the largest approval will win most likely or get the largest share. But other options that have at least some approval may then win as well with some smaller probability, or also get some smaller share of the budget. <br/>For polls selecting a single option this means that then there is a certain chance element involved to determine the actual winner. This is because we must make sure that no group of participants can simply be ignored by the other participants as it is the case with majority rule. This way, <i>vodle</i> gives every participant the exact same influence and gives every faction an influence that matches its size.",
         "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One participant is determined by lot, everyone having the same chance of being that participant. Among the options that this participant approves, the one with the largest overall approval is the winner. (In case of a tie, the average wap is used to break the tie.) The pie piece to the left of each option shows the resulting probability that this option wins.",
         "p26": "If the poll is about allocating a budget, the size of each optionʼs shares is calculated the same way: the share is proportional to the number of participants that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
-        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practise?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
+        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
-        "-page-title": "Imprint"
+        "-page-title": "Legal / Imprint"
     },
     "inviteto": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Invite Poll Participants page:",
@@ -395,7 +395,7 @@
     },
     "invite-email": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in the Invitation email:",
-        "subject": "Invitation to poll (closing {{due}})",
+        "subject": "Invitation to poll (ending {{due}})",
         "body-greeting": "Dear participant,",
         "body-before-title": "Iʼm inviting you to take part in a new interactive poll titled",
         "body-closes": "The poll ends on {{due}}.",
@@ -455,9 +455,12 @@
         "running": "Running polls",
         "no-running-polls-1": "Currently, vodle knows of no running polls that you can vote in.",
         "no-running-polls-2": "If you have received an invitation to a poll, please click the link in the invitation!",
-        "recently-closed": "Closed",
-        "no-recently-closed-polls-1": "Vodle knows of no closed polls that you have voted in.",
-        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.",
+
+        "recently-closed": "Ended",
+
+        "no-recently-closed-polls-1": "Vodle knows of no ended polls that you have voted in.",
+        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already ended, you can click the link in the invitation and see the poll results.",
+
         "older": "Older",
         "drafts": "Drafts",
         "no-draft-polls-1": "Currently, you have no polls drafted.",
@@ -486,7 +489,8 @@
         "delegation_accepted": "A delegation request was accepted",
         "delegation_declined": "A delegation request was declined",
         "new_option": "An option was added to a poll",
-        "poll_closed": "A poll closed"
+        "poll_closing_soon": "A poll is ending soon",
+        "poll_closed": "A poll ended"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -519,6 +523,13 @@
         "hint-mostapproved-1": "You are not approving the top-most option.",
         "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
+        "reason": "Why?",
+        "reason-all-abstained": "All participants abstained. So vodle had to draw a lot. This option won.",
+        "reason-full-consensus-unique": "This is the only option that all non-abstaining participants have approved. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-full-consensus-highest": "Among those options that all non-abstaining participants have approved, this one had the highest average wap. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-largest-approval": "This option has been approved by the largest number of non-abstaining participants, {{approval}}%. Still, {{disapproval}}% of the non-abstaining participants have not approved it. Therefore, vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{approval}}% of the lots were on this option. The lot that was drawn was one of those, so this option won.",
+        "reason-smaller-approval": "There is no option that all non-abstaining participants have approved. So vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{share}}% of the lots were on this option. This is because {{share}}% of the non-abstaining participants have approved this option but have not approved any option that was higher in the ranking. So their share of the winning probability went to this option. The lot that was drawn was one of those lots, so this option won.",
+        "of-the-budget-go-to": "{{share}}% of the budget go to <i>{{option}}</i>",
         "final-ratings": "Details & final waps",
         "also-for-other": "Some or all of the waps below are also used for one other participant, who has delegated to you.",
         "also-for-others": "Some or all of the waps below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",
@@ -552,7 +563,7 @@
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
         "-page-title": "Please check",
         "caution1": "After the poll has started, you cannot change any of the above. However, you and the other participants can always add further options.",
-        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically be closed. Once started, you can neither shorten nor extend the this deadline.",
+        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically end. Once started, you can neither shorten nor extend the this deadline.",
         "closes": "Ends",
         "db-label": "Data storage",
         "publish": "Start the poll now",

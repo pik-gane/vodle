@@ -7,35 +7,37 @@
 
     "title": "Icecream flavour (Test poll)",
 
-    "desc": "What flavour should we buy for tonight's party? (You and four simulated voters)",
+    "desc": "What flavour should we buy for tonight's party? (You and four simulated voters. This poll corresponds to the situation in the scientific article by Heitzig and Simmons, SSRN, 2021, Figure 2. The codes in brackets behind the option names below are those used in that article)",
+
+    "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225",
     
     "due_type": "10min",
 
     "options": [
         {
-            "name": "Vanilla",
-            "desc": "This will get universal approval if you rate it at more than zero or if you abstain",
-            "ratings": [19,38,57,76]
-        },
-        {
-            "name": "Chocolate",
-            "desc": "This will get 80% approval if you rate it at 21 or higher",
-            "ratings": [74,48,22,0]
-        },
-        {
-            "name": "Strawberry",
+            "name": "Strawberry (X1)",
             "desc": "This is the favourite of two simulated voters",
             "ratings": [100,100,0,0]
         },
         {
-            "name": "Lemon",
+            "name": "Lemon (X2)",
             "desc": "This is the favourite of one simulated voter",
             "ratings": [0,0,100,0]
         },
         {
-            "name": "Mango",
+            "name": "Mango (X3)",
             "desc": "This is the favourite of one simulated voter",
             "ratings": [0,0,0,100]
+        },
+        {
+            "name": "Vanilla (A)",
+            "desc": "This is a potential full consensus for all five voters. It will get universal approval if you rate it at more than zero or if you abstain",
+            "ratings": [19,38,57,76]
+        },
+        {
+            "name": "Chocolate (B)",
+            "desc": "This is a potential partial consensus for the supporters of X1 and X2. It will get 80% approval if you rate it at 21 or higher",
+            "ratings": [74,48,22,0]
         }
     ]
 

@@ -63,6 +63,7 @@ export class SettingsPage implements OnInit {
     delegation_accepted?: boolean,
     delegation_declined?: boolean,
     new_option?: boolean,
+    poll_closing_soon?:boolean,
     poll_closed?: boolean
   };
 
