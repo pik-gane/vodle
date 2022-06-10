@@ -972,7 +972,11 @@ export class DataService implements OnDestroy {
 
   wait_for_poll_db(pid: string): Promise<any> {
     // TODO: is there a better way for doing this?
-    return this.local_poll_dbs[pid].info();
+    if (pid in this.local_poll_dbs) {
+      return this.local_poll_dbs[pid].info();
+    } else {
+      return new Promise<any>((resolve, reject) => {resolve(true)});
+    }
   }
 
   change_poll_state(p: Poll, new_state: string) {

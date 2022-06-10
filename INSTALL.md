@@ -51,7 +51,7 @@ This page describes how [contributors](./CONTRIBUTING.md) who want to test code 
   ```
 - Then create an instance of the image, and check that it is running:
   ```
-  $ sudo docker run --name vodle-dev-couchdb -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 --expose 5984 -m 1G -d couchdb
+  $ sudo docker run --restart unless-stopped --name vodle-dev-couchdb -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 --expose 5984 -m 1G -d couchdb
   $ sudo docker ps -a
   ```
   which should say something like
