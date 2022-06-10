@@ -2,25 +2,22 @@
     "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
     "_HEADER_": [
         "[COMMENT] (C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.",
-        "[COMMENT] This file is part of vodle.",  
-        "[COMMENT] vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",    
-        "[COMMENT] vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",   
+        "[COMMENT] This file is part of vodle.",
+        "[COMMENT] vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
+        "[COMMENT] vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",
         "[COMMENT] You should have received a copy of the GNU Affero General Public License along with vodle. If not, see <https://www.gnu.org/licenses/>."
     ],
-    
     "_WELCOME_TO_TRANSLATORS_": [
         "[COMMENT] Thank you for helping translate vodle!",
         "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
         "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
     ],
-
     "_OVERALL_CONVENTIONS_": [
         "[COMMENT] Please use gender-neutral language.",
         "[COMMENT] Please use correct hyphens -, dashes –, minus signs −, apostrophes ʼ and the right quotation marks for your language instead of foot symbols ' and inch symbols",
         "[COMMENT] Please use the correct whitespacing with exclamation marks and question marks for your language."
     ],
-
     "_CONVENTIONS_FOR_THIS_LANGUAGE_": [
         "[COMMENT EN] We use British English: favourite, colour, centre, etc.",
         "[COMMENT EN] We use gender-neutral or female pronouns (they, she) and avoid 'he'.",
@@ -28,7 +25,6 @@
         "[COMMENT EN] We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
         "[COMMENT EN] We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
-
     "add": "Add",
     "add-option": "Add option",
     "add-target": "Add option",
@@ -68,44 +64,34 @@
     "test": "Test",
     "wap": "Wap",
     "yes": "Yes",
-
     "about": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the About page:",
-
         "-page-title": "About vodle",
-
         "h1": "What is vodle?",
         "p11": "vodle helps a group make fair and good decisions. It finds the <i>maximum partial consensus</i> among any set of options. Truly democratic, it gives everyone the same effective influence.",
         "p12": "For each option, it shows you the current approval as a light bar on the right, and allows you to adjust your waps in real-time using sliders. When your slider touches the approval bar, it turns green to indicate that you approve that option as well. This way, the group tends to converge to a full or partial consensus that is as broad as possible.",
         "p13": "When the poll ends, the winning option is determined by a fair but simple algorithm that gives every participant the same influence, not just those participants who happen to be in a majority.",
         "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option wins. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, vodle must sometimes also use a certain amount of chance, similar to a greencard lottery.",
-        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has closed, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
+        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has ended, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
         "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other optionsʼ winning probabilities are at most as large as their approval scores (in percent of all participants who do not abstain).",
         "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several options), the procedure is similar: If one option is approved by all, you have full consensus, so this option will get the full budget. Otherwise vodle allocates the largest share of the budget to the option with the broadest approval, and smaller shares to the other options.",
         "p18": "Exact procedure: Options are sorted by descending approval. Then each optionʼs share is proportional to the number of participants who have approved this option but no higher-up option.",
-
         "h2": "Whoʼs behind it?",
         "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
-
         "h3": "Support vodle!",
         "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
     },
-
     "addoption": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Add Option dialog:",
-
         "header": "Add another option",
         "intro": "Please make sure the new option is not already covered by the existing options.",
         "different-language": "This poll is in a different language ({{language}}). If possible, please try using that language in your texts below, or use some other language the poll participants understand.",
         "info": "Once added, the option cannot be edited or removed again.",
         "notification-added-title": "Option added"
     },
-
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",
-
         "-page-title": "Let's set your waps",
-
         "-step-1-title": "Favourite option",
         "favourite-intro-1": "The following questions are only to get you started and set your initial waps. You can always change them later.",
         "favourite-warn-change": "You have already set some waps. If you proceed here, this may change them.",
@@ -114,7 +100,6 @@
         "favourite-explanation-1": "We are giving the option <i>“{{favourite}}”</i> a wap of <b>100</b>.",
         "favourite-explanation-2": "This means that you <i>definitely approve</i> the option, no matter what the waps of the other participants are.",
         "favourite-explanation-3": "It may however be that <i>“{{favourite}}”</i> will not get enough approval in the end to win. Even if a majority approves this option, it is not certain that it wins. Therefore it is important to also think about possible compromise options next.",
-
         "-step-2-title": "Acceptable options",
         "acceptable-intro": "Which options do you find acceptable as well?<br/>You can select as many as you want (or none).",
         "acceptable-explanation-1": "We are giving the options that you <b>didn't mark as acceptable</b> a wap of <b>0</b>.",
@@ -122,17 +107,14 @@
         "acceptable-explanation-3": "Those options you marked as <b>acceptable</b> we'll give a wap <b>between 1 and 99</b>.",
         "acceptable-explanation-4": "This means that you <i>potentially approve</i> these options, depending on what the waps of the other participants are.",
         "acceptable-explanation-5": "To help us set these waps more specifically, you should now consider how many <i>other</i> participants would potentially approve these options as well.",
-
         "-step-3-title": "Estimated approval by others",
         "estimates-intro": "Please estimate for each option which percentage of participants would potentially approve it.<br/>If you are unsure, better give a slightly lower estimate.",
         "estimates-explanation-1": "We'll now go through all acceptable options. For each of them, please decide how much approval by other participants is needed before <b>you yourself</> would approve the option.",
         "estimates-explanation-2": "This might be the same percentage that you estimated just now. But you could also say that you would approve an option only if even more participants approve than you estimated..",
-
         "-step-4-title": "From when on would you approve?",
         "thresholds-intro": "For the option <b><i>“{{option}}”</i></b> you have estimated that <b>{{estimate}}%</b> of the participants would potentially approve it.",
         "thresholds-question-1": "If indeed {{estimate}}% approve the option, would you yourself then approve the option as well?",
         "thresholds-question-2": "Then how many participants would need to approve this option before you would approve it, too?",
-
         "-step-5-title": "Summary",
         "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
         "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
@@ -141,10 +123,8 @@
         "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
         "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },
-
     "badges": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as badge labels:",
-
         "abstaining": "Abstaining",
         "can-accept": "Can accept",
         "closing-soon": "Ending soon",
@@ -153,32 +133,26 @@
         "new": "New",
         "please-check": "Please check"
     },
-
     "data": {
         "notifications-permission-header": "May vodle show you notifications?",
         "notifications-permission-intro": "If you allow this, vodle can remind you of upcoming poll deadlines, delegation requests and other important events. You can control which notifications you want to receive on vodleʼs settings page."
     },
-
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
-
         "header": "Delegate to some other participant",
         "intro": "You can ask some other participant to act as your delegate. The delegate will then control your waps instead of you. In other words, their waps will be used as your waps, too. The delegate can also delegate their and your waps further to some third participant, and so on. You can revoke the delegation at any time, and can also always choose to still adjust some of the waps yourself.",
         "nickname-label": "Delegateʼs nickname:",
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
         "from-placeholder": "Enter your own e-mail address, name or nickname",
-
         "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
-
         "share": "Use a messenger app",
         "compose-email": "Compose an e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Delegation link copied to clipboard.",
         "notification-copied-link-body": "Please send it now to your delegate, {{nickname}}!",
-
-        "message-subject": "Request to act as delegate in poll (closing {{due}})",
+        "message-subject": "Request to act as delegate in poll (ending {{due}})",
         "message-body-greeting": "Dear fellow poll participant,",
         "message-body-before-title": "Iʼd like to ask you to act as my delegate in the vodle poll titled",
         "message-body-closes": "(This poll ends on {{due}}.)",
@@ -187,10 +161,8 @@
         "message-body-dont-share": "Please do not share this link with anyone else.",
         "message-body-regards": "Best regards"
     },
-
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
-
         "-page-title": "Delete my data",
         "confirm-header": "Really delete your data?",
         "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private vodle data from the remote data server that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll data servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
@@ -199,54 +171,42 @@
         "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
         "failed": "Could not delete all data for some reason."
     },
-
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
-
         "-page-title": "Act as delegate?",
-
         "header": "Would you act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
         "intro": "Your waps will then also control the other participantʼs waps.",
         "details": "If you accept, you can still choose whether you want to set your waps yourself or delegate your (and the other participantʼs) waps further to some third person.",
         "check-first": "You can also check your waps first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline",
-
         "cycle-header": "{{from}} asks you to act as their delegate in the poll <i>“{{poll_title}}”.</i>",
         "two-way-intro": "But you have already delegated your own waps for the same poll to that very person, {{from}}. As long as this is the case, you cannot accept this request.",
         "cycle-intro": "However, your own delegate for this poll has directly or indirectly delegated your waps further to {{from}}. As long as this is the case, you cannot accept this request.",
         "cycle-details": "Otherwise, this would create a delegation cycle and vodle would not know whose waps to use.",
         "cycle-revoke-first": "If you would still like to accept the request, please consider revoking your own delegation first and then return here.",
-
         "weight-exceeded-header": "{{from}} asks you to act as their delegate in the poll <i>“{{poll_title}}”.</i>",
         "weight-exceeded-intro": "However, this would give you or your own delegate a voting weight that is larger than the limit of {{limit}}. As long as this is the case, you cannot accept this request.",
         "weight-exceeded-details": "Otherwise, you or your own delegate would get too powerful in this poll.",
         "weight-exceeded-revoke-first": "If you would still like to accept the request, please consider declining other requests that you have accepted or revoking your own delegation first and then return here.",
-
         "accepted-header": "You have accepted this request from {{from}}.",
         "accepted-intro": "So your waps are currently controlling that personʼs waps in the poll <i>“{{poll_title}}”.</i>",
         "accepted-details": "If you want to revoke your acceptance, you can do this. As long as the other person has not withdrawn her request, you can also later accept it again.",
         "keep": "Keep",
         "revoke": "Revoke",
-
         "declined-header": "You have declined this request from {{from}}.",
         "declined-intro": "So your waps are currently <i>not</i> controlling that personʼs waps in the poll <i>“{{poll_title}}”.</i>",
         "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
         "no-change": "Donʼt change",
-
         "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle or a too large voting weight.",
-
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
-        "closed": "Unfortunately, this poll is already closed.",
+        "closed": "Unfortunately, this poll has already ended.",
         "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!"
     },
-
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
-
         "-page-title": "Edit draft poll",
-
         "del-poll-confirm-question": "Delete this poll draft?<br/>(This cannot be undone!)",
         "general-information": "General information",
         "type-label": "In this poll, the group will...",
@@ -258,7 +218,6 @@
         "desc-placeholder": "Some more information about this poll (optional)",
         "url-label": "“Read more” link",
         "url-placeholder": "Some webpage with more details when participant clicks “read more” (optional)",
-
         "due-type-label": "Poll will end...",
         "due-type-custom": "at a custom date and time",
         "due-type-10min": "after 10 minutes",
@@ -273,11 +232,9 @@
         "due-type-two-weeks": "after two weeks",
         "due-type-four-weeks": "after four weeks",
         "due-datetime-label": "Ending date and time",
-
         "advanced-settings": "Advanced settings",
         "db-label": "Where shall vodle store the pollʼs encrypted data?",
         "language": "Language of poll texts",
-
         "option-name-label": "Option name",
         "target-name-label": "Option name",
         "option-name-placeholder": "A short name for this option",
@@ -289,151 +246,111 @@
         "option-url-placeholder": "A link to some webpage containing more details about “{{name}}”",
         "del-option-confirm-question": "Delete option<br/><b><i>{{name}}</i></b>?",
         "del-target-confirm-question": "Delete option<br/><b><i>{{name}}</i></b>?",
-
         "please-list-options-explanation": "Please list at least two options. Donʼt bother about their ordering. Further options can always be added later by the participants as long as the poll is running.",
         "please-list-targets-explanation": "Please list at least two possible options. Donʼt bother about their ordering. Further options can always be added later by the participants as long as the poll is running.",
         "draft-saved": "Draft saved under<br/>“My polls”",
-
         "send-for-review": "Send for review",
         "import-options-from-file": "Import options from file",
         "import-options-header": "Import options from file",
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-
         "notification-saved-title": "Draft saved under “My polls”."
     },
-
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
-
         "confirm": "This link to the external web page<br/><br/><b>{{url}}</b><br/><br/>was provided by a vodle user and was not examined by vodle.<br/><br/>Do you want to open it despite the potential risks involved?",
         "copy-link": "Copy link",
         "yes": "Yes, open it",
         "notification-copied-link-title": "External link copied to clipboard.",
         "notification-copied-link-body": ""
     },
-
     "explain": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Explain... page. These are chopped into small pieces reflecting line-breaks in the SVG layout of the page:",
-
         "title-approval": "Approval for",
-
         "all-ratings": "all waps for this option",
         "large-to-small": "sorted from large to small",
-
         "opposition": "opposition",
         "vertical-approval-label": "approval",
         "horizontal-approval-label": "approval",
-
         "your-rating-line-1": "your",
         "your-rating-line-2": "wap",
         "largest-line-1": "your largest wap is interpreted as 100",
         "largest-line-2": "to make sure you approve at least one option",
-
         "threshold-smaller-line-1": "smaller",
         "threshold-smaller-line-2": "waps",
         "threshold-smaller-line-3": "donʼt",
         "threshold-smaller-line-4": "approve",
-
         "threshold-larger-line-1": "larger",
         "threshold-larger-line-2": "waps",
         "threshold-larger-line-3": "do",
         "threshold-larger-line-4": "approve",
-
         "title-share": "Share for",
-
-        "all-abstain-line-1":                   "Since all participants abstain,",
+        "all-abstain-line-1": "Since all participants abstain,",
         "all-abstain-line-2-before-percentage": "all options get the same share of ",
-        "all-abstain-line-2-after-percentage":  "",
-
+        "all-abstain-line-2-after-percentage": "",
         "share-intro-line-1": "Everyoneʼs share goes to the",
         "share-intro-line-2": "highest-ranked option they approve.",
-
         "zero-line-1": "No-one approves this option,",
         "zero-line-2": "so it gets no share.",
-
         "no-one-line-1": "Of the {{percentage}}% who approve this option",
         "no-one-line-2": "no-one also approves a higher-ranked option.",
-
         "all-line-1": "Of the {{percentage}}% who approve this option",
         "all-line-2": "everyone also approves a higher-ranked option.",
-
         "some-line-1": "Of the {{percentage}}% who approve this option",
         "some-line-2": "some also approve a higher-ranked option.",
-
         "only-higher-line-1-before-optionname": "{{percentage}}% approve ",
         "only-higher-line-1-after-optionname": ",",
         "only-higher-line-2": "so their share goes to that option.",
-
         "only-higher-incl-you-line-1-before-optionname": "{{percentage}}% (including you) approve ",
         "only-higher-incl-you-line-1-after-optionname": ",",
         "only-higher-incl-you-line-2": "so their share goes to that option.",
-
         "among-them-line-1-before-optionname": "{{percentage}}% approve ",
         "among-them-line-1-after-optionname": ",",
         "among-them-line-2": "so their share goes to that option.",
-
         "among-them-incl-you-line-1-before-optionname": "{{percentage}}% (including you) approve ",
         "among-them-incl-you-line-1-after-optionname": ",",
         "among-them-incl-you-line-2": "so their share goes to that option.",
-
         "another-line-1-before-optionname": "Another {{percentage}}% approve ",
         "another-line-1-after-optionname": "",
         "another-line-2": "but nothing higher up.",
-
         "another-incl-you-line-1-before-optionname": "Another {{percentage}}% (including you) approve ",
         "another-incl-you-line-1-after-optionname": "",
         "another-incl-you-line-2": "but nothing higher up.",
-
         "whole-share-line-1-before-percentage": "So the whole share of ",
         "whole-share-line-1-after-percentage": "",
         "whole-share-line-2-before-optionname": "goes to ",
         "whole-share-line-2-after-optionname": ".",
-
         "whole-share-incl-you-line-1-before-percentage": "So the whole share of ",
         "whole-share-incl-you-line-1-after-percentage": " (including yours)",
         "whole-share-incl-you-line-2-before-optionname": "goes to ",
         "whole-share-incl-you-line-2-after-optionname": ".",
-
         "remaining-line-1-before-percentage": "The share of the remaining ",
         "remaining-line-1-after-percentage": "",
         "remaining-line-2-before-optionname": "goes to ",
         "remaining-line-2-after-optionname": ".",
-
         "remaining-incl-you-line-1-before-percentage": "The share of the remaining ",
         "remaining-incl-you-line-1-after-percentage": "",
         "remaining-incl-you-line-2-before-optionname": "(including yours) goes to ",
         "remaining-incl-you-line-2-after-optionname": ".",
-
         "nothing-left-line-1-before-percentage": "So there remain ",
         "nothing-left-line-1-after-percentage": "",
         "nothing-left-line-2-before-optionname": "for ",
         "nothing-left-line-2-after-optionname": "."
     },
-
     "glossary": {
-
         "_COMMENT_": "[COMMENT] These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
-
         "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the colourful <b>sliders</b>.<!-- You can let vodle help you in this by clicking on “Assist me”.--></p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>In the beginning, all your waps are zero and the sliders are red knobs. A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option. The slider is green then.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.",
-
         "non-abstaining": "This is the number of participants who have given <b>at least one option a positive wap</b>. Participants who give all options a zero wap are abstaining and excert no influence on the result.",
-
         "approve": "<p><b>The light bar coming in from the right shows how many participants currently approve an option.</b> If you want to know how this comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p><p>So, whether you approve an option or not depends not only on your own wap but may also depend on all other participantsʼ waps. If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p>",
-
         "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>",
-
         "level-of-agreement": "<p>The level of <b>agreement</b> shows you how close to full consensus you are. 100% means the whole share goes to a single option and that option is approved by all.</p><p>Otherwise, the agreement level equals the percentage of participants who approve the winning options, averaged over all options that get a positive share, and taking the size of those shares into account.</p><p>More precisely, vodle computes the level of agreement as follows: it multiplies each optionʼs approval score with that optionʼs share divided by 100, and then sums all these numbers up.</p>"
     },
-
     "help": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Help page:",
-
         "-page-title": "Help",
-
         "h1": "How to vote – short version",
-        "p11a": "Select a poll from", 
+        "p11a": "Select a poll from",
         "p11b": "My polls",
         "p11c": "or click on a poll link that was sent to you.",
         "p12a": "Give each option a <b>wap</b> by using the sliders. <i>Vodle</i> interprets your wap of an option as your “<b>willingness to approve</b>” that option.",
@@ -445,11 +362,10 @@
         "p13c": "If you think an option is an acceptable <b>compromise</b> or is even a potential <b>consensus</b>, then <b>increase your wap</b> until the slider enters the bar and gets green. (If it already overlaps the bar quite much, you can also move it somewhat to the left so that it overlaps only little.)",
         "p14": "Options are <b>listed by descending approval</b>, the most approved option is always on top.",
         "p15a": "<b>The pie charts to the left determine the result of the poll when it ends:</b>",
-        "p15b1": "In a poll for selecting a", 
+        "p15b1": "In a poll for selecting a",
         "p15b2": "<i>single option</i>, the pie pieces show how probable it is that each option wins.",
         "p15c1": "In a poll for allocating",
         "p15c2": "<i>shares</i> of a budget, the pie pieces show the shares that will be allocated to each possible option.",
-
         "h2": "How to vote – longer explanation",
         "p21": "By giving all options a “wap”, you indicate your <b>“willingness to approve”</b> each option. All participantsʼ waps then determine which options you actually <b>approve</b>. At any moment in time while the poll runs, every participant approves some number of options – zero, one, or more than one. When the poll ends, the approval is used to determine the winner or budget shares in a way explained further down.",
         "p22": "But first: <i>How does your willingness to approve determine whether you actually approve an option or not?</i> If you give a wap of 100, it means you definitely approve that option, and if you give a wap of zero, you definitely donʼt approve that option. (If you give a wap of more than zero, but no option at 100, then you approve the option with the highest wap.)",
@@ -459,34 +375,27 @@
         "p26": "If the poll is about allocating a budget, the size of each optionʼs shares is calculated the same way: the share is proportional to the number of participants that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
         "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
     },
-
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
-
         "-page-title": "Legal / Imprint"
     },
-
     "inviteto": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Invite Poll Participants page:",
-
         "-page-title": "Invite poll participants",
         "first-intro": "Your poll has started. Please invite your participants now!",
         "later-intro": "Here you can invite participants for the poll:",
         "caution-with-share1": "The simplest way to invite participants is via the share button. Alternatively, you can write them an e-mail. Or you copy the invite link and distribute it in any way you like.",
         "caution-without-share1": "The simplest way to invite participants is via e-mail. Or you copy the invite link and distribute it in any way you like.",
         "caution2": "The invite link contains the poll id and a poll password. Anyone who gets the link either directly or because someone forwarded it to them will be able to participate in the poll. So please make sure you and your participants only send it to authorized people.",
-
         "share": "Share",
         "compose-email": "Compose e-mail",
         "copy-link": "Copy link",
         "notification-copied-link-title": "Invite link copied to clipboard.",
         "notification-copied-link-body": "Please send it to your participants now!"
     },
-
     "invite-email": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in the Invitation email:",
-
-        "subject": "Invitation to poll (closing {{due}})",
+        "subject": "Invitation to poll (ending {{due}})",
         "body-greeting": "Dear participant,",
         "body-before-title": "Iʼm inviting you to take part in a new interactive poll titled",
         "body-closes": "The poll ends on {{due}}.",
@@ -494,10 +403,8 @@
         "body-dont-share": "Please do not share this link with anyone else.",
         "body-regards": "Best regards"
     },
-
     "joinpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Join A Poll page:",
-
         "-page-title": "Join a poll",
         "fetching": "Just a moment please, Iʼm fetching this pollʼs data...<br/><br/>(Since I'm still a test version, this may take a minute. If after a minute nothing shows, please reload this page. If it then takes again more than one minute, please log out and in again via the menu on the top left.)<br/><br/>",
         "initializing": "Just a moment please, Iʼm initializing the poll...",
@@ -511,207 +418,164 @@
         "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
-
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
-
         "-page-title": "Login",
-
         "welcome": "Welcome to",
         "ask-language": "Which language do you want to use?",
-
         "ask-used-before": "Have you used vodle before on any device?",
-
         "ask-fresh-email": "Please enter your e-mail address you want to use with vodle.",
         "ask-fresh-email-2": "We will only store it in an encrypted way and give it to no-one. We will also not send you any emails.",
         "ask-old-email": "Please enter the e-mail address that you are using with vodle.",
         "ask-old-email-2": "This way you can access your existing data.",
-
         "consent-privacy-before-privacy": "Yes, I have read the ",
         "consent-privacy-privacy": "data protection declaration and terms of use",
         "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
-
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
         "store-password": "Store my password between sessions.",
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
-
         "ready-to-start": "OK, have fun with vodle!",
         "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared."
     },
-
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
-
         "-page-title": "Log out",
         "confirm-header": "Really log out?",
         "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
         "failed": "Could not log out for some reason"
     },
-
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
-
         "-page-title": "My polls",
         "please-respond": "Please respond:",
         "request-by": "Delegation request by {{from}}",
-
         "running": "Running polls",
-
         "no-running-polls-1": "Currently, vodle knows of no running polls that you can vote in.",
         "no-running-polls-2": "If you have received an invitation to a poll, please click the link in the invitation!",
 
-        "recently-closed": "Closed",
+        "recently-closed": "Ended",
 
-        "no-recently-closed-polls-1": "Vodle knows of no closed polls that you have voted in.",
-        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already been closed, you can click the link in the invitation and see the poll results.",
+        "no-recently-closed-polls-1": "Vodle knows of no ended polls that you have voted in.",
+        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already ended, you can click the link in the invitation and see the poll results.",
 
         "older": "Older",
-
         "drafts": "Drafts",
-
         "no-draft-polls-1": "Currently, you have no polls drafted.",
         "no-draft-polls-2": "To start or draft a new poll, click the ‘+‘ button below!"
     },
-
     "news-title": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as titles of News items:",
-
         "delegation_accepted": "{{nickname}} accepted your delegation request.",
         "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request.",
         "delegation_accepted_after_all": "{{nickname}} has now accepted your delegation request after all.",
-        "delegation_revoked": "Unfortunately, {{nickname}} revoked her earlier agreement to your delegation request."  
+        "delegation_revoked": "Unfortunately, {{nickname}} revoked her earlier agreement to your delegation request."
     },
-
     "news-body": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as bodies of News items:",
-
         "delegation_declined": "You might want to ask a different delegate."
     },
-
     "notifications": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in notifications (title and body of notification):",
-
         "closing-soon-title": "The poll {{title}} is ending soon!",
         "closing-soon-body": "It ends on {{due}}.",
-
         "was-closed-title": "The poll {{title}} has ended!",
         "was-closed-body": "Please visit the poll to see the results."
     },
-
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
-
         "delegation_accepted": "A delegation request was accepted",
         "delegation_declined": "A delegation request was declined",
         "new_option": "An option was added to a poll",
-        "poll_closed": "A poll closed"
+        "poll_closing_soon": "A poll is ending soon",
+        "poll_closed": "A poll ended"
     },
-
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
-
         "-page-title": "Poll",
         "-page-title-running": "Running poll",
-
         "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
-
         "delegate-button": "Delegate",
-
         "different-language": "This poll is in a different language ({{language}}).",
         "closes": "Ends",
         "closed": "Ended",
         "type-share": "Options are assigned shares",
         "type-winner": "One option wins",
-
         "assist-me-inline": "Assist me",
         "assist-me-button": "Assist<br/>me",
-
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
-
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
         "hint-abstaining-2-wap": "wap",
         "hint-abstaining-2-after-wap": " <b>(drag the red knob right)</b>, or delegate your waps to someone you trust.",
-
         "hint-only1positive-1-before-wap": "You are giving only one option a positive ",
         "hint-only1positive-1-wap": "wap",
         "hint-only1positive-1-after-wap": ".",
         "hint-only1positive-2": "You should consider giving some possible compromise options a positive wap as well.",
-
         "hint-only1approved-1-before-approving": "You are ",
         "hint-only1approved-1-approving": "approving",
         "hint-only1approved-1-after-approving": " only one option.",
         "hint-only1approved-2-before-wap": "You approve an option if it has received your largest ",
         "hint-only1approved-2-wap": "wap",
         "hint-only1approved-2-after-wap": " or your wap overlaps with the bar.",
-
         "hint-mostapproved-1": "You are not approving the top-most option.",
-
         "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
+        "reason": "Why?",
+        "reason-all-abstained": "All participants abstained. So vodle had to draw a lot. This option won.",
+        "reason-full-consensus-unique": "This is the only option that all non-abstaining participants have approved. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-full-consensus-highest": "Among those options that all non-abstaining participants have approved, this one had the highest average wap. So it was the sure winner and vodle did not have to use a lottery this time.",
+        "reason-largest-approval": "This option has been approved by the largest number of non-abstaining participants, {{approval}}%. Still, {{disapproval}}% of the non-abstaining participants have not approved it. Therefore, vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{approval}}% of the lots were on this option. The lot that was drawn was one of those, so this option won.",
+        "reason-smaller-approval": "There is no option that all non-abstaining participants have approved. So vodle had to use a lottery to determine the winner in a fair way. In that lottery, {{share}}% of the lots were on this option. This is because {{share}}% of the non-abstaining participants have approved this option but have not approved any option that was higher in the ranking. So their share of the winning probability went to this option. The lot that was drawn was one of those lots, so this option won.",
+        "of-the-budget-go-to": "{{share}}% of the budget go to <i>{{option}}</i>",
         "final-ratings": "Details & final waps",
-
         "also-for-other": "Some or all of the waps below are also used for one other participant, who has delegated to you.",
         "also-for-others": "Some or all of the waps below are also used for {{n_others}} other participants, who have directly or indirectly delegated to you.",
         "declined-some": "You have also declined some delegation requests.",
         "declined-all": "You have declined all delegation requests.",
         "have-accepted": "You have <b>accepted</b> delegation by",
         "have-declined": "You have <b>declined</b> delegation by",
-
         "delegate-not-responded": "has not yet responded to your delegation request.",
         "delegate-controls-all": "controls all of your waps as your delegate.",
         "delegate-controls-most": "controls most of your waps as your delegate.",
         "delegate-controls-some": "controls some of your waps as your delegate.",
         "delegate-controls-none": "currently controls none of your waps as your delegate.",
         "revoke_delegation": "Do you really want to revoke your delegation to {{nickname}}? If you do, you can later send a new delegation request to someone else or again to {{nickname}}. If you donʼt, you can still take control of some of your waps via the toggles to the right.",
-
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
         "my-own": "my own",
         "delegate-s": "{{delegate}}’s",
-
         "chance-to-win": "{{percentage}}%<small> current chance to win</small>",
         "final-chance-to-win": "<small>had a </small>{{percentage}}%<small> final chance to win</small>",
         "of-the-budget": "<small>would currently get </small>{{percentage}}%<small> of the budget</small>",
         "final-budget": "<small>finally gets </small>{{percentage}}%<small> of the budget</small>",
         "including-your-share": " (including your share)",
-
         "approved-by": "<small>approved by </small>{{percentage}}%",
         "including-you": " (including you)",
         "average-rating": "avg. wap {{average}}",
-
         "explain": "Explain",
-        
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
-
         "sorting": "Sorting options by approval..."
     },
-
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
-
         "-page-title": "Please check",
         "caution1": "After the poll has started, you cannot change any of the above. However, you and the other participants can always add further options.",
-        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically be closed. Once started, you can neither shorten nor extend the this deadline.",
+        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically end. Once started, you can neither shorten nor extend the this deadline.",
         "closes": "Ends",
         "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will",
         "is-in-past": "The end date is in the past by now. Please change it first."
     },
-
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
-
         "-page-title": "Privacy & Terms"
     },
-
     "select-server": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Select A Server part of the Settings and Edit Draft Poll pages:",
-
         "same-as-personal": "like my personal data (see ‘Settings’)",
         "central": "in the vodle cloud",
         "same-as-some-poll": "like for one of my polls",
@@ -721,10 +585,8 @@
         "which-other-poll": "Which other pollʼs data location do you want to use for this poll as well?",
         "please-enter-couchdb": "Please enter the URL, username and password for that CouchDB data server."
     },
-
     "settings": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Settings page:",
-
         "-page-title": "Settings",
         "data-storage": "Personal data",
         "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an e-mail address and set a password.",
@@ -734,10 +596,8 @@
         "appearance": "Appearance",
         "notifications": "Notifications"
     },
-
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",
-
         "db-pw-required": "Database password is required.",
         "db-server-url-required": "Database URL is required.",
         "db-server-url-pattern": "Please enter a valid URL.",
