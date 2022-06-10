@@ -69,7 +69,9 @@ export class DraftpollKebapPage implements OnInit {
       this.examples = [];
       for (let row of result.rows) {
         let doc = row.doc;
-        this.examples.push(JSON.stringify(doc));
+        if (!doc._id.includes("§§")) {
+          this.examples.push(JSON.stringify(doc));
+        }
       }
       // make sure the items appear in the select dialog:
       this.ref.detectChanges();

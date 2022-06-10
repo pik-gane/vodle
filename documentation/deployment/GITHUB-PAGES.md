@@ -2,7 +2,7 @@ Currently the workflow is still manual
 1. Push to remote main
 2. On github, merge into github-pages-test
 3. Pull to local github-pages-test: `git switch github-pages-test; git pull`
-4. Build web page locally with `ionic capacitor build browser --prod`
+4. Build web page locally with `ionic build --prod` (no longer `ionic capacitor build browser --prod`)
 5. If all seems fine, `rm -rf docs; cp -r www docs`
 6. Commit and push to remote github-pages-test: `git add .; git commit; git push`
 7. (not yet working:) wait for the page building workflow on gitub finishes 
