@@ -78,7 +78,7 @@
 ## Current State & Next Steps
 
 **We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
-- **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
+- **A *Minimal Viable Product (MVP)* is almost finished (99%) and will be ready towards the end of June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
@@ -153,4 +153,4 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 - The delegation and flowers icons are also lincensed under CC-BY lincenses
 - The outstretched arms background image is modified from https://pixabay.com/vectors/businessman-silhouette-2873115/ which has a Pixabay license https://pixabay.com/service/license/
 
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see [AUTHORS](AUTHORS).
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see [AUTHORS](AUTHORS).
