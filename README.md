@@ -78,7 +78,7 @@
 ## Current State & Next Steps
 
 **We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
-- **A *Minimal Viable Product (MVP)* is almost finished (90%) and will be ready in May or June.**
+- **A *Minimal Viable Product (MVP)* is almost finished (99%) and will be ready towards the end of June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
@@ -93,7 +93,7 @@ A few of them also here:
 
 vodle is developed by the [FutureLab on Game Theory and Networks of Interacting Agents](https://www.pik-potsdam.de/en/institute/futurelabs/gane) at the [Potsdam Institute for Climate Impact Research](https://www.pik-potsdam.de/), with contributions from the open-source community. 
 
-Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a rating from 0 to 100 or can choose to delegate their rating of an option to another voter they trust. 
+Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
 
 It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
@@ -153,4 +153,4 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 - The delegation and flowers icons are also lincensed under CC-BY lincenses
 - The outstretched arms background image is modified from https://pixabay.com/vectors/businessman-silhouette-2873115/ which has a Pixabay license https://pixabay.com/service/license/
 
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK) authors, and contributors, see [AUTHORS](AUTHORS).
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see [AUTHORS](AUTHORS).
