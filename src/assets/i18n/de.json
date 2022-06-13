@@ -77,7 +77,7 @@
         "p17": "Bei <b>Verteilungs-Abstimmungen</b> (bei denen die Gruppe irgendein <i>Budget verteilen</i> in <i>Anteile</i> für verschiedene Optionen aufteilen muss), ist das Verfahren ähnlich: Wenn eine Option Zustimmung von allen bekommt, gibt es vollen Konsens, also bekommt diese Option das ganze Budget. Anderenfalls teilt vodle den größten Anteil des Budgets der Option mit der größten Zustimmung zu, und den anderen Optionen kleinere Anteile.",
         "p18": "Genaue Prozedur: Die Optionen werden nach absteigender Zustimmung sortiert. Dann bekommt jede Option einen Anteil proportional zur Anzahl Teilnehmer:innen, die dieser Option aber keiner höherplatzierten Option zugestimmt haben.",
         "h2": "Wer steckt dahinter?",
-        "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
+        "p21": "vodles Algorithmus (genannt “maximaler Teil-Konsens”) wurde entwickelt und auf Fairness optimiert am Potsdam-Institut für Klimafolgenforschung (PIK) vom Mathematiker Jobst Heitzig in Zusammenarbeit mit Forest W. Simmons. Er ist inspiriert vom „Schwellwert-Modell“ des berühmten Soziologen Mark Granovetter. Diese App ist open-source, der Programmcode liegt auf <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Hauptentwickler: Jobst Heitzig. Wesentliche Beiträge von: Marius Amrhein. Beratung: Adrian Lison. Weitere Beiträge: siehe Programmcode.",
         "h3": "Unterstütze vodle!",
         "p31": "Da wir und verpflichtet haben, dass vodle frei nutzbar für alle bleibt, brauchen wir weiterhin Hilfe. Wenn Du Nerd, Kreative:r, Influencer:in, Wissenschaftler:in, Philantrop:in, Aktivist:in oder Politiker:in bist, an die Zukunft von fairen &amp; effizienten Konsens-Entscheidungen glaubst und ein wenig beitragen möchtest, dann haben wir ein paar Ideen, <a href=\"{{support_vodle_url}}\" target=\"_blank\">wie Du uns helfen kannst!</a>"
     },
@@ -143,8 +143,8 @@
         "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Waps werden auch als Deine Waps verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Waps weiterhin selbst einstellen.",
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",
-        "from-label": "Die/Der Delegierte:r wird folgendes als Absender:in dieser Anfrage sehen:",
-        "from-placeholder": "Enter your own e-mail address, name or nickname",
+        "from-label": "Die/Der Delegierte:r wird Folgendes als Absender:in dieser Anfrage sehen:",
+        "from-placeholder": "Deine eigene E-Mail-Adresse, Dein Name oder Kurznamen",
         "request-options-with-share": "Am einfachsten kannst Du die Person über den Teilen-Knopf bitten, dein:e Delegierte:r zu sein. Stattdessen kannst Du auch eine E-Mail schreiben. Oder Du kopierst den Delegierungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "request-options-without-share": "Am einfachsten kannst die Person per E-Mail bitten, dein:e Delegierte:r zu sein. Oder Du kopierst den Einladungs-Link und verteilst ihn auf Deine bevorzugte Weise.",
         "share": "Teilen",
@@ -161,16 +161,18 @@
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "message-body-regards": "Mit besten Grüßen"
     },
+
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
-        "-page-title": "Delete my data",
-        "confirm-header": "Really delete your data?",
-        "confirm-intro": "<p><b>This will delete all vodle data from this device. It will also delete your private vodle data from the remote data server that you are currently using.</b></p><p>It will however <i>not</i> delete any data from other devices. It will also <i>not</i> delete any of your wap or delegation data.</p><p>For polls that are still running, it will instead set all your waps to zero, cancel all of your own delegation requests, and decline any delegation requests to you. For polls that have already ended, it will leave your waps and delegation data unchanged to guarantee that poll results can be verified and remain unaltered. On most poll data servers, those data will eventually be deleted after some time, but anonymized copies of it may remain on other participantsʼ devices.</p><p><b>If you do this, your data cannot be restored!</b></p>",
-        "confirm-button": "Yes, delete my data",
-        "success-title": "Your data was deleted.",
-        "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
-        "failed": "Could not delete all data for some reason."
+        "-page-title": "Meine Daten löschen",
+        "confirm-header": "Wirklich alle Daten löschen?",
+        "confirm-intro": "<p><b>Dies löscht sämtliche vodle-Daten von diesem Gerät. Es löscht auch Deine privaten vodle-Daten vom Daten-Server, den Du momentan verwendest.</b></p><p>Es löscht allerdings <i>keine</i> Daten von anderen Geräten. Es löscht auch <i>nicht</i> Deine Waps oder Delegations-Daten</p><p>Für noch laufende Abstimmungen setzt es stattdessen alle Deine Waps auf Null, widerruft alle Deine Delegationsanfragen und lehnt alle Delegationsanfragen an Dich ab. Für bereits beendete Abstimmungen lässt es Deine Waps und Delegationsdaten unverändert, damit Abstimmungsergebnisse überprüfbar und unverändert bleiben. Auf den meisten Daten-Servern werden diese Daten schließlich nach einiger Zeit gelöscht, aber anonymisierte Kopien können auf den Geräten anderer Teilnehmer:innen zurückbleiben.</p><p><b>Wenn Du dies tust, können Deine Daten nicht wiederhergestellt werden!</b></p>",
+        "confirm-button": "Ja, lösche meine Daten",
+        "success-title": "Deine Daten wurden gelöscht.",
+        "success-body": "vodle hofft, Dich bald wiederzusehen, auch wenn es sich nicht an Dich erinnern wird :-)",
+        "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden."
     },
+
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
         "-page-title": "Delegierte:r sein?",
@@ -373,11 +375,11 @@
         "p24": "Jetzt, wo wir verstanden haben, wie die Zustimmung berechnet wird, können wir uns der Frage widmen, wie die <b>Gewinnwahrscheinlichkeiten</b> der Optionen bzw. die <b>Aufteilung des Budgets</b> auf die Optionen berechnet wird, und wie die tatsächlich <b>gewinnende Option</b> ermittelt wird. Wenn genau eine Option 100% Zustimmung hat, dann gewinnt diese mit Sicherheit bzw. bekommt das gesamte Budget. Wenn mehrere Optionen 100% Zustimmmung haben, wird von diesen Option diejenige, die die größte Summe aller Waps hat, gewinnen bzw. das gesamte Budget bekommen. <br/>Wenn keine Option 100% Zustimmung hat, verteilt <i>vodle</i> die Gewinnwahrscheinlichkeit bzw. das Budget zwischen zwei oder mehr Optionen. In diesem Fall wird die Option mit der größten Zustimmung am wahrscheinlichsten gewinnen bzw. den größten Teil des Budgets bekommen. Aber andere Optionen, die zumindest etwas Zustimmung haben, können dann auch mit geringerer Wahrscheinlichkeit gewinnen oder einen kleineren Teil des Budgets bekommen. <br/>Wenn in der Abstimmung am Ende eine Option gewählt wird, bedeutet dies, dass dann der Zufall eine gewisse Rolle spielt. Das liegt daran, dass wir sicherstellen müssen, dass keine Gruppe von Teilnehmer:innen einfach von den anderen ignoriert werden kann, wie es bei Mehrheitsentscheidungen der Fall ist. Auf diese Weise gibt <i>vodle</i> allen Teilnehmer:innen genau das selbe Maß an Einfluss und jeder Fraktion einen Einfluss, der ihrer Größe entspricht.",
         "p25": "Wenn keine Option 100% Zustimmung hat, aber bei der Abstimmung eine einzelne Option gewählt werden soll, dann geschieht dies wie folgt. Erst wird ein:e Teilnehmer:in per Los gezogen. Von den Optionen, der dieser Person zugestimmt hat, gewinnt diejenige mit der größten Gesamt-Zustimmung. (Bei Gleichstand wird das durchschnittliche Wap hinzugezogen.) Das Tortenstück links von jeder Option zeigt, mit welcher Wahrscheinlichkeit dabei diese Option gewinnen würde.",
         "p26": "Wenn hingegen bei der Abstimmung ein Budget verteilt werden soll, dann wird der Anteil des Budgets für jede mögliche Option auf genau die gleiche Weise berechnet. Der Anteil für eine Option entspricht der Anzahl an Teilnehmer:innen, die (i) dieser Option zugestimmt haben, aber (ii) keiner anderen Option zugestimmt haben, das insgesamt mehr Zustimmung hat.",
-        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
+        "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"        
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
-        "-page-title": "Legal / Imprint"
+        "-page-title": "Impressum"
     },
     "inviteto": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Invite Poll Participants page:",
@@ -429,7 +431,7 @@
         "ask-old-email": "Bitte gib die E-Mail-Adresse ein, die Du für vodle verwendest.",
         "ask-old-email-2": "So bekommst Du Zugriff auf Deine vorhandenen Daten.",
         "consent-privacy-before-privacy": "Ja, ich habe die ",
-        "consent-privacy-privacy": "Datenschutzerklärung und Allgemeinen Geschäftsbedingungen",
+        "consent-privacy-privacy": "Datenschutzerklärung und Nutzungsbedingungen",
         "consent-privacy-after-privacy": " zur Kenntnis genommen. Ich willige in die Verarbeitung meiner Daten auf Endgeräten und Datenbankservern in der dort beschriebenen Form ein, um an Abstimmungen teilzunehmen. Ich stimme zu, dass meine Daten in pseudonymisierter Form teilweise an andere Teilnehmer:innen übertragen werden. Ich bin mir bewusst, dass dadurch mein Recht auf Löschung insofern eingeschränkt wird, als dass diese Kopien auf den Endgeräten anderer Teilnehmer:innen mglw. nicht gelöscht werden können. Ich kann diese Einwilligung per E-Mail an privacy@vodle.it widerrufen.",
         "ask-fresh-password": "Bitte vergib ein Passwort.",
         "ask-fresh-password-2": "Damit werden Deine Daten verschlüsselt, so dass niemand anderes sie lesen kann. Bitte gut merken, es kann nicht wiederhergestellt werden.",
@@ -437,7 +439,7 @@
         "store-password": "Store my password between sessions.",
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, viel Spaß mit vodle!",
-        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared."
+        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch angemeldet, bis Du Dich abmeldest. Bitte vergiss nicht, Dich über das Menü abzumelden, falls dies ein unsicheres oder mit anderen gemeinsam genutztes Gerät ist."
     },
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
@@ -479,10 +481,10 @@
     },
     "notifications": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in notifications (title and body of notification):",
-        "closing-soon-title": "The poll {{title}} is ending soon!",
-        "closing-soon-body": "It ends on {{due}}.",
-        "was-closed-title": "The poll {{title}} has ended!",
-        "was-closed-body": "Please visit the poll to see the results."
+        "closing-soon-title": "Die Abstimmung {{title}} endet bald!",
+        "closing-soon-body": "Sie endet {{due}}.",
+        "was-closed-title": "Die Abstimmung {{title}} hat geendet!",
+        "was-closed-body": "Bitte gehe zur Abstimmung, um das Ergebnis zu sehen."
     },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
@@ -521,9 +523,9 @@
         "hint-only1approved-2-wap": "Wap",
         "hint-only1approved-2-after-wap": " bekommen hat oder Dein Wap in den Balken ragt.",
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
-        "results": "Results:",
-        "winner-is": "The winner is <i>{{winner}}</i>",
-        "final-ratings": "Details & final waps",
+        "results": "Ergebnis:",
+        "winner-is": "Es gewinnt <i>{{winner}}</i>",
+        "final-ratings": "Details & endgültige Waps",
         "also-for-other": "Manche oder alle der Waps weiter unten werden auch für eine weitere Person verwendet, die an Dich delegiert hat.",
         "also-for-others": "Manche oder alle der Waps weiter unten werden auch für {{n_others}} weitere Personen verwendet, die direkt oder indirekt an Dich delegiert haben.",
         "declined-some": "Du hast auch einige Bitten um Delegation abgelehnt.",
