@@ -180,7 +180,6 @@ export class Poll {
   _state: string;  // cache for state since it is asked very often
   syncing: boolean = false;
   allow_voting: boolean = false;
-  has_results: boolean = false;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
@@ -193,7 +192,7 @@ export class Poll {
       // copy state from db into cache:
       this._state = this.G.D.getp(pid, 'state') as poll_state_t;
     }
-    G.L.entry("Poll.constructor", pid, this._state);
+    G.L.entry("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
     this._pid = pid;
     this.G.P.polls[pid] = this;
     if (this._pid in this.G.D.tally_caches) { 
@@ -204,15 +203,11 @@ export class Poll {
 
     if (this._state == 'running') {
       this.set_timeouts();
-    } else if (this._state == 'closed') {
-      if (this.type == 'share' || !!this.winner) {
-        this.has_results = true;
-      } else {
-        this.end();
-      }
+    } else if (this._state == 'closed' && !this.has_results) {
+      this.end();
     }
 
-    G.L.exit("Poll.constructor", pid);
+    G.L.exit("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
   }
 
   set_timeouts(start_date?: Date) {
@@ -299,8 +294,17 @@ export class Poll {
   get have_seen(): boolean { return this.G.D.getp(this._pid, 'have_seen') == 'true'; }
   set have_seen(value: boolean) { this.G.D.setp(this._pid, 'have_seen', value.toString()); }
 
+  get has_results(): boolean { return this.G.D.getp(this._pid, 'has_results') == 'true'; }
+  set has_results(value: boolean) { this.G.D.setp(this._pid, 'has_results', value.toString()); }
+
+  get have_seen_results(): boolean { return this.G.D.getp(this._pid, 'have_seen_results') == 'true'; }
+  set have_seen_results(value: boolean) { this.G.D.setp(this._pid, 'have_seen_results', value.toString()); }
+
   get have_acted(): boolean { return this.G.D.getp(this._pid, 'have_acted') == 'true'; }
   set have_acted(value: boolean) { this.G.D.setp(this._pid, 'have_acted', value.toString()); }
+
+  get has_been_notified_of_end(): boolean { return this.G.D.getp(this._pid, 'has_been_notified_of_end') == 'true'; }
+  set has_been_notified_of_end(value: boolean) { this.G.D.setp(this._pid, 'has_been_notified_of_end', value.toString()); }
 
   // attributes that are needed to access the poll's database 
   // and thus stored in user's personal data.
@@ -1694,7 +1698,7 @@ export class Poll {
           due = this.due, 
           past_due = !!due && now > due;
     if (past_due) {
-      if (this._state == "running" || (this.type == "winner" && this.winner == "")) {
+      if (this._state == "running" || (this._state == "closed" && !this.has_results)) {
         this.end();
       }
       return true;
@@ -1769,7 +1773,8 @@ export class Poll {
 
   notify_of_end() {
     this.has_results = true;
-    if (this.G.S.get_notify_of("poll_closed")) {
+    this.have_seen_results = false;
+    if (this.G.S.get_notify_of("poll_closed") && !this.has_been_notified_of_end) {
       LocalNotifications.schedule({
         notifications: [{
           title: this.G.translate.instant('notifications.was-closed-title', {title:this.title}),
@@ -1779,6 +1784,7 @@ export class Poll {
       })
       .then(res => {
         this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
+        this.has_been_notified_of_end = true;
       }).catch(err => {
         this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
       });  
