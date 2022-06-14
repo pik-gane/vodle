@@ -159,14 +159,18 @@ TODO:
     </div>
   </form>
 
-  <ion-item color="light" (click)="advanced_expanded=!advanced_expanded">
-    <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
-    <ion-label>
-      <small [innerHtml]="'&nbsp;&nbsp;&nbsp;'+('draftpoll.advanced-settings'|translate)"></small>
-    </ion-label>
-  </ion-item>
-  <app-select-server #select_server [style.display]="advanced_expanded?'block':'none'" [page]="'settings'" [page_object]="this">
-  </app-select-server>
+  <ng-container *ngIf="E.data_service.allow_other_servers">
+    <ion-item color="light" (click)="advanced_expanded=!advanced_expanded">
+      <ion-icon size="small" [name]="advanced_expanded?'caret-down-outline':'caret-forward-outline'" color="primary"></ion-icon>
+      <ion-label>
+        <small [innerHtml]="'&nbsp;&nbsp;&nbsp;'+('draftpoll.advanced-settings'|translate)"></small>
+      </ion-label>
+    </ion-item>
+    <app-select-server #select_server 
+      [style.display]="advanced_expanded?'block':'none'" 
+      [page]="'settings'" [page_object]="this">
+    </app-select-server>
+  </ng-container>
 
   <!--APPEARANCE-->
 
