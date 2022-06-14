@@ -571,7 +571,7 @@
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
-        "-page-title": "Datenschutz & AGB"
+        "-page-title": "Datenschutz & Bedingungen"
     },
     "select-server": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Select A Server part of the Settings and Edit Draft Poll pages:",

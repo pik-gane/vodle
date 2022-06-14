@@ -19,7 +19,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 export const environment = {
   production: true,
+  imprint_url: "./assets/impressum.html",
   privacy_statement_url: "https://mensch72.github.io/assets/datenschutz.html",
+  privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
   logging: {
     logLevels: [
       {
