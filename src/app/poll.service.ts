@@ -1772,6 +1772,7 @@ export class Poll {
   }
 
   notify_of_end() {
+    this.G.L.trace("Poll.notify_of_end has_been_notified_of_end");
     this.has_results = true;
     this.have_seen_results = false;
     if (this.G.S.get_notify_of("poll_closed") && !this.has_been_notified_of_end) {
@@ -1783,8 +1784,8 @@ export class Poll {
         }]
       })
       .then(res => {
-        this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
         this.has_been_notified_of_end = true;
+        this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
       }).catch(err => {
         this.G.L.warn("Poll.notify_of_end localNotifications.schedule failed:", err);
       });  

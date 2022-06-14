@@ -2250,7 +2250,7 @@ export class DataService implements OnDestroy {
             window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
-          this.G.L.trace("DataService.store_user_data synced no need to update", key, value);
+          this.G.L.trace("DataService.store_user_data synced no need to update", key, value, old_value);
         }
 
       }).catch(err => {
