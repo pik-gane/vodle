@@ -1130,7 +1130,7 @@ export class Poll {
         this.T.approvals_map.set(oid, new Map());
         this.T.approval_scores_map.set(oid, 0);
         this.T.total_effective_ratings_map.set(oid, 0);
-        this.T.scores_map.set(oid, 0); 
+        this.update_score(oid, 0, 0, score_factor);
       }
     }
 //    this.G.L.trace("Poll.tally_all scores", this._pid, [...this.T.scores_map]);
