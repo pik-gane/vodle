@@ -488,8 +488,8 @@
         "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
         "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
         "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
-        "poll_closing_soon": "A poll is ending soon",
-        "poll_closed": "A poll ended"
+        "poll_closing_soon": "Eine Abstimmung endet bald",
+        "poll_closed": "Eine Abstimmung hat geendet"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
