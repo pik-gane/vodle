@@ -518,6 +518,7 @@
         "hint-only1approved-2-wap": "wap",
         "hint-only1approved-2-after-wap": " or your wap overlaps with the bar.",
         "hint-mostapproved-1": "You are not approving the top-most option.",
+        "wait-for-results": "The results are being determined...",
         "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
         "reason": "Why?",

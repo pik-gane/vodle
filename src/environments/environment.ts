@@ -23,7 +23,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 export const environment = {
   production: false,
+  imprint_url: "./assets/impressum.html",
   privacy_statement_url: "./assets/datenschutz.html",
+  privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
   logging: {
     logLevels: [
       {
@@ -37,9 +39,10 @@ export const environment = {
 //    central_db_server_url: "http://localhost/couch/", // use this when you have an nginx docker container running that forwards requests to localhost/couch/ to localhost:5984 
 //    central_db_server_url: "http://localhost:8100/couch/",  // use this when you don't have an nginx docker container doing that. in this case the angular dev server running on 8100 will do the forwarding to localhost:5984
     central_db_password: "none",
-    pwd_length: 12,
+    allow_other_servers: false,
     hash_n_bytes: 8,
     pid_length: 6,
+    pwd_length: 12,
     oid_length: 4,
     vid_length: 4,
     did_length: 4,

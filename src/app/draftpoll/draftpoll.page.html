@@ -289,8 +289,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
 
     <!-- Server: -->
-    <app-select-server #select_server [page_object]="this"
-      [page]="'draftpoll'"
+    <app-select-server #select_server
+      *ngIf="E.data_service.allow_other_servers" 
+      [page_object]="this" [page]="'draftpoll'"
       [style.display]="(stage>5) && advanced_expanded?'block':'none'">
     </app-select-server><!--stage 7-->
   

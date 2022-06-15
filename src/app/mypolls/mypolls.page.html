@@ -123,22 +123,20 @@ TODO:
           <!-- Badges: -->
 
           <div style="display: flex; flex-direction: column;">
-          <div *ngIf="!p.have_seen" style="display: flex;flex-direction: row-reverse;">
-            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
-          </div>
-          <div *ngIf="p.is_closing_soon" style="display: flex;flex-direction: row-reverse;">
-            <ion-badge size="small" class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
-          </div>
-          <div *ngIf="p.have_seen && p.am_abstaining" style="display: flex;flex-direction: row-reverse;">
-            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
-          </div>
-          <div *ngIf="p.have_delegated" style="display: flex;flex-direction: row-reverse;">
-            <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+            <div *ngIf="!p.have_seen" style="display: flex;flex-direction: row-reverse;">
+              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+            </div>
+            <div *ngIf="p.is_closing_soon" style="display: flex;flex-direction: row-reverse;">
+              <ion-badge size="small" class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+            </div>
+            <div *ngIf="p.have_seen && p.am_abstaining" style="display: flex;flex-direction: row-reverse;">
+              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
+            </div>
+            <div *ngIf="p.have_delegated" style="display: flex;flex-direction: row-reverse;">
+              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+            </div>
           </div>
 
-<!--          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
--->
-</div>
           <!-- Invite-to button: -->
 
           <ion-button *ngIf="can_invite(p)" fill="clear" 
@@ -172,6 +170,17 @@ TODO:
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [innerHtml]="p.title"></i>
           </ion-label>
+          <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
+
+            <!-- Badges: -->
+  
+            <div style="display: flex; flex-direction: column;">
+              <div *ngIf="!p.have_seen_results" style="display: flex;flex-direction: row-reverse;">
+                <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+              </div>
+            </div>
+  
+          </ion-buttons>
         </ion-item>
       </ng-container>
       <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0 && !G.show_spinner">

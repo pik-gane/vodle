@@ -103,6 +103,7 @@ export class JoinpollPage implements OnInit {
       this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
         // remote poll db has been replicated completely to local poll db
         this.ready = true;
+        this.p.set_timeouts();
         this.p.tally_all();
       });
     }
