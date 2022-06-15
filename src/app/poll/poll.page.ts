@@ -168,6 +168,9 @@ export class PollPage implements OnInit {
     this.update_delegation_info();
     this.on_delegate_toggle_change();
     this.p.have_seen = true;
+    if (this.p.has_results) {
+      this.p.have_seen_results = true;
+    }
     this.G.L.exit("PollPage.onDataReady");
   }
 

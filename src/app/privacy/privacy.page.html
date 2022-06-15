@@ -29,11 +29,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
+<!-- IF GERMAN, USE GERMAN VERSION: -->
+
 <ion-content *ngIf="translate.currentLang=='de'" class="ion-padding">
 
   <ion-item color="primary">
-    <ion-label>
-      Datenschutzerklärung und Allgemeine Geschäftsbedingungen
+    <ion-label [innerHtml]="E.privacy_statement_headline">
     </ion-label>
   </ion-item>
 
@@ -362,13 +363,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 </ion-content>
 
 
-<!-- ENGLISH: -->
+<!-- OTHERWISE USE ENGLISH VERSION: -->
 
 <ion-content *ngIf="translate.currentLang!='de'" class="ion-padding">
 
   <ion-item color="primary">
-    <ion-label>
-      Data protection statement and terms of use (in German)
+    <ion-label [innerHtml]="E.privacy_statement_headline">
     </ion-label>
   </ion-item>
 

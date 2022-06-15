@@ -392,6 +392,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-item>
     </ng-container>
 
+    <!-- results not ready yet: -->
+    <ng-container *ngIf="!p.allow_voting && !p.has_results">
+      <ion-item color="warning">
+        <p [innerHtml]="'poll.wait-for-results'|translate">
+        </p>
+      </ion-item>
+    </ng-container>
+
     <!-- FINAL WAPS EXPANDER (if ended): -->
 
     <ion-item *ngIf="!p.allow_voting" 

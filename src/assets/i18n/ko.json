@@ -518,6 +518,7 @@
         "hint-only1approved-2-wap": "승인율",
         "hint-only1approved-2-after-wap": "을 가지거나 오른쪽 바와 겹치는 경우입니다.",
         "hint-mostapproved-1": "당신은 맨 위의 선택지를 승인하고 있지 않습니다.",
+        "wait-for-results": "The results are being determined...",
         "results": "결과:",
         "winner-is": "채택된 선택지는 <i>{{winner}}</i> 입니다",
         "reason": "왜죠?",

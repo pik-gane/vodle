@@ -161,7 +161,7 @@ const poll_keystarts_in_user_db = [
   'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 
   'password', 'myvid', 
   'del_private_key', 'del_nickname', 'del_from', 
-  'have_seen', 'have_acted', 'have_seen_results', 
+  'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
   'poll_page',
   'simulated_ratings',
   'final_rand', 'winner'
@@ -1380,7 +1380,7 @@ export class DataService implements OnDestroy {
         this.handle_poll_db_change.bind(this)(pid, change);
       }).on('paused', info => {
         // replication was paused, usually because of a lost connection
-        this.G.L.info("DataService pausing poll data sync", pid, info);
+        this.G.L.info("DataService pausing poll data sync", pid, this.G.P.polls[pid]._state);
         const _ = window.navigator.onLine;
         this.G.P.polls[pid].syncing = false;
         this.G.remove_spinning_reason(pid);
@@ -2250,7 +2250,7 @@ export class DataService implements OnDestroy {
             window.setTimeout(this.store_user_data.bind(this), environment.db_put_retry_delay_ms, key, dict, dict_key);
           });
         } else {
-          this.G.L.trace("DataService.store_user_data synced no need to update", key, value);
+          this.G.L.trace("DataService.store_user_data synced no need to update", key, value, old_value);
         }
 
       }).catch(err => {

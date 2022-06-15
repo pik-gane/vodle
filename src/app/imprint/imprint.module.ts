@@ -7,7 +7,7 @@ import { IonicModule } from '@ionic/angular';
 
 import { ImprintPageRoutingModule } from './imprint-routing.module';
 
-import { ImprintPage } from './imprint.page';
+import { ImprintPage, SafePipe } from './imprint.page';
 
 @NgModule({
   imports: [
@@ -17,6 +17,6 @@ import { ImprintPage } from './imprint.page';
     ImprintPageRoutingModule,
     TranslateModule.forChild()
   ],
-  declarations: [ImprintPage]
+  declarations: [ImprintPage, SafePipe]
 })
 export class ImprintPageModule {}
