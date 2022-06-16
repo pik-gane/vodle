@@ -72,7 +72,7 @@
         "p12": "Es zeigt Dir für jede Option die momentane Zustimmung als hellen Balken auf der rechten Seite, und erlaubt Dir, Deine Waps mit Hilfe von Schiebereglern in Echtzeit anzupassen. Wenn Dein Schieberegler den Zustimmungs-Balken berührt, wird er grün, um anzuzeigen, dass Du dieser Option ebenfalls zustimmst. Auf diese Weise kann die Gruppe zu einem vollen oder teilweisen Konsens finden, der so breit wie möglich ist.",
         "p13": "Wenn die Abstimmung endet, wird die Gewinner-Option durch einen fairen und einfachen Algorithmus bestimmt, der jeder Person den selben Einfluß gibt, nicht nur denen, die zu einer Mehrheit gehören.",
         "p14": "In <b>Auswahl-Abstimmungen</b> (bei denen die Gruppe eine <i>einzelne Option</i> auswählen muss), wird die Entscheidung wie folgt getroffen. Wenn eine Option Zustimmung von allen bekommt, gewinnt diese volle Konsens-Option. Andernfalls erklärt vodle in den meisten Fällen die Option mit der breitesten Zustimmung zur Gewinnerin. Aber um fair zu sein, muss vodle manchmal auch ein wenig Zufall walten lassen, ähnlich wie bei einer Lotterie.",
-        "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has ended, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
+        "p15": "vodle benutzt dabei folgendes Verfahren: Sobald die Abstimmung beendet ist, werden die Optionen nach absteigender Zustimmung sortiert, und es wird ein:e Teilnehmer:in zufällig ausgewählt. Die höchstplatzierte Option bei der der Schieberegler dieser Person grün ist, gewinnt.",
         "p16": "Auf diese Weise hat die Option mit der meisten Zustimmung die bei Weitem größte Wahrscheinlichkeit, zu gewinnen. Die Gewinnwahrscheinlichkeiten der anderen Optionen sind höchstens so groß wie ihr Zustimmungswert (in Prozent aller Teilnehmer:innen, die sich nicht vollständig enthalten haben).",
         "p17": "Bei <b>Verteilungs-Abstimmungen</b> (bei denen die Gruppe irgendein <i>Budget verteilen</i> in <i>Anteile</i> für verschiedene Optionen aufteilen muss), ist das Verfahren ähnlich: Wenn eine Option Zustimmung von allen bekommt, gibt es vollen Konsens, also bekommt diese Option das ganze Budget. Anderenfalls teilt vodle den größten Anteil des Budgets der Option mit der größten Zustimmung zu, und den anderen Optionen kleinere Anteile.",
         "p18": "Genaue Prozedur: Die Optionen werden nach absteigender Zustimmung sortiert. Dann bekommt jede Option einen Anteil proportional zur Anzahl Teilnehmer:innen, die dieser Option aber keiner höherplatzierten Option zugestimmt haben.",
@@ -127,7 +127,7 @@
         "_COMMENT_SECTION_": "[COMMENT] strings used as badge labels:",
         "abstaining": "Enthaltung",
         "can-accept": "Zustimmung möglich",
-        "closing-soon": "Schließt bald",
+        "closing-soon": "Endet bald",
         "delegated": "Delegiert",
         "draft": "Entwurf",
         "new": "Neu",
@@ -203,7 +203,7 @@
         "declined-impossible-details": "Du kannst der Bitte momentan nicht zustimmen, da das einen Delegations-Kreis oder ein zu großes Stimmgewicht ergäbe.",
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal.",
-        "closed": "Unfortunately, this poll has already ended.",
+        "closed": "Leider ist diese Abstimmung bereits beendet.",
         "is-self": "Diese Anfrage hast Du selbst erstellt :-) Schicke den Link bitte an die Person, die Du um Delegation bitten möchtest!"
     },
     "draftpoll": {
@@ -457,9 +457,11 @@
         "running": "Offene Abstimmungen",
         "no-running-polls-1": "Momentan kennt vodle keine offenen Abstimmungen, an denen Du teilnehmen kannst.",
         "no-running-polls-2": "Wenn Du eine Einladung zu einer Abstimmung erhalten hast, klick bitte auf den Link in der Einladung!",
-        "recently-closed": "Ended",
-        "no-recently-closed-polls-1": "Vodle knows of no ended polls that you have voted in.",
-        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already ended, you can click the link in the invitation and see the poll results.",
+        "recently-closed": "Beendet",
+
+        "no-recently-closed-polls-2": "Vodle kennt keine beendeten Abstimmungen, an denen Du teilgenommen hast.",
+        "no-recently-closed-polls-1": "Wenn Du eine alte Einladung zu einer bereits beendeten Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.",
+
         "older": "Älter",
         "drafts": "Entwürfe",
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
@@ -488,8 +490,8 @@
         "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
         "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
         "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
-        "poll_closing_soon": "A poll is ending soon",
-        "poll_closed": "A poll ended"
+        "poll_closing_soon": "Eine Abstimmung ended bald",
+        "poll_closed": "Eine Abstimmung hat geendet"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -498,8 +500,8 @@
         "checkmark-clicked": "Deine Änderungen werden immer sofort gesendet wenn Du online bist. Du musst nichts extra anklicken dafür. Das Häkchen zeigt, dass Deine Änderungen erfolgreich übermittelt wurden.",
         "delegate-button": "Delegieren",
         "different-language": "Diese Abstimmung ist in einer anderen Sprache ({{language}}).",
-        "closes": "Schließt",
-        "closed": "Geschlossen",
+        "closes": "Endet",
+        "closed": "Beendet",
         "type-share": "Optionen bekommen Anteile",
         "type-winner": "Eine Option gewinnt",
         "assist-me-inline": "Assistiere mir",
@@ -522,7 +524,7 @@
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
         "results": "Ergebnis:",
         "winner-is": "Es gewinnt <i>{{winner}}</i>",
-        "reason": "Why?",
+        "reason": "Warum?",
         "reason-all-abstained": "Alle Teilnehmer:innen haben sich enthalten. Also musste vodle losen. Diese Option gewann dabei.",
         "reason-full-consensus-unique": "Dies ist die einzige Option, der alle sich nicht enthaltenden Teilnehmer:innen zugestimmt haben. Also war sie die sichere Gewinnerin und vodle musste diesmal keine Lotterie verwenden.",
         "reason-full-consensus-highest": "Von den Optionen, der alle sich nicht enthaltenden Teilnehmer:innen zugestimmt haben, hatte diese im Durchschnitt die höchsten Waps. Also war sie die sichere Gewinnerin und vodle musste diesmal keine Lotterie verwenden.",
@@ -562,8 +564,8 @@
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
         "-page-title": "Bitte prüfen",
         "caution1": "Sobald die Abstimmung startet, kannst Du die obigen Angaben nicht mehr ändern. Allerdings können Du und die anderen Teilnehmer:innen jederzeit weitere Optionen hinzufügen.",
-        "caution2": "Until the set due date, participants will be able to vote and add options, but cannot delete any. Then the poll will automatically end. Once started, you can neither shorten nor extend the this deadline.",
-        "closes": "Schließt",
+        "caution2": "Die Teilnehmer:innen können bis zur festgelegten Schlusszeit abstimmen und Optionen hinzufügen, aber keine löschen. Dann endet die Abstimmung automatisch. Einmal gestartet, kannst Du sie nicht mehr verkürzen oder verlängern.",
+        "closes": "Endet",
         "db-label": "Datenspeicherung",
         "publish": "Abstimmung starten",
         "type-label": "In dieser Abstimmung wird die Gruppe",
@@ -571,7 +573,7 @@
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
-        "-page-title": "Datenschutz & AGB"
+        "-page-title": "Datenschutz & Bedingungen"
     },
     "select-server": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Select A Server part of the Settings and Edit Draft Poll pages:",
