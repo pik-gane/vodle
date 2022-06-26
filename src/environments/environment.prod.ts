@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 export const environment = {
   production: true,
   imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "https://mensch72.github.io/assets/datenschutz.html",
+  privacy_statement_url: "./assets/datenschutz.html",
   privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
   logging: {
     logLevels: [
@@ -50,9 +50,9 @@ export const environment = {
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
-//  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
+  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
 //  magic_link_base_url: "https://pik-gane.github.io/vodle/#/",
-  magic_link_base_url: "http://app.vodle.it/#/",
+//  magic_link_base_url: "http://app.vodle.it/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false
