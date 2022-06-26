@@ -457,9 +457,9 @@
         "running": "Offene Abstimmungen",
         "no-running-polls-1": "Momentan kennt vodle keine offenen Abstimmungen, an denen Du teilnehmen kannst.",
         "no-running-polls-2": "Wenn Du eine Einladung zu einer Abstimmung erhalten hast, klick bitte auf den Link in der Einladung!",
-        "recently-closed": "Ended",
-        "no-recently-closed-polls-1": "Vodle knows of no ended polls that you have voted in.",
-        "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already ended, you can click the link in the invitation and see the poll results.",
+        "recently-closed": "Beendet",
+        "no-recently-closed-polls-2": "Vodle kennt keine beendeten Abstimmungen, an denen Du teilgenommen hast.",
+        "no-recently-closed-polls-1": "Wenn Du eine alte Einladung zu einer bereits beendeten Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.",
         "older": "Älter",
         "drafts": "Entwürfe",
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
@@ -488,8 +488,8 @@
         "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
         "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
         "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
-        "poll_closing_soon": "A poll is ending soon",
-        "poll_closed": "A poll ended"
+        "poll_closing_soon": "Eine Abstimmung endet bald",
+        "poll_closed": "Eine Abstimmung hat geendet"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -520,9 +520,10 @@
         "hint-only1approved-2-wap": "Wap",
         "hint-only1approved-2-after-wap": " bekommen hat oder Dein Wap in den Balken ragt.",
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
+        "wait-for-results": "Das Ergebnis wird ermittelt...",
         "results": "Ergebnis:",
         "winner-is": "Es gewinnt <i>{{winner}}</i>",
-        "reason": "Why?",
+        "reason": "Warum?",
         "reason-all-abstained": "Alle Teilnehmer:innen haben sich enthalten. Also musste vodle losen. Diese Option gewann dabei.",
         "reason-full-consensus-unique": "Dies ist die einzige Option, der alle sich nicht enthaltenden Teilnehmer:innen zugestimmt haben. Also war sie die sichere Gewinnerin und vodle musste diesmal keine Lotterie verwenden.",
         "reason-full-consensus-highest": "Von den Optionen, der alle sich nicht enthaltenden Teilnehmer:innen zugestimmt haben, hatte diese im Durchschnitt die höchsten Waps. Also war sie die sichere Gewinnerin und vodle musste diesmal keine Lotterie verwenden.",
@@ -571,7 +572,7 @@
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
-        "-page-title": "Datenschutz & AGB"
+        "-page-title": "Datenschutz & Bedingungen"
     },
     "select-server": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Select A Server part of the Settings and Edit Draft Poll pages:",
