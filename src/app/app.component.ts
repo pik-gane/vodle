@@ -78,8 +78,8 @@ export class AppComponent {
     translate.setDefaultLang('en');
 
     // the lang to use, if the lang isn't available, it will use the current loader to get them
-    translate.use('de');
-    translate.use('en');
+    const preferred_lang = navigator.language.slice(0,2);
+    translate.use(translate.langs.includes(preferred_lang)?preferred_lang:'en');
 
   }
 

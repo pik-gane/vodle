@@ -17,10 +17,6 @@
             "url": "https://youtu.be/IQEzFe9-bsg"
         },
         {
-            "name": "Sweet Child o' Mine - Guns N' Roses",
-            "url": "https://youtu.be/uhiamj_I7II"
-        },
-        {
             "name": "Imagine - John Lennon",
             "url": "https://youtu.be/f2bcREkpE0I"
         },
@@ -65,10 +61,6 @@
             "url": "https://youtu.be/HTXiC8g3F40"
         },
         {
-            "name": "You Are the Sunshine of My Life - Stevie Wonder",
-            "url": "https://youtu.be/UsYn8GS5wWc"
-        },
-        {
             "name": "Don't Stop 'Til You Get Enough - Michael Jackson",
             "url": "https://youtu.be/ZE5UtdyiOOQ"
         },
@@ -77,39 +69,43 @@
             "url": "https://youtu.be/L0Qd1lkOigI"
         },
         {
-            "name": "I Could Have Danced All Night (My Fair Lady) - Julie Andrews",
+            "name": "I Could Have Danced All Night - My Fair Lady",
             "url": "https://youtu.be/kfEAYnsq9FM"
-        },
-        {
-            "name": "Easy (Like Sunday Morning) - The Commodores",
-            "url": "https://youtu.be/McaDoZHvcdw"
         },
         {
             "name": "Sorry Seems to Be the Hardest Word - Elton John",
             "url": "https://youtu.be/d0JGwAxkDC0"
         },
         {
-            "name": "(They Long to Be) Close to You - The Carpenters",
-            "url": "https://youtu.be/7dAS3M6salg"
-        },
-        {
             "name": "The Way We Were - Barbra Streisand",
             "url": "https://youtu.be/N5sUkY0_wxw"
         },
         {
-            "name": "Time Warp - The Rocky Horror Picture Show",
+            "name": "Time Warp - Rocky Horror Show (but you must all dance along then!)",
             "url": "https://youtu.be/qSjXWndxJAc"
         },
         {
             "name": "Dust in the Wind - Kansas",
             "url": "https://youtu.be/58soUmYN2dI"
-        },
-        {
-            "name": "My Cherie Amour - Stevie Wonder",
-            "url": "https://youtu.be/VfNth5H7jHU"
         }
     ],
     "unused": [
+        {
+            "name": "You Are the Sunshine of My Life - Stevie Wonder",
+            "url": "https://youtu.be/UsYn8GS5wWc"
+        },
+        {
+            "name": "Sweet Child o' Mine - Guns N' Roses",
+            "url": "https://youtu.be/uhiamj_I7II"
+        },
+        {
+            "name": "(They Long to Be) Close to You - The Carpenters",
+            "url": "https://youtu.be/7dAS3M6salg"
+        },
+        {
+            "name": "Easy (Like Sunday Morning) - The Commodores",
+            "url": "https://youtu.be/McaDoZHvcdw"
+        },
         {
             "name": "Zombie - The Cranberries",
             "url": "https://youtu.be/81_2Xb0XB_E"
@@ -137,6 +133,10 @@
         {
             "name": "Tainted Love - Imelda May",
             "url": "https://youtu.be/IisUDdCAfuY"
+        },
+        {
+            "name": "My Cherie Amour - Stevie Wonder",
+            "url": "https://youtu.be/VfNth5H7jHU"
         },
         {}
     ]
