@@ -259,7 +259,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 <ion-icon 
                     color="light" style="position: relative; top: 2px" 
                     [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-                </ion-icon><b>&nbsp;{{Math.round(p.agreement_level * 1000) / 10}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
+                </ion-icon><b>&nbsp;{{(p.agreement_level * 100).toFixed(1)}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
               </span>&nbsp;&nbsp;&nbsp;
               <ion-badge *ngIf="false"
                     class="ion-no-margin" 
@@ -335,8 +335,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- FINAL RESULTS (if ended and results are ready): -->
 
-    <!-- TODO!! -->
-
     <!-- winner exists: -->
     <ng-container *ngIf="p.has_results && p.type=='winner'">
       <ion-item color="light">
@@ -363,12 +361,12 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           <span 
             *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner == oidsorted[0]" 
             [innerHtml]="'poll.reason-largest-approval'|translate:{
-              approval:Math.round(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*1000)/10,
-              disapproval:100-Math.round(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*1000)/10}"></span>
+              approval:(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1),
+              disapproval:(100-p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1)}"></span>
           <span 
             *ngIf="p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner != oidsorted[0]" 
             [innerHtml]="'poll.reason-smaller-approval'|translate:{
-              share:Math.round(p.T.shares_map.get(p.winner)*1000)/10}"></span>
+              share:(p.T.shares_map.get(p.winner)*100).toFixed(1)}"></span>
         </p>
       </ion-item>
     </ng-container>
@@ -384,7 +382,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           <ng-container *ngFor="let item of [].constructor(oidsorted.length); let i = index">
             <ng-container *ngIf="p.T.shares_map.get(oidsorted[i]) > 0">
                 <h3><b>
-                  <span [innerHtml]="'poll.of-the-budget-go-to'|translate:{share:Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10, option:p.options[oidsorted[i]].name}"></span>
+                  <span [innerHtml]="'poll.of-the-budget-go-to'|translate:{share:(p.T.shares_map.get(oidsorted[i])*100).toFixed(1), option:p.options[oidsorted[i]].name}"></span>
                 </b></h3> 
             </ng-container>
           </ng-container>
@@ -710,7 +708,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                             -->
                             <text x="100%" y="15" 
                               style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="#9abcbd" [innerHtml]="
-                                Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10 + '%&nbsp;&nbsp;'
+                                (p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 100).toFixed(1) + '%&nbsp;&nbsp;'
                               ">
                             </text>
                           </svg>
@@ -775,7 +773,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                                 ? (p.allow_voting?'poll.chance-to-win':'poll.final-chance-to-win') 
                                 : (p.allow_voting?'poll.of-the-budget':'poll.final-budget')) 
                             | translate: {percentage: 
-                              Math.round(p.T.shares_map.get(oidsorted[i]) * 1000) / 10
+                              (p.T.shares_map.get(oidsorted[i]) * 100).toFixed(1)
                             }">
                           </span><small><wbr> <span style="color:#4c822e;" 
                               [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
@@ -787,7 +785,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <span style="color:#9abcbd; white-space: nowrap;">
                           <span [innerHtml]="
                             'poll.approved-by' | translate: {percentage:
-                              Math.round(p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 1000) / 10
+                              (p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 100).toFixed(1)
                             }">
                           </span>
                         </span>
@@ -808,7 +806,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                               style="color:#9abcbd">,
                           <span style="white-space: nowrap;" [innerHtml]="
                             'poll.average-rating' | translate: {average:
-                              Math.round(p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 10) / 10
+                              (p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining)).toFixed(1)
                             }">
                           </span>
                         </span>&nbsp;

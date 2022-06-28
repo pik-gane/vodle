@@ -5,13 +5,17 @@
 
     "title": "Which Karaoke song shall the boss sing?",
 
-    "desc": "At our next celebration, which of the following freely available Karaoke songs shall the boss sing for our entertainment?",
+    "desc": "At our next celebration, which of the following freely available Karaoke songs shall the boss sing for our entertainment? (If you add further options, please make sure they are available at https://www.youtube.com/user/karafun and add the corresponding Youtube link.)",
     
-    "url": "",
+    "url": "https://www.youtube.com/user/karafun",
 
     "due_type": "friday-noon",
 
     "options": [
+        {
+            "name": "La Isla Bonita - Madonna",
+            "url": "https://youtu.be/zV4K9_cne8Y"
+        },
         {
             "name": "My Heart Will Go On - Céline Dion (Titanic)",
             "url": "https://youtu.be/IQEzFe9-bsg"
