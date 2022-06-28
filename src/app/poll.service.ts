@@ -212,6 +212,7 @@ export class Poll {
 
   set_timeouts(start_date?: Date) {
     /** set timeouts for ending soon and ending events */
+    this.G.L.entry("Poll.set_timeouts", this._pid, start_date);
     const has_just_ended = this.end_if_past_due();
     if (!has_just_ended) {
       this.allow_voting = true;
@@ -222,8 +223,12 @@ export class Poll {
         const due_ms = due.getTime(),
               time_left_ms = due_ms - now_ms;
         // set timeout for ending:
-        window.setTimeout(this.end.bind(this), time_left_ms);
-        this.G.L.trace("Poll.set_timeouts: end scheduled", this._pid, time_left_ms);
+        if (time_left_ms < 2000000000) {
+          window.setTimeout(this.end.bind(this), time_left_ms);
+          this.G.L.trace("Poll.set_timeouts: end scheduled", this._pid, time_left_ms);  
+        } else {
+          this.G.L.trace("Poll.set_timeouts: end not scheduled, too far in future", this._pid, time_left_ms);  
+        }
         const started = start_date || this.start_date;
         this.G.L.trace("Poll.set_timeouts start_date", this._pid, started);
         if (!!started) {
@@ -231,10 +236,14 @@ export class Poll {
                 total_time_ms = due_ms - started_ms,
                 notify_time_ms = due_ms - this.G.S.closing_soon_fraction * total_time_ms,
                 time_to_notify_ms = notify_time_ms - now_ms;
-          if (time_to_notify_ms > 0) {
+          if (time_to_notify_ms > 2000000000) {
+            this.G.L.trace("Poll.set_timeouts: notify_closing_soon not scheduled, too far in future", this._pid, time_to_notify_ms);
+          } else if (time_to_notify_ms > 0) {
             window.setTimeout(this.notify_closing_soon.bind(this), time_to_notify_ms);
             this.G.L.trace("Poll.set_timeouts: notify_closing_soon scheduled", this._pid, time_to_notify_ms);
-          } 
+          } else {
+            this.G.L.trace("Poll.set_timeouts: notify_closing_soon not scheduled since in past", this._pid, time_to_notify_ms);
+          }
         }
       }
     }
@@ -1701,6 +1710,7 @@ export class Poll {
     const now = new Date(), 
           due = this.due, 
           past_due = !!due && now > due;
+    this.G.L.entry("Poll.end_if_past_due", this._pid, now, due, past_due, this._state);
     if (past_due) {
       if (this._state == "running" || (this._state == "closed" && !this.has_results)) {
         this.end();
