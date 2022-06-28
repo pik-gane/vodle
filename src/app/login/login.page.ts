@@ -242,6 +242,12 @@ export class LoginPage implements OnInit {
     }
   }
 
+  login_as_guest() {
+    this.G.S.password = "Guest" + Math.round(Math.random()*100000);
+    this.G.S.email = this.G.S.password + "@vodle.it";
+    this.G.D.login_submitted();
+  }
+
   blur_password() {
     setTimeout(() => {
       this.input_retype_password.setFocus();

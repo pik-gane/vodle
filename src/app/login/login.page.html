@@ -175,6 +175,22 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
+      <ng-container *ngIf="step=='fresh_email'">
+        <ion-item>
+        </ion-item>
+        <ion-item class="item-text-wrap" lines="none">
+          <small><p style="width:100%;">
+            <span [innerHtml]="'login.login-as-guest-head'|translate"></span><br/>
+            <ion-button type="submit" color="primary" slot="start" 
+                [disabled]="!accept_privacy" 
+                shape="round"
+                (click)="login_as_guest()">
+              <span [innerHtml]="'login.login-as-guest-button'|translate"></span>
+            </ion-button><br/>
+            <span *ngIf="!accept_privacy"style="width:100%;" [innerHtml]="'login.login-as-guest-foot'|translate"></span>
+          </p></small>
+        </ion-item>
+      </ng-container>
     </ng-container>
 
     <ng-container *ngIf="step=='fresh_password'">
