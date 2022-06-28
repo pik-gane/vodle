@@ -367,7 +367,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
-    if (force || (this.needs_refresh && !(this.refresh_paused))) {
+    if (force || (this.needs_refresh && !(this.refresh_paused) && !this.dragged_oid)) {
       if (!force) {
         // link displayed sorting to poll's sorting:
         const loadingElement = await this.loadingController.create({
@@ -541,6 +541,7 @@ export class PollPage implements OnInit {
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
+      this.update_order();
       return false;
     } else {
       this.rating_change_ended(oid);
@@ -558,6 +559,7 @@ export class PollPage implements OnInit {
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
+      this.update_order();
       return false;
     } else {
       this.rating_change_ended(oid);
