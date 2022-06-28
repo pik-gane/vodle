@@ -62,9 +62,9 @@ export const environment = {
     verify_updates: true
   },
   closing: {
-    grace_period_1_ms: 2000,
-    grace_period_2_ms: 2000,
-    grace_period_3_ms: 2000
+    grace_period_1_ms: 3000,
+    grace_period_2_ms: 3000,
+    grace_period_3_ms: 3000
   },
   max_len: {
     title: 200,

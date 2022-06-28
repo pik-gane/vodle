@@ -179,14 +179,14 @@ export class SettingsPage implements OnInit {
   private fill_form() {
     this.G.L.entry("SettingsPage.fill_form");
     // fill form fields with values from data or defaults
-    const default_lang = navigator.language.slice(0,2);
+    const preferred_lang = navigator.language.slice(0,2);
     this.formGroup.setValue({
       email: this.G.S.email||'',
       pw: {
         password: this.G.S.password||'',
         confirm_password: this.G.S.password||'',
       },
-      language: this.G.S.language||(this.translate.langs.includes(default_lang)?default_lang:'en'),
+      language: this.G.S.language||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
       theme: this.G.S.theme||'light',
     });
     this.select_server.selectServerFormGroup.setValue({
