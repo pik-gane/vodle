@@ -45,6 +45,7 @@ export const environment = {
 //    backdoor_public_key: "ea17226c631a8a78c67626136d91980e82328b72e6b536c7df7e68fbb22c2aa7",
   },
   delegation: {
+    enabled: false,
     max_weight: 10
   },
   db_put_retry_delay_ms: 100,

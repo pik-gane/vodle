@@ -43,7 +43,7 @@ export class PollPage implements OnInit {
   Math = Math;
   Object = Object;
   window = window;
-  environment = environment;
+  E = environment;
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 

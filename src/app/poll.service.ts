@@ -901,6 +901,10 @@ export class Poll {
   // Methods dealing with changes to the delegation graph:
 
   add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {
+    if (!environment.delegation.enabled) {
+      this.G.L.error("PollService.add_delegation when delegation is disabled", this._pid, client_vid, oid, delegate_vid);
+      return false;
+    }
     /** Called whenever a delegation shall be added. Returns whether this succeeded */
     const dir_d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid), 
@@ -909,21 +913,21 @@ export class Poll {
     if (dir_d_map.has(client_vid)) {
 
       if (dir_d_map.get(client_vid) == delegate_vid) {
-        this.G.L.warn("PollService.add_delegation of existing delegation", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
+        this.G.L.warn("PollService.add_delegation of existing delegation", this._pid, client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
         return true;
       } else {
-        this.G.L.error("PollService.add_delegation when delegation already exists", client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
+        this.G.L.error("PollService.add_delegation when delegation already exists", this._pid, client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
         return false;  
       }
 
     } else if (new_eff_d_vid == client_vid) { 
 
-      this.G.L.error("PollService.add_delegation when this would create a cycle", client_vid, oid, delegate_vid);
+      this.G.L.error("PollService.add_delegation when this would create a cycle", this._pid, client_vid, oid, delegate_vid);
       return false;
 
     } else {
 
-      this.G.L.trace("PollService.add_delegation feasible", client_vid, oid, delegate_vid);
+      this.G.L.trace("PollService.add_delegation feasible", this._pid, client_vid, oid, delegate_vid);
 
       // register DIRECT delegation and inverse:
       dir_d_map.set(client_vid, delegate_vid);

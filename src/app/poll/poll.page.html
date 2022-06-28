@@ -94,6 +94,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
         </span><ion-button class="ion-no-margin ion-no-padding"
+            [disabled]="!E.delegation.enabled"
             style="position: relative; right: -4px;"
             shape="round" fill="solid" color="primary">
           <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
@@ -885,7 +886,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- DEBUGGING AREA (not in production mode): -->
 
-    <ng-container *ngIf="false && !environment.production">
+    <ng-container *ngIf="false && !E.production">
       <ion-item></ion-item>
       <ion-item class="ion-text-right" lines="none">
         <ion-col><small><p style="color: grey;">

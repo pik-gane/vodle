@@ -140,6 +140,7 @@
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
         "header": "Delegiere an eine:n andere:n Teilnehmer:in",
+        "disabled": "Entschuldigung, Delegation wird von dieser Version von vodle noch nicht unterstützt.",
         "intro": "Du kannst eine:n andere:n Teilnehmer:in bitten, Dein:e Delegierte:r zu sein. Diese Person wird dann statt Dir abstimmen. Das heißt, ihre Waps werden auch als Deine Waps verwendet. Diese Person kann ihre und Deine Stimme auch an eine Dritte Person weiter delegieren, und so weiter. Du kannst die Delegation jederzeit widerrufen. Du kannst auch jederzeit einzelne Waps weiterhin selbst einstellen.",
         "nickname-label": "Kurzname der/des Delegierten:",
         "nickname-placeholder": "Bitte trage einen Kurznamen für diese Person (oder ihr voller Name) ein",

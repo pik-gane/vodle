@@ -186,4 +186,8 @@ export class DelegationDialogPage implements OnInit {
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");
   }
+  
+  close() {
+    this.popover.dismiss();
+  }
 }

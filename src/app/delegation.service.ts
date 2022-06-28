@@ -17,6 +17,16 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+/*
+
+CAUTION: At the moment, delegation is disabled due to a difficult bug!
+
+BUG: Delegation cycles are not always prevented and can lead to inconsistent results.
+
+PROPOSED SOLUTION: Allow cycles. When a cycle exists, the effective wap is the maximum of the waps assigned by the members of the cycle. To implement this, the simple map effective_delegation_map needs to be replaced by a binary relationship similar to indirect_delegation_map. 
+
+*/
+
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
