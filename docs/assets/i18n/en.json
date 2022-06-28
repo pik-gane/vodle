@@ -139,6 +139,7 @@
     },
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
+        "disabled": "We apologize, delegation is not yet enabled in this version of vodle.",
         "header": "Delegate to some other participant",
         "intro": "You can ask some other participant to act as your delegate. The delegate will then control your waps instead of you. In other words, their waps will be used as your waps, too. The delegate can also delegate their and your waps further to some third participant, and so on. You can revoke the delegation at any time, and can also always choose to still adjust some of the waps yourself.",
         "nickname-label": "Delegateʼs nickname:",

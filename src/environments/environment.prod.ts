@@ -20,8 +20,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 export const environment = {
   production: true,
   imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "./assets/datenschutz.html",
-  privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
+  privacy_statement_url: "./assets/privacy.html",
+  privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
   logging: {
     logLevels: [
       {
