@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html amp>
 <head>
+    <script>
+        if (navigator.language.slice(0,2)=="de") {
+            window.location.replace("./index_de.html");
+        }
+    </script>    
   <!-- Site made with 8b Website Builder v0.0.0.0, https://8b.com -->
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -157,7 +162,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
 			<!-- SHOW LOGO -->
 			<div class="navbar-brand">
 				<div class="navbar-logo">
-					<a href="#menu1-0"><amp-img src="assets/landing-page/images/company-1-h_kd4sitvg.png" layout="fixed" height="49" width="228" alt="vodle – everygroup’s consensus" class="placeholder-loader">
+					<a href="#menu1-0"><amp-img src="assets/landing-page/images/company-1-h_kd4sitvg.png" layout="fixed" height="49" width="228" alt="vodle – everygroup’s consensus" class="placeholder-loader" style="max-width: 228px!important">
 						<div placeholder="" class="placeholder">
                                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
                                     <circle class="big" fill="none" stroke="#c2e0e0" stroke-width="3" stroke-dasharray="230" stroke-dashoffset="230" cx="150" cy="150" r="145"></circle>
@@ -232,9 +237,10 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
         <div class="mbr-row align-left">
             <div class="title-block mbr-col-sm-12 mbr-col-md-12 mbr-col-lg-12">
                 <h1 class="mbr-section-title mbr-fonts-style mbr-bold display-1">vodle</h1>
-                <h2 class="mbr-section-subtitle mbr-fonts-style mbr-pt-3 display-2">a free &amp; easy online tool<br>for making fair &amp; efficient consensus decisions<br></h2>
+                <h2 class="mbr-section-subtitle mbr-fonts-style mbr-pt-3 display-2">a free &amp; easy social app<br>for making fair &amp; efficient consensus decisions<br></h2>
                 
-                <div class="mbr-section-btn mbr-pt-4"><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><a class="btn-primary btn display-7" href="#features1-21">Learn how</a></div>
+                <div class="mbr-section-btn mbr-pt-4"><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><a class="btn-secondary btn display-7" href="http://app.vodle.it">OK, LET'S GO!</a>
+                <div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><a class="btn-primary btn display-7" href="#features1-21">learn how</a></div>
             </div>
         </div>
     </div>
@@ -242,7 +248,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
 
 <section class="slider2 slider slider-with-bullets cid-s5YuZms5XX" id="slider2-22"><amp-state id="selectedslider222"><script type="application/json">{"slide": 0}</script></amp-state>
 	
-	<div class="slider-box" data-autoplay="true" data-delay="3000"><amp-carousel class="carousel" height="3" width="4" layout="responsive" type="slides" loop="" autoplay="" delay="6000" on="slideChange:AMP.setState({selectedslider222: {slide :event.index}})" id="carouselslider222"><div class="image">
+	<div class="slider-box" data-autoplay="true" data-delay="3000"><amp-carousel class="carousel" width="100%" layout="responsive" type="slides" loop="" autoplay="" delay="6000" on="slideChange:AMP.setState({selectedslider222: {slide :event.index}})" id="carouselslider222"><div class="image">
 				<amp-img class="carousel-img placeholder-loader" src="assets/landing-page/images/background1-h_kd5025zv.jpg" layout="fill" alt="" width="12.060301507537687" height="3">
 					
 					<div class="container">
@@ -337,7 +343,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
     
     <div class="container">
         <div class="title-wrap mbr-pb-4 align-center">
-            <h3 class="mbr-section-title mbr-bold mbr-fonts-style display-2">why choose vodle</h3>
+            <h3 class="mbr-section-title mbr-bold mbr-fonts-style display-2">why choose vodle?</h3>
             <!--TODO: use vodle green for icons here-->
         </div>
         <div class="mbr-row mbr-jc-c">
@@ -351,7 +357,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     <div class="card-box">
                         <h3 class="card-title mbr-bold mbr-fonts-style display-5">consensus decisions<br>are just better</h3>
                         
-                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Consensus decision making can lead to much better results than majority voting. If done right, it finds strong compromise options benefitting all stakeholders rather than just a mere half of the voters.</p>
+                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Consensus decision making can lead to much better results than majority voting. If done right, it finds strong compromise options benefitting all stakeholders rather than just a mere half of the participants.</p>
                         
                     </div>
                 </div>
@@ -366,7 +372,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     <div class="card-box">
                         <h3 class="card-title mbr-bold mbr-fonts-style display-5">interactivity<br>without lengthly debates</h3>
                         
-                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> is based on how voters rate their options – whether anytime from home or in a physical meeting. Our smart algorithm identifies options’ consensus potential and winning probabilities in real time as voters’ ratings evolve towards consensus.</p>
+                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> is based on how participants evaluate their options – whether anytime from home or in a physical meeting. Our smart algorithm identifies options’ consensus potential and winning probabilities in real time as participants’ evaluations evolve towards consensus.</p>
                         
                     </div>
                 </div>
@@ -381,7 +387,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     <div class="card-box">
                         <h3 class="card-title mbr-bold mbr-fonts-style display-5">protect minorities<br>&amp; embrace diversity<br></h3>
                         
-                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> gives everyone the same effective power even in controversial situations or if some voters act strategically. Still, no voter can delay a decision forever. With <strong>vodle</strong>, all voters have incentives to consider all others’ preferences.</p>
+                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> gives everyone the same effective power even in controversial situations or if some participants act strategically. Still, no participant can delay a decision. With <strong>vodle</strong>, all participants have incentives to consider all others’ preferences.</p>
                         
                     </div>
                 </div>
@@ -399,11 +405,11 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
             <!--TODO: use vodle blue for icons here-->
 
         </div>
-        <div class="mbr-row mbr-black">
 
-            <div class="mbr-row mbr-column mbr-col-lg-8">
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+        <div class="mbr-row mbr-jc-c">
+
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1576 927l-1328 738q-23 13-39.5 3t-16.5-36v-1472q0-26 16.5-36t39.5 3l1328 738q23 13 23 31t-23 31z"></path></svg></span>
@@ -412,28 +418,28 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         <div class="card-box">
                             <h3 class="card-title mbr-bold mbr-fonts-style display-5">set up your poll<br></h3>
                             
-                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Pose a question, set a decision deadline, list some first options, maybe add some descriptions and links, then invite your voters!<br></p>
+                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Pose a question, set a decision deadline, list some first options, maybe add some descriptions and links, then invite your participants!<br></p>
                             
                         </div>
                     </div>
                 </div>
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-star fa"><svg width="100%" height="100%" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1728 647q0 22-26 48l-363 354 86 500q1 7 1 20 0 21-10.5 35.5t-30.5 14.5q-19 0-40-12l-449-236-449 236q-22 12-40 12-21 0-31.5-14.5t-10.5-35.5q0-6 2-20l86-500-364-354q-25-27-25-48 0-37 56-46l502-73 225-455q19-41 49-41t49 41l225 455 502 73q56 9 56 46z"></path></svg></span>
                             </div>
                         </div>
                         <div class="card-box">
-                            <h3 class="card-title mbr-bold mbr-fonts-style display-5">rate or add options<br></h3>
+                            <h3 class="card-title mbr-bold mbr-fonts-style display-5">evaluate or add options<br></h3>
                             
-                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">As a voter, just rate each option from 0 to 100. You can change your ratings and also add further options at any time until the deadline.<br></p>
+                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">As a participant, just give each option a “wap” from 0 to 100. You can change your waps and also add further options at any time until the deadline.<br></p>
                             
                         </div>
                     </div>
                 </div>
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-refresh fa"><svg width="100%" height="100%" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1639 1056q0 5-1 7-64 268-268 434.5t-478 166.5q-146 0-282.5-55t-243.5-157l-129 129q-19 19-45 19t-45-19-19-45v-448q0-26 19-45t45-19h448q26 0 45 19t19 45-19 45l-137 137q71 66 161 102t187 36q134 0 250-65t186-179q11-17 53-117 8-23 30-23h192q13 0 22.5 9.5t9.5 22.5zm25-800v448q0 26-19 45t-45 19h-448q-26 0-45-19t-19-45 19-45l138-138q-148-137-349-137-134 0-250 65t-186 179q-11 17-53 117-8 23-30 23h-199q-13 0-22.5-9.5t-9.5-22.5v-7q65-268 270-434.5t480-166.5q146 0 284 55.5t245 156.5l130-129q19-19 45-19t45 19 19 45z"></path></svg></span>
@@ -442,13 +448,13 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         <div class="card-box">
                             <h3 class="card-title mbr-bold mbr-fonts-style display-5">watch & make consensus grow<br></h3>
                             
-                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">As a voter, watch in real-time how all options’ consensus potential and the resulting winning probabilities evolve. Adjust your ratings to promote potential consensus options you like.<br></p>
+                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">As a participant, watch in real-time how all options’ consensus potential and the resulting winning probabilities evolve. Adjust your waps to promote potential consensus options you like.<br></p>
                             
                         </div>
                     </div>
                 </div>
-                <div class="card mbr-col-sm-12 last-child">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-check fa"><svg width="100%" height="100%" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1671 566q0 40-28 68l-724 724-136 136q-28 28-68 28t-68-28l-136-136-362-362q-28-28-28-68t28-68l136-136q28-28 68-28t68 28l294 295 656-657q28-28 68-28t68 28l136 136q28 28 28 68z"></path></svg></span>
@@ -457,17 +463,17 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         <div class="card-box">
                             <h3 class="card-title mbr-bold mbr-fonts-style display-5">at the deadline, see the winning option!<br></h3>
                             
-                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Using a simple but smart algorithm based on the science of fair voting rules, <b>vodle</b> picks the winning option based on all voters’ final ratings. <br></p>
+                            <p class="card-text mbr-fonts-style mbr-pt-2 display-7">Using a simple but smart algorithm from the science of fair voting rules, <b>vodle</b> picks the winning option based on all participants’ final waps. <br></p>
                             
                         </div>
                     </div>
                 </div>
-            </div>
+            
 
             <div class="mbr-row mbr-column mbr-col-lg-4">
                 <div class="image-wrap mbr-col-md-12 mbr-col-sm-12 mbr-col-lg-4 mbr-flex">
                     <div class="image-block mbr-col-md-12 mbr-col-sm-12 mbr-mr-auto">
-                        <amp-img src="assets/landing-page/images/screenshot_tilted.png" layout="fixed" width="321" height="438" alt="vodle screenshot" class="placeholder-loader">
+                        <amp-img src="assets/landing-page/images/screenshot_tilted.png" layout="fixed" width="260" height="550" alt="vodle screenshot" class="placeholder-loader">
                             <div placeholder="" class="placeholder">
                                     <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
                                         <circle class="big" fill="none" stroke="#c2e0e0" stroke-width="3" stroke-dasharray="230" stroke-dashoffset="230" cx="150" cy="150" r="145"></circle>
@@ -476,11 +482,14 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         </amp-img>
                     </div>
                 </div><!--TODO: use cleaner better screenshot-->
-                <form action="http://app.vodle.it/#/help">
-                    <button class="btn-primary btn display-7">take a tour! (not yet)</button>
-                </form>
             </div>
-
+            <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                <div class="card-wrapper mbr-flex mbr-column">
+                    <form action="http://demo.vodle.it/">
+                        <button class="btn-primary btn display-7">see a demo poll!</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -504,7 +513,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         <div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div>
                         <div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div>
                         <div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div>
-                        <form action="http://app.vodle.it/#/mypolls">
+                        <form action="http://app.vodle.it/#/draftpoll">
                             <button class="btn btn-md btn-primary btn-form display-2">start your first poll!</button>
                         </form>
                     </div>            <!--TODO: use vodle green for this button-->
@@ -525,8 +534,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                 <div class="title-block mbr-col-sm-12 mbr-col-md-12">
                     <h1 class="mbr-section-title mbr-fonts-style mbr-bold display-2">about us</h1>
                     
-                    <p class="mbr-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> is brought to you by a small but enthusiastic <a href="#team1-1v">team</a> of volunteers who believe that fair &amp; efficient group decisions are at the heart of a healthy democratic society.<br><br>As we are committed to keep <strong>vodle</strong> free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, just contact us! <br></p>
-                    <div class="mbr-section-btn mbr-pt-4"><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><a class="btn-primary btn display-7" href="#support">Some ideas how you might support us</a></div>
+                    <p class="mbr-text mbr-fonts-style mbr-pt-2 display-7"><strong>vodle</strong> is brought to you by a small but enthusiastic <a href="#team1-1v">team</a> of scientists and volunteers who believe that fair &amp; efficient group decisions are at the heart of a healthy democratic society.<br><br>It was mainly developed at the Potsdam Institute for Climate Impact Research (PIK) and is hosted on its servers.<br><br>As we are committed to keep <strong>vodle</strong> free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, just contact us! <br></p>
+                    <div class="mbr-section-btn mbr-pt-4"><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><div style="position: absolute; left: -100000px; opacity: 0;" contenteditable="true"></div><a class="btn-primary btn display-7" href="#support">some ideas how you might support us</a></div>
                 </div>
             </div>
             <div class="image-wrap mbr-col-md-12 mbr-col-sm-12 mbr-col-lg-6 mbr-flex">
@@ -570,8 +579,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     </div>
                     <div class="card-box mbr-pt-3">
                         <h3 class="card-title mbr-bold mbr-fonts-style display-5">Jobst Heitzig<br></h3>
-                        <h4 class="card-subtitle mbr-bold mbr-fonts-style mbr-pt-3 display-7">Chief Method Developer<br></h4>
-                        <p class="card-text mbr-fonts-style mbr-pt-1 display-7">Jobst devotes his spare time from his day job as a mathematician to develop the methods and algorithms at the core of <strong>vodle</strong>.<br></p>
+                        <h4 class="card-subtitle mbr-bold mbr-fonts-style mbr-pt-3 display-7">Chief Method & Software Developer<br></h4>
+                        <p class="card-text mbr-fonts-style mbr-pt-1 display-7">Jobst devotes part of his paid time and much of his spare time from his day job as a mathematician at PIK to develop the methods and algorithms at the core of <strong>vodle</strong>.<br></p>
                     </div>
                 </div>
             </div>
@@ -591,7 +600,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     <div class="card-box mbr-pt-3">
                         <h3 class="card-title mbr-bold mbr-fonts-style display-5">Marius Amrhein<br></h3>
                         <h4 class="card-subtitle mbr-bold mbr-fonts-style mbr-pt-3 display-7">User Experience Designer<br></h4>
-                        <p class="card-text mbr-fonts-style mbr-pt-1 display-7">Marius uses Design Thinking and interviews with user groups and decision experts to constantly improve <b>vodle</b>’s look & feel.<br></p>
+                        <p class="card-text mbr-fonts-style mbr-pt-1 display-7">Marius has used Design Thinking and interviews with user groups and decision experts to improve <b>vodle</b>’s look & feel.<br></p>
                     </div>
                 </div>
             </div>
@@ -624,6 +633,21 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
     </div>
 </section>
 
+<section class="contacts7 cid-r1rE4FefB5" id="hosted" style="background-color: white;">
+    
+    <div class="container">
+        <div class="title-wrap align-center">
+            <a href="https://www.pik-potsdam.de/en">
+
+            <h3 class="mbr-section-title mbr-bold mbr-fonts-style display-2">
+                a service of the</h3><br><h3 class="card-title mbr-bold mbr-fonts-style display-5">
+                <amp-img src="assets/landing-page/images/pik.png" layout="fixed" width="200" height="88" alt="vodle screenshot" class="placeholder-loader"></amp-img>
+                <br>Potsdam Institute for Climate Impact Research</h3>
+            </a>
+        </div>
+    </div>
+</section>
+
 <section class="contacts7 cid-r1rE4FefB5" id="contact">
     
     
@@ -642,8 +666,12 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         </div>
                     </div>
                     <div class="card-box mbr-pt-3">
-                        <h4 class="card-title mbr-bold mbr-fonts-style display-5">E-Mail</h4>
+                        <h4 class="card-title mbr-bold mbr-fonts-style display-5">e-mail</h4>
                         <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><a href="mailto:info@vodle.it">info@vodle.it</a></p>
+                    </div>
+                    <div class="card-box mbr-pt-3">
+                        <h4 class="card-title mbr-bold mbr-fonts-style display-5">or follow us on twitter</h4>
+                        <p class="card-text mbr-fonts-style mbr-pt-2 display-7"><a href="https://twitter.com/vodle_it">@vodle_it</a></p>
                     </div>
                 </div>
             </div>
@@ -656,18 +684,18 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
 
 <section class="features1 cid-s5XJUE0SPC" id="support"><!--TODO: make background white-->
     
+
+
     <div class="container">
         <div class="title-wrap mbr-pb-4 align-center">
             <h3 class="mbr-section-title mbr-bold mbr-fonts-style display-2">how to help<br></h3>
                         <!--TODO: use vodle green for icons here-->
 
         </div>
-        <div class="mbr-row mbr-black">
+        <div class="mbr-row mbr-jc-c">
 
-            <div class="mbr-row mbr-column mbr-col-lg-12">
-
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+            <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" fill="currentColor"  viewBox="0 0 25 25"><path id="Group_People" data-name="Group People" d="M16.75,19H16v5.5a.5.5,0,0,1-.5.5h-6a.5.5,0,0,1-.5-.5V19H8.25A1.25,1.25,0,0,1,7,17.75v-3.5a4.25,4.25,0,0,1,3.23-4.11,3.5,3.5,0,1,1,4.55,0A4.25,4.25,0,0,1,18,14.25v3.5A1.25,1.25,0,0,1,16.75,19ZM6,17.75v-3.5A5.23,5.23,0,0,1,8.6,9.73a4.27,4.27,0,0,1-.41-3.45,4.39,4.39,0,0,0-.43-.14,3.5,3.5,0,1,0-4.55,0A4.25,4.25,0,0,0,0,10.25v3.5A1.25,1.25,0,0,0,1.24,15H2v5.5a.5.5,0,0,0,.5.5h5a.5.5,0,0,0,.5-.5V20A2.25,2.25,0,0,1,6,17.75ZM21.77,6.14a3.5,3.5,0,1,0-4.54,0,4.32,4.32,0,0,0-.42.14,4.27,4.27,0,0,1-.41,3.45A5.23,5.23,0,0,1,19,14.25v3.5A2.25,2.25,0,0,1,17,20v.51a.5.5,0,0,0,.5.5h5a.5.5,0,0,0,.5-.5V15h.75A1.25,1.25,0,0,0,25,13.75v-3.5A4.25,4.25,0,0,0,21.77,6.14Z"/></svg></span>
@@ -678,11 +706,10 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                             <p class="card-text mbr-fonts-style mbr-pt-2 display-7">
                             Then we’d like to talk to you about developing a “moderator” version of <b>vodle</b> that you can test during some workshops. This way you make the consensus formation process for your participants more efficient and save valuable workshop time!<br></p>
                         </div>
-                    </div>
                 </div>
-
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+            </div>
+            <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" viewBox="0 0 42 41.98" xmlns="http://www.w3.org/2000/svg" fill="currentColor">  <g>
@@ -701,9 +728,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         </div>
                     </div>
                 </div>
-
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%"  fill="currentColor" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m437 421c8.291 0 15-6.709 15-15v-360c0-8.291-6.709-15-15-15s-15 6.709-15 15v19.42l-212 74.883v171.394l212 74.883v19.42c0 8.291 6.709 15 15 15z"/><path d="m90 331v135c0 8.291 6.709 15 15 15h30c8.291 0 15-6.709 15-15v-75h15c24.814 0 45-20.186 45-45v-15h-30v15c0 8.276-6.724 15-15 15h-15v-30z"/><path d="m503.709 182.582-21.709-10.854v108.545l21.709-10.854c5.083-2.55 8.291-7.735 8.291-13.419v-60c0-5.684-3.208-10.869-8.291-13.418z"/><path d="m75 301h105v-150h-105c-41.353 0-75 33.647-75 75s33.647 75 75 75z"/></svg></span>
@@ -717,8 +743,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     </div>
                 </div>
 
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" viewBox="0 0 19 13" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="currentColor">
@@ -736,13 +762,13 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                         <div class="card-box">
                             <h3 class="card-title mbr-bold mbr-fonts-style display-5">you’re a software developer with some spare time?</h3>
                             <p class="card-text mbr-fonts-style mbr-pt-2 display-7">
-                            Just see our up-to-date backlog issues on <a href="https://github.com/mensch72/maxparc-ionic/issues">github.</a></p>
+                            Just see our up-to-date backlog issues on <a href="https://github.com/pik-gane/vodle/issues">github.</a></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-database"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg></span>
@@ -756,8 +782,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     </div>
                 </div>
 
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
@@ -784,8 +810,8 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
                     </div>
                 </div>
 
-                <div class="card mbr-col-sm-12 md-pb lg-pb">
-                    <div class="card-wrapper mbr-flex">
+                <div class="card mbr-col-sm-12 mbr-col-md-8 mbr-col-lg-4 align-center md-pb">
+                    <div class="card-wrapper mbr-flex mbr-column">
                         <div class="card-img">
                             <div class="iconfont-wrapper">
                                 <span class="amp-iconfont fa-play fa"><svg width="100%" height="100%" viewBox="0 0 42 41.98" xmlns="http://www.w3.org/2000/svg" fill="currentColor">  <g>
@@ -815,7 +841,7 @@ body{font-family: Didact Gothic;}blockquote{border-color: #4e84c2;}div[submit-su
     
     <div class="footer-container container">
         <div class="mbr-row mbr-px-2 link-items mbr-jc-c mbr-fonts-style display-7">
-            <p class="mbr-text fLink mbr-px-1 align-center mbr-white"><a href="https://sandstorm.pik-potsdam.de/#/imprint">Imprint</a> | <a href="https://sandstorm.pik-potsdam.de/assets/datenschutz.html">Privacy</a></p>
+            <p class="mbr-text fLink mbr-px-1 align-center mbr-white"><a href="https://sandstorm.pik-potsdam.de/assets/impressum.html">Imprint</a> | <a href="https://sandstorm.pik-potsdam.de/assets/privacy.html">Privacy</a></p>
         </div>
     </div>
 </section>
