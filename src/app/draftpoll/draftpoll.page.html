@@ -211,7 +211,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
             #ionSelects tabindex="0" required 
             (ionChange)="set_poll_due_type();changed_due_type()">
-          <ion-select-option value="custom" [innerHtml]="'draftpoll.due-type-custom'|translate"></ion-select-option>
+        <!-- FIXME: apparently the ion-datetime is broken, so we need to disable this option until that is fixed: -->
+            <ion-select-option value="custom" [innerHtml]="'draftpoll.due-type-custom'|translate"></ion-select-option>
+            <!---->
           <ion-select-option value="10min" [innerHtml]="'draftpoll.due-type-10min'|translate"></ion-select-option>
           <ion-select-option value="hour" [innerHtml]="'draftpoll.due-type-hour'|translate"></ion-select-option>
           <ion-select-option value="24hr" [innerHtml]="'draftpoll.due-type-24hr'|translate"></ion-select-option>
