@@ -158,7 +158,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     </ion-item>
     <ion-item *ngIf="(p.desc||'')!='' || (p.url||'') != ''"
         color="primary" class="ion-padding-left ion-padding-right" 
-        style="cursor: pointer; --min-height: 0!important;" lines="none"
+        style="cursor: pointer; --min-height: 0!important;"
         (click)="details_expanded =! details_expanded">
       <ion-grid class="ion-no-padding ion-padding-bottom ion-no-margin" style="width: 100%;">
         <ion-row class="ion-no-padding ion-no-margin">
@@ -194,7 +194,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     <ion-item color="primary" class="ion-no-margin ion-padding-left ion-padding-right" >
       <ion-grid class="ion-no-padding ion-no-margin">
         <ion-row class="ion-no-padding ion-no-margin">
-          <ion-col class="ion-no-padding ion-no-margin" style="padding-bottom: 8px">
+          <ion-col class="ion-no-padding ion-no-margin" style="padding-bottom:8px; padding-top:2px;">
 
             <!-- ASSIST BUTTON: -->
 
@@ -258,18 +258,40 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             <small style="white-space: nowrap;">
               <span style="white-space: nowrap;">
                 <ion-icon 
-                    color="light" style="position: relative; top: 2px" 
+                    color="light" style="position: relative; top: 2px;" 
                     [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-                </ion-icon><b>&nbsp;{{(p.agreement_level * 100).toFixed(1)}}</b>%&nbsp;<span class="externallink" (click)="glossary('level-of-agreement')"[innerHtml]="'level-of-agreement'|translate"></span>
-              </span>&nbsp;&nbsp;&nbsp;
+                </ion-icon><b>&nbsp;{{(p.agreement_level * 100).toFixed(1)}}</b>%&nbsp;<span 
+                    class="externallink" 
+                    (click)="glossary('level-of-agreement')" 
+                    [innerHtml]="'level-of-agreement'|translate"
+                  ></span>
+              </span>&nbsp;
+
+              <!-- SUGGESTIONS BUTTON (TODO: place somewhere else): -->
+
               <ion-badge *ngIf="false"
                     class="ion-no-margin" 
-                    style="position: absolute; right:10px; bottom:7px; font-size: 11.5px; padding-top:2px" 
+                    style="position: relative; bottom:-6px; font-size: 11.5px; padding-top:2px" 
                     color="success" 
                     >
                 <ion-icon name="bulb-outline" class="ion-no-padding ion-no-margin"
                   style="position: relative; top: 1.5px;"></ion-icon>&nbsp;<span [innerHtml]="'<b>3</b> suggestions'"></span> 
               </ion-badge>
+
+              <!-- LIVE SCORES TOGGLE: -->
+
+              <ion-button [disabled]="!p.allow_voting"
+                  (click)="toggle_show_live()" 
+                  size="small" fill="clear" class="ion-no-padding ion-no-margin"
+                  style="position: absolute; right:8.5px; bottom:8px;" 
+                  >
+                <ng-container *ngIf="p.allow_voting">
+                  <span style="color:#88e950; white-space: normal; text-align: right; font-size: 11.5px;"
+                    [innerHtml]="'poll.show-live' | translate">
+                  </span>&nbsp;<ion-button size="small" shape="round" color="success" class="ion-no-border ion-no-padding"><ion-icon slot="icon-only" [name]="show_live?'eye-off-outline':'eye-outline'" style="padding-left:4px;padding-right:5px"></ion-icon></ion-button><!--<ion-toggle [checked]="show_live" color="warning" style="padding-left: 0px!important;"></ion-toggle>-->
+                </ng-container>
+              </ion-button>
+
             </small>
           </ion-col>
         </ion-row>
@@ -309,7 +331,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           </p>
         </small>
       </ion-item>
-      <ion-item *ngIf="p.my_n_rated_positive != 1 && p.my_n_approved == 1" color="secondary">
+      <ion-item *ngIf="show_live && p.my_n_rated_positive != 1 && p.my_n_approved == 1" color="secondary">
         <small>
           <p>
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-before-approving'|translate"></span><wbr/><span (click)="glossary('approve')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1approved-1-approving'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1approved-1-after-approving'|translate"></span>&nbsp;<wbr/>
@@ -324,7 +346,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           </p>
         </small>
       </ion-item>
-      <ion-item *ngIf="p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)" color="light">
+      <ion-item *ngIf="show_live && p.my_n_approved > 1 && !p.T.approvals_map.get(oidsorted[0]).get(p.myvid)" color="light">
         <small>
           <p>
             <span [innerHtml]="'poll.hint-mostapproved-1'|translate"></span>
@@ -584,15 +606,17 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <ion-item class="ion-no-padding ion-no-margin" lines="none"
             style="--min-height: 0px!important; font-weight: bold;">
-        <small (click)="glossary('share')" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
-  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
+        <small (click)="show_live?glossary('share'):null" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
+          <span *ngIf="show_live" style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
         </small>
         <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
-  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'poll.your-wap'|translate"></span><!-- &rarr;-->
+          <span class="externallink" [innerHtml]="'poll.your-wap'|translate"></span><!-- &rarr;-->
         </small>
         <!-- TODO: make padding robustly correct accross devices: -->
-        <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
-          <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>&nbsp;<span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
+        <small (click)="show_live?glossary('approve'):null" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+          <ng-container *ngIf="show_live">
+            <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>&nbsp;<span class="externallink" [innerHtml]="'approval'|translate"></span>
+          </ng-container>
         </small>
       </ion-item>
 
@@ -610,7 +634,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <div style="width: 60px!important"></div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
+              <svg [attr.display]="show_live?'inline':'none'" xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
                 <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
                 <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
                 <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
@@ -663,7 +687,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     <ion-range 
                         [disabled]="!p.allow_voting"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
-                        [color]="slidercolor[oidsorted[i]]"
+                        [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
                         [value]="p.get_my_proxy_rating(oidsorted[i])" 
                         (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
@@ -686,10 +710,13 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: -10; width: 100%; padding-left: 11px">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                            <rect [id]="'bar_' + oidsorted[i]" 
+                            <rect [id]="'bar_' + oidsorted[i]"
+                              [attr.display]="show_live?'inline':'none'" 
                               x="100%" width="0%" y="8" height="18" 
                               fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
-                            <line x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" />
+                            <line [attr.display]="show_live?'inline':'none'" 
+                              x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" 
+                              />
                             <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
                             <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
                           </svg>
@@ -698,7 +725,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <!-- Numerical annotations when expanded: -->
 
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: 10; width: 100%; padding-left: 11px; pointer-events: none;">
-                          <svg [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'" 
+                          <svg [attr.display]="(show_live && option_expanded[oidsorted[i]]) ? 'inline' : 'none'" 
                               xmlns="http://www.w3.org/2000/svg" width="100%" height="45px">
                             <!--
                             <text x="0%" y="20" 
@@ -765,7 +792,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     [expanded]="option_expanded[oidsorted[i]]">
                   <ion-row class="ion-no-padding ion-padding-bottom ion-no-margin">
                     <ion-col class="ion-no-padding ion-no-margin">
-                      <b>
+
+                      <!-- Live results: -->
+
+                      <b [style.display]="show_live?'inline':'none'">
                         <!-- Winning chance/budget share: -->
                         <span style="color:#769596;">
                           <span style="white-space: nowrap;" [innerHtml]="
@@ -796,30 +826,33 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                           </span>
                         </small>
                         <small>
-                        <!-- avg. rating: -->
-                        <span *ngIf="(i>0 
-                                  && p.T.approval_scores_map.get(oidsorted[i-1]) 
-                                  == p.T.approval_scores_map.get(oidsorted[i])) 
-                              || (i<oidsorted.length-1 
-                                  && p.T.approval_scores_map.get(oidsorted[i+1]) 
-                                  == p.T.approval_scores_map.get(oidsorted[i]))" 
-                              style="color:#9abcbd">,
-                          <span style="white-space: nowrap;" [innerHtml]="
-                            'poll.average-rating' | translate: {average:
-                              (p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining)).toFixed(1)
-                            }">
+                          <!-- avg. rating: -->
+                          <span *ngIf="(i>0 
+                                    && p.T.approval_scores_map.get(oidsorted[i-1]) 
+                                    == p.T.approval_scores_map.get(oidsorted[i])) 
+                                || (i<oidsorted.length-1 
+                                    && p.T.approval_scores_map.get(oidsorted[i+1]) 
+                                    == p.T.approval_scores_map.get(oidsorted[i]))" 
+                                style="color:#9abcbd">,
+                            <span style="white-space: nowrap;" [innerHtml]="
+                              'poll.average-rating' | translate: {average:
+                                (p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining)).toFixed(1)
+                              }">
+                            </span>
+                          </span>&nbsp;
+                          <!-- explanation link: -->
+                          <span style="color:#9abcbd; white-space: nowrap;">
+                            (<a 
+                              (click)="explain_approval_dialog(oidsorted[i])"
+                              [innerHtml]="'poll.explain' | translate">
+                            </a>)
                           </span>
-                        </span>&nbsp;
-                        <!-- explanation link: -->
-                        <span style="color:#9abcbd; white-space: nowrap;">
-                          (<a 
-                            (click)="explain_approval_dialog(oidsorted[i])"
-                            [innerHtml]="'poll.explain' | translate">
-                          </a>)
-                        </span>
-                      </small>
+                        </small>
                       </b>
-                      <span [style.display]="(!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url) ? 'inline' : 'none'">
+
+                      <!-- Description: -->
+                      
+                      <span [style.display]="(show_live && (!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url)) ? 'inline' : 'none'">
                         <br/>
                       </span>
                       <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
