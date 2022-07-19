@@ -548,6 +548,7 @@
         "choose-whose-ratings": "Wessen<br/>Wap<br/>nehmen?",
         "my-own": "meine",
         "delegate-s": "{{delegate}}s",
+        "your-wap": "Dein Wap",
         "chance-to-win": "{{percentage}}%<small> aktuelle Gewinnchance</small>",
         "final-chance-to-win": "<small>hatte am Ende </small>{{percentage}}%<small> Gewinnchance</small>",
         "of-the-budget": "<small>bekäme jetzt </small>{{percentage}}%<small> des Budgets</small>",

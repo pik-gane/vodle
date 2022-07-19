@@ -588,12 +588,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
   <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
         </small>
         <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
-  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'wap'|translate"></span><!-- &rarr;-->
+  <!--        <ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px; color: #9abcbd"></ion-icon>--><span class="externallink" [innerHtml]="'poll.your-wap'|translate"></span><!-- &rarr;-->
         </small>
         <!-- TODO: make padding robustly correct accross devices: -->
         <small (click)="glossary('approve')" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
-          <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>
-          <span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
+          <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>&nbsp;<span class="externallink" [innerHtml]="'approval'|translate"></span><!--<ion-icon name="help-circle-outline" style="position: relative; top: 4px; font-size: medium; padding: 0px;  color: #9abcbd"></ion-icon>-->
         </small>
       </ion-item>
 
