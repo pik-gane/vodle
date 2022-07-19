@@ -606,15 +606,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <ion-item class="ion-no-padding ion-no-margin" lines="none"
             style="--min-height: 0px!important; font-weight: bold;">
-        <small (click)="show_live?glossary('share'):null" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
-          <span *ngIf="show_live" style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
+        <small (click)="(show_live||!p.allow_voting)?glossary('share'):null" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
+          <span *ngIf="show_live||!p.allow_voting" style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
         </small>
         <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
           <span class="externallink" [innerHtml]="'poll.your-wap'|translate"></span><!-- &rarr;-->
         </small>
         <!-- TODO: make padding robustly correct accross devices: -->
-        <small (click)="show_live?glossary('approve'):null" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
-          <ng-container *ngIf="show_live">
+        <small (click)="(show_live||!p.allow_voting)?glossary('approve'):null" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+          <ng-container *ngIf="show_live||!p.allow_voting">
             <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>&nbsp;<span class="externallink" [innerHtml]="'approval'|translate"></span>
           </ng-container>
         </small>
@@ -634,7 +634,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <div style="width: 60px!important"></div>
-              <svg [attr.display]="show_live?'inline':'none'" xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
+              <svg [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
                 <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
                 <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
                 <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
@@ -711,10 +711,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: -10; width: 100%; padding-left: 11px">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
                             <rect [id]="'bar_' + oidsorted[i]"
-                              [attr.display]="show_live?'inline':'none'" 
+                              [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" 
                               x="100%" width="0%" y="8" height="18" 
                               fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
-                            <line [attr.display]="show_live?'inline':'none'" 
+                            <line [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" 
                               x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" 
                               />
                             <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
@@ -725,7 +725,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <!-- Numerical annotations when expanded: -->
 
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: 10; width: 100%; padding-left: 11px; pointer-events: none;">
-                          <svg [attr.display]="(show_live && option_expanded[oidsorted[i]]) ? 'inline' : 'none'" 
+                          <svg [attr.display]="((show_live||!p.allow_voting) && option_expanded[oidsorted[i]]) ? 'inline' : 'none'" 
                               xmlns="http://www.w3.org/2000/svg" width="100%" height="45px">
                             <!--
                             <text x="0%" y="20" 
@@ -795,7 +795,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                       <!-- Live results: -->
 
-                      <b [style.display]="show_live?'inline':'none'">
+                      <b [style.display]="(show_live||!p.allow_voting)?'inline':'none'">
                         <!-- Winning chance/budget share: -->
                         <span style="color:#769596;">
                           <span style="white-space: nowrap;" [innerHtml]="
@@ -852,7 +852,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                       <!-- Description: -->
                       
-                      <span [style.display]="(show_live && (!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url)) ? 'inline' : 'none'">
+                      <span [style.display]="((show_live||!p.allow_voting) && (!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url)) ? 'inline' : 'none'">
                         <br/>
                       </span>
                       <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
