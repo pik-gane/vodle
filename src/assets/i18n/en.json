@@ -552,7 +552,7 @@
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
         "my-own": "my own",
         "delegate-s": "{{delegate}}’s",
-        "your-wap": "your wap",
+        "your-wap": "Your wap",
         "chance-to-win": "{{percentage}}%<small> current chance to win</small>",
         "final-chance-to-win": "<small>had a </small>{{percentage}}%<small> final chance to win</small>",
         "of-the-budget": "<small>would currently get </small>{{percentage}}%<small> of the budget</small>",
