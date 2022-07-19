@@ -119,7 +119,7 @@
         "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
         "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
         "ratings-favourite": "This is your <b>favourite</b> option. I have given it a wap of <b>100</b> because you want to approve it for sure.",
-        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
+        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a small uncertainty buffer and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
         "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
         "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },
@@ -415,7 +415,7 @@
         "p2": "Some options have already been suggested. Any participant in the poll can suggest further options at any time, until the poll ends.",
         "p3": "You can express your willingness to approve the suggested options by <i>giving them “waps”</i>. You can give each option a wap from 0 (donʼt approve) to 100 (approve for sure).",
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
-        "p5": "You can use the “assist me” button to set your initial waps. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. It may make sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
+        "p5": "You can use the “assist me” button to set your initial waps. After setting your initial waps, it makes sense to switch on “live results” to monitor the pollʼs development over time. Then you can adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. ",
         "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
@@ -601,6 +601,8 @@
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",
         "appearance": "Appearance",
+        "behaviour": "Behaviour",
+        "default-wap": "Default wap",
         "notifications": "Notifications"
     },
     "validation": {
