@@ -153,6 +153,16 @@ export class PollPage implements OnInit {
       this.router.navigate(["/mypolls"]);
       return;
     }
+    if (this.p.allow_voting) {
+      this.G.L.info("PollPage checking if default waps are needed", this.pid);
+      for (let oid of this.p.oids) {
+        const orm = this.p.own_ratings_map.get(oid);
+        if (!orm.has(this.p.myvid)) {
+          this.G.L.info("PollPage setting default wap", this.pid, oid, this.G.S.default_wap);
+          this.p.set_my_own_rating(oid, this.G.S.default_wap, true);
+        }
+      }  
+    }
     this.p.tally_all();
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 

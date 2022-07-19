@@ -94,6 +94,7 @@ export class SettingsPage implements OnInit {
       }),
       language: new FormControl('', Validators.required),
       theme: new FormControl('', Validators.required),
+      default_wap: new FormControl('')
     });
   }
   
@@ -158,6 +159,10 @@ export class SettingsPage implements OnInit {
     let c = this.formGroup.get('theme');
     if (c.valid) this.G.S.theme = c.value;
   }
+  set_default_wap() {
+    let c = this.formGroup.get('default_wap');
+    this.G.S.default_wap = c.value;
+  }
 
   // selectServer component hooks:
 
@@ -188,6 +193,7 @@ export class SettingsPage implements OnInit {
       },
       language: this.G.S.language||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
       theme: this.G.S.theme||'light',
+      default_wap: this.G.S.default_wap||0
     });
     this.select_server.selectServerFormGroup.setValue({
       db: this.G.S.db||'',

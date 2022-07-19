@@ -107,6 +107,7 @@ export class AddoptionDialogPage implements OnInit {
     if (this.parent.delegation_status == 'agreed') {
       this.G.Del.update_my_delegation(this.p.pid, o.oid, true);
     }
+    this.p.set_my_own_rating(o.oid, this.G.S.default_wap);
     this.parent.oidsorted.push(o.oid);
     this.parent.sortingcounter++;
     this.ref.detectChanges();

@@ -245,6 +245,7 @@ export class LoginPage implements OnInit {
   login_as_guest() {
     this.G.S.password = "Guest" + Math.round(Math.random()*100000);
     this.G.S.email = this.G.S.password + "@vodle.it";
+    this.G.S.default_wap = 10;
     this.G.D.login_submitted();
   }
 
@@ -258,6 +259,7 @@ export class LoginPage implements OnInit {
     this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
+      this.G.S.default_wap = 10;
       this.G.D.login_submitted();
     }
   }

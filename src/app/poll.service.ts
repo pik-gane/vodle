@@ -681,12 +681,14 @@ export class Poll {
     this.G.L.info("PollService.init_vid", this.myvid);
   }
 
+  /*
   init_myratings() {
     for (const oid in this.options) {
       this.set_my_own_rating(oid, 0);
     }
   }
-
+  */
+ 
   after_incoming_changes(tally=true) {
     if ((this.state == 'running') && (this.ratings_have_changed)) {
       this.ratings_have_changed = false;

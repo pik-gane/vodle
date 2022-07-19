@@ -117,8 +117,6 @@ export class PreviewpollPage implements OnInit {
       this.p.state = 'running';
       // wait for these changes to poll db to be finished before continuing!
       this.G.D.wait_for_poll_db(this.pid).finally(() => {
-        // set own ratings to zero:
-        this.p.init_myratings();
         this.p.creator = this.G.S.email;
         // if test, register simulated voters:
         this.G.L.trace("PreviewpollPage.publish_button_clicked poll is_test", this.p.is_test, this.G.D.getp(this.pid, 'is_test'));
