@@ -76,6 +76,16 @@ export class AssistPage implements OnInit {
   ionViewWillEnter() {
     this.G.L.entry("AssistPage.ionViewWillEnter");
     this.G.D.page = this;
+    if (this.G.S.default_wap > 0) {
+      for (const oid of this.P.oidsorted) {
+        this.acceptable[oid] = true;
+        this.estimates[oid] = this.G.S.default_wap > 5 ? 105 - this.G.S.default_wap : 100;
+      }
+    } else {
+      for (const oid of this.P.oidsorted) {
+        this.estimates[oid] = 50;
+      }
+    }
   }
 
   ionViewDidEnter() {
@@ -231,7 +241,7 @@ export class AssistPage implements OnInit {
     const oid = this.thresholded_oids[this.current_index];
     if (this.threshold_answer[oid] != false) {
       this.threshold_answer[oid] = false;
-      this.thresholds[oid] = Math.min(100, Math.max(0, this.thresholds[oid], this.estimates[oid]+1));
+      this.thresholds[oid] = Math.min(100, Math.max(0, this.thresholds[oid], this.estimates[oid] + 5));
       this.changes = true;  
     }
   }
@@ -255,7 +265,7 @@ export class AssistPage implements OnInit {
   set_thresholded_ratings() {
     /** set all ratings based on thresholds: */
     for (const oid of this.thresholded_oids) {
-      const r = Math.max(0, Math.min(100, 101-this.thresholds[oid]));
+      const r = Math.max(0, Math.min(100, 105 - this.thresholds[oid]));
       this.G.L.trace("AssistPage.set_ratings", oid, r);
       this.set_rating(oid, r);
     }

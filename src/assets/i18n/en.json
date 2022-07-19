@@ -119,7 +119,7 @@
         "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
         "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
         "ratings-favourite": "This is your <b>favourite</b> option. I have given it a wap of <b>100</b> because you want to approve it for sure.",
-        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
+        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a small uncertainty buffer and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
         "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
         "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },

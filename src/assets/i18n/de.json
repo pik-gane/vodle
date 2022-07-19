@@ -117,7 +117,7 @@
         "ratings-intro-1": "Danke! Ich habe jetzt Deine Waps so eingestellt, dass sie Deiner Zustimmbereitschaft entsprechen.",
         "ratings-intro-2": "Waps funktionieren so: Wenn man ein Wap von <i>X</i> einstellt, dann stimmt man zu, wenn mehr als 100% minus <i>X</i> der Teilnehmer:innen zustimmen. Deshalb habe ich Deine Waps wie folgt eingestellt:",
         "ratings-favourite": "Dies ist Deine <b>Lieblingsoption.</b> Ich habe Ihr ein Wap von <b>100</b> gegeben, weil Du Ihr auf jeden Fall zustimmen willst.",
-        "ratings-acceptable": "Dieser Option willst Du zustimmen, wenn mindestens {{threshold}}% der Teilnehmer:innen zustimmen. Ich habe einen sehr kleinen Unsicherheitsbereich von einem Prozent hinzugefügt und der Option ein Wap von <b>{{wap}}</b> gegeben. Das sorgt dafür, dass Du der Option zustimmst, wenn mehr als {{more_than}}% zustimmen.",
+        "ratings-acceptable": "Dieser Option willst Du zustimmen, wenn mindestens {{threshold}}% der Teilnehmer:innen zustimmen. Ich habe einen kleinen Unsicherheitsbereich hinzugefügt und der Option ein Wap von <b>{{wap}}</b> gegeben. Das sorgt dafür, dass Du der Option zustimmst, wenn mehr als {{more_than}}% zustimmen.",
         "ratings-other": "Alle anderen Optionen bekommen <b>0</b>, da Du ihnen auf keinen Fall zustimmen willst.",
         "ratings-extro": "Du kannst Deine Waps jederzeit über die Schieberegler anpassen, um z.B. auf die Entwicklung der tatsächlichen Zustimmungswerte zu reagieren. Die aktuelle Zustimmung wird immer als heller Balken angezeigt. Weitere Informationen bekommst Du über die unterstrichenen Wörter auf der Abstimmungsseite."
     },
