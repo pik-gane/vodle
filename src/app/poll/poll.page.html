@@ -301,6 +301,21 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     <!-- VOTE STATUS BANNER: -->
 
     <ng-container *ngIf="p.allow_voting">
+      <ion-item *ngIf="!p.have_acted && !p.am_abstaining" color="warning">
+        <small>
+          <p>
+            <span style="font-size: medium" [innerHtml]="'poll.hint-first-time-1'|translate"></span>&nbsp;<wbr/>
+            <span [innerHtml]="'poll.hint-first-time-2-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span class="externallink" [innerHtml]="'poll.hint-first-time-2-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:4px;"></ion-icon></span><span [innerHtml]="'poll.hint-first-time-2-after-wap'|translate"></span>
+            <!-- assist link: -->
+            &nbsp;<wbr/><span style="white-space: nowrap;">
+              (<a 
+                (click)="assist_dialog()"
+                [innerHtml]="'poll.assist-me-inline' | translate">
+              </a>)
+            </span>
+          </p>
+        </small>
+      </ion-item>
       <ion-item *ngIf="p.am_abstaining" color="danger">
         <small>
           <p>
