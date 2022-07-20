@@ -441,7 +441,8 @@
         "store-password": "Store my password between sessions.",
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, have fun with vodle!",
-        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared."
+        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared.",
+        "ready-to-start-guest": "You are using the guest account <b>{{email}}</b> with password <b>{{password}}</b>. Please note this before logging out and enter this as your email address when logging in again."
     },
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",

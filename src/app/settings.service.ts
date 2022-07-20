@@ -38,6 +38,8 @@ export class SettingsService {
 
   private G: GlobalService;
 
+  use_guest = false;
+
   constructor() { }
 
   init(G:GlobalService) { 

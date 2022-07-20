@@ -160,7 +160,7 @@ export class LoginPage implements OnInit {
     setTimeout(() => {
       const el = this.input_email||this.input_new_password||this.input_old_password;
       if (el) {
-        el.setFocus();
+        if (this.step!='fresh_email') el.setFocus();
       } else {
         const el = document.getElementById("dismiss_button");
         if (el) {
@@ -243,9 +243,10 @@ export class LoginPage implements OnInit {
   }
 
   login_as_guest() {
-    this.G.S.password = "Guest" + Math.round(Math.random()*100000);
+    this.G.S.password = "Guest" + Math.round(Math.random()*1000000);
     this.G.S.email = this.G.S.password + "@vodle.it";
     this.G.S.default_wap = 10;
+    this.G.S.use_guest = true;
     this.G.D.login_submitted();
   }
 

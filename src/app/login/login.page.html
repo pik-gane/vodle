@@ -142,7 +142,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input #input_email
                   formControlName="email" [maxlength]="E.max_len.name"
-                  type="text" inputmode="email" autofocus="true"
+                  type="text" inputmode="email" [autofocus]="step=='old_email'"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
@@ -338,6 +338,7 @@ TODO:
         <ion-col>
           <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
           <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
+          <p *ngIf="G.S.use_guest" class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-guest'|translate:{email:G.S.email,password:G.S.password}"></p>
         </ion-col>
       </ion-item>
       <ion-item lines="none">

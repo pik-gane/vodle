@@ -441,7 +441,8 @@
         "store-password": "Store my password between sessions.",
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, viel Spaß mit vodle!",
-        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch angemeldet, bis Du Dich abmeldest. Bitte vergiss nicht, Dich über das Menü abzumelden, falls dies ein unsicheres oder mit anderen gemeinsam genutztes Gerät ist."
+        "ready-to-start-detail": "Wenn Du gehst, werden Deine Waps automatisch gespeichert. Du bleibst automatisch angemeldet, bis Du Dich abmeldest. Bitte vergiss nicht, Dich über das Menü abzumelden, falls dies ein unsicheres oder mit anderen gemeinsam genutztes Gerät ist.",
+        "ready-to-start-guest": "Du nutzt das Gast-Konto <b>{{email}}</b> mit Passwort <b>{{password}}</b>. Bitte merke es Dir, bevor Du Dich abmeldest, und gib es als Email-Adresse ein, wenn Du Dich wieder anmeldest."
     },
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
