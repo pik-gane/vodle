@@ -33,7 +33,8 @@ const svgcolors = {
   "vodleblue": "#3465a4",
   "vodlegreen": "#62a73b",
   "vodledarkgreen": "#4c822e"
-};
+  },
+  r_avatar = 10;
 
 @Component({
   selector: 'app-analysis',
@@ -158,9 +159,14 @@ export class AnalysisPage implements OnInit {
     }
     this.G.L.info("subset_counts", subset_counts);
     // 4. convert to array of objects of arrays as needed by venn.js:
-    const sets_array = []; 
-    for (const [i, oid] of Object.entries(our_oids)) {
-      sets_array.push({ sets: [chars[i]], size: subset_counts[chars[i]], label: this.P.p.options[oid].name });
+    const sets_array = [],
+          n_not_abstaining = T.n_not_abstaining; 
+    for (const [i, oid] of our_oids.entries()) {
+      sets_array.push({ 
+          sets: [chars[i]], 
+          size: subset_counts[chars[i]], 
+          label: this.P.p.options[oid].name + ": " + (shares_map.get(oid) * 100).toFixed(1) + "%" 
+        });
     }
     for (const [subset, size] of Object.entries(subset_counts)) {
       if (subset.length > 1) {
@@ -168,7 +174,8 @@ export class AnalysisPage implements OnInit {
       }
     }
     sets_array.reverse(); // so that topmost option is painted last
-    var chart = venn.VennDiagram();
+    var chart = venn.VennDiagram().height(600);
+    // 5. paint the diagram:
     d3.select("#venn").datum(sets_array).call(chart);
     d3.selectAll("#venn .venn-circle path")
     // lower options appear successively paler:
@@ -179,6 +186,52 @@ export class AnalysisPage implements OnInit {
     .style("stroke", "white");
     d3.selectAll("#venn .venn-circle text")
     .style("fill", "white")
-    .style("font-size", "16px");
-}
+    .style("font-size", "16px")
+    .style("font-style", "italic")
+    .style("font-weight", "bold");
+    // 6. add voter avatars at random positions:
+    const circles = [];
+    for (const [i, oid] of our_oids.entries()) {
+      const bbox = d3.select('g[data-venn-sets="'+chars[i]+'"]').node().getBBox(),
+            R = bbox.width / 2,
+            cx = bbox.x + R,
+            cy = bbox.y + R,
+            n = n_not_abstaining <= 100 
+                ? T.n_votes_map.get(oid)
+                : Math.round(T.shares_map.get(oid) * 100);
+      circles.push({cx:cx, cy:cy, R:R});
+      // put individual voters on that disc:
+      for (let k=0; k<n; k++) {
+        var x, y;
+        // find a valid place:
+        while (true) {
+          // draw a random point on that disc:
+          const r = (R - r_avatar) * Math.sqrt(Math.random()),
+                phi = 2 * Math.PI * Math.random();
+          x = cx + r * Math.sin(phi);
+          y = cy + r * Math.cos(phi);
+          // check whether it is outside all earlier discs:
+          let fine = true;
+          for (let j=0; j<i; j++) {
+            const c = circles[j],
+                  d2 = (x - c.cx)**2 + (y - c.cy)**2;
+            if (d2 < (c.R + r_avatar)**2) {
+              fine = false;
+              break;
+            }
+          }
+          if (fine) break;
+        }
+        // draw the avatar:
+        d3.select("#venn > svg").append("circle")
+          .style("stroke", "black")
+          .style("stroke-opacity", "0.1")
+          .style("fill", "black")
+          .style("fill-opacity", "0.1")
+          .attr("r", r_avatar)
+          .attr("cx", x)
+          .attr("cy", y);
+      }
+    }
+  }
 }

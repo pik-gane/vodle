@@ -721,7 +721,7 @@ export class PollPage implements OnInit {
     const modal = await this.modalController.create({
         component: AnalysisPage, 
 //        translucent: true,
-//        cssClass: 'assist',
+        cssClass: 'analysis',
 //        showBackdrop: true,
         componentProps: {P: this},
         backdropDismiss​: true
