@@ -1,0 +1,63 @@
+<!--
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<ion-header>
+
+  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
+    <ion-toolbar style="padding-left: 16px;">
+
+      <!--<ion-icon slot="start" name="analytics-outline"></ion-icon>&nbsp;-->
+      <ion-text 
+        style="font-weight: bold; font-size: larger;"
+        [innerHtml]="'analysis.-page-title' | translate">
+      </ion-text>
+      <ion-buttons slot="end">
+
+        <!-- OFFLINE SIGN -- >
+        <ng-container *ngIf="!window.navigator.onLine">
+          <ion-icon name="cloud-offline-outline" color="grey"
+            style="position: relative; bottom: -1px;">
+          </ion-icon>
+          <ion-icon name="alert-outline" color="grey">
+          </ion-icon>
+        </ng-container> 
+        <!---->
+
+        <!-- SYNCING SIGN: -- >
+        <ion-spinner *ngIf="!!P.p && P.p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
+        <!---->
+
+        <!-- CLOSE BUTTON: -->
+        <ion-button fill="clear" (click)="close()">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+    
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-item>
+
+</ion-header>
+
+<!-- SCROLLABLE CONTENT: -->
+
+<ion-content *ngIf="P.ready">
+
+  <div id="venn"></div>
+
+</ion-content>

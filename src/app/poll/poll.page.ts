@@ -29,6 +29,7 @@ import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
 import { AssistPage } from '../assist/assist.module';  
+import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
 
@@ -714,6 +715,24 @@ export class PollPage implements OnInit {
     }
   }
   
+  async analysis_dialog() {
+    /** open the analysis modal */
+    this.p.end_if_past_due();
+    const modal = await this.modalController.create({
+        component: AnalysisPage, 
+//        translucent: true,
+//        cssClass: 'assist',
+//        showBackdrop: true,
+        componentProps: {P: this},
+        backdropDismiss​: true
+//        swipeToClose: true,
+//        presentingElement: this.routerOutlet.nativeEl
+    });
+    modal.present();
+
+    this.currentModal = modal;
+  }
+
   explain_approval_dialog(oid: string) {
     /** open the explanation dialog modal */
     this.modalController.create({

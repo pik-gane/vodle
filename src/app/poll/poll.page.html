@@ -269,13 +269,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
               <!-- SUGGESTIONS BUTTON (TODO: place somewhere else): -->
 
-              <ion-badge *ngIf="false"
+              <ion-badge *ngIf="true"
                     class="ion-no-margin" 
                     style="position: relative; bottom:-6px; font-size: 11.5px; padding-top:2px" 
                     color="success" 
+                    (click)="analysis_dialog()"
                     >
                 <ion-icon name="bulb-outline" class="ion-no-padding ion-no-margin"
-                  style="position: relative; top: 1.5px;"></ion-icon>&nbsp;<span [innerHtml]="'<b>3</b> suggestions'"></span> 
+                  style="position: relative; top: 1.5px;"></ion-icon>&nbsp;<span [innerHtml]="'suggestions'"></span> 
               </ion-badge>
 
               <!-- LIVE SCORES TOGGLE: -->
