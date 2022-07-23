@@ -188,10 +188,10 @@ export class AnalysisPage implements OnInit {
     .style("stroke-opacity", 0)
     .style("stroke", "white");
     d3.selectAll("#venn .venn-circle text")
-    .style("fill", "black")
+    .style("fill", "white")
     .style("fill-opacity", 0)
     .style("stroke-width", 0)
-    .style("font-size", "12px")
+    .style("font-size", "14px")
     .style("font-style", "italic")
     .style("font-weight", "bold");
     // 6. add voter avatars at random positions:
@@ -265,13 +265,13 @@ export class AnalysisPage implements OnInit {
       // move label to front:
       svg.append(() => svg_text.node());
       const cloned_text = svg_text.clone(true);
-      svg_text.style("stroke-width", 3).style("stroke", "white").style("stroke-opacity", 0);
+      svg_text.style("stroke-width", 2).style("stroke", "black").style("stroke-opacity", 0);
       // fade in:
       svg_circle.transition().duration(2000).delay(1000*i)
         .style("fill-opacity", .95 - .05 * i)
         .style("stroke-opacity", 1);
       svg_text.transition().duration(2000).delay(1000*i)
-        .style("stroke-opacity", 0.5);
+        .style("stroke-opacity", 0.75);
       cloned_text.transition().duration(2000).delay(1000*i)
         .style("fill-opacity", 1);
       svg_g.selectAll("circle").transition().duration(2000).delay(1000*i)
