@@ -87,6 +87,10 @@
         "info": "Einmal hinzugefügte Optionen kann niemand mehr verändern oder löschen.",
         "notification-added-title": "Option hinzugefügt"
     },
+    "analysis": {
+        "_COMMENT_SECTION_": "[COMMENT] strings used on the Analysis dialog:",
+        "-page-title": "Verteilung von Zustimmung und Anteilen"
+    },
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",
         "-page-title": "Wir setzen Deine Waps",
@@ -507,6 +511,7 @@
         "type-winner": "Eine Option gewinnt",
         "assist-me-inline": "Assistiere mir",
         "assist-me-button": "Assistiere<br/>mir",
+        "analysis-details": "Details",
         "show-live": "Live-<br/>Ergebnisse",
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
         "hint-first-time-1": "Willkommen.",

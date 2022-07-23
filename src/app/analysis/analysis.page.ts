@@ -165,7 +165,7 @@ export class AnalysisPage implements OnInit {
       sets_array.push({ 
           sets: [chars[i]], 
           size: subset_counts[chars[i]], 
-          label: this.P.p.options[oid].name + ": " + (shares_map.get(oid) * 100).toFixed(1) + "%" 
+          label: this.P.p.options[oid].name // + ": " + (shares_map.get(oid) * 100).toFixed(1) + "%" 
         });
     }
     for (const [subset, size] of Object.entries(subset_counts)) {
@@ -174,32 +174,41 @@ export class AnalysisPage implements OnInit {
       }
     }
     sets_array.reverse(); // so that topmost option is painted last
-    var chart = venn.VennDiagram().height(600);
     // 5. paint the diagram:
+    const div = d3.select("#venn"),
+          div_bbox = div.node().getBoundingClientRect(),
+          div_width = div_bbox.width;
+    var chart = venn.VennDiagram().width(div_width).height(.9*div_width);
     d3.select("#venn").datum(sets_array).call(chart);
     d3.selectAll("#venn .venn-circle path")
     // lower options appear successively paler:
-    .style("fill-opacity", function(d, i) { return .9 - .09 * (our_oids.length - 1 - i); })
+    .style("fill-opacity", 0)
     .style("fill", function(d, i) { return svgcolors[colors[our_oids.length - 1 - i]]; })
     .style("stroke-width", 1)
-    .style("stroke-opacity", 1)
+    .style("stroke-opacity", 0)
     .style("stroke", "white");
     d3.selectAll("#venn .venn-circle text")
-    .style("fill", "white")
-    .style("font-size", "16px")
+    .style("fill", "#9abcbd")
+    .style("fill-opacity", 0)
+    .style("font-size", "12px")
     .style("font-style", "italic")
     .style("font-weight", "bold");
     // 6. add voter avatars at random positions:
-    const circles = [];
+    const circle_data = [], svg = d3.select("#venn > svg"), svg_gs = [];
     for (const [i, oid] of our_oids.entries()) {
-      const bbox = d3.select('g[data-venn-sets="'+chars[i]+'"]').node().getBBox(),
+      const svg_g0 = d3.select('g[data-venn-sets="'+chars[i]+'"]'),
+            svg_circle = svg_g0.select('path'),
+            svg_text = svg_g0.select('text'),
+            bbox = svg_circle.node().getBBox(),
             R = bbox.width / 2,
             cx = bbox.x + R,
             cy = bbox.y + R,
             n = n_not_abstaining <= 100 
                 ? T.n_votes_map.get(oid)
-                : Math.round(T.shares_map.get(oid) * 100);
-      circles.push({cx:cx, cy:cy, R:R});
+                : Math.round(T.shares_map.get(oid) * 100),
+            svg_g = svg.append("g");
+      circle_data.push({cx:cx, cy:cy, R:R});
+      svg_gs.push(svg_g);
       // put individual voters on that disc:
       for (let k=0; k<n; k++) {
         var x, y;
@@ -213,7 +222,7 @@ export class AnalysisPage implements OnInit {
           // check whether it is outside all earlier discs:
           let fine = true;
           for (let j=0; j<i; j++) {
-            const c = circles[j],
+            const c = circle_data[j],
                   d2 = (x - c.cx)**2 + (y - c.cy)**2;
             if (d2 < (c.R + r_avatar)**2) {
               fine = false;
@@ -223,15 +232,23 @@ export class AnalysisPage implements OnInit {
           if (fine) break;
         }
         // draw the avatar:
-        d3.select("#venn > svg").append("circle")
+        svg_g.append("circle")
           .style("stroke", "black")
-          .style("stroke-opacity", "0.1")
+          .style("stroke-opacity", 0)
           .style("fill", "black")
-          .style("fill-opacity", "0.1")
+          .style("fill-opacity", 0)
           .attr("r", r_avatar)
           .attr("cx", x)
           .attr("cy", y);
       }
+      // fade in:
+      svg_circle.transition().duration(2000).delay(1000*i)
+        .style("fill-opacity", .95 - .05 * i)
+        .style("stroke-opacity", 1);
+      svg_text.transition().duration(2000).delay(1000*i)
+        .style("fill-opacity", 1);
+      svg_g.selectAll("circle").transition().duration(2000).delay(1000*i)
+        .style("fill-opacity", 0.2);
     }
   }
 }
