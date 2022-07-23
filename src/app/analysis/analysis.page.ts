@@ -34,7 +34,7 @@ const svgcolors = {
   "vodlegreen": "#62a73b",
   "vodledarkgreen": "#4c822e"
   },
-  r_avatar = 10;
+  r_avatar = 7;
 
 @Component({
   selector: 'app-analysis',
@@ -188,8 +188,9 @@ export class AnalysisPage implements OnInit {
     .style("stroke-opacity", 0)
     .style("stroke", "white");
     d3.selectAll("#venn .venn-circle text")
-    .style("fill", "#9abcbd")
+    .style("fill", "black")
     .style("fill-opacity", 0)
+    .style("stroke-width", 0)
     .style("font-size", "12px")
     .style("font-style", "italic")
     .style("font-weight", "bold");
@@ -206,7 +207,8 @@ export class AnalysisPage implements OnInit {
             n = n_not_abstaining <= 100 
                 ? T.n_votes_map.get(oid)
                 : Math.round(T.shares_map.get(oid) * 100),
-            svg_g = svg.append("g");
+            svg_g = svg.append("g"),
+            positions = [];
       circle_data.push({cx:cx, cy:cy, R:R});
       svg_gs.push(svg_g);
       // put individual voters on that disc:
@@ -215,22 +217,34 @@ export class AnalysisPage implements OnInit {
         // find a valid place:
         while (true) {
           // draw a random point on that disc:
-          const r = (R - r_avatar) * Math.sqrt(Math.random()),
+          const r = (R - 1.5*r_avatar) * Math.sqrt(Math.random()),
                 phi = 2 * Math.PI * Math.random();
           x = cx + r * Math.sin(phi);
           y = cy + r * Math.cos(phi);
-          // check whether it is outside all earlier discs:
+          // check whether it is not overlapping an earlier dot:
           let fine = true;
-          for (let j=0; j<i; j++) {
-            const c = circle_data[j],
-                  d2 = (x - c.cx)**2 + (y - c.cy)**2;
-            if (d2 < (c.R + r_avatar)**2) {
+          for (let j=0; j<k; j++) {
+            const pos = positions[j],
+                  d2 = (x - pos.x)**2 + (y - pos.y)**2;
+            if (d2 < (3*r_avatar)**2) {
               fine = false;
               break;
             }
           }
+          if (fine) {
+            // check whether it is outside all earlier discs:
+            for (let j=0; j<i; j++) {
+              const c = circle_data[j],
+                    d2 = (x - c.cx)**2 + (y - c.cy)**2;
+              if (d2 < (c.R + 1.5*r_avatar)**2) {
+                fine = false;
+                break;
+              }
+            }
+          }
           if (fine) break;
         }
+        positions.push([x, y]);
         // draw the avatar:
         svg_g.append("circle")
           .style("stroke", "black")
@@ -241,14 +255,27 @@ export class AnalysisPage implements OnInit {
           .attr("cx", x)
           .attr("cy", y);
       }
+    }
+    // finally place labels on top and fade in:
+    for (const [i, oid] of our_oids.entries()) {
+      const svg_g0 = d3.select('g[data-venn-sets="'+chars[i]+'"]'),
+            svg_circle = svg_g0.select('path'),
+            svg_text = svg_g0.select('text'),
+            svg_g = svg_gs[i];
+      // move label to front:
+      svg.append(() => svg_text.node());
+      const cloned_text = svg_text.clone(true);
+      svg_text.style("stroke-width", 3).style("stroke", "white").style("stroke-opacity", 0);
       // fade in:
       svg_circle.transition().duration(2000).delay(1000*i)
         .style("fill-opacity", .95 - .05 * i)
         .style("stroke-opacity", 1);
       svg_text.transition().duration(2000).delay(1000*i)
+        .style("stroke-opacity", 0.5);
+      cloned_text.transition().duration(2000).delay(1000*i)
         .style("fill-opacity", 1);
       svg_g.selectAll("circle").transition().duration(2000).delay(1000*i)
-        .style("fill-opacity", 0.2);
+        .style("fill-opacity", 0.3);
     }
   }
 }
