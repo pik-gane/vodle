@@ -199,7 +199,6 @@ export class AnalysisPage implements OnInit {
     for (const [i, oid] of our_oids.entries()) {
       const svg_g0 = d3.select('g[data-venn-sets="'+chars[i]+'"]'),
             svg_circle = svg_g0.select('path'),
-            svg_text = svg_g0.select('text'),
             bbox = svg_circle.node().getBBox(),
             R = bbox.width / 2,
             cx = bbox.x + R,
@@ -209,20 +208,21 @@ export class AnalysisPage implements OnInit {
                 : Math.round(T.shares_map.get(oid) * 100),
             svg_g = svg.append("g"),
             positions = [];
+      let fine = false;
       circle_data.push({cx:cx, cy:cy, R:R});
       svg_gs.push(svg_g);
       // put individual voters on that disc:
       for (let k=0; k<n; k++) {
         var x, y;
         // find a valid place:
-        while (true) {
+        for (let it=0; it<100; it++) {
           // draw a random point on that disc:
           const r = (R - 1.5*r_avatar) * Math.sqrt(Math.random()),
                 phi = 2 * Math.PI * Math.random();
           x = cx + r * Math.sin(phi);
           y = cy + r * Math.cos(phi);
           // check whether it is not overlapping an earlier dot:
-          let fine = true;
+          fine = true;
           for (let j=0; j<k; j++) {
             const pos = positions[j],
                   d2 = (x - pos.x)**2 + (y - pos.y)**2;
@@ -245,6 +245,7 @@ export class AnalysisPage implements OnInit {
           if (fine) break;
         }
         positions.push([x, y]);
+        if (fine) {
         // draw the avatar:
         svg_g.append("circle")
           .style("stroke", "black")
@@ -254,6 +255,7 @@ export class AnalysisPage implements OnInit {
           .attr("r", r_avatar)
           .attr("cx", x)
           .attr("cy", y);
+        }
       }
     }
     // finally place labels on top and fade in:
