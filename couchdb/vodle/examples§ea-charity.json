@@ -21,7 +21,7 @@
             "name": "Animal Welfare Fund",
             "desc": "The Animal Welfare Fund aims to effectively improve the well-being of nonhuman animals, by making grants that focus on one or more of the following: Relatively neglected geographic regions or groups of animals; Promising research into animal advocacy or animal well-being; Activities that could make it easier to help animals in the future; Otherwise best-in-class opportunities.",
             "url": "https://funds.effectivealtruism.org/funds/animal-welfare"
-        },kutschke@pik-potsdam.de
+        },
         {
             "name": "Long-Term Future Fund",
             "desc": "The Long-Term Future Fund aims to positively influence the long-term trajectory of civilization by making grants that address global catastrophic risks, especially potential risks from advanced artificial intelligence and pandemics. In addition, we seek to promote, implement, and advocate for longtermist ideas, and to otherwise increase the likelihood that future generations will flourish.",
@@ -48,5 +48,4 @@
             "url": "https://funds.effectivealtruism.org/partners/ace-recommended-charities"
         }
     ]
-
 }
