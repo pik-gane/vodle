@@ -1,0 +1,137 @@
+{
+    "type": "share",
+
+    "language": "en",
+
+    "title": "Where shall Jobst's next donation go?",
+
+    "desc": "After this poll is closed, Jobst will donate EUR 150 in total to some of the charities that the Effective Altruism movement recommends. You collectively control how much of it goes to which charity! At the same time, by participating and testing this app, you help us improving it! If you find some bug, please take a minute to report the issue to info@vodle.it.",
+    
+    "url": "https://www.effektiveraltruismus.de/donate",
+
+    "due_type": "four-weeks",
+
+    "options": [
+        {
+            "name": "GiveWell Maximum Impact Fund",
+            "desc": "Donate to the highest-value funding opportunities among GiveWell’s recommended charities. We use our latest research to grant the funds to the recommended charity (or charities) where we believe they’ll do the most good.",
+            "url": "https://www.givewell.org/maximum-impact-fund"
+        },
+        {
+            "name": "Against Malaria Foundation",
+            "desc": "We protect people from malaria. We fund nets and ensure they are distributed and used. We show you where the nets go. We monitor and report their use and impact.",
+            "url": "https://www.againstmalaria.com/"
+        },
+        {
+            "name": "Malaria Consortium",
+            "desc": "Our work is focused on the control, management and, where appropriate, the eventual elimination of range of diseases – malaria, pneumonia, diarrhoea, dengue and neglected tropical diseases. We balance this focus with other factors that affect child and maternal health, particularly malnutrition.",
+            "url": "https://www.malariaconsortium.org/"
+        },
+        {
+            "name": "Deworm the World",
+            "desc": "A nine-time GiveWell top charity, our Deworm the World Initiative combats worm infections by working with governments to deliver mass school-based deworming programs. Since 2014, we have supported governments to implement high quality programming, helping treat over 280 million children in 2019. Deworming is proven to improve the nutrition, cognition, school attendance, and long-term economic prospects of children.",
+            "url": "https://www.evidenceaction.org/dewormtheworld/"
+        },
+        {
+            "name": "SCI Foundation (Worm Infections)",
+            "desc": "We’re a non-profit initiative supporting governments in sub-Saharan African countries. We support them to develop sustainable, cost-effective programmes against parasitic worm infections such as schistosomiasis and intestinal worms.",
+            "url": "https://schistosomiasiscontrolinitiative.org/"
+        },
+        {
+            "name": "Helen Keller Intl. (Health, Nutrition)",
+            "desc": "We have partnered with communities that are striving to overcome longstanding cycles of poverty for more than 100 years. By delivering the essential building blocks of good health, sound nutrition and clear vision, we help millions of people create lasting change in their own lives.",
+            "url": "https://www.hki.org/who-we-are/"
+        },
+        {
+            "name": "StrongMinds (Depression)",
+            "desc": "In Africa, 66 million women are living with depression, and 85% have no access to treatment. StrongMinds provides free, group talk therapy to low-income women and adolescents in Uganda and Zambia. We scale our reach through peer-to-peer therapy, teletherapy, public education, and partnerships. Women who complete our therapy achieve clinically significant reductions in depression symptoms, restoring hope for themselves and their families.",
+            "url": "https://strongminds.org/"
+        },
+        {
+            "name": "Evidence Action (Poverty)",
+            "desc": "Evidence Action scales evidence-based and cost-effective programs to reduce the burden of poverty for hundreds of millions of people. Our approach fills the gap between research about what works and solutions for people in need. We operate in seven countries across the globe and positively impact the lives of hundreds of millions of people every year in a measurable way.",
+            "url": "https://www.evidenceaction.org/"
+        },
+        {
+            "name": "Give Directly (Poverty)",
+            "desc": "GiveDirectly is a nonprofit that lets donors like you send money directly to the world’s poorest households. We believe people living in poverty deserve the dignity to choose for themselves how best to improve their lives — cash enables that choice.",
+            "url": "https://www.givedirectly.org/"
+        },
+        {
+            "name": "Give Directly – Basic Income Project",
+            "desc": "GiveDirectly is leading the world’s largest and longest term experiment to date studying the effects of a Universal Basic Income. As part of this USD 30 M project, we have already distributed millions of dollars to 20,000 individuals living across 197 villages, and an additional 100 villages have been surveyed as a control group. Some individuals will receive payments for 12 years, and the full study will last at least that long. Initial results on the effects of UBI during COVID-19 were released in September 2020; additional results from the first endline survey are expected early next year.",
+            "url": "https://www.givedirectly.org/ubi-study/"
+        },
+        {
+            "name": "Clean Air Task Force (Emissions Reductions)",
+            "desc": "We push the change in technologies and policies needed to get to a zero-emissions, high-energy planet at an affordable cost. We imagine a world where the energy needs of all people are met efficiently without damaging the atmosphere.",
+            "url": "https://www.catf.us/"
+        },
+        {
+            "name": "Carbon180 (Carbon Removal)",
+            "desc": "Working closely with policymakers, scientists, entrepreneuers, and our peer organizations, we design and champion policies that will bring carbon removal solutions to gigaton scale and establish the US as an international leader in an emerging industry. We’re commited to doing so in a way that's good for communities and the environment.",
+            "url": "https://carbon180.org/"
+        },
+        {
+            "name": "Future Cleantech Architects",
+            "desc": "We identify critical fields of innovation in industries where sustainable solutions are still in very early stages. We work with high-level policy-makers to intensify their R&D activities accordingly. We initiate and actively drive high-level research consortia on critical technologies for these neglected industries.",
+            "url": "https://fcarchitects.org/"
+        },
+        {
+            "name": "Information Technology & Innovation Foundation",
+            "desc": "ITIF’s mission is to formulate, evaluate, and promote policy solutions that accelerate innovation and boost productivity to spur growth, opportunity, and progress. ITIF’s goal is to provide policymakers around the world with high-quality information, analysis, and actionable recommendations they can trust. To that end, ITIF adheres to a high standard of research integrity with an internal code of ethics grounded in analytical rigor, original thinking, policy pragmatism, and editorial independence.",
+            "url": "https://itif.org/publications/2015/01/10/about/"
+        },
+        {
+            "name": "Albert Schweitzer Foundation (Animal Welfare)",
+            "desc": "Our commitment is to focus on the single greatest source of pain and death for animals: the use of animals and animal products as a food source. In well developed and affluent countries, a healthy diet does not require the death and suffering of animals for the production of food, which is why we promote plant-based diets as the most ethical solution. Spreading veganism is a lengthy process most realistically reached and sustained through interim steps, including the reduction of meat consumption. Since the use of animals as a food source is not likely to end in the near future, we strive to reduce the suffering of all animals that are being raised, kept and killed for the sake of food production.",
+            "url": "https://albertschweitzerfoundation.org/"
+        },
+        {
+            "name": "Recommended Animal Charity Fund",
+            "desc": "The Recommended Charity Fund is for anyone who wishes to support Animal Charity Evaluators' (ACE) recommended charities through a single donation, simplifying the process so that you can easily give to effective animal charities. The Fund supports ACE’s current Top Charities and Standout Charities, and its disbursement is determined by ACE’s research team. (You might also want to add some of those charities as more specific options to this poll)",
+            "url": "https://animalcharityevaluators.org/donation-advice/recommended-charities/"
+        }
+        {
+            "name": "Good Food Institute (Alternative Meat)",
+            "desc": "We to accelerate alternative protein innovation. Globally, meat consumption is the highest it’s ever been. According to the UN, global meat production is projected to double by 2050. With plant-based meat, cultivated meat, and fermentation, we can mitigate the environmental impact of our food system, decrease the risk of zoonotic disease, and ultimately feed more people with fewer resources. By making meat from plants and cultivating meat from cells, we can modernize meat production.",
+            "url": "https://gfi.org/"
+        },
+        {
+            "name": "Humane League (Animal Welfare)",
+            "desc": "We exist to end the abuse of animals raised for food by influencing the policies of the world’s biggest companies, demanding legislation, and empowering others to take action and leave animals off their plates.",
+            "url": "https://thehumaneleague.org/"
+        },
+        {
+            "name": "Wild Animal Initiative",
+            "desc": "Although the natural world is a source of great beauty and happiness, vast numbers of animals routinely face serious challenges such as disease, hunger, or natural disasters. There is no “one-size-fits-all” solution to these threats. However, even as we recognize that improving the welfare of free-ranging wild animals is difficult, we believe that humans have a responsibility to help whenever we can. Our staff explores how humans can beneficially coexist with animals through the lens of wild animal welfare.",
+            "url": "https://www.wildanimalinitiative.org/"
+        },
+        {
+            "name": "Center on Long-Term Risk (AI Security)",
+            "desc": "Our goal is to address worst-case risks from the development and deployment of advanced Artificial Intelligence systems. We are currently focused on conflict scenarios as well as technical and philosophical aspects of cooperation. We do interdisciplinary research, make and recommend grants, and build a community of professionals and other researchers around our priorities.",
+            "url": "https://longtermrisk.org/"
+        },
+        {
+            "name": "Machine Intelligence Research Inst. (AI Security)",
+            "desc": "Our mission is to develop formal tools for the clean design and analysis of general-purpose AI systems, with the intent of making such systems safer and more reliable when they are developed.",
+            "url": "https://intelligence.org/about/"
+        },
+        {
+            "name": "80,000 Hours (Consultancy for Altruists)",
+            "desc": "80,000 Hours provides research and support to help students and graduates switch into careers that effectively tackle the world’s most pressing problems.",
+            "url": "https://80000hours.org/"
+        },
+        {
+            "name": "Centre for Effective Altruism",
+            "desc": "The Centre for Effective Altruism is dedicated to building and nurturing a global community of people who are thinking carefully about the world’s biggest problems and taking impactful action to solve them.",
+            "url": "https://www.centreforeffectivealtruism.org/what-is-cea"
+        },
+        {
+            "name": "Netzwerk für Eff. Altruismus Deutschland",
+            "desc": "Wir sind ein Netzwerk von Menschen in Deutschland, die sich intensiv für die Welt einsetzen und den Nutzen für andere zu einem wichtigen Teil unseres Lebens machen. Wir nutzen wissenschaftliche Evidenz und Vernunft, um herauszufinden, wie dies am besten funktioniert.",
+            "url": "https://ealokal.de/#about"
+        }
+    ]
+
+}
