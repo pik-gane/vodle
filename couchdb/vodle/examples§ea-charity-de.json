@@ -91,7 +91,7 @@
             "name": "Recommended Animal Charity Fund",
             "desc": "The Recommended Charity Fund is for anyone who wishes to support Animal Charity Evaluators' (ACE) recommended charities through a single donation, simplifying the process so that you can easily give to effective animal charities. The Fund supports ACE’s current Top Charities and Standout Charities, and its disbursement is determined by ACE’s research team. (You might also want to add some of those charities as more specific options to this poll)",
             "url": "https://animalcharityevaluators.org/donation-advice/recommended-charities/"
-        }
+        },
         {
             "name": "Good Food Institute (Alternative Meat)",
             "desc": "We to accelerate alternative protein innovation. Globally, meat consumption is the highest it’s ever been. According to the UN, global meat production is projected to double by 2050. With plant-based meat, cultivated meat, and fermentation, we can mitigate the environmental impact of our food system, decrease the risk of zoonotic disease, and ultimately feed more people with fewer resources. By making meat from plants and cultivating meat from cells, we can modernize meat production.",
@@ -133,5 +133,4 @@
             "url": "https://ealokal.de/#about"
         }
     ]
-
 }
