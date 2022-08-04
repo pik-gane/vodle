@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { environment } from 'src/environments/environment';
 
 import { GlobalService } from "../../global.service";
@@ -38,20 +38,20 @@ export class SelectServerComponent implements OnInit {
   @Input() page: string; // the name of that page provided in its template
   @Input() page_object; // the name of that page provided in its template
 
-  selectServerFormGroup: FormGroup;
+  selectServerFormGroup: UntypedFormGroup;
 
   constructor(
-    public formBuilder: FormBuilder,
+    public formBuilder: UntypedFormBuilder,
     public G: GlobalService,
   ) { }
 
   ngOnInit() {
     this.G.L.entry("SelectServerComponent.ngOnInit");
     this.selectServerFormGroup = this.formBuilder.group({
-      db: new FormControl(this.page=='settings'?'central':'default', Validators.required),
-      db_from_pid: new FormControl('TODO', Validators.required),
-      db_custom_server_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
-      db_custom_password: new FormControl('', Validators.required), // TODO: validator?
+      db: new UntypedFormControl(this.page=='settings'?'central':'default', Validators.required),
+      db_from_pid: new UntypedFormControl('TODO', Validators.required),
+      db_custom_server_url: new UntypedFormControl('', Validators.pattern(this.G.urlRegex)),
+      db_custom_password: new UntypedFormControl('', Validators.required), // TODO: validator?
     });
     this.showing_db_custom_password = false;
     if (this.page_object) {

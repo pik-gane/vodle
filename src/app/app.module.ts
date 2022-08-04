@@ -47,35 +47,34 @@ export function configureLogging(loggingService: LoggingService): () => void {
 }
 
 @NgModule({
-  declarations: [AppComponent],
-  entryComponents: [],
-  imports: [
-    LoggingServiceModule,
-    BrowserModule, 
-    IonicModule.forRoot(), 
-    IonicStorageModule.forRoot(),
-    AppRoutingModule,
-    HttpClientModule, 
-    TranslateModule.forRoot({
-        defaultLanguage: 'en',
-        loader: {
-          provide: TranslateLoader,
-          useFactory: (createTranslateLoader),
-          deps: [HttpClient]
-      }
-    }),
-  ],
-  providers: [
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    { provide: LocationStrategy, useClass: HashLocationStrategy },
-    GlobalService,
-    {
-      deps: [LoggingService],
-      multi: true,
-      provide: APP_INITIALIZER,
-      useFactory: configureLogging
-    }
-  ],
-  bootstrap: [AppComponent],
+    declarations: [AppComponent],
+    imports: [
+        LoggingServiceModule,
+        BrowserModule,
+        IonicModule.forRoot(),
+        IonicStorageModule.forRoot(),
+        AppRoutingModule,
+        HttpClientModule,
+        TranslateModule.forRoot({
+            defaultLanguage: 'en',
+            loader: {
+                provide: TranslateLoader,
+                useFactory: (createTranslateLoader),
+                deps: [HttpClient]
+            }
+        }),
+    ],
+    providers: [
+        { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+        { provide: LocationStrategy, useClass: HashLocationStrategy },
+        GlobalService,
+        {
+            deps: [LoggingService],
+            multi: true,
+            provide: APP_INITIALIZER,
+            useFactory: configureLogging
+        }
+    ],
+    bootstrap: [AppComponent]
 })
 export class AppModule {}

@@ -23,6 +23,11 @@
         "[COMMENT DE] Wir verwenden korrekte Bindestriche -, Bereichsstriche –, Minuszeichen −, Apostrophe ʼ und Anführungsstriche „“ statt Fußzeichen ' und Zollzeichen",
         "[COMMENT DE] Wir vermeiden die Begriffe 'wählen' und 'Wähler' und verwenden stattdessen 'Abstimmung', 'Teilnehmer:in', 'teilnehmen' um klarzustellen, dass es sich hier nicht um Mehrheits-Wahlen handelt."
     ],
+    "-parameters": {
+        "_COMMENT_SECTION_": "[COMMENT] locale parameters used in code, not occurring as text:",
+        "_COMMENT_first-day-of-week": "[COMMENT] in first-day-of-week, please specify 0 for Sunday or 1 for Monday etc. or 6 for Saturday",
+        "first-day-of-week": "1"
+    },
     "add": "Hinzufügen",
     "add-option": "Option hinzufügen",
     "add-target": "Option hinzufügen",

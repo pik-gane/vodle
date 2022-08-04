@@ -25,7 +25,7 @@ TODO:
 */
 
 import { Component, OnInit, ViewChild, ViewChildren, ElementRef, QueryList, ChangeDetectorRef } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
@@ -65,7 +65,7 @@ export class DraftpollPage implements OnInit {
 
   // form:
 
-  formGroup: FormGroup;
+  formGroup: UntypedFormGroup;
   stage: number
   option_stage: number;
   expanded: Array<boolean>;
@@ -101,7 +101,7 @@ export class DraftpollPage implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    public formBuilder: FormBuilder, 
+    public formBuilder: UntypedFormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
     public G: GlobalService,
@@ -432,7 +432,7 @@ export class DraftpollPage implements OnInit {
 
   open_due_custom() {
     setTimeout(() => {
-      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
+// FIXME:      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
     }, 100);
   }
 
@@ -708,13 +708,13 @@ export class DraftpollPage implements OnInit {
 
   private reset() {
     this.formGroup = this.formBuilder.group({
-      poll_type: new FormControl('', Validators.required),
-      poll_language: new FormControl(''),
-      poll_title: new FormControl('', Validators.required),
-      poll_desc: new FormControl(''),
-      poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
-      poll_due_type: new FormControl('', Validators.required),
-      poll_due_custom: new FormControl('', this.allowed_date.bind(this)),
+      poll_type: new UntypedFormControl('', Validators.required),
+      poll_language: new UntypedFormControl(''),
+      poll_title: new UntypedFormControl('', Validators.required),
+      poll_desc: new UntypedFormControl(''),
+      poll_url: new UntypedFormControl('', Validators.pattern(this.G.urlRegex)),
+      poll_due_type: new UntypedFormControl('', Validators.required),
+      poll_due_custom: new UntypedFormControl('', this.allowed_date.bind(this)),
     });
     this.G.P.update_ref_date();
   }
@@ -776,9 +776,9 @@ export class DraftpollPage implements OnInit {
   }
 
   private add_option_inputs(i:number) {
-    this.formGroup.addControl('option_name'+i, new FormControl("", Validators.required));
-    this.formGroup.addControl('option_desc'+i, new FormControl(""));
-    this.formGroup.addControl('option_url'+i, new FormControl("", Validators.pattern(this.G.urlRegex)));
+    this.formGroup.addControl('option_name'+i, new UntypedFormControl("", Validators.required));
+    this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
+    this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
   }
   

@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
-import { Validators, FormBuilder, FormGroup, FormControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { IonButton, IonInput } from '@ionic/angular';
 
@@ -57,10 +57,10 @@ export class LoginPage implements OnInit {
   
   // ATTRIBUTES:
 
-  languageFormGroup: FormGroup;
-  emailFormGroup: FormGroup;
-  passwordFormGroup: FormGroup;
-  oldPasswordFormGroup: FormGroup;
+  languageFormGroup: UntypedFormGroup;
+  emailFormGroup: UntypedFormGroup;
+  passwordFormGroup: UntypedFormGroup;
+  oldPasswordFormGroup: UntypedFormGroup;
 
   step: string;
 
@@ -84,7 +84,7 @@ export class LoginPage implements OnInit {
   constructor(      
       private router: Router,
       public route: ActivatedRoute,
-      public formBuilder: FormBuilder,
+      public formBuilder: UntypedFormBuilder,
       public translate: TranslateService,
       public G: GlobalService) { 
     this.G.L.entry("LoginPage.constructor");
@@ -108,29 +108,29 @@ export class LoginPage implements OnInit {
   ngOnInit() {
     this.G.L.entry("LoginPage.ngOnInit");
     this.languageFormGroup = this.formBuilder.group({
-      language: new FormControl('', Validators.required),
+      language: new UntypedFormControl('', Validators.required),
     });
     this.emailFormGroup = this.formBuilder.group({
-      email: new FormControl('', Validators.compose([
+      email: new UntypedFormControl('', Validators.compose([
 //        Validators.required,  // TODO: uncomment once the problem is solved that the privacy link does not work properly when field left empty
         Validators.email
       ])),
     });
     this.passwordFormGroup = this.formBuilder.group({
       pw: this.formBuilder.group({
-        password: new FormControl('', Validators.compose([
+        password: new UntypedFormControl('', Validators.compose([
           Validators.required,
           Validators.minLength(8),
           Validators.pattern(this.G.S.password_regexp)
         ])),
-        confirm_password: new FormControl('', Validators.required),
+        confirm_password: new UntypedFormControl('', Validators.required),
       }, {
         validators: [this.G.S.passwords_match]
       }),
     });
     this.oldPasswordFormGroup = this.formBuilder.group({
       pw: this.formBuilder.group({
-        password: new FormControl('', Validators.compose([
+        password: new UntypedFormControl('', Validators.compose([
           Validators.required,
           Validators.minLength(8),
           Validators.pattern(this.G.S.password_regexp)

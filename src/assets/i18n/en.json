@@ -25,6 +25,11 @@
         "[COMMENT EN] We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
         "[COMMENT EN] We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
+    "-parameters": {
+        "_COMMENT_SECTION_": "[COMMENT] locale parameters used in code, not occurring as text:",
+        "_COMMENT_first-day-of-week": "[COMMENT] in first-day-of-week, please specify 0 for Sunday or 1 for Monday etc. or 6 for Saturday",
+        "first-day-of-week": "0"
+    },
     "add": "Add",
     "add-option": "Add option",
     "add-target": "Add option",
