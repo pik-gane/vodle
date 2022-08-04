@@ -212,4 +212,5 @@ export class SettingsPage implements OnInit {
       this.G.L.trace("SettingsPage.notify_changed", cls, value);
     }
   }
+
 }

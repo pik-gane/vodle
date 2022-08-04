@@ -1695,7 +1695,7 @@ export class DataService implements OnDestroy {
   private handle_user_db_change(change) {
     // called by PouchDB sync and replicate
 //    change = JSON.parse(JSON.stringify(change));
-    this.G.L.entry("DataService.handle_user_db_change", change);
+    this.G.L.entry("DataService.handle_user_db_change");
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);

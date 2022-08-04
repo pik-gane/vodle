@@ -175,7 +175,6 @@ ion-select {
     position: relative;
     top: 15px;
 }
-.kebap .popover-content{ --width: auto; }
 
 .file-button {
     position: relative;
@@ -264,18 +263,28 @@ a, a:link, a:visited, a:hover, a:active, .externallink {
 }
 
 
-.add-option-class .popover-content {
-    position: absolute;
-    bottom: 20px!important;
-    height: 600px!important;
-    left: 20px!important;
-    width: auto!important;
+.add-option-class {
+    --width: 400px!important;
+    --height: 600px!important;
 }
+
+ion-popover.select-popover {
+    --height: auto!important; 
+    --width: 400px!important; 
+    --max-width: 400px!important; 
+    --min-width: 400px!important; 
+}
+
+.kebap { --width: auto!important; }
 
 ion-spinner {
     transform: scale(0.75);
 }
 
 .analysis .modal-wrapper{
-    --height: 90%;
+    --min-height: 90%!important;
+}
+
+.analysis {
+    --min-height: 90%!important;
 }

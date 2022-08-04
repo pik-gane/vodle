@@ -787,8 +787,8 @@ export class PollPage implements OnInit {
     if (this.p.allow_voting) {
       // TODO: also add delegation if ospec.type == "-"?
       this.popover.create({
-  //      event, // TODO: use this from Ionic v6 on!
-  //      side: 'top', // TODO: use this from Ionic v6 on!
+        event, // TODO: use this from Ionic v6 on!
+        side: 'top', // TODO: use this from Ionic v6 on!
         component: AddoptionDialogPage, 
         translucent: true,
         showBackdrop: true,

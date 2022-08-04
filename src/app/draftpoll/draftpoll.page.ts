@@ -432,7 +432,7 @@ export class DraftpollPage implements OnInit {
 
   open_due_custom() {
     setTimeout(() => {
-      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
+// FIXME:      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
     }, 100);
   }
 
