@@ -94,7 +94,23 @@
     },
     "analysis": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Analysis dialog:",
-        "-page-title": "Verteilung von Zustimmung und Anteilen"
+        "-page-title": "Verteilung von Zustimmung und Anteilen",
+        "each-dot-participant": "Jeder Punkt stellt eine:n sich nicht enthaltende:n Teilnehmer:in dar.",
+        "each-dot-percent": "Jeder Punkt stellt ein Prozent der sich nicht enthaltende:n Teilnehmer:innen dar.",
+        "yellow-dot": "Der gelbe Punkt zeigt, wohin Dein Anteil geht.",
+        "discs": "Die Scheiben zeigen, wie viel Zustimmung jede Option hat. Der hinter den anderen Scheiben herausschauende Teil der Scheibe zeigt den Anteil, den die Option bekommt. Wir zeigen hier nur Optionen, die einen Anteil bekommen.",
+        "_COMMENT_COLORS": "[COMMENT] The text below is split into 1. a part before a color word, including necessary whitespace, 2. a color word, and 3. a part after the color word, including necessary whitespace. Please take care to leave all whitespace intact!",
+        "colors-before-red": "Die Farben zeigen, welchen Optionen Du selbst zustimmst und wohin Dein Anteil geht. ",
+        "colors-red": "Rot:",
+        "colors-between-red-and-blue": " Du stimmst der Option nicht zu, weil Dein Wap null ist. ",
+        "colors-blue": "Blau:",
+        "colors-between-blue-and-green": " Du stimmst dieser Option momentan nicht zu. ",
+        "colors-green": "Grün:",
+        "colors-after-green": " Du stimmst der Option zu.",
+        "colors-before-dark-green": " Dein Anteil geht an die ",
+        "colors-dark-green": "dunkelgrüne",
+        "colors-after-dark-green": " Option.",
+        "suggestion-general": "<b>Vorschlag:</b> Du könntest mit den Unterstützer:innen derjenigen Optionen sprechen, denen Du nicht zustimmst (rot und blau). Vielleicht könnt Ihr gemeinsam irgend eine andere Option finden, der Ihr alle zustimmen könnt? <small>Eine gute Kompromiss-Option ist vielleicht bereits auf der Liste, oder Du willst sie vielleicht neu hinzufügen.</small>"
     },
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",

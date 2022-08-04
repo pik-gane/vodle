@@ -34,7 +34,8 @@ const svgcolors = {
   "vodlegreen": "#62a73b",
   "vodledarkgreen": "#4c822e"
   },
-  r_avatar = 7;
+  r_avatar = 7,
+  stretch = 1.1;
 
 @Component({
   selector: 'app-analysis',
@@ -108,7 +109,8 @@ export class AnalysisPage implements OnInit {
     const T = this.P.p.T,
           shares_map = T.shares_map,
           our_oids = [],
-          colors = [];
+          colors = [],
+          myvote = T.votes_map.get(this.P.p.myvid);
     for (const [i, oid] of T.oids_descending.entries()) {
       if (i == 10) {
         break;
@@ -170,9 +172,12 @@ export class AnalysisPage implements OnInit {
     }
     for (const [subset, size] of Object.entries(subset_counts)) {
       if (subset.length > 1) {
-        sets_array.push({ sets: [...subset], size: size });
+        sets_array.push({ 
+          sets: [...subset], size: size, 
+          weight: subset.length > 2 ? 0 : 1 });
       }
     }
+    this.G.L.info("sets_array", sets_array);
     sets_array.reverse(); // so that topmost option is painted last
     // 5. paint the diagram:
     const div = d3.select("#venn"),
@@ -208,12 +213,32 @@ export class AnalysisPage implements OnInit {
                 : Math.round(T.shares_map.get(oid) * 100),
             svg_g = svg.append("g"),
             positions = [];
+      var cx0: number, cy0: number;
+      /*
+      // TEST: replace circles by ellipses to improve visibility of small extensions?:
+      if (i > 0) {
+        const dcx = cx - cx0, dcy = cy - cy0, angle = Math.atan2(dcy, dcx), 
+              newcx = cx + R * (stretch - 1) * Math.cos(angle),
+              newcy = cy + R * (stretch - 1) * Math.sin(angle);
+        svg_g0.append("ellipse")          
+          .style("stroke", "black")
+          .style("fill-opacity", 0)
+          .attr("cx", newcx)
+          .attr("cy", newcy)
+          .attr("rx", R * stretch)
+          .attr("ry", R / stretch)
+          .attr("transform", "rotate("+angle+" "+newcx+" "+newcy+")");
+      } else {
+        cx0 = cx;
+        cy0 = cy;
+      }
+      */
       let fine = false;
       circle_data.push({cx:cx, cy:cy, R:R});
       svg_gs.push(svg_g);
       // put individual voters on that disc:
       for (let k=0; k<n; k++) {
-        var x, y;
+        var x, y, color = (k == 0 && myvote == oid) ? "yellow" : "black";
         // find a valid place:
         for (let it=0; it<100; it++) {
           // draw a random point on that disc:
@@ -225,7 +250,7 @@ export class AnalysisPage implements OnInit {
           fine = true;
           for (let j=0; j<k; j++) {
             const pos = positions[j],
-                  d2 = (x - pos.x)**2 + (y - pos.y)**2;
+                  d2 = (x - pos[0])**2 + (y - pos[1])**2;
             if (d2 < (3*r_avatar)**2) {
               fine = false;
               break;
@@ -248,9 +273,9 @@ export class AnalysisPage implements OnInit {
         if (fine) {
         // draw the avatar:
         svg_g.append("circle")
-          .style("stroke", "black")
+          .style("stroke", color)
           .style("stroke-opacity", 0)
-          .style("fill", "black")
+          .style("fill", color)
           .style("fill-opacity", 0)
           .attr("r", r_avatar)
           .attr("cx", x)

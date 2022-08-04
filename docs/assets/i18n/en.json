@@ -96,7 +96,23 @@
     },
     "analysis": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Analysis dialog:",
-        "-page-title": "Distribution of approval & shares"
+        "-page-title": "Distribution of approval & shares",
+        "each-dot-participant": "Each dot represents one non-abstaining participant.",
+        "each-dot-percent": "Each dot represents one percent of all non-abstaining participants.",
+        "yellow-dot": "The yellow dot marks where your share goes.",
+        "discs": "The discs show how much approval each option gets. The part of the disc that sticks out from behind the other discs shows the share that this option gets. We only show those options that get a share here.",
+        "_COMMENT_COLORS": "[COMMENT] The text below is split into 1. a part before a color word, including necessary whitespace, 2. a color word, and 3. a part after the color word, including necessary whitespace. Please take care to leave all whitespace intact!",
+        "colors-before-red": "The colors show which options you yourself approve and where your share goes. ",
+        "colors-red": "Red:",
+        "colors-between-red-and-blue": " you won't approve the option since your wap is zero. ",
+        "colors-blue": "Blue:",
+        "colors-between-blue-and-green": " you currently don't approve this option. ",
+        "colors-green": "Green:",
+        "colors-after-green": " you approve the option.",
+        "colors-before-dark-green": " Your share goes to the ",
+        "colors-dark-green": "dark green",
+        "colors-after-dark-green": " option.",
+        "suggestion-general": "<b>Suggestion:</b> You might want to talk to the supporters of the options you don't approve (red and blue). Maybe you can together find some other option that you can all approve? <small>A good compromise option might already be on the menu or you might want to add it.</small>"
     },
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",
