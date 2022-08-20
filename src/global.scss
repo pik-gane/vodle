@@ -111,6 +111,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 html {
     --ion-font-family: 'Quicksand'; // , 'Nunito';
+    image-rendering: webkit-optimize-contrast;
 }
 
 .split-pane-side {

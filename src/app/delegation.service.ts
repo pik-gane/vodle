@@ -23,7 +23,9 @@ CAUTION: At the moment, delegation is disabled due to a difficult bug!
 
 BUG: Delegation cycles are not always prevented and can lead to inconsistent results.
 
-PROPOSED SOLUTION: Allow cycles. When a cycle exists, the effective wap is the maximum of the waps assigned by the members of the cycle. To implement this, the simple map effective_delegation_map needs to be replaced by a binary relationship similar to indirect_delegation_map. 
+PROPOSED SOLUTION: Allow cycles. When a cycle exists, the effective wap is the maximum of the waps assigned by the members of the cycle. 
+
+To implement this, the simple map effective_delegation_map will point to an arbitrary member of the cycle in case of a cycle. 
 
 */
 
@@ -209,76 +211,71 @@ export class DelegationService {
 
   // RESPONDING TO A DELEGATION REQUEST:
 
-  get_incoming_request_status(pid: string, did: string): string {
+  get_incoming_request_status(pid: string, did: string): Array<string> {
     if (pid in this.G.P.polls) {
       const p = this.G.P.polls[pid];
       if (p.state != 'running') {
-        return "closed";
+        return ["closed"];
       } else {
         // check if request has been retrieved from db:
         const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
         if (agreement) {
           // check if already answered:
           if (agreement.status == 'agreed') {
-            return "accepted";
+            return ["accepted"];
           } 
           // check if already delegating (in)directly back to client_vid for at least one option:
-          var possible;
+          var status: Array<any>;
           const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
                 effdelmap = this.G.D.effective_delegation_map_caches[pid],
                 inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
                 myvid = p.myvid,
                 client_vid = agreement.client_vid;
           if (client_vid == myvid) {
-            return "is-self";
+            return ["impossible", "is-self"];
           }
           let two_way = false, cycle = false, weight_exceeded = false;
           for (let oid of p.oids) {
+            const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
+            const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
+            if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
+                + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
+                > environment.delegation.max_weight) {
+              weight_exceeded = true;
+              break;
+            }
             if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
               two_way = true;
-              break;
-            } else {
-              const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
-              if (effdel_vid == client_vid) {
-                cycle = true;
-                break;
-              } else {
-                const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
-                if ((thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
-                    + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
-                    > environment.delegation.max_weight) {
-                  // TODO: verify that effective delegate herself is counted properly!
-                  weight_exceeded = true;
-                }
-                break;
-              }
+            } else if (effdel_vid == client_vid) {
+              cycle = true;
             }
           }
-          if (two_way) {
-            possible = "two-way";
+          if (weight_exceeded) {
+            status = ["impossible", "weight-exceeded"];
+          } else if (two_way) {
+            status = ["possible", "two-way"];
           } else if (cycle) {
-            possible = "cycle";
-          } else if (weight_exceeded) {
-            possible = "weight-exceeded";
+            status = ["possible", "cycle"];
           } else {
-            possible = "possible";
+            status = ["possible", "acyclic"];
           }
           if (agreement.status == 'declined') {
-            return "declined, " + possible;
+            status[0] = "declined, " + status[0];
+            return status;
           } else {
-            return possible;
+            return status;
           }
         } else {
-          return "not-in-db";
+          return ["impossible", "not-in-db"];
         }
       }
     } else {
-      return "poll-unknown";
+      return ["impossible", "poll-unknown"];
     }
   }
 
   store_incoming_request(pid: string, did: string, from: string, url: string, status: string) {
-    if (status != 'is-self') {
+    if (status != 'impossible') {
       this.G.D.setu("del_incoming."+did, JSON.stringify([from, url, status]));
       let cache = this.G.D.incoming_dids_caches[pid];
       if (!cache) {
@@ -291,7 +288,7 @@ export class DelegationService {
   update_incoming_request_status(pid: string, did: string, status: string) {
     const cache = this.G.D.incoming_dids_caches[pid],
           [from, url, old_status] = cache.get(did);
-    if (status != old_status) {
+    if (status != old_status[0]) {
       this.store_incoming_request(pid, did, from, url, status);
     }
   }

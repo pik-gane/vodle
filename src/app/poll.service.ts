@@ -58,6 +58,8 @@ type tally_cache_t = { // T is short for "tally data"
   n_votes_map: Map<string, number>;
   // for each oid, the winning probability/share:
   shares_map: Map<string, number>;
+  // len of cycle myvid is on, or null if not:
+  my_cycle_len: number;
 };
                       
 // in the following, month index start at zero (!) while date index starts at one (!):
@@ -823,7 +825,7 @@ export class Poll {
     return this._effective_delegation_map;
   }
 
-  // for each oid and vid, the set of vids who effectively delegated to this vid (default: null, meaning no delegation):
+  // for each oid and vid, the set of vids who effectively delegated to this vid, excluding the vid itself (default: null, meaning no delegation):
   _inv_effective_delegation_map: Map<string, Map<string, Set<string>>>;
   get inv_effective_delegation_map(): Map<string, Map<string, Set<string>>> {
     if (!this._inv_effective_delegation_map) {
@@ -917,10 +919,15 @@ export class Poll {
       return false;
     }
     /** Called whenever a delegation shall be added. Returns whether this succeeded */
+
+    this.G.L.debug("add_delegation entry", this.pid, oid, client_vid, delegate_vid);
+
     const dir_d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid), 
           new_eff_d_vid = eff_d_map.get(delegate_vid) || delegate_vid;
-    // make sure no delegation exists yet and delegation would not create a cycle:
+
+    // make sure no delegation exists yet:
+    // (we no longer require that delegation would not create a cycle)
     if (dir_d_map.has(client_vid)) {
 
       if (dir_d_map.get(client_vid) == delegate_vid) {
@@ -931,11 +938,12 @@ export class Poll {
         return false;  
       }
 
+    /*
     } else if (new_eff_d_vid == client_vid) { 
 
       this.G.L.error("PollService.add_delegation when this would create a cycle", this._pid, client_vid, oid, delegate_vid);
       return false;
-
+    */
     } else {
 
       this.G.L.trace("PollService.add_delegation feasible", this._pid, client_vid, oid, delegate_vid);
@@ -964,49 +972,88 @@ export class Poll {
       inv_ind_ds_of_delegate.add(client_vid);
       if (ind_ds_of_delegate) {
         for (const vid of ind_ds_of_delegate) {
-          ind_ds_of_client.add(vid);
-          if (!inv_ind_d_map.has(vid)) {
-            inv_ind_d_map.set(vid, new Set());
+          if (vid != client_vid) { // avoid self-reference entries
+            ind_ds_of_client.add(vid);
+            if (!inv_ind_d_map.has(vid)) {
+              inv_ind_d_map.set(vid, new Set());
+            }
+            inv_ind_d_map.get(vid).add(client_vid);  
           }
-          inv_ind_d_map.get(vid).add(client_vid);
         }
       }
       // voters dependent on client:
       if (inv_eff_ds_of_client) {
         for (const vid of inv_eff_ds_of_client) {
           const ind_ds_of_vid = ind_d_map.get(vid);
-          ind_ds_of_vid.add(delegate_vid);
-          inv_ind_ds_of_delegate.add(vid);
+          if (vid != delegate_vid) { // avoid self-reference entries
+            ind_ds_of_vid.add(delegate_vid);
+            inv_ind_ds_of_delegate.add(vid);  
+          }
           if (ind_ds_of_delegate) {
             for (const vid2 of ind_ds_of_delegate) {
-              ind_ds_of_vid.add(vid2);
-              if (!inv_ind_d_map.has(vid2)) {
-                inv_ind_d_map.set(vid2, new Set());
+              if (vid2 != vid) { // avoid self-reference entries
+                ind_ds_of_vid.add(vid2);
+                if (!inv_ind_d_map.has(vid2)) {
+                  inv_ind_d_map.set(vid2, new Set());
+                }
+                inv_ind_d_map.get(vid2).add(vid);  
               }
-              inv_ind_d_map.get(vid2).add(vid);
             }
           }  
         }    
       }
 
-      // update EFFECTIVE delegations, inverses, and proxy ratings: 
-      const new_proxy_rating = this.own_ratings_map.get(oid).get(new_eff_d_vid) || 0;
-      if (!inv_eff_d_map.has(new_eff_d_vid)) {
-        inv_eff_d_map.set(new_eff_d_vid, new Set());
-      }
-      const inv_eff_ds_of_new_eff_d = inv_eff_d_map.get(new_eff_d_vid);
-      // this vid:
-      eff_d_map.set(client_vid, new_eff_d_vid);
-      inv_eff_ds_of_new_eff_d.add(client_vid);
-      this.update_proxy_rating(client_vid, oid, new_proxy_rating);
-      // dependent voters:
-      if (inv_eff_ds_of_client) {
-        for (const vid of inv_eff_ds_of_client) {
-          eff_d_map.set(vid, new_eff_d_vid);
-          inv_eff_ds_of_new_eff_d.add(vid);
-          this.update_proxy_rating(vid, oid, new_proxy_rating);
+      // update EFFECTIVE delegations, inverses, and proxy ratings:
+      if (new_eff_d_vid == client_vid) {
+        // a cycle is created
+        const rmap = this.own_ratings_map.get(oid);
+        let vid = delegate_vid,
+            new_proxy_rating = rmap.get(vid) || 0,
+            cycle_len = 0,
+            includes_me = false;
+        // loop through cycle members:
+        for (cycle_len = 1; cycle_len <= this.T.all_vids_set.size; cycle_len++) {
+          vid = dir_d_map.get(vid);
+          if (vid == delegate_vid) break;
+          // use max rating on cycle as new proxy rating:
+          new_proxy_rating = Math.max(new_proxy_rating, this.own_ratings_map.get(oid).get(vid) || 0);
+          if (vid == this.myvid) {
+            includes_me = true;
+          }
+        } 
+        this.G.L.info("add_delegation created cycle of length", cycle_len, includes_me, this.pid, oid, client_vid, delegate_vid);
+        if (includes_me) {
+          this.T.my_cycle_len = cycle_len;
+        }
+        this.update_proxy_rating(client_vid, oid, new_proxy_rating);
+        // update proxy rating of all dependent voters:
+        if (inv_eff_ds_of_client) {
+          for (const vid of inv_eff_ds_of_client) {
+            this.update_proxy_rating(vid, oid, new_proxy_rating);
+          }  
+        }  
+      } else {
+        // determine new proxy rating:
+        const new_proxy_rating = this.own_ratings_map.get(oid).get(new_eff_d_vid) || 0;
+        // update eff_d_map and inverse:
+        if (!inv_eff_d_map.has(new_eff_d_vid)) {
+          inv_eff_d_map.set(new_eff_d_vid, new Set());
+        }
+        const inv_eff_ds_of_new_eff_d = inv_eff_d_map.get(new_eff_d_vid);
+        // this vid:
+        eff_d_map.set(client_vid, new_eff_d_vid);
+        inv_eff_ds_of_new_eff_d.add(client_vid);
+        this.update_proxy_rating(client_vid, oid, new_proxy_rating);
+        // dependent voters:
+        if (inv_eff_ds_of_client) {
+          for (const vid of inv_eff_ds_of_client) {
+            eff_d_map.set(vid, new_eff_d_vid);
+            inv_eff_ds_of_new_eff_d.add(vid);
+            this.update_proxy_rating(vid, oid, new_proxy_rating);
+          }  
         }  
       }
+      this.G.L.debug("add_delegation exit", this.pid, oid, client_vid, delegate_vid);
       return true;
     }
   }
@@ -1028,25 +1075,71 @@ export class Poll {
             inv_ind_ds_of_client = inv_ind_d_map.get(client_vid),
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
             inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
-            inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client);
+            inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client),
+            is_on_cycle = ind_d_map.get(old_d_vid).has(client_vid);
+
+      this.G.L.debug("del_delegation entry", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
 
       // deregister DIRECT delegation and inverse of vid:
       dir_d_map.delete(client_vid);
       inv_dir_d_map.get(old_d_vid).delete(client_vid);
 
-      // deregister INDIRECT delegation of vid to others:
+      // deregister INDIRECT delegation of client_vid to others:
       for (const vid of old_ind_ds_of_client) {
         inv_ind_d_map.get(vid).delete(client_vid);
       }
       ind_d_map.delete(client_vid);
 
-      // deregister INDIRECT delegation of voters who indirectly delegated to vid to old indirect delegates of vid:
-      if (inv_ind_ds_of_client) {
-        for (const vid of inv_ind_ds_of_client) {
-          const ind_ds_of_vid = ind_d_map.get(vid);
-          for (const vid2 of old_ind_ds_of_client) {
-            ind_ds_of_vid.delete(vid2);
-            inv_ind_d_map.get(vid2).delete(vid);
+      // deregister INDIRECT delegations no longer valid:
+      if (is_on_cycle) {
+        // we're on a cycle, so
+        // first find cycle elements in correct forward order:
+        let vid = old_d_vid,
+            former_cycle = [vid];
+        // loop through cycle members:
+        while (true) {
+          vid = dir_d_map.get(vid);
+          former_cycle.push(vid);
+          if (vid == client_vid) break;
+        } 
+        if (former_cycle.includes(this.myvid)) {
+          this.T.my_cycle_len = null;
+        }
+        // now for each vid indirectly delegating to client, ...
+        if (inv_ind_ds_of_client) {
+          for (const vid of inv_ind_ds_of_client) {
+            // follow delegation path to cycle:
+            let cycle_vid = vid,
+                cycle_pos = -1;
+            while (true) {
+              cycle_pos = former_cycle.indexOf(cycle_vid);
+              if (cycle_pos != -1) {
+                break;
+              }
+              cycle_vid = dir_d_map.get(cycle_vid);
+            }
+            // then deregister indirect delegations to all earlier cycle members:
+            const ind_ds_of_vid = ind_d_map.get(vid);
+            for (let pos = 0; pos < cycle_pos; pos++) {
+              const vid2 = former_cycle[pos];
+              if (ind_ds_of_vid.has(vid2)) {
+                ind_ds_of_vid.delete(vid2);
+                inv_ind_d_map.get(vid2).delete(vid);  
+              }
+            }
+          }
+        }
+      } else {
+        // we're not on a cycle, so
+        // deregister INDIRECT delegation of voters who indirectly delegated to client_vid 
+        // to all old indirect delegates of vid:
+        if (inv_ind_ds_of_client) {
+          for (const vid of inv_ind_ds_of_client) {
+            const ind_ds_of_vid = ind_d_map.get(vid);
+            for (const vid2 of old_ind_ds_of_client) {
+              ind_ds_of_vid.delete(vid2);
+              inv_ind_d_map.get(vid2).delete(vid);
+            }
           }
         }
       }
@@ -1067,6 +1160,7 @@ export class Poll {
           this.update_proxy_rating(vid, oid, new_proxy_rating);
         }            
       }
+      this.G.L.debug("del_delegation exit", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
     }
   }
 
@@ -1103,7 +1197,8 @@ export class Poll {
       oids_descending: [],
       votes_map: new Map(),
       n_votes_map: new Map(),
-      shares_map: new Map()
+      shares_map: new Map(),
+      my_cycle_len: null
     }
     // extract voters and total_ratings:
     for (const [oid, effective_ratings_map] of this.effective_ratings_map) {

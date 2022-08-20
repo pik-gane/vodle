@@ -34,6 +34,7 @@ export const environment = {
       },
     ]  
   },
+  show_debug_info: true,
   data_service: {
     central_db_server_url: "http://localhost:5984/", // use this if you want to use your local couchdb on localhost:5984 without proxy 
 //    central_db_server_url: "http://localhost/couch/", // use this when you have an nginx docker container running that forwards requests to localhost/couch/ to localhost:5984 

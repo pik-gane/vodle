@@ -30,6 +30,7 @@ export const environment = {
       },
     ]  
   },
+  show_debug_info: false, // must be false in production!
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",
     central_db_password: "none",

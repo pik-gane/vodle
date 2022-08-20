@@ -2635,7 +2635,7 @@ export class DataService implements OnDestroy {
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
           for (const [did, [from, url, status]] of cache) {
-            if (!status.startsWith('declined')) {
+            if (!status[0].startsWith('declined')) {
               this.G.L.trace("DataService.delete_all declining request", did);
               this.G.Del.decline(pid, did);
             }

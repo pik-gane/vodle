@@ -543,8 +543,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
 
-            <!-- Info about how many ratings the delegate controls: -->
-
             <ion-col class="ion-no-margin ion-padding-right">
               <small>
                 <p>
@@ -576,7 +574,17 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
 
-            <!-- Info about how many ratings the delegate controls: -->
+            <!-- TODO: if on cycle, warn that own rating still matters, and show cycle len! 
+              - if toggle is off, dashed additional needle should show the rating 
+                that would result if toggle were on, i.e., the max of own and rest of cycle
+              - if toggle is on, the slider still needs to be active since proxy rating still depends on own!
+                the slider will then be own rating. 
+                if value >= max on rest of cycle, it will look normal, and max on rest will be shown as an additional mark (a dashed small circle?).
+                if value < max on rest of cycle, it will be normal size but grey, and max on cycle will be shown as colored but small solid needle protruding from behind it.
+                details text will explain about this!
+            -->
+
+            <!-- Info about how many of user's ratings the delegate controls: -->
 
             <ion-col class="ion-no-margin ion-padding-right">
               <small>
@@ -938,11 +946,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
     <!-- DEBUGGING AREA (not in production mode): -->
 
-    <ng-container *ngIf="false && !E.production">
+    <ng-container *ngIf="E.show_debug_info">
       <ion-item></ion-item>
       <ion-item class="ion-text-right" lines="none">
         <ion-col><small><p style="color: grey;">
-          Debugging info: state={{p.state}}, vid={{p.myvid}}, oids={{p.oids}}, oidsorted={{oidsorted}}/{{p.T.oids_descending}}, scores_map={{G.map2str(p.T.scores_map)}}. 
+          Debugging info: cycle_len={{p.T.my_cycle_len}}, state={{p.state}}, vid={{p.myvid}}, oids={{p.oids}}, oidsorted={{oidsorted}}/{{p.T.oids_descending}}, scores_map={{G.map2str(p.T.scores_map)}}. 
           Simulate state (off:closed, on:running): 
         </p></small></ion-col>
         <ion-buttons slot="end">
