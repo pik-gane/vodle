@@ -39,6 +39,8 @@ import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
 
+import { unique_name_validator } from '../sharedcomponents/unique-form-validator';
+
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
 function is_forward_key(ev: KeyboardEvent) {
@@ -776,7 +778,7 @@ export class DraftpollPage implements OnInit {
   }
 
   private add_option_inputs(i:number) {
-    this.formGroup.addControl('option_name'+i, new UntypedFormControl("", Validators.required));
+    this.formGroup.addControl('option_name'+i, new UntypedFormControl("", [Validators.required, unique_name_validator(this.pd.options.map(o => o.name))]));
     this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
     this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
