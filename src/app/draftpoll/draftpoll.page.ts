@@ -851,6 +851,7 @@ export class DraftpollPage implements OnInit {
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],

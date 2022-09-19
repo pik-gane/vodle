@@ -655,6 +655,7 @@
         "poll-due-future": "This date and time is in the past or too far in the future.",
         "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
+        "option-name-unique": "The option name already exists.",
         "option-url-valid": "Please enter a valid URL."
     }
 }
