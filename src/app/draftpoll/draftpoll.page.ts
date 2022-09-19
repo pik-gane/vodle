@@ -41,7 +41,7 @@ import { environment } from 'src/environments/environment';
 
 import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
 import { Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators'
+import { map } from 'rxjs/operators'
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
@@ -851,6 +851,7 @@ export class DraftpollPage implements OnInit {
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],
@@ -859,15 +860,13 @@ export class DraftpollPage implements OnInit {
     ],
   }
 
-  existingOptionName$(currentControlName):Observable<string[]> {
-   return this.formGroup.valueChanges.pipe(
-      map(valuesO => {
-        const keys = Object.keys(valuesO as Object).filter(k => { return k.includes('option_name') && k !== currentControlName })
-        console.info(keys);
-        const names: string[] = [];
-        keys.forEach(key => names.push(valuesO[key]));
-        console.info(names)
-        return names
+  existingOptionName$(currentControlName: string): Observable<string[]> {
+    return this.formGroup.valueChanges.pipe(
+      map(values => {
+        const optionNameKeys = Object.keys(values as Object).filter(k => { return k.includes('option_name') && k !== currentControlName })
+        const existingOptionNames: string[] = [];
+        optionNameKeys.forEach(key => existingOptionNames.push(values[key]));
+        return existingOptionNames;
       })
     )
   }
