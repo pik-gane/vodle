@@ -23,6 +23,9 @@ import { IonInput, PopoverController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TranslateService } from '@ngx-translate/core';
 
+import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
+import { Observable, of } from 'rxjs';
+
 import { Capacitor } from '@capacitor/core';
 //import { Share } from '@capacitor/share';
 //import { LocalNotifications } from '@capacitor/local-notifications';
@@ -75,7 +78,7 @@ export class AddoptionDialogPage implements OnInit {
     this.p = this.parent.p;
 
     this.formGroup = this.formBuilder.group({});
-    this.formGroup.addControl('option_name', new UntypedFormControl("", Validators.required));
+    this.formGroup.addControl('option_name', new UntypedFormControl("", [Validators.required], [unique_name_validator$(of(this.p.oids.map(oid => this.p.options[oid].name)))]));
     this.formGroup.addControl('option_desc', new UntypedFormControl(""));
     this.formGroup.addControl('option_url', new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
 
@@ -126,6 +129,7 @@ export class AddoptionDialogPage implements OnInit {
   validation_messages = {
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],
