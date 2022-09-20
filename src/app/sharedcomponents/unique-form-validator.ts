@@ -2,7 +2,7 @@ import { AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/fo
 import { Observable } from 'rxjs';
 import { map, take } from 'rxjs/operators'
 
-/** The options-name has to be unique */
+/** The option-name has to be unique */
 
 export function unique_name_validator$(value$: Observable<string[]>): AsyncValidatorFn {
   return (control: AbstractControl): Observable<ValidationErrors | null> => {
