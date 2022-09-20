@@ -39,6 +39,10 @@ import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
 
+import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators'
+
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
 function is_forward_key(ev: KeyboardEvent) {
@@ -776,7 +780,7 @@ export class DraftpollPage implements OnInit {
   }
 
   private add_option_inputs(i:number) {
-    this.formGroup.addControl('option_name'+i, new UntypedFormControl("", Validators.required));
+    this.formGroup.addControl('option_name' + i, new UntypedFormControl("", [Validators.required], [unique_name_validator$(this.existingOptionName$( 'option_name' + i))]));
     this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
     this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
@@ -847,6 +851,7 @@ export class DraftpollPage implements OnInit {
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],
@@ -854,5 +859,17 @@ export class DraftpollPage implements OnInit {
       { type: 'pattern', message: 'validation.option-url-valid' },
     ],
   }
+
+  existingOptionName$(currentControlName: string): Observable<string[]> {
+    return this.formGroup.valueChanges.pipe(
+      map(values => {
+        const optionNameKeys = Object.keys(values as Object).filter(k => { return k.includes('option_name') && k !== currentControlName })
+        const existingOptionNames: string[] = [];
+        optionNameKeys.forEach(key => existingOptionNames.push(values[key]));
+        return existingOptionNames;
+      })
+    )
+  }
+
   
 }
