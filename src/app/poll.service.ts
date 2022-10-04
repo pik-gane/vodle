@@ -1824,23 +1824,23 @@ export class Poll {
     this.allow_voting = false;
     // 2. wait some "grace" period for potentially ongoing sync to finish 
     // and potential clock discrepancies between local and CouchDB server.
-    window.setTimeout(() => {
+    window.setTimeout((() => {
       // 3. set state to final state "closed" if no other voter has done so:
       this.G.L.trace("Poll.end setting state to closed", this._pid);
       this.state = "closed";
       // 4. wait another grace period for this change to sync:
-      window.setTimeout(() => {
+      window.setTimeout((() => {
         // 5. tell poll db sync to stop:
         this.G.L.trace("Poll.end stopping sync", this._pid);
         this.G.D.stop_poll_sync(this.pid);
         this.G.D.wait_for_poll_db(this.pid);
         // 6. wait another grace period for this stopping to have happened:
-        window.setTimeout(() => {
+        window.setTimeout((() => {
           // 7. perform a one-time replication from the remote poll db
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
           this.G.L.trace("Poll.end replicating a last time", this._pid);
           this.G.D.replicate_once(this.pid)
-          .then(() => {
+          .then((() => {
             // 8. perform a final tally:
             this.G.L.trace("Poll.end tally a last time", this._pid);
             this.tally_all();
@@ -1848,21 +1848,21 @@ export class Poll {
               // 9. get the revision number of the remote poll state doc:
               this.G.L.trace("Poll.end getting state doc revision", this._pid);
               this.G.D.get_remote_poll_state_doc(this.pid)
-              .then(doc => {
+              .then((doc => {
                 // 10. concatenate it with the pid 
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
                 this.make_final_rand(this.pid + doc._rev);
                 this.make_winner();
                 this.notify_of_end();
-              }); 
+              }).bind(this)); 
             } else {
               this.notify_of_end();
             }
-          });
-        }, environment.closing.grace_period_3_ms);
-      }, environment.closing.grace_period_2_ms);
-    }, environment.closing.grace_period_1_ms);
+          }).bind(this));
+        }).bind(this), environment.closing.grace_period_3_ms);
+      }).bind(this), environment.closing.grace_period_2_ms);
+    }).bind(this), environment.closing.grace_period_1_ms);
   }
 
   make_winner() {
