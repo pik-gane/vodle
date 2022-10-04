@@ -198,6 +198,10 @@ export class PollPage implements OnInit {
   }
 
   ionViewWillLeave() {
+    if (this.p.has_results) {
+      // register that results have been seen:
+      this.p.have_seen_results = true;
+    }
     // make sure current slider values are really stored in database:
     for (let oid of this.oidsorted) {
       if (!this.delegate || this.rate_yourself_toggle[oid]) {
