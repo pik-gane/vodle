@@ -28,7 +28,7 @@ Or simply start and **be a friendly observer, frank commentator and neutral advi
 ### Our commitment
 
 As we are on our way towards a First Stable Release, we currently spend about 10 hours a week on improving the MVP. 
-*We commit to reply to your messages in the discussion board within one day.*
+*We commit to reply to your messages in the issue tracker or discussion board within one day.*
 
 If you decide to contribute something, we are very happy to help you get started.
 *So if you get stuck at some point in the following section, don't hesitate to ask on the discussion board!* 
