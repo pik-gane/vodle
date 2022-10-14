@@ -153,6 +153,7 @@ export class SettingsService {
     fr: 'Français',
     ko: '한국어',
     pl: 'Polski',
+    hi: 'हिन्दी'
 //    zh: '中文'
   };
 
