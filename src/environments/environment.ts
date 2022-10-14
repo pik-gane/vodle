@@ -24,8 +24,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 export const environment = {
   production: false,
   imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "./assets/datenschutz.html",
-  privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
+  privacy_statement_url: "./assets/privacy.html",
+  privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
   logging: {
     logLevels: [
       {
@@ -34,6 +34,7 @@ export const environment = {
       },
     ]  
   },
+  show_debug_info: true,
   data_service: {
     central_db_server_url: "http://localhost:5984/", // use this if you want to use your local couchdb on localhost:5984 without proxy 
 //    central_db_server_url: "http://localhost/couch/", // use this when you have an nginx docker container running that forwards requests to localhost/couch/ to localhost:5984 
@@ -51,6 +52,7 @@ export const environment = {
 //    backdoor_public_key: "ea17226c631a8a78c67626136d91980e82328b72e6b536c7df7e68fbb22c2aa7",
   },
   delegation: {
+    enabled: false,
     max_weight: 3
   },
   db_put_retry_delay_ms: 100,
@@ -62,9 +64,9 @@ export const environment = {
     verify_updates: true
   },
   closing: {
-    grace_period_1_ms: 2000,
-    grace_period_2_ms: 2000,
-    grace_period_3_ms: 2000
+    grace_period_1_ms: 3000,
+    grace_period_2_ms: 3000,
+    grace_period_3_ms: 3000
   },
   max_len: {
     title: 200,

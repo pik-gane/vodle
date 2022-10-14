@@ -25,6 +25,11 @@
         "[COMMENT EN] We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
         "[COMMENT EN] We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
+    "-parameters": {
+        "_COMMENT_SECTION_": "[COMMENT] locale parameters used in code, not occurring as text:",
+        "_COMMENT_first-day-of-week": "[COMMENT] in first-day-of-week, please specify 0 for Sunday or 1 for Monday etc. or 6 for Saturday",
+        "first-day-of-week": "0"
+    },
     "add": "Add",
     "add-option": "Add option",
     "add-target": "Add option",
@@ -50,7 +55,7 @@
     "OK": "OK",
     "options": "Options",
     "password": "Password",
-    "possible-targets": "Possible options",
+    "possible-targets": "Options",
     "read-more": "Read more",
     "ready": "Ready",
     "retype-password": "Retype password",
@@ -70,14 +75,14 @@
         "h1": "What is vodle?",
         "p11": "vodle helps a group make fair and good decisions. It finds the <i>maximum partial consensus</i> among any set of options. Truly democratic, it gives everyone the same effective influence.",
         "p12": "For each option, it shows you the current approval as a light bar on the right, and allows you to adjust your waps in real-time using sliders. When your slider touches the approval bar, it turns green to indicate that you approve that option as well. This way, the group tends to converge to a full or partial consensus that is as broad as possible.",
-        "p13": "When the poll ends, the winning option is determined by a fair but simple algorithm that gives every participant the same influence, not just those participants who happen to be in a majority.",
+        "p13": "When the poll ends, the winning option is determined by a fair but simple rule that gives every participant the same influence, not just those participants who happen to be in a majority.",
         "p14": "In <b>choice polls</b> (where your group is selecting a <i>single option</i>), the decision is made as follows. If one option is approved by all, this full consensus option wins. Otherwise vodle most likely declares the option with the broadest approval the winner. But to achieve fairness, vodle must sometimes also use a certain amount of chance, similar to a greencard lottery.",
         "p15": "The exact procedure that vodle uses for determining the winning option is this: After the poll has ended, options are sorted by descending approval, and one participant is picked by lot. The top-most option for which that participantʼs slider is green wins.",
         "p16": "This way, the most-approved option will have the vastly largest probability of winning. Other optionsʼ winning probabilities are at most as large as their approval scores (in percent of all participants who do not abstain).",
         "p17": "In <b>allocation polls</b> (where your group is <i>dividing some budget</i> or resource into <i>shares</i> for several options), the procedure is similar: If one option is approved by all, you have full consensus, so this option will get the full budget. Otherwise vodle allocates the largest share of the budget to the option with the broadest approval, and smaller shares to the other options.",
         "p18": "Exact procedure: Options are sorted by descending approval. Then each optionʼs share is proportional to the number of participants who have approved this option but no higher-up option.",
         "h2": "Whoʼs behind it?",
-        "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
+        "p21": "vodleʼs decision rule (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
         "h3": "Support vodle!",
         "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
     },
@@ -88,6 +93,26 @@
         "different-language": "This poll is in a different language ({{language}}). If possible, please try using that language in your texts below, or use some other language the poll participants understand.",
         "info": "Once added, the option cannot be edited or removed again.",
         "notification-added-title": "Option added"
+    },
+    "analysis": {
+        "_COMMENT_SECTION_": "[COMMENT] strings used on the Analysis dialog:",
+        "-page-title": "Distribution of approval & shares",
+        "each-dot-participant": "Each dot represents one non-abstaining participant.",
+        "each-dot-percent": "Each dot represents one percent of all non-abstaining participants.",
+        "yellow-dot": "The yellow dot marks where your share goes.",
+        "discs": "The discs show how much approval each option gets. The part of the disc that sticks out from behind the other discs shows the share that this option gets. We only show those options that get a share here.",
+        "_COMMENT_COLORS": "[COMMENT] The text below is split into 1. a part before a color word, including necessary whitespace, 2. a color word, and 3. a part after the color word, including necessary whitespace. Please take care to leave all whitespace intact!",
+        "colors-before-red": "The colors show which options you yourself approve and where your share goes. ",
+        "colors-red": "Red:",
+        "colors-between-red-and-blue": " you won't approve the option since your wap is zero. ",
+        "colors-blue": "Blue:",
+        "colors-between-blue-and-green": " you currently don't approve this option. ",
+        "colors-green": "Green:",
+        "colors-after-green": " you approve the option.",
+        "colors-before-dark-green": " Your share goes to the ",
+        "colors-dark-green": "dark green",
+        "colors-after-dark-green": " option.",
+        "suggestion-general": "<b>Suggestion:</b> You might want to talk to the supporters of the options you don't approve (red and blue). Maybe you can together find some other option that you can all approve? <small>A good compromise option might already be on the menu or you might want to add it.</small>"
     },
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",
@@ -119,7 +144,7 @@
         "ratings-intro-1": "Thank you! I have now set your waps so that they correspond to your willingness to approve.",
         "ratings-intro-2": "Waps work like this: when one sets a wap of <i>X</i>, one will approve if more than 100% minus <i>X</i> of the participants approve. Therefore I have set your waps as follows:",
         "ratings-favourite": "This is your <b>favourite</b> option. I have given it a wap of <b>100</b> because you want to approve it for sure.",
-        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
+        "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a small uncertainty buffer and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
         "ratings-other": "All other options get <b>0</b> since you don't want to approve them no matter what.",
         "ratings-extro": "You can adjust your waps anytime using the sliders, e.g. to react on the development of the actual approval scores. Current approval is always shown as a light bar. You can get more information by clicking the underlined words in the voting page."
     },
@@ -139,6 +164,7 @@
     },
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
+        "disabled": "We apologize, delegation is not yet enabled in this version of vodle.",
         "header": "Delegate to some other participant",
         "intro": "You can ask some other participant to act as your delegate. The delegate will then control your waps instead of you. In other words, their waps will be used as your waps, too. The delegate can also delegate their and your waps further to some third participant, and so on. You can revoke the delegation at any time, and can also always choose to still adjust some of the waps yourself.",
         "nickname-label": "Delegateʼs nickname:",
@@ -198,7 +224,7 @@
         "declined-intro": "So your waps are currently <i>not</i> controlling that personʼs waps in the poll <i>“{{poll_title}}”.</i>",
         "declined-details": "If you want to accept now after all, you can do this. You can still revoke your acceptance later again.",
         "no-change": "Donʼt change",
-        "declined-impossible-details": "You cannot currently accept this request because that would create a delegation cycle or a too large voting weight.",
+        "declined-impossible-details": "You cannot currently accept this request because that would create a too large voting weight.",
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
         "closed": "Unfortunately, this poll has already ended.",
@@ -340,7 +366,7 @@
     },
     "glossary": {
         "_COMMENT_": "[COMMENT] These are the texts that appear in the footer when clicking on a question-mark symbol or underlined term. They should not exceed 200 words in at most 5 paragraphs to leave enough space for the UI above it.",
-        "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the colourful <b>sliders</b>.<!-- You can let vodle help you in this by clicking on “Assist me”.--></p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>In the beginning, all your waps are zero and the sliders are red knobs. A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option. The slider is green then.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.",
+        "wap": "<p>In vodle, you vote by giving each option a <b>wap</b>. This is a number <b>between 0 and 100</b>. You can set it with the <b>sliders</b>. You can get help with this by clicking “Assist me”.</p><p>A wap is not a rating in the usual sense! It rather specifies under which conditions you <b>approve</b> the option.</p><p>A wap of <b>zero</b> means that you <b>definitely don't approve</b> the option.</p><p>If you drag the slider all the way to the right, you give a wap of <b>100</b>. That means you <b>definitely approve</b> the option.</p><p>You can also give a wap <b>between 1 and 99</b>. Then you approve the option only if <b>enough others</b> approve it as well. The more to the right is the slider, the earlier you approve. If you give a wap of, say, 30, then you approve if more than 70% of all participants approve it. If you give a wap of <b><i>X</i></b>, you approve if more than <b>100% minus <i>X</i></b> approve.</p><p>If you turn on <b>“Live results”</b>, the slider color shows whether you approve.</p>",
         "non-abstaining": "This is the number of participants who have given <b>at least one option a positive wap</b>. Participants who give all options a zero wap are abstaining and excert no influence on the result.",
         "approve": "<p><b>The light bar coming in from the right shows how many participants currently approve an option.</b> If you want to know how this comes about, you can click the name of the option and then on “<b>Explain</b>”.</p><p>Whether you yourself approve of an option is shown by the colour of your wap slider. If it overlaps with the bar, it is green and you approve.</p><p>If none of your waps overlaps with a bar, then you approve the option with the largest wap. This way, you always approve at least one option. Often one approves oneʼs favourite option and one or more other acceptable options.</p><p>So, whether you approve an option or not depends not only on your own wap but may also depend on all other participantsʼ waps. If, say, more than 70% of the participants give the option a wap of 30 or more, all of these participants approve the option. If more than <i>X%</i> give a wap of 100 minus <i>X</i> or more, they all approve it.</p>",
         "share": "<p>Each option gets a <b>share</b> in per cent. All shares together give 100%.</p><p>If the poll is about distributing a budget or resource, each option gets their share of it in the end. If the poll is about selecting a single option instead, the share determines the <b>probability</b> that this option wins in the end.</p><p>The shares are calculated from the approval scores: The option that is listed on top gets a share that equals its approval score. (If all approve this option, it wins for sure or gets all of the budget.) The other options get smaller shares or nothing. Options without approval get no share.</p><p>The exact formula is: the share of an option equals the percentage of participants who approve this option but approve no other option that is listed higher. In other words: “<b>your</b>” share always goes to an option you approve, namely to that with the largest overall approval score.</p><p>If you want to know how the current share comes about, you can click the name of the option and then on “<b>Explain</b>”.</p>",
@@ -414,7 +440,7 @@
         "p2": "Some options have already been suggested. Any participant in the poll can suggest further options at any time, until the poll ends.",
         "p3": "You can express your willingness to approve the suggested options by <i>giving them “waps”</i>. You can give each option a wap from 0 (donʼt approve) to 100 (approve for sure).",
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
-        "p5": "You can use the “assist me” button to set your initial waps. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. It may make sense to monitor the pollʼs development over time, adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus.",
+        "p5": "You can use the “assist me” button to set your initial waps. After setting your initial waps, it makes sense to switch on “live results” to monitor the pollʼs development over time. Then you can adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. ",
         "lets-go-button": "OK, letʼs go",
         "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
@@ -431,13 +457,17 @@
         "consent-privacy-before-privacy": "Yes, I have read the ",
         "consent-privacy-privacy": "data protection declaration and terms of use",
         "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
+        "login-as-guest-head": "Alternatively, you can use a guest account:",
+        "login-as-guest-button": "Use guest account",
+        "login-as-guest-foot": "(Please check the consent box first)",
         "ask-fresh-password": "Please set a password.",
         "ask-fresh-password-2": "This will be used to encrypt your data so that no-one else can read them. Please memorize it, there is no way to recover it.",
         "ask-old-password": "Please enter your existing vodle password.",
         "store-password": "Store my password between sessions.",
         "store-password-note": "I am aware that anyone with access to my device can then access all my vodle data.",
         "ready-to-start": "OK, have fun with vodle!",
-        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared."
+        "ready-to-start-detail": "When you leave, your waps will be saved automatically. We keep you logged in until you log out. Please donʼt forget to log out via the menu if this device is unsafe or shared.",
+        "ready-to-start-guest": "You are using the guest account <b>{{email}}</b> with password <b>{{password}}</b>. Please note this before logging out and enter this as your email address when logging in again."
     },
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
@@ -505,11 +535,17 @@
         "type-winner": "One option wins",
         "assist-me-inline": "Assist me",
         "assist-me-button": "Assist<br/>me",
+        "analysis-details": "Details",
+        "show-live": "live<br/>results",
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
+        "hint-first-time-1": "Welcome.",
+        "hint-first-time-2-before-wap": "Currently, all your ",
+        "hint-first-time-2-wap": "waps",
+        "hint-first-time-2-after-wap": " are set to the default value. <b>Change them by dragging the knobs</b> or delegate them to someone you trust.",
         "hint-abstaining-1": "You are abstaining.",
         "hint-abstaining-2-before-wap": "You may want to give at least your favourite a positive ",
         "hint-abstaining-2-wap": "wap",
-        "hint-abstaining-2-after-wap": " <b>(drag the red knob right)</b>, or delegate your waps to someone you trust.",
+        "hint-abstaining-2-after-wap": " <b>(drag the knob right)</b>, or delegate your waps to someone you trust.",
         "hint-only1positive-1-before-wap": "You are giving only one option a positive ",
         "hint-only1positive-1-wap": "wap",
         "hint-only1positive-1-after-wap": ".",
@@ -547,6 +583,7 @@
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
         "my-own": "my own",
         "delegate-s": "{{delegate}}’s",
+        "your-wap": "Your wap",
         "chance-to-win": "{{percentage}}%<small> current chance to win</small>",
         "final-chance-to-win": "<small>had a </small>{{percentage}}%<small> final chance to win</small>",
         "of-the-budget": "<small>would currently get </small>{{percentage}}%<small> of the budget</small>",
@@ -595,6 +632,8 @@
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",
         "appearance": "Appearance",
+        "behaviour": "Behaviour",
+        "default-wap": "Default wap",
         "notifications": "Notifications"
     },
     "validation": {
@@ -616,6 +655,7 @@
         "poll-due-future": "This date and time is in the past or too far in the future.",
         "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
+        "option-name-unique": "The option name already exists.",
         "option-url-valid": "Please enter a valid URL."
     }
 }

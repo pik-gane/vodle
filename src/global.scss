@@ -48,11 +48,38 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 @import './app/sharedcomponents/expandable/expandable.component';
 
+/* quicksand-regular - vietnamese_latin-ext_latin */
+@font-face {
+    font-family: 'Quicksand';
+    font-style: normal;
+    font-weight: 400;
+    src: url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.eot'); /* IE9 Compat Modes */
+    src: local(''),
+         url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+         url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+         url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.woff') format('woff'), /* Modern Browsers */
+         url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+         url('./assets/fonts/quicksand-regular/quicksand-v29-vietnamese_latin-ext_latin-regular.svg#Quicksand') format('svg'); /* Legacy iOS */
+  }  
+  /* quicksand-700 - vietnamese_latin-ext_latin */
+  @font-face {
+    font-family: 'Quicksand';
+    font-style: normal;
+    font-weight: 700;
+    src: url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.eot'); /* IE9 Compat Modes */
+    src: local(''),
+         url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+         url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.woff2') format('woff2'), /* Super Modern Browsers */
+         url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.woff') format('woff'), /* Modern Browsers */
+         url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
+         url('./assets/fonts/quicksand-700/quicksand-v29-vietnamese_latin-ext_latin-700.svg#Quicksand') format('svg'); /* Legacy iOS */
+  }
+  /*
 @font-face {
     font-family: 'Quicksand';
     font-weight: 300;
     font-style: normal;
-    src: url('./assets/fonts/quicksand-regular/quicksand-v9-latin-regular.eot');
+    src: url('./assets/fonts/quicksand-regular/quicksand-v29-latin-regular.eot');
     src: url('./assets/fonts/quicksand-regular/quicksand-v9-latin-regular.eot?#iefix') format('embedded-opentype'),
     local('Quicksand Regular'),
     url('./assets/fonts/quicksand-regular/quicksand-v9-latin-regular.woff2') format('woff2'),
@@ -60,7 +87,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     url('./assets/fonts/quicksand-regular/quicksand-v9-latin-regular.ttf') format('truetype'),
     url('./assets/fonts/quicksand-regular/quicksand-v9-latin-regular.svg#Lato') format('svg');
     }
-/*
 @font-face {
     font-family: 'Quicksand';
     font-weight: 500;
@@ -85,6 +111,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 html {
     --ion-font-family: 'Quicksand'; // , 'Nunito';
+    image-rendering: webkit-optimize-contrast;
 }
 
 .split-pane-side {
@@ -149,7 +176,6 @@ ion-select {
     position: relative;
     top: 15px;
 }
-.kebap .popover-content{ --width: auto; }
 
 .file-button {
     position: relative;
@@ -238,15 +264,28 @@ a, a:link, a:visited, a:hover, a:active, .externallink {
 }
 
 
-.add-option-class .popover-content {
-    position: absolute;
-    bottom: 20px!important;
-    height: 600px!important;
-    left: 20px!important;
-    width: auto!important;
+.add-option-class {
+    --width: 400px!important;
+    --height: 600px!important;
 }
+
+ion-popover.select-popover {
+    --height: auto!important; 
+    --width: 400px!important; 
+    --max-width: 400px!important; 
+    --min-width: 400px!important; 
+}
+
+.kebap { --width: auto!important; }
 
 ion-spinner {
     transform: scale(0.75);
 }
 
+.analysis .modal-wrapper{
+    --min-height: 90%!important;
+}
+
+.analysis {
+    --min-height: 90%!important;
+}

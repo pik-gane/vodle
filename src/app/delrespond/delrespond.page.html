@@ -32,7 +32,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Acceptance is possible: -->
 
-  <ng-container *ngIf="status=='possible'">
+  <ng-container *ngIf="status[0]=='possible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -68,16 +68,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>  
   </ng-container>
 
-  <!-- Acceptance would lead to cycle: -->
+  <!-- Acceptance would lead to cycle: - ->
+    (We do no longer disallow this. 
+     TODO: We should however tell the user that a cycle is created)
 
-  <ng-container *ngIf="(status=='cycle')||(status=='two-way')">
+  <ng-container *ngIf="(status[1]=='cycle')||(status[1]=='two-way')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4> 
-        <ng-container *ngIf="status=='two-way'">
+        <ng-container *ngIf="status[1]=='two-way'">
           <p><b [innerHtml]="'delrespond.two-way-intro'|translate:{from:from}"></b></p> 
         </ng-container>
-        <ng-container *ngIf="status=='cycle'">
+        <ng-container *ngIf="status[1]=='cycle'">
           <p [innerHtml]="'delrespond.cycle-intro'|translate:{from:from}"></p> 
         </ng-container>
         <p [innerHtml]="'delrespond.cycle-details'|translate"></p>
@@ -109,6 +111,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-col>
     </ion-item>  
   </ng-container>
+  -->
   <!--
   <ng-container *ngIf="status=='cycle'">
     <ion-item lines="none" class="ion-text-center">
@@ -149,7 +152,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   
   <!-- Acceptance would exceed maximum allowed voting weight: -->
 
-  <ng-container *ngIf="status=='weight-exceeded'">
+  <ng-container *ngIf="status[1]=='weight-exceeded'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.weight-exceeded-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -187,7 +190,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Request was already accepted but can be declined after the fact: -->
 
-  <ng-container *ngIf="status=='accepted'">
+  <ng-container *ngIf="status[0]=='accepted'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.accepted-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -225,7 +228,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Request was already declined but can be accepted after the fact: -->
 
-  <ng-container *ngIf="status=='declined, possible'">
+  <ng-container *ngIf="status[0]=='declined, possible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -263,7 +266,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Request was already declined and cannot be accepted: -->
 
-  <ng-container *ngIf="(status=='declined, two-way')||(status=='declined, cycle')||(status=='declined, weight-exceeded')">
+  <ng-container *ngIf="(status[0]=='declined, impossible')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -294,7 +297,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Poll is unknown: -->
 
-  <ng-container *ngIf="status=='poll-unknown'">
+  <ng-container *ngIf="status==['impossible','poll-unknown']">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
@@ -311,9 +314,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
   </ng-container>
 
-  <!-- Poll is already closed: -->
+  <!-- Poll is already closed (has already ended): -->
 
-  <ng-container *ngIf="status=='closed'">
+  <ng-container *ngIf="status==['impossible','closed']">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p> 
@@ -341,7 +344,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- We're still missing some data: -->
 
-  <ng-container *ngIf="status=='not-in-db'">
+  <ng-container *ngIf="status==['impossible','not-in-db']">
     <ion-item [innerHtml]="'delrespond.try-again'|translate">      
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
@@ -354,7 +357,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- It's ourselves: -->
 
-  <ng-container *ngIf="status=='is-self'">
+  <ng-container *ngIf="status==['impossible','is-self']">
     <ion-item [innerHtml]="'delrespond.is-self'|translate">      
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"

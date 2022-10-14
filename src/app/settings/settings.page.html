@@ -198,11 +198,34 @@ TODO:
       </ion-select>
     </ion-item>-->
 
-    <!--TODO: NOTIFICATIONS
-      - if "denied", grey it out and show a message to please grant notifications first.
-    -->
+    <!--BEHAVIOUR-->
+
+    <ion-item color="primary" [innerHtml]="'settings.behaviour'|translate">
+    </ion-item>
+    <ion-item>
+      <ion-label color="primary" position="stacked" style="min-height:20px!important;">
+        <span [innerHtml]="'settings.default-wap'|translate"></span>
+      </ion-label>
+      <ion-range formControlName="default_wap"
+          color="vodleblue" (ionChange)="set_default_wap()"
+          mode="md" pin="true"
+          min="0" max="100" step="1" snaps="true" ticks="false"
+          style="--bar-height: 7px; --knob-size: 35px; padding-top:8px; padding-left:0px " 
+          >
+        <ion-label slot="start" style="width:25px!important;"><span style="font-size:16px!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
+        <!--
+        <ion-label slot="start">0</ion-label>
+        <ion-label slot="end">100</ion-label>
+        -->
+      </ion-range>
+    </ion-item>
 
   </form>
+
+  <!--TODO: NOTIFICATIONS
+    - if "denied", grey it out and show a message to please grant notifications first.
+  -->
+
   <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
   </ion-item>
   <ion-item>

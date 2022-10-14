@@ -18,87 +18,109 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-content *ngIf="ready">
-  <form [formGroup]="formGroup">
-    <ion-list lines="full">
-      <ion-item lines="none">
-        <ion-col class="ion-no-padding ion-no-margin">
-          <h1 [innerHtml]="'delegation-request.header'|translate"></h1> 
-          <p [innerHtml]="'delegation-request.intro'|translate"></p> 
-        </ion-col>      
-      </ion-item>
-      <ion-item>
-        <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
-        <ion-input 
-          formControlName="delegate_nickname" 
-          autofocus="true" #focus_element
-          [placeholder]="'delegation-request.nickname-placeholder'|translate"
-          (ionChange)="delegate_nickname_changed()" debounce="100"
-          (ionBlur)="delegate_nickname_changed()"
-          type="text" [maxlength]="E.max_len.name">
-        </ion-input>
-      </ion-item>
-      <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.delegate_nickname">
-          <div class="error-message" 
-              *ngIf="formGroup.get('delegate_nickname').hasError(validation.type) 
-                      && (formGroup.get('delegate_nickname').dirty || formGroup.get('delegate_nickname').touched)"
-              [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-      </div>
-      <ion-item>
-        <small>
-          <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
+
+  <ng-container *ngIf="E.delegation.enabled">
+    <form [formGroup]="formGroup">
+      <ion-list lines="full">
+        <ion-item lines="none">
+          <ion-col class="ion-no-padding ion-no-margin">
+            <h1 [innerHtml]="'delegation-request.header'|translate"></h1> 
+            <p [innerHtml]="'delegation-request.intro'|translate"></p> 
+          </ion-col>      
+        </ion-item>
+        <ion-item>
+          <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
           <ion-input 
-            formControlName="from" 
-            [placeholder]="'delegation-request.from-placeholder'|translate"
-            (ionChange)="from_changed()" debounce="100"
-            (ionBlur)="from_changed()"
+            formControlName="delegate_nickname" 
+            autofocus="true" #focus_element
+            [placeholder]="'delegation-request.nickname-placeholder'|translate"
+            (ionChange)="delegate_nickname_changed()" debounce="100"
+            (ionBlur)="delegate_nickname_changed()"
             type="text" [maxlength]="E.max_len.name">
           </ion-input>
-        </small>
-      </ion-item>
-      <ng-container *ngIf="can_share">
-        <ion-item lines="none">
-          <ion-col class="ion-no-padding ion-no-margin">
-            <small><p [innerHtml]="'delegation-request.request-options-with-share'|translate"></p></small> 
-          </ion-col>      
         </ion-item>
-        <ion-item lines="none" class="ion-text-end" text-wrap>
+        <div class="validation-errors">
+          <ng-container *ngFor="let validation of validation_messages.delegate_nickname">
+            <div class="error-message" 
+                *ngIf="formGroup.get('delegate_nickname').hasError(validation.type) 
+                        && (formGroup.get('delegate_nickname').dirty || formGroup.get('delegate_nickname').touched)"
+                [innerHtml]="validation.message|translate">
+            </div>
+          </ng-container>
+        </div>
+        <ion-item>
+          <small>
+            <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
+            <ion-input 
+              formControlName="from" 
+              [placeholder]="'delegation-request.from-placeholder'|translate"
+              (ionChange)="from_changed()" debounce="100"
+              (ionBlur)="from_changed()"
+              type="text" [maxlength]="E.max_len.name">
+            </ion-input>
+          </small>
+        </ion-item>
+        <ng-container *ngIf="can_share">
+          <ion-item lines="none">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small><p [innerHtml]="'delegation-request.request-options-with-share'|translate"></p></small> 
+            </ion-col>      
+          </ion-item>
+          <ion-item lines="none" class="ion-text-end" text-wrap>
+            <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+                shape="round"
+                (click)="share_button_clicked()">
+              <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
+              <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+            </ion-button>
+          </ion-item>
+        </ng-container>
+        <ng-container *ngIf="!can_share">
+          <ion-item lines="none">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small><p [innerHtml]="'delegation-request.request-options-without-share'|translate"></p></small> 
+            </ion-col>      
+          </ion-item>
+        </ng-container>
+        <ion-item 
+            lines="none" class="ion-text-end" text-wrap>
           <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-              shape="round"
-              (click)="share_button_clicked()">
-            <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
-            <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+                shape="round" (click)="email_button_clicked($event)">
+            <a [href]="mailto_url" target="_top" style="color:inherit;text-decoration:inherit">
+              <span [innerHtml]="'delegation-request.compose-email'|translate"></span>&nbsp;
+              <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
+            </a>
           </ion-button>
         </ion-item>
-      </ng-container>
-      <ng-container *ngIf="!can_share">
-        <ion-item lines="none">
-          <ion-col class="ion-no-padding ion-no-margin">
-            <small><p [innerHtml]="'delegation-request.request-options-without-share'|translate"></p></small> 
-          </ion-col>      
+        <ion-item 
+            lines="none" class="ion-text-end" text-wrap>
+          <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+              shape="round"
+              (click)="copy_button_clicked()">
+            <span [innerHtml]="'delegation-request.copy-link'|translate"></span>&nbsp;
+            <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
+          </ion-button>
         </ion-item>
-      </ng-container>
-      <ion-item 
-          lines="none" class="ion-text-end" text-wrap>
-        <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-              shape="round" (click)="email_button_clicked($event)">
-          <a [href]="mailto_url" target="_top" style="color:inherit;text-decoration:inherit">
-            <span [innerHtml]="'delegation-request.compose-email'|translate"></span>&nbsp;
-            <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
-          </a>
-        </ion-button>
+      </ion-list>
+    </form>
+  </ng-container>
+
+  <!-- IF DISABLED: -->
+
+  <ng-container *ngIf="!E.delegation.enabled">
+    <ion-list lines="full">
+      <ion-item lines="none">
+        <span [innerHtml]="'delegation-request.disabled'|translate"></span>
       </ion-item>
       <ion-item 
-          lines="none" class="ion-text-end" text-wrap>
-        <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+      lines="none" class="ion-text-end" text-wrap>
+        <ion-button color="primary" slot="end"
             shape="round"
-            (click)="copy_button_clicked()">
-          <span [innerHtml]="'delegation-request.copy-link'|translate"></span>&nbsp;
-          <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
+            (click)="close()">
+          <span [innerHtml]="'OK'|translate"></span>&nbsp;
         </ion-button>
       </ion-item>
     </ion-list>
-  </form>
+  </ng-container>
+
 </ion-content>

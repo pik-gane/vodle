@@ -38,6 +38,8 @@ export class SettingsService {
 
   private G: GlobalService;
 
+  use_guest = false;
+
   constructor() { }
 
   init(G:GlobalService) { 
@@ -97,6 +99,9 @@ export class SettingsService {
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
+  public get default_wap(): number { return Number.parseInt(this.G.D.getu('default_wap')||'0'); }
+  public set default_wap(value: number) { this.G.D.setu('default_wap', value.toString()); }
+
   get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls) != "0"; } // by default, all notifications are on
   set_notify_of(cls: string, value: boolean) { this.G.D.setu('notify_of_'+cls, value ? "1": "0"); }
 
@@ -148,6 +153,7 @@ export class SettingsService {
     fr: 'Français',
     ko: '한국어',
     pl: 'Polski',
+    hi: 'हिन्दी'
 //    zh: '中文'
   };
 

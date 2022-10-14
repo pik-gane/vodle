@@ -128,7 +128,7 @@ export class MypollsPage implements OnInit {
   get closed_polls(): Poll[] {
     // return polls sorted by due:
     return Object.values(this.G.P.polls)
-      .filter((p) => p.state=='closed')
+      .filter((p) => p.state=='closed' && !!p.due)
       .sort((p1, p2) => p2.due.getTime() - p1.due.getTime());
   } 
 

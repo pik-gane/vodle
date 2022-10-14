@@ -27,7 +27,7 @@
     ]
   },
   "couchdb": {
-    "max_document_size": 10000,
+    "max_document_size": 20000,
     "users_db_security_editable": true,
     "delayed_commits": true
   },

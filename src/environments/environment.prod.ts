@@ -20,8 +20,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 export const environment = {
   production: true,
   imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "https://mensch72.github.io/assets/datenschutz.html",
-  privacy_statement_headline: "Formale Datenschutzerklärung und Nutzungs-Bedingungen",
+  privacy_statement_url: "./assets/privacy.html",
+  privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
   logging: {
     logLevels: [
       {
@@ -30,6 +30,7 @@ export const environment = {
       },
     ]  
   },
+  show_debug_info: false, // must be false in production!
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",
     central_db_password: "none",
@@ -45,22 +46,23 @@ export const environment = {
 //    backdoor_public_key: "ea17226c631a8a78c67626136d91980e82328b72e6b536c7df7e68fbb22c2aa7",
   },
   delegation: {
+    enabled: false,
     max_weight: 10
   },
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
-//  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
+  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
 //  magic_link_base_url: "https://pik-gane.github.io/vodle/#/",
-  magic_link_base_url: "http://app.vodle.it/#/",
+//  magic_link_base_url: "http://app.vodle.it/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false
   },
   closing: {
-    grace_period_1_ms: 2000,
-    grace_period_2_ms: 2000,
-    grace_period_3_ms: 2000
+    grace_period_1_ms: 3000,
+    grace_period_2_ms: 3000,
+    grace_period_3_ms: 3000
   },
   max_len: {
     title: 200,

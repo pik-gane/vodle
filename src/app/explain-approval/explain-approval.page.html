@@ -183,7 +183,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
                   <rect x="75" y="-16" width="25" height="13" fill="#ffffffd0"></rect>
-                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
+                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
                   <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
               </g>
@@ -234,7 +234,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <text y="-13" [innerHtml]="'explain.all-abstain-line-1'|translate">
             </text>
             <text y="-8">
-              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(1000/p.oids.length)/10}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
+              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(100/p.oids.length).toFixed(1)}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
             </text>
           </g>
 
@@ -266,22 +266,22 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <ng-container *ngIf="a > 0">
                 <ng-container *ngIf="ps.length != 1">
                   <ng-container *ngIf="ps[ps.length-1] == 0">
-                    <text y="0" [innerHtml]="'explain.all-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+                    <text y="0" [innerHtml]="'explain.all-line-1'|translate:{percentage:(a*100).toFixed(1)}">
                     </text>
-                    <text y="5" [innerHtml]="'explain.all-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+                    <text y="5" [innerHtml]="'explain.all-line-2'|translate:{percentage:(a*100).toFixed(1)}">
                     </text>
                   </ng-container>
                   <ng-container *ngIf="ps[ps.length-1] > 0">
-                    <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+                    <text y="0" [innerHtml]="'explain.some-line-1'|translate:{percentage:(a*100).toFixed(1)}">
                     </text>
-                    <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+                    <text y="5" [innerHtml]="'explain.some-line-2'|translate:{percentage:(a*100).toFixed(1)}">
                     </text>
                   </ng-container>
                 </ng-container>
                 <ng-container *ngIf="ps.length == 1">
-                  <text y="0" [innerHtml]="'explain.no-one-line-1'|translate:{percentage:Math.round(a*1000)/10}">
+                  <text y="0" [innerHtml]="'explain.no-one-line-1'|translate:{percentage:(a*100).toFixed(1)}">
                   </text>
-                  <text y="5" [innerHtml]="'explain.no-one-line-2'|translate:{percentage:Math.round(a*1000)/10}">
+                  <text y="5" [innerHtml]="'explain.no-one-line-2'|translate:{percentage:(a*100).toFixed(1)}">
                   </text>
                 </ng-container>
               </ng-container>
@@ -299,7 +299,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </rect>
             <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
             </line>
-            <text x="100" y="8" fill="#9abcbd" text-anchor="end"><tspan font-weight="bold">{{Math.round(a*1000)/10}}%</tspan>&nbsp;</text>
+            <text x="100" y="8" fill="#9abcbd" text-anchor="end"><tspan font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
             <text x="100" y="13" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
           </g>
 
@@ -323,42 +323,42 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <!-- text: -->
               <ng-container *ngIf="ps.length == 2 && myv != oids[i]">
                 <text y="0">
-                  {{('explain.only-higher-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.only-higher-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.only-higher-line-2'|translate">
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length == 2 && myv == oids[i]">
                 <text y="0">
-                  {{('explain.only-higher-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.only-higher-incl-you-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.only-higher-incl-you-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.only-higher-incl-you-line-2'|translate">
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length != 2 && i == 0 && myv != oids[i]">
                 <text y="0">
-                  {{('explain.among-them-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.among-them-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.among-them-line-2'|translate">
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length != 2 && i == 0 && myv == oids[i]">
                 <text y="0">
-                  {{('explain.among-them-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.among-them-incl-you-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.among-them-incl-you-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.among-them-incl-you-line-2'|translate">
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length != 2 && i > 0 && myv != oids[i]">
                 <text y="0">
-                  {{('explain.another-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.another-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.another-line-2'|translate">
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length != 2 && i > 0 && myv == oids[i]">
                 <text y="0">
-                  {{('explain.another-incl-you-line-1-before-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-incl-you-line-1-after-optionname'|translate:{percentage:Math.round(ps[i]*1000)/10})}}
+                  {{('explain.another-incl-you-line-1-before-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}<tspan font-style="italic">{{os[i]}}</tspan>{{('explain.another-incl-you-line-1-after-optionname'|translate:{percentage:(ps[i]*100).toFixed(1)})}}
                 </text>
                 <text y="5" [innerHtml]="'explain.another-incl-you-line-2'|translate">
                 </text>
@@ -388,7 +388,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <!-- text: -->
               <ng-container *ngIf="ps.length == 1 && myv != oid">
                 <text y="0">
-                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
@@ -396,7 +396,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length == 1 && myv == oid">
                 <text y="0">
-                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
@@ -404,7 +404,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv != oid">
                 <text y="0">
-                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
@@ -412,7 +412,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv == oid">
                 <text y="0">
-                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{Math.round(ps[ps.length-1]*1000)/10}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}

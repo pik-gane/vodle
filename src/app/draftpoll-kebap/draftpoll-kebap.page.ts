@@ -64,7 +64,7 @@ export class DraftpollKebapPage implements OnInit {
     this.popover.dismiss();
   }
 
-  use_example_clicked() {
+  use_example_clicked(event: MouseEvent) {
     this.parent.G.D.get_example_docs().then(result => {
       this.examples = [];
       for (let row of result.rows) {
@@ -75,7 +75,7 @@ export class DraftpollKebapPage implements OnInit {
       }
       // make sure the items appear in the select dialog:
       this.ref.detectChanges();
-      this.select_example.open(new MouseEvent("click"));
+      this.select_example.open(event);
     }).catch(err => {
       this.parent.G.L.error("DraftpollPage.use_example_clicked failed", err);
     });

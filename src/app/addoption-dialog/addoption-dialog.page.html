@@ -125,7 +125,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <ion-icon name="arrow-back-outline"></ion-icon>&nbsp;
             <span [innerHtml]="'cancel'|translate"></span>
           </ion-button>&nbsp;&nbsp;
-          <ion-button color="primary"
+          <ion-button color="primary" [disabled]="!formGroup.valid"
               shape="round" fill="solid"
               (click)="OK_button_clicked()"><!--type="submit" button-type="submit"-->
             <ion-icon name="checkmark"></ion-icon>&nbsp;

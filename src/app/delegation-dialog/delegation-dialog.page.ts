@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ViewChild } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -48,7 +48,7 @@ export class DelegationDialogPage implements OnInit {
   can_use_web_share: boolean;
   can_share: boolean;
 
-  formGroup: FormGroup;
+  formGroup: UntypedFormGroup;
 
   p: Poll;
   did: string;
@@ -62,7 +62,7 @@ export class DelegationDialogPage implements OnInit {
 
   constructor(
     private popover: PopoverController,
-    public formBuilder: FormBuilder, 
+    public formBuilder: UntypedFormBuilder, 
     public translate: TranslateService,
     public G: GlobalService) { 
   }
@@ -74,8 +74,8 @@ export class DelegationDialogPage implements OnInit {
     this.can_use_web_share = (typeof navigator.share === "function");
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
-      delegate_nickname: new FormControl('', Validators.required),
-      from: new FormControl(this.G.S.email)
+      delegate_nickname: new UntypedFormControl('', Validators.required),
+      from: new UntypedFormControl(this.G.S.email)
     });
     // TODO: what if already some delegation active or pending?
     // prepare a new delegation:
@@ -185,5 +185,9 @@ export class DelegationDialogPage implements OnInit {
     this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");
+  }
+  
+  close() {
+    this.popover.dismiss();
   }
 }
