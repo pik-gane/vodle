@@ -18,10 +18,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ChangeDetectorRef, ViewChild } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { TranslateService } from '@ngx-translate/core';
+
+import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
+import { Observable, of } from 'rxjs';
 
 import { Capacitor } from '@capacitor/core';
 //import { Share } from '@capacitor/share';
@@ -48,7 +51,7 @@ export class AddoptionDialogPage implements OnInit {
 //  can_use_web_share: boolean;
 //  can_share: boolean;
 
-  formGroup: FormGroup;
+  formGroup: UntypedFormGroup;
 
   p: Poll;
   poll_link: string;
@@ -57,7 +60,7 @@ export class AddoptionDialogPage implements OnInit {
   mailto_url: string;
 
   constructor(
-    public formBuilder: FormBuilder, 
+    public formBuilder: UntypedFormBuilder, 
     private popover: PopoverController,
     public G: GlobalService,
     public translate: TranslateService,
@@ -75,9 +78,9 @@ export class AddoptionDialogPage implements OnInit {
     this.p = this.parent.p;
 
     this.formGroup = this.formBuilder.group({});
-    this.formGroup.addControl('option_name', new FormControl("", Validators.required));
-    this.formGroup.addControl('option_desc', new FormControl(""));
-    this.formGroup.addControl('option_url', new FormControl("", Validators.pattern(this.G.urlRegex)));
+    this.formGroup.addControl('option_name', new UntypedFormControl("", [Validators.required], [unique_name_validator$(of(this.p.oids.map(oid => this.p.options[oid].name)))]));
+    this.formGroup.addControl('option_desc', new UntypedFormControl(""));
+    this.formGroup.addControl('option_url', new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
 
     this.ready = true;
   }
@@ -107,6 +110,7 @@ export class AddoptionDialogPage implements OnInit {
     if (this.parent.delegation_status == 'agreed') {
       this.G.Del.update_my_delegation(this.p.pid, o.oid, true);
     }
+    this.p.set_my_own_rating(o.oid, this.G.S.default_wap);
     this.parent.oidsorted.push(o.oid);
     this.parent.sortingcounter++;
     this.ref.detectChanges();
@@ -125,6 +129,7 @@ export class AddoptionDialogPage implements OnInit {
   validation_messages = {
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],

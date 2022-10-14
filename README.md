@@ -78,7 +78,7 @@
 ## Current State & Next Steps
 
 **We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
-- **A *Minimal Viable Product (MVP)* is almost finished (99%) and will be ready towards the end of June.**
+- **A *Minimal Viable Product (MVP)* is finished since end of June.**
 - **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
@@ -99,7 +99,7 @@ It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cf
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
-We are also building a [Website for end users: **vodle.it**](http://vodle.it), currently under construction.
+We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 
 ### Built With 
 

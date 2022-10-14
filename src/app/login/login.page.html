@@ -142,7 +142,7 @@ TODO:
                 <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 <ion-input #input_email
                   formControlName="email" [maxlength]="E.max_len.name"
-                  type="text" inputmode="email" autofocus="true"
+                  type="text" inputmode="email" [autofocus]="step=='old_email'"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
@@ -175,6 +175,22 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
+      <ng-container *ngIf="step=='fresh_email'">
+        <ion-item>
+        </ion-item>
+        <ion-item class="item-text-wrap" lines="none">
+          <small><p style="width:100%;">
+            <span [innerHtml]="'login.login-as-guest-head'|translate"></span><br/>
+            <ion-button type="submit" color="primary" slot="start" 
+                [disabled]="!accept_privacy" 
+                shape="round"
+                (click)="login_as_guest()">
+              <span [innerHtml]="'login.login-as-guest-button'|translate"></span>
+            </ion-button><br/>
+            <span *ngIf="!accept_privacy"style="width:100%;" [innerHtml]="'login.login-as-guest-foot'|translate"></span>
+          </p></small>
+        </ion-item>
+      </ng-container>
     </ng-container>
 
     <ng-container *ngIf="step=='fresh_password'">
@@ -322,6 +338,7 @@ TODO:
         <ion-col>
           <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
           <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
+          <p *ngIf="G.S.use_guest" class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-guest'|translate:{email:G.S.email,password:G.S.password}"></p>
         </ion-col>
       </ion-item>
       <ion-item lines="none">

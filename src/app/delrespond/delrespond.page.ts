@@ -39,7 +39,7 @@ export class DelrespondPage implements OnInit {
   from: string;
   private_key: string;
   agreement: del_agreement_t;
-  status: string;
+  status: Array<string>;
 
   // LIFECYCLE:
 
@@ -84,7 +84,7 @@ export class DelrespondPage implements OnInit {
     }
     this.G.L.entry("DelrespondPage.onDataReady", this.pid, this.p.state);
     this.status = this.G.Del.get_incoming_request_status(this.pid, this.did);
-    this.G.Del.store_incoming_request(this.pid, this.did, this.from, this.url, this.status);
+    this.G.Del.store_incoming_request(this.pid, this.did, this.from, this.url, this.status[0]);
     this.ready = true;
     this.G.L.exit("DelrespondPage.onDataReady");
   }

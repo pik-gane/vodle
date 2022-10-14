@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { NgModule } from '@angular/core';
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -40,6 +40,7 @@ export { DraftpollPage } from './draftpoll.page';
     SharedcomponentsModule,
     TranslateModule.forChild()
   ],
-  declarations: [DraftpollPage]
+  declarations: [DraftpollPage],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class DraftpollPageModule {}

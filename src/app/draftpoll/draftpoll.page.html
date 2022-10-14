@@ -229,27 +229,30 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!-- Custom due date: -->
       <ng-container *ngIf="formGroup.get('poll_due_type').value=='custom'">
         <ion-item [color]="stage==5?'warning':''"><!--stage 5-->
-          <ion-label position="floating" color="primary">
+          <ion-label color="primary">
             <span [class]="stage==5?'current-field':''" 
               [innerHtml]="'draftpoll.due-datetime-label'|translate">
             </span>
           </ion-label>
-          <!--TODO: maybe use https://github.com/VitaliiBlagodir/cordova-plugin-datepicker instead-->
-          <ion-datetime 
-            id="poll_due_custom"
-            formControlName="poll_due_custom" 
-            tabindex="0"
-            pickerFormat="DD MMM YY HH mm"
-            displayFormat="DDDD, DD MMMM YYYY, HH:mm" 
-            [min]="G.P.ref_date.toISOString()"
-            [max]="get_max_due().toISOString()"
-            (ionClick)="G.P.update_ref_date();"
-            (ionChange)="set_poll_due_custom();changed_poll_due_custom()"
-            [dayNames]="'daynames-sunday-to-saturday'|translate"
-            [monthNames]="'monthnames'|translate"
-            [cancelText]="'cancel'|translate"
-            [doneText]="'OK'|translate">
-          </ion-datetime>
+          <ion-datetime-button datetime="poll_due_custom"></ion-datetime-button>
+          <ion-modal [keepContentsMounted]="true">
+            <ng-template>
+              <ion-datetime 
+                id="poll_due_custom"
+                tabindex="0"
+                formControlName="poll_due_custom" 
+                [min]="G.P.ref_date.toISOString()"
+                [max]="get_max_due().toISOString()"
+                (ionClick)="G.P.update_ref_date();"
+                (ionChange)="set_poll_due_custom();changed_poll_due_custom()"
+                [cancelText]="'cancel'|translate"
+                [doneText]="'OK'|translate"
+                [locale]="G.S.language"
+                [firstDayOfWeek]="'-parameters.first-day-of-week'|translate"
+                >
+              </ion-datetime>
+            </ng-template>
+          </ion-modal>
         </ion-item>
         <div class="validation-errors">
           <ng-container *ngFor="let validation of validation_messages.poll_due_custom">

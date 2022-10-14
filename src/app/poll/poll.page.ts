@@ -29,6 +29,7 @@ import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
 import { AssistPage } from '../assist/assist.module';  
+import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
 
@@ -43,7 +44,7 @@ export class PollPage implements OnInit {
   Math = Math;
   Object = Object;
   window = window;
-  environment = environment;
+  E = environment;
 
   @ViewChild(IonContent, { static: false }) content: IonContent;
 
@@ -66,6 +67,7 @@ export class PollPage implements OnInit {
   votedfor = null; // oid my prob. share goes to
 
   // gui layout choices by user:
+  show_live = false;
   final_expanded = false;
   details_expanded = true;
   incoming_delegation_expanded = false;
@@ -120,6 +122,7 @@ export class PollPage implements OnInit {
     window.addEventListener('online', f);
     // get gui state:
     const specs = JSON.parse(this.G.D.getp(this.pid, "poll_page") || "{}");
+    this.show_live = (specs['show_live'] == true);
     this.details_expanded = (specs['details_expanded'] != false);
     this.incoming_delegation_expanded = (specs['incoming_delegation_expanded'] == true);
     this.option_expanded = specs['option_expanded'] || {};
@@ -150,6 +153,16 @@ export class PollPage implements OnInit {
       this.G.L.warn("PollPage unknown pid ignored, redirecting to mypolls page", this.pid, this.G.P.polls);
       this.router.navigate(["/mypolls"]);
       return;
+    }
+    if (this.p.allow_voting) {
+      this.G.L.info("PollPage checking if default waps are needed", this.pid);
+      for (let oid of this.p.oids) {
+        const orm = this.p.own_ratings_map.get(oid);
+        if (!orm.has(this.p.myvid)) {
+          this.G.L.info("PollPage setting default wap", this.pid, oid, this.G.S.default_wap);
+          this.p.set_my_own_rating(oid, this.G.S.default_wap, true);
+        }
+      }  
     }
     this.p.tally_all();
     // TODO: optimize sorting performance:
@@ -185,6 +198,10 @@ export class PollPage implements OnInit {
   }
 
   ionViewWillLeave() {
+    if (this.p.has_results) {
+      // register that results have been seen:
+      this.p.have_seen_results = true;
+    }
     // make sure current slider values are really stored in database:
     for (let oid of this.oidsorted) {
       if (!this.delegate || this.rate_yourself_toggle[oid]) {
@@ -199,6 +216,7 @@ export class PollPage implements OnInit {
     }
     // store gui state:
     const specs = {
+      'show_live': this.show_live,
       'details_expanded': this.details_expanded,
       'incoming_delegation_expanded': this.incoming_delegation_expanded,
       'option_expanded': this.option_expanded
@@ -353,7 +371,7 @@ export class PollPage implements OnInit {
 
   listeners: Map<any, any[]> = new Map(); // cache for event listeners used in update_order
   final_rand: number = 0;
-  
+
   async update_order(force=false) {
     // TODO: rather have this triggered by tally function!
     if (this.oidsorted.length != this.p.oids.length) {
@@ -367,9 +385,8 @@ export class PollPage implements OnInit {
         }
       }  
     }
-    if (force || (this.needs_refresh && !(this.refresh_paused))) {
+    if (force || (this.show_live && this.needs_refresh && !(this.refresh_paused) && !this.dragged_oid)) {
       if (!force) {
-        // link displayed sorting to poll's sorting:
         const loadingElement = await this.loadingController.create({
           message: this.translate.instant('poll.sorting'),
           spinner: 'crescent',
@@ -426,6 +443,13 @@ export class PollPage implements OnInit {
   }
 
   // CONTROLS:
+
+  toggle_show_live() {
+    this.show_live = !this.show_live;
+    if (this.show_live) {
+      this.update_order();
+    }
+  }
 
   expand(oid: string) {
     this.option_expanded[oid] = !this.option_expanded[oid];
@@ -541,6 +565,7 @@ export class PollPage implements OnInit {
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
+      this.update_order();
       return false;
     } else {
       this.rating_change_ended(oid);
@@ -558,6 +583,7 @@ export class PollPage implements OnInit {
     if (oid != this.dragged_oid) {
       this.swallow_event(ev);
       this.dragged_oid = null;
+      this.update_order();
       return false;
     } else {
       this.rating_change_ended(oid);
@@ -693,6 +719,24 @@ export class PollPage implements OnInit {
     }
   }
   
+  async analysis_dialog() {
+    /** open the analysis modal */
+    this.p.end_if_past_due();
+    const modal = await this.modalController.create({
+        component: AnalysisPage, 
+//        translucent: true,
+        cssClass: 'analysis',
+//        showBackdrop: true,
+        componentProps: {P: this},
+        backdropDismiss​: true
+//        swipeToClose: true,
+//        presentingElement: this.routerOutlet.nativeEl
+    });
+    modal.present();
+
+    this.currentModal = modal;
+  }
+
   explain_approval_dialog(oid: string) {
     /** open the explanation dialog modal */
     this.modalController.create({
@@ -747,8 +791,8 @@ export class PollPage implements OnInit {
     if (this.p.allow_voting) {
       // TODO: also add delegation if ospec.type == "-"?
       this.popover.create({
-  //      event, // TODO: use this from Ionic v6 on!
-  //      side: 'top', // TODO: use this from Ionic v6 on!
+        event, // TODO: use this from Ionic v6 on!
+        side: 'top', // TODO: use this from Ionic v6 on!
         component: AddoptionDialogPage, 
         translucent: true,
         showBackdrop: true,

@@ -1695,7 +1695,7 @@ export class DataService implements OnDestroy {
   private handle_user_db_change(change) {
     // called by PouchDB sync and replicate
 //    change = JSON.parse(JSON.stringify(change));
-    this.G.L.entry("DataService.handle_user_db_change", change);
+    this.G.L.entry("DataService.handle_user_db_change");
     let local_changes = false;
     if (change.deleted){
       local_changes = this.handle_deleted_user_doc(change.doc);
@@ -2635,7 +2635,7 @@ export class DataService implements OnDestroy {
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
           for (const [did, [from, url, status]] of cache) {
-            if (!status.startsWith('declined')) {
+            if (!status[0].startsWith('declined')) {
               this.G.L.trace("DataService.delete_all declining request", did);
               this.G.Del.decline(pid, did);
             }

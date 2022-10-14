@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 
 import { IonInput, IonSelect } from '@ionic/angular';
@@ -54,7 +54,7 @@ export class SettingsPage implements OnInit {
 
   // form:
 
-  formGroup: FormGroup;
+  formGroup: UntypedFormGroup;
   editing_email: boolean;
   editing_password: boolean;
   showing_password: boolean;
@@ -72,7 +72,7 @@ export class SettingsPage implements OnInit {
   ready = false;  
 
   constructor(
-      public formBuilder: FormBuilder,
+      public formBuilder: UntypedFormBuilder,
       public translate: TranslateService,
       public G: GlobalService) { 
     this.G.L.entry("SettingsPage.constructor");
@@ -81,19 +81,20 @@ export class SettingsPage implements OnInit {
   ngOnInit() {
     this.G.L.entry("SettingsPage.ngOnInit");
     this.formGroup = this.formBuilder.group({
-      email: new FormControl('', Validators.compose([Validators.required, Validators.email])),
+      email: new UntypedFormControl('', Validators.compose([Validators.required, Validators.email])),
       pw: this.formBuilder.group({
-        password: new FormControl('', Validators.compose([
+        password: new UntypedFormControl('', Validators.compose([
           Validators.required,
           Validators.minLength(8),
           Validators.pattern(this.G.S.password_regexp)
         ])),
-        confirm_password: new FormControl('', Validators.required),
+        confirm_password: new UntypedFormControl('', Validators.required),
       }, {
         validators: [this.G.S.passwords_match]
       }),
-      language: new FormControl('', Validators.required),
-      theme: new FormControl('', Validators.required),
+      language: new UntypedFormControl('', Validators.required),
+      theme: new UntypedFormControl('', Validators.required),
+      default_wap: new UntypedFormControl('')
     });
   }
   
@@ -158,6 +159,10 @@ export class SettingsPage implements OnInit {
     let c = this.formGroup.get('theme');
     if (c.valid) this.G.S.theme = c.value;
   }
+  set_default_wap() {
+    let c = this.formGroup.get('default_wap');
+    this.G.S.default_wap = c.value;
+  }
 
   // selectServer component hooks:
 
@@ -179,14 +184,16 @@ export class SettingsPage implements OnInit {
   private fill_form() {
     this.G.L.entry("SettingsPage.fill_form");
     // fill form fields with values from data or defaults
+    const preferred_lang = navigator.language.slice(0,2);
     this.formGroup.setValue({
       email: this.G.S.email||'',
       pw: {
         password: this.G.S.password||'',
         confirm_password: this.G.S.password||'',
       },
-      language: this.G.S.language||navigator.languages[0].slice(0,2),
+      language: this.G.S.language||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
       theme: this.G.S.theme||'light',
+      default_wap: this.G.S.default_wap||0
     });
     this.select_server.selectServerFormGroup.setValue({
       db: this.G.S.db||'',
@@ -205,4 +212,5 @@ export class SettingsPage implements OnInit {
       this.G.L.trace("SettingsPage.notify_changed", cls, value);
     }
   }
+
 }

@@ -25,7 +25,7 @@ TODO:
 */
 
 import { Component, OnInit, ViewChild, ViewChildren, ElementRef, QueryList, ChangeDetectorRef } from '@angular/core';
-import { Validators, FormBuilder, FormGroup, FormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
@@ -38,6 +38,10 @@ import { GlobalService } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
+
+import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators'
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
@@ -65,7 +69,7 @@ export class DraftpollPage implements OnInit {
 
   // form:
 
-  formGroup: FormGroup;
+  formGroup: UntypedFormGroup;
   stage: number
   option_stage: number;
   expanded: Array<boolean>;
@@ -101,7 +105,7 @@ export class DraftpollPage implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    public formBuilder: FormBuilder, 
+    public formBuilder: UntypedFormBuilder, 
     private popover: PopoverController,
     public alertCtrl: AlertController,
     public G: GlobalService,
@@ -432,7 +436,7 @@ export class DraftpollPage implements OnInit {
 
   open_due_custom() {
     setTimeout(() => {
-      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
+// FIXME:      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
     }, 100);
   }
 
@@ -708,13 +712,13 @@ export class DraftpollPage implements OnInit {
 
   private reset() {
     this.formGroup = this.formBuilder.group({
-      poll_type: new FormControl('', Validators.required),
-      poll_language: new FormControl(''),
-      poll_title: new FormControl('', Validators.required),
-      poll_desc: new FormControl(''),
-      poll_url: new FormControl('', Validators.pattern(this.G.urlRegex)),
-      poll_due_type: new FormControl('', Validators.required),
-      poll_due_custom: new FormControl('', this.allowed_date.bind(this)),
+      poll_type: new UntypedFormControl('', Validators.required),
+      poll_language: new UntypedFormControl(''),
+      poll_title: new UntypedFormControl('', Validators.required),
+      poll_desc: new UntypedFormControl(''),
+      poll_url: new UntypedFormControl('', Validators.pattern(this.G.urlRegex)),
+      poll_due_type: new UntypedFormControl('', Validators.required),
+      poll_due_custom: new UntypedFormControl('', this.allowed_date.bind(this)),
     });
     this.G.P.update_ref_date();
   }
@@ -776,9 +780,9 @@ export class DraftpollPage implements OnInit {
   }
 
   private add_option_inputs(i:number) {
-    this.formGroup.addControl('option_name'+i, new FormControl("", Validators.required));
-    this.formGroup.addControl('option_desc'+i, new FormControl(""));
-    this.formGroup.addControl('option_url'+i, new FormControl("", Validators.pattern(this.G.urlRegex)));
+    this.formGroup.addControl('option_name' + i, new UntypedFormControl("", [Validators.required], [unique_name_validator$(this.existingOptionName$( 'option_name' + i))]));
+    this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
+    this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
     this.option_stage = 0;
   }
   
@@ -847,6 +851,7 @@ export class DraftpollPage implements OnInit {
     ],
     'option_name': [
       { type: 'required', message: 'validation.option-name-required' },
+      { type: 'not_unique', message: 'validation.option-name-unique' },
     ],
     'option_desc': [
     ],
@@ -854,5 +859,17 @@ export class DraftpollPage implements OnInit {
       { type: 'pattern', message: 'validation.option-url-valid' },
     ],
   }
+
+  existingOptionName$(currentControlName: string): Observable<string[]> {
+    return this.formGroup.valueChanges.pipe(
+      map(values => {
+        const optionNameKeys = Object.keys(values as Object).filter(k => { return k.includes('option_name') && k !== currentControlName })
+        const existingOptionNames: string[] = [];
+        optionNameKeys.forEach(key => existingOptionNames.push(values[key]));
+        return existingOptionNames;
+      })
+    )
+  }
+
   
 }
