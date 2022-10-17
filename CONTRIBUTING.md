@@ -13,7 +13,7 @@
 
 You could do so in any number of ways, not just by writing code, for example:
 
-**Make vodle fly after the minimal viable product (MVP) is launched** in summer, by identifying promising groups of potential testers and early users of the MVP (V0.9), finding potential funders for the subsequent development of a first major release (V1.0), and developing vodle's long-term vision further.
+**Make vodle fly**, by identifying promising groups of potential testers and early users of the MVP, finding potential funders for the subsequent development of a first major release, and developing vodle's long-term vision further.
 
 **Help making vodle more accessible** by translating it into further languages, improving and completing existing translations, adding a dark, high-contrast, or color-blind-friendly theme, improving accessibility for screen readers, or designing and improving in-app aids such as hints, the FAQ and help texts, or a tutorial, demo, or walkthrough.
 
@@ -27,8 +27,8 @@ Or simply start and **be a friendly observer, frank commentator and neutral advi
 
 ### Our commitment
 
-As we are on our way towards a Minimal Viable Product, we currently spend about 15 hours a week on developing vodle. 
-*We commit to reply to your messages in the discussion board within one day.*
+As we are on our way towards a First Stable Release, we currently spend about 10 hours a week on improving the MVP. 
+*We commit to reply to your messages in the issue tracker or discussion board within one day.*
 
 If you decide to contribute something, we are very happy to help you get started.
 *So if you get stuck at some point in the following section, don't hesitate to ask on the discussion board!* 
