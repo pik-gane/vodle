@@ -25,6 +25,11 @@
         "[COMMENT EN] We avoid the terms 'vote', 'voter', 'voting' and rather use 'poll', 'participant', 'participate', in order to make clear that this is not plain majority voting.",
         "[COMMENT EN] We take care to use 'APPROVE an option' instead of 'approve OF an option' or 'agree to an option', in order to make clear that this is a formal act rather than an attitude."
     ],
+    "-parameters": {
+        "_COMMENT_SECTION_": "[COMMENT] locale parameters used in code, not occurring as text:",
+        "_COMMENT_first-day-of-week": "[COMMENT] in first-day-of-week, please specify 0 for Sunday or 1 for Monday etc. or 6 for Saturday",
+        "first-day-of-week": "0"
+    },
     "add": "Dodaj",
     "add-option": "Dodaj opcję",
     "add-target": "Dodaj opcję",
@@ -89,6 +94,26 @@
         "info": "Po dodaniu, opcja nie może być edytowana ani usuwana.",
         "notification-added-title": "Dodano opcję"
     },
+    "analysis": {
+        "_COMMENT_SECTION_": "[COMMENT] strings used on the Analysis dialog:",
+        "-page-title": "Distribution of approval & shares",
+        "each-dot-participant": "Each dot represents one non-abstaining participant.",
+        "each-dot-percent": "Each dot represents one percent of all non-abstaining participants.",
+        "yellow-dot": "The yellow dot marks where your share goes.",
+        "discs": "The discs show how much approval each option gets. The part of the disc that sticks out from behind the other discs shows the share that this option gets. We only show those options that get a share here.",
+        "_COMMENT_COLORS": "[COMMENT] The text below is split into 1. a part before a color word, including necessary whitespace, 2. a color word, and 3. a part after the color word, including necessary whitespace. Please take care to leave all whitespace intact!",
+        "colors-before-red": "The colors show which options you yourself approve and where your share goes. ",
+        "colors-red": "Red:",
+        "colors-between-red-and-blue": " you won't approve the option since your wap is zero. ",
+        "colors-blue": "Blue:",
+        "colors-between-blue-and-green": " you currently don't approve this option. ",
+        "colors-green": "Green:",
+        "colors-after-green": " you approve the option.",
+        "colors-before-dark-green": " Your share goes to the ",
+        "colors-dark-green": "dark green",
+        "colors-after-dark-green": " option.",
+        "suggestion-general": "<b>Suggestion:</b> You might want to talk to the supporters of the options you don't approve (red and blue). Maybe you can together find some other option that you can all approve? <small>A good compromise option might already be on the menu or you might want to add it.</small>"
+    },
     "assist": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Assist Me dialog:",
         "-page-title": "Ustawmy Twoje wapy",
@@ -139,6 +164,7 @@
     },
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
+        "disabled": "We apologize, delegation is not yet enabled in this version of vodle.",
         "header": "Deleguj do innej osoby uczestniczącej",
         "intro": "Możesz poprosić inną osobę uczestniczącą o działanie jako delegat. Delegat będzie kontrolował Twoje wapy zamiast Ciebie. Innymi słowy, jego wapy będą wykorzystywane również jako Twoje wapy. Delegat może również delegować swoje i Twoje wapy do osób trzecich i tak dalej. Możesz odwołać delegację w dowolnym momencie, a także zawsze możesz dodatkowo dostosować część swoich wapów.",
         "nickname-label": "Nazwa delegata:",
@@ -431,13 +457,17 @@
         "consent-privacy-before-privacy": "Tak, przeczytałem ",
         "consent-privacy-privacy": "deklarację o ochronie danych i warunki użytkowania",
         "consent-privacy-after-privacy": ". Wyrażam zgodę na przetwarzanie moich danych na urządzeniach użytkownika i serwerach bazy danych w opisany sposób, aby móc uczestniczyć w ankietach. Zgadzam się, że niektóre z moich danych zostaną przekazane innym uczestnikom w formie pseudoanimizowanej. Mam świadomość, że moje prawo do usunięcia moich danych jest zatem ograniczone, ponieważ kopie te nie mogą być usuwane na wszystkich urządzeniach użytkowników. Mogę cofnąć tę zgodę, wysyłając e-mail na adres privacy@vodle.it.",
+        "login-as-guest-head": "Alternatively, you can use a guest account:",
+        "login-as-guest-button": "Use guest account",
+        "login-as-guest-foot": "(Please check the consent box first)",
         "ask-fresh-password": "Proszę ustawić hasło.",
         "ask-fresh-password-2": "Użyjemy go do szyfrowania Twoich danych, tak aby nikt inny nie mógł ich przeczytać. Proszę, zapamiętaj je, ponieważ nie ma możliwości jego odzyskania.",
         "ask-old-password": "Proszę podać swoje hasło do vodle.",
         "store-password": "Przechowuj moje hasło pomiędzy sesjami.",
         "store-password-note": "Zdaję sobie sprawę, że każdy, kto ma dostęp do mojego urządzenia, może uzyskać dostęp do wszystkich moich danych vodle.",
         "ready-to-start": "OK, baw się dobrze razem z vodle!",
-        "ready-to-start-detail": "Kiedy wyjdziesz, automatycznie zapiszemy Twoje wapy. Twoja sesja pozostanie aktywna, dopóki się nie wylogujesz. Nie zapomnij wylogować się za pomocą menu, jeśli to urządzenie jest niebezpieczne lub współdzielone z innymi."
+        "ready-to-start-detail": "Kiedy wyjdziesz, automatycznie zapiszemy Twoje wapy. Twoja sesja pozostanie aktywna, dopóki się nie wylogujesz. Nie zapomnij wylogować się za pomocą menu, jeśli to urządzenie jest niebezpieczne lub współdzielone z innymi.",
+        "ready-to-start-guest": "You are using the guest account <b>{{email}}</b> with password <b>{{password}}</b>. Please note this before logging out and enter this as your email address when logging in again."
     },
     "logout": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
@@ -502,7 +532,13 @@
         "type-winner": "Jedna opcja wygrywa",
         "assist-me-inline": "Asystuj mi",
         "assist-me-button": "Asystuj<br/>mi",
+        "analysis-details": "Details",
+        "show-live": "live<br/>results",
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
+        "hint-first-time-1": "Welcome.",
+        "hint-first-time-2-before-wap": "Currently, all your ",
+        "hint-first-time-2-wap": "waps",
+        "hint-first-time-2-after-wap": " are set to the default value. <b>Change them by dragging the knobs</b> or delegate them to someone you trust.",
         "hint-abstaining-1": "Wstrzymujesz się od głosu.",
         "hint-abstaining-2-before-wap": "Być może chcesz przynajmniej przypisać swojej ulubionej opcji pozytywny ",
         "hint-abstaining-2-wap": "wap",
@@ -544,6 +580,7 @@
         "choose-whose-ratings": "Wybierz<br/>czyj wap<br/>użyć",
         "my-own": "mój własny",
         "delegate-s": "{{delegate}}",
+        "your-wap": "Your wap",
         "chance-to-win": "{{percentage}}%<small> aktualna szansa na wygraną</small>",
         "final-chance-to-win": "<small>miała </small>{{percentage}}%<small> szansy na wygraną</small>",
         "of-the-budget": "<small>dostałby obecnie </small>{{percentage}}%<small> budżetu</small>",
@@ -592,6 +629,8 @@
         "edit": "Edytuj",
         "db-label": "Gdzie vodle powinno trzymać Twoje zaszyfrowane dane?",
         "appearance": "Wygląd",
+        "behaviour": "Behaviour",
+        "default-wap": "Default wap",
         "notifications": "Powiadomienia"
     },
     "validation": {
@@ -613,6 +652,7 @@
         "poll-due-future": "Ta data i czas są w przeszłości lub zbyt daleko w przyszłości.",
         "delegate-nickname-required": "Nazwa użytkownika jest wymagana",
         "option-name-required": "Nazwa jest wymagana.",
+        "option-name-unique": "The option name already exists.",
         "option-url-valid": "Proszę wprowadzić prawidłowy adres URL."
     }
 }
