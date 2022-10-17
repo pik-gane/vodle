@@ -65,9 +65,18 @@ When coding, please try to stick to the style you see in the existing code. Ther
 
 ## 4. Working on translations
 
-We will soon provide detailed information on this... in the meantime, please look at the JSON files under [src/assets/i18n/](./src/assets/i18n/).
+Currently, the following workflow for translations has proved useful:
 
+1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  
+2. Once there is an issue for a language, I will set up that language in the Crowdin free translation tool and it will appear here: https://crowdin.com/project/vodle
+3. On that page, you can start working on new or existing translations right-away by clicking on the language and then on "en.json". 
+4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated.
+5. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
+6. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
+7. Once you want to have a look at your changes in a test installation, simply tell me in the issue page and I will set up a test installation for you.
+8. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this as well :-)
 
+For those who don't want to use Crowdin, you can also work on the JSON files under [src/assets/i18n/](./src/assets/i18n/) directly, but this might introduce syncing issues with Crowdin if others use Crowdin for the same language – please contact me first before you do.
 
 <!--
 
