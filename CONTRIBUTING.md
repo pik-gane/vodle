@@ -76,6 +76,8 @@ Currently, the following workflow for translations has proved useful:
 7. Once you want to have a look at your changes in a test installation, simply tell me in the issue page and I will set up a test installation for you.
 8. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this as well :-)
 
+If you are more experienced with Crowdin than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between github and Crowding, please let us know!
+
 For those who don't want to use Crowdin, you can also work on the JSON files under [src/assets/i18n/](./src/assets/i18n/) directly, but this might introduce syncing issues with Crowdin if others use Crowdin for the same language – please contact me first before you do.
 
 <!--
