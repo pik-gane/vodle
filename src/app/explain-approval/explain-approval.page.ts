@@ -80,6 +80,15 @@ export class ExplainApprovalPage implements OnInit {
   tspan_end = '</tspan>';
   text_end = '</text>'; 
 
+  // styling:
+  approval_font_size_small = 3;
+  approval_font_size_normal = 3.75;
+  approval_font_size_large = 6;
+  share_font_size_small = 3;
+  share_font_size_normal = 3.75;
+  share_font_size_large = 6;
+
+
   constructor(
     private modalController: ModalController,
     translate: TranslateService,

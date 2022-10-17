@@ -66,7 +66,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
       <!-- APPROVAL TAB: -->
 
-      <g *ngIf="tab=='approval'" font-family="Quicksand" font-size="5">
+      <g *ngIf="tab=='approval'" font-family="Quicksand" [attr.font-size]="approval_font_size_normal">
 
         <!-- ANIMATION:
           * from sec. tr1 to tr2, the ratings come in 
@@ -77,7 +77,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         -->
 
         <text x="0" y="-11" fill="black">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
-        <text x="0" y="-6" fill="#808080" font-size="5">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
+        <text x="0" y="-6" fill="#808080">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
 
         <g transform="scale(1 -1) translate(0 -100)">
 
@@ -183,11 +183,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
                   <rect x="75" y="-16" width="25" height="13" fill="#ffffffd0"></rect>
-                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan font-size="8" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
+                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan [attr.font-size]="approval_font_size_large" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
                   <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
               </g>
-              <g *ngIf="!!myv && eff_unequal_proxy" font-size="4" fill="#808080">
+              <g *ngIf="!!myv && eff_unequal_proxy" [attr.font-size]="approval_font_size_small" fill="#808080">
                 <text x="-20" y="31">*<tspan [innerHtml]="'explain.largest-line-1'|translate"></tspan></text>
                 <text x="-20" y="34">&nbsp;<tspan [innerHtml]="'explain.largest-line-2'|translate"></tspan></text>
               </g>
@@ -219,7 +219,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
       <!-- SHARE TAB: -->
 
-      <g *ngIf="tab=='share'" font-family="Quicksand" font-size="5">
+      <g *ngIf="tab=='share'" font-family="Quicksand" [attr.font-size]="share_font_size_normal">
 
         <!-- TODO:
           * fade black arrows and explanation to grey
@@ -234,7 +234,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <text y="-13" [innerHtml]="'explain.all-abstain-line-1'|translate">
             </text>
             <text y="-8">
-              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(100/p.oids.length).toFixed(1)}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
+              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(100/p.oids.length).toFixed(1)}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
             </text>
           </g>
 
@@ -388,7 +388,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <!-- text: -->
               <ng-container *ngIf="ps.length == 1 && myv != oid">
                 <text y="0">
-                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
@@ -396,7 +396,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length == 1 && myv == oid">
                 <text y="0">
-                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
@@ -404,7 +404,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv != oid">
                 <text y="0">
-                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
@@ -412,7 +412,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv == oid">
                 <text y="0">
-                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}
@@ -420,7 +420,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] == 0">
                 <text y="0">
-                  {{'explain.nothing-left-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" font-size="8">0%</tspan>{{'explain.nothing-left-line-1-after-percentage'|translate}}
+                  {{'explain.nothing-left-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">0%</tspan>{{'explain.nothing-left-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
                   {{'explain.nothing-left-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e">{{optionname}}</tspan>{{'explain.nothing-left-line-2-after-optionname'|translate}}

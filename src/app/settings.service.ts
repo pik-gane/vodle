@@ -147,14 +147,14 @@ export class SettingsService {
 
   // OTHER CONSTANTS:
 
-  language_names = {
+  language_names = { // TODO: keep in "phonetically alphabetical" order
     de: 'Deutsch',
     en: 'English',
     fr: 'Français',
+    hi: 'हिन्दी',
     ko: '한국어',
     pl: 'Polski',
-    fi: 'Suomea',
-    hi: 'हिन्दी'
+    fi: 'Suomea'
 //    zh: '中文'
   };
 
