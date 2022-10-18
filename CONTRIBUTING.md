@@ -78,11 +78,12 @@ Currently, the following workflow for translations has proved useful:
 1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  
 2. Once there is an issue for a language, we will set up that language in the Crowdin free translation tool and it will appear here: https://crowdin.com/project/vodle
 3. On that page, you can start working on new or existing translations right-away by clicking on the language and then on "en.json" (you have to register for a free Crowdin account however). The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file).
-4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the GUI. 
-5. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
-6. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
-7. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
-8. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
+4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the GUI.
+5. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
+6. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
+7. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
+8. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
+9. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
 
 If you are more experienced with Crowdin than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between github and Crowdin, please let us know!
 
@@ -135,3 +136,4 @@ For those who don't want to use Crowdin, you can also work on the JSON files und
 
 
 -->
+
