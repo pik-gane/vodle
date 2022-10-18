@@ -154,7 +154,7 @@ export class SettingsService {
     hi: 'हिन्दी',
     ko: '한국어',
     pl: 'Polski',
-    fi: 'Suomea'
+    fi: 'Suomi'
 //    zh: '中文'
   };
 
