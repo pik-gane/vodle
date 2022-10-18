@@ -67,6 +67,7 @@
     "start": "Start",
     "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",
+    "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! the willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
     "wap": "Wap",
     "yes": "Yes",
     "about": {
