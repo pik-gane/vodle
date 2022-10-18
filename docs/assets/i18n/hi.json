@@ -532,6 +532,7 @@
         "type-winner": "एक विकल्प जीतता है",
         "assist-me-inline": "मेरी सहायता करो",
         "assist-me-button": "सहायता<br/>मेरी",
+        "level-of-agreement": "% समझौता",
         "analysis-details": "विवरण",
         "show-live": "लाइव<br/>परिणाम",
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
