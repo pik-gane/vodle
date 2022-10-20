@@ -154,8 +154,9 @@ export class SettingsService {
     hi: 'हिन्दी',
     ko: '한국어',
     pl: 'Polski',
-    fi: 'Suomi'
+    fi: 'Suomi',
 //    zh: '中文'
+    nn: '[JSON file keys]'
   };
 
   validation_messages = {
