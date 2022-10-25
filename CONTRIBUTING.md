@@ -80,10 +80,11 @@ Currently, the following workflow for translations has proved useful:
 3. On that page, you can start working on new or existing translations right-away by clicking on the language and then on "en.json" (you have to register for a free Crowdin account however). The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file).
 4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the GUI.
 5. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
-6. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
-7. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
-8. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
-9. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
+6. Some terms (e.g., "wap", "approve", "option") require special care and are thus described in Crowdin's glossary/terminology, which you can switch on via the third button on the right-hand side of the Crowdin editor: ![image](https://user-images.githubusercontent.com/22815964/197727161-956ebd09-6682-4515-b660-8c846dadac3f.png) 
+7. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
+8. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
+9. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
+10. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
 
 If you are more experienced with Crowdin than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between github and Crowdin, please let us know!
 
