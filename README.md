@@ -79,7 +79,7 @@
 
 **We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
 - **A *Minimal Viable Product (MVP)* is finished since end of June.**
-- **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
+- **For now, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
 
