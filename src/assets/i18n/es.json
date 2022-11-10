@@ -160,13 +160,13 @@
     },
     "data": {
         "notifications-permission-header": "¿Puede vodle mostarte notificaciones?",
-        "notifications-permission-intro": "Si aceptas, vodle puede avisarte de encuestas próximas a terminar, pedidos de delegación y otros eventos importantes. Puedes controlar que notificacionesYou can control which notifications you want to receive on vodleʼs settings page."
+        "notifications-permission-intro": "Si aceptas, vodle puede avisarte de encuestas próximas a terminar, pedidos de delegación y otros eventos importantes. Puedes controlar que notificaciones quieres recibir en la sección de configuració de vodle."
     },
     "delegation-request": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
-        "disabled": "We apologize, delegation is not yet enabled in this version of vodle.",
-        "header": "Delegate to some other participant",
-        "intro": "You can ask some other participant to act as your delegate. The delegate will then control your waps instead of you. In other words, their waps will be used as your waps, too. The delegate can also delegate their and your waps further to some third participant, and so on. You can revoke the delegation at any time, and can also always choose to still adjust some of the waps yourself.",
+        "disabled": "Lo sentimos, delegar no está disponible en esta versión de vodle.",
+        "header": "Delega a otro participante",
+        "intro": "Puedes pedir a otro participante que actúe como tu delegado. El delegado puede entonces también controlar los waps. En otras palabras, sus waps serán usados como tus waps. El delegado puede delegar también los waps propios y tuyos a otro tercer participante y así continuamente. Puedes quitar la delegación en todo momento, así como también puedes seguir ajustando los waps por tu cuenta.",
         "nickname-label": "Delegateʼs nickname:",
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
