@@ -150,6 +150,7 @@ export class SettingsService {
   language_names = {
     de: 'Deutsch',
     en: 'English',
+    es: 'Español',
     fr: 'Français',
     ko: '한국어',
     pl: 'Polski',
