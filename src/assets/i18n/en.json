@@ -235,6 +235,7 @@
         "-page-title": "Edit draft poll",
         "del-poll-confirm-question": "Delete this poll draft?<br/>(This cannot be undone!)",
         "general-information": "General information",
+        "details": "Details",
         "type-label": "In this poll, the group will...",
         "type-winner": "select one of several options",
         "type-share": "divide some resource between several options",
