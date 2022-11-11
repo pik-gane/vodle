@@ -474,7 +474,7 @@
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Log Out page:",
         "-page-title": "Cerrar sesión",
         "confirm-header": "¿Realmente quieres cerrar tu sesión?",
-        "confirm-intro": "Cerrar tu sesión se solamente necesario en dispositivos compartidos o que no sean seguros. Cuando cierres sesión tus datos de vodle serán borrados en este dispositivo (pero no de la base de datos remota). Por favor asegúrate de recordar el correo y contraseña que estás usando con vodle antes de cerrar sesión. Si los olvidas, no podrán ser recuperados ya que no son guardados en ningún lugar.",
+        "confirm-intro": "Cerrar tu sesión es solamente necesario en dispositivos compartidos o que no sean seguros. Cuando cierres sesión tus datos de vodle serán borrados en este dispositivo (pero no de la base de datos remota). Por favor asegúrate de recordar el correo y la contraseña que estás usando con vodle antes de cerrar sesión. Si los olvidas, no podrán ser recuperados ya que no son guardados en ningún lugar.",
         "confirm-button": "Si, cerrar sesión",
         "failed": "Por alguna razón tu sesión no pudo ser cerrada"
     },
