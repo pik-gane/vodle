@@ -2,6 +2,8 @@
 
 *(If you read this on GitHub, you can access a table of contents via the* ⋮☰ *button in the top-left corner of this panel)*
 
+Note that some concepts are named differently in the GUI than in the code for reasons of accessibility. Such pairs of terms are mutually linked in this list.)  
+
 ### Abstention
 When a [voter's](#voter) [effective ratings](#effective-rating) for all [options](#option) are zero, that voter *abstains* and thereby does not control any portion of the [share](#share). An abstaining voter is treated completely equivalent to a person who does not participate in the poll at all and does not specify any ratings.
 
@@ -39,6 +41,7 @@ Only the delegate will know the identity of the client, as soon as the client se
 When a [poll](#poll) reaches its [due date](#due-date), it is *closed*. No-one can change any ratings or delegations from that point on, and a final [tally](#tallying) is performed to determine the final [shares](#share). 
 For polls of [type](#poll-type) "winner", also the [winner](#winner) of the poll is then drawn on the basis of these shares. 
 See also [results](#results).
+(In the GUI, we use the phrase "the poll *ends*" instead of "the poll is closed".) 
 
 ### Database username
 We control access to [user data](#user-data-item), [poll data](#poll-data-item) and [voter data](#voter-data-item) in the [user database](#user-database) and [poll databases](#poll-database) by defining several technical *database usernames* in the respective CouchDB servers.
@@ -102,6 +105,9 @@ In other words: A voter's effective ratings equal her proxy ratings, only if the
 
 The effective ratings are then used to determine who [approves](#approval) what.
 
+### Ending (of a poll)
+This is the GUI's term for what is called [closing](#closing) in the code.
+
 ### Indirect delegate
 If a [voter](#voter) *A* has delegated to some other voter *B* who in turn has delegated to another voter *C* and so on, then all of *B*, *C*, etc. are *indirect delegates* of *A*. The final voter in this delegation sequence is *A*'s [effective delegate](#effective-delegate).
 
@@ -149,6 +155,9 @@ Each option has a unique [option ID](#oid).
 
 ### Own rating
 A [voter](#voter)'s *own rating* of an [option](#option) is the rating she herself gives by adjusting the [rating slider](#rating-slider) of that option. It is only relevant if she has not [delegated](#delegation) her rating of that option to another voter. If she hasn't, her *own rating* also becomes her [proxy rating](#proxy-rating) of the option. Otherwise, her *own rating* is ignored and her [delegate](#delegate)'s proxy rating of the option also becomes her proxy rating of the option.
+
+### Participant
+This is the term we use in the GUI for what is called a ["voter"](#voter) in the code.
 
 ### pid
 The globally unique ID of a [poll](#poll).
@@ -247,6 +256,8 @@ The ranking determines to which of a [voter](#voter)'s [approved](#approval) opt
 Because of the possibility of [delegation](#delegation), we distinguish between a voter's [own rating](#own-rating) of an option and a voter's [proxy rating](#proxy-rating) of that option. Because we want to make sure that no non-[abstaining](#abstention) voter's share is lost, we also distinguish between a voter's proxy rating and her [effective rating](#effective-rating) of an option (but most of the time these are the same). It is the latter that determines who [approves](#approval) what and eventually whose [share](#share) goes where.
 
 The procedure that determines the [results](#results) from all ratings is called [tallying](#tallying).
+
+(In the GUI, we use the invented term "*wap*" instead of "rating" because "rating" would suggests certain wrong assumptions about how the tallying proceeds.) 
 
 ### Rating slider
 In a [voter](#voter)'s [voting interface](#voting-interface), each [option](#option) has a *rating slider* attached which shows the voter's [proxy rating](#proxy-rating) of that option. If the voter has not delegated any rating, the proxy rating equals the voter's [own rating](#own-rating) of that option, and the voter can use the slider to adjust this rating. If the voter has delegated some ratings but not this one (because she used the [delegation toggle](#delegation-toggle) to regain control), the slider also shows her own rating and, in addition, a dashed line above it shows the proxy rating of her delegate for comparison. If she has delegated her rating of this option, the slider only shows the proxy rating of her delegate (which is then also her own proxy rating) and cannot be adjusted (which is indicated by a smaller knob).
@@ -364,7 +375,7 @@ In the UI, we rather use language such as "your share goes to ...", "... includi
 On the code level, a *voter* is a [user](#user) in her role as participant in a certain [poll](#poll).
 In each poll she participates, a user has a different unique [voter ID](#vid).
 
-Not that, to avoid the association of majority voting, we do *not* (or very rarely) use the term "voter" in the vodle **UI** but rather use the term **"participant"** there. 
+(Note that, to avoid the association of majority voting, we do *not* (or very rarely) use the term "voter" in the vodle **GUI** but rather use the term **"participant"** there.)
 
 ### Voter data item
 A *voter data item* is a data item that is related to a particular [poll](#poll) and is owned by a particular [voter](#voter) in that poll (rather than being common to all voters, compare [poll data item](#poll-data-item)).
@@ -385,6 +396,9 @@ This *voting interface* allows the voter to
 - see all options' [approval score](#approval-score) as a light bar coming in from the right, and their [shares](#share) as a pie chart piece on the left,
 - see which options she [approves](#approval) and which option "her" share goes, and
 - access explanatory animations for approval scores and shares.
+
+### Wap
+This is the invented word used in the GUI instead of ["rating"](#rating). It abbreviates "willingness to approve".
 
 ### Winner
 When a [poll](#poll) of [type](#poll-type) "winner" [closes](#closing), a unique option is declared the "winner" as the final [result](#results) of the poll.

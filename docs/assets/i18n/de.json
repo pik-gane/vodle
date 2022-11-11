@@ -235,6 +235,7 @@
         "-page-title": "Abstimmung bearbeiten",
         "del-poll-confirm-question": "Entwurf endgültig löschen?<br/>(Das kann nicht rückgängig gemacht werden!)",
         "general-information": "Allgemeine Daten",
+        "details": "Details",
         "type-label": "In dieser Abstimmung wird die Gruppe...",
         "type-winner": "eine von mehreren Optionen auswählen",
         "type-share": "eine Ressource auf verschiedene Optionen aufteilen",
