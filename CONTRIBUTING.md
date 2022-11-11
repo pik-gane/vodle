@@ -4,7 +4,7 @@
 
 1. [Introduction](#1-introduction)
 2. [Getting started](#2-getting-started)
-3. [Finding your way around the code](#3-finding-your-way-around-the-code)
+3. [Contributing code](#3-contributing-code)
 4. [Working on translations](#4-working-on-translations)
 
 ## 1. Introduction
@@ -39,7 +39,7 @@ You might begin by just scanning our [End user website](http://vodle.it) and rea
 
 If you are interested in code-related stuff, you might then continue with browsing the [Code](#finding-your-way-around-the-code) and the [Issue tracker](https://github.com/pik-gane/vodle/issues) to identify a *good first issue* (some are labelled as such). While the issue tracker is used to report bugs and list enhancements that are ready to implement, our [Discussions page](https://github.com/pik-gane/vodle/discussions) is the place for feature requests, ideas, questions, and the like. There you can see what we're currently thinking about. 
 
-The most important issues at the moment are [those related to the Minimal Viable Product Milestone (MVP)](https://github.com/pik-gane/vodle/issues?q=is%3Aopen+is%3Aissue+milestone%3AMVP).
+The most important issues at the moment are [those related to the First Stable Release](https://github.com/pik-gane/vodle/milestone/2).
 
 Some types of contribution can be made without installing a development version of vodle on your own computer, such as documentation-related thinds, code reviews, designing stuff.
 
@@ -47,7 +47,15 @@ But other types of contribution will require *setting up a development and testi
 
 In any case, it might be a good idea to take a short tour as described [here](./documentation/development/BASIC_MANUAL_TEST_TOUR.md). 
 
-## 3. Finding your way around the code
+## 3. Contributing code
+
+Before you start coding: 
+- Please set up your git to [sign all commits](https://docs.github.com/articles/about-gpg/) automatically, because our branch protection rules require all commits to be signed before merging them into main, and it is easier to do it right away than signing them afterwards.
+
+Once you do a pull request:
+- Please [sign our Contributor License Agreement](https://cla-assistant.io/pik-gane/vodle) because we use a permissive license that requires this from all contributors.
+
+### 3.1. Finding your way around the code
 
 Each app page and dialog lives as a ***component*** in its own folder inside [src/app/](./src/app/). 
 Its layout and UI are given by an Angular template file `*.page.html`,
@@ -65,9 +73,22 @@ When coding, please try to stick to the style you see in the existing code. Ther
 
 ## 4. Working on translations
 
-We will soon provide detailed information on this... in the meantime, please look at the JSON files under [src/assets/i18n/](./src/assets/i18n/).
+Currently, the following workflow for translations has proved useful:
 
+1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  
+2. Once there is an issue for a language, we will set up that language in the Crowdin free translation tool and it will appear here: https://crowdin.com/project/vodle
+3. On that page, you can start working on new or existing translations right-away by clicking on the language and then on "en.json" (you have to register for a free Crowdin account however). The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file).
+4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the GUI.
+5. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
+6. Some terms (e.g., "wap", "approve", "option") require special care and are thus described in Crowdin's glossary/terminology, which you can switch on via the third button on the right-hand side of the Crowdin editor: ![image](https://user-images.githubusercontent.com/22815964/197727161-956ebd09-6682-4515-b660-8c846dadac3f.png) 
+7. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
+8. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
+9. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
+10. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
 
+If you are more experienced with Crowdin than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between github and Crowdin, please let us know!
+
+For those who don't want to use Crowdin, you can also work on the JSON files under [src/assets/i18n/](./src/assets/i18n/) directly, but this might introduce syncing issues with Crowdin if others use Crowdin for the same language – so please contact us first before you work on a JSON file directly.
 
 <!--
 
@@ -116,3 +137,4 @@ We will soon provide detailed information on this... in the meantime, please loo
 
 
 -->
+

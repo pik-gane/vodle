@@ -15,6 +15,7 @@
 [![GNU License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]-->
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
+[![try the MVP](https://img.shields.io/badge/Status-Minimal%20Viable%20Product%20available-brightgreen)](http://app.vodle.it)
 ![](https://img.shields.io/badge/Status-Approaching%20First%20Release-green)
 
 ## *[Contributions welcome!](CONTRIBUTING.md)*
@@ -78,8 +79,12 @@
 ## Current State & Next Steps
 
 **We are on our way towards a First Stable Release ([want to help?](./CONTRIBUTING.md)).**
-- **A *Minimal Viable Product (MVP)* is finished since end of June.**
-- **Over the summer, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
+
+- **A *Minimal Viable Product (MVP)* is finished since end of June '22 and can be tried out online at [app.vodle.it](http://app.vodle.it).**
+
+  *--> Are you in a group of people that would be willing to try vodle with our support, to enable us to improve it further?*
+
+- **For now, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
 
@@ -99,6 +104,8 @@ It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cf
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
+More details in this [more comprehensive introduction](documentation/INTRODUCTION.md) is
+
 We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 
 ### Built With 
@@ -117,9 +124,11 @@ We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 
 ### I simply want to use it!
 
-Sadly, the app is not yet ready to be used *([but you can do something about that](CONTRIBUTING.md))*.
+You can easily **set up a poll at [app.vodle.it](http://app.vodle.it/#/draftpoll)** and then send the invite link to your participants.
 
-Once the Minimal Viable Product is finished (May or June), you can simply go to [www.vodle.it](http://www.vodle.it) to use vodle as a **web app in your browser**.
+If you want to try it out first in an existing demo poll, visit **[demo.vodle.it](http://demo.vodle.it)**.
+
+Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*., the app seems to work decently already.
 
 Later, when the First Stable Release is ready, you can alternatively install vodle as an **app on your smartphone** via certain app stores.
 
@@ -154,3 +163,29 @@ You are highly welcome to get involved in any of a number of ways! We have a who
 - The outstretched arms background image is modified from https://pixabay.com/vectors/businessman-silhouette-2873115/ which has a Pixabay license https://pixabay.com/service/license/
 
 (C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see [AUTHORS](AUTHORS).
+
+
+## *Disclaimer: We're Using GitHub Under Protest*
+
+*This project is currently hosted on GitHub.  This is not ideal; GitHub is a
+proprietary, trade-secret system that is not Free and Open Souce Software
+(FOSS).  We are deeply concerned about using a proprietary system like GitHub
+to develop our FOSS project.  We have an
+[open discussion](https://github.com/pik-gane/vodle/discussions/215) where the
+project contributors are actively discussing how we can move away from GitHub
+in the long term.  We urge you to read about the
+[Give up GitHub](https://GiveUpGitHub.org) campaign from
+[the Software Freedom Conservancy](https://sfconservancy.org) to understand
+some of the reasons why GitHub is not a good place to host FOSS projects.*
+
+*If you are a contributor who personally has already quit using GitHub, please
+[check this resource](https://github.com/pik-gane/vodle/discussions/215) for how to send us contributions without
+using GitHub directly.*
+
+***Any use of this project's code by GitHub Copilot, past or present, is done
+without our permission.  We do not consent to GitHub's use of this project's
+code in Copilot.***
+
+![Logo of the GiveUpGitHub campaign](https://sfconservancy.org/img/GiveUpGitHub.png)
+
+
