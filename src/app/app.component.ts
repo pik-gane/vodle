@@ -72,10 +72,11 @@ export class AppComponent {
 
   constructor(translate: TranslateService) {
     console.log("APP CONSTRUCTOR");
-    translate.addLangs(['de','en','ko','pl', 'es']);
+    translate.addLangs(['de','en','ko','pl','fi','hi','es']);
 
     // this language will be used as a fallback when a translation isn't found in the current language
     translate.setDefaultLang('en');
+//    translate.setDefaultLang('nn'); // uncomment to produce translate key screenshots
 
     // the lang to use, if the lang isn't available, it will use the current loader to get them
     const preferred_lang = navigator.language.slice(0,2);

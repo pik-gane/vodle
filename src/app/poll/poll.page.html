@@ -260,10 +260,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 <ion-icon 
                     color="light" style="position: relative; top: 2px;" 
                     [name]="p.agreement_level == 1 ? 'checkmark-done-outline' : 'analytics-outline'">
-                </ion-icon><b>&nbsp;{{(p.agreement_level * 100).toFixed(1)}}</b>%&nbsp;<span 
+                </ion-icon><b>&nbsp;{{(p.agreement_level * 100).toFixed(1)}}</b><span 
                     class="externallink" 
                     (click)="glossary('level-of-agreement')" 
-                    [innerHtml]="'level-of-agreement'|translate"
+                    [innerHtml]="'poll.level-of-agreement'|translate"
                   ></span><ng-container *ngIf="p.T.n_not_abstaining > 0">&nbsp;(<span 
                   class="externallink" 
                   (click)="analysis_dialog()" 
