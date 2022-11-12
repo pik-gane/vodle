@@ -17,6 +17,7 @@
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 [![try the MVP](https://img.shields.io/badge/Status-Minimal%20Viable%20Product%20available-brightgreen)](http://app.vodle.it)
 ![](https://img.shields.io/badge/Status-Approaching%20First%20Release-green)
+[![Coverity Scan Build Status](https://img.shields.io/coverity/scan/26984.svg)](https://scan.coverity.com/projects/pik-gane-vodle)
 
 ## *[Contributions welcome!](CONTRIBUTING.md)*
 
