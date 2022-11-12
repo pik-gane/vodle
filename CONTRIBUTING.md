@@ -53,7 +53,7 @@ Before you start coding:
 - Please set up your git to [sign all commits](https://docs.github.com/articles/about-gpg/) automatically, because our branch protection rules require all commits to be signed before merging them into main, and it is easier to do it right away than signing them afterwards.
 
 Once you do a pull request:
-- Please [sign our Contributor License Agreement](https://cla-assistant.io/pik-gane/vodle) because we use a permissive license that requires this from all contributors.
+- Please [sign our Contributor License Agreement](https://cla-assistant.io/pik-gane/vodle).
 
 ### 3.1. Finding your way around the code
 
