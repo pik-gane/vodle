@@ -110,6 +110,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
 <ion-content *ngIf="ready && !!p" 
     (pointerup)="onBodyPointerup($event)"
+    (touchup)="onBodyTouchup($event)"
     [scrollEvents]="true"
     (ionScroll)="onScroll($event)"    
     >
