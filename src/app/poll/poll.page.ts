@@ -385,7 +385,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
-    if (force || (this.show_live && this.needs_refresh && !(this.refresh_paused) && !this.dragged_oid)) {
+    if (force || (this.show_live && this.needs_refresh && !(this.refresh_paused))) {
       if (!force) {
         const loadingElement = await this.loadingController.create({
           message: this.translate.instant('poll.sorting'),
@@ -613,11 +613,7 @@ export class PollPage implements OnInit {
     // if clicking started in a slider, call that slider's pointerup handler:
     if (this.dragged_oid) {
       this.G.L.entry("onBodyPointerup");
-      // This variable needs to be saved before setting the timeout
-      // otherwise the timeout will point to de updated null dragged_oid
-      const previous_dragged_oid = this.dragged_oid
       this.onRatingColPointerup(this.dragged_oid, ev);
-      this.onRatingColPointerup(previous_dragged_oid, ev);
     }
     return true;
   }
@@ -629,11 +625,7 @@ export class PollPage implements OnInit {
     // if touching started in a slider, call that slider's touchup handler:
     if (this.dragged_oid) {
       this.G.L.entry("onBodyTouchup");
-      // This variable needs to be saved before setting the timeout
-      // otherwise the timeout will point to de updated null dragged_oid
-      const previous_dragged_oid = this.dragged_oid
       this.onRatingColTouchup(this.dragged_oid, ev);
-      this.onRatingColTouchup(previous_dragged_oid, ev);
     }
     return true;
   }
