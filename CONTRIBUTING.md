@@ -48,6 +48,7 @@ But other types of contribution will require *setting up a development and testi
 In any case, it might be a good idea to take a short tour as described [here](./documentation/development/BASIC_MANUAL_TEST_TOUR.md). 
 
 ## 3. Contributing code
+We are very happy if you decide to contribute code! We are committed to keep all contributions to vodle free and open-source software, licensed under the very strong copyleft license AGPL-3.0 or later. Hence we need all contributors to give use the necessary nonexclusive rights that will allow us to enforce this license. This is the reason why we ask you to sign a Contributor License Agreement (CLA) before we merge your pull request. We have chosen a very light and balanced version of CLA designed by the Free Software Foundation Europe, the so-called "Fiduciary License Agreement (FLA) 2.0" which was [designed to ensure that the software will forever remain Free Software](https://fsfe.org/activities/fla/fla.en.html) without giving us undue power. If you have any questions about this, please contact us.
 
 Before you start coding: 
 - Please set up your git to [sign all commits](https://docs.github.com/articles/about-gpg/) automatically, because our branch protection rules require all commits to be signed before merging them into main, and it is easier to do it right away than signing them afterwards.
