@@ -142,11 +142,12 @@ export class DraftpollPage implements OnInit {
       this.stage = 0;
       if (!this.pd) {
         this.G.L.info("DraftpollPage editing new draft");
-        this.pd = { db:'default' };
+        this.pd = { db:'default', language:this.G.S.language };
       } else {
         this.G.L.info("DraftpollPage editing draft with data", this.pd);
         this.pd.due_custom = (this.pd.due_custom||'')!=''?(new Date(this.pd.due_custom)):null;
         this.pd.db = this.pd.db||'default';
+        this.pd.language = this.pd.language||this.G.S.language;
       }
     } else if (this.pid in this.G.P.polls) {
       if (this.G.P.polls[this.pid].state == 'draft') {
