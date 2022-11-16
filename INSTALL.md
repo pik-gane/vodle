@@ -260,7 +260,7 @@ $ cd vodle
   $ mkdir log
   ```
 - In this directory, place suitable SSL certificate files `certificate.pem` and `private-unprotected.pem`
-- Also provide a custom `nginx.conf` (based on the template contained here) and insert the Docker bridge IP address of the CouchDB container (found before, see above)
+- Also provide a custom `nginx.conf` (based on the template contained [here](https://github.com/pik-gane/vodle/blob/main/resources/server_admins/nginx.conf.TEMPLATE)) and insert the Docker bridge IP address of the CouchDB container (found before, see above)
 - Symlink vodle's built static Javascript and other assets:
   ```
   $ ln -s ~/vodle/docs www
@@ -276,4 +276,3 @@ $ cd vodle
   ```
   $ sudo docker start|stop|restart vodle-prod-couchdb vodle-prod-nginx
   ```
-  
