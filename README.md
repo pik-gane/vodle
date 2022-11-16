@@ -107,7 +107,7 @@ It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cf
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
-More details in this [more comprehensive introduction](documentation/INTRODUCTION.md) is
+More details about the tool can be found in this [more comprehensive introduction](documentation/INTRODUCTION.md).
 
 We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 
