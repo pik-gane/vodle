@@ -2,7 +2,9 @@
 
 *End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser or install it as a smartphone app.*
 
-This page describes how [contributors](./CONTRIBUTING.md) who want to test code can install vodle on their machine.
+This page describes 
+- how [contributors](./CONTRIBUTING.md) who want to test code can install vodle on their machine.
+- how one can install a production version of the vodle web-app and database on a dedicated server using docker.
 
 ## Setting up a development and testing environment
 
@@ -192,3 +194,86 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   $ curl -X GET "http://admin:password@localhost:5984/vodle/_design/vodle_lists/_list/user_docs_by_last_access/user_last_access_doc_by_doc_id?include_docs=true&older_than=X" | curl -X POST --data-binary @- -H 'Content-Type: application/json' "http://admin:password@localhost:5984/vodle/_purge"
   ```
   where `X` is the number of months the last_access date must be over to be deleted. Note that this will NOT delete these docs from any user device, since the purge is not replicated to these devices!
+
+## Setting up a production environment
+
+The recommended vodle web-app and database production environment conveniently consists of two communicating Docker containers that can easily be installed and configured.
+
+### Fetching vodle
+```
+$ cd ~
+$ git clone https://github.com/pik-gane/vodle.git
+$ cd vodle
+```
+
+### Installing Docker, database, webserver, and necessary tools
+- Install [Docker](https://www.docker.com/)
+- Download standard containers for [CouchDB database](https://hub.docker.com/_/couchdb) and [nginx webserver](https://hub.docker.com/_/nginx):
+  ```
+  $ sudo docker pull couchdb
+  $ sudo docker pull nginx:alpine
+  ```
+- Install [couchdb-bootstrap](https://www.npmjs.com/package/couchdb-bootstrap) to be able to bulk-load data into your CouchDB database:
+  ```
+  $ sudo npm install -g couchdb-bootstrap
+  ```
+
+### Starting and configuring the database
+- Run the Docker CouchDB container:
+  ```
+  $ sudo docker run --restart unless-stopped vodle-prod-couchdb
+  ```
+- Configure the database server and initialize the database:
+  ```
+  $ cd src/couchdb
+  $ couchdb-bootstrap http://admin:password@localhost:5984
+  ```
+  which should respond with a long JSON doc in the log looking somewhat like this, with many `"ok": true`:
+  ```
+  {
+    "configure": {
+      "httpd/enable_cors": {
+        "ok": true,
+        "value": "true"
+      },
+      ...
+        {
+          "ok": true,
+          "id": "examples:scify",
+          "rev": "1-8418d51bcd89e746fbb14f3a37167dec"
+        }
+      ]
+    }
+  }
+  ``` 
+- Find the Docker bridge IP address of the container (often it is 172.17.0.2):
+  ```
+  $ sudo docker inspect vodle-prod-couchdb
+  ```
+  Look for `"bridge": { "IPAddress": ... }`
+ 
+### Configuring and starting the webserver
+- Make a dedicated directory `nginx` for all things nginx, cd into it, and make a log directory:
+  ```
+  $ mkdir ~/nginx
+  $ cd ~/nginx
+  $ mkdir log
+  ```
+- In this directory, place suitable SSL certificate files `certificate.pem` and `private-unprotected.pem`
+- Also provide a custom `nginx.conf` (based on the template contained here) and insert the Docker bridge IP address of the CouchDB container (found before, see above)
+- Symlink vodle's built static Javascript and other assets:
+  ```
+  $ ln -s ~/vodle/docs www
+  ```
+- Still inside `nginx`, run the container as follows:
+  ```
+  $ sudo docker run --name vodle-prod-nginx --restart unless-stopped -v "`pwd`/nginx.conf":/etc/nginx/nginx.conf:ro -v "`pwd`/log/":/var/log/nginx/:rw -v "`pwd`/certificate.pem":/etc/cert.pem -v "`pwd`/private-unprotected.pem":/etc/private-unprotected.pem -v "`pwd`/www":/usr/share/nginx/html:ro -d -p 80:80 -p 443:443 nginx:alpine
+  ```
+  (If necessary, adjust the public ports 80 and 443 to your situation)
+
+### Start/Stop/Restart
+- Simply
+  ```
+  $ sudo docker start|stop|restart vodle-prod-couchdb vodle-prod-nginx
+  ```
+  
