@@ -24,11 +24,12 @@ TODO:
 - store emailandpasswordhash for performance
 */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, Inject, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
+import { DOCUMENT } from '@angular/common';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -339,7 +340,9 @@ export class DataService implements OnDestroy {
       public loadingController: LoadingController,
       public alertCtrl: AlertController,
       public translate: TranslateService,
-      public storage: Storage) { 
+      public storage: Storage,
+      @Inject(DOCUMENT) private document: Document
+      ) { 
   }
 
   ionViewWillLeave() {
@@ -566,7 +569,9 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.process_local_only_user_docs filled user cache with key", key, "and value", value);
       if (key=='local_language') {
         // adjust app language:
-        this.translate.use((value||'')!=''?value:environment.default_lang);
+        const used_lang = (value||'')!=''?value:environment.default_lang;
+        this.translate.use(used_lang);
+        this.document.documentElement.lang = used_lang; 
       }
     }
     this.after_local_only_user_cache_is_filled();
@@ -1440,7 +1445,9 @@ export class DataService implements OnDestroy {
     if (key=='language') {
       this.setu('local_language', value);
     } else if (key=='local_language') {
-        this.translate.use(value!=''?value:environment.default_lang);
+        const used_lang = value!=''?value:environment.default_lang;
+        this.translate.use(used_lang);
+        this.document.documentElement.lang = used_lang; 
     }
     const old_values = {};
     if (keys_triggering_data_move.includes(key)) {
@@ -1811,8 +1818,10 @@ export class DataService implements OnDestroy {
 
   private after_changes(tally=true) {
     this.G.L.entry("DataService.after_changes");
-    const lang = this.getu('language');
-    this.translate.use(lang!=''?lang:environment.default_lang);
+    const lang = this.getu('language'),
+          used_lang = lang!=''?lang:environment.default_lang;
+    this.translate.use(used_lang);
+    this.document.documentElement.lang = used_lang; 
 
     // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs,
     // or if due is long over, delete:
