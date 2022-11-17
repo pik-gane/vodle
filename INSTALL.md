@@ -206,6 +206,7 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   $ git clone https://github.com/pik-gane/vodle.git
   $ cd vodle
   ```
+- If you want to deploy a specific branch, switch to that branch with `git switch ...`
 - Install the Ionic Command Line Interface:
   ```
   $ sudo npm install -g @ionic/cli
