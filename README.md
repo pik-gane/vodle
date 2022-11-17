@@ -133,7 +133,7 @@ You can easily **set up a poll at [app.vodle.it](http://app.vodle.it/#/draftpoll
 
 If you want to try it out first in an existing demo poll, visit **[demo.vodle.it](http://demo.vodle.it)**.
 
-Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*., the app seems to work decently already.
+Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*, the app works quite decently already.
 
 Later, when the First Stable Release is ready, you can alternatively install vodle as an **app on your smartphone** via certain app stores.
 
