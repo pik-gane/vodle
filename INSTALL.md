@@ -1,6 +1,6 @@
 # Installation
 
-*End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser or install it as a smartphone app.*
+*End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser.* (Later on, we will also provide a smartphone app.)
 
 This page describes 
 - how [contributors](./CONTRIBUTING.md) who want to test code can install vodle on their machine.
