@@ -111,7 +111,7 @@ More details about the tool can be found in this [more comprehensive introductio
 
 We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 
-Finally, *vodle* can also be used for *scientific research* on collective decision making. If you want to perform some behavioral experiment with *vodle*, we are happy to adapt it to your needs.
+Finally, *vodle* is also used for [*scientific research* on collective decision making](RESEARCH.md). If you want to perform some behavioral experiment with *vodle*, we are happy to adapt it to your needs.
 
 ### Built With 
 
