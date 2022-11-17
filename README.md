@@ -101,7 +101,7 @@ vodle is developed by the [FutureLab on Game Theory and Networks of Interacting 
 
 (Pronounciation: vəʊdl, as in vote, node, rode, total, yodel and zodiac, not as in model or noodle)
 
-Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
+***Vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
 
 It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
@@ -110,6 +110,8 @@ It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cf
 More details about the tool can be found in this [more comprehensive introduction](documentation/INTRODUCTION.md).
 
 We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
+
+Finally, *vodle* can also be used for *scientific research* on collective decision making. If you want to perform some behavioral experiment with *vodle*, we are happy to adapt it to your needs.
 
 ### Built With 
 
