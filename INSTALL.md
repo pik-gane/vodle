@@ -1,6 +1,6 @@
 # Installation
 
-*End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser or install it as a smartphone app.*
+*End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser.* (Later on, we will also provide a smartphone app.)
 
 This page describes 
 - how [contributors](./CONTRIBUTING.md) who want to test code can install vodle on their machine.
@@ -195,16 +195,33 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   ```
   where `X` is the number of months the last_access date must be over to be deleted. Note that this will NOT delete these docs from any user device, since the purge is not replicated to these devices!
 
+
 ## Setting up a production environment
 
-The recommended vodle web-app and database production environment conveniently consists of two communicating Docker containers that can easily be installed and configured.
+### Download, configure and build vodle
 
-### Fetching vodle
-```
-$ cd ~
-$ git clone https://github.com/pik-gane/vodle.git
-$ cd vodle
-```
+- Install [Node.js](https://nodejs.org/en/download/).
+- Clone the vodle repository:
+  ```
+  $ git clone https://github.com/pik-gane/vodle.git
+  $ cd vodle
+  ```
+- If you want to deploy a specific branch, switch to that branch with `git switch ...`
+- Install the Ionic Command Line Interface:
+  ```
+  $ sudo npm install -g @ionic/cli
+  ```
+- Install all needed packages:
+  ```
+  $ npm install
+  ```
+  (this will install everything listed in [package.json](./package.json))
+- Adjust the settings in `src/environments/environment.prod.ts` according to your needs, e.g., change URLs and paths to imprint and privacy statement.
+- Build vodle:
+  ```
+  $ ionic build --prod
+  ```
+(The last two steps need to be repeated when updating vodle to a new version)
 
 ### Installing Docker, database, webserver, and necessary tools
 - Install [Docker](https://www.docker.com/)
