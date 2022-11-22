@@ -119,6 +119,7 @@ Finally, *vodle* is also used for [*scientific research* on collective decision 
 * [Angular](https://angular.io/)
 * [Typescript](https://www.typescriptlang.org/)
 * [CouchDB](https://couchdb.apache.org/)
+* [Weblate](https://weblate.org/)
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Ionic_Logo.svg" alt="ionic" height="40"/>&nbsp;<img src="https://angular.io/assets/images/logos/angular/angular.svg" alt="angular" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/0d6c64dbbf311879f7d563bfc3ccf559f9ed111c/icons/couchdb/couchdb-original.svg" alt="couchdb" height="40"/> 
 
