@@ -385,7 +385,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
-    if (force || (this.show_live && this.needs_refresh && !(this.refresh_paused) && !this.dragged_oid)) {
+    if (force || (this.show_live && this.needs_refresh && !(this.refresh_paused))) {
       if (!force) {
         const loadingElement = await this.loadingController.create({
           message: this.translate.instant('poll.sorting'),
