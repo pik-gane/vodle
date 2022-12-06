@@ -147,17 +147,17 @@ export class SettingsService {
 
   // OTHER CONSTANTS:
 
-  language_names = { // TODO: keep in "phonetically alphabetical" order
+  language_names = { // TODO: keep in "phonetically (!) alphabetical" order
     de: 'Deutsch',
     en: 'English',
     es: 'Español',
-//    fr: 'Français',
-//    hi: 'हिन्दी',
+    fr: 'Français',
+    hi: 'हिन्दी',
     ko: '한국어',
     pl: 'Polski',
-//    fi: 'Suomi',
-//    zh: '中文'
-    nn: '[JSON file keys]'
+    fi: 'Suomi',
+    zh: '中文',
+    nn: '[show JSON file keys]'
   };
 
   validation_messages = {

@@ -76,7 +76,7 @@ export class AppComponent {
       @Inject(DOCUMENT) private document: Document
       ) {
     console.log("APP CONSTRUCTOR");
-    translate.addLangs(['de','en','es','ko','pl']);
+    translate.addLangs(['de','en','es','fr','hi','ko','pl','fi','zh']);
 
     // this language will be used as a fallback when a translation isn't found in the current language
     translate.setDefaultLang('en');
