@@ -11,7 +11,8 @@
         "[COMMENT] Thank you for helping translate vodle!",
         "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
-        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them.",
+        "[COMMENT] Please take special care with the words 'wap', 'approval', 'approve', see comments below."
     ],
     "_OVERALL_CONVENTIONS_": [
         "[COMMENT] Please use gender-neutral language.",
@@ -33,6 +34,7 @@
     "add": "Añadir",
     "add-option": "Añadir opción",
     "add-target": "Añadir opción",
+    "_COMMENT_approval": "'approve' and 'approval' here refers to the act of formally endorsing an option or formally agreeing to an option. It does NOT refer to 'liking' or 'preferring' the option. In English, the correct form is hence 'approve an option' and not 'approve OF an option'.",
     "approval": "Aprobación",
     "cancel": "Cancelar",
     "choose-file": "Selecciona un archivo",
@@ -67,6 +69,7 @@
     "start": "Comenzar",
     "step-i-of-n": "Paso {{i}} de {{n}}",
     "test": "Prueba",
+    "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! The willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
     "wap": "Wap",
     "yes": "Si",
     "about": {
@@ -111,7 +114,7 @@
         "colors-after-green": " apruebas completamente esta opción.",
         "colors-before-dark-green": " Tu cuota va hacia la opción ",
         "colors-dark-green": "verde oscuro.",
-        "colors-after-dark-green": "",
+        "colors-after-dark-green": " opción.",
         "suggestion-general": "<b>Sugerencia:</b> Quizás quieras hablar con aquellos que aprueban opciones que tú no (rojo y azul). ¿Tal vez puedan encontrar juntos otra opción que todos puedan aprobar? <br/><small>Una buena opción intermedia puede ya estar en el menú o quizás quieras añadirla.</small>"
     },
     "assist": {
@@ -486,12 +489,9 @@
         "running": "Encuestas activas",
         "no-running-polls-1": "En este momento, vodle no encuentra encuestas en las que puedas participar.",
         "no-running-polls-2": "Si has recibido una invitación a una encuesta, por favor ¡haz click en la invitación!",
-
         "recently-closed": "Finalizadas",
-
         "no-recently-closed-polls-1": "Vodle no encuentra ninguna encuesta finalizada en la que hayas participado.",
         "no-recently-closed-polls-2": "Si tienes una invitación a una encuesta que ya finalizó, puedes hacer click en el link de invitación para ver los resultados de la encuesta.",
-
         "older": "Previos",
         "drafts": "Borradores",
         "no-draft-polls-1": "En este momento, no tienes borradores de encuestas.",
@@ -536,6 +536,7 @@
         "type-winner": "Una opción es la ganadora",
         "assist-me-inline": "Ayúdame",
         "assist-me-button": "Ayúdame",
+        "level-of-agreement": "% agreement",
         "analysis-details": "Detalles",
         "show-live": "resultados<br/>en vivo",
         "_COMMENT_HINTS": "[COMMENT] Some of the hint texts below are split into 1. a part before the word 'wap' or 'approving', including necessary whitespace, 2. the word 'wap' or 'approving' itself (which is then formatted as a link to a help page), and 3. a part after the word 'wap' or 'approving', including necessary whitespace.",
@@ -549,7 +550,7 @@
         "hint-abstaining-2-after-wap": " positivo <b>(arrastra hacia la derecha el marcador)</b>, o puedes delegarlo en alguien quien confíes.",
         "hint-only1positive-1-before-wap": "Estás dando solamente a una opción un ",
         "hint-only1positive-1-wap": "wap",
-        "hint-only1positive-1-after-wap": " postiivo.",
+        "hint-only1positive-1-after-wap": " positivo.",
         "hint-only1positive-2": "Deberías considerar darle, a algunas opciones de compromiso, un wap positivo también.",
         "hint-only1approved-1-before-approving": "Tu estaś ",
         "hint-only1approved-1-approving": "aprobando",
