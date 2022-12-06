@@ -185,7 +185,6 @@
         "message-body-dont-share": "Bitte gib den Link an niemanden weiter.",
         "message-body-regards": "Mit besten Grüßen"
     },
-
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
         "-page-title": "Meine Daten löschen",
@@ -196,7 +195,6 @@
         "success-body": "vodle hofft, Dich bald wiederzusehen, auch wenn es sich nicht an Dich erinnern wird :-)",
         "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden."
     },
-
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
         "-page-title": "Delegierte:r sein?",
@@ -400,7 +398,7 @@
         "p24": "Jetzt, wo wir verstanden haben, wie die Zustimmung berechnet wird, können wir uns der Frage widmen, wie die <b>Gewinnwahrscheinlichkeiten</b> der Optionen bzw. die <b>Aufteilung des Budgets</b> auf die Optionen berechnet wird, und wie die tatsächlich <b>gewinnende Option</b> ermittelt wird. Wenn genau eine Option 100% Zustimmung hat, dann gewinnt diese mit Sicherheit bzw. bekommt das gesamte Budget. Wenn mehrere Optionen 100% Zustimmmung haben, wird von diesen Option diejenige, die die größte Summe aller Waps hat, gewinnen bzw. das gesamte Budget bekommen. <br/>Wenn keine Option 100% Zustimmung hat, verteilt <i>vodle</i> die Gewinnwahrscheinlichkeit bzw. das Budget zwischen zwei oder mehr Optionen. In diesem Fall wird die Option mit der größten Zustimmung am wahrscheinlichsten gewinnen bzw. den größten Teil des Budgets bekommen. Aber andere Optionen, die zumindest etwas Zustimmung haben, können dann auch mit geringerer Wahrscheinlichkeit gewinnen oder einen kleineren Teil des Budgets bekommen. <br/>Wenn in der Abstimmung am Ende eine Option gewählt wird, bedeutet dies, dass dann der Zufall eine gewisse Rolle spielt. Das liegt daran, dass wir sicherstellen müssen, dass keine Gruppe von Teilnehmer:innen einfach von den anderen ignoriert werden kann, wie es bei Mehrheitsentscheidungen der Fall ist. Auf diese Weise gibt <i>vodle</i> allen Teilnehmer:innen genau das selbe Maß an Einfluss und jeder Fraktion einen Einfluss, der ihrer Größe entspricht.",
         "p25": "Wenn keine Option 100% Zustimmung hat, aber bei der Abstimmung eine einzelne Option gewählt werden soll, dann geschieht dies wie folgt. Erst wird ein:e Teilnehmer:in per Los gezogen. Von den Optionen, der dieser Person zugestimmt hat, gewinnt diejenige mit der größten Gesamt-Zustimmung. (Bei Gleichstand wird das durchschnittliche Wap hinzugezogen.) Das Tortenstück links von jeder Option zeigt, mit welcher Wahrscheinlichkeit dabei diese Option gewinnen würde.",
         "p26": "Wenn hingegen bei der Abstimmung ein Budget verteilt werden soll, dann wird der Anteil des Budgets für jede mögliche Option auf genau die gleiche Weise berechnet. Der Anteil für eine Option entspricht der Anzahl an Teilnehmer:innen, die (i) dieser Option zugestimmt haben, aber (ii) keiner anderen Option zugestimmt haben, das insgesamt mehr Zustimmung hat.",
-        "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"        
+        "p27": "Jetzt wissen wir also, wie die Gewinner-Option bzw. die Budget-Anteile gefunden werden. <b><i>Nur wie solltest Du jetzt Deine „Zustimm-Bereitschaft“ in der Praxis festlegen?</i></b> Dafür gibt es eine einfache Faustregel, die oft sehr gute Kompromisse ergibt: <b>Gib Deiner Lieblingsoption 100. Gib allen Optionen, die überdurchschnittlich gut sind, etwas zwischen Null und 100 – je mehr, je besser die Option ist. Schließlich gib allen unterdurchschnittlichen Optionen Null.</b>"
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
@@ -641,8 +639,8 @@
         "db-server-url-required": "Eine Datenbank-URL wird benötigt.",
         "db-server-url-pattern": "Bitte gib eine gültige URL ein.",
         "db-user-required": "Ein Datenbank-Benutzername wird benötigt.",
-        "email-required": "Emailadresse wird benötigt.",
-        "email-valid": "Bitte gib eine gültige Emailadresse ein.",
+        "email-required": "E-Mail-Adresse wird benötigt.",
+        "email-valid": "Bitte gib eine gültige E-Mail-Adresse ein.",
         "password-length": "Das Passwort muss mindestens 8 Zeichen lang sein.",
         "password-pattern": "Das Password muss einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten.",
         "password-required": "Ein Passwort wird benötigt.",
