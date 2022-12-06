@@ -116,7 +116,7 @@ TODO:
         <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
           <!--<ion-icon *ngIf="p.type=='share'" class="poll-type-list" size="small" src="./assets/icon/flowers.svg"></ion-icon>-->
           <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-          <i [innerHtml]="p.title"></i>
+          <i [lang]="p.language" [innerHtml]="p.title"></i>
         </ion-label>
         <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
 
@@ -168,7 +168,7 @@ TODO:
         <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
           <ion-label>
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-            <i [innerHtml]="p.title"></i>
+            <i [lang]="p.language" [innerHtml]="p.title"></i>
           </ion-label>
           <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
 
@@ -202,7 +202,7 @@ TODO:
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
         <ion-item *ngIf="p.state=='closed'" [routerLink]="'/draftpoll/'+p.pid">
           <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-          <small><i>{{p.title}}</i></small>
+          <small><i [lang]="p.language">{{p.title}}</i></small>
           <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
         </ion-item>
       </ng-container>
@@ -220,7 +220,7 @@ TODO:
         <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: pointer;">
           <ion-label>
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-            <i [innerHtml]="p.title"></i>
+            <i [lang]="p.language" [innerHtml]="p.title"></i>
           </ion-label>
           <ion-buttons slot="end" 
               style="position: relative; right: -10px;"

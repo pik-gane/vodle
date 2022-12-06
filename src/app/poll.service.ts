@@ -414,7 +414,7 @@ export class Poll {
   get type(): poll_type_t { return this.G.D.getp(this._pid, 'type') as poll_type_t; }
   set type(value: poll_type_t) { this.G.D.setp(this._pid, 'type', value); }
 
-  get language(): string { return this.G.D.getp(this._pid, 'language') as poll_type_t; }
+  get language(): string { return this.G.D.getp(this._pid, 'language'); }
   set language(value: string) { this.G.D.setp(this._pid, 'language', value); }
 
   get title(): string { return this.G.D.getp(this._pid, 'title'); }

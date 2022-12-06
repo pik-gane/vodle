@@ -48,12 +48,13 @@ But other types of contribution will require *setting up a development and testi
 In any case, it might be a good idea to take a short tour as described [here](./documentation/development/BASIC_MANUAL_TEST_TOUR.md). 
 
 ## 3. Contributing code
+We are very happy if you decide to contribute code! We are committed to keep all contributions to vodle free and open-source software, licensed under the very strong copyleft license AGPL-3.0 or later. Hence we need all contributors to give use the necessary nonexclusive rights that will allow us to enforce this license. This is the reason why we ask you to sign a Contributor License Agreement (CLA) before we merge your pull request. We have chosen a very light and balanced version of CLA designed by the Free Software Foundation Europe, the so-called "Fiduciary License Agreement (FLA) 2.0" which was [designed to ensure that the software will forever remain Free Software](https://fsfe.org/activities/fla/fla.en.html) without giving us undue power. If you have any questions about this, please contact us.
 
 Before you start coding: 
 - Please set up your git to [sign all commits](https://docs.github.com/articles/about-gpg/) automatically, because our branch protection rules require all commits to be signed before merging them into main, and it is easier to do it right away than signing them afterwards.
 
 Once you do a pull request:
-- Please [sign our Contributor License Agreement](https://cla-assistant.io/pik-gane/vodle) because we use a permissive license that requires this from all contributors.
+- Please [sign our Contributor License Agreement](https://cla-assistant.io/pik-gane/vodle).
 
 ### 3.1. Finding your way around the code
 
@@ -75,20 +76,19 @@ When coding, please try to stick to the style you see in the existing code. Ther
 
 Currently, the following workflow for translations has proved useful:
 
-1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  
-2. Once there is an issue for a language, we will set up that language in the Crowdin free translation tool and it will appear here: https://crowdin.com/project/vodle
-3. On that page, you can start working on new or existing translations right-away by clicking on the language and then on "en.json" (you have to register for a free Crowdin account however). The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file).
-4. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the GUI.
-5. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
-6. Some terms (e.g., "wap", "approve", "option") require special care and are thus described in Crowdin's glossary/terminology, which you can switch on via the third button on the right-hand side of the Crowdin editor: ![image](https://user-images.githubusercontent.com/22815964/197727161-956ebd09-6682-4515-b660-8c846dadac3f.png) 
-7. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
-8. If you spot an error in the English base text, please *do not* correct it within Crowdin but rather report it in the issue page.
-9. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
-10. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
+1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  In that issue, indicate whether you prefer to use [Crowdin](https://crowdin.com) or [Weblate](https://weblate.org/en/) for working on the translations. Even though we [have used Crowdin in the past](https://crowdin.com/project/vodle), **we encourage you to use Weblate** instead since it is libre software. Both tools will be free of charge for you (you have to register for free accounts there however). A third option would be to work on the JSON files directly, but we discourage this since it makes the review process harder; if you still choose this way, please contact us first before you work on a JSON file directly.
+2. Once there is an issue and prospective contributor for a language, we will set up that language in Crowdin or Weblate and put the link to it into the issue. The current weblate translations can be found [here](https://hosted.weblate.org/projects/vodle/).
+3. If working with Crowdin, you can start working on new or existing translations by clicking on the language and then on "en.json". The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file). 
+4. If working with Weblate, please look at this [video tutorial](https://www.youtube.com/watch?v=VFwTn32MrBw) for now. Once we have collected experiences with it, we will add some details here as well. 
+5. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the Crowdin GUI.
+6. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
+7. Some terms (e.g., "wap", "approve", "option") require special care and are thus described in Crowdin's glossary/terminology, which you can switch on via the third button on the right-hand side of the Crowdin editor: ![image](https://user-images.githubusercontent.com/22815964/197727161-956ebd09-6682-4515-b660-8c846dadac3f.png) 
+8. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
+9. If you spot an error in the English base text, please *do not* correct it within the translation tool but rather report it in the issue page.
+10. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
+11. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
 
-If you are more experienced with Crowdin than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between github and Crowdin, please let us know!
-
-For those who don't want to use Crowdin, you can also work on the JSON files under [src/assets/i18n/](./src/assets/i18n/) directly, but this might introduce syncing issues with Crowdin if others use Crowdin for the same language – so please contact us first before you work on a JSON file directly.
+If you are more experienced with Weblate than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between the git repo and the translation tool, please let us know!
 
 <!--
 

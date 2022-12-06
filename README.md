@@ -17,6 +17,7 @@
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) 
 [![try the MVP](https://img.shields.io/badge/Status-Minimal%20Viable%20Product%20available-brightgreen)](http://app.vodle.it)
 ![](https://img.shields.io/badge/Status-Approaching%20First%20Release-green)
+[![Coverity Scan Build Status](https://img.shields.io/coverity/scan/26984.svg)](https://scan.coverity.com/projects/pik-gane-vodle)
 
 ## *[Contributions welcome!](CONTRIBUTING.md)*
 
@@ -98,15 +99,21 @@ A few of them also here:
 
 vodle is developed by the [FutureLab on Game Theory and Networks of Interacting Agents](https://www.pik-potsdam.de/en/institute/futurelabs/gane) at the [Potsdam Institute for Climate Impact Research](https://www.pik-potsdam.de/), with contributions from the open-source community. 
 
-Once released, ***vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
+It is both [Freeware](https://en.wikipedia.org/wiki/Freeware) (comes at no monetary cost) and [FOSS/FLOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software) (free/libre open-source software).
+
+(Pronounciation: vəʊdl, as in vote, node, rode, total, yodel and zodiac, not as in model or noodle)
+
+***Vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
 
 It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
-More details in this [more comprehensive introduction](documentation/INTRODUCTION.md) is
+More details about the tool can be found in this [more comprehensive introduction](documentation/INTRODUCTION.md).
 
 We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
+
+Finally, *vodle* is also used for [*scientific research* on collective decision making](RESEARCH.md). If you want to perform some behavioral experiment with *vodle*, we are happy to adapt it to your needs.
 
 ### Built With 
 
@@ -114,6 +121,7 @@ We also have a [Website for end users: **vodle.it**](http://www.vodle.it).
 * [Angular](https://angular.io/)
 * [Typescript](https://www.typescriptlang.org/)
 * [CouchDB](https://couchdb.apache.org/)
+* [Weblate](https://weblate.org/)
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Ionic_Logo.svg" alt="ionic" height="40"/>&nbsp;<img src="https://angular.io/assets/images/logos/angular/angular.svg" alt="angular" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/0d6c64dbbf311879f7d563bfc3ccf559f9ed111c/icons/couchdb/couchdb-original.svg" alt="couchdb" height="40"/> 
 
@@ -128,7 +136,7 @@ You can easily **set up a poll at [app.vodle.it](http://app.vodle.it/#/draftpoll
 
 If you want to try it out first in an existing demo poll, visit **[demo.vodle.it](http://demo.vodle.it)**.
 
-Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*., the app seems to work decently already.
+Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*, the app works quite decently already.
 
 Later, when the First Stable Release is ready, you can alternatively install vodle as an **app on your smartphone** via certain app stores.
 
