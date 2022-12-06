@@ -11,7 +11,8 @@
         "[COMMENT] Thank you for helping translate vodle!",
         "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
-        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them.",
+        "[COMMENT] Please take special care with the words 'wap', 'approval', 'approve', see comments below."
     ],
     "_OVERALL_CONVENTIONS_": [
         "[COMMENT] Please use gender-neutral language.",
@@ -33,6 +34,7 @@
     "add": "추가",
     "add-option": "선택지 추가",
     "add-target": "선택지 추가",
+    "_COMMENT_approval": "'approve' and 'approval' here refers to the act of formally endorsing an option or formally agreeing to an option. It does NOT refer to 'liking' or 'preferring' the option. In English, the correct form is hence 'approve an option' and not 'approve OF an option'.",
     "approval": "승인",
     "cancel": "취소",
     "choose-file": "파일 선택",
@@ -67,6 +69,7 @@
     "start": "시작",
     "step-i-of-n": "{{n}} 단계 중 {{i}} 번째 단계",
     "test": "테스트",
+    "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! The willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
     "wap": "승인 점수",
     "yes": "예",
     "about": {
@@ -235,6 +238,7 @@
         "-page-title": "투표 초안 수정",
         "del-poll-confirm-question": "이 투표 초안을 삭제합니까?<br/>(이 작업은 되돌릴 수 없습니다!)",
         "general-information": "기본 정보",
+        "details": "Details",
         "type-label": "이 그룹은 이 투표에서...",
         "type-winner": "여러 선택지 중 한 가지를 고릅니다.",
         "type-share": "여러 선택지에 어떠한 자원을 분배합니다.",
