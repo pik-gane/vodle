@@ -221,7 +221,7 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   ```
   $ ionic build --prod
   ```
-(The last two steps need to be repeated when updating vodle to a new version)
+(The last three steps need to be repeated when updating vodle to a new version)
 
 ### Installing Docker, database, webserver, and necessary tools
 - Install [Docker](https://www.docker.com/)
@@ -238,11 +238,11 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
 ### Starting and configuring the database
 - Run the Docker CouchDB container:
   ```
-  $ sudo docker run --restart unless-stopped vodle-prod-couchdb
+  $ sudo docker run --restart unless-stopped --name vodle-prod-couchdb -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 --expose 5984 -m 1G -d couchdb
   ```
 - Configure the database server and initialize the database:
   ```
-  $ cd src/couchdb
+  $ cd couchdb
   $ couchdb-bootstrap http://admin:password@localhost:5984
   ```
   which should respond with a long JSON doc in the log looking somewhat like this, with many `"ok": true`:
@@ -276,8 +276,8 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   $ cd ~/nginx
   $ mkdir log
   ```
-- In this directory, place suitable SSL certificate files `certificate.pem` and `private-unprotected.pem`
-- Also provide a custom `nginx.conf` (based on the template contained [here](https://github.com/pik-gane/vodle/blob/main/resources/server_admins/nginx.conf.TEMPLATE)) and insert the Docker bridge IP address of the CouchDB container (found before, see above)
+- In the nginx directory, place suitable SSL certificate files `certificate.pem` and `private-unprotected.pem`
+- Also provide a custom `nginx.conf` (based on the template contained [here](https://raw.githubusercontent.com/pik-gane/vodle/main/resources/server_admins/nginx.conf.TEMPLATE)) and insert the Docker bridge IP address of the CouchDB container (found before, see above)
 - Symlink vodle's built static Javascript and other assets:
   ```
   $ ln -s ~/vodle/docs www
