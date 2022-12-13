@@ -21,8 +21,10 @@ export const environment = {
   LEAVE_THIS_AS_THE_FIRST_ENTRY: true,
   // Important: leave the previous line exactly as it is!
   production: true,
-  imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "./assets/privacy.html",
+  imprint_url: null,
+  privacy_statement_url: null,
+//  imprint_url: "./assets/impressum.html",
+//  privacy_statement_url: "./assets/privacy.html",
   privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
   logging: {
     logLevels: [

@@ -160,12 +160,17 @@ TODO:
         </ng-container>
         </div>  
       </form>
-      <ion-item lines="none" class="item-text-wrap">
-        <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
-        <small><p>
-          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
-        </p></small>
-      </ion-item>
+      <ng-container *ngIf="E.privacy_statement_url">
+        <ion-item lines="none" class="item-text-wrap">
+          <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
+          <small><p>
+            <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+          </p></small>
+        </ion-item>
+      </ng-container>
+      <ng-container *ngIf="!E.privacy_statement_url">
+        <ion-checkbox style="visibility: hidden" value="true" [(ngModel)]="accept_privacy"></ion-checkbox>
+      </ng-container>
       <ion-item lines="none">
         <ion-button type="submit" size="larger" color="primary" slot="end" 
             [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''" 

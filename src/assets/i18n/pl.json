@@ -456,7 +456,7 @@
         "ask-old-email-2": "W ten sposób możesz uzyskać dostęp do Twoich danych.",
         "consent-privacy-before-privacy": "Tak, przeczytałem ",
         "consent-privacy-privacy": "deklarację o ochronie danych i warunki użytkowania",
-        "consent-privacy-after-privacy": ". Wyrażam zgodę na przetwarzanie moich danych na urządzeniach użytkownika i serwerach bazy danych w opisany sposób, aby móc uczestniczyć w ankietach. Zgadzam się, że niektóre z moich danych zostaną przekazane innym uczestnikom w formie pseudoanimizowanej. Mam świadomość, że moje prawo do usunięcia moich danych jest zatem ograniczone, ponieważ kopie te nie mogą być usuwane na wszystkich urządzeniach użytkowników. Mogę cofnąć tę zgodę, wysyłając e-mail na adres privacy@vodle.it.",
+        "consent-privacy-after-privacy": ". Wyrażam zgodę na przetwarzanie moich danych na urządzeniach użytkownika i serwerach bazy danych w opisany sposób, aby móc uczestniczyć w ankietach. Zgadzam się, że niektóre z moich danych zostaną przekazane innym uczestnikom w formie pseudoanimizowanej. Mam świadomość, że moje prawo do usunięcia moich danych jest zatem ograniczone, ponieważ kopie te nie mogą być usuwane na wszystkich urządzeniach użytkowników. Mogę cofnąć tę zgodę, wysyłając e-mail.",
         "login-as-guest-head": "Alternatively, you can use a guest account:",
         "login-as-guest-button": "Use guest account",
         "login-as-guest-foot": "(Please check the consent box first)",

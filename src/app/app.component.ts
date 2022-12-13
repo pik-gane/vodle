@@ -20,6 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { Component, Inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { DOCUMENT } from '@angular/common';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -48,16 +49,19 @@ export class AppComponent {
       url: '/about',
       icon: 'information-circle-outline'
     },
+  ].concat(environment.privacy_statement_url?[
     {
       title: 'privacy.-page-title',
       url: '/privacy',
       icon: 'shield-checkmark-outline'
     },
+  ]:[]).concat(environment.imprint_url?[
     {
       title: 'imprint.-page-title',
       url: '/imprint',
       icon: 'at-outline'
     },
+  ]:[]).concat([
     {
       title: 'delete-all.-page-title',
       url: '/delete-all',
@@ -68,7 +72,7 @@ export class AppComponent {
       url: '/logout',
       icon: 'log-out'
     }
-  ];
+  ]);
 
 
   constructor(

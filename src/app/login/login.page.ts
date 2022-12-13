@@ -67,7 +67,7 @@ export class LoginPage implements OnInit {
   showing_password: boolean;
   advanced_expanded: boolean;
   terms_expanded = false;
-  accept_privacy = false;
+  accept_privacy = !environment.privacy_statement_url; // auto-accept if empty privacy URL
   save_password = false;
   
   @ViewChild('input_email', { static: false }) input_email: IonInput;
@@ -99,7 +99,7 @@ export class LoginPage implements OnInit {
       }
       if (step == 'connected') {
         // store privacy consent in database:
-        this.G.D.setu('consent', 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.');
+        this.G.D.setu('consent', 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.');
       }
 
     });
