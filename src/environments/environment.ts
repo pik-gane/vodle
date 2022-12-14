@@ -77,6 +77,10 @@ export const environment = {
   polls: {
     max_duration_days: 31,
     delete_after_days: 31
+  },
+  hosting_institution: {
+    name: "GitHub Pages",
+    url: "https://pages.github.com/"
   }
 };
 

@@ -65,6 +65,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <h3 [innerHtml]="'about.h2'|translate"></h3>
     <p [innerHtml]="'about.p21'|translate:{github_url:environment.github_url}">
     </p>
+    <p *ngIf="environment.hosting_institution.name"><b [innerHtml]="'about.p22-this-instance'|translate:{hosting_institution_name:environment.hosting_institution.name, hosting_institution_url:environment.hosting_institution.url}"></b>
+    </p>
+    <!-- TODO: turn this into a translated part and a name + link parameter fetched from the environment: 
+    <p><b>This instance of the vodle web-app is generously hosted by the <i><a href="https://osuosl.org" target="_blank">Oregon State University Open Source Lab</a>.</i></b></p>
+    -->
   <h3 [innerHtml]="'about.h3'|translate"></h3>
     <p [innerHtml]="'about.p31'|translate:{support_vodle_url:environment.support_vodle_url}"></p>
 </ion-content>

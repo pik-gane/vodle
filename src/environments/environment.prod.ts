@@ -76,6 +76,10 @@ export const environment = {
     max_duration_days: 31,
     delete_after_days: 31
   },
+  hosting_institution: {
+    name: null,
+    url: null
+  },
   // Important: leave the next line exactly as it is!
   LEAVE_THIS_AS_THE_LAST_ENTRY: true
 };

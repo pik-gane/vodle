@@ -216,7 +216,7 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
   $ npm install
   ```
   (this will install everything listed in [package.json](./package.json))
-- Adjust the settings in `src/environments/environment.prod.ts` according to your needs, e.g., change URLs and paths to imprint and privacy statement.
+- Adjust the settings in `src/environments/environment.prod.ts` according to your needs. In particular, change or remove URLs, paths, names, and titles of imprint, privacy statement, and hosting institution.
 - Build vodle:
   ```
   $ ionic build --prod
