@@ -27,5 +27,6 @@
         "first-day-of-week": "1"
     },
     "add-option": "添加选项",
-    "step-i-of-n": "{{n}} 的步骤 {{i}}"
+    "step-i-of-n": "{{n}} 的步骤 {{i}}",
+    "add-target": "添加选项"
 }
