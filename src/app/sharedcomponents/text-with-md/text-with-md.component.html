@@ -1,0 +1,10 @@
+<ng-container *ngIf="!showTextInline else inline">
+  <ion-text [color]="color">
+    <i [lang]="language" [innerHtml]="text"></i>
+  </ion-text>
+</ng-container>
+<ng-template #inline>
+  <span [style.display]="inline">
+    <i><span [lang]="language" [innerHtml]="text"></span>&nbsp;&nbsp;</i>
+  </span>
+</ng-template>

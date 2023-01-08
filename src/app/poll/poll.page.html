@@ -172,7 +172,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 ? 'white-space: normal; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
                 : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
                 ">
-              <i *ngIf="(p.desc||'')!=''" [lang]="p.language" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
+              <app-text-with-md *ngIf="(p.desc||'')!=''" [text]="p.desc" [language]="p.language" [color]="white"></app-text-with-md>
+              <span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
               <small *ngIf="(p.url||'') != ''">
                 (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url));details_expanded=!details_expanded"><ion-text 
                   class="externallink"  
@@ -884,9 +885,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       <span [style.display]="((show_live||!p.allow_voting) && (!!p.options[oidsorted[i]].desc || !!p.options[oidsorted[i]].url)) ? 'inline' : 'none'">
                         <br/>
                       </span>
-                      <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
-                        <i><span [lang]="p.language" [innerHtml]="p.options[oidsorted[i]].desc"></span>&nbsp;&nbsp;</i>
-                      </span>
+                      <app-text-with-md *ngIf="(p.options[oidsorted[i]].desc||'')!=''" [text]="p.options[oidsorted[i]].desc" [language]="p.language" [showTextInline]="true"></app-text-with-md>
                       <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
                         <small>
                           (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.options[oidsorted[i]].url))"><ion-text 

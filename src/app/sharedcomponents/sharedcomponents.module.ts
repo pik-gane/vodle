@@ -25,9 +25,10 @@ import { TranslateModule } from '@ngx-translate/core';
 
 import { ExpandableComponent } from './expandable/expandable.component';
 import { SelectServerComponent } from './select-server/select-server.component';
+import {TextWithMDComponent} from './text-with-md/text-with-md.component'
 
 @NgModule({
-  declarations: [ExpandableComponent, SelectServerComponent],
+  declarations: [ExpandableComponent, SelectServerComponent,TextWithMDComponent],
   imports: [
     CommonModule, 
     IonicModule, 
@@ -35,6 +36,6 @@ import { SelectServerComponent } from './select-server/select-server.component';
     ReactiveFormsModule,
     TranslateModule.forChild()
   ],
-  exports: [ExpandableComponent, SelectServerComponent]
+  exports: [ExpandableComponent, SelectServerComponent,TextWithMDComponent]
 })
 export class SharedcomponentsModule { }
