@@ -24,8 +24,9 @@ export class TextWithMDComponent implements OnInit {
       .replace(
         /(\*{1,3})(.+?)\1(?!\*)/g,
         (match, { length: length }, text) => {
-          if (length !== 2) text = text.italics()
-          return length === 1 ? text : text.bold()
+          if (length !== 2)
+            text = `<i>${text}</i>`;
+          return length === 1 ? text : `<b>${text}</b>`;
         }
       )
       .replace(/\n/g, '<br>') // new line
