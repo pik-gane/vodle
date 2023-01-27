@@ -86,6 +86,7 @@
         "p18": "सटीक प्रक्रिया: विकल्पों को अवरोही अनुमोदन द्वारा क्रमबद्ध किया जाता है। फिर प्रत्येक विकल्प का हिस्सा उन प्रतिभागियों की संख्या के समानुपाती होता है जिन्होंने इस विकल्प को मंजूरी दी है लेकिन कोई उच्च-अप विकल्प नहीं है।",
         "h2": "इसके पीछे कौन है?",
         "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
+        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
         "h3": "वोडल का समर्थन करें!",
         "p31": "जैसा कि हम सभी के लिए वोडल मुक्त रखने के लिए प्रतिबद्ध हैं, हमें अभी भी और सहायता की आवश्यकता है। यदि आप एक बेवकूफ, रचनात्मक, प्रभावशाली, वैज्ञानिक, परोपकारी, कार्यकर्ता, राजनीतिज्ञ, मित्रवत विदेशी हैं ... जो निष्पक्ष और भविष्य के भविष्य में विश्वास करते हैं; कुशल आम सहमति बनाना और किसी भी छोटे तरीके से योगदान देना चाहते हैं, हमारे पास कुछ विचार हैं <a href=\"{{support_vodle_url}}\" target=\"_blank\">आप हमें कैसे समर्थन दे सकते हैं!</a>"
     },
@@ -460,7 +461,7 @@
         "ask-old-email-2": "इस तरह आप अपने मौजूदा डेटा तक पहुंच सकते है",
         "consent-privacy-before-privacy": "हाँ, मैंने पढ़ा है ",
         "consent-privacy-privacy": "डाटा सुरक्षा घोषणा और उपयोग की शर्तें",
-        "consent-privacy-after-privacy": ". मैं मतदान में भाग लेने के लिए, वर्णित तरीके से उपयोगकर्ता उपकरणों और डेटाबेस सर्वर पर अपने डेटा के प्रसंस्करण के लिए सहमति देता हूं। मैं सहमत हूं कि मेरा कुछ डेटा छद्म नाम के रूप में अन्य प्रतिभागियों को प्रेषित किया जाएगा। मुझे पता है कि मेरे डेटा को हटाने का मेरा अधिकार सीमित है क्योंकि इन प्रतियों को सभी उपयोगकर्ता उपकरणों पर हटाया नहीं जा सकता है। मैं इस सहमति को ईमेल द्वारा privacy@vodle.it पर रद्द कर सकता हूं।",
+        "consent-privacy-after-privacy": ". मैं मतदान में भाग लेने के लिए, वर्णित तरीके से उपयोगकर्ता उपकरणों और डेटाबेस सर्वर पर अपने डेटा के प्रसंस्करण के लिए सहमति देता हूं। मैं सहमत हूं कि मेरा कुछ डेटा छद्म नाम के रूप में अन्य प्रतिभागियों को प्रेषित किया जाएगा। मुझे पता है कि मेरे डेटा को हटाने का मेरा अधिकार सीमित है क्योंकि इन प्रतियों को सभी उपयोगकर्ता उपकरणों पर हटाया नहीं जा सकता है। मैं इस सहमति को ईमेल द्वारा पर रद्द कर सकता हूं।",
         "login-as-guest-head": "वैकल्पिक रूप से, आप अतिथि खाते का उपयोग कर सकते हैं:",
         "login-as-guest-button": "अतिथि खाते का प्रयोग करें",
         "login-as-guest-foot": "(कृपया पहले सहमति बॉक्स को चेक करें)",
