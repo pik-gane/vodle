@@ -86,6 +86,7 @@
         "p18": "구체적인 과정: 선택지들은 승인 받은 수에 따라 내림차순으로 정렬됩니다. 이로써 선택지 각각의 지분은 그 선택지를 승인하였지만 그보다 더 높은 우선순위의 선택지가 없는 참가자의 수에 비례합니다.",
         "h2": "제작자들",
         "p21": "vodle의 알고리즘 (\"최대 부분 합의\" 또는 \"maximum partial consensus\") 은 Potsdam Institute for Climate Impact Research (PIK) 에서 수학자 Jobst Heitzig와 Forest W. Simmons의 협업으로 개발되고 공평성 향상을 위해 최적화되었습니다. 저명한 사회학자인 Mark Granovetter의 \"임곗값 모델\"(\"threshold model\") 로부터 영감을 받아 연구되었습니다. 이 앱은 오픈소스이며, 코드는 <a href=\"{{github_url}}\" target=\"_blank\">github</a>에 호스팅 되어있습니다. 메인 개발자: Jobst Heitzig. 최고 기여자: Marius Amrhein. 자문 위원: Adrian Lison. 그 밖의 기여자분들: 프로그램 코드를 참조해 주십시오.",
+        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
         "h3": "vodle을 지원해주세요!",
         "p31": "모두에게 vodle을 무료로 제공하고자 하기에 저희는 더 많은 도움이 필요합니다. 너드, 창의적 사람, 인플루언서, 과학자, 자선가, 정치 활동가, 정치인, 외계인... 누구든 간에 공평하고 효율적인 결론 도출 시스템에 도움을 주고 싶으신 분은 <a href=\"{{support_vodle_url}}\" target=\"_blank\">언제든지 환영입니다!</a>"
     },
@@ -460,7 +461,7 @@
         "ask-old-email-2": "이로써 당신의 기존 데이터를 사용할 수 있습니다.",
         "consent-privacy-before-privacy": "네, 저는 다음 내용을 읽어보았습니다: ",
         "consent-privacy-privacy": "데이터 보호 선언 및 사용 약관",
-        "consent-privacy-after-privacy": "저는 투표에 참여하기 위해 제 데이터가 표기된 방식대로 사용자들의 장치와 데이터베이스 서버에서 활용되는 것에 대해 동의합니다. 또한, 제 데이터가 별명 또는 익명의 형태로 다른 참가자들에게 전송되는 것에 대해 동의합니다. 다른 모든 사용자의 장치에서 이 데이터들을 삭제할 방안이 없으므로, 이후에 자신의 모든 관련 데이터를 지우는 권한에 있어 제한받음을 인지하고 있습니다. 언제든지 privacy@vodle.it에 이메일을 보내 동의를 취소할 수 있습니다.",
+        "consent-privacy-after-privacy": "저는 투표에 참여하기 위해 제 데이터가 표기된 방식대로 사용자들의 장치와 데이터베이스 서버에서 활용되는 것에 대해 동의합니다. 또한, 제 데이터가 별명 또는 익명의 형태로 다른 참가자들에게 전송되는 것에 대해 동의합니다. 다른 모든 사용자의 장치에서 이 데이터들을 삭제할 방안이 없으므로, 이후에 자신의 모든 관련 데이터를 지우는 권한에 있어 제한받음을 인지하고 있습니다. 언제든지 에 이메일을 보내 동의를 취소할 수 있습니다.",
         "login-as-guest-head": "Alternatively, you can use a guest account:",
         "login-as-guest-button": "Use guest account",
         "login-as-guest-foot": "(Please check the consent box first)",
