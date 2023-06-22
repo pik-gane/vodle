@@ -11,7 +11,8 @@
         "[COMMENT] Thank you for helping translate vodle!",
         "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
-        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them.",
+        "[COMMENT] Please take special care with the words 'wap', 'approval', 'approve', see comments below."
     ],
     "_OVERALL_CONVENTIONS_": [
         "[COMMENT] Please use gender-neutral language.",
@@ -33,6 +34,7 @@
     "add": "추가",
     "add-option": "선택지 추가",
     "add-target": "선택지 추가",
+    "_COMMENT_approval": "'approve' and 'approval' here refers to the act of formally endorsing an option or formally agreeing to an option. It does NOT refer to 'liking' or 'preferring' the option. In English, the correct form is hence 'approve an option' and not 'approve OF an option'.",
     "approval": "승인",
     "cancel": "취소",
     "choose-file": "파일 선택",
@@ -67,6 +69,7 @@
     "start": "시작",
     "step-i-of-n": "{{n}} 단계 중 {{i}} 번째 단계",
     "test": "테스트",
+    "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! The willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
     "wap": "승인 점수",
     "yes": "예",
     "about": {
@@ -83,6 +86,7 @@
         "p18": "구체적인 과정: 선택지들은 승인 받은 수에 따라 내림차순으로 정렬됩니다. 이로써 선택지 각각의 지분은 그 선택지를 승인하였지만 그보다 더 높은 우선순위의 선택지가 없는 참가자의 수에 비례합니다.",
         "h2": "제작자들",
         "p21": "vodle의 알고리즘 (\"최대 부분 합의\" 또는 \"maximum partial consensus\") 은 Potsdam Institute for Climate Impact Research (PIK) 에서 수학자 Jobst Heitzig와 Forest W. Simmons의 협업으로 개발되고 공평성 향상을 위해 최적화되었습니다. 저명한 사회학자인 Mark Granovetter의 \"임곗값 모델\"(\"threshold model\") 로부터 영감을 받아 연구되었습니다. 이 앱은 오픈소스이며, 코드는 <a href=\"{{github_url}}\" target=\"_blank\">github</a>에 호스팅 되어있습니다. 메인 개발자: Jobst Heitzig. 최고 기여자: Marius Amrhein. 자문 위원: Adrian Lison. 그 밖의 기여자분들: 프로그램 코드를 참조해 주십시오.",
+        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
         "h3": "vodle을 지원해주세요!",
         "p31": "모두에게 vodle을 무료로 제공하고자 하기에 저희는 더 많은 도움이 필요합니다. 너드, 창의적 사람, 인플루언서, 과학자, 자선가, 정치 활동가, 정치인, 외계인... 누구든 간에 공평하고 효율적인 결론 도출 시스템에 도움을 주고 싶으신 분은 <a href=\"{{support_vodle_url}}\" target=\"_blank\">언제든지 환영입니다!</a>"
     },
@@ -235,6 +239,7 @@
         "-page-title": "투표 초안 수정",
         "del-poll-confirm-question": "이 투표 초안을 삭제합니까?<br/>(이 작업은 되돌릴 수 없습니다!)",
         "general-information": "기본 정보",
+        "details": "Details",
         "type-label": "이 그룹은 이 투표에서...",
         "type-winner": "여러 선택지 중 한 가지를 고릅니다.",
         "type-share": "여러 선택지에 어떠한 자원을 분배합니다.",
