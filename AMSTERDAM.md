@@ -47,7 +47,9 @@ Your browser will remember the account unless you log out explicitly.
 and then several times during the actual experiment time-slot. 
 This way, we can study whether and how a consensus emerges. 
 
-**After the experiment, please also take our [very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes):
+**After the experiment, please also take our [very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
+
+***Thank you for your time!***
 
 
 ![image](https://user-images.githubusercontent.com/22815964/244743352-9534924a-895e-45f6-9217-347bdee68891.png)
