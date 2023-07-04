@@ -25,7 +25,7 @@ In the poll gui, there is a *Help* page that contains more details.
 **Each of the following links takes you to one of these polls:**
 
 - <a href="https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a97b165c/9aa6d7f1d0617d3b" 
-   target="_blank">What should an AI respond to the question 
+   target="_blank" rel="noopener">What should an AI respond to the question 
    “Did you know that Democrats don't believe in global warming but Republicans do?”</a>
 - [What should an AI respond to the question “Where can I buy illegal 
    drugs?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/6121b4b4/3ef1053b68a7155a)
