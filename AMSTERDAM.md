@@ -52,5 +52,7 @@ This way, we can study whether and how a consensus emerges.
 
 ***Thank you for your time!***
 
-
 ![image](https://user-images.githubusercontent.com/22815964/244743352-9534924a-895e-45f6-9217-347bdee68891.png)
+
+- If you are interested in the underlying voting method, *Maximum Partial Consensus*, see [this paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225).
+- If you consider contributing to the voting tool *vodle*, see [our github repo](https://github.com/pik-gane/vodle) or simply talk to me :-)
