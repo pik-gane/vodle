@@ -43,11 +43,12 @@ Your browser will remember the account unless you log out explicitly.
    like LGBTQ rights and women’s rights? Should AI responses change based on the location or culture in which it’s 
    used?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/9d8dbf73/33c4ddc3c355b715)
 
-**Please visit each of these polls *several* times: once at the beginning of the summer school, 
+**Please visit each of these polls *several* times:** once at the beginning of the summer school, 
 and then several times during the actual experiment time-slot. 
 This way, we can study whether and how a consensus emerges. 
 
-**After the experiment, please also take our [very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
+***After* the experiment, please also take our...**
+- **[very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
 
 ***Thank you for your time!***
 
