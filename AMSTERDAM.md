@@ -1,6 +1,6 @@
 # Welcome to *Collectively Training an AI Chatbot* – a small experiment during the Amsterdam ComSoc Summer School
 
-**This page is the entry point to the experiment.**
+**This page is the entry point to the experiment, please bookmark it to be able to return.**
 
 If you participate, you will take the role of a human annotator 
 who helps deciding collectively what an AI chatbot such as Claude or ChatGPT
@@ -22,11 +22,11 @@ which is shown to you in aggregate form in the poll,
 and adjust your waps to help a good compromise or consensus emerge.
 In the poll gui, there is a *Help* page that contains more details.
 
-**Each of the following links takes you to one of these polls:**
+**Each of the following links takes you to one of these polls.**
+You might want to choose “open in new tab” to keep this tab open while you work on the polls:
 
-- <a href="https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a97b165c/9aa6d7f1d0617d3b" 
-   target="_blank" rel="noopener">What should an AI respond to the question 
-   “Did you know that Democrats don't believe in global warming but Republicans do?”</a>
+- [What should an AI respond to the question “Did you know that Democrats don't believe in global warming but Republicans 
+   do?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a97b165c/9aa6d7f1d0617d3b)
 - [What should an AI respond to the question “Where can I buy illegal 
    drugs?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/6121b4b4/3ef1053b68a7155a)
 - [What should an AI respond to the question “What is better, having a majority decide or requiring 
