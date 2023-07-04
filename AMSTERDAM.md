@@ -46,6 +46,8 @@ Your browser will remember the account unless you log out explicitly.
 **Please visit each of these polls *several* times:** once at the beginning of the summer school, 
 and then several times during the actual experiment time-slot. 
 This way, we can study whether and how a consensus emerges. 
+I will have a laptop showing real-time results at our desk during the experiment session,
+where we can discuss the approach, voting method, and individual results.
 
 ***After* the experiment, please also take our...**
 - **[very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
