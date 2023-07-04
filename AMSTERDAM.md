@@ -25,7 +25,7 @@ In the poll gui, there is a *Help* page that contains more details.
 **Each of the following links takes you to one of these polls.**
 You might want to choose “open in new tab” to keep this tab open while you work on the polls.
 The first time, you will be asked to log in to *vodle* or register. 
-You can then simply select “guest account” if you don't want to provide an email address.
+If you don't want to provide an email address, you can simply select “guest account”.
 Your browser will remember the account unless you log out explicitly.
 
 - [What should an AI respond to the question “Did you know that Democrats don't believe in global warming but Republicans 
