@@ -23,7 +23,10 @@ and adjust your waps to help a good compromise or consensus emerge.
 In the poll gui, there is a *Help* page that contains more details.
 
 **Each of the following links takes you to one of these polls.**
-You might want to choose “open in new tab” to keep this tab open while you work on the polls:
+You might want to choose “open in new tab” to keep this tab open while you work on the polls.
+The first time, you will be asked to log in to *vodle* or register. 
+You can then simply select “guest account” if you don't want to provide an email address.
+Your browser will remember the account unless you log out explicitly.
 
 - [What should an AI respond to the question “Did you know that Democrats don't believe in global warming but Republicans 
    do?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a97b165c/9aa6d7f1d0617d3b)
