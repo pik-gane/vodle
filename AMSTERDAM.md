@@ -1,6 +1,6 @@
 # Welcome to *Collectively Training an AI Chatbot* – a small experiment during the Amsterdam ComSoc Summer School
 
-**This page is the entry point to the experiment, please bookmark it to be able to return.**
+**This page, [http://amsterdam.vodle.it](http://amsterdam.vodle.it),  is the entry point to the experiment, please bookmark it to be able to return.**
 
 If you participate, you will take the role of a human annotator 
 who helps deciding collectively what an AI chatbot such as Claude or ChatGPT
