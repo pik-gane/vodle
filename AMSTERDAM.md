@@ -23,6 +23,7 @@ and adjust your waps to help a good compromise or consensus emerge.
 In the poll gui, there is a *Help* page that contains more details.
 
 **Each of the following links takes you to one of these polls.**
+Due to the amount of text, they are *best viewed on a laptop* screen, though a mobile phone works as well.
 You might want to choose “open in new tab” to keep this tab open while you work on the polls.
 The first time, you will be asked to log in to *vodle* or register. 
 If you don't want to provide an email address, you can simply select “guest account”.
