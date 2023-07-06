@@ -41,7 +41,7 @@ Your browser will remember the account unless you log out explicitly.
    Potter?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a34282b4/ccfab4a58fa3c97f)
 - [What principles should guide AI when handling topics that involve both human rights and local cultural or legal differences, 
    like LGBTQ rights and women’s rights? Should AI responses change based on the location or culture in which it’s 
-   used?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/9d8dbf73/33c4ddc3c355b715)
+   used?](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/9d8dbf73/33c4ddc3c355b715)
 
 **Please visit each of these polls *several* times:** once at the beginning of the summer school, 
 and then several times during the actual experiment time-slot. 
