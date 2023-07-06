@@ -50,6 +50,8 @@ This way, we can study whether and how a consensus emerges.
 I will have a laptop showing real-time results at our desk during the experiment session,
 where we can discuss the approach, voting method, and individual results.
 
+*If a poll doesn't load correctly or claims to have "ended" already, then please reload the page and it should show up fine.* (Sorry, this is a known bug).
+
 ***After* the experiment, please also take our...**
 - **[very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
 
