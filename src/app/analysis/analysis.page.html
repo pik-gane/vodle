@@ -78,16 +78,24 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </p>
           <small *ngIf="!P.p.am_abstaining">
             <p>
-              <span [innerHtml]="'analysis.colors-before-red'|translate"></span>
-              <span style="color:#d33939"><b [innerHtml]="'analysis.colors-red'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-between-red-and-blue'|translate"></span>            
-              <span style="color:#3465a4"><b [innerHtml]="'analysis.colors-blue'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-between-blue-and-green'|translate"></span>            
-              <span style="color:#62a73b"><b [innerHtml]="'analysis.colors-green'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-after-green'|translate"></span>        
-              <span [innerHtml]="'analysis.colors-before-dark-green'|translate"></span>            
-              <span style="color:#4c822e"><b [innerHtml]="'analysis.colors-dark-green'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-after-dark-green'|translate"></span>          
+                <span [innerHtml]="'analysis.colors-before-red'|translate"></span>
+                <span [style.color]="var(--vodle-color-red)">
+                  <b [innerHtml]="'analysis.colors-red'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-between-red-and-blue'|translate"></span>
+                <span [style.color]="var(--vodle-color-blue)">
+                  <b [innerHtml]="'analysis.colors-blue'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-between-blue-and-green'|translate"></span>
+                <span [style.color]="var(--vodle-color-green)">
+                  <b [innerHtml]="'analysis.colors-green'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-after-green'|translate"></span>
+                <span [innerHtml]="'analysis.colors-before-dark-green'|translate"></span>
+                <span [style.color]="var(--vodle-color-dark-green)">
+                  <b [innerHtml]="'analysis.colors-dark-green'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-after-dark-green'|translate"></span>
           </p></small>
           <p [innerHtml]="'analysis.suggestion-general'|translate">
           </p>

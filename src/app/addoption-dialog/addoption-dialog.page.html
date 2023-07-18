@@ -33,22 +33,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
       <!-- NAME: -->
 
-      <ion-item>
+      <ion-item lines="none">
         <ion-label position="floating" color="primary">
-          <span [innerHtml]="
-              (p.type=='winner' 
-              ? 'draftpoll.option-name-label' 
-              : 'draftpoll.target-name-label') | translate">
-          </span>
+          <span [innerHtml]="'draftpoll.option-name-label'|translate"></span>
         </ion-label>
         <ion-input 
           formControlName="option_name" 
           autofocus="true" #focus_element
-          [placeholder]="(p.type == 'winner' 
-                          ? 'draftpoll.option-name-placeholder' 
-                          : 'draftpoll.target-name-placeholder') | translate"
+          [placeholder]="(p.type == 'winner' ? 'draftpoll.option-name-placeholder' : 'draftpoll.target-name-placeholder') | translate"
           type="text" required [maxlength]="E.max_len.name" 
-          style="font-weight: bold; font-style: italic;">
+          style="--ion-color-primary: var(--vodle-color-blue); font-weight: bold; font-style: italic;">
         </ion-input>      
       </ion-item>
       <div class="validation-errors">
