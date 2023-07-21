@@ -53,7 +53,9 @@ where we can discuss the approach, voting method, and individual results.
 *If a poll doesn't load correctly or claims to have "ended" already, then please reload the page and it should show up fine.* (Sorry, this is a known bug).
 
 ***After* the experiment, please also take our...**
-- **[very short survey](https://freeonlinesurveys.com/s/Zfdj2AwY)** (about 5 minutes).
+- **[very short survey](https://freeonlinesurveys.com/s/T3rwXDjk)** (about 5 minutes).
+
+***(If you tried this link earlier and received an error, please try it again now! We apologize for the bug.)***
 
 ***Thank you for your time!***
 
