@@ -25,6 +25,8 @@ Later **assist in project and community management** by prioritizing feature req
 
 Or simply start and **be a friendly observer, frank commentator and neutral advisor** for the project.
 
+If you want to talk to us in person, you can [schedule a zoom meeting](https://app.simplymeet.me/vodle).
+
 ### Our commitment
 
 As we are on our way towards a First Stable Release, we currently spend about 10 hours a week on improving the MVP. 
