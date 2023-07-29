@@ -16,7 +16,6 @@ details.
 You should have received a copy of the GNU Affero General Public License 
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
-
 <ion-content *ngIf="ready">
   <form [formGroup]="formGroup">
     <ion-list lines="full">
@@ -38,12 +37,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <span [innerHtml]="'draftpoll.option-name-label'|translate"></span>
         </ion-label>
         <ion-input 
-          formControlName="option_name" 
-          autofocus="true" #focus_element
-          [placeholder]="(p.type == 'winner' ? 'draftpoll.option-name-placeholder' : 'draftpoll.target-name-placeholder') | translate"
-          type="text" required [maxlength]="E.max_len.name" 
-          style="--ion-color-primary: var(--vodle-color-blue); font-weight: bold; font-style: italic;">
-        </ion-input>      
+            formControlName="option_name" 
+            autofocus="true" #focus_element
+            [placeholder]="(p.type == 'winner' ? 'draftpoll.option-name-placeholder' : 'draftpoll.target-name-placeholder') | translate"
+            type="text" required [maxlength]="E.max_len.name" 
+            class="bold-italic">
+        </ion-input>    
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.option_name">
@@ -63,10 +62,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
         </ion-label>
         <ion-textarea 
-          formControlName="option_desc" [maxlength]="E.max_len.desc"
-          [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          rows="1" auto-grow type="text" 
-          style="font-style: italic;">
+            formControlName="option_desc" [maxlength]="E.max_len.desc"
+            [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
+            rows="1" auto-grow type="text" 
+            class="italic">
         </ion-textarea>
       </ion-item>
       <div class="validation-errors">
@@ -87,10 +86,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
         </ion-label>
         <ion-input 
-          formControlName="option_url" 
-          [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          type="text" inputmode="url" [maxlength]="E.max_len.url"
-          style="font-size: smaller;">
+            formControlName="option_url" 
+            [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
+            type="text" inputmode="url" [maxlength]="E.max_len.url"
+            class="small-font">
         </ion-input>
         <ion-button 
             *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 

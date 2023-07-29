@@ -16,19 +16,18 @@ details.
 You should have received a copy of the GNU Affero General Public License 
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
-
 <ion-content>
-  <ion-item (click)="send4review()">
+  <ion-item (click)="send4review()" style="--ion-background-color: var(--ion-color-light); --ion-color: var(--ion-color-dark);">
     <ion-button fill="clear" color="dark">
       <ion-icon name="share-social"></ion-icon>&nbsp;&nbsp;<span [innerHtml]="'draftpoll.send-for-review'|translate"></span>
     </ion-button>
   </ion-item>
-  <ion-item (click)="import()">
+  <ion-item (click)="import()" style="--ion-background-color: var(--ion-color-light); --ion-color: var(--ion-color-dark);">
     <ion-button fill="clear" color="dark">
       <ion-icon name="folder-open-outline"></ion-icon>&nbsp;&nbsp;<span [innerHtml]="'draftpoll.import-options-from-file'|translate"></span>
     </ion-button>
   </ion-item>
-  <ion-item (click)="use_example_clicked($event)">
+  <ion-item (click)="use_example_clicked($event)" style="--ion-background-color: var(--ion-color-light); --ion-color: var(--ion-color-dark);">
     <ion-button fill="clear" color="dark">
       <ion-icon name="cloud-download-outline"></ion-icon>&nbsp;&nbsp;
       <span [innerHtml]="'draftpoll.use-example-from-db'|translate"></span>

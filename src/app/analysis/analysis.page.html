@@ -19,23 +19,21 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-header>
 
-  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
-    <ion-toolbar style="padding-left: 16px;">
-
+  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:var(--vodle-padding-end)!important">
+    <ion-toolbar style="padding-left: var(--vodle-padding-left);">
       <!--<ion-icon slot="start" name="analytics-outline"></ion-icon>&nbsp;-->
       <ion-text 
-        style="font-weight: bold; font-size: larger;"
-        [innerHtml]="'analysis.-page-title' | translate">
-      </ion-text>
-      <ion-buttons slot="end">
+      style="font-weight: var(--vodle-font-weight); font-size: var(--vodle-font-size);"
+      [innerHtml]="'analysis.-page-title' | translate">
+    </ion-text>
+    <ion-buttons slot="end">
 
         <!-- OFFLINE SIGN -- >
         <ng-container *ngIf="!window.navigator.onLine">
           <ion-icon name="cloud-offline-outline" color="grey"
-            style="position: relative; bottom: -1px;">
+            style="position: var(--vodle-position); bottom: var(--vodle-bottom);">
           </ion-icon>
-          <ion-icon name="alert-outline" color="grey">
-          </ion-icon>
+          <ion-icon name="alert-outline" color="grey"></ion-icon>
         </ng-container> 
         <!---->
 
