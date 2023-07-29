@@ -36,9 +36,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-select #ionSelects #select_example interface="popover" 
         (ionChange)="use_example()" display="none"
         [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-        style="font-size: smaller">
+        style="--vodle-font-size: var(--vodle-font-size-smaller)">
       <ion-select-option value="-" [innerHtml]="'draftpoll.use-example-from-db-none'|translate"></ion-select-option>
       <ion-select-option *ngFor="let doc of examples" [value]="doc" [innerHtml]="JSON.parse(doc)['title']"></ion-select-option>
     </ion-select>
   </ion-item>
-</ion-content> 
+</ion-content>

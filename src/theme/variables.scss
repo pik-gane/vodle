@@ -99,6 +99,33 @@ $font-family-wp-base: "Quicksand Medium";
   --select-font-size: smaller;
   --add-option-padding: 5px;
   --label-line-height: 1.0;
+  --vodle-font-size-smaller: 0.8em;
+  --vodle-font-size-title: 2em;
+  --vodle-color-threshold-smaller: #3465a4;
+  --vodle-color-threshold-larger: #62a73b;
+  --vodle-color-my-rating: var(--vodle-color-threshold-smaller); // assuming that cs[myi] uses the same color as --vodle-color-threshold-smaller
+  --vodle-color-approval-label: #9abcbd;
+  --vodle-color-explain-note: #808080;
+  --vodle-color-backdrop: #ffffffd0;
+  --color-opposition-bar: #3465a4a0;
+  --color-black: #000000;
+  --color-percentage: #4c822e;
+  --color-intro-text: #769596;
+  --color-approval-bar: #bce4e5;
+  --color-horizontal-approval-label: #9abcbd;
+  --opposition-fill: #3465a4a0;
+  --text-fill: black;
+  --percentage-fill: #4c822e;
+  --intro-fill: #769596;
+  --approval-bar-fill: #bce4e5;
+  --approval-text-fill: #9abcbd;
+  --backdrop-fill: #ffffffff;
+  --vodle-color-arrow: #769596;
+  --vodle-color-approval-share: #9abcbd;
+  --vodle-stroke-width: 0.2;
+  --vodle-stroke-dasharray: .5 .5;
+  --vodle-rect-height: 2;
+  --vodle-rect-stroke: none;
 
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */
@@ -245,6 +272,8 @@ $font-family-wp-base: "Quicksand Medium";
     --ion-color-light-contrast-rgb: 255,255,255;
     --ion-color-light-shade: #1e2023;
     --ion-color-light-tint: #383a3e;
+    --opposition-fill: <dark-mode-value>;
+    --text-fill: <dark-mode-value>;
   }
 
   /*
