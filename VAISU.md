@@ -18,7 +18,7 @@ More precisely, specfying a wap of *x* means you approve if and only if less tha
 
 You can change all your waps arbitrarily often until the deadline on August 7.
 This allows you to react to the data specified by other participants,
-which is shown to you in aggregate form in the poll, 
+which is shown to you in aggregate form in the poll if you click on "live results", 
 and adjust your waps to help a good compromise or consensus emerge.
 In the poll gui, there is a *Help* page that contains more details.
 
