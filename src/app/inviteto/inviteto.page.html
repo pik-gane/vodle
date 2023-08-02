@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
-  <ion-toolbar style="padding-right:11px;">
+  <ion-toolbar style="padding-right: var(--toolbar-padding-right);">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
@@ -93,7 +93,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!--TODO: disable if due is in the past by now-->
       <ion-button size="large" color="primary" slot="end" [disabled]="false" 
             shape="round">
-        <a [href]="email_href" target="_top" style="color:inherit;text-decoration:inherit">
+        <a [href]="email_href" target="_top" style="color: var(--link-color); text-decoration: var(--link-decoration);">
           <span [innerHtml]="'inviteto.compose-email'|translate"></span>&nbsp;
           <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
         </a>
