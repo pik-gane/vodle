@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
-  <ion-toolbar style="padding-right:11px;">
+  <ion-toolbar style="padding-right: var(--toolbar-padding-right);">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
@@ -35,7 +35,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             [innerHtml]="('draftpoll.type-'+p.type|translate)+'.'"></ion-text>
         </p>
         <ion-text color="primary"><h3>
-          <span style="position:relative;top:3px;z-index:10;">
+          <span style="position:var(--vodle-position-relative);top:var(--vodle-top-position);z-index:var(--vodle-z-index-level);">
             <ion-icon color="primary"
               [name]="p.type=='winner'?'trophy':'cut'">
             </ion-icon>&nbsp;
@@ -45,14 +45,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
           <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [lang]="p.language" [innerHtml]="p.desc"></i></ion-text>
           <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary"><span *ngIf="((p.desc||'')!='')&&((p.url||'')!='')">&nbsp;</span>
-            (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
+            (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: var(--vodle-position); top: var(--icon-top);"></ion-icon></span>)
           </ion-text>
         </p>
         <p>
           <ng-container *ngIf="p.due >= G.P.ref_date">
             <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))"></ion-text>
           </ng-container>
-          <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" style="color: red;"></ion-text>
+          <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" style="color: var(--vodle-color-red);"></ion-text>
         </p>
         <p *ngIf="((p.language||'')!='') && (p.language!=G.S.language)">
           <small>
@@ -84,7 +84,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <ion-text color="primary"><b><i [lang]="p.language" [innerHtml]="o.name"></i></b></ion-text>
           <ion-text *ngIf="(o.desc||'')!=''" color="primary"><br/><i [lang]="p.language" [innerHtml]="o.desc"></i></ion-text>
           <ion-text *ngIf="(o.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
-            (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
+            (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: var(--vodle-position);"></ion-icon></span>)
           </ion-text>            
         </p>
       </ion-col>
