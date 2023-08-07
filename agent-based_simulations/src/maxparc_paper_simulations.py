@@ -70,7 +70,7 @@ else:
 
 #case = "PLOTS"
 case = "TEST"
-results_dir = "~/tmp/"
+results_dir = "./"
 
 if case == "PAPER":
 
