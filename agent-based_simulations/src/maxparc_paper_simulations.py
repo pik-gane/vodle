@@ -71,6 +71,7 @@ else:
 #case = "PLOTS"
 #case = "TEST"
 case = "PAPER"
+
 results_dir = "./"
 
 if case == "PAPER":
@@ -83,7 +84,7 @@ if case == "PAPER":
     
     mcn = 2000 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
     
-    nvoterss = 2* (10**linspace(1,3,500) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 499
+    nvoterss = 2* (10**linspace(1,2,1000) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 99
     noptionss = arange(3,10) 
     
     do_compromises = True 
@@ -116,7 +117,7 @@ elif case == "TEST":
     
     mcn = 3 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
     
-    nvoterss = 2* (10**linspace(1,3,500) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 499
+    nvoterss = 2* (10**linspace(1,2,1000) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 99
     noptionss = arange(3,10) 
     
     do_compromises = True 

@@ -2,8 +2,8 @@ from __future__ import print_function, division
 
 # AFTERWARDS: for f in *.pdf; do pdftoppm -png $f $f; done
 
-datafolder = "/tmp/"
-fileprefix = "2023_08_07_test_all"
+datafolder = "./"
+fileprefix = "test_all"
 #what = []
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
 what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
