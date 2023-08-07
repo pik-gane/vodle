@@ -5,9 +5,11 @@
 #SBATCH --account=gane
 #SBATCH --output=test-%j.out
 #SBATCH --error=test-%j.err
-#SBATCH --workdir=/p/tmp/heitzig/
+#SBATCH --workdir=/home/heitzig/tmp/
+
 #SBATCH --array=1-2
 
 module load anaconda/2020.11
-conda activate /p/projects/ou/labs/gane/maxparc/paper_revision/conda_env
+source activate /p/projects/ou/labs/gane/maxparc/paper_revision/conda_env
+
 python -u /p/projects/ou/labs/gane/maxparc/paper_revision/vodle/agent-based_simulations/src/maxparc_paper_simulations.py
