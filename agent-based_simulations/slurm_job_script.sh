@@ -2,7 +2,7 @@
 
 #SBATCH --qos=short
 #SBATCH --job-name=maxparc
-#SBATCH --account=heitzig
+#SBATCH --account=gane
 #SBATCH --output=test-%j.out
 #SBATCH --error=test-%j.err
 #SBATCH --workdir=/p/tmp/heitzig/
