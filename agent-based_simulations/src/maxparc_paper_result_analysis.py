@@ -6,7 +6,8 @@ datafolder = "./"
 fileprefix = "test_all"
 #what = []
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
-what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
+#what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
+what = ["boxplots"]
 #what = ["best"]
 
 test = 0
@@ -23,6 +24,7 @@ import sh
 sh.mkdir("-p", plotfolder + "/main")
 sh.mkdir("-p", plotfolder + "/grouped")
 sh.mkdir("-p", plotfolder + "/univariate")
+sh.mkdir("-p", plotfolder + "/boxplots")
 
 # strategy:
 
