@@ -3,7 +3,7 @@ from __future__ import print_function, division
 # AFTERWARDS: for f in *.pdf; do pdftoppm -png $f $f; done
 
 datafolder = "./"
-fileprefix = "test_all"
+fileprefix = "paper_all"
 #what = []
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
 #what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
