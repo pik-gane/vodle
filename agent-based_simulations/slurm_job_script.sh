@@ -6,6 +6,7 @@
 #SBATCH --output=test-%j.out
 #SBATCH --error=test-%j.err
 #SBATCH --workdir=/p/tmp/heitzig/
+#SBATCH --array=1-2
 
 module load anaconda/2020.11
 conda activate /p/projects/ou/labs/gane/maxparc/paper_revision/conda_env
