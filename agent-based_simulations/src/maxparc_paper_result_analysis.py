@@ -6,7 +6,8 @@ datafolder = "/tmp/"
 fileprefix = "2023_08_07_test_all"
 #what = []
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
-what = ["best"]
+what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
+#what = ["best"]
 
 test = 0
 skip_existing = 1
@@ -19,7 +20,9 @@ else:
     nrows = 1e10
 
 import sh
+sh.mkdir("-p", plotfolder + "/main")
 sh.mkdir("-p", plotfolder + "/grouped")
+sh.mkdir("-p", plotfolder + "/univariate")
 
 # strategy:
 
@@ -506,7 +509,8 @@ if "main_welfare" in what:
             ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
             ax.xaxis.set_minor_locator(ticker.MultipleLocator(minor[u]))
     #        ax.tick_params(which="both", bottom=True)
-            ax.grid(b=True, which='minor', color='w', linewidth=0.5)
+            ax.grid( #b=True, 
+                which='minor', color='w', linewidth=0.5)
             print(u, ": not sig. (p>.01):", notsig)
     
         fig, axs = plt.subplots(ncols=len(umodels), figsize=(12,6))

@@ -47,7 +47,9 @@ set_printoptions(precision=3,suppress=True)
 
 time_started = time()
 
-if False:
+try_mpi = True
+
+if try_mpi:
     try:
         from mpi4py import MPI
         parallelization_rank = MPI.COMM_WORLD.rank
@@ -55,8 +57,9 @@ if False:
     except:
         parallelization_rank = 0
         print(parallelization_rank,"%018.7f"%time_started,"starting without MPI")
-import os
-parallelization_rank = os.getpid()
+else:
+    import os
+    parallelization_rank = os.getpid()
 
 # TODO: read simulation parameters from command line!
 
@@ -67,7 +70,7 @@ parallelization_rank = os.getpid()
 
 #case = "PLOTS"
 case = "TEST"
-results_dir = "/tmp"
+results_dir = "~/tmp/"
 
 if case == "PAPER":
 
@@ -104,13 +107,13 @@ if case == "PAPER":
     
 elif case == "TEST":
 
-    jobname = "2023_08_07_test_"
+    jobname = "test"
     do_plots = False
     
     # make unique random seed so that parallel jobs are different:
     seed_offset = 0
     
-    mcn = 100 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
+    mcn = 3 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
     
     nvoterss = 2* (10**linspace(1,3,1000) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 999
     noptionss = arange(3,10) 
