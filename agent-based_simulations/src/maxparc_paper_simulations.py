@@ -47,7 +47,7 @@ set_printoptions(precision=3,suppress=True)
 
 time_started = time()
 
-try_mpi = True
+try_mpi = False
 
 if try_mpi:
     try:
