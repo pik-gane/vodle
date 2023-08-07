@@ -7,7 +7,8 @@
 #SBATCH --error=test-%j.err
 #SBATCH --workdir=/p/projects/ou/labs/gane/maxparc/paper_revision/results
 
-#SBATCH --array=1-2
+#SBATCH --array=1-750
+#SBATCH --time=12:00:00
 
 module load anaconda/2020.11
 source activate /p/projects/ou/labs/gane/maxparc/paper_revision/conda_env
