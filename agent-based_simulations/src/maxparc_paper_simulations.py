@@ -69,12 +69,13 @@ else:
 ##################
 
 #case = "PLOTS"
-case = "TEST"
+#case = "TEST"
+case = "PAPER"
 results_dir = "./"
 
 if case == "PAPER":
 
-    jobname = "2020_03_28_1mio_"
+    jobname = "paper"
     do_plots = False
     
     # make unique random seed so that parallel jobs are different:
@@ -82,7 +83,7 @@ if case == "PAPER":
     
     mcn = 2000 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
     
-    nvoterss = 2* (10**linspace(1,3,1000) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 999
+    nvoterss = 2* (10**linspace(1,3,500) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 499
     noptionss = arange(3,10) 
     
     do_compromises = True 
@@ -115,7 +116,7 @@ elif case == "TEST":
     
     mcn = 3 # size of Monte Carlo sample of each node (will be multiplied by two if do_compromises)
     
-    nvoterss = 2* (10**linspace(1,3,1000) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 999
+    nvoterss = 2* (10**linspace(1,3,500) / 2).astype("int") - 1 # odd numbers log-uniformly distributed from 9 to 499
     noptionss = arange(3,10) 
     
     do_compromises = True 
