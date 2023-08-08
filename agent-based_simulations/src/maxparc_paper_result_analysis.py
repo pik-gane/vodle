@@ -1,13 +1,14 @@
 from __future__ import print_function, division
 
+# BEFORE: cat header_for_paper.csv paper*.csv > _paper_all.csv
 # AFTERWARDS: for f in *.pdf; do pdftoppm -png $f $f; done
 
 datafolder = "./"
-fileprefix = "paper_all"
-#what = []
+fileprefix = "_paper_all"
+#what = ["regression"]
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
-#what = ["cost", "table", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
-what = ["boxplots"]
+what = ["main_welfare", "basic", "uni", "grouped", "boxplots", "cost", "table", "paired"]
+#what = ["boxplots"]
 #what = ["best"]
 
 test = 0

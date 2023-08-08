@@ -3,8 +3,8 @@
 #SBATCH --qos=short
 #SBATCH --job-name=maxparc
 #SBATCH --account=gane
-#SBATCH --output=test-%j.out
-#SBATCH --error=test-%j.err
+#SBATCH --output=maxparc-%j.out
+#SBATCH --error=maxparc-%j.err
 #SBATCH --workdir=/p/projects/ou/labs/gane/maxparc/paper_revision/results
 
 #SBATCH --array=1-750
