@@ -11,4 +11,4 @@ module load anaconda/2020.11
 source activate /p/projects/ou/labs/gane/maxparc/paper_revision/conda_env
 
 cd /p/projects/ou/labs/gane/maxparc/paper_revision/results
-python -u /p/projects/ou/labs/gane/maxparc/paper_revision/vodle/agent-based_simulations/src/maxparc_paper_result_analysis.py
+python -u /p/projects/ou/labs/gane/maxparc/paper_revision/vodle/agent-based_simulations/src/maxparc_paper_result_analysis.py $1
