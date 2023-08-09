@@ -5,11 +5,20 @@ from __future__ import print_function, division
 
 datafolder = "./"
 fileprefix = "_paper_all"
-#what = ["regression"]
+
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
-what = ["main_welfare", "basic", "uni", "grouped", "boxplots", "cost", "table", "paired"]
-#what = ["boxplots"]
+#what = ["main_welfare", "basic", "uni", "grouped", "boxplots", "cost", "table", "paired"]
+
+#what = ["regression"]
 #what = ["best"]
+#what = ["main_welfare"]
+#what = ["basic"]
+#what = ["uni"]
+#what = ["grouped"]
+#what = ["boxplots"]
+#what = ["cost"]
+#what = ["table"]
+#what = ["paired"]
 
 test = 0
 skip_existing = 1
