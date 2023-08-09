@@ -6,6 +6,8 @@ from __future__ import print_function, division
 datafolder = "./"
 fileprefix = "_paper_all"
 
+what = None
+
 #what = ["cost", "table", "regression", "main_welfare", "basic", "uni", "paired", "grouped", "boxplots"]
 #what = ["main_welfare", "basic", "uni", "grouped", "boxplots", "cost", "table", "paired"]
 
@@ -19,6 +21,15 @@ fileprefix = "_paper_all"
 #what = ["cost"]
 #what = ["table"]
 #what = ["paired"]
+
+if what is None:
+    # read what from command line:
+    import sys
+    what = sys.argv[1:]
+    assert len(what) > 0
+    assert all([w in ["best","main_welfare","basic","uni","grouped","boxplots","cost","table","paired","regression"] for w in what])
+    
+print("what:", what)
 
 test = 0
 skip_existing = 1
