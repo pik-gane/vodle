@@ -2109,6 +2109,21 @@ def interactive_maxparc(u_,ut_,B0,Tvoters,Fvoters,facsizes,facstarts,facu):
     return m, nfacmoves*1./nfactrials, nkeeps*1./(nkeeps+nreverts), lchangebyiteration, B
 
 
+# Counterexample for NL being strongly monotonic:
+
+for B in [[
+    [.5,1/6,0],
+    [0,.75,1]
+    ],[
+    [1,1/6,0],
+    [0,.75,1]
+    ],[
+    [1,1/6],
+    [0,.75]
+    ]]:
+    print(B, mNL(np.array(B)))
+
+exit()
 
 ###### MAIN PROGRAM ######
 

@@ -173,7 +173,7 @@ groupvar_orders = {
     "scenario": scenarios,
     "riskmodel": riskmodels,
     "npolls": [1,2,3,5,7,10], 
-    "nvoters_cls": ["9..29", "31..99", "101..299", "301..999"],
+    "nvoters_cls": ["9..19", "21..39", "41..59", "61..99"],
     "with_compromise": [0, 1],
     "BMr": [2,5,9],
     "BMh": [0,1],
