@@ -19,6 +19,8 @@
 ![](https://img.shields.io/badge/Status-Approaching%20First%20Release-green)
 [![Coverity Scan Build Status](https://img.shields.io/coverity/scan/26984.svg)](https://scan.coverity.com/projects/pik-gane-vodle)
 
+## This branch also contains code and results of the agent-based simulations used in our 2023 scientific paper
+
 ## *[Contributions welcome!](CONTRIBUTING.md)*
 
 
