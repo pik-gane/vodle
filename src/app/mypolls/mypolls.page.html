@@ -243,6 +243,43 @@ TODO:
     </ng-container>
   </ion-list>
 
+
+  <!--Archieved:-->
+
+  <ion-item color="primary" (click)="archived_expanded=!archived_expanded" style="cursor: pointer;">
+    <ion-icon size="small" [name]="archived_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
+    &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.archived'|translate"></ion-label>
+  </ion-item>
+  <ng-container *ngIf="archived_expanded">
+    <ng-container *ngFor="let p of arvhived_polls">
+      <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
+        <ion-label>
+          <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+          <i [lang]="p.language" [innerHtml]="p.title"></i>
+        </ion-label>
+        <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
+
+          <!-- Badges: -->
+
+          <div style="display: flex; flex-direction: column;">
+            <div *ngIf="!p.have_seen_results" style="display: flex;flex-direction: row-reverse;">
+              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+            </div>
+          </div>
+
+        </ion-buttons>
+      </ion-item>
+    </ng-container>
+    <ng-container *ngIf="Object.keys(G.P.closed_polls).length==0 && !G.show_spinner">
+      <ion-item>
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml] ="'mypolls.no-recently-closed-polls-1'|translate"></p>
+          <small><p [innerHtml] ="'mypolls.no-recently-closed-polls-2'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+    </ng-container>
+  </ng-container>
+
   <ion-fab vertical="bottom" horizontal="end" slot="fixed" class="ion-margin">
     <ion-fab-button routerLink="/draftpoll">
       <ion-icon name="add"></ion-icon>

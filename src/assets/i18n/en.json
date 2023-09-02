@@ -498,6 +498,7 @@
 
         "older": "Older",
         "drafts": "Drafts",
+        "archived": "Archived",
         "no-draft-polls-1": "Currently, you have no polls drafted.",
         "no-draft-polls-2": "To start or draft a new poll, click the ‘+‘ button below!"
     },
@@ -601,7 +602,8 @@
         "explain": "Explain",
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
-        "sorting": "Sorting options by approval..."
+        "sorting": "Sorting options by approval...",
+        "archive": "Archive Poll"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
