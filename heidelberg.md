@@ -3,7 +3,7 @@
 **Bitte tut folgendes:**
 
 1. *Diese* Seite (also [heidelberg.vodle.it](http://heidelberg.vodle.it)) den Lesezeichen hinzufügen.
-2. ***In einem neuen Tab*** die Seite [app.vodle.it](http://app.vodle.it) öffnen, sich dort als Teilnehmer registrieren, und den Tab wieder schließen.
+2. ***In einem neuen Tab*** die Seite [app.vodle.it](http://app.vodle.it) öffnen, sich dort als Teilnehmer registrieren. Sobald die Seite "Meine Abstimmungen" erscheint, den Tab wieder schließen.
 3. ***Nacheinander*** jeden der folgenden Links ***in einem neuen Tab*** öffnen. Sobald die Abstimmung geladen wurde, den Tab erst ***wieder schließen*** und hierher zurückkehren, und ***dann erst*** den nächsten Link öffnen. Dadurch werdet Ihr für diese vier Abstimmungen registriert:
    - [für Abstimmung 1 registrieren](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/a4d3546d/96de179abb3d99b0)
    - [für Abstimmung 2 registrieren](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/cb2ae625/c42c31adc04d4046)
