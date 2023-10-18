@@ -289,3 +289,10 @@ ion-spinner {
 .analysis {
     --min-height: 90%!important;
 }
+
+// NOTE: fix for ion-popover not appearing for languages
+// Alternatively, remove below and upgrade ionic to 6.5.2 or later
+// See: https://stackoverflow.com/a/76381282, https://stackoverflow.com/a/76382473
+ion-popover [popover]:not(:popover-open):not(dialog[open]) {
+    display: contents;
+}
