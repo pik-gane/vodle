@@ -561,7 +561,6 @@ export class DataService implements OnDestroy {
   }
 
   private process_local_only_user_docs(result) {
-    console.log(result);
     this.G.L.entry("DataService.process_local_only_user_docs");
     // copy data from local-only docs to cache:
     for (const row of result.rows) {
@@ -1515,7 +1514,6 @@ export class DataService implements OnDestroy {
     // decide where to store data:
     const pos = (key+'.').indexOf('.'),
           subkey = (key+'.').slice(0, pos);
-    console.log(pos,subkey,key,value)
     if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
@@ -1532,7 +1530,6 @@ export class DataService implements OnDestroy {
   delp(pid:string, key:string) {
     // delete a poll data item
     // deregister pid, oid if necessary:
-    console.log(key);
     if (key == "title") {
       this._pids.delete(pid);
       delete this._pid_oids[pid];
@@ -1547,7 +1544,7 @@ export class DataService implements OnDestroy {
           subkey = (key+'.').slice(0, pos);
     if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       // construct key for user db:
-            const ukey = get_poll_key_prefix(pid) + key;
+    const ukey = get_poll_key_prefix(pid) + key;
       this.delu(ukey);
     } else {
       if (!(pid in this.poll_caches) || !(key in this.poll_caches[pid])) {
@@ -1835,7 +1832,6 @@ export class DataService implements OnDestroy {
             deletion_date = (due_str == '') ? null : 
               new Date((new Date(due_str)).getTime() + environment.polls.delete_after_days*24*60*60*1000);
       const is_poll_archived = this.G.D.getp(pid, 'is_archived');
-      console.log("HERE ONLY " ,this.local_poll_dbs[pid],this.remote_poll_dbs[pid])
       if (!!deletion_date && (new Date()) >= deletion_date && !is_poll_archived) {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
