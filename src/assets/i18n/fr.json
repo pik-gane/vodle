@@ -26,7 +26,7 @@
         "closed": "Unfortunately, this poll has already ended.",
         "details": "Si vous acceptez, vous pouvez toujours choisir si vous voulez évaluer vous-même les options ou déléguer vos évaluations (et celles de l'autre participant) à une tierce personne.",
         "poll-unknown": "Vous ne participez pas encore à ce sondage. Veuillez vérifier si vous avez reçu un lien d'invitation pour ce sondage. Si c'est le cas, utilisez d'abord ce lien, puis réessayez.",
-        "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
+        "_COMMENT_SECTION_": "",
         "declined-intro": "Vos évaluations ne sont donc pas <i>actuellement</i> contrôlant les évaluations de cette personne dans le sondage <i>«{{poll_title}}».</i>",
         "weight-exceeded-revoke-first": "Si vous souhaitez toujours accepter la demande, veuillez envisager de refuser d'autres demandes que vous avez acceptées, ou de révoquer votre propre délégation, puis de revenir ici.",
         "cycle-intro": "Cependant, votre propre délégué pour ce sondage a délégué directement ou indirectement vos évaluations à {{from}}. Tant que c'est le cas, vous ne pouvez pas accepter cette demande.",
@@ -111,7 +111,8 @@
         "p14": "Dans les <b>sondages à choix</b> (où votre groupe sélectionne une option <i>unique</i>), la décision est prise comme suit. Si une option est approuvée par tous, cette option de consensus total l'emporte. Sinon, vodle déclare probablement l'option la plus largement approuvée comme gagnante. Mais pour atteindre l'équité, vodle doit parfois aussi utiliser un certain degré de chance, comme une loterie de cartes vertes.",
         "_COMMENT_SECTION_": "[COMMENT] strings used on the About page:",
         "p16": "De cette façon, l'option la plus approuvée aura la plus grande probabilité de gagner. Les autres probabilités de gagner sont au plus aussi grandes que leur score d'approbation (en pourcentage de tous les participants qui ne s'abstiennent pas).",
-        "p13": "Lorsque le sondage se termine, l'option gagnante est déterminée par un algorithme juste mais simple qui donne à chaque participant la même influence, pas seulement les participants qui se trouvent dans une majorité."
+        "p13": "Lorsque le sondage se termine, l'option gagnante est déterminée par un algorithme juste mais simple qui donne à chaque participant la même influence, pas seulement les participants qui se trouvent dans une majorité.",
+        "p22-this-instance": "Cette instance de l'application web Vodle est généreusement hébergée par <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>"
     },
     "ready": "Prêt",
     "server": "Serveur",
@@ -136,8 +137,8 @@
         "header": "Déléguer à un autre participant",
         "request-options-without-share": "La façon la plus simple de demander à cette personne d'agir comme votre délégué est par courriel. Ou vous copiez le lien de la délégation et envoyez-le à votre convenance.",
         "request-options-with-share": "Le moyen le plus simple de demander à cette personne d'agir en tant que délégué est via le bouton de partage. Alternativement, vous pouvez leur écrire un e-mail. Ou vous copiez le lien de délégation et l'envoyez comme bon vous semble.",
-        "message-subject": "Request to act as delegate in poll (ending {{due}})",
-        "disabled": "We apologize, delegation is not yet enabled in this version of vodle.",
+        "message-subject": "Demande d'agir en tant que délégué dans le sondage (se terminant le {{due}}).",
+        "disabled": "Nous nous excusons, la délégation n'est pas encore activée dans cette version de Vodle.",
         "copy-link": "Copier le lien",
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delegate dialog:",
         "message-body-before-title": "J'aime à vous demander d'agir en tant que délégué dans le sondage de vodle intitulé",
@@ -190,5 +191,44 @@
     "favourite": "Favourite",
     "share": "Share",
     "add": "Ajouter",
-    "db-user": "Nom d'utilisateur de base de données"
+    "db-user": "Nom d'utilisateur de base de données",
+    "analysis": {
+        "each-dot-participant": "Chaque point représente un participant non s'abstenant.",
+        "discs": "Les disques montrent combien d'**approval** chaque option reçoit. La partie du disque qui dépasse derrière les autres disques montre la part que cette option reçoit. Nous ne montrons que les options qui reçoivent une part ici.",
+        "each-dot-percent": "Chaque point représente un pour cent de tous les participants non s'abstenant.",
+        "colors-blue": "Bleu :",
+        "colors-red": "Rouge :",
+        "-page-title": "Distribution d'approbation et de parts",
+        "colors-between-red-and-blue": " vous n'approuverez pas l'option car votre Wap est à zéro. ",
+        "yellow-dot": "Le point jaune indique où va votre part.",
+        "colors-after-green": " vous approuvez l'option.",
+        "colors-green": "Vert :",
+        "colors-between-blue-and-green": " vous n'approuvez actuellement pas cette option. ",
+        "colors-before-red": "Les couleurs montrent quelles options vous approuvez vous-même et où va votre part. "
+    },
+    "assist": {
+        "ratings-other": "Toutes les autres options obtiennent <b>0</b> car vous ne voulez pas les approuver, peu importe les circonstances.",
+        "ratings-acceptable": "Cela option tu veux approuver si au moins {{threshold}} % des participants approuvent. J'ai ajouté une petite marge d'incertitude et ai attribué le option un Wap de <b>{{wap}}</b>. Cela garantit que vous approuvez cela option si strictement plus de {{more_than}} % approuvent.",
+        "-step-5-title": "résumé",
+        "ratings-favourite": "C'est ton <b>préféré</b> option. Je lui ai attribué un Wap de <b>100</b> car tu le veux approuver c'est sûr.",
+        "ratings-intro-1": "Merci ! J'ai maintenant réglé vos waps de manière à ce qu'ils correspondent à votre volonté approuver.",
+        "ratings-extro": "Vous pouvez ajuster vos Waps à tout moment en utilisant les curseurs, par exemple, pour réagir à l'évolution des scores d'approbation actuels. L'approbation actuelle est toujours affichée sous forme de barre lumineuse. Vous pouvez obtenir plus d'informations en cliquant sur les mots soulignés sur la page de vote.",
+        "ratings-intro-2": "Les Waps fonctionnent de la manière suivante : lorsque l'on définit un Wap de <i>X</i>, on approuvera si plus de 100 % moins <i>X</i> des participants approuvent. Par conséquent, j'ai réglé vos Waps comme suit :"
+    },
+    "delete-all": {
+        "-page-title": "Supprimer mes données",
+        "confirm-intro": "<p><b>Cela supprimera toutes les données Vodle de cet appareil. Cela supprimera également vos données Vodle privées du serveur de données distant que vous utilisez actuellement.</b></p>\n<p> Cependant, cela ne supprimera pas les données des autres appareils, ni vos données de Wap ou de délégation.</p><p> Pour les sondages encore en cours, cela réinitialisera tous vos Wap à zéro, annulera toutes vos demandes de délégation et refusera toute demande de délégation à votre égard. Pour les sondages déjà terminés, cela laissera vos données de Wap et de délégation inchangées afin de garantir que les résultats du sondage puissent être vérifiés et restent inchangés. Sur la plupart des serveurs de données de sondage, ces données seront éventuellement supprimées après un certain temps, mais des copies anonymisées peuvent rester sur les appareils d'autres participants.</p>\n<p><b>Si vous le faites, vos données ne pourront pas être restaurées !</b></p>",
+        "failed": "N'a pas pu supprimer toutes les données pour une raison quelconque.",
+        "success-title": "Vos données ont été supprimées.",
+        "confirm-header": "Vraiment supprimer vos données ?",
+        "success-body": "Vodle espère vous revoir bientôt, même si elle ne se souviendra pas de vous :-)",
+        "confirm-button": "Oui, supprimez mes données"
+    },
+    "_COMMENTS_": "",
+    "validation": {
+        "option-url-valid": "Veuillez entrer une URL valide."
+    },
+    "-parameters": {
+        "first-day-of-week": "0"
+    }
 }
