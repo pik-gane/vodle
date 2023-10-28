@@ -60,7 +60,21 @@
         "option-desc-placeholder": "Plus d'informations sur «{{name}}»",
         "import-options-msg": "Le fichier doit être un fichier .csv.<br/><br/>Chaque ligne doit spécifier une option, soit au format<br/>&nbsp;&nbsp;&nbsp;<i>\"Nom\"</i><br/>ou<br/>&nbsp;&nbsp;&nbsp;<i>\"Nom\", \"Description\"</i><br/>ou<br/>&nbsp;&nbsp;&nbsp;<i>\"Nom\", \"Description\", \"URL\"</i>",
         "please-list-targets-explanation": "Veuillez énumérer au moins deux options. Ne vous inquiétez pas pour leur ordre. D'autres options peuvent toujours être ajoutées plus tard par les participants tant que le sondage est en cours.",
-        "type-label": "Dans ce sondage, le groupe..."
+        "type-label": "Dans ce sondage, le groupe...",
+        "due-datetime-label": "Date de fin et heure",
+        "target-name-placeholder": "Un nom court pour cette option possible",
+        "due-type-four-weeks": "après quatre semaines",
+        "due-type-friday-noon": "Vendredi à midi",
+        "due-type-sunday-night": "dimanche soir",
+        "due-type-week": "après une semaine",
+        "option-name-placeholder": "Un nom court pour cette option",
+        "db-label": "Où Vodle devrait-il stocker les données chiffrées du sondage ?",
+        "language": "Langue des textes du poll",
+        "target-name-label": "Nom de l'option",
+        "due-type-two-weeks": "après deux semaines",
+        "advanced-settings": "Paramètres avancés",
+        "no-more-button": "Plus rien pour le moment",
+        "option-name-label": "Nom de l'option"
     },
     "wap": "Wap",
     "addoption": {
@@ -93,7 +107,19 @@
         "all-abstain-line-2-before-percentage": "toutes les options obtiennent le même partage de ",
         "threshold-larger-line-1": "les évaluations",
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Explain... page. These are chopped into small pieces reflecting line-breaks in the SVG layout of the page:",
-        "threshold-smaller-line-3": "n'approuveront"
+        "threshold-smaller-line-3": "n'approuveront",
+        "some-line-2": "Certains approuvent également une option mieux notée.",
+        "zero-line-1": "Personne n'approuve cette option,",
+        "some-line-1": "Parmi les {{percentage}} % qui approuvent cette option",
+        "no-one-line-1": "Parmi les {{percentage}} % qui approuvent cette option",
+        "only-higher-line-1-before-optionname": "{{percentage}} % approuvent. ",
+        "zero-line-2": "donc elle n'obtient aucune part.",
+        "only-higher-line-1-after-optionname": ",",
+        "share-intro-line-1": "La part de chacun va à la",
+        "no-one-line-2": "Personne n'approuve également une option mieux notée.",
+        "share-intro-line-2": "La part de chacun va à l'option la mieux notée qu'ils approuvent.",
+        "all-line-2": "Tout le monde approuve également une option mieux notée.",
+        "all-line-1": "Parmi les {{percentage}} % qui approuvent cette option"
     },
     "password": "Mot de passe",
     "about": {
@@ -204,7 +230,11 @@
         "colors-after-green": " vous approuvez l'option.",
         "colors-green": "Vert :",
         "colors-between-blue-and-green": " vous n'approuvez actuellement pas cette option. ",
-        "colors-before-red": "Les couleurs montrent quelles options vous approuvez vous-même et où va votre part. "
+        "colors-before-red": "Les couleurs montrent quelles options vous approuvez vous-même et où va votre part. ",
+        "colors-before-dark-green": " Votre part va à la ",
+        "colors-after-dark-green": " .option.",
+        "colors-dark-green": "vert foncé",
+        "suggestion-general": "\"<b>Suggestion :</b> Vous pourriez discuter avec les partisans des options que vous n'approuvez pas (rouge et bleue). Peut-être pouvez-vous trouver ensemble une autre option que vous pouvez tous approuver ? <small>Une bonne option de compromis pourrait déjà être au menu ou vous pourriez envisager de l'ajouter.</small>\""
     },
     "assist": {
         "ratings-other": "Toutes les autres options obtiennent <b>0</b> car vous ne voulez pas les approuver, peu importe les circonstances.",
@@ -213,7 +243,23 @@
         "ratings-favourite": "C'est ton <b>préféré</b> option. Je lui ai attribué un Wap de <b>100</b> car tu le veux approuver c'est sûr.",
         "ratings-intro-1": "Merci ! J'ai maintenant réglé vos waps de manière à ce qu'ils correspondent à votre volonté approuver.",
         "ratings-extro": "Vous pouvez ajuster vos Waps à tout moment en utilisant les curseurs, par exemple, pour réagir à l'évolution des scores d'approbation actuels. L'approbation actuelle est toujours affichée sous forme de barre lumineuse. Vous pouvez obtenir plus d'informations en cliquant sur les mots soulignés sur la page de vote.",
-        "ratings-intro-2": "Les Waps fonctionnent de la manière suivante : lorsque l'on définit un Wap de <i>X</i>, on approuvera si plus de 100 % moins <i>X</i> des participants approuvent. Par conséquent, j'ai réglé vos Waps comme suit :"
+        "ratings-intro-2": "Les Waps fonctionnent de la manière suivante : lorsque l'on définit un Wap de <i>X</i>, on approuvera si plus de 100 % moins <i>X</i> des participants approuvent. Par conséquent, j'ai réglé vos Waps comme suit :",
+        "favourite-explanation-2": "Cela signifie que vous <i>approuvez définitivement</i> l'option, peu importe les notations des autres participants.",
+        "acceptable-explanation-4": "Cela signifie que vous les <i>approuvez potentiellement</i>, en fonction des notations des autres participants.",
+        "acceptable-explanation-1": "Nous attribuons aux options que vous n'avez pas marquées comme <b>acceptables</b> une notation de <b>0</b>.",
+        "acceptable-explanation-5": "Pour nous aider à définir ces notations de manière plus spécifique, vous devriez maintenant considérer combien d'<i>autres</i> participants approuveraient potentiellement ces options également.",
+        "acceptable-intro": "Quelles options trouvez-vous également acceptables ?<br/>Vous pouvez en sélectionner autant que vous le souhaitez (ou aucune).",
+        "acceptable-explanation-3": "Les options que vous avez marquées comme <b>acceptables</b> recevront une notation <b>entre 1 et 99</b>.",
+        "favourite-warn-change": "Vous avez déjà défini certaines notations. Si vous poursuivez ici, cela pourrait les modifier.",
+        "add-option-info": "Si vous pensez qu'une option importante manque toujours, vous pouvez l'ajouter en bas de la page avec les curseurs.",
+        "favourite-explanation-1": "Nous attribuons à l'option <i>“{{favourite}}”</i> une notation de <b>100</b>.",
+        "favourite-intro-1": "Les questions suivantes sont uniquement là pour vous aider à commencer et à définir vos notations initiales. Vous pouvez toujours les modifier ultérieurement.",
+        "-step-1-title": "Option favorite",
+        "acceptable-explanation-2": "Cela signifie que vous <i>n'approuvez définitivement pas</i> ces options, quelle que soit la notation des autres participants.",
+        "favourite-explanation-3": "Il se peut cependant que <i>“{{favourite}}”</i> n'obtienne pas suffisamment d'approval à la fin pour l'emporter. Même si une majorité approves cette option, il n'est pas certain qu'elle l'emporte. Par conséquent, il est important de réfléchir également aux éventuelles options de compromis à venir.",
+        "favourite-intro-2": "Quelle option préféreriez-vous le plus ?",
+        "-step-2-title": "Options acceptables",
+        "-page-title": "Réglons vos notations"
     },
     "delete-all": {
         "-page-title": "Supprimer mes données",
@@ -230,5 +276,11 @@
     },
     "-parameters": {
         "first-day-of-week": "0"
+    },
+    "external-link": {
+        "yes": "Oui, ouvrez-le",
+        "confirm": "Ce lien vers la page Web externe<br/><br/><b>{{url}}</b><br/><br/>a été fourni par un utilisateur de Vodle et n'a pas été examiné par Vodle.<br/><br/>Souhaitez-vous l'ouvrir malgré les risques potentiels ?",
+        "copy-link": "Copier le lien",
+        "notification-copied-link-title": "Lien externe copié dans le presse-papiers."
     }
 }
