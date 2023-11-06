@@ -598,7 +598,8 @@
         "explain": "समझाएँ",
         "add-option": "विकल्प जोड़ें",
         "add-option-info": "यदि आपको लगता है कि कुछ महत्वपूर्ण विकल्प गायब है और सूचीबद्ध विकल्पों में से किसी के द्वारा कवर नहीं किया गया है, तो आप इसे जोड़ सकते हैं। एक बार जोड़ने के बाद, विकल्पों को संपादित या फिर से हटाया नहीं जा सकता है।",
-        "sorting": "स्वीकृति के आधार पर विकल्पों को क्रमित किया जा रहा है..."
+        "sorting": "स्वीकृति के आधार पर विकल्पों को क्रमित किया जा रहा है...",
+        "add-option-expired": "Time to add new options has expired."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

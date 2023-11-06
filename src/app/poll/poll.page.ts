@@ -786,6 +786,9 @@ export class PollPage implements OnInit {
   } 
 
   add_option(event: Event) {
+    if(!this.p.can_add_option()){
+      return;
+    }
     /** open the add option dialog popover */
     this.p.end_if_past_due();
     if (this.p.allow_voting) {

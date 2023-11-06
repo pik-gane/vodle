@@ -1914,6 +1914,15 @@ export class Poll {
     this.final_rand = rand;
   }
 
+  can_add_option(): boolean {
+     if (this.remaining_time_fraction > environment.no_more_options_time_fraction){
+         return true;
+       } else {
+         return false;
+       }
+  }
+
+
 
 }
 

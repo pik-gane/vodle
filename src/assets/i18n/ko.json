@@ -598,7 +598,8 @@
         "explain": "설명",
         "add-option": "선택지 추가",
         "add-option-info": "중요한 선택지가 위에 목록에 없다고 생각된다면 추가 할 수 있습니다. 하지만 추가된 이후에는 수정되거나 삭제할 수 없음을 유의해 주십시오.",
-        "sorting": "승인 수에 따라 선택지 정렬중..."
+        "sorting": "승인 수에 따라 선택지 정렬중...",
+        "add-option-expired": "Time to add new options has expired."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
