@@ -41,7 +41,7 @@ import { environment } from 'src/environments/environment';
 
 import { unique_name_validator$ } from '../sharedcomponents/unique-form-validator';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators'
+import { map, startWith } from 'rxjs/operators'
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
@@ -863,6 +863,7 @@ export class DraftpollPage implements OnInit {
 
   existingOptionName$(currentControlName: string): Observable<string[]> {
     return this.formGroup.valueChanges.pipe(
+      startWith({}),
       map(values => {
         const optionNameKeys = Object.keys(values as Object).filter(k => { return k.includes('option_name') && k !== currentControlName })
         const existingOptionNames: string[] = [];
