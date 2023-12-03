@@ -596,8 +596,7 @@
         "explain": "Selitä",
         "add-option": "Lisää vaihtoehto",
         "add-option-info": "Jos tärkeä vaihtoehto mielestäsi puuttuu vielä eikä yksikään muista vaihtoehdoista kata sitä, voit lisätä sen. Kun vaihtoehto on lisätty, sitä ei voi kuitenkaan enää muokata tai poistaa.",
-        "sorting": "Järjestetään vaihtoehtoja kannatuksen perusteella...",
-        "add-option-expired": "Time to add new options has expired."
+        "sorting": "Järjestetään vaihtoehtoja kannatuksen perusteella..."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

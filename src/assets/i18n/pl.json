@@ -598,8 +598,7 @@
         "explain": "Wyjaśnij",
         "add-option": "Dodaj opcję",
         "add-option-info": "Jeśli uważasz, że brakuje jakiejś ważnej opcji i nie pokrywa się ona z żadną z już wymienionych, możesz ją dodać. Jednak po dodaniu opcji nie można jej ponownie edytować ani usunąć.",
-        "sorting": "Sortowanie opcji według poziomu akceptacji...",
-        "add-option-expired": "Time to add new options has expired."
+        "sorting": "Sortowanie opcji według poziomu akceptacji..."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

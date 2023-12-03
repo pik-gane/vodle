@@ -598,8 +598,7 @@
         "explain": "Explicar",
         "add-option": "Añadir opción",
         "add-option-info": "Si crees que falta alguna opción importante y no está cubierta por ninguna de las anteriores, puedes añadirla. Una vez añadida, las opciones no podrán ser editadas o eliminadas.",
-        "sorting": "Ordenando opciones según su aprobación...",
-        "add-option-expired": "Time to add new options has expired."
+        "sorting": "Ordenando opciones según su aprobación..."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

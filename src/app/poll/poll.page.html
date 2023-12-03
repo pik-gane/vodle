@@ -941,9 +941,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             [disabled]="!p.can_add_option()">
           </ion-button>
         </ion-item>
-          <ion-item *ngIf="!p.can_add_option()" color="danger">
-            <strong [innerHtml]="'poll.add-option-expired' | translate"></strong>
-          </ion-item>
         <ion-item lines="none" style="padding-bottom: 10px!important;">
           <small [innerHtml]="'poll.add-option-info' | translate"></small>
         </ion-item>

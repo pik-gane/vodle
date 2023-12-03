@@ -49,7 +49,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                           : 'draftpoll.target-name-placeholder') | translate"
           type="text" required [maxlength]="E.max_len.name" 
           style="font-weight: bold; font-style: italic;">
-        </ion-input>      
+        </ion-input>
       </ion-item>
       <div class="validation-errors">
         <ng-container *ngFor="let validation of validation_messages.option_name">
@@ -125,7 +125,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <ion-icon name="arrow-back-outline"></ion-icon>&nbsp;
             <span [innerHtml]="'cancel'|translate"></span>
           </ion-button>&nbsp;&nbsp;
-          <ion-button color="primary" [disabled]="!formGroup.valid"
+          <ion-button color="primary" [disabled]="isAddButtonDisabled()"
               shape="round" fill="solid"
               (click)="OK_button_clicked()"><!--type="submit" button-type="submit"-->
             <ion-icon name="checkmark"></ion-icon>&nbsp;
@@ -133,6 +133,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </ion-button>
         </ion-buttons>
       </ion-item>
+      <div class="validation-errors">
+        <ng-container>
+          <div class="error-message"
+               *ngIf="!this.p.can_add_option()"
+               [innerHtml]="'poll.add-option-expired'|translate">
+          </div>
+        </ng-container>
+      </div>
       <ion-item lines="none">
         <small [innerHtml]="'addoption.info' | translate"></small>
       </ion-item>
