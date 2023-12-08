@@ -17,3 +17,45 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+.header-text {
+    color: var(--ion-color-primary);
+}
+
+.intro-text {
+    color: var(--ion-color-secondary);
+}
+
+.float-label {
+    position: floating;
+    color: primary;
+}
+
+.primary-text {
+    color: var(--ion-color-primary);
+}
+
+.input-bold-italic {
+    --ion-color-primary: var(--vodle-color-blue);
+    font-weight: bold;
+    font-style: italic;
+}
+
+.validation-errors {
+    color: var(--ion-color-danger);
+}
+
+.text-italic {
+    font-style: italic;
+}
+
+.small-text-input {
+    font-size: smaller;
+}
+
+.back-button {
+    --ion-color: var(--ion-color-secondary);
+}
+
+.ok-button {
+    --ion-color: var(--ion-color-primary);
+}

@@ -23,7 +23,7 @@ TODO:
 -->
 
 <ion-header>
-  <ion-toolbar style="padding-right:11px;">
+  <ion-toolbar style="padding-right:var(--toolbar-padding-right);">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
@@ -66,7 +66,7 @@ TODO:
           </ion-item>
         </ion-col>
         <ion-button fill="clear"
-            tabindex="-1" style="padding-top: 10px;"
+            tabindex="-1" style="padding-top:var(--spacing-small);"
             [disabled]="editing_email && !formGroup.get('email').valid"
             (click)="editing_email=!editing_email">
           <!--TODO: give focus to field-->
@@ -105,17 +105,15 @@ TODO:
           </ion-col>
           <ion-buttons>
             <ion-button 
-                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
+                tabindex="-1" style="var(--button-padding-top);" fill="clear" color="primary" 
                 (click)="showing_password=!showing_password">
-              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>
-              <!--&nbsp;<span [innerHtml]="(showing_password?'hide':'show')|translate"></span>-->
+                <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>
             </ion-button>
             <ion-button fill="clear"
-                tabindex="-1" style="padding-top: 10px;" color="primary" 
+                tabindex="-1" style="var(--vodle-padding-top);" color="primary" 
                 (click)="editing_password=!editing_password" 
                 [disabled]="editing_password && !formGroup.get('pw').valid">
-              <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
-              <!--<span [innerHtml]="(editing_password?'OK':'settings.edit')|translate"></span>-->
+                <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-row>
@@ -210,15 +208,15 @@ TODO:
           color="vodleblue" (ionChange)="set_default_wap()"
           mode="md" pin="true"
           min="0" max="100" step="1" snaps="true" ticks="false"
-          style="--bar-height: 7px; --knob-size: 35px; padding-top:8px; padding-left:0px " 
+          style="--bar-height: var(--vodle-bar-height); --knob-size: var(--vodle-knob-size); padding-top: var(--vodle-padding-top); padding-left: var(--vodle-padding-left);" 
           >
-        <ion-label slot="start" style="width:25px!important;"><span style="font-size:16px!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
+        <ion-label slot="start" style="width: var(--vodle-width)!important;"><span style="font-size: var(--vodle-font-size-16)!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
         <!--
         <ion-label slot="start">0</ion-label>
         <ion-label slot="end">100</ion-label>
         -->
       </ion-range>
-    </ion-item>
+    </ion-item>    
 
   </form>
 

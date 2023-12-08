@@ -19,23 +19,21 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-header>
 
-  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
-    <ion-toolbar style="padding-left: 16px;">
-
+  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:var(--vodle-padding-end)!important">
+    <ion-toolbar style="padding-left: var(--vodle-padding-left);">
       <!--<ion-icon slot="start" name="analytics-outline"></ion-icon>&nbsp;-->
       <ion-text 
-        style="font-weight: bold; font-size: larger;"
-        [innerHtml]="'analysis.-page-title' | translate">
-      </ion-text>
-      <ion-buttons slot="end">
+      style="font-weight: var(--vodle-font-weight); font-size: var(--vodle-font-size);"
+      [innerHtml]="'analysis.-page-title' | translate">
+    </ion-text>
+    <ion-buttons slot="end">
 
         <!-- OFFLINE SIGN -- >
         <ng-container *ngIf="!window.navigator.onLine">
           <ion-icon name="cloud-offline-outline" color="grey"
-            style="position: relative; bottom: -1px;">
+            style="position: var(--vodle-position); bottom: var(--vodle-bottom);">
           </ion-icon>
-          <ion-icon name="alert-outline" color="grey">
-          </ion-icon>
+          <ion-icon name="alert-outline" color="grey"></ion-icon>
         </ng-container> 
         <!---->
 
@@ -78,16 +76,24 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </p>
           <small *ngIf="!P.p.am_abstaining">
             <p>
-              <span [innerHtml]="'analysis.colors-before-red'|translate"></span>
-              <span style="color:#d33939"><b [innerHtml]="'analysis.colors-red'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-between-red-and-blue'|translate"></span>            
-              <span style="color:#3465a4"><b [innerHtml]="'analysis.colors-blue'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-between-blue-and-green'|translate"></span>            
-              <span style="color:#62a73b"><b [innerHtml]="'analysis.colors-green'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-after-green'|translate"></span>        
-              <span [innerHtml]="'analysis.colors-before-dark-green'|translate"></span>            
-              <span style="color:#4c822e"><b [innerHtml]="'analysis.colors-dark-green'|translate"></b></span>
-              <span [innerHtml]="'analysis.colors-after-dark-green'|translate"></span>          
+                <span [innerHtml]="'analysis.colors-before-red'|translate"></span>
+                <span [style.color]="var(--vodle-color-red)">
+                  <b [innerHtml]="'analysis.colors-red'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-between-red-and-blue'|translate"></span>
+                <span [style.color]="var(--vodle-color-blue)">
+                  <b [innerHtml]="'analysis.colors-blue'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-between-blue-and-green'|translate"></span>
+                <span [style.color]="var(--vodle-color-green)">
+                  <b [innerHtml]="'analysis.colors-green'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-after-green'|translate"></span>
+                <span [innerHtml]="'analysis.colors-before-dark-green'|translate"></span>
+                <span [style.color]="var(--vodle-color-dark-green)">
+                  <b [innerHtml]="'analysis.colors-dark-green'|translate"></b>
+                </span>
+                <span [innerHtml]="'analysis.colors-after-dark-green'|translate"></span>
           </p></small>
           <p [innerHtml]="'analysis.suggestion-general'|translate">
           </p>

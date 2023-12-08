@@ -19,12 +19,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-header>
 
-  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end:0px!important">
-    <ion-toolbar style="padding-left: 16px;">
+  <ion-item class="ion-no-margin ion-no-padding" style="--inner-padding-end: var(--zero-pixel)!important"> <!-- Changed -->
+    <ion-toolbar style="padding-left: var(--spacing-large);"> <!-- Changed -->
 
       <ion-icon slot="start" name="color-wand-outline"></ion-icon>&nbsp;
       <ion-text 
-        style="font-weight: bold; font-size: larger;"
+        class="bold-text large-text" <!-- Changed -->
         [innerHtml]="'assist.-page-title' | translate">
       </ion-text>
       <ion-buttons slot="end">
@@ -32,7 +32,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <!-- OFFLINE SIGN -- >
         <ng-container *ngIf="!window.navigator.onLine">
           <ion-icon name="cloud-offline-outline" color="grey"
-            style="position: relative; bottom: -1px;">
+            style="position: relative; bottom: var(--neg-one-pixel);"> <!-- Changed -->
           </ion-icon>
           <ion-icon name="alert-outline" color="grey">
           </ion-icon>
@@ -114,7 +114,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-item>  
     </ion-radio-group>
     <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--spacing-small);" <!-- Changed -->
           [disabled]="!favourite"
           (click)="submit_favourite()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
@@ -143,133 +143,131 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </p>
     </ion-item>
     <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+      <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--spacing-small);" <!-- Changed -->
           (click)="understood_favourite()">
         <ion-label [innerHtml]="'next'|translate"></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
-  
   <!-- STEP 2: ACCEPTABLE OPTIONS -->
 
-  <!-- selection: -->
-  <ng-container *ngIf="step == 2">
-    <ion-item color="light">
-      <p>
-        <span [innerHtml]="'assist.acceptable-intro'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
-      <ng-container *ngIf="P.oidsorted[i] == favourite">
-        <ion-checkbox slot="start" checked="true" disabled="true" style="margin-right:30px;"></ion-checkbox>
-        <ion-text color="black"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
-      </ng-container>
+<!-- selection: -->
+<ng-container *ngIf="step == 2">
+  <ion-item color="light">
+    <p>
+      <span [innerHtml]="'assist.acceptable-intro'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
+    <ng-container *ngIf="P.oidsorted[i] == favourite">
+      <ion-checkbox slot="start" checked="true" disabled="true" style="margin-right:var(--checkbox-margin-right);"></ion-checkbox>
+      <ion-text color="black"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
+    </ng-container>
+    <ng-container *ngIf="P.oidsorted[i] != favourite">
+      <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 
+        slot="start"></ion-checkbox>
+      <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>  
+    </ng-container>
+  </ion-item>  
+  <ion-item lines="none">
+    <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--button-padding-top);"
+        (click)="submit_acceptable()">
+      <ion-label [innerHtml]="'OK'|translate"></ion-label>
+    </ion-button>
+  </ion-item>
+</ng-container>
+
+<!-- explanation: -->
+<ng-container *ngIf="step == 2.1">
+  <ion-item color="success">
+    <p>
+      <span [innerHtml]="'assist.acceptable-explanation-1'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item>
+    <p>
+      <span [innerHtml]="'assist.acceptable-explanation-2'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item color="success">
+    <p>
+      <span [innerHtml]="'assist.acceptable-explanation-3'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item>
+    <p>
+      <span [innerHtml]="'assist.acceptable-explanation-4'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item>
+    <p>
+      <span [innerHtml]="'assist.acceptable-explanation-5'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item lines="none">
+    <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--button-padding-top);"
+        (click)="understood_acceptable()">
+      <ion-label [innerHtml]="'next'|translate"></ion-label>
+    </ion-button>
+  </ion-item>
+</ng-container>
+
+<!-- STEP 3: ESTIMATED APPROVAL FOR ACCEPTABLE OPTIONS: -->
+
+<!-- selection: -->
+<ng-container *ngIf="step == 3">
+  <ion-item color="light">
+    <p>
+      <span [innerHtml]="'assist.estimates-intro'|translate"></span>
+    </p>
+  </ion-item>
+  <ng-container *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
+    <ion-item *ngIf="acceptable[P.oidsorted[i]] && P.oidsorted[i] != favourite">
       <ng-container *ngIf="P.oidsorted[i] != favourite">
-        <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 
-          slot="start"></ion-checkbox>
-        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>  
+        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
+        <ion-buttons slot="end">
+          <ion-input 
+            inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
+            [(ngModel)]="estimates[P.oidsorted[i]]" 
+            debounce="100" (ngModelChange)="estimate_change()"
+          ></ion-input>&nbsp;%
+        </ion-buttons>
       </ng-container>
     </ion-item>  
-    <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
-          (click)="submit_acceptable()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
-      </ion-button>
-    </ion-item>
   </ng-container>
+  <ion-item lines="none">
+    <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--button-padding-top);"
+        (click)="submit_estimates()">
+      <ion-label [innerHtml]="'OK'|translate"></ion-label>
+    </ion-button>
+  </ion-item>
+</ng-container>
 
-  <!-- explanation: -->
-  <ng-container *ngIf="step == 2.1">
-    <ion-item color="success">
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-1'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-2'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item color="success">
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-3'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-4'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.acceptable-explanation-5'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
-          (click)="understood_acceptable()">
-        <ion-label [innerHtml]="'next'|translate"></ion-label>
-      </ion-button>
-    </ion-item>
-  </ng-container>
-
-  <!-- STEP 3: ESTIMATED APPROVAL FOR ACCEPTABLE OPTIONS: -->
-
-  <!-- selection: -->
-  <ng-container *ngIf="step == 3">
-    <ion-item color="light">
-      <p>
-        <span [innerHtml]="'assist.estimates-intro'|translate"></span>
-      </p>
-    </ion-item>
-    <ng-container *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
-      <ion-item *ngIf="acceptable[P.oidsorted[i]] && P.oidsorted[i] != favourite">
-        <ng-container *ngIf="P.oidsorted[i] != favourite">
-          <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
-          <ion-buttons slot="end">
-            <ion-input 
-              inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
-              [(ngModel)]="estimates[P.oidsorted[i]]" 
-              debounce="100" (ngModelChange)="estimate_change()"
-            ></ion-input>&nbsp;%
-          </ion-buttons>
-        </ng-container>
-      </ion-item>  
-    </ng-container>
-    <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
-          (click)="submit_estimates()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
-      </ion-button>
-    </ion-item>
-  </ng-container>
-
-  <!-- explanation: -->
-  <ng-container *ngIf="step == 3.1">
-    <ion-item color="light">
-      <p>
-        <span [innerHtml]="'assist.estimates-explanation-1'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item>
-      <p>
-        <span [innerHtml]="'assist.estimates-explanation-2'|translate"></span>
-      </p>
-    </ion-item>
-    <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
-          (click)="understood_estimates()">
-        <ion-label [innerHtml]="'next'|translate"></ion-label>
-      </ion-button>
-    </ion-item>
-  </ng-container>
+<!-- explanation: -->
+<ng-container *ngIf="step == 3.1">
+  <ion-item color="light">
+    <p>
+      <span [innerHtml]="'assist.estimates-explanation-1'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item>
+    <p>
+      <span [innerHtml]="'assist.estimates-explanation-2'|translate"></span>
+    </p>
+  </ion-item>
+  <ion-item lines="none">
+    <ion-button size="normal" shape="round" slot="end" style="padding-top: var(--button-padding-top);"
+        (click)="understood_estimates()">
+      <ion-label [innerHtml]="'next'|translate"></ion-label>
+    </ion-button>
+  </ion-item>
+</ng-container>
 
   <!-- STEP 4: SINCERE APPROVAL THRESHOLDS FOR ACCEPTABLE OPTIONS: -->
-
   <!-- selection: -->
   <ng-container *ngIf="step == 4">
     <ion-item *ngFor="let item of [].constructor(current_index); let i = index" color="secondary"
-        (click)="go_index(i)" style="cursor: pointer;">
+        (click)="go_index(i)" [style.cursor]="var(--pointer-cursor)">
       <ion-label>
         <b><i [innerHtml]="P.p.options[thresholded_oids[i]].name"></i></b>
       </ion-label>
@@ -309,26 +307,20 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-buttons>
     </ion-item>
     <ion-item lines="none">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+      <ion-button size="normal" shape="round" slot="end" [style.padding-top]="var(--top-padding-10)"
           (click)="submit_threshold()" [disabled]="threshold_answer[thresholded_oids[current_index]] != true && threshold_answer[thresholded_oids[current_index]] != false">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
       </ion-button>
     </ion-item>
     <ion-item *ngFor="let item of [].constructor(thresholded_oids.length-1-current_index); let j = index" color="secondary"
-        (click)="go_index(current_index+1+j)" style="cursor: pointer;">
+        (click)="go_index(current_index+1+j)" [style.cursor]="var(--pointer-cursor)">
       <ion-label>
         <b><i [innerHtml]="P.p.options[thresholded_oids[current_index+1+j]].name"></i></b>
       </ion-label>
     </ion-item>
-    <!-- debugging info:
-    <ion-item>
-      {{thresholded_oids}}, {{threshold_answer}}, {{JSON.stringify(thresholds)}}
-    </ion-item>
-    -->
   </ng-container>
 
   <!-- STEP 5: RESULTING RATINGS: -->
-
   <!-- selection: -->
   <ng-container *ngIf="step == 5">
     <ion-item color="success">
@@ -341,7 +333,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <span [innerHtml]="'assist.ratings-intro-2'|translate"></span>
       </p>
     </ion-item>
-
     <ion-item  *ngFor="let item of [].constructor(acceptable_oids.length); let i = index">
       <ion-text *ngIf="acceptable_oids[i] == favourite">
         <p>
@@ -353,26 +344,23 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <p>
           <b><i [innerHtml]="P.p.options[acceptable_oids[i]].name"></i></b>
         </p>
-        <p [innerHtml]="'assist.ratings-acceptable'|translate:{threshold:thresholds[acceptable_oids[i]], wap:ratings[acceptable_oids[i]], more_than:100-ratings[acceptable_oids[i]]}"></p>
+        <p [innerHtml]="'assist.ratings-acceptable'|translate:{threshold:thresholds[acceptable_oids[i]], wap:ratings[acceptable_oids[i]]}"></p>
       </ion-text>
     </ion-item>
-    <ion-item>
-      <p [innerHtml]="'assist.ratings-other'|translate"></p>
+    <ion-item *ngFor="let item of [].constructor(unacceptable_oids.length); let i = index">
+      <ion-text>
+        <p>
+          <b><i [innerHtml]="P.p.options[unacceptable_oids[i]].name"></i></b>
+        </p>
+        <p [innerHtml]="'assist.ratings-unacceptable'|translate:{threshold:thresholds[unacceptable_oids[i]], wap:ratings[unacceptable_oids[i]]}"></p>
+      </ion-text>
     </ion-item>
-    <ion-item color="light">
-      <p [innerHtml]="'assist.ratings-extro'|translate"></p>
-    </ion-item>
-    <ion-item lines="none" style="padding-bottom: 10px!important;">
-      <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
+    <ion-item lines="none" [style.padding-bottom]="var(--bottom-padding-10)!important">
+      <ion-button size="normal" shape="round" slot="end" [style.padding-top]="var(--top-padding-10)"
           (click)="understood_ratings()">
         <ion-label [innerHtml]="'OK'|translate"></ion-label>
       </ion-button>
     </ion-item>
-    <!-- debugging info: -- >
-    <ion-item>
-      {{thresholded_oids}}, {{JSON.stringify(ratings)}}
-    </ion-item>
-    <!---->
   </ng-container>
 
   <ion-fab *ngIf="show_up" vertical="top" horizontal="end" slot="fixed" size="small" class="ion-no-margin ion-no-padding">
@@ -385,5 +373,4 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-icon name="chevron-down-outline"></ion-icon>
     </ion-fab-button>
   </ion-fab>
-
 </ion-content>

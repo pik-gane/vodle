@@ -56,9 +56,165 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-color-contrast: #000000;
 }
 
+
+
+
 /** Ionic CSS Variables **/
 :root {
   --ion-font-family: "Quicksand";
+  --ion-font-family: "Quicksand";
+  --vodle-color-red: #d33939;
+  --vodle-color-blue: #3465a4;
+  --vodle-color-green: #62a73b;
+  --vodle-color-dark-green: #4c822e;
+  --ion-color-grey: grey;
+  --vodle-font-bold-italic: bold italic;
+  --vodle-font-italic: italic;
+  --vodle-font-size-smaller: smaller;
+  --vodle-padding-end: 0px;
+  --vodle-padding-left: 16px;
+  --vodle-font-weight: bold;
+  --vodle-font-size: larger;
+  --vodle-position: relative;
+  --vodle-bottom: -1px;
+  --vodle-icon-bottom: -1px;
+  --vodle-padding-top: 10px;
+  --vodle-checkbox-margin-right: 30px;
+  --zero-pixel: 0px;
+  --spacing-large: 16px;
+  --neg-one-pixel: -1px;
+  --spacing-small: 10px;
+  --checkbox-margin-right: 30px;
+  --button-padding-top: 10px;
+  --toolbar-padding-right: 11px;
+  --icon-color: #444444;
+  --skip-button-color: #00a000;
+  --validation-errors-color: #ff0000;
+  --poll-type: relative;
+  --poll-type-top: 3px;
+  --poll-type-z-index: 10;
+  --poll-title-input: 0;
+  --poll-desc-textarea: 0;
+  --poll-url-input: 0;
+  --poll-image-input: 0;
+  --select-font-size: smaller;
+  --add-option-padding: 5px;
+  --label-line-height: 1.0;
+  --vodle-font-size-smaller: 0.8em;
+  --vodle-font-size-title: 2em;
+  --vodle-color-threshold-smaller: #3465a4;
+  --vodle-color-threshold-larger: #62a73b;
+  --vodle-color-my-rating: var(--vodle-color-threshold-smaller); // assuming that cs[myi] uses the same color as --vodle-color-threshold-smaller
+  --vodle-color-approval-label: #9abcbd;
+  --vodle-color-explain-note: #808080;
+  --vodle-color-backdrop: #ffffffd0;
+  --color-opposition-bar: #3465a4a0;
+  --color-black: #000000;
+  --color-percentage: #4c822e;
+  --color-intro-text: #769596;
+  --color-approval-bar: #bce4e5;
+  --color-horizontal-approval-label: #9abcbd;
+  --opposition-fill: #3465a4a0;
+  --text-fill: black;
+  --percentage-fill: #4c822e;
+  --intro-fill: #769596;
+  --approval-bar-fill: #bce4e5;
+  --approval-text-fill: #9abcbd;
+  --backdrop-fill: #ffffffff;
+  --vodle-color-arrow: #769596;
+  --vodle-color-approval-share: #9abcbd;
+  --vodle-stroke-width: 0.2;
+  --vodle-stroke-dasharray: .5 .5;
+  --vodle-rect-height: 2;
+  --vodle-rect-stroke: none;
+  --toolbar-padding-right: 11px;
+  --link-color: inherit;
+  --link-decoration: inherit;
+  --full-width: 100%;
+  --image-width: 306px;
+  --checkbox-visibility: hidden;
+  --button-padding-top: 15px;
+  --vodle-cursor-pointer: pointer;
+  --vodle-position-relative: relative;
+  --vodle-margin-right-neg-10: -10px;
+  --vodle-badge-margin-left: 5px;
+  --vodle-badge-margin-bottom: 1px;
+  --vodle-badge-margin-top: 1px;
+  --vodle-font-size-x-small: x-small;
+  --ion-no-padding-important: padding-left: 0px!important; padding-right: 0px!important;
+  --position-left: position: relative; left: -9px;
+  --ion-text-bold: font-weight: bold;
+  --ion-text-large: font-size: larger;
+  --position-bottom: position: relative; bottom: -1px;
+  --position-right: position: relative; right: -4px;
+  --icon-gray-important: color: gray!important;
+  --item-pointer-min-height: 0!important;
+  --details-expanded: white-space: normal; overflow: hidden; text-overflow: ellipsis; width: 100%!important;
+  --details-collapsed: white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%!important;
+  --relative-icon-position: position: relative; top: 2px;
+  --vodle-padding-bottom: 8px;
+  --vodle-padding-top-2: 2px;
+  --icon-top: 2px;
+  --small-font-size: 14px;
+  --badge-bottom: -6px;
+  --xsmall-font-size: 11.5px;
+  --padding-top: 2px;
+  --button-right: 8.5px;
+  --button-bottom: 8px;
+  --toggle-color: #88e950;
+  --icon-padding-left: 4px;
+  --button-size: var(--vodle-font-size);
+  --vodle-font-size-medium: medium;
+  --vodle-width-small: 68px;
+  --vodle-padding-right-agreed: 62px;
+  --vodle-padding-right: 10px;
+  --vodle-width-svg-container: 60px;
+  --vodle-position-absolute: absolute;
+  --vodle-bottom-zero: 0px;
+  --vodle-color-circle: #bce4e5;
+  --vodle-color-path: #9abcbd;
+  --vodle-color-line: #769596;
+  --vodle-padding-top: 8px;
+  --vodle-cursor-pointer: pointer;
+  --vodle-position-relative: relative;
+  --vodle-left: -6px;
+  --vodle-z-index: 20;
+  --vodle-max-width: 100%;
+  --vodle-top: 3px;
+  --vodle-pointer-events: auto; /* or you can specify the default value you want to use */
+  --vodle-pointer-events-none: none;
+  --vodle-bar-height-large: 7px;
+  --vodle-bar-height-small: 5px;
+  --vodle-knob-size-large: 35px;
+  --vodle-knob-size-small: 17px;
+  --vodle-margin-right: 12px;
+  --vodle-fill-1: #bce4e5;
+  --vodle-stroke-1: #bce4e5;
+  --vodle-stroke-2: #b4dbdb;
+  --vodle-font-size: 12px;
+  --vodle-top-neg-2: -2px;
+  --vodle-right-11: 11px;
+  --vodle-z-index-neg-5: -5;
+  --stroke-width-2: 2px;
+  --stroke-dasharray-3-2: 3 2;
+  --r-5: 5px;
+  --div-absolute-position: absolute;
+  --div-z-index: 10;
+  --div-top: 22px;
+  --div-right: 1px;
+  --div-text-align: right;
+  --ion-toggle-top: -8px;
+  --poll-info-color: #769596;
+  --poll-highlight-color: #4c822e;
+  --poll-approval-color: #9abcbd;
+  --poll-approval-highlight-color: #62a73b;
+  --color-gray: #8c8c8c;
+  --vodle-font-size-medium: 20px;
+  --vodle-font-size-larger: 40px;
+  --vodle-top-position: 3px;
+  --vodle-z-index-level: 10;
+  --image-height: 40px;
+  
 
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */
@@ -205,6 +361,8 @@ $font-family-wp-base: "Quicksand Medium";
     --ion-color-light-contrast-rgb: 255,255,255;
     --ion-color-light-shade: #1e2023;
     --ion-color-light-tint: #383a3e;
+    --opposition-fill: <dark-mode-value>;
+    --text-fill: <dark-mode-value>;
   }
 
   /*
@@ -296,6 +454,40 @@ $font-family-wp-base: "Quicksand Medium";
 }
 
 /* background images: */
+
+/* Padding, Font and Margins */
+.padding-small {
+  padding: 4px;
+}
+
+.margin-small {
+  margin: 4px;
+}
+
+.font-size-large {
+  font-size: 1.5em;
+}
+
+.bold-italic {
+  font-weight: var(--vodle-font-bold-italic);
+}
+
+.italic {
+  font-style: var(--vodle-font-italic);
+}
+
+.small-font {
+  font-size: var(--vodle-font-size-smaller);
+}
+
+.bold-text {
+  font-weight: bold;
+}
+
+.large-text {
+  font-size: larger;
+}
+
 
 app-login {
   background: url(../assets/img/bg_arms_outstretched.png) no-repeat;

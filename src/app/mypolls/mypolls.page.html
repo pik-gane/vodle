@@ -23,7 +23,7 @@ TODO:
 -->
 
 <ion-header>
-  <ion-toolbar style="padding-right:11px;">
+  <ion-toolbar style="padding-right:var(--toolbar-padding-right);">
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
@@ -33,14 +33,14 @@ TODO:
       <!-- OFFLINE SIGN -->
       <ng-container *ngIf="!window.navigator.onLine">
         <ion-icon name="cloud-offline-outline" color="grey"
-          style="position: relative; bottom: -1px;">
+          style="position: var(--vodle-position); bottom: var(--vodle-bottom);">
         </ion-icon>
         <ion-icon name="alert-outline" color="grey">
         </ion-icon>
       </ng-container> 
 
       <!-- SYNCING SIGN -->
-      <ion-icon *ngIf="G.show_spinner || !window.navigator.onLine" name="swap-vertical-outline" color="grey" style="margin-right: 10px;"></ion-icon>
+      <ion-icon *ngIf="G.show_spinner || !window.navigator.onLine" name="swap-vertical-outline" color="grey" style="margin-right: var(--spacing-small);"></ion-icon>
       <!--
       <ion-spinner *ngIf="G.show_spinner || !window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
       -->
@@ -50,6 +50,7 @@ TODO:
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
+
 
 <!--
   TODO:
@@ -76,12 +77,13 @@ TODO:
             <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
           </ion-button>
           <ion-button slot="end" class="ion-no-margin ion-no-padding" fill="clear" size="small" (click)="news.delete(n);G.N.dismiss(n.key)">
-            <ion-icon slot="icon-only" name="close-outline" style="color:gray!important">
+            <ion-icon slot="icon-only" name="close-outline" style="color:var(--ion-color-grey)!important">
             </ion-icon>    
           </ion-button>  
         </ion-item>
       </ion-card-content>
     </ion-card>
+    
 
     <!-- UNANSWERED REQUESTS -->
 
@@ -107,7 +109,6 @@ TODO:
     </ng-container>
 
     <!--RUNNING-->
-
     <ion-item color="primary" class="ion-no-margin">
       <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
@@ -118,27 +119,27 @@ TODO:
           <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <i [lang]="p.language" [innerHtml]="p.title"></i>
         </ion-label>
-        <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
-
+        <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: var(--vodle-position); right: var(--vodle-right);">
+    
           <!-- Badges: -->
-
-          <div style="display: flex; flex-direction: column;">
-            <div *ngIf="!p.have_seen" style="display: flex;flex-direction: row-reverse;">
-              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+    
+          <div style="display: var(--vodle-display-flex); flex-direction: var(--vodle-flex-direction-column);">
+            <div *ngIf="!p.have_seen" style="display: var(--vodle-display-flex);flex-direction: var(--vodle-flex-direction-row-reverse);">
+              <ion-badge class="ion-no-margin" style="margin-left:var(--vodle-margin-left); margin-bottom:var(--vodle-margin-bottom); margin-top:var(--vodle-margin-top); font-size: var(--vodle-font-size-x-small);" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
             </div>
-            <div *ngIf="p.is_closing_soon" style="display: flex;flex-direction: row-reverse;">
-              <ion-badge size="small" class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
+            <div *ngIf="p.is_closing_soon" style="display: var(--vodle-display-flex);flex-direction: var(--vodle-flex-direction-row-reverse);">
+              <ion-badge size="small" class="ion-no-margin" style="margin-left:var(--vodle-margin-left); margin-bottom:var(--vodle-margin-bottom); margin-top:var(--vodle-margin-top); font-size: var(--vodle-font-size-x-small);" color="danger" [innerHtml]="'badges.closing-soon'|translate"></ion-badge>
             </div>
-            <div *ngIf="p.have_seen && p.am_abstaining" style="display: flex;flex-direction: row-reverse;">
-              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
+            <div *ngIf="p.have_seen && p.am_abstaining" style="display: var(--vodle-display-flex);flex-direction: var(--vodle-flex-direction-row-reverse);">
+              <ion-badge class="ion-no-margin" style="margin-left:var(--vodle-margin-left); margin-bottom:var(--vodle-margin-bottom); margin-top:var(--vodle-margin-top); font-size: var(--vodle-font-size-x-small);" color="danger" slot="end" [innerHtml]="'badges.abstaining' | translate"></ion-badge>
             </div>
-            <div *ngIf="p.have_delegated" style="display: flex;flex-direction: row-reverse;">
-              <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
+            <div *ngIf="p.have_delegated" style="display: var(--vodle-display-flex);flex-direction: var(--vodle-flex-direction-row-reverse);">
+              <ion-badge class="ion-no-margin" style="margin-left:var(--vodle-margin-left); margin-bottom:var(--vodle-margin-bottom); margin-top:var(--vodle-margin-top); font-size: var(--vodle-font-size-x-small);" color="secondary" slot="end" [innerHtml]="'badges.delegated' | translate"></ion-badge>
             </div>
           </div>
-
+    
           <!-- Invite-to button: -->
-
+    
           <ion-button *ngIf="can_invite(p)" fill="clear" 
               class="ion-no-padding ion-no-margin"
               [routerLink]="'/inviteto/'+p.pid">
@@ -159,24 +160,24 @@ TODO:
 
     <!-- CLOSED: -->
 
-    <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: pointer;">
+    <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: var(--vodle-cursor-pointer);">
       <ion-icon size="small" [name]="closed_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="closed_expanded">
       <ng-container *ngFor="let p of closed_polls">
-        <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
+        <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: var(--vodle-cursor-pointer);">
           <ion-label>
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [lang]="p.language" [innerHtml]="p.title"></i>
           </ion-label>
-          <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
+          <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: var(--vodle-position-relative); right: var(--vodle-margin-right-neg-10);">
 
             <!-- Badges: -->
   
             <div style="display: flex; flex-direction: column;">
               <div *ngIf="!p.have_seen_results" style="display: flex;flex-direction: row-reverse;">
-                <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
+                <ion-badge class="ion-no-margin" style="margin-left: var(--vodle-badge-margin-left); margin-bottom: var(--vodle-badge-margin-bottom); margin-top: var(--vodle-badge-margin-top); font-size: var(--vodle-font-size-x-small);" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
               </div>
             </div>
   
@@ -192,6 +193,7 @@ TODO:
         </ion-item>
       </ng-container>
     </ng-container>
+
     <!--OLDER-->
     <!--
     <ion-item color="light" (click)="older_expanded=!older_expanded">
@@ -203,50 +205,52 @@ TODO:
         <ion-item *ngIf="p.state=='closed'" [routerLink]="'/draftpoll/'+p.pid">
           <ion-icon size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
           <small><i [lang]="p.language">{{p.title}}</i></small>
-          <ion-badge class="ion-no-margin" style="margin-left:5px;" color="primary" slot="end">New</ion-badge>
+          <ion-badge class="ion-no-margin" style="margin-left: var(--vodle-badge-margin-left);" color="primary" slot="end">New</ion-badge>
         </ion-item>
       </ng-container>
     </ng-container>
+
     -->
 
     <!--DRAFTS:-->
 
-    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: pointer;">
+    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: var(--vodle-cursor-pointer);">
       <ion-icon size="small" [name]="drafts_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
-    </ion-item>
-    <ng-container *ngIf="drafts_expanded">
+  </ion-item>
+  <ng-container *ngIf="drafts_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
-        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: pointer;">
-          <ion-label>
-            <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
-            <i [lang]="p.language" [innerHtml]="p.title"></i>
-          </ion-label>
-          <ion-buttons slot="end" 
-              style="position: relative; right: -10px;"
-              class="ion-no-padding ion-no-margin">
-            <ion-badge class="ion-no-margin" style="margin-left:5px; font-size: x-small;" color="light" [innerHtml]="'badges.draft'|translate"></ion-badge>
-            <ion-button fill="clear">
-              <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
-            </ion-button>
-          </ion-buttons>
-        </ion-item>
+          <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: var(--vodle-cursor-pointer);">
+              <ion-label>
+                  <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+                  <i [lang]="p.language" [innerHtml]="p.title"></i>
+              </ion-label>
+              <ion-buttons slot="end" 
+                style="position: relative; right: var(--vodle-button-position-right);"
+                class="ion-no-padding ion-no-margin">
+                <ion-badge class="ion-no-margin" style="margin-left: var(--vodle-badge-margin-left); font-size: var(--vodle-badge-font-size);" color="light" [innerHtml]="'badges.draft'|translate"></ion-badge>
+                <ion-button fill="clear">
+                  <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+
+          </ion-item>
       </ng-container>
       <ng-container *ngIf="Object.keys(G.P.draft_polls).length==0 && !G.show_spinner">
-        <ion-item>
-          <ion-col class="ion-no-padding ion-no-margin">
-            <p [innerHtml] ="'mypolls.no-draft-polls-1'|translate"></p>
-            <small><p [innerHtml] ="'mypolls.no-draft-polls-2'|translate"></p></small>
-          </ion-col>
-        </ion-item>
+          <ion-item>
+              <ion-col class="ion-no-padding ion-no-margin">
+                  <p [innerHtml] ="'mypolls.no-draft-polls-1'|translate"></p>
+                  <small><p [innerHtml] ="'mypolls.no-draft-polls-2'|translate"></p></small>
+              </ion-col>
+          </ion-item>
       </ng-container>
-    </ng-container>
+  </ng-container>
   </ion-list>
-
+  
   <ion-fab vertical="bottom" horizontal="end" slot="fixed" class="ion-margin">
-    <ion-fab-button routerLink="/draftpoll">
-      <ion-icon name="add"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+      <ion-fab-button routerLink="/draftpoll">
+          <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+  </ion-fab>  
 
 </ion-content>
