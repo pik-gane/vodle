@@ -41,6 +41,7 @@ export class MypollsPage implements OnInit {
   closed_expanded = false;
   drafts_expanded = false;
   older_expanded = false;
+  archived_expanded = false;
 
   // LIFECYCLE:
 
@@ -128,8 +129,16 @@ export class MypollsPage implements OnInit {
   get closed_polls(): Poll[] {
     // return polls sorted by due:
     return Object.values(this.G.P.polls)
-      .filter((p) => p.state=='closed' && !!p.due)
+      .filter((p) => p.state=='closed' && !!p.due && !p.is_archived)
       .sort((p1, p2) => p2.due.getTime() - p1.due.getTime());
   } 
+
+  get arvhived_polls(): Poll[] {
+    // return polls sorted by due:
+    return Object.values(this.G.P.polls)
+      .filter((p) => p.state=='closed' && p.is_archived)
+      .sort((p1, p2) => p2.due.getTime() - p1.due.getTime());
+  } 
+  
 
 }

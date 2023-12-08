@@ -964,7 +964,12 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     </ng-container>
 
   </ion-list>
+
+  <ion-item *ngIf="p.state == 'closed'">
+    <ion-checkbox slot="start" [(ngModel)]="p.is_archived" ></ion-checkbox><ion-label [innerHtml]="'poll.archive'|translate"></ion-label>
+  </ion-item>
 </ion-content>
+
 
 <!-- OPTIONAL GLOSSARY: -->
 
