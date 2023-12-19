@@ -1922,8 +1922,11 @@ export class Poll {
        }
   }
 
-
-
+  add_option_deadline(): Date {
+    const t0 = this.start_date.getTime(),
+          t2 = this.due.getTime();
+    return new Date(t2 - (t2 - t0) * environment.no_more_options_time_fraction);  
+  } 
 }
 
 

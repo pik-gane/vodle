@@ -41,7 +41,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               : 'draftpoll.target-name-label') | translate">
           </span>
         </ion-label>
-        <ion-input 
+        <ion-input  
+          [disabled]="!p.can_add_option()"
           formControlName="option_name" 
           autofocus="true" #focus_element
           [placeholder]="(p.type == 'winner' 
@@ -69,6 +70,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
         </ion-label>
         <ion-textarea 
+          [disabled]="!p.can_add_option()"
           formControlName="option_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
           rows="1" auto-grow type="text" 
@@ -93,6 +95,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
         </ion-label>
         <ion-input 
+          [disabled]="!p.can_add_option()"
           formControlName="option_url" 
           [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
           type="text" inputmode="url" [maxlength]="E.max_len.url"

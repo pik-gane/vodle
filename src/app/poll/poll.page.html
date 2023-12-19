@@ -941,8 +941,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             [disabled]="!p.can_add_option()">
           </ion-button>
         </ion-item>
-        <ion-item lines="none" style="padding-bottom: 10px!important;">
-          <small [innerHtml]="'poll.add-option-info' | translate"></small>
+        <ion-item lines="none" style="padding-bottom: 10px!important;" [disabled]="!p.can_add_option()">
+          <small [innerHtml]="'poll.add-option-info' | translate:{deadline:G.D.format_date(p.add_option_deadline())}"></small>
         </ion-item>
       </ng-container>
 
