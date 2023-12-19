@@ -601,7 +601,8 @@
         "explain": "Explain",
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
-        "sorting": "Sorting options by approval..."
+        "sorting": "Sorting options by approval...",
+        "add-option-expired": "Time to add new options has expired."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

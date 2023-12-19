@@ -930,12 +930,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <ng-container *ngIf="p.allow_voting">
         <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
           <ion-fab-button 
-            size="small" (click)="add_option($event)" fill="clear" color="primary">
+            size="small" (click)="add_option($event)" fill="clear" color="primary"
+            [disabled]="!p.can_add_option()">
             <ion-icon name="add"></ion-icon>
+
           </ion-fab-button>
-          <ion-button 
+          <ion-button
             class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
-            [innerHtml]="'poll.add-option' | translate"> 
+            [innerHtml]="'poll.add-option' | translate"
+            [disabled]="!p.can_add_option()">
           </ion-button>
         </ion-item>
         <ion-item lines="none" style="padding-bottom: 10px!important;">

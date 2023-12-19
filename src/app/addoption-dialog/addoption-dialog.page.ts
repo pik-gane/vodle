@@ -91,6 +91,11 @@ export class AddoptionDialogPage implements OnInit {
     setTimeout(() => this.focus_element.setFocus(), 100);
   }
 
+  isAddButtonDisabled(): boolean {
+      // Combine both conditions here
+      return !this.formGroup.valid || !this.p.can_add_option();
+    }
+
   OK_button_clicked() {
     /** add the option */
     const name = this.formGroup.get('option_name').value,
