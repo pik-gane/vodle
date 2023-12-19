@@ -594,7 +594,7 @@
         "average-rating": "durchschn. Wap {{average}}",
         "explain": "Erklären",
         "add-option": "Option hinzufügen",
-        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
+        "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie bis {{deadline}} hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
         "sorting": "Optionen werden neu sortiert..."
     },
     "previewpoll": {

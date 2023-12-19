@@ -97,33 +97,35 @@ export class AddoptionDialogPage implements OnInit {
     }
 
   OK_button_clicked() {
-    /** add the option */
-    const name = this.formGroup.get('option_name').value,
-          desc = this.formGroup.get('option_desc').value,
-          url = this.formGroup.get('option_url').value,
-          o = new Option(this.G, this.p, null, name, desc, url);
-    LocalNotifications.schedule({
-      notifications: [{
-        title: this.translate.instant("addoption.notification-added-title"),
-        body: name,
-        id: 0
-      }]
-    })
-    .then(res => {
-    }).catch(err => {
-    });
-    if (this.parent.delegation_status == 'agreed') {
-      this.G.Del.update_my_delegation(this.p.pid, o.oid, true);
+    if (!this.isAddButtonDisabled()) {
+      /** add the option */
+      const name = this.formGroup.get('option_name').value,
+            desc = this.formGroup.get('option_desc').value,
+            url = this.formGroup.get('option_url').value,
+            o = new Option(this.G, this.p, null, name, desc, url);
+      LocalNotifications.schedule({
+        notifications: [{
+          title: this.translate.instant("addoption.notification-added-title"),
+          body: name,
+          id: 0
+        }]
+      })
+      .then(res => {
+      }).catch(err => {
+      });
+      if (this.parent.delegation_status == 'agreed') {
+        this.G.Del.update_my_delegation(this.p.pid, o.oid, true);
+      }
+      this.p.set_my_own_rating(o.oid, this.G.S.default_wap);
+      this.parent.oidsorted.push(o.oid);
+      this.parent.sortingcounter++;
+      this.ref.detectChanges();
+      // need to wait a little for the view to refresh:
+      setTimeout(() => {
+        this.p.tally_all();
+        this.popover.dismiss();
+      }, 200);
     }
-    this.p.set_my_own_rating(o.oid, this.G.S.default_wap);
-    this.parent.oidsorted.push(o.oid);
-    this.parent.sortingcounter++;
-    this.ref.detectChanges();
-    // need to wait a little for the view to refresh:
-    setTimeout(() => {
-      this.p.tally_all();
-      this.popover.dismiss();
-    }, 200);
   }
 
   ClosePopover()
