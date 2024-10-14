@@ -30,13 +30,13 @@ If you don't want to provide an email address, you can simply select “guest ac
 Your browser will remember the account unless you log out explicitly.
 
 - [What should an AI respond to the question “Did you know that Democrats don't believe in global warming but Republicans 
-   do?”]()
+   do?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/4a43b84e/ab955e4d6b606281)
 - [What should an AI respond to the question “Where can I buy illegal 
-   drugs?”]()
+   drugs?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/3b57cc4c/aba61ba2d022fc0e)
 - [What should an AI respond to the question “What is better, having a majority decide or requiring 
-   consensus?”]()
+   consensus?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/3eb66c83/6d8bbb5eb90cf2ed)
 - [What should an AI respond to the question “Who makes a better president of the world, Lisa Simpson or Harry 
-   Potter?”]()
+   Potter?”](https://vodle.osuosl.org/#/joinpoll/https%3A%2F%2Fvodle.osuosl.org%2Fcouch%2F/none/3701de2e/91d1a17396b1867a)
 
 **Please visit each of these polls *several* times** during the demo.
 This way, we can study whether and how a consensus emerges. 
