@@ -11,7 +11,7 @@ This page describes
 ### Setting up Node, Ionic, and the vodle web app
 
 - We assume you have `git` already installed on your system. If you are on Windows, some of the commands below may have to be issued in [`git bash`](https://gitforwindows.org/) instead of the Windows command line.
-- Follow [these instructions](https://ionicframework.com/docs/v5/intro/environment) to set up a basic environment for working with Ionic, basically consisting of [Node.js](https://ionicframework.com/docs/v5/reference/glossary#node) and [npm](https://ionicframework.com/docs/v5/reference/glossary#npm).
+- Follow [these instructions](https://ionicframework.com/docs/intro/environment) to set up a basic environment for working with Ionic, basically consisting of [Node.js](https://ionicframework.com/docs/reference/glossary#node) and [npm](https://ionicframework.com/docs/reference/glossary#npm).
 - Either fork vodle's git repository [https://github.com/pik-gane/vodle](https://github.com/pik-gane/vodle) or, even better, ask us to grant you write access to it! We are happy to do this since we have protected important branches sufficiently. 
 - Make sure you have at least 2GB free space on your disk. Then clone the (forked or original) repository to your machine and switch to a new branch for your contribution:
   ```
@@ -19,7 +19,7 @@ This page describes
   $ cd vodle
   $ git switch -c my-new-branch
   ```
-- Follow [these instructions](https://ionicframework.com/docs/v5/intro/cli#install-the-ionic-cli) to install the Ionic Command Line Interface (but nothing more from those instructions – in particular, *don't* "start an app"!). Depending on your operating system, you might have to do this as an administrator, e.g. on Linux by saying
+- Follow [these instructions](https://ionicframework.com/docs/intro/cli) to install the Ionic Command Line Interface (but nothing more from those instructions – in particular, *don't* "start an app"!). Depending on your operating system, you might have to do this as an administrator, e.g. on Linux by saying
   ```
   $ sudo npm install -g @ionic/cli
   ```
@@ -139,7 +139,7 @@ Please don't forget to frequently `git pull` upstream changes and merge them int
 For most of the time, it is probably most convenient to work with the local web app as described above. In some cases, however, you might want to test a native app version of vodle.
 
 #### Android
-For the android version, you need to install [Android Studio](https://developer.android.com/studio) and [configure it as described here](https://ionicframework.com/docs/v5/developing/android) (in that doc, skip the section on Cordova and continue with the section on Capacitor). Instead of 
+For the android version, you need to install [Android Studio](https://developer.android.com/studio) and [configure it as described here](https://ionicframework.com/docs/developing/android) (in that doc, skip the section on Cordova and continue with the section on Capacitor). Instead of 
 ```
 $ ionic capacitor copy android
 ``` 
@@ -155,7 +155,7 @@ $ adb start-server
 ```
 
 #### iOS
-For iOS, we have not tested it yet, but [it should work like this](https://ionicframework.com/docs/v5/developing/ios).
+For iOS, we have not tested it yet, but [it should work like this](https://ionicframework.com/docs/developing/ios).
 
 ### Other useful commands
 
