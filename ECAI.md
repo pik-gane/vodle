@@ -16,7 +16,7 @@ Similarly, 100 means you definitely do approve that response, even if no-one els
 A number between 0 and 100 means you *conditionally* approve that response.
 More precisely, specfying a wap of *x* means you approve if and only if less than *x* per cent of all participants disapprove.
 
-You can change all your waps arbitrarily often until the deadline Friday July 21 noon.
+You can change all your waps arbitrarily often.
 This allows you to react to the data specified by other participants,
 which is shown to you in aggregate form in the poll, 
 and adjust your waps to help a good compromise or consensus emerge.
