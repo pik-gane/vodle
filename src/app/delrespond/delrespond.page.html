@@ -265,8 +265,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ng-container>
 
   <!-- Request was already declined and cannot be accepted: -->
-
-  <ng-container *ngIf="(status[0]=='declined, impossible')">
+  <ng-container *ngIf="(status[0]=='declined')&&(status[1]=='impossible')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -297,7 +296,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Poll is unknown: -->
 
-  <ng-container *ngIf="status==['impossible','poll-unknown']">
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='poll-unknown')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
@@ -316,7 +315,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Poll is already closed (has already ended): -->
 
-  <ng-container *ngIf="status==['impossible','closed']">
+  <ng-container *ngIf="(status[0]=='closed')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p> 
@@ -343,8 +342,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ng-container>
 
   <!-- We're still missing some data: -->
-
-  <ng-container *ngIf="status==['impossible','not-in-db']">
+  
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='missing-data')">
     <ion-item [innerHtml]="'delrespond.try-again'|translate">      
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
@@ -357,7 +356,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- It's ourselves: -->
 
-  <ng-container *ngIf="status==['impossible','is-self']">
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='is-self')">
     <ion-item [innerHtml]="'delrespond.is-self'|translate">      
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"

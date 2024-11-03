@@ -80,10 +80,16 @@ export class DelrespondPage implements OnInit {
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     if (this.pid in this.G.P.polls) {
-      this.p = this.G.P.polls[this.pid];    
+      this.p = this.G.P.polls[this.pid];
+    }else{
+      this.p = null;
+    }
+    this.status = this.G.Del.get_incoming_request_status(this.pid, this.did);
+    if (this.status[0] === 'impossible' && this.status[1] === 'poll-unknown') { // poll does not exist, prevents further errors
+      this.ready = true;
+      return;
     }
     this.G.L.entry("DelrespondPage.onDataReady", this.pid, this.p.state);
-    this.status = this.G.Del.get_incoming_request_status(this.pid, this.did);
     this.G.Del.store_incoming_request(this.pid, this.did, this.from, this.url, this.status[0]);
     this.ready = true;
     this.G.L.exit("DelrespondPage.onDataReady");
