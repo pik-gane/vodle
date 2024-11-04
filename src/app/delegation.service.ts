@@ -212,65 +212,62 @@ export class DelegationService {
   // RESPONDING TO A DELEGATION REQUEST:
 
   get_incoming_request_status(pid: string, did: string): Array<string> {
-    if (pid in this.G.P.polls) {
-      const p = this.G.P.polls[pid];
-      if (p.state != 'running') {
-        return ["closed"];
-      } else {
-        // check if request has been retrieved from db:
-        const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
-        if (agreement) {
-          // check if already answered:
-          if (agreement.status == 'agreed') {
-            return ["accepted"];
-          } 
-          // check if already delegating (in)directly back to client_vid for at least one option:
-          var status: Array<any>;
-          const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
-                effdelmap = this.G.D.effective_delegation_map_caches[pid],
-                inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
-                myvid = p.myvid,
-                client_vid = agreement.client_vid;
-          if (client_vid == myvid) {
-            return ["impossible", "is-self"];
-          }
-          let two_way = false, cycle = false, weight_exceeded = false;
-          for (let oid of p.oids) {
-            const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
-            const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
-            if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
-                + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
-                > environment.delegation.max_weight) {
-              weight_exceeded = true;
-              break;
-            }
-            if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
-              two_way = true;
-            } else if (effdel_vid == client_vid) {
-              cycle = true;
-            }
-          }
-          if (weight_exceeded) {
-            status = ["impossible", "weight-exceeded"];
-          } else if (two_way) {
-            status = ["possible", "two-way"];
-          } else if (cycle) {
-            status = ["possible", "cycle"];
-          } else {
-            status = ["possible", "acyclic"];
-          }
-          if (agreement.status == 'declined') {
-            status[0] = "declined, " + status[0];
-            return status;
-          } else {
-            return status;
-          }
-        } else {
-          return ["impossible", "not-in-db"];
-        }
-      }
-    } else {
+    if (!(pid in this.G.P.polls)) {
       return ["impossible", "poll-unknown"];
+    }
+    const p = this.G.P.polls[pid];
+    if (p.state != 'running') {
+      return ["closed"];
+    }
+    // check if request has been retrieved from db:
+    const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
+    if (!agreement) {
+      return ["impossible", "not-in-db"];
+    }
+    // check if already answered:
+    if (agreement.status == 'agreed') {
+      return ["accepted"];
+    } 
+    // check if already delegating (in)directly back to client_vid for at least one option:
+    var status: Array<any>;
+    const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
+          effdelmap = this.G.D.effective_delegation_map_caches[pid],
+          inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
+          myvid = p.myvid,
+          client_vid = agreement.client_vid;
+    if (client_vid == myvid) {
+      return ["impossible", "is-self"];
+    }
+    let two_way = false, cycle = false, weight_exceeded = false;
+    for (let oid of p.oids) {
+      const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
+      const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
+      if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
+          + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
+          > environment.delegation.max_weight) {
+        weight_exceeded = true;
+        break;
+      }
+      if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
+        two_way = true;
+      } else if (effdel_vid == client_vid) {
+        cycle = true;
+      }
+    }
+    if (weight_exceeded) {
+      status = ["impossible", "weight-exceeded"];
+    } else if (two_way) {
+      status = ["possible", "two-way"];
+    } else if (cycle) {
+      status = ["possible", "cycle"];
+    } else {
+      status = ["possible", "acyclic"];
+    }
+    if (agreement.status == 'declined') {
+      status[0] = "declined, " + status[0];
+      return status;
+    } else {
+      return status;
     }
   }
 
