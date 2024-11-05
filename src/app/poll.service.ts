@@ -556,13 +556,15 @@ export class Poll {
   }
 
   get am_abstaining(): boolean {
-    /** whether or not I'm currently abstaining */
+    /** whether or not I'm currently abstaining and haven't delegated */
+    if (this.have_delegated) {
+      return false;
+    }
     if (!!this.T.votes_map) {
       const myvote = this.T.votes_map.get(this.myvid);
       return myvote === undefined;
-    } else {
-      return false;
     }
+    return false;
   }
 
   get my_n_rated_positive(): number {
@@ -1076,7 +1078,7 @@ export class Poll {
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
             inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
             inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client),
-            is_on_cycle = ind_d_map.get(old_d_vid).has(client_vid);
+            is_on_cycle = false;
 
       this.G.L.debug("del_delegation entry", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
 
