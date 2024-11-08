@@ -1,4 +1,4 @@
-# Installatio
+# Installation
 
 *End users: On our end user website [vodle.it](http://vodle.it), you can directly use vodle in your browser.* (Later on, we will also provide a smartphone app.)
 
