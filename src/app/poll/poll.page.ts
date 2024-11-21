@@ -56,7 +56,8 @@ export class PollPage implements OnInit {
   delegate: string;
   delegation_status = "none";
 
-  n_indirect_clients = 1;
+  have_been_delegated = false;
+  n_indirect_clients = 0;
   accepted_requests = [];
   declined_requests = [];
 
@@ -184,6 +185,7 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
+    this.have_been_delegated = this.p.have_been_delegated(this.p.myvid, this.accepted_requests);
     this.G.L.exit("PollPage.onDataReady");
   }
 
@@ -191,6 +193,7 @@ export class PollPage implements OnInit {
     this.G.L.entry("PollPage.onDataChange");
     this.p.tally_all();
     this.update_order();
+    this.have_been_delegated = this.p.have_been_delegated(this.p.myvid, this.accepted_requests);
     this.update_delegation_info();
     this.news = this.G.N.filter({pid: this.pid});
     this.changeDetector.detectChanges();
@@ -772,9 +775,12 @@ export class PollPage implements OnInit {
             text: this.translate.instant('OK'),
             role: 'Ok', 
             handler: () => {
+              console.log('Confirm Ok.');
               this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
+              console.log('Delegation revoked.');
               this.delegate = null;
               this.delegation_status = 'none';
+              console.log("id: ", this.p.myvid);
               this.update_delegation_info();
               this.G.D.save_state();
             } 

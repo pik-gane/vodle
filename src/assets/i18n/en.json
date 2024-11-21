@@ -232,7 +232,8 @@
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
         "closed": "Unfortunately, this poll has already ended.",
-        "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!"
+        "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!",
+        "been-revoked": "Unfortunately, this request has already been revoked."
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
@@ -506,7 +507,7 @@
         "delegation_accepted": "{{nickname}} accepted your delegation request.",
         "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request.",
         "delegation_accepted_after_all": "{{nickname}} has now accepted your delegation request after all.",
-        "delegation_revoked": "Unfortunately, {{nickname}} revoked her earlier agreement to your delegation request."
+        "delegation_revoked": "Unfortunately, {{nickname}} revoked their delegation to you."
     },
     "news-body": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as bodies of News items:",

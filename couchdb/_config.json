@@ -5,8 +5,7 @@
     "socket_options": "[{nodelay, true}]"
   },
   "chttpd": {
-    "require_valid_user": false,
-    "delayed_commits": false
+    "require_valid_user": true
   },
   "cors": {
     "origins": "*",

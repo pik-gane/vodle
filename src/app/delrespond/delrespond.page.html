@@ -70,9 +70,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Acceptance would lead to cycle: - ->
     (We do no longer disallow this. 
-     TODO: We should however tell the user that a cycle is created)
+     TODO: We should however tell the user that a cycle is created) -->
 
-  <ng-container *ngIf="(status[1]=='cycle')||(status[1]=='two-way')">
+  <ng-container *ngIf="status[1]=='cycle'||status[1]=='two-way'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4> 
@@ -111,7 +111,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-col>
     </ion-item>  
   </ng-container>
-  -->
+
   <!--
   <ng-container *ngIf="status=='cycle'">
     <ion-item lines="none" class="ion-text-center">
@@ -363,6 +363,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         shape="round"
         (click)="dismiss()">
       <span [innerHtml]="'OK'|translate"></span>&nbsp;
+    </ion-button>
+  </ng-container>
+
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='revoked')">
+    <ion-item [innerHtml]="'delrespond.been-revoked'|translate">      
+    </ion-item>
+    <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+      <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
     </ion-button>
   </ng-container>
   

@@ -1557,6 +1557,7 @@ export class DataService implements OnDestroy {
   }
 
   getv(pid: string, key: string, vid?: string): string {
+    console.log("getv", pid, key, vid)
     // get own voter data item
     let value = null;
     if (this.pid_is_draft(pid)) {
@@ -1568,10 +1569,11 @@ export class DataService implements OnDestroy {
       // other polls' data is stored in poll's own database.
       // construct key for poll db:
       const pkey = this.get_voter_key_prefix(pid, vid) + key;
-//      this.G.L.trace("getv", pid, key, vid, pkey)
+    //  this.G.L.trace("getv", pid, key, vid, pkey)
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][pkey] || '';
     }
+    console.log("getv", pid, key, vid, value);
     return value;
   }
 
@@ -1591,8 +1593,11 @@ export class DataService implements OnDestroy {
     }
   }
 
-  delv(pid: string, key: string) {
-    // delete a voter data item
+  delv(pid: string, key: string, vid?: string) {
+    if(!this.getv(pid, key)) {
+      this.G.L.warn("DataService.delv nothing to delete", pid, key);
+      return;
+    }
     if (this.pid_is_draft(pid)) {
       const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
       delete this.user_cache[ukey];

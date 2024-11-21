@@ -187,6 +187,10 @@ export class DelegationService {
   revoke_delegation(pid: string, did: string, oid: string) {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
     const a = this.get_delegation_agreements_cache(pid).get(did);
+    if (!a) {
+      this.G.L.error("DelegationService.revoke_delegation without agreement", pid, did);
+      return;
+    }
     const p = this.G.P.polls[pid];
     if ((a.client_vid != p.myvid)) {
       this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
@@ -207,6 +211,9 @@ export class DelegationService {
     if (dcache) {
       dcache.delete(oid);
     }
+
+    this.G.D.direct_delegation_map_caches[pid].get(oid).delete(p.myvid);
+    this.G.D.setv(pid, "del_status." + did, "revoked"); // used to update the delegatee's screen;
   }
 
   // RESPONDING TO A DELEGATION REQUEST:
@@ -224,10 +231,20 @@ export class DelegationService {
     if (!agreement) {
       return ["impossible", "not-in-db"];
     }
+
+    // check if request has already been revoked
+    const revoked = this.G.D.getv(pid, "del_status." + did, agreement.client_vid);
+    if (revoked == "revoked") {
+      return ["impossible", "revoked"];
+    }
+
     // check if already answered:
     if (agreement.status == 'agreed') {
       return ["accepted"];
     } 
+
+    const a = this.get_agreement(pid, did);
+
     // check if already delegating (in)directly back to client_vid for at least one option:
     var status: Array<any>;
     const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
@@ -250,16 +267,24 @@ export class DelegationService {
       }
       if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
         two_way = true;
-      } else if (effdel_vid == client_vid) {
-        cycle = true;
       }
     }
+    // check for cycles:
+    for (let oid of p.oids){
+      const thisindirdelmap = this.G.D.inv_indirect_delegation_map_caches[pid].get(oid).get(a.delegate_vid) || new Set<string>();
+      if (thisindirdelmap.has(a.client_vid)) {
+        cycle = true;
+        break;
+      }
+    }
+
     if (weight_exceeded) {
       status = ["impossible", "weight-exceeded"];
     } else if (two_way) {
-      status = ["possible", "two-way"];
+      status = ["impossible", "two-way"];
     } else if (cycle) {
-      status = ["possible", "cycle"];
+      console.log("cycle detected");
+      status = ["impossible", "cycle"];
     } else {
       status = ["possible", "acyclic"];
     }
@@ -617,6 +642,13 @@ export class DelegationService {
       this.G.D.outgoing_dids_caches[pid] = new Map();
     }
     return this.G.D.outgoing_dids_caches[pid];
+  }
+
+  get_my_incoming_dids_cache(pid:string) {
+    if (!this.G.D.incoming_dids_caches[pid]) {
+      this.G.D.incoming_dids_caches[pid] = new Map();
+    }
+    return this.G.D.incoming_dids_caches[pid];
   }
 
   get_delegation_agreements_cache(pid:string) {

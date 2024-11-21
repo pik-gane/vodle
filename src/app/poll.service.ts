@@ -469,18 +469,18 @@ export class Poll {
     // will only be called by the option itself to self-register in its poll!
     if (o.oid in this._options) {
       return false;
-    } else {
-      this._options[o.oid] = o;
-      if (!this.own_ratings_map.has(o.oid)) this.own_ratings_map.set(o.oid, new Map());
-      if (!this.proxy_ratings_map.has(o.oid)) this.proxy_ratings_map.set(o.oid, new Map());
-      if (!this.direct_delegation_map.has(o.oid)) this.direct_delegation_map.set(o.oid, new Map());
-      if (!this.inv_direct_delegation_map.has(o.oid)) this.inv_direct_delegation_map.set(o.oid, new Map());
-      if (!this.indirect_delegation_map.has(o.oid)) this.indirect_delegation_map.set(o.oid, new Map());
-      if (!this.inv_indirect_delegation_map.has(o.oid)) this.inv_indirect_delegation_map.set(o.oid, new Map());
-      if (!this.effective_delegation_map.has(o.oid)) this.effective_delegation_map.set(o.oid, new Map());
-      if (!this.inv_effective_delegation_map.has(o.oid)) this.inv_effective_delegation_map.set(o.oid, new Map());
-      return true;
     }
+    
+    this._options[o.oid] = o;
+    if (!this.own_ratings_map.has(o.oid)) this.own_ratings_map.set(o.oid, new Map());
+    if (!this.proxy_ratings_map.has(o.oid)) this.proxy_ratings_map.set(o.oid, new Map());
+    if (!this.direct_delegation_map.has(o.oid)) this.direct_delegation_map.set(o.oid, new Map());
+    if (!this.inv_direct_delegation_map.has(o.oid)) this.inv_direct_delegation_map.set(o.oid, new Map());
+    if (!this.indirect_delegation_map.has(o.oid)) this.indirect_delegation_map.set(o.oid, new Map());
+    if (!this.inv_indirect_delegation_map.has(o.oid)) this.inv_indirect_delegation_map.set(o.oid, new Map());
+    if (!this.effective_delegation_map.has(o.oid)) this.effective_delegation_map.set(o.oid, new Map());
+    if (!this.inv_effective_delegation_map.has(o.oid)) this.inv_effective_delegation_map.set(o.oid, new Map());
+    return true;
   }
 
   get options(): Record<string, Option> { return this._options; }
@@ -595,6 +595,74 @@ export class Poll {
     const agreement = this.G.Del.get_agreement(this.pid, did);
     return (agreement.status == "agreed") && (agreement.active_oids.size == agreement.accepted_oids.size);
   }
+
+  getDidFromUrl(url: string): string | null {
+    // Match the structure of the URL to extract the second item after '/delrespond/'
+    const regex = /\/delrespond\/[^/]+\/([^/]+)/;
+  
+    const match = url.match(regex);
+    if (match && match[1]) {
+      return match[1]; // Return the 'did'
+    }
+  
+    return null; // Return null if no match is found
+  }
+
+  have_been_delegated(clientVid: string, listOfDelInv: object[]) {
+    var ret = false;
+    this.G.L.entry("Poll.have_been_delegated", clientVid, listOfDelInv);
+    // check if clientVid has been delegated to by any of the vids in listOfDelInv
+    for (const delInv of listOfDelInv) {
+      const url = delInv["url"];
+      const did = this.getDidFromUrl(url);
+      console.log("url: ", url);
+
+      const agreement = this.G.Del.get_agreement(this._pid, did);
+
+      const delId = agreement.client_vid;
+      const s = this.G.D.getv(this._pid, "del_status." + did, delId);
+      if (!s){
+        ret = ret || agreement.active_oids.size > 0;
+        continue;
+      }
+      if(["agreed", "pending"].includes(agreement.status) && s == "revoked"){
+        this.G.D.incoming_dids_caches[this.pid].get(did)[2] = "revoked";
+        ret = false;
+        
+        // remove from local cache
+        for (const oid of this.oids) {
+          // remove from direct
+          this.direct_delegation_map.get(oid).delete(delId);
+
+          // remove from indirect
+          const clientInvDelMap = this.inv_indirect_delegation_map.get(oid).get(clientVid);
+          const delInvMap = this.inv_indirect_delegation_map.get(oid).get(agreement.client_vid);
+          var setDiff = new Set(<string[]>[]);
+          clientInvDelMap.forEach((value, key) => {
+            console.log("key: ", key);
+            console.log("value: ", value);
+            if(!delInvMap.has(key) && value != delId){ 
+              setDiff.add(value);
+            }
+          });
+          this.inv_indirect_delegation_map.get(oid).set(clientVid, setDiff);
+          this.G.D.inv_direct_delegation_map_caches[this.pid].get(oid).set(clientVid, setDiff);
+        }
+
+        // add a notification that the delegation has been revoked
+        this.G.N.add({
+          class: 'delegation_declined',
+          pid: this.pid,
+          title: this.G.Del.translate.instant('news-title.delegation_revoked', {nickname: delInv["from"]})
+        });
+      }else{
+        ret = true;
+      }
+    }
+    return ret;
+  }
+
+
 
   ratings_have_changed = false;
 
@@ -1061,6 +1129,7 @@ export class Poll {
   }
 
   del_delegation(client_vid: string, oid: string) {
+    console.log("del_delegation", client_vid, oid);
     // Called whenever a voter revokes her delegation for some option
     const dir_d_map = this.direct_delegation_map.get(oid), 
           eff_d_map = this.effective_delegation_map.get(oid);
@@ -1078,11 +1147,13 @@ export class Poll {
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
             inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
             inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client),
+            // is_on_cycle = ind_d_map.get(old_d_vid).has(client_vid);
             is_on_cycle = false;
 
       this.G.L.debug("del_delegation entry", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
 
       // deregister DIRECT delegation and inverse of vid:
+      this.direct_delegation_map.get(oid).delete(client_vid);
       dir_d_map.delete(client_vid);
       inv_dir_d_map.get(old_d_vid).delete(client_vid);
 
@@ -1165,7 +1236,7 @@ export class Poll {
       this.G.L.debug("del_delegation exit", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
     }
   }
-
+  
   get_n_indirect_option_clients(vid: string, oid: string): number {
     /** count how many voters have indirectly delegated to vid for oid */
     return (this.inv_indirect_delegation_map.get(oid).get(vid)||new Set()).size;
