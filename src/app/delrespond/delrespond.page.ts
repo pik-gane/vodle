@@ -117,6 +117,13 @@ export class DelrespondPage implements OnInit {
     this.router.navigate(["/poll/" + this.pid]);
   }
 
+  // TODO: use to send a different message to the delegator
+  decline_due_to_error() {
+    /** store negative response and go to poll page */
+    this.G.Del.decline_due_to_error(this.pid, this.did, this.private_key);
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
   dismiss() {
     this.router.navigate(["/mypolls"]);
   }

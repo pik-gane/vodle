@@ -271,8 +271,10 @@ export class DelegationService {
     }
     // check for cycles:
     for (let oid of p.oids){
-      const thisindirdelmap = this.G.D.inv_indirect_delegation_map_caches[pid].get(oid).get(a.delegate_vid) || new Set<string>();
-      if (thisindirdelmap.has(a.client_vid)) {
+      console.log("delID: ", p.myvid);
+      const invindirdelmap = p.inv_effective_delegation_map.get(oid).get(a.client_vid) || new Map();
+      console.log("MAP: ", invindirdelmap);
+      if (invindirdelmap.has(p.myvid)) {
         cycle = true;
         break;
       }
@@ -331,6 +333,16 @@ export class DelegationService {
     const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  decline_due_to_error(pid: string, did: string, private_key?: string) {
+    if (!private_key) {
+      private_key = this.get_private_key(pid, did);
+    }
+    const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.decline_due_to_error", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
   }
 
