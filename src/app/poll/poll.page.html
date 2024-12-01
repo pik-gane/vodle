@@ -461,7 +461,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- INCOMING DELEGATIONS BANNER: -->
 
-      <ion-item *ngIf="accepted_requests.length > 0 || declined_requests.length > 0"
+      <ion-item *ngIf="(accepted_requests.length > 0 && n_indirect_clients > 0) || declined_requests.length > 0"
           color="light">
         <ion-grid class="ion-no-padding ion-no-margin">
 
@@ -478,7 +478,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                   size="smaller" class="ion-no-margin" 
                   style="color:black; position: relative; left: -2px; top: 2px;">
                 </ion-icon>
-                <span *ngIf="accepted_requests.length > 0" 
+                <span *ngIf="n_indirect_clients > 0"
                   [innerHtml]="
                     ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
                     | translate: {n_others: n_indirect_clients})

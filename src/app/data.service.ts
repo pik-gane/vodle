@@ -214,12 +214,12 @@ function myhash(what): string {
 
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
 export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
-export type del_response_t = {option_spec: del_option_spec_t};
+export type del_response_t = {option_spec: del_option_spec_t, status: "agreed" | "declined" | "revoked", "decline_cycle", "decline_self"};
 export type del_signed_response_t = string;
 export type del_agreement_t = { // by pid, did
   client_vid?: string,
   delegate_vid?: string,
-  status?: "pending" | "agreed" | "declined" | "revoked",
+  status?: "pending" | "agreed" | "declined" | "revoked" | "declined_cycle" | "declined_self",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
 };
@@ -1522,7 +1522,9 @@ export class DataService implements OnDestroy {
       } else {
         this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
       }
-    } else {
+    } if (key == 'shared_map') {
+      return this._setp_in_polldb(pid, key, value);
+    }else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
   }
@@ -1578,6 +1580,7 @@ export class DataService implements OnDestroy {
   }
 
   setv(pid: string, key: string, value: string): boolean {
+    console.log("setv", pid, key, value)
     /** Set a voter data item.
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
@@ -1591,6 +1594,59 @@ export class DataService implements OnDestroy {
     } else {
       return this.setv_in_polldb(pid, key, value);
     }
+  }
+
+  set_shared_map(pid: string, val: Map<string, string>) {
+    const mapKey = `poll.${pid}.shared_map`;
+    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
+  }
+
+  set_effective_delegation(pid: string, vid: string, val: string[]) {
+    const mapKey = `poll.${pid}.shared_map`;
+    const currentMap = this.getSharedMap(pid);
+
+    currentMap.set(vid, JSON.stringify(val)); // Add or update the key-value pair
+    // this.setp(pid, 'shared_map', JSON.stringify(Array.from(currentMap.entries())));
+    // this.setv_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
+    // this.store_poll_data(pid, mapKey, currentMap, mapKey, false);
+    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
+  }
+
+  getSharedMap(pid: string): Map<string, string> {
+    const cache = this.poll_caches[pid]['poll.' + pid + '.shared_map'] || '[]';
+    const ps = cache ? JSON.parse(cache) : {};
+    const mp = new Map<string, string>(ps);
+    console.log("getSharedMap", pid, mp);
+    return mp;
+    let result = new Map<string, string>(); // Default value if async fails or doesn't resolve in time
+
+    this.getSharedMapAsync(pid)
+      .then(map => {
+          result = map; // Set the resolved map to result
+      })
+      .catch(err => {
+          console.error('Error fetching shared map:', err);
+      });
+
+    return result; // Return the default or updated result
+  }
+
+  async getSharedMapAsync(pid: string): Promise<Map<string, string>> {
+    console.log("getSharedMap_pid", pid);
+    const db = this.get_local_poll_db(pid); // Retrieve the local PouchDB instance for the poll.
+    // const docId = '~vodle.poll.e031c7§poll.e031c7.shared_map';
+    const docId = '~vodle.poll.' + pid + '§poll.' + pid + '.shared_map';
+    return db.get(docId).then(doc => {
+      console.log(doc);
+      const val = decrypt(doc.value, this.user_cache[get_poll_key_prefix(pid) + 'password']);
+      console.log("shared_val:", val);
+      const map = new Map<string, string>(JSON.parse(val));
+      console.log("shared_fin_map:", map);
+      return map;
+    }
+    ).catch(err => {
+      console.log("getSharedMap", err);
+    });
   }
 
   delv(pid: string, key: string, vid?: string) {
@@ -1657,6 +1713,18 @@ export class DataService implements OnDestroy {
     this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
     return this.store_user_data(ukey, this.user_cache, ukey);
+  }
+
+  setv_global_for_poll(pid: string, key: string, value: string): boolean {
+    // set global voter data item in poll db:
+    value = value || '';
+    // construct key for poll db:
+    // return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + "§";
+    const pkey = "§";
+    this.ensure_poll_cache(pid);
+    this.G.L.trace("DataService.setv_global_for_poll", pid, key, value);
+    this.poll_caches[pid][pkey] = value;
+    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, false);
   }
 
   setv_in_polldb(pid: string, key: string, value: string, vid?: string): boolean {
@@ -1775,6 +1843,9 @@ export class DataService implements OnDestroy {
         this.page.onDataChange();
       }
     }
+    if (change.docs.some((doc) => doc._id.endsWith('shared_set'))) {
+      console.log('shared_set has been updated', change.docs);
+    }  
     this.G.L.exit("DataService.handle_poll_db_change", pid, this.pending_changes);
   }
 
@@ -2322,7 +2393,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value)) {
+        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value) && (key.indexOf("shared_map") == -1)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2384,7 +2455,7 @@ export class DataService implements OnDestroy {
       // check which voter's data this is:
       const vid_prefix = key.slice(0, key.indexOf("§")),
             vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
-      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true') {
+      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true' && key.indexOf("shared_map") == -1) {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.store_poll_data tried changing another voter's data item", pid, key);
 

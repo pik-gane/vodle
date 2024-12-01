@@ -186,34 +186,68 @@ export class DelegationService {
 
   revoke_delegation(pid: string, did: string, oid: string) {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
-    const a = this.get_delegation_agreements_cache(pid).get(did);
-    if (!a) {
-      this.G.L.error("DelegationService.revoke_delegation without agreement", pid, did);
-      return;
-    }
-    const p = this.G.P.polls[pid];
-    if ((a.client_vid != p.myvid)) {
-      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
-    } else {
-      this.G.D.delv(pid, "del_request." + did);
-      const acache = this.get_delegation_agreements_cache(pid);
-      if (acache) {
-        const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(p.myvid, oid);
-          }
-        }
-        acache.delete(did);
+    // const a = this.get_delegation_agreements_cache(pid).get(did);
+    // if (!a) {
+    //   this.G.L.error("DelegationService.revoke_delegation without agreement", pid, did);
+    //   return;
+    // }
+    // const p = this.G.P.polls[pid];
+    // if ((a.client_vid != p.myvid)) {
+    //   this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
+    // } else {
+    //   this.G.D.delv(pid, "del_request." + did);
+    //   const acache = this.get_delegation_agreements_cache(pid);
+    //   if (acache) {
+    //     const oids = acache.get(did).active_oids;
+    //     if (oids) {
+    //       for (const oid of oids) {
+    //         p.del_delegation(p.myvid, oid);
+    //       }
+    //     }
+    //     acache.delete(did);
+    //   }
+    // }
+    // const dcache = this.get_my_outgoing_dids_cache(pid);
+    // if (dcache) {
+    //   dcache.delete(oid);
+    // }
+    
+    const private_key = this.get_private_key(pid, did);
+    const response = {status:"revoked"} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
+    signed_response = this.sign_response(response, private_key);
+    this.set_my_signed_response(pid, did, signed_response);
+    this.G.D.setv(pid, "del_status." + did, "revoked"); // store in db that delegation was revoked
+    // update effectve delegation for delegate_vid
+    const a = this.get_agreement(pid, did);
+    const sm = this.G.D.getSharedMap(pid);
+    const eff_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
+
+    var stack = [];
+    for (let id of sm.keys()) {
+      if (JSON.parse(sm.get(id) || "[]").includes(a.client_vid)) {
+        stack.push(id);
       }
     }
-    const dcache = this.get_my_outgoing_dids_cache(pid);
-    if (dcache) {
-      dcache.delete(oid);
+    while (stack.length > 0) {
+      const curr_del = stack.pop();
+      console.log("shared_revoked_curr_del: ", curr_del);
+      const old_delegate_eff_set = new Set(JSON.parse(sm.get(curr_del) || "[]"));
+      var new_delegate_eff_set = new Set();
+      for (let id of old_delegate_eff_set) {
+        if (id == a.client_vid || eff_set.has(id)) {
+          continue;
+        }
+        new_delegate_eff_set.add(id);
+      }
+      sm.set(curr_del, JSON.stringify(Array.from(new_delegate_eff_set)));
     }
 
-    this.G.D.direct_delegation_map_caches[pid].get(oid).delete(p.myvid);
-    this.G.D.setv(pid, "del_status." + did, "revoked"); // used to update the delegatee's screen;
+    this.G.D.set_shared_map(pid, sm); 
+
+    // this.G.D.setv_in_polldb(pid, "del_effective." + a.delegate_vid, JSON.stringify(Array.from(new_delegate_eff_set)), "vodle");
+    // this.handle_deleted_delegation(pid, did);
+    //console.log("revoked: ", this.G.D.getSharedMap(pid).get(a.delegate_vid));
+    this.G.L.exit("DelegationService.revoke_delegation");
   }
 
   // RESPONDING TO A DELEGATION REQUEST:
@@ -270,11 +304,10 @@ export class DelegationService {
       }
     }
     // check for cycles:
+    const map = this.G.D.getSharedMap(pid);
     for (let oid of p.oids){
-      console.log("delID: ", p.myvid);
-      const invindirdelmap = p.inv_effective_delegation_map.get(oid).get(a.client_vid) || new Map();
-      console.log("MAP: ", invindirdelmap);
-      if (invindirdelmap.has(p.myvid)) {
+      const set = new Set<string>(JSON.parse(map.get(client_vid) || "[]"));
+      if (set.has(myvid)) {
         cycle = true;
         break;
       }
@@ -285,7 +318,6 @@ export class DelegationService {
     } else if (two_way) {
       status = ["impossible", "two-way"];
     } else if (cycle) {
-      console.log("cycle detected");
       status = ["impossible", "cycle"];
     } else {
       status = ["possible", "acyclic"];
@@ -310,19 +342,36 @@ export class DelegationService {
   }
 
   update_incoming_request_status(pid: string, did: string, status: string) {
-    const cache = this.G.D.incoming_dids_caches[pid],
-          [from, url, old_status] = cache.get(did);
+    const cache = this.G.D.incoming_dids_caches[pid];
+    if (!cache) {
+      return;
+    }
+    const [from, url, old_status] = cache.get(did);
     if (status != old_status[0]) {
       this.store_incoming_request(pid, did, from, url, status);
     }
   }
 
   accept(pid: string, did: string, private_key: string) {
+    console.log("accepting delegation");
     /** accept a delegation request, store response in db */
     const response = {option_spec: {type: "-", oids: []}} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.accept", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+    // update effective delegation
+    const a = this.get_agreement(pid, did);
+    const eff_set = new Set<string>(JSON.parse(this.G.D.getSharedMap(pid).get(a.client_vid) || "[]"));
+    const old_delegate_eff_set = new Set<string>(JSON.parse(this.G.D.getSharedMap(pid).get(a.delegate_vid) || "[]"));
+    var new_delegate_eff_set = new Set<string>();
+    for (let id of eff_set) {
+      new_delegate_eff_set.add(id);
+    }
+    for (let id of old_delegate_eff_set) {
+      new_delegate_eff_set.add(id);
+    }
+    new_delegate_eff_set.add(a.client_vid);
+    this.G.D.set_effective_delegation(pid, a.delegate_vid, Array.from(new_delegate_eff_set) as string[]);
   }
 
   decline(pid: string, did: string, private_key?: string) {
@@ -344,6 +393,36 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline_due_to_error", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  handle_deleted_delegation(pid:string, did:string){
+    var updated_ids = new Set<string>();
+    const a = this.get_agreement(pid, did);
+    var eff_del_map = new Map<string, Set<string>>();
+    // iterate through all voters and populate map;
+    let p = this.G.P.polls[pid];
+    for (let id of p.T.all_vids_set) {
+      eff_del_map.set(id, new Set<string>(JSON.parse(this.G.D.getv(pid, "del_effective." + id, "vodle") || "[]")));
+    }
+    // update effective delegation for any voter that delegate was delegating to
+    for (let id of eff_del_map.get(a.client_vid)) {
+      if (!eff_del_map.get(id).has(a.client_vid)) {
+        continue;
+      }
+      var new_eff_del_set = new Set<string>();
+      for (let id2 of eff_del_map.get(id)) {
+        if (id2 != a.client_vid && eff_del_map.get(a.client_vid).has(id2)) {
+          new_eff_del_set.add(id2);
+        }
+      }
+      this.G.D.setv_in_polldb(pid, "del_effective." + id, JSON.stringify(Array.from(new_eff_del_set)), "vodle");
+      updated_ids.add(id);
+    }
+    
+    for (let id of updated_ids.values()){
+      console.log("hd_updated id: ", id);
+      console.log("hd_updated set: ", this.G.D.getv(pid, "del_effective." + id, "vodle"));
+    }
   }
 
   // DATA HANDLING:
@@ -465,8 +544,7 @@ export class DelegationService {
     this.update_agreement(pid, did, a, request, signed_response);
   }
 
-  update_agreement(pid: string, did: string, agreement: del_agreement_t,
-        request: del_request_t, signed_response: del_signed_response_t) {
+  update_agreement(pid: string, did: string, agreement: del_agreement_t, request: del_request_t, signed_response: del_signed_response_t) {
     /** after changes to request or response,
      * compare request and response, set status, extract accepted and active oids */
     this.G.L.entry("DelegationService.update_agreement", pid, did, agreement, request, signed_response);
@@ -497,8 +575,11 @@ export class DelegationService {
       }
       const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
       const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
-      if (!response.option_spec) {
-        a.status = "declined";
+      if (pair.status == "revoked") {
+        a.status = "revoked";
+        return;
+      } else if (!response.option_spec) {
+        a.status = "declined"
       } else {
         if (response.option_spec.type == "+") {
           // oids specifies accepted options
@@ -590,9 +671,7 @@ export class DelegationService {
         }
         a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
-    
     }
-
     // if voter affected directly, add news item:
     if (a.client_vid == p.myvid) {
       if ((old_status=="pending") && (a.status=="agreed")) {
@@ -624,7 +703,6 @@ export class DelegationService {
         });
       }
     }
-
     // TODO: update tally!
 
     this.G.L.exit("DelegationService.update_agreement", a.status, [...a.accepted_oids], [...a.active_oids]);
@@ -646,6 +724,10 @@ export class DelegationService {
 
   response2string(response: del_response_t): string {
     /** turn response data without signature deterministically into a string message that can be signed: */
+    // if response is a status message, return it as is:
+    if (response.status) {
+      return JSON.stringify(response);
+    }
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }
 

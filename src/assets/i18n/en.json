@@ -507,7 +507,9 @@
         "delegation_accepted": "{{nickname}} accepted your delegation request.",
         "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request.",
         "delegation_accepted_after_all": "{{nickname}} has now accepted your delegation request after all.",
-        "delegation_revoked": "Unfortunately, {{nickname}} revoked their delegation to you."
+        "delegation_revoked": "Unfortunately, {{nickname}} revoked their delegation to you.",
+        "delegation_declined_cycle": "Unfortunately, {{nickname}} declined your delegation request as it would have created a cycle.",
+        "delegation_decline_self": "Unfortunately, {{nickname}} declined your delegation request as they are already delegating to you."
     },
     "news-body": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as bodies of News items:",

@@ -103,6 +103,7 @@ export class DelrespondPage implements OnInit {
 
   // GUI callbacks:
 
+  // TODO: verify that it is still possible to accept the request
   accept() {
     /** store positive response and go to poll page */
     this.G.Del.accept(this.pid, this.did, this.private_key);

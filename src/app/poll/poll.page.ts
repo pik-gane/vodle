@@ -57,7 +57,7 @@ export class PollPage implements OnInit {
   delegation_status = "none";
 
   have_been_delegated = false;
-  n_indirect_clients = 0;
+  n_indirect_clients = 1;
   accepted_requests = [];
   declined_requests = [];
 
@@ -190,6 +190,11 @@ export class PollPage implements OnInit {
   }
 
   onDataChange() {
+    this.G.L.entry("PollPage.onDataChangeshared");
+    const map = this.G.D.getSharedMap(this.pid);  
+    for (let vid of this.p.T.all_vids_set){
+      console.log("shared_effective delegates of", vid, new Set<string>(JSON.parse(map.get(vid) || "[]")));
+    }
     this.G.L.entry("PollPage.onDataChange");
     this.p.tally_all();
     this.update_order();
@@ -243,6 +248,7 @@ export class PollPage implements OnInit {
   }
 
   update_delegation_info() {
+    this.G.L.entry("PollPage.update_delegation_info");
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -251,11 +257,25 @@ export class PollPage implements OnInit {
     this.declined_requests = [];
     if (cache) {
       for (const [did, [from, url, status]] of cache) {
-        if (status == 'agreed') {
-          this.accepted_requests.push({from:from, url:url});
-        } else if (status.startsWith('declined')) {
-          this.declined_requests.push({from:from, url:url});
-        } 
+        const st = this.G.D.getv(this.pid, "del_status."+did);
+        if (st && st != status) {
+          if (status == 'agreed') {
+            if (st == 'revoked') {
+              this.G.N.add({
+                class: 'delegation_declined', 
+                pid: this.pid,
+                title: this.translate.instant('news-title.delegation_revoked', {nickname: from}),
+              });
+              cache.delete(did);
+            }
+          }
+        }else{
+          if (status == 'agreed') {
+            this.accepted_requests.push({from:from, url:url});
+          } else if (status.startsWith('declined')) {
+            this.declined_requests.push({from:from, url:url});
+          } 
+        }
       }
     }
     // find outgoing delegation:
