@@ -361,17 +361,24 @@ export class DelegationService {
     this.set_my_signed_response(pid, did, signed_response);
     // update effective delegation
     const a = this.get_agreement(pid, did);
-    const eff_set = new Set<string>(JSON.parse(this.G.D.getSharedMap(pid).get(a.client_vid) || "[]"));
-    const old_delegate_eff_set = new Set<string>(JSON.parse(this.G.D.getSharedMap(pid).get(a.delegate_vid) || "[]"));
-    var new_delegate_eff_set = new Set<string>();
-    for (let id of eff_set) {
-      new_delegate_eff_set.add(id);
+    const sm = this.G.D.getSharedMap(pid);
+    const eff_set = new Set<string>(JSON.parse(sm.get(a.client_vid) || "[]"));
+    var new_sm = sm;
+    for (let id of sm.keys()) {
+      if (id == a.client_vid) {
+        continue;
+      }
+      const old_eff_set = new Set<string>(JSON.parse(sm.get(id) || "[]"));
+      if (id == a.delegate_vid || old_eff_set.has(a.delegate_vid)) {
+        var new_eff_set = old_eff_set;
+        for (const id2 of eff_set){
+          new_eff_set.add(id2);
+        }
+        new_eff_set.add(a.client_vid);
+        new_sm.set(id, JSON.stringify(Array.from(new_eff_set)));
+      }
     }
-    for (let id of old_delegate_eff_set) {
-      new_delegate_eff_set.add(id);
-    }
-    new_delegate_eff_set.add(a.client_vid);
-    this.G.D.set_effective_delegation(pid, a.delegate_vid, Array.from(new_delegate_eff_set) as string[]);
+    this.G.D.set_shared_map(pid, new_sm);
   }
 
   decline(pid: string, did: string, private_key?: string) {
@@ -385,6 +392,7 @@ export class DelegationService {
     this.set_my_signed_response(pid, did, signed_response);
   }
 
+  // todo: make this give a different news item to the client
   decline_due_to_error(pid: string, did: string, private_key?: string) {
     if (!private_key) {
       private_key = this.get_private_key(pid, did);
