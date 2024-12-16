@@ -151,6 +151,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </small>
 
             <!-- POLL TITLE -->
+            <ion-text *ngIf="this.G.D.get_ranked_delegation_allowed(this.pid)"
+            style="font-weight: bold; font-size: larger; padding-left: 0px;"
+            [innerHtml]="'  [Ranked Delegation Allowed]'">
+          </ion-text>
             <h3><b><i [lang]="p.language" [innerHtml]="p.title"></i></b></h3>
           </ion-col>
         </ion-row>
@@ -163,7 +167,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <ion-grid class="ion-no-padding ion-padding-bottom ion-no-margin" style="width: 100%;">
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
-
             <!-- POLL DESCRIPTION, "READ MORE" LINK -->
 
             <div [style]="

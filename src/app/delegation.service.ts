@@ -263,7 +263,11 @@ export class DelegationService {
     // check if already answered:
     if (agreement.status == 'agreed') {
       return ["accepted"];
-    } 
+    }
+
+    if (this.G.D.get_ranked_delegation_allowed(pid)){
+      return ["ranked"];
+    }
 
     const a = this.get_agreement(pid, did);
 

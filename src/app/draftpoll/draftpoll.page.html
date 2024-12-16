@@ -289,6 +289,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         style="font-size: smaller">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
+      <ion-label position="floating" color="primary">
+        <span [innerHtml]="'draftpoll.del_ranked'|translate"></span>
+      </ion-label>
+      <ion-toggle 
+        formControlName="poll_allow_ranked_delegation"
+        (ionChange)="set_poll_allow_ranked_delegation()">
+      </ion-toggle>
     </ion-item>
 
     <!-- Server: -->

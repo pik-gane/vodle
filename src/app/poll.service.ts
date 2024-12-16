@@ -431,6 +431,9 @@ export class Poll {
   get due_type(): poll_due_type_t { return this.G.D.getp(this._pid, 'due_type') as poll_due_type_t; }
   set due_type(value: poll_due_type_t) { this.G.D.setp(this._pid, 'due_type', value); }
 
+  get allow_ranked(): boolean { return this.G.D.getp(this._pid, 'allow_ranked') == 'true'; }
+  set allow_ranked(value: boolean) { this.G.D.setp(this._pid, 'allow_ranked', value.toString()); }
+
   // Date objects are stored as ISO strings:
 
   get start_date(): Date {

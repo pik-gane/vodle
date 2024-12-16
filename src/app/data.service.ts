@@ -1522,7 +1522,7 @@ export class DataService implements OnDestroy {
       } else {
         this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
       }
-    } if (key == 'shared_map') {
+    } else if (key == 'shared_map') {
       return this._setp_in_polldb(pid, key, value);
     }else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
@@ -1611,28 +1611,9 @@ export class DataService implements OnDestroy {
 
   getSharedMap(pid: string): Map<string, string> {
     const cache = this.poll_caches[pid]['poll.' + pid + '.shared_map'] || '[]';
-    console.log("shared_map_cache", this.poll_caches[pid]);
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);
-    console.log("getSharedMap", pid, mp);
     return mp;
-  }
-
-  async getSharedMapAsync(pid: string): Promise<Map<string, string>> {
-    console.log("getSharedMap_pid", pid);
-    const db = this.get_local_poll_db(pid); // Retrieve the local PouchDB instance for the poll.
-    const docId = '~vodle.poll.' + pid + '§poll.' + pid + '.shared_map';
-    return db.get(docId).then(doc => {
-      console.log(doc);
-      const val = decrypt(doc.value, this.user_cache[get_poll_key_prefix(pid) + 'password']);
-      console.log("shared_val:", val);
-      const map = new Map<string, string>(JSON.parse(val));
-      console.log("shared_fin_map:", map);
-      return map;
-    }
-    ).catch(err => {
-      console.log("getSharedMap", err);
-    });
   }
 
   delv(pid: string, key: string, vid?: string) {
@@ -1650,6 +1631,10 @@ export class DataService implements OnDestroy {
       delete this.poll_caches[pid][pkey];
       this.delete_poll_data(pid, pkey); 
     }
+  }
+
+  get_ranked_delegation_allowed(pid: string): boolean {
+    return this.poll_caches[pid]['allow_ranked'] == 'true';
   }
 
   // TODO: delv!

@@ -207,6 +207,7 @@
         "header": "Would you act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
         "intro": "Your waps will then also control the other participantʼs waps.",
         "details": "If you accept, you can still choose whether you want to set your waps yourself or delegate your (and the other participantʼs) waps further to some third person.",
+        "details_ranked": "Note that this poll allows ranked delegation. [Insert explanation of how cycles and stuff are allowed]",
         "check-first": "You can also check your waps first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline",
@@ -287,7 +288,8 @@
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-        "notification-saved-title": "Draft saved under “My polls”."
+        "notification-saved-title": "Draft saved under “My polls”.",
+        "del_ranked": "Allow ranked delegation?"
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
