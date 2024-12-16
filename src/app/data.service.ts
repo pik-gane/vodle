@@ -1606,35 +1606,21 @@ export class DataService implements OnDestroy {
     const currentMap = this.getSharedMap(pid);
 
     currentMap.set(vid, JSON.stringify(val)); // Add or update the key-value pair
-    // this.setp(pid, 'shared_map', JSON.stringify(Array.from(currentMap.entries())));
-    // this.setv_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
-    // this.store_poll_data(pid, mapKey, currentMap, mapKey, false);
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
   }
 
   getSharedMap(pid: string): Map<string, string> {
     const cache = this.poll_caches[pid]['poll.' + pid + '.shared_map'] || '[]';
+    console.log("shared_map_cache", this.poll_caches[pid]);
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);
     console.log("getSharedMap", pid, mp);
     return mp;
-    let result = new Map<string, string>(); // Default value if async fails or doesn't resolve in time
-
-    this.getSharedMapAsync(pid)
-      .then(map => {
-          result = map; // Set the resolved map to result
-      })
-      .catch(err => {
-          console.error('Error fetching shared map:', err);
-      });
-
-    return result; // Return the default or updated result
   }
 
   async getSharedMapAsync(pid: string): Promise<Map<string, string>> {
     console.log("getSharedMap_pid", pid);
     const db = this.get_local_poll_db(pid); // Retrieve the local PouchDB instance for the poll.
-    // const docId = '~vodle.poll.e031c7§poll.e031c7.shared_map';
     const docId = '~vodle.poll.' + pid + '§poll.' + pid + '.shared_map';
     return db.get(docId).then(doc => {
       console.log(doc);

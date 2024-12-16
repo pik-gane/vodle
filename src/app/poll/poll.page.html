@@ -716,7 +716,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         [disabled]="!p.allow_voting"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                         [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
-                        [value]="p.get_my_proxy_rating(oidsorted[i])" 
+                        [value]="get_my_rating(oidsorted[i])" 
                         (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"

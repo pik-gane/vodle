@@ -186,42 +186,34 @@ export class DelegationService {
 
   revoke_delegation(pid: string, did: string, oid: string) {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
-    // const a = this.get_delegation_agreements_cache(pid).get(did);
-    // if (!a) {
-    //   this.G.L.error("DelegationService.revoke_delegation without agreement", pid, did);
-    //   return;
-    // }
-    // const p = this.G.P.polls[pid];
-    // if ((a.client_vid != p.myvid)) {
-    //   this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
-    // } else {
-    //   this.G.D.delv(pid, "del_request." + did);
-    //   const acache = this.get_delegation_agreements_cache(pid);
-    //   if (acache) {
-    //     const oids = acache.get(did).active_oids;
-    //     if (oids) {
-    //       for (const oid of oids) {
-    //         p.del_delegation(p.myvid, oid);
-    //       }
-    //     }
-    //     acache.delete(did);
-    //   }
-    // }
-    // const dcache = this.get_my_outgoing_dids_cache(pid);
-    // if (dcache) {
-    //   dcache.delete(oid);
-    // }
-    
-    const private_key = this.get_private_key(pid, did);
-    const response = {status:"revoked"} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
-    signed_response = this.sign_response(response, private_key);
-    this.set_my_signed_response(pid, did, signed_response);
-    this.G.D.setv(pid, "del_status." + did, "revoked"); // store in db that delegation was revoked
     // update effectve delegation for delegate_vid
     const a = this.get_agreement(pid, did);
+    
+    const p = this.G.P.polls[pid];
+    if ((a.client_vid != p.myvid)) {
+      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
+    } else {
+      this.G.D.delv(pid, "del_request." + did);
+      const acache = this.get_delegation_agreements_cache(pid);
+      if (acache) {
+        const oids = acache.get(did).active_oids;
+        if (oids) {
+          for (const oid of oids) {
+            p.del_delegation(p.myvid, oid);
+          }
+        }
+        acache.delete(did);
+      }
+    }
+    const dcache = this.get_my_outgoing_dids_cache(pid);
+    if (dcache) {
+      dcache.delete(oid);
+    }
+    
     const sm = this.G.D.getSharedMap(pid);
     const eff_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
 
+    // gets all voters that are affected by the delegation being
     var stack = [];
     for (let id of sm.keys()) {
       if (JSON.parse(sm.get(id) || "[]").includes(a.client_vid)) {
@@ -243,10 +235,6 @@ export class DelegationService {
     }
 
     this.G.D.set_shared_map(pid, sm); 
-
-    // this.G.D.setv_in_polldb(pid, "del_effective." + a.delegate_vid, JSON.stringify(Array.from(new_delegate_eff_set)), "vodle");
-    // this.handle_deleted_delegation(pid, did);
-    //console.log("revoked: ", this.G.D.getSharedMap(pid).get(a.delegate_vid));
     this.G.L.exit("DelegationService.revoke_delegation");
   }
 
@@ -343,7 +331,7 @@ export class DelegationService {
 
   update_incoming_request_status(pid: string, did: string, status: string) {
     const cache = this.G.D.incoming_dids_caches[pid];
-    if (!cache) {
+    if (!cache){
       return;
     }
     const [from, url, old_status] = cache.get(did);
@@ -364,7 +352,7 @@ export class DelegationService {
     const sm = this.G.D.getSharedMap(pid);
     const eff_set = new Set<string>(JSON.parse(sm.get(a.client_vid) || "[]"));
     var new_sm = sm;
-    for (let id of sm.keys()) {
+    for (let id of this.G.P.polls[pid].T.all_vids_set) {
       if (id == a.client_vid) {
         continue;
       }

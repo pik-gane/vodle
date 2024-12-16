@@ -185,16 +185,11 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
-    this.have_been_delegated = this.p.have_been_delegated(this.p.myvid, this.accepted_requests);
     this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
     this.G.L.entry("PollPage.onDataChangeshared");
-    const map = this.G.D.getSharedMap(this.pid);  
-    for (let vid of this.p.T.all_vids_set){
-      console.log("shared_effective delegates of", vid, new Set<string>(JSON.parse(map.get(vid) || "[]")));
-    }
     this.G.L.entry("PollPage.onDataChange");
     this.p.tally_all();
     this.update_order();
@@ -338,7 +333,9 @@ export class PollPage implements OnInit {
     // update n_delegated: // TODO: make more efficient
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
-      if (!b) sum++;
+      if (!b) {
+        sum++;
+      }
     }
     this.n_delegated = sum;
   }
@@ -387,7 +384,8 @@ export class PollPage implements OnInit {
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
 //        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
         if (delegate_vid) {
-          const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          // const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          const rating = this.G.D.getv(this.pid, "rating."+oid, this.p.delegate_id)||0;
           this.G.L.trace("PollPage.show_stats rating", rating);
           if (needle) {
             needle.x2.baseVal.valueAsString = (rating).toString() + '%';
@@ -659,6 +657,14 @@ export class PollPage implements OnInit {
       this.onRatingColTouchup(this.dragged_oid, ev);
     }
     return true;
+  }
+
+  get_my_rating(oid: string) {
+    if (this.delegate && !this.rate_yourself_toggle[oid]) {
+      this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+      return this.G.D.getv(this.pid, "rating."+oid, this.p.delegate_id);
+    }
+    return this.p.get_my_own_rating(oid);
   }
 
   get_knob_pos(oid: string) {
