@@ -210,7 +210,7 @@ export class DelegationService {
       dcache.delete(oid);
     }
     
-    const sm = this.G.D.getSharedMap(pid);
+    const sm = this.G.D.get_inverse_indirect_map(pid);
     const eff_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
 
     // gets all voters that are affected by the delegation being
@@ -234,7 +234,7 @@ export class DelegationService {
       sm.set(curr_del, JSON.stringify(Array.from(new_delegate_eff_set)));
     }
 
-    this.G.D.set_shared_map(pid, sm); 
+    this.G.D.set_inverse_indirect_map(pid, sm); 
     this.G.L.exit("DelegationService.revoke_delegation");
   }
 
@@ -296,7 +296,7 @@ export class DelegationService {
       }
     }
     // check for cycles:
-    const map = this.G.D.getSharedMap(pid);
+    const map = this.G.D.get_inverse_indirect_map(pid);
     for (let oid of p.oids){
       const set = new Set<string>(JSON.parse(map.get(client_vid) || "[]"));
       if (set.has(myvid)) {
@@ -353,7 +353,7 @@ export class DelegationService {
     this.set_my_signed_response(pid, did, signed_response);
     // update effective delegation
     const a = this.get_agreement(pid, did);
-    const sm = this.G.D.getSharedMap(pid);
+    const sm = this.G.D.get_inverse_indirect_map(pid);
     const eff_set = new Set<string>(JSON.parse(sm.get(a.client_vid) || "[]"));
     var new_sm = sm;
     for (let id of this.G.P.polls[pid].T.all_vids_set) {
@@ -370,7 +370,7 @@ export class DelegationService {
         new_sm.set(id, JSON.stringify(Array.from(new_eff_set)));
       }
     }
-    this.G.D.set_shared_map(pid, new_sm);
+    this.G.D.set_inverse_indirect_map(pid, new_sm);
   }
 
   decline(pid: string, did: string, private_key?: string) {

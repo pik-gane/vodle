@@ -1596,20 +1596,20 @@ export class DataService implements OnDestroy {
     }
   }
 
-  set_shared_map(pid: string, val: Map<string, string>) {
+  set_inverse_indirect_map(pid: string, val: Map<string, string>) {
     const mapKey = `poll.${pid}.shared_map`;
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
   }
 
   set_effective_delegation(pid: string, vid: string, val: string[]) {
     const mapKey = `poll.${pid}.shared_map`;
-    const currentMap = this.getSharedMap(pid);
+    const currentMap = this.get_inverse_indirect_map(pid);
 
     currentMap.set(vid, JSON.stringify(val)); // Add or update the key-value pair
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
   }
 
-  getSharedMap(pid: string): Map<string, string> {
+  get_inverse_indirect_map(pid: string): Map<string, string> {
     const cache = this.poll_caches[pid]['poll.' + pid + '.shared_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);

@@ -1260,9 +1260,8 @@ export class Poll {
   get_n_indirect_clients(vid: string): number {
     /** count how many voters have indirectly delegated to vid for some oid */
     console.log("poll_id", this._pid);
-    const map = this.G.D.getSharedMap(this._pid);
+    const map = this.G.D.get_inverse_indirect_map(this._pid);
     const set = new Set<string>(JSON.parse(map.get(vid) || "[]"));
-    console.log("getSharedMapNINDSET", vid, set);
     return set.size;
   }
 
