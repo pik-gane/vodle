@@ -312,13 +312,6 @@ export class DataService implements OnDestroy {
 
   delegation_agreements_caches: Record<string, Map<string, del_agreement_t>>; // by pid, did
 
-  direct_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of direct delegation data, not stored in database
-  inv_direct_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse direct delegation data, not stored in database
-  indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of indirect delegation data, not stored in database
-  inv_indirect_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse indirect delegation data, not stored in database
-  effective_delegation_map_caches: Record<string, Map<string, Map<string, string>>>; // redundant storage of effective delegation data, not stored in database
-  inv_effective_delegation_map_caches: Record<string, Map<string, Map<string, Set<string>>>>; // redundant storage of inverse effective delegation data, not stored in database
-
   tally_caches: Record<string, {}>; // temporary storage of tally data, not stored in database
 
   news_keys: Set<string>;
@@ -436,12 +429,6 @@ export class DataService implements OnDestroy {
     this.outgoing_dids_caches = {};
     this.incoming_dids_caches = {};
     this.delegation_agreements_caches = {};
-    this.direct_delegation_map_caches = {};
-    this.inv_direct_delegation_map_caches = {};
-    this.indirect_delegation_map_caches = {};
-    this.inv_indirect_delegation_map_caches = {};
-    this.effective_delegation_map_caches = {};
-    this.inv_effective_delegation_map_caches = {};
     this.proxy_ratings_map_caches = {};
     this.max_proxy_ratings_map_caches = {};
     this.argmax_proxy_ratings_map_caches = {};

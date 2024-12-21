@@ -195,7 +195,6 @@ export class PollPage implements OnInit {
     this.update_order();
     this.have_been_delegated = this.p.have_been_delegated(this.p.myvid, this.accepted_requests);
     this.update_delegation_info();
-    this.update_data();
     this.news = this.G.N.filter({pid: this.pid});
     this.changeDetector.detectChanges();
     this.G.L.exit("PollPage.onDataChange");
@@ -233,13 +232,6 @@ export class PollPage implements OnInit {
     this.G.L.entry("PollPage.ionViewDidLeave");
     this.G.D.save_state();
     this.G.L.exit("PollPage.ionViewDidLeave");
-  }
-
-  update_data(){
-    const m = this.G.D.inv_direct_delegation_map_caches[this.pid]
-    for (const oid of this.oidsorted) {
-      const oidm = m.get(oid);
-    }
   }
 
   update_delegation_info() {

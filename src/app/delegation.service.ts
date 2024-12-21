@@ -197,11 +197,6 @@ export class DelegationService {
       const acache = this.get_delegation_agreements_cache(pid);
       if (acache) {
         const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(p.myvid, oid);
-          }
-        }
         acache.delete(did);
       }
     }
@@ -304,26 +299,22 @@ export class DelegationService {
 
     // check if already delegating (in)directly back to client_vid for at least one option:
     var status: Array<any>;
-    const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
-          effdelmap = this.G.D.effective_delegation_map_caches[pid],
-          inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
-          myvid = p.myvid,
+    const myvid = p.myvid,
           client_vid = agreement.client_vid;
     if (client_vid == myvid) {
       return ["impossible", "is-self"];
     }
     let two_way = false, cycle = false, weight_exceeded = false;
-    for (let oid of p.oids) {
-      const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
-      const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
-      if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
-          + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
-          > environment.delegation.max_weight) {
-        weight_exceeded = true;
-        break;
-      }
-      if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
-        two_way = true;
+    const dirdelmap = this.G.D.get_direct_delegation_map(pid);
+    
+    if (!this.G.D.get_ranked_delegation_allowed(pid)){
+      const list = dirdelmap.get(myvid) || [];
+      for (const [did2, _, active] of list) {
+        const a = this.get_agreement(pid, did2);
+        if (a.client_vid == client_vid) {
+          two_way = true;
+          break;
+        }
       }
     }
     // check for cycles:
@@ -666,11 +657,6 @@ export class DelegationService {
       const acache = this.get_delegation_agreements_cache(pid);
       if (acache) {
         const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(client_vid, oid);
-          }
-        }
         acache.delete(did);
       }
     }
@@ -783,19 +769,13 @@ export class DelegationService {
             if (!(a.accepted_oids.has(oid) && request.option_spec.oids.includes(oid))) {
               // oid no longer active:
               a.active_oids.delete(oid);
-              p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
             }
           }
           for (const oid of request.option_spec.oids) {
             if (a.accepted_oids.has(oid) && !a.active_oids.has(oid)) {
               // oid newly active:
-              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
-                a.active_oids.add(oid);
-                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              } else {
-                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
-              }
+              a.active_oids.add(oid);
             }
           }
         } else if (request.option_spec.type == "-") {
@@ -804,19 +784,12 @@ export class DelegationService {
             if (request.option_spec.oids.includes(oid) || !a.accepted_oids.has(oid)) {
               // oid no longer active:
               a.active_oids.delete(oid);
-              p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
             }
           }
           for (const oid of a.accepted_oids) {
             if ((!a.active_oids.has(oid)) && (!request.option_spec.oids.includes(oid))) {
-              // oid newly active:
-              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
-                a.active_oids.add(oid);
-                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              } else {
-                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
-              }
+              a.active_oids.add(oid);
             }
           }
         }
