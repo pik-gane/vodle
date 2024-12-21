@@ -175,6 +175,7 @@
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
         "from-placeholder": "Enter your own e-mail address, name or nickname",
+        "rank-label": "Rank of delegation:",
         "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "share": "Use a messenger app",

@@ -88,7 +88,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-button>
 
       <!-- DELEGATE BUTTON: -->
-      <ion-button *ngIf="!!p && delegation_status!='agreed' && p.allow_voting"
+      <ion-button *ngIf="!!p && get_allowed_to_delegate() && p.allow_voting"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"

@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ViewChild } from '@angular/core';
-import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl, Form } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -59,6 +59,8 @@ export class DelegationDialogPage implements OnInit {
   message_title: string;
   message_body: string;
   mailto_url: string;
+  rank: number;
+  rank_options: number[];
 
   constructor(
     private popover: PopoverController,
@@ -75,8 +77,25 @@ export class DelegationDialogPage implements OnInit {
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
-      from: new UntypedFormControl(this.G.S.email)
+      from: new UntypedFormControl(this.G.S.email),
     });
+
+    // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
+    if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
+      const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+      console.log("dir_delegation_map", ddm);
+      console.log("THIS USER a.dir_", this.G.P.polls[this.parent.pid].myvid);
+      for (const [uid, dels] of ddm) {
+        console.log("user.dir_", uid);
+        for (const del of dels) {
+          console.log("a.dir_", del);
+          const a = this.G.Del.get_agreement(this.parent.pid, del[0]);
+          console.log("a.dir_", a);
+        }
+      }
+      this.initialise_rank_values();
+    }
+
     // TODO: what if already some delegation active or pending?
     // prepare a new delegation:
     [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
@@ -92,6 +111,24 @@ export class DelegationDialogPage implements OnInit {
     setTimeout(() => this.focus_element.setFocus(), 100);
   }
 
+  initialise_rank_values() {
+    const uid = this.parent.p.myvid;
+    const dir_del_map = this.G.D.get_direct_delegation_map(this.parent.pid);
+    const dir_del = dir_del_map.get(uid) || [];
+    var ranks = Array.from({ length: environment.delegation.max_delegations }, (_, i) => i + 1);
+    for (const entry of dir_del) {
+      if (entry === undefined) {
+        continue;
+      }
+      const indexToRemove: number = ranks.indexOf(Number(entry[1]));
+      if (indexToRemove !== -1) {
+        ranks.splice(indexToRemove, 1);
+      }
+    }
+    this.rank = ranks[0];
+    this.rank_options = ranks;
+  }
+
   delegate_nickname_changed() {
     const delegate_nickname = this.formGroup.get('delegate_nickname').value;
     this.G.D.setp(this.p.pid, "del_nickname." + this.did, delegate_nickname);
@@ -103,6 +140,10 @@ export class DelegationDialogPage implements OnInit {
     this.G.D.setp(this.p.pid, "del_from." + this.did, from);
     this.set_delegation_link(from);
     this.update_request();
+  }
+
+  rank_changed(e) {
+    this.rank = e.detail.value;
   }
 
   update_request() {
@@ -147,6 +188,7 @@ export class DelegationDialogPage implements OnInit {
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
       this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
@@ -159,6 +201,7 @@ export class DelegationDialogPage implements OnInit {
     this.from_changed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
+    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
     LocalNotifications.schedule({
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
@@ -182,6 +225,7 @@ export class DelegationDialogPage implements OnInit {
     this.delegate_nickname_changed();
     this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
+    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
     this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");

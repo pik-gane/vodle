@@ -534,8 +534,7 @@ export class Poll {
 
   get_my_proxy_rating(oid: string): number {
     if (this.delegate_id){
-      const agr = this.G.Del.get_agreement(this.pid, this.did);
-      console.log("shared_oid: ", agr.active_oids);
+      const agr = this.G.Del.get_agreement(this.pid, this.delegate_id);
       if (agr.active_oids.has(oid)){
         return +this.G.D.getv(this.pid, "rating."+oid, this.delegate_id)||0;
       }
@@ -603,12 +602,16 @@ export class Poll {
   }
 
   get have_delegated(): boolean {
-    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
-    if (!did) return false;
-    const agreement = this.G.Del.get_agreement(this.pid, did);
-    this.did = did;
-    this.delegate_id = agreement.delegate_vid;
-    return (agreement.status == "agreed") && (agreement.active_oids.size == agreement.accepted_oids.size);
+    const dir_del = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dir_del.get(this.myvid) || [];
+    for (const entry of list) {
+      if (entry[2] == "2") {
+        const a = this.G.Del.get_agreement(this.pid, entry[0]);
+        this.delegate_id = a.delegate_vid;
+        return true;
+      }
+    }
+    return false;
   }
 
   getDidFromUrl(url: string): string | null {
@@ -1013,7 +1016,7 @@ export class Poll {
 
     // make sure no delegation exists yet:
     // (we no longer require that delegation would not create a cycle)
-    if (dir_d_map.has(client_vid)) {
+    if (dir_d_map.has(client_vid) && !this.G.D.get_ranked_delegation_allowed(this.pid)) {
 
       if (dir_d_map.get(client_vid) == delegate_vid) {
         this.G.L.warn("PollService.add_delegation of existing delegation", this._pid, client_vid, oid, delegate_vid, dir_d_map.get(client_vid));
@@ -1160,7 +1163,7 @@ export class Poll {
             inv_ind_d_map = this.inv_indirect_delegation_map.get(oid),
             inv_ind_ds_of_client = inv_ind_d_map.get(client_vid),
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
-            inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
+            inv_eff_ds_of_client = inv_eff_d_map.get(client_vid) || new Set(),
             inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client),
             // is_on_cycle = ind_d_map.get(old_d_vid).has(client_vid);
             is_on_cycle = false;
@@ -1259,7 +1262,6 @@ export class Poll {
 
   get_n_indirect_clients(vid: string): number {
     /** count how many voters have indirectly delegated to vid for some oid */
-    console.log("poll_id", this._pid);
     const map = this.G.D.get_inverse_indirect_map(this._pid);
     const set = new Set<string>(JSON.parse(map.get(vid) || "[]"));
     return set.size;

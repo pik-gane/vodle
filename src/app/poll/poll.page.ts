@@ -274,22 +274,47 @@ export class PollPage implements OnInit {
       }
     }
     // find outgoing delegation:
-    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
-    this.G.L.trace("PollPage.update_delegation_info did", did);
+    var did;
+    const dir_del_map = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dir_del_map.get(this.p.myvid) || [];
+    for (const [did_, rank, status] of list) {
+      if (status == '2') {
+        did = did_;
+        break;
+      }
+    }
     if (did) {
-      this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      // this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      this.set_delegate();
       const agreement = this.G.Del.get_agreement(this.pid, did);
       this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
-      this.delegation_status = agreement.status;
+      var st = "null";
+      const list = dir_del_map.get(this.p.myvid) || [];
+      for (const [did, rank, status] of list) {
+        if (status == '2') {
+          st = "agreed";
+          break;
+        }
+      }
+      this.delegation_status = st == "agreed" ? "agreed" : agreement.status;
     }
     this.update_delegation_toggles();
   }
 
   update_delegation_toggles() {
     for (let oid of this.oidsorted) {
-      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
-      if (!did) {
-        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      // let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
+      // if (!did) {
+      //   did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      // }
+      var did;
+      const dm = this.G.D.get_direct_delegation_map(this.pid);
+      const list = dm.get(this.p.myvid) || [];
+      for (const [did_, rank, status] of list) {
+        if (status == '2') {
+          did = did_;
+          break;
+        }
       }
       if (did) {
         const a = this.G.Del.get_agreement(this.pid, did);
@@ -323,7 +348,18 @@ export class PollPage implements OnInit {
   on_rate_yourself_toggle_change(oid:string) {
 //    const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
     // update delegation data:
-    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    var did = null;
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [];
+    console.log("list", list);
+    for (const [did_, _, status] of list) {
+      if (status == '2') {
+        did = did_;
+        break;
+      }
+    }
+
+    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid], did);
     // update slider value:
 //    this.get_slider(oid).value = new_rating.toString();
     this.on_delegate_toggle_change();
@@ -469,6 +505,24 @@ export class PollPage implements OnInit {
       (this.votedfor == oid) ? 'vodledarkgreen' :
       (value + ((this.p.T.approval_scores_map.get(oid) / this.p.T.n_not_abstaining) || 0) * 100 <= 100) ? 'vodleblue' : 
       'vodlegreen';
+  }
+
+  set_delegate() {
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid);
+    var d = null;
+    if (!list) {
+      this.delegate = null;
+      return
+    }
+    for (const [did, rank, status] of list) {
+      if (status == '2') {
+        d = did;
+        break;
+      }
+    }
+    this.delegate = d ? this.G.Del.get_delegate_nickname(this.pid, d) : null;
+    this.p.delegate_id = d;
   }
 
   // CONTROLS:
@@ -667,6 +721,15 @@ export class PollPage implements OnInit {
     return this.p.get_my_own_rating(oid);
   }
 
+  get_allowed_to_delegate() : boolean {
+    if (!this.G.D.get_ranked_delegation_allowed(this.pid) && this.delegation_status == 'agreed'){
+      return false;
+    }
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [];
+    return list.length < environment.delegation.max_delegations;
+  }
+
   get_knob_pos(oid: string) {
     /** get the slider knob position (left and right pixel coordinates)
      *  to be able to compare with click/touch coordinate:
@@ -810,10 +873,21 @@ export class PollPage implements OnInit {
             role: 'Ok', 
             handler: () => {
               console.log('Confirm Ok.');
-              this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
+              var did = null;
+              const dm = this.G.D.get_direct_delegation_map(this.pid);
+              const list = dm.get(this.p.myvid) || [];
+              for (const [did_, _, status] of list) {
+                if (status == '2') {
+                  did = did_;
+                  break;
+                }
+              }
+              console.log("revoke_found_did", did);
+              this.G.Del.revoke_delegation(this.pid, did, "*");
               console.log('Delegation revoked.');
-              this.delegate = null;
-              this.delegation_status = 'none';
+              // this.delegate = null;
+              this.set_delegate();
+              this.delegation_status = this.delegate ? 'agreed' : 'none';
               console.log("id: ", this.p.myvid);
               this.update_delegation_info();
               this.G.D.save_state();

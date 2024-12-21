@@ -1522,7 +1522,7 @@ export class DataService implements OnDestroy {
       } else {
         this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
       }
-    } else if (key == 'shared_map') {
+    } else if (key == 'inverse_indirect_map') {
       return this._setp_in_polldb(pid, key, value);
     }else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
@@ -1559,7 +1559,6 @@ export class DataService implements OnDestroy {
   }
 
   getv(pid: string, key: string, vid?: string): string {
-    console.log("getv", pid, key, vid)
     // get own voter data item
     let value = null;
     if (this.pid_is_draft(pid)) {
@@ -1575,12 +1574,10 @@ export class DataService implements OnDestroy {
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][pkey] || '';
     }
-    console.log("getv", pid, key, vid, value);
     return value;
   }
 
   setv(pid: string, key: string, value: string): boolean {
-    console.log("setv", pid, key, value)
     /** Set a voter data item.
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
@@ -1596,13 +1593,14 @@ export class DataService implements OnDestroy {
     }
   }
 
+  // inverse_indirect_map:- key: voterid, value: [voterid1, voterid2, voterid3] voterids that have effectively delegated to the voterid
   set_inverse_indirect_map(pid: string, val: Map<string, string>) {
-    const mapKey = `poll.${pid}.shared_map`;
+    const mapKey = `poll.${pid}.inverse_indirect_map`;
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
   }
 
   set_effective_delegation(pid: string, vid: string, val: string[]) {
-    const mapKey = `poll.${pid}.shared_map`;
+    const mapKey = `poll.${pid}.inverse_indirect_map`;
     const currentMap = this.get_inverse_indirect_map(pid);
 
     currentMap.set(vid, JSON.stringify(val)); // Add or update the key-value pair
@@ -1610,10 +1608,30 @@ export class DataService implements OnDestroy {
   }
 
   get_inverse_indirect_map(pid: string): Map<string, string> {
-    const cache = this.poll_caches[pid]['poll.' + pid + '.shared_map'] || '[]';
+    const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);
+    console.log("inverse_indirect_map: ", mp);
     return mp;
+  }
+
+  // direct_delegation_map:- key: voterid, value: [[voterid, rank, is_current_delegation], [voterid2, rank, is_current_delegate]] of the voter that the key has delegated to.
+  // When ranked delegation is not allowed, the rank is always 0 and the size of the value is 1.
+  set_direct_delegation_map(pid: string, val: Map<string, Array<[string, string, string]>>) {
+    const mapKey = `poll.${pid}.direct_delegation_map`;
+    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
+  }
+
+  get_direct_delegation_map(pid: string): Map<string, Array<[string, string, string]>> {
+    const cache = this.poll_caches[pid]['poll.' + pid + '.direct_delegation_map'] || '[]';
+    const ps = cache ? JSON.parse(cache) : {};
+    const mp = new Map<string, Array<[string, string, string]>>(ps);
+    return mp;
+  }
+
+  clear_direct_delegation_map(pid: string) {
+    const mapKey = `poll.${pid}.direct_delegation_map`;
+    this._setp_in_polldb(pid, mapKey, JSON.stringify([]));
   }
 
   delv(pid: string, key: string, vid?: string) {
@@ -2364,7 +2382,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value) && (key.indexOf("shared_map") == -1)) {
+        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value) && (key.indexOf("inverse_indirect_map") == -1) && (key.indexOf("direct_delegation_map") == -1)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -2426,7 +2444,7 @@ export class DataService implements OnDestroy {
       // check which voter's data this is:
       const vid_prefix = key.slice(0, key.indexOf("§")),
             vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
-      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true' && key.indexOf("shared_map") == -1) {
+      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true' && key.indexOf("inverse_indirect_map") == -1) {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.store_poll_data tried changing another voter's data item", pid, key);
 
