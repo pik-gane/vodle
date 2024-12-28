@@ -564,7 +564,7 @@ export class Poll {
   get am_abstaining(): boolean {
     /** whether or not I'm currently abstaining and haven't delegated */
     if (this.have_delegated) {
-      return false;
+      return this.T.votes_map.get(this.myvid) === undefined;
     }
     if (!!this.T.votes_map) {
       const myvote = this.T.votes_map.get(this.myvid);
@@ -959,17 +959,35 @@ export class Poll {
       this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
       // check whether vid has not delegated:
       const dir_d_map = this.G.D.get_direct_delegation_map(this.pid);
-      if (!dir_d_map.has(vid)) {
+      var have_delegated = false;
+      if (dir_d_map.has(vid)) {
+        for (const entry of dir_d_map.get(vid)) {
+          if (entry[2] == "2") {
+            have_delegated = true;
+            break;
+          }
+        }
+      }
+
+      this.update_proxy_rating(vid, oid, value, update_tally);
+      if (!have_delegated) {
         // vid has not delegated this rating,
         // so update all dependent voters' effective ratings:
-        this.update_proxy_rating(vid, oid, value, update_tally);
         // const vid2s = (this.G.D.get_inv_effective_delegation_map(this.pid).get(oid)||new Map()).get(vid);
-        const vid2s = this.G.D.get_inverse_indirect_map(this.pid).get(vid);
+        const vid2s = new Set<string>(JSON.parse(this.G.D.get_inverse_indirect_map(this.pid).get(vid) || "[]"));
         if (vid2s) {
           for (const vid2 of vid2s) {
             // vid2 effectively delegates their rating of oid to vid,
             // hence we store vid's new rating of oid as vid2's effective rating of oid:
-            this.update_proxy_rating(vid2, oid, value, update_tally);
+            const list = this.G.D.get_direct_delegation_map(this.pid).get(vid2) || [];
+            for (const entry of list) {
+              const a = this.G.Del.get_agreement(this.pid, entry[0]);
+              if (!(a.delegate_vid == vid) || !a.active_oids.has(oid) || entry[2] != "2") {
+                continue;
+              }
+              this.update_proxy_rating(vid2, oid, value, update_tally);
+              break;
+            }
           }
         }
       }

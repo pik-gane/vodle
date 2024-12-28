@@ -82,17 +82,6 @@ export class DelegationDialogPage implements OnInit {
 
     // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
     if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
-      const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-      console.log("dir_delegation_map", ddm);
-      console.log("THIS USER a.dir_", this.G.P.polls[this.parent.pid].myvid);
-      for (const [uid, dels] of ddm) {
-        console.log("user.dir_", uid);
-        for (const del of dels) {
-          console.log("a.dir_", del);
-          const a = this.G.Del.get_agreement(this.parent.pid, del[0]);
-          console.log("a.dir_", a);
-        }
-      }
       this.initialise_rank_values();
     }
 

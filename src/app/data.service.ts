@@ -1598,7 +1598,6 @@ export class DataService implements OnDestroy {
     const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);
-    console.log("inverse_indirect_map: ", mp);
     return mp;
   }
 

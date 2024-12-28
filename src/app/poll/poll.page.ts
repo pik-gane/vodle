@@ -267,12 +267,14 @@ export class PollPage implements OnInit {
     }
     // find outgoing delegation:
     var did;
+    var pendingSet = new Set<string>();
     const dir_del_map = this.G.D.get_direct_delegation_map(this.pid);
     const list = dir_del_map.get(this.p.myvid) || [];
     for (const [did_, rank, status] of list) {
       if (status == '2') {
         did = did_;
-        break;
+      } else if (status == '0') {
+        pendingSet.add(did_);
       }
     }
     if (did) {
@@ -289,6 +291,11 @@ export class PollPage implements OnInit {
         }
       }
       this.delegation_status = st == "agreed" ? "agreed" : agreement.status;
+    } else if (pendingSet.size > 0) {
+      this.delegation_status = "pending";
+      this.delegate = this.G.Del.get_delegate_nickname(this.pid, pendingSet.values().next().value);
+    } else {
+      this.delegation_status = "none";
     }
     this.update_delegation_toggles();
   }
@@ -338,12 +345,11 @@ export class PollPage implements OnInit {
   }
 
   on_rate_yourself_toggle_change(oid:string) {
-//    const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
+  //const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
     // update delegation data:
     var did = null;
     const dm = this.G.D.get_direct_delegation_map(this.pid);
     const list = dm.get(this.p.myvid) || [];
-    console.log("list", list);
     for (const [did_, _, status] of list) {
       if (status == '2') {
         did = did_;
@@ -351,10 +357,18 @@ export class PollPage implements OnInit {
       }
     }
 
+    // set rating
+    if (this.rate_yourself_toggle[oid]) {
+      this.p.set_my_own_rating(oid, this.p.get_my_effective_rating(oid), true);
+    } else {
+      this.p.set_my_own_rating(oid, +this.G.D.getv(this.pid, "rating."+oid, this.p.delegate_id)||0, true);
+    }
+
     this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid], did);
     // update slider value:
 //    this.get_slider(oid).value = new_rating.toString();
     this.on_delegate_toggle_change();
+    this.G.D.save_state();
   }
 
   on_delegate_toggle_change() {
@@ -514,7 +528,7 @@ export class PollPage implements OnInit {
       }
     }
     this.delegate = d ? this.G.Del.get_delegate_nickname(this.pid, d) : null;
-    this.p.delegate_id = d;
+    this.p.delegate_id = d? d : null;
   }
 
   // CONTROLS:
@@ -874,13 +888,10 @@ export class PollPage implements OnInit {
                   break;
                 }
               }
-              console.log("revoke_found_did", did);
               this.G.Del.revoke_delegation(this.pid, did, "*");
-              console.log('Delegation revoked.');
               // this.delegate = null;
               this.set_delegate();
               this.delegation_status = this.delegate ? 'agreed' : 'none';
-              console.log("id: ", this.p.myvid);
               this.update_delegation_info();
               this.G.D.save_state();
             } 

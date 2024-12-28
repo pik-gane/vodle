@@ -125,6 +125,13 @@ export class DelrespondPage implements OnInit {
     this.router.navigate(["/poll/" + this.pid]);
   }
 
+  revoke() {
+    /** store negative response and go to poll page */
+    this.G.Del.set_delegation_pending(this.pid, this.did);
+    this.G.Del.decline(this.pid, this.did, this.private_key);
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
   dismiss() {
     this.router.navigate(["/mypolls"]);
   }
