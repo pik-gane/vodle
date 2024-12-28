@@ -88,7 +88,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-button>
 
       <!-- DELEGATE BUTTON: -->
-      <ion-button *ngIf="!!p && delegation_status!='agreed' && p.allow_voting"
+      <ion-button *ngIf="!!p && get_allowed_to_delegate() && p.allow_voting"
           (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"
@@ -151,7 +151,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </small>
 
             <!-- POLL TITLE -->
-
             <h3><b><i [lang]="p.language" [innerHtml]="p.title"></i></b></h3>
           </ion-col>
         </ion-row>
@@ -164,7 +163,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <ion-grid class="ion-no-padding ion-padding-bottom ion-no-margin" style="width: 100%;">
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
-
             <!-- POLL DESCRIPTION, "READ MORE" LINK -->
 
             <div [style]="
@@ -337,7 +335,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           </p>
         </small>
       </ion-item>
-      <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
+      <ion-item *ngIf="p.my_n_rated_positive == 1 && !p.have_delegated" color="warning">
         <small>
           <p>
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
@@ -462,7 +460,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- INCOMING DELEGATIONS BANNER: -->
 
-      <ion-item *ngIf="(accepted_requests.length > 0) || (declined_requests.length > 0)"
+      <ion-item *ngIf="(accepted_requests.length > 0 && n_indirect_clients > 0) || declined_requests.length > 0"
           color="light">
         <ion-grid class="ion-no-padding ion-no-margin">
 
@@ -479,7 +477,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                   size="smaller" class="ion-no-margin" 
                   style="color:black; position: relative; left: -2px; top: 2px;">
                 </ion-icon>
-                <span *ngIf="accepted_requests.length > 0" 
+                <span *ngIf="n_indirect_clients > 0"
                   [innerHtml]="
                     ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
                     | translate: {n_others: n_indirect_clients})
@@ -717,7 +715,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         [disabled]="!p.allow_voting"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                         [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
-                        [value]="p.get_my_proxy_rating(oidsorted[i])" 
+                        [value]="get_my_rating(oidsorted[i])" 
                         (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"

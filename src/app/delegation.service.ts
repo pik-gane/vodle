@@ -36,6 +36,7 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
 import { Poll } from './poll.service';
+import { min } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -126,14 +127,11 @@ export class DelegationService {
     return a.delegate_vid;
   }
 
-  update_my_delegation(pid: string, oid: string, activate: boolean) {
+  update_my_delegation(pid: string, oid: string, activate: boolean, did? :string) {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */
     const p = this.G.P.polls[pid];
-    let did = this.get_my_outgoing_dids_cache(pid).get(oid);
-    if (!did) {
-      did = this.get_my_outgoing_dids_cache(pid).get("*");
-    }
+
     if (!did) {
       this.G.L.error("DelegationService.update_my_delegation without existing did", pid, oid, activate);
     } else {
@@ -184,9 +182,39 @@ export class DelegationService {
     }
   }
 
+  set_delegation_pending(pid:string, did:string){
+    const a = this.get_agreement(pid, did);
+    var dm = this.G.D.get_direct_delegation_map(pid);
+    var list = dm.get(a.client_vid) || [];
+    var new_list = [];
+    for (var entry of list) {
+      if (entry[0] === did) {
+        entry[2] = '0';
+      }
+      new_list.push(entry);
+    }
+    dm.set(a.client_vid, new_list);
+    this.G.D.set_direct_delegation_map(pid, dm);
+
+    // update inverse map
+    const sm = this.G.D.get_inverse_indirect_map(pid);
+    const eff_set = new Set(JSON.parse(sm.get(a.delegate_vid) || "[]"));
+    const client_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
+    var new_eff_set = new Set();
+    for (let id of eff_set) {
+      if (id == a.client_vid || client_set.has(id)) {
+        continue;
+      }
+      new_eff_set.add(id);
+    }
+    sm.set(a.delegate_vid, JSON.stringify(Array.from(new_eff_set)));
+  }
+
   revoke_delegation(pid: string, did: string, oid: string) {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
-    const a = this.get_delegation_agreements_cache(pid).get(did);
+    // update effectve delegation for delegate_vid
+    const a = this.get_agreement(pid, did);
+    
     const p = this.G.P.polls[pid];
     if ((a.client_vid != p.myvid)) {
       this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
@@ -195,11 +223,6 @@ export class DelegationService {
       const acache = this.get_delegation_agreements_cache(pid);
       if (acache) {
         const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(p.myvid, oid);
-          }
-        }
         acache.delete(did);
       }
     }
@@ -207,70 +230,185 @@ export class DelegationService {
     if (dcache) {
       dcache.delete(oid);
     }
+    
+    const sm = this.G.D.get_inverse_indirect_map(pid);
+    const eff_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
+
+    // gets all voters that are affected by the delegation being deleted
+    if (!this.G.D.get_ranked_delegation_allowed(pid)){
+      var stack = [];
+      for (let id of sm.keys()) {
+        if (JSON.parse(sm.get(id) || "[]").includes(a.client_vid)) {
+          stack.push(id);
+        }
+      }
+      while (stack.length > 0) {
+        const curr_del = stack.pop();
+        const old_delegate_eff_set = new Set(JSON.parse(sm.get(curr_del) || "[]"));
+        var new_delegate_eff_set = new Set();
+        for (let id of old_delegate_eff_set) {
+          if (id == a.client_vid || eff_set.has(id)) {
+            continue;
+          }
+          new_delegate_eff_set.add(id);
+        }
+        sm.set(curr_del, JSON.stringify(Array.from(new_delegate_eff_set)));
+      }
+
+      this.G.D.set_inverse_indirect_map(pid, sm);
+    }
+
+    // update direct delegation map
+    var dir_del_map = this.G.D.get_direct_delegation_map(pid);
+    var dir_del = dir_del_map.get(a.client_vid) || [];
+    var new_list = [];
+    for (var entry of dir_del) {
+      if (entry[2] === '2') {
+        continue;
+      }
+      new_list.push(entry);
+    }
+    dir_del_map.set(a.client_vid, new_list);
+    this.G.D.set_direct_delegation_map(pid, dir_del_map);
+
+    if (this.G.D.get_ranked_delegation_allowed(pid)){
+      this.recalculate_delegation_map(pid);
+    }
+
+    this.G.L.exit("DelegationService.revoke_delegation");
+  }
+
+  recalculate_delegation_map(pid: string) {
+    const active_delegations = new Map<string, string>();
+    this.find_path(pid);
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    for (const [vid, dels] of dm) {
+      active_delegations.set(vid, "");
+    }
+    for (const [vid, dels] of dm) {
+      for (const del of dels) {
+        if (del[2] === '2') {
+          const a = this.get_agreement(pid, del[0]);
+          active_delegations.set(a.delegate_vid, a.client_vid);
+          break;
+        }
+      }
+    }
+
+    let visited = new Set<string>();
+    let inverse_map = new Map<string, Set<string>>();
+    for (const vid of active_delegations.keys()) {
+      if (visited.has(vid)) {
+        continue;
+      }
+      this.bfs(pid, vid, active_delegations, visited, inverse_map);
+    }
+    // stringifying the inverse map
+    let new_sm = new Map<string, string>();
+    for (const [vid, set] of inverse_map) {
+      new_sm.set(vid, JSON.stringify(Array.from(set)));
+    }
+    this.G.D.set_inverse_indirect_map(pid, new_sm);
+  }
+
+  // recursive function to calculate the inverse indirect map
+  bfs(pid: string, vid: string, active_delegations: Map<string, string>, visited: Set<string>, inverse_map: Map<string, Set<string>>) {
+    if (visited.has(vid)) {
+      return;
+    }
+    visited.add(vid);
+    const client_vid = active_delegations.get(vid);
+    if (!client_vid) {
+      return;
+    }
+    if (!visited.has(client_vid)) {
+      this.bfs(pid, client_vid, active_delegations, visited, inverse_map);
+    }
+    if (!inverse_map.has(client_vid)) {
+      inverse_map.set(client_vid, new Set<string>());
+    }
+    let s = new Set(inverse_map.get(client_vid) || []);
+    s.add(client_vid);
+    inverse_map.set(vid, s);
   }
 
   // RESPONDING TO A DELEGATION REQUEST:
 
   get_incoming_request_status(pid: string, did: string): Array<string> {
-    if (pid in this.G.P.polls) {
-      const p = this.G.P.polls[pid];
-      if (p.state != 'running') {
-        return ["closed"];
-      } else {
-        // check if request has been retrieved from db:
-        const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
-        if (agreement) {
-          // check if already answered:
-          if (agreement.status == 'agreed') {
-            return ["accepted"];
-          } 
-          // check if already delegating (in)directly back to client_vid for at least one option:
-          var status: Array<any>;
-          const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
-                effdelmap = this.G.D.effective_delegation_map_caches[pid],
-                inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
-                myvid = p.myvid,
-                client_vid = agreement.client_vid;
-          if (client_vid == myvid) {
-            return ["impossible", "is-self"];
-          }
-          let two_way = false, cycle = false, weight_exceeded = false;
-          for (let oid of p.oids) {
-            const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
-            const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
-            if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
-                + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
-                > environment.delegation.max_weight) {
-              weight_exceeded = true;
-              break;
-            }
-            if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
-              two_way = true;
-            } else if (effdel_vid == client_vid) {
-              cycle = true;
-            }
-          }
-          if (weight_exceeded) {
-            status = ["impossible", "weight-exceeded"];
-          } else if (two_way) {
-            status = ["possible", "two-way"];
-          } else if (cycle) {
-            status = ["possible", "cycle"];
-          } else {
-            status = ["possible", "acyclic"];
-          }
-          if (agreement.status == 'declined') {
-            status[0] = "declined, " + status[0];
-            return status;
-          } else {
-            return status;
-          }
-        } else {
-          return ["impossible", "not-in-db"];
+    if (!(pid in this.G.P.polls)) {
+      return ["impossible", "poll-unknown"];
+    }
+    const p = this.G.P.polls[pid];
+    if (p.state != 'running') {
+      return ["closed"];
+    }
+    // check if request has been retrieved from db:
+    const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
+    if (!agreement) {
+      return ["impossible", "not-in-db"];
+    }
+
+    // check if request has already been revoked
+    const revoked = this.G.D.getv(pid, "del_status." + did, agreement.client_vid);
+    if (revoked == "revoked") {
+      return ["impossible", "revoked"];
+    }
+
+    // check if already answered:
+    if (agreement.status == 'agreed') {
+      return ["accepted"];
+    }
+
+    if (this.G.D.get_ranked_delegation_allowed(pid)){
+      return ["ranked"];
+    }
+
+    const a = this.get_agreement(pid, did);
+
+    // check if already delegating (in)directly back to client_vid for at least one option:
+    var status: Array<any>;
+    const myvid = p.myvid,
+          client_vid = agreement.client_vid;
+    if (client_vid == myvid) {
+      return ["impossible", "is-self"];
+    }
+    let two_way = false, cycle = false, weight_exceeded = false;
+    const dirdelmap = this.G.D.get_direct_delegation_map(pid);
+    
+    if (!this.G.D.get_ranked_delegation_allowed(pid)){
+      const list = dirdelmap.get(myvid) || [];
+      for (const [did2, _, active] of list) {
+        const a = this.get_agreement(pid, did2);
+        if (a.client_vid == client_vid) {
+          two_way = true;
+          break;
         }
       }
+    }
+    // check for cycles:
+    const map = this.G.D.get_inverse_indirect_map(pid);
+    for (let oid of p.oids){
+      const set = new Set<string>(JSON.parse(map.get(client_vid) || "[]"));
+      if (set.has(myvid)) {
+        cycle = true;
+        break;
+      }
+    }
+
+    if (weight_exceeded) {
+      status = ["impossible", "weight-exceeded"];
+    } else if (two_way) {
+      status = ["impossible", "two-way"];
+    } else if (cycle) {
+      status = ["impossible", "cycle"];
     } else {
-      return ["impossible", "poll-unknown"];
+      status = ["possible", "acyclic"];
+    }
+    if (agreement.status == 'declined') {
+      status[0] = "declined, " + status[0];
+      return status;
+    } else {
+      return status;
     }
   }
 
@@ -286,8 +424,11 @@ export class DelegationService {
   }
 
   update_incoming_request_status(pid: string, did: string, status: string) {
-    const cache = this.G.D.incoming_dids_caches[pid],
-          [from, url, old_status] = cache.get(did);
+    const cache = this.G.D.incoming_dids_caches[pid];
+    if (!cache){
+      return;
+    }
+    const [from, url, old_status] = cache.get(did);
     if (status != old_status[0]) {
       this.store_incoming_request(pid, did, from, url, status);
     }
@@ -299,6 +440,55 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.accept", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+    
+    const a = this.get_agreement(pid, did);
+    // update effective delegation
+    if (!this.G.D.get_ranked_delegation_allowed(pid)){
+      const sm = this.G.D.get_inverse_indirect_map(pid);
+      const eff_set = new Set<string>(JSON.parse(sm.get(a.client_vid) || "[]"));
+      var new_sm = sm;
+      for (let id of this.G.P.polls[pid].T.all_vids_set) {
+        if (id === a.client_vid) {
+          continue;
+        }
+        const old_eff_set = new Set<string>(JSON.parse(sm.get(id) || "[]"));
+        if (id === a.delegate_vid || old_eff_set.has(a.delegate_vid)) {
+          var new_eff_set = old_eff_set;
+          for (const id2 of eff_set){
+            new_eff_set.add(id2);
+          }
+          new_eff_set.add(a.client_vid);
+          new_sm.set(id, JSON.stringify(Array.from(new_eff_set)));
+        }
+      }
+      this.G.D.set_inverse_indirect_map(pid, new_sm);
+
+      // update direct delegation map
+      var dir_del_map = this.G.D.get_direct_delegation_map(pid);
+      var dir_del = dir_del_map.get(a.client_vid) || [];
+      for (var entry of dir_del) {
+        if (entry[0] === did) {
+          entry[2] = '2';
+          break;
+        }
+      }
+      dir_del_map.set(a.client_vid, dir_del);
+      this.G.D.set_direct_delegation_map(pid, dir_del_map);
+      return;
+    }
+
+    var dir_del_map = this.G.D.get_direct_delegation_map(pid);
+    var dir_del = dir_del_map.get(a.client_vid) || [];
+    for (var entry of dir_del) {
+      if (entry[0] === did) {
+        entry[2] = '1';
+        break;
+      }
+    }
+    dir_del_map.set(a.client_vid, dir_del);
+    this.G.D.set_direct_delegation_map(pid, dir_del_map);
+
+    this.recalculate_delegation_map(pid);
   }
 
   decline(pid: string, did: string, private_key?: string) {
@@ -310,6 +500,125 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+    
+    // update map
+    if (this.G.D.get_ranked_delegation_allowed(pid)){
+      this.recalculate_delegation_map(pid);
+    }
+  }
+
+  // todo: make this give a different news item to the client
+  decline_due_to_error(pid: string, did: string, private_key?: string) {
+    if (!private_key) {
+      private_key = this.get_private_key(pid, did);
+    }
+    const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.decline_due_to_error", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  private find_path(pid: string) {
+    this.min_sum_all(pid);
+  }
+
+  private delegating_voters(pid: string) : Set<string> {
+    let del_voters = new Set<string>();
+    const dir_del_map = this.G.D.get_direct_delegation_map(pid);
+    for (const vid of this.G.P.polls[pid].T.all_vids_set) {
+      for (const [did, rank, active] of dir_del_map.get(vid) || []) {
+        if (active != '0') {
+          del_voters.add(vid);
+          break;
+        }
+      }
+    }
+    return del_voters;
+  }
+
+  private is_casting_voter(pid: string, vid: string) {
+    const dir_del_map = this.G.D.get_direct_delegation_map(pid);
+    for (const [did, rank, active] of dir_del_map.get(vid) || []) {
+      if (active == '0') {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private find_all_paths(pid: string, vid: string, current_path: string[], paths: string[][]) {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    for (const [did, _, active] of dm.get(vid) || []) {
+      if (active == '0') {
+        continue;
+      }
+      const a = this.get_agreement(pid, did);
+      let new_path: string[] = [...current_path, did];
+      if (this.is_casting_voter(pid, a.delegate_vid)) {
+        paths.push(new_path);
+      } else if (!current_path.includes(did)) {
+        this.find_all_paths(pid, a.delegate_vid, new_path, paths);
+      }
+    }
+  }
+
+  private get_rank_from_did(pid: string, did: string) : number {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    const a = this.get_agreement(pid, did);
+    for (const [did2, rank, active] of dm.get(a.client_vid) || []) {
+      if (did2 == did) {
+        return Number(rank);
+      }
+    }
+    return 0;
+  }
+
+  private min_sum(pid: string, vid: string) : Array<string> {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    let paths: string[][] = [[]];
+    this.find_all_paths(pid, vid, [], paths);
+
+    let minSumPath: string[] = [];
+    let minSum = Number.MAX_VALUE;
+
+    for (const path of paths) {
+      if (path.length == 0) {
+        continue;
+      }
+      let pathSum = 0;
+      for (const did of path) {
+        pathSum += this.get_rank_from_did(pid, did);
+      }
+      if (pathSum < minSum) {
+        minSum = pathSum;
+        minSumPath = path;
+      }
+    }
+    return minSumPath;
+  }
+
+  private min_sum_all(pid: string) {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    for (let vid of this.delegating_voters(pid)) {
+      const minSumPath = this.min_sum(pid, vid);
+      for (const did of minSumPath) {
+        const a = this.get_agreement(pid, did);
+        const delegations = dm.get(a.client_vid) || [];
+        var newDelegations = [];
+        for (const [did2, rank, active] of delegations) {
+          if (did2 == did) {
+            newDelegations.push([did2, rank, '2']);
+          } else if (active === '2') {
+            newDelegations.push([did2, rank, '1']);
+          } else {
+            newDelegations.push([did2, rank, active]);
+          }
+        }
+        dm.set(a.client_vid, newDelegations);
+      }
+    }
+    this.G.D.set_direct_delegation_map(pid, dm);
   }
 
   // DATA HANDLING:
@@ -328,6 +637,21 @@ export class DelegationService {
 
   set_private_key(pid: string, did: string, value: string) {
     this.G.D.setp(pid, "del_private_key." + did, value);
+  }
+
+  get_delegate_rank(pid: string, did: string): number {
+    const rank = Number(this.G.D.getv(pid, "del_rank." + did));
+    return rank;
+  }
+
+  set_delegate_rank(pid: string, did: string, value: number) {
+    // this.G.D.setv(pid, "del_rank." + did, JSON.stringify(value));
+    var direct_del_map = this.G.D.get_direct_delegation_map(pid);
+    var myvid = this.G.P.polls[pid].myvid;
+    var dir_del = direct_del_map.get(myvid) || [];
+    dir_del.push([did, JSON.stringify(value), '0']);
+    direct_del_map.set(myvid, dir_del);
+    this.G.D.set_direct_delegation_map(pid, direct_del_map);
   }
 
   get_request(pid: string, did: string, client_vid?: string): del_request_t {
@@ -365,7 +689,7 @@ export class DelegationService {
   get_agreement(pid: string, did: string): del_agreement_t {
     const cache = this.get_delegation_agreements_cache(pid);
     let a = cache.get(did);
-    this.G.L.entry("DelegationService.get_agreement", pid, did, a);
+    // this.G.L.entry("DelegationService.get_agreement", pid, did, a);
     if (!a) {
       a = {
         status: "pending",
@@ -403,11 +727,6 @@ export class DelegationService {
       const acache = this.get_delegation_agreements_cache(pid);
       if (acache) {
         const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(client_vid, oid);
-          }
-        }
         acache.delete(did);
       }
     }
@@ -431,8 +750,7 @@ export class DelegationService {
     this.update_agreement(pid, did, a, request, signed_response);
   }
 
-  update_agreement(pid: string, did: string, agreement: del_agreement_t,
-        request: del_request_t, signed_response: del_signed_response_t) {
+  update_agreement(pid: string, did: string, agreement: del_agreement_t, request: del_request_t, signed_response: del_signed_response_t) {
     /** after changes to request or response,
      * compare request and response, set status, extract accepted and active oids */
     this.G.L.entry("DelegationService.update_agreement", pid, did, agreement, request, signed_response);
@@ -463,8 +781,11 @@ export class DelegationService {
       }
       const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
       const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
-      if (!response.option_spec) {
-        a.status = "declined";
+      if (pair.status == "revoked") {
+        a.status = "revoked";
+        return;
+      } else if (!response.option_spec) {
+        a.status = "declined"
       } else {
         if (response.option_spec.type == "+") {
           // oids specifies accepted options
@@ -517,19 +838,13 @@ export class DelegationService {
             if (!(a.accepted_oids.has(oid) && request.option_spec.oids.includes(oid))) {
               // oid no longer active:
               a.active_oids.delete(oid);
-              p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
             }
           }
           for (const oid of request.option_spec.oids) {
             if (a.accepted_oids.has(oid) && !a.active_oids.has(oid)) {
               // oid newly active:
-              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
-                a.active_oids.add(oid);
-                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              } else {
-                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
-              }
+              a.active_oids.add(oid);
             }
           }
         } else if (request.option_spec.type == "-") {
@@ -538,27 +853,18 @@ export class DelegationService {
             if (request.option_spec.oids.includes(oid) || !a.accepted_oids.has(oid)) {
               // oid no longer active:
               a.active_oids.delete(oid);
-              p.del_delegation(a.client_vid, oid);
               this.G.L.trace("DelegationService.update_agreement deactivated oid", pid, oid);
             }
           }
           for (const oid of a.accepted_oids) {
             if ((!a.active_oids.has(oid)) && (!request.option_spec.oids.includes(oid))) {
-              // oid newly active:
-              if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
-                a.active_oids.add(oid);
-                this.G.L.trace("DelegationService.update_agreement activated oid", pid, oid);
-              } else {
-                this.G.L.warn("DelegationService.update_agreement couldn't activate oid", pid, oid);
-              }
+              a.active_oids.add(oid);
             }
           }
         }
         a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
-    
     }
-
     // if voter affected directly, add news item:
     if (a.client_vid == p.myvid) {
       if ((old_status=="pending") && (a.status=="agreed")) {
@@ -590,7 +896,6 @@ export class DelegationService {
         });
       }
     }
-
     // TODO: update tally!
 
     this.G.L.exit("DelegationService.update_agreement", a.status, [...a.accepted_oids], [...a.active_oids]);
@@ -612,6 +917,10 @@ export class DelegationService {
 
   response2string(response: del_response_t): string {
     /** turn response data without signature deterministically into a string message that can be signed: */
+    // if response is a status message, return it as is:
+    if (response.status) {
+      return JSON.stringify(response);
+    }
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }
 
@@ -620,6 +929,13 @@ export class DelegationService {
       this.G.D.outgoing_dids_caches[pid] = new Map();
     }
     return this.G.D.outgoing_dids_caches[pid];
+  }
+
+  get_my_incoming_dids_cache(pid:string) {
+    if (!this.G.D.incoming_dids_caches[pid]) {
+      this.G.D.incoming_dids_caches[pid] = new Map();
+    }
+    return this.G.D.incoming_dids_caches[pid];
   }
 
   get_delegation_agreements_cache(pid:string) {

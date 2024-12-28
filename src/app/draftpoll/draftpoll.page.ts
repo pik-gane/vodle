@@ -83,7 +83,8 @@ export class DraftpollPage implements OnInit {
     is_test?,
     type?, language?, 
     title?, desc?, url?, 
-    due_type?, due_custom?, 
+    due_type?, due_custom?,
+    allow_ranked?,
     db?, db_from_pid?, db_custom_server_url?, db_custom_password?,
     options?: option_data_t[] 
   };
@@ -142,7 +143,7 @@ export class DraftpollPage implements OnInit {
       this.stage = 0;
       if (!this.pd) {
         this.G.L.info("DraftpollPage editing new draft");
-        this.pd = { db:'default', language:this.G.S.language };
+        this.pd = { db:'default', language:this.G.S.language, allow_ranked:false};
       } else {
         this.G.L.info("DraftpollPage editing draft with data", this.pd);
         this.pd.due_custom = (this.pd.due_custom||'')!=''?(new Date(this.pd.due_custom)):null;
@@ -158,7 +159,8 @@ export class DraftpollPage implements OnInit {
           pid:p.pid,
           type:p.type, language:p.language,
           title:p.title, desc:p.desc, url:p.url, 
-          due_type:p.due_type, due_custom:p.due_custom, 
+          due_type:p.due_type, due_custom:p.due_custom,
+          allow_ranked:p.allow_ranked,
           db:p.db, db_from_pid:p.db_from_pid, db_custom_server_url:p.db_custom_server_url, db_custom_password:p.db_custom_password,
           options: [] 
         };
@@ -186,6 +188,7 @@ export class DraftpollPage implements OnInit {
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
         poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
+        poll_allow_ranked_delegation: this.pd.allow_ranked||false,
       });
       if (this.pd.language||this.pd.db_from_pid||this.pd.db_custom_server_url) {
         this.advanced_expanded = true;
@@ -233,6 +236,7 @@ export class DraftpollPage implements OnInit {
         db_from_pid: this.pd.db_from_pid||'',
         db_custom_server_url: this.pd.db_custom_server_url||'',
         db_custom_password: this.pd.db_custom_password||'',
+        db_allow_ranked: this.pd.allow_ranked||false,
       });
     }
   }
@@ -266,6 +270,7 @@ export class DraftpollPage implements OnInit {
       p.url = this.pd.url;
       p.due_type = this.pd.due_type;
       p.due_custom = this.pd.due_custom;
+      p.allow_ranked = this.pd.allow_ranked || false;
       p.set_due();
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
@@ -320,6 +325,7 @@ export class DraftpollPage implements OnInit {
         this.G.L.warn("DraftpollPage.ionViewWillLeave localNotifications.schedule failed:", err);
       });
     }
+    console.log("DraftpollPage.ionViewWillLeave p object:", p);
     this.G.L.trace("DraftpollPage.ionViewWillLeave D.pids:", [...this.G.D.pids]);
     this.G.L.exit("DraftpollPage.ionViewWillLeave");
   }
@@ -377,6 +383,12 @@ export class DraftpollPage implements OnInit {
     this.G.P.update_ref_date();
     let c = this.formGroup.get('poll_due_custom');
     if (c.valid) this.pd.due_custom = new Date(c.value);
+  }
+
+  set_poll_allow_ranked_delegation(){
+    this.G.L.trace("set_poll_allow_ranked_delegation",this.pd.allow_ranked);
+    this.pd.allow_ranked = this.formGroup.get('poll_allow_ranked_delegation').value;
+    this.G.L.trace("set_poll_allow_ranked_delegation result",this.pd.allow_ranked);
   }
 
   set_option_name(i: number) {
@@ -720,6 +732,7 @@ export class DraftpollPage implements OnInit {
       poll_url: new UntypedFormControl('', Validators.pattern(this.G.urlRegex)),
       poll_due_type: new UntypedFormControl('', Validators.required),
       poll_due_custom: new UntypedFormControl('', this.allowed_date.bind(this)),
+      poll_allow_ranked_delegation: new UntypedFormControl(false),
     });
     this.G.P.update_ref_date();
   }

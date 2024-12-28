@@ -175,6 +175,7 @@
         "nickname-placeholder": "Please enter the nickname of that person (or their true name)",
         "from-label": "The delegate will see the following as the sender of this request:",
         "from-placeholder": "Enter your own e-mail address, name or nickname",
+        "rank-label": "Rank of delegation:",
         "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "share": "Use a messenger app",
@@ -207,6 +208,7 @@
         "header": "Would you act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
         "intro": "Your waps will then also control the other participantʼs waps.",
         "details": "If you accept, you can still choose whether you want to set your waps yourself or delegate your (and the other participantʼs) waps further to some third person.",
+        "details_ranked": "Note that this poll allows ranked delegation. [Insert explanation of how cycles and stuff are allowed]",
         "check-first": "You can also check your waps first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline",
@@ -232,7 +234,8 @@
         "poll-unknown": "You are not participating in this poll yet. Please check if you have received an invitation link for this poll. If so, use that link first and then try this one again.",
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
         "closed": "Unfortunately, this poll has already ended.",
-        "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!"
+        "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!",
+        "been-revoked": "Unfortunately, this request has already been revoked."
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
@@ -286,7 +289,8 @@
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-        "notification-saved-title": "Draft saved under “My polls”."
+        "notification-saved-title": "Draft saved under “My polls”.",
+        "del_ranked": "Allow ranked delegation?"
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -506,7 +510,9 @@
         "delegation_accepted": "{{nickname}} accepted your delegation request.",
         "delegation_declined": "Unfortunately, {{nickname}} declined your delegation request.",
         "delegation_accepted_after_all": "{{nickname}} has now accepted your delegation request after all.",
-        "delegation_revoked": "Unfortunately, {{nickname}} revoked her earlier agreement to your delegation request."
+        "delegation_revoked": "Unfortunately, {{nickname}} revoked their delegation to you.",
+        "delegation_declined_cycle": "Unfortunately, {{nickname}} declined your delegation request as it would have created a cycle.",
+        "delegation_decline_self": "Unfortunately, {{nickname}} declined your delegation request as they are already delegating to you."
     },
     "news-body": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as bodies of News items:",

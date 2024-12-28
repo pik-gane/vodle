@@ -38,9 +38,9 @@ function (newDoc, savedDoc, userCtx) {
                     }
                     */
                 } else {
-                    // if doc already exists, let noone update or delete it:
-                    if (savedDoc) {
-                        throw ({forbidden: 'Noone may update or delete existing poll documents.'})
+                    // if doc already exists, let noone update or delete it, unless its delegation map:
+                    if (savedDoc && !_id.endsWith("inverse_indirect_map") && !_id.endsWith("direct_delegation_map")) {
+                        throw ({forbidden: 'Noone may update or delete existing poll documents.'});
                     }
                     // let only the voters create it:
                     let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§")); 
