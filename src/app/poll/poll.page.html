@@ -335,7 +335,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           </p>
         </small>
       </ion-item>
-      <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
+      <ion-item *ngIf="p.my_n_rated_positive == 1 && !p.have_delegated" color="warning">
         <small>
           <p>
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
