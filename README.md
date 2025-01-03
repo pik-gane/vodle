@@ -105,7 +105,7 @@ It is both [Freeware](https://en.wikipedia.org/wiki/Freeware) (comes at no monet
 
 ***Vodle will help groups make better decisions** – fairer, more efficient, more consensus-oriented, interactive, and for free.* Its underlying algorithm is based on thorough science and makes sure that all participants get the exact same influence on the decision, and that the power any faction receives is proportional to their size. This distinguishes vodle from almost every other voting app, where even a slight majority can make all the decisions. With vodle, a majority of 51% has only 51% power rather than 100%. In vodle, voters can give all options a "wap" from 0 to 100 or can choose to delegate their waps of an option to another voter they trust. Based on the waps, vodle will determine the winner in a fair, proportional, and efficient way.
 
-It's all based on science: [Main article](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
+It's all based on science: [Main article](https://link.springer.com/article/10.1007/s00355-024-01524-3) | [Preprint version](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3751225) | [Earlier article](https://link.springer.com/article/10.1007/s00355-010-0517-y)
 
 *This page is mainly for potential contributors and other people interested in how vodle works under the hood.*
 
