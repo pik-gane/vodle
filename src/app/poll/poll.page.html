@@ -553,6 +553,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 </p>
               </small>
             </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-item *ngIf="get_ranked_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
+              <ion-col size="auto" class="ion-no-margin">
+                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                  <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+                </ion-button>
+              </ion-col>
+            </ion-item>
 
             <!-- Revoke delegation button: -->
 
@@ -568,7 +577,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-grid>
       </ion-item>
 
-      <ion-item *ngIf="delegation_status=='agreed'" 
+      <ion-item *ngIf="delegation_status=='agreed' && !get_different_delegation_allowed()" 
           color="warning"> 
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
@@ -584,7 +593,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             -->
 
             <!-- Info about how many of user's ratings the delegate controls: -->
-
             <ion-col class="ion-no-margin ion-padding-right">
               <small>
                 <p>
@@ -600,7 +608,16 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 </p>
               </small>
             </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-col *ngIf="get_ranked_delegation_allowed()" size="auto" class="ion-no-margin">
+              <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+              </ion-button>
+            </ion-col>
+            
 
+            
             <!-- Revoke delegation button: -->
 
             <ion-col size="auto" class="ion-no-margin">
@@ -610,6 +627,43 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </ion-col>
 
             <!-- Help text for delegation toggles: -->
+
+            <ion-col 
+                size="auto" 
+                class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
+                style="padding-bottom:3px;">
+              <small>
+                <p>
+                  <span [innerHtml]="'poll.choose-whose-ratings' | translate"></span>&nbsp;
+                  <ion-icon 
+                    name="arrow-down-outline" 
+                    style="position:relative;top:3px;">
+                  </ion-icon>
+                </p>
+              </small>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
+
+      <ion-item *ngIf="delegation_status=='agreed' && get_different_delegation_allowed()" color="warning">
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
+            <!-- Info about how many of user's ratings the delegate controls: -->
+            <ion-col class="ion-no-margin ion-padding-right">
+              <small>
+                <p>
+                  <span [innerHtml]="'poll.delegate-different-info' | translate"></span>
+                </p>
+              </small>
+            </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-col size="auto" class="ion-no-margin">
+              <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+              </ion-button>
+            </ion-col>
 
             <ion-col 
                 size="auto" 
@@ -722,7 +776,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         mode="md" pin="true"
                         min="0" max="100" step="1" snaps="true" ticks="false"
                         [style]="''
-                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
+                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed' || (get_different_delegation_allowed() && (option_delegated.get(oidsorted[i]) == null || option_delegated.get(oidsorted[i]) == ''))
                           ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                           : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
                         class="ion-no-padding ion-no-margin">
@@ -785,7 +839,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <!-- DELEGATION TOGGLE: -->
 
-                  <ion-col *ngIf="delegation_status=='agreed'" 
+                  <ion-col *ngIf="(delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != '')" 
                       class="ion-no-margin ion-no-padding" 
                       size="auto">&nbsp;&nbsp;&nbsp;
                     <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
@@ -799,7 +853,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       <small [innerHtml]="
                         rate_yourself_toggle[oidsorted[i]] 
                         ? ('poll.my-own' | translate) 
-                        : ('poll.delegate-s' | translate: {delegate: delegate})
+                        : ('poll.delegate-s' | translate: {delegate: get_delegate(oidsorted[i])})
                         " >
                       </small>
                     </div>

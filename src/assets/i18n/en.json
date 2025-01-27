@@ -176,6 +176,7 @@
         "from-label": "The delegate will see the following as the sender of this request:",
         "from-placeholder": "Enter your own e-mail address, name or nickname",
         "rank-label": "Rank of delegation:",
+        "different-label": "Select options:",
         "request-options-with-share": "The simplest way to ask that person to act as your delegate is via the share button. Alternatively, you can write them an e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "request-options-without-share": "The simplest way to ask that person to act as your delegate is via e-mail. Or you copy the delegation link and send it to them in any way you like.",
         "share": "Use a messenger app",
@@ -190,7 +191,11 @@
         "message-body-explanation": "If you accept, vodle will use your waps automatically to set my waps as well, with no additional work required by you.",
         "message-body-before-link": "To accept or decline this request, please use the following link:",
         "message-body-dont-share": "Please do not share this link with anyone else.",
-        "message-body-regards": "Best regards"
+        "message-body-regards": "Best regards",
+        "nickname": "Nickname",
+        "rank": "Rank",
+        "agreed-options": "Agreed Options",
+        "status": "Status"
     },
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
@@ -290,7 +295,8 @@
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
         "notification-saved-title": "Draft saved under “My polls”.",
-        "del_ranked": "Allow ranked delegation?"
+        "del_ranked": "Allow ranked delegation?",
+        "del_different": "Allow delegation of waps to different participants?"
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -591,6 +597,7 @@
         "delegate-controls-most": "controls most of your waps as your delegate.",
         "delegate-controls-some": "controls some of your waps as your delegate.",
         "delegate-controls-none": "currently controls none of your waps as your delegate.",
+        "delegate-different-info": "Your waps are controlled by a delegate.",
         "revoke_delegation": "Do you really want to revoke your delegation to {{nickname}}? If you do, you can later send a new delegation request to someone else or again to {{nickname}}. If you donʼt, you can still take control of some of your waps via the toggles to the right.",
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
         "my-own": "my own",

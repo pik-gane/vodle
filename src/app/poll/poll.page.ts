@@ -28,6 +28,8 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { DelegationDialogRankedPage } from '../delegation-dialog-ranked/delegation-dialog-ranked.module';
+import { DelegationDialogDifferentPage } from '../delegation-dialog-different/delegation-dialog-different.module';
 import { AssistPage } from '../assist/assist.module';  
 import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
@@ -55,6 +57,7 @@ export class PollPage implements OnInit {
 
   delegate: string;
   delegation_status = "none";
+  option_delegated: Map<string, string> = null;
 
   have_been_delegated = false;
   n_indirect_clients = 1;
@@ -207,7 +210,8 @@ export class PollPage implements OnInit {
     }
     // make sure current slider values are really stored in database:
     for (let oid of this.oidsorted) {
-      if (!this.delegate || this.rate_yourself_toggle[oid]) {
+      if (!this.delegate || this.rate_yourself_toggle[oid]
+        || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))) {
         this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
       }
     }
@@ -234,8 +238,25 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.ionViewDidLeave");
   }
 
+  update_options_delegated() {
+    if (this.option_delegated == null) {
+      this.option_delegated = new Map<string, string>();
+    }
+    for (const oid of this.p.oids) {
+      const val = this.G.D.getv(this.pid, "del_oid." + oid);
+      if (val == "null") {
+        this.option_delegated.set(oid, null);
+      } else {
+        this.option_delegated.set(oid, val);
+      }
+    }
+  }
+
   update_delegation_info() {
     this.G.L.entry("PollPage.update_delegation_info");
+    if (this.get_different_delegation_allowed()) {
+      this.update_options_delegated();
+    }
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -361,7 +382,11 @@ export class PollPage implements OnInit {
     if (this.rate_yourself_toggle[oid]) {
       this.p.set_my_own_rating(oid, this.p.get_my_effective_rating(oid), true);
     } else {
-      this.p.set_my_own_rating(oid, +this.G.D.getv(this.pid, "rating."+oid, this.p.delegate_id)||0, true);
+      var d = this.p.delegate_id;
+      if (this.get_different_delegation_allowed()) {
+        d = this.option_delegated.get(oid);
+      }
+      this.p.set_my_own_rating(oid, +this.G.D.getv(this.pid, "rating."+oid, d)||0, true);
     }
 
     this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid], did);
@@ -515,12 +540,11 @@ export class PollPage implements OnInit {
 
   set_delegate() {
     const dm = this.G.D.get_direct_delegation_map(this.pid);
-    const list = dm.get(this.p.myvid);
+    const list = dm.get(this.p.myvid) || [[]];
     var d = null;
-    if (!list) {
-      this.delegate = null;
-      return
-    }
+    // list.sort((a, b) => Number(a[1]) - Number(b[1]));
+    d = list[0] ? list[0][0] : null;
+
     for (const [did, rank, status] of list) {
       if (status == '2') {
         d = did;
@@ -529,6 +553,15 @@ export class PollPage implements OnInit {
     }
     this.delegate = d ? this.G.Del.get_delegate_nickname(this.pid, d) : null;
     this.p.delegate_id = d? d : null;
+  }
+
+  get_delegate(oid?: string) {
+    if (!this.get_different_delegation_allowed()) {
+      return this.delegate;
+    }
+    if (oid) {
+      return this.G.Del.get_delegate_nickname(this.pid, this.option_delegated.get(oid));
+    }
   }
 
   // CONTROLS:
@@ -569,7 +602,8 @@ export class PollPage implements OnInit {
     /** update own rating in cache on basis of slider knob position,
      *  but don't store it in the database yet (see also rating_change_ended()).
      */
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if ((!this.delegate || this.rate_yourself_toggle[oid]) 
+      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
     this.show_stats();
@@ -604,7 +638,8 @@ export class PollPage implements OnInit {
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.entry("PollPage.rating_change_ended");
     this.p.have_acted = true;
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if (!this.delegate || this.rate_yourself_toggle[oid]
+      || (this.G.D.get_different_delegation_allowed(this.pid) && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))){
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
     this.update_order();
@@ -720,6 +755,16 @@ export class PollPage implements OnInit {
   }
 
   get_my_rating(oid: string) {
+    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+      const did = this.option_delegated.get(oid);
+      if (did && did != "" && !this.rate_yourself_toggle[oid]) {
+        const agr = this.G.Del.get_agreement(this.pid, did);
+        this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+        return this.G.D.getv(this.pid, "rating."+oid, agr.delegate_vid);
+      }
+      return this.p.get_my_own_rating(oid);
+    }
+    
     if (this.delegate && !this.rate_yourself_toggle[oid]) {
       this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
       return this.G.D.getv(this.pid, "rating."+oid, this.p.delegate_id);
@@ -728,12 +773,30 @@ export class PollPage implements OnInit {
   }
 
   get_allowed_to_delegate() : boolean {
-    if (!this.G.D.get_ranked_delegation_allowed(this.pid) && this.delegation_status == 'agreed'){
+    if (!this.G.D.get_ranked_delegation_allowed(this.pid) && this.delegation_status == 'agreed' && !this.G.D.get_different_delegation_allowed(this.pid)) {
       return false;
+    }
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      var c = 0;
+      for (let key of this.option_delegated.keys()) {
+        const did = this.option_delegated.get(key) || '';
+        if (did != '') {
+          c++;
+        }
+      }
+      return c < this.p.oids.length;
     }
     const dm = this.G.D.get_direct_delegation_map(this.pid);
     const list = dm.get(this.p.myvid) || [];
     return list.length < environment.delegation.max_delegations;
+  }
+
+  get_ranked_delegation_allowed() : boolean {
+    return this.G.D.get_ranked_delegation_allowed(this.pid);
+  }
+
+  get_different_delegation_allowed() : boolean {
+    return this.G.D.get_different_delegation_allowed(this.pid);
   }
 
   get_knob_pos(oid: string) {
@@ -786,6 +849,28 @@ export class PollPage implements OnInit {
       ] 
     }); 
     await confirm.present(); 
+  }
+
+  open_delegation_info_dialog_different(event: Event) {
+    this.modalController.create({
+      component: DelegationDialogDifferentPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
+  }
+
+  delegation_info_dialog(event: Event) {
+    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+      this.open_delegation_info_dialog_different(event);
+      return;
+    }
+    this.modalController.create({
+      component: DelegationDialogRankedPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
   }
 
   delegate_dialog(event: Event) {
@@ -879,9 +964,9 @@ export class PollPage implements OnInit {
             role: 'Ok', 
             handler: () => {
               console.log('Confirm Ok.');
-              var did = null;
               const dm = this.G.D.get_direct_delegation_map(this.pid);
               const list = dm.get(this.p.myvid) || [];
+              var did = list[0][0] || null;
               for (const [did_, _, status] of list) {
                 if (status == '2') {
                   did = did_;
@@ -900,7 +985,58 @@ export class PollPage implements OnInit {
       }); 
       await confirm.present(); 
     }
-  } 
+  }
+
+  async revoke_delegation_different_dialog(oids: string[]): Promise<boolean> {
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      return new Promise(async (resolve) => {
+        const confirm = await this.alertCtrl.create({
+          message: this.translate.instant(
+            'poll.revoke_delegation', { nickname: this.get_delegate(oids[0]) }
+          ),
+          buttons: [
+            {
+              text: this.translate.instant('cancel'),
+              role: 'Cancel',
+              handler: () => {
+                console.log('Confirm Cancel.');
+                resolve(false); // Resolve with false on cancel
+              },
+            },
+            {
+              text: this.translate.instant('OK'),
+              role: 'Ok',
+              handler: () => {
+                console.log('Confirm Ok.');
+                const dm = this.G.D.get_direct_delegation_map(this.pid);
+                const list = dm.get(this.p.myvid) || [];
+                var did = list[0][0] || null;
+                for (const [did_, _, status] of list) {
+                  if (status == '2') {
+                    did = did_;
+                    break;
+                  }
+                }
+                for (let oid of oids) {
+                  this.G.Del.revoke_delegation(this.pid, did, oid);
+                }
+                this.set_delegate();
+                this.delegation_status = this.delegate ? 'agreed' : 'none';
+                this.update_delegation_info();
+                this.G.D.save_state();
+  
+                resolve(true); // Resolve with true on confirm
+              },
+            },
+          ],
+        });
+        await confirm.present();
+      });
+    }
+    return false; // Return false if `allow_voting` is not true
+  }
+  
 
   add_option(event: Event) {
     if(!this.p.can_add_option()){

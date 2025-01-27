@@ -95,6 +95,26 @@ export class DelegationService {
     return [p, did, request, keypair.private, agreement];
   }
 
+  prepare_delegation_for_options(pid: string, oid_list: string[]): [Poll, string, del_request_t, string, del_agreement_t] {
+    /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
+    this.G.L.entry("DelegationService.prepare_delegation_for_options", pid, oid_list);
+    const p = this.G.P.polls[pid],
+          did = this.generate_did(),
+          keypair = this.G.D.generate_sign_keypair(),
+          request = {
+            option_spec: { type: "+", oids: oid_list }, // Request delegation for specified options
+            public_key: keypair.public
+          } as del_request_t,
+          agreement = {
+            client_vid: p.myvid,
+            status: "pending",
+            accepted_oids: new Set(),
+            active_oids: new Set()
+          } as del_agreement_t;
+    this.G.L.exit("DelegationService.prepare_delegation_for_options");
+    return [p, did, request, keypair.private, agreement];
+  }
+
   get_delegation_link(pid: string, did: string, from: string, privkey: string): string {
     /** generate magic link to be sent to delegate */
     const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + encodeURIComponent(from) + "/" + privkey;
@@ -140,7 +160,7 @@ export class DelegationService {
       if ((a.client_vid != p.myvid) 
           || (a.status != "agreed") 
           || !a.accepted_oids.has(oid)) {
-        this.G.L.error("DelegationService.update_my_delegation without agreed delegation from me", pid, oid, activate, did);
+        this.G.L.error("DelegationService.update_my_delegation without agreed delegation from me", pid, oid, activate, did, a);
       } else if (activate) {
         if (a.active_oids.has(oid)) {
           this.G.L.warn("DelegationService.update_my_delegation oid already active", pid, oid, did);
@@ -216,8 +236,8 @@ export class DelegationService {
     const a = this.get_agreement(pid, did);
     
     const p = this.G.P.polls[pid];
-    if ((a.client_vid != p.myvid)) {
-      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
+    if ((a.client_vid != p.myvid) && a.status != "pending") {
+      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did, a);
     } else {
       this.G.D.delv(pid, "del_request." + did);
       const acache = this.get_delegation_agreements_cache(pid);
@@ -234,8 +254,13 @@ export class DelegationService {
     const sm = this.G.D.get_inverse_indirect_map(pid);
     const eff_set = new Set(JSON.parse(sm.get(a.client_vid) || "[]"));
 
+    // updates db if multiple delegation is allowed
+    if (this.G.D.get_different_delegation_allowed(pid)){
+      this.G.D.setv(pid, "del_oid." + oid, "");
+    }
+
     // gets all voters that are affected by the delegation being deleted
-    if (!this.G.D.get_ranked_delegation_allowed(pid)){
+    if (!this.G.D.get_ranked_delegation_allowed(pid) && a.status != "pending") {
       var stack = [];
       for (let id of sm.keys()) {
         if (JSON.parse(sm.get(id) || "[]").includes(a.client_vid)) {
@@ -260,10 +285,23 @@ export class DelegationService {
 
     // update direct delegation map
     var dir_del_map = this.G.D.get_direct_delegation_map(pid);
-    var dir_del = dir_del_map.get(a.client_vid) || [];
+    var dir_del = dir_del_map.get(p.myvid) || [];
     var new_list = [];
+    
+    if (a.status == "pending") {
+      for (var entry of dir_del) {
+        if (entry[0] === did) {
+          continue;
+        }
+        new_list.push(entry);
+      }
+      dir_del_map.set(p.myvid, new_list);
+      this.G.D.set_direct_delegation_map(pid, dir_del_map);
+      return;
+    }
+
     for (var entry of dir_del) {
-      if (entry[2] === '2') {
+      if (entry[0] === did) {
         continue;
       }
       new_list.push(entry);
@@ -649,7 +687,14 @@ export class DelegationService {
     var direct_del_map = this.G.D.get_direct_delegation_map(pid);
     var myvid = this.G.P.polls[pid].myvid;
     var dir_del = direct_del_map.get(myvid) || [];
-    dir_del.push([did, JSON.stringify(value), '0']);
+    var ptr = 0;
+    for (ptr = 0; ptr < dir_del.length; ptr++) {
+      if (Number(dir_del[ptr][1]) > value) {
+        break;
+      }
+    }
+    dir_del.splice(ptr, 0, [did, JSON.stringify(value), '0']);
+    // dir_del.push([did, JSON.stringify(value), '0']);
     direct_del_map.set(myvid, dir_del);
     this.G.D.set_direct_delegation_map(pid, direct_del_map);
   }

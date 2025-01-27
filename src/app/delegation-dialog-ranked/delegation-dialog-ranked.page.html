@@ -1,0 +1,94 @@
+<!--
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<ion-content *ngIf="ready">
+  <!-- Table Header -->
+  <ion-grid class="table-grid">
+    <ion-row class="table-header">
+      <!-- Rank Header -->
+      <ion-col class="ion-text-start">
+        <span [innerHtml]="'delegation-request.rank'|translate">
+        </span>
+      </ion-col>
+
+      <!-- Nickname Header -->
+      <ion-col class="ion-text-center">
+        <span [innerHtml]="'delegation-request.nickname'|translate">
+        </span>
+      </ion-col>
+
+      <!-- Status Header -->
+      <ion-col class="ion-text-end">
+        <span [innerHtml]="'delegation-request.status'|translate">
+        </span>
+      </ion-col>
+
+      <!-- Spacer for Reorder Icon -->
+      <ion-col size="auto" class="table-cell table-header-cell" style="width: 32px;"></ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($event)">
+    <ion-item *ngFor="let item of delegation_list" lines="none">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <!-- Rank (Left-Aligned) -->
+          <ion-col size="auto" class="ion-text-start">
+            <strong>{{ item.rank }}</strong>
+          </ion-col>
+  
+          <!-- Nickname (Centered) -->
+          <ion-col class="ion-text-center">
+            {{ item.nickname }}
+          </ion-col>
+  
+          <!-- Status (Right-Aligned) -->
+          <ion-col size="auto" class="ion-text-end" style="width: 32px;">
+            {{ item.status }}
+          </ion-col>
+
+          <ion-col *ngIf="reorder_disabled" size="1"></ion-col>
+        </ion-row>
+      </ion-grid>
+      <ion-reorder slot="end"></ion-reorder>
+    </ion-item>
+  </ion-reorder-group>
+  
+
+  <ion-row class="ion-justify-content-center ion-align-items-center button-row">
+    <ion-col size="auto">
+      <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
+        <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"></span>&nbsp;
+        <ion-icon name="reorder-two-outline"></ion-icon>
+      </ion-button>
+    </ion-col>
+  </ion-row>
+
+
+  <!-- Buttons Row -->
+  <ion-row class="ion-justify-content-center ion-align-items-center button-row">
+    <ion-col size="auto">
+    <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+      <span [innerHtml]="'Exit'"></span>&nbsp;
+      <ion-icon name="close-circle-outline"></ion-icon>
+    </ion-button>
+    </ion-col>
+  </ion-row>
+
+</ion-content>

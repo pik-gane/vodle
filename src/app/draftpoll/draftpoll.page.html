@@ -294,7 +294,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-label>
       <ion-toggle 
         formControlName="poll_allow_ranked_delegation"
+        [checked]="pd.allow_ranked"
         (ionChange)="set_poll_allow_ranked_delegation()">
+      </ion-toggle>
+      <ion-label position="floating" color="primary">
+        <span [innerHtml]="'draftpoll.del_different'|translate"></span>
+      </ion-label>
+      <ion-toggle
+        formControlName="poll_allow_different_delegation"
+        [checked]="pd.allow_different"
+        (ionChange)="set_poll_allow_different_delegation()">
       </ion-toggle>
     </ion-item>
 

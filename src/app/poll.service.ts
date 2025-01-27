@@ -434,6 +434,9 @@ export class Poll {
   get allow_ranked(): boolean { return this.G.D.getp(this._pid, 'allow_ranked') == 'true'; }
   set allow_ranked(value: boolean) { this.G.D.setp(this._pid, 'allow_ranked', value.toString()); }
 
+  get allow_different(): boolean { return this.G.D.getp(this._pid, 'allow_different') == 'true'; }
+  set allow_different(value: boolean) { this.G.D.setp(this._pid, 'allow_different', value.toString()); }
+
   // Date objects are stored as ISO strings:
 
   get start_date(): Date {
@@ -527,7 +530,15 @@ export class Poll {
   }
 
   get_my_proxy_rating(oid: string): number {
-    if (this.delegate_id){
+    var did = this.delegate_id;
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      const val = this.G.D.getv(this.pid, "del_oid." + oid);
+      if (!val){
+        return this.get_my_own_rating(oid);
+      }
+      did = val;
+    }
+    if (did){
       const agr = this.G.Del.get_agreement(this.pid, this.delegate_id);
       if (agr.active_oids.has(oid)){
         return +this.G.D.getv(this.pid, "rating."+oid, this.delegate_id)||0;
@@ -982,8 +993,18 @@ export class Poll {
             const list = this.G.D.get_direct_delegation_map(this.pid).get(vid2) || [];
             for (const entry of list) {
               const a = this.G.Del.get_agreement(this.pid, entry[0]);
-              if (!(a.delegate_vid == vid) || !a.active_oids.has(oid) || entry[2] != "2") {
+              if (a.delegate_vid != vid || !a.active_oids.has(oid) || entry[2] != "2") {
                 continue;
+              }
+              if (this.G.D.get_different_delegation_allowed(this.pid)){
+                const val = this.G.D.getv(this.pid, "del_oid." + oid, vid2);
+                console.log("xyz", this.options[oid].name, oid, val);
+                if (!val){
+                  continue;
+                }
+                if (val == ""){
+                  continue;
+                }
               }
               this.update_proxy_rating(vid2, oid, value, update_tally);
               break;

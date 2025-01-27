@@ -1641,6 +1641,10 @@ export class DataService implements OnDestroy {
     return this.poll_caches[pid]['allow_ranked'] == 'true';
   }
 
+  get_different_delegation_allowed(pid:string): boolean {
+    return this.poll_caches[pid]['allow_different'] == 'true';
+  }
+
   // TODO: delv!
 
   get_example_docs(): Promise<any> {
