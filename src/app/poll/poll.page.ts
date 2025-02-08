@@ -243,11 +243,42 @@ export class PollPage implements OnInit {
       this.option_delegated = new Map<string, string>();
     }
     for (const oid of this.p.oids) {
-      const val = this.G.D.getv(this.pid, "del_oid." + oid);
-      if (val == "null") {
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, status, _] of list) {
+        if (status === '2' || status === '0' || status === '1') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+      }else{
+        this.option_delegated.set(oid, '');
+      }
+      console.log("opt_ddm", list);
+      console.log("option_delegated", this.option_delegated);
+    }
+    return;
+    for (const oid of this.p.oids) {
+      // const val = this.G.D.getv(this.pid, "del_oid." + oid);
+      // if (val == "null") {
+      //   this.option_delegated.set(oid, null);
+      // } else {
+      //   this.option_delegated.set(oid, val);
+      // }
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, rank, status] of list) {
+        if (status == '2') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+      }else{
         this.option_delegated.set(oid, null);
-      } else {
-        this.option_delegated.set(oid, val);
       }
     }
   }
@@ -287,6 +318,10 @@ export class PollPage implements OnInit {
       }
     }
     // find outgoing delegation:
+    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+      
+    }
+
     var did;
     var pendingSet = new Set<string>();
     const dir_del_map = this.G.D.get_direct_delegation_map(this.pid);

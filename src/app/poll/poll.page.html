@@ -563,6 +563,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
               </ion-col>
             </ion-item>
 
+            <ion-item *ngIf="get_different_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
+              <ion-col size="auto" class="ion-no-margin">
+                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                  <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+                </ion-button>
+              </ion-col>
+            </ion-item>
+
             <!-- Revoke delegation button: -->
 
             <ion-col size="auto" class="ion-no-margin">

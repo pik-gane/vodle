@@ -115,9 +115,17 @@ export class DelegationService {
     return [p, did, request, keypair.private, agreement];
   }
 
-  get_delegation_link(pid: string, did: string, from: string, privkey: string): string {
+  get_delegation_link(pid: string, did: string, from: string, privkey: string, oids?: string[]): string {
     /** generate magic link to be sent to delegate */
-    const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + encodeURIComponent(from) + "/" + privkey;
+    let link = `${environment.magic_link_base_url}delrespond/${pid}/${did}/${encodeURIComponent(from)}/${privkey}`;
+    
+    if (oids && oids.length > 0) {
+      console.log("oids", oids);
+      const params = new URLSearchParams();
+      oids.forEach(value => params.append('oids', value));
+      link = `${link}?${params.toString()}`;
+    }
+    console.log("link", link);
     this.G.L.debug("DelegationService.get_delegation_link", link);
     return link;
   }
@@ -316,6 +324,68 @@ export class DelegationService {
     this.G.L.exit("DelegationService.revoke_delegation");
   }
 
+  activate_delegations_if_acyclic(pid: string) {
+    this.G.L.entry("DelegationService.activate_delegations_if_acyclic", pid);
+  
+    // Iterate over all options (oids) in the delegation map
+    for (const oid of this.G.P.polls[pid].oids) {
+      const vidMap = this.G.D.get_direct_delegation_map(pid, oid);
+  
+      // If there are no delegations for this oid, skip
+      if (!vidMap) continue;
+  
+      let visited = new Set<string>();
+      let inCycle = new Set<string>();
+  
+      // Function to detect cycles using DFS
+      const detectCycle = (vid: string, stack: Set<string>): boolean => {
+        if (stack.has(vid)) return true; // Cycle detected
+        if (visited.has(vid)) return false; // Already processed
+  
+        visited.add(vid);
+        stack.add(vid);
+  
+        const delegations = vidMap.get(vid) || [];
+        for (const [did, status] of delegations) {
+          if (status !== '0') { // Ignore inactive delegations
+            const a = this.get_agreement(pid, did);
+            if (a && a.delegate_vid && detectCycle(a.delegate_vid, stack)) {
+              inCycle.add(vid);
+              return true;
+            }
+          }
+        }
+  
+        stack.delete(vid);
+        return false;
+      };
+  
+      // Detect cycles for this `oid`
+      for (const vid of vidMap.keys()) {
+        if (!visited.has(vid) && detectCycle(vid, new Set())) {
+          inCycle.add(vid);
+        }
+      }
+  
+      // Activate delegations that are **not** in a cycle and have status 1 or 2
+      for (const [vid, delegations] of vidMap) {
+        for (const entry of delegations) {
+          const [did, status] = entry;
+          if (!inCycle.has(vid) && (status === '1' || status === '2')) {
+            entry[1] = '2'; // Set status to active
+            this.G.L.debug(`Activated delegation ${did} for oid ${oid} and voter ${vid}`);
+          } else {
+            this.G.L.warn(`Skipping activation for delegation ${did} (oid ${oid}, voter ${vid}) due to cycle`);
+          }
+        }
+      }
+    }
+  
+    this.G.L.exit("DelegationService.activate_delegations_if_acyclic");
+  }
+  
+
+
   recalculate_delegation_map(pid: string) {
     const active_delegations = new Map<string, string>();
     this.find_path(pid);
@@ -472,6 +542,36 @@ export class DelegationService {
     }
   }
 
+  accept_different(pid: string, did: string, private_key: string, oids: string[]) {
+    /** accept a delegation request, store response in db */
+    const response = {option_spec: {type: "+", oids: oids}} as del_response_t,
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.accept_different", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+    
+    const a = this.get_agreement(pid, did);
+    // update map
+    for (let oid of oids) {
+      var direct_del_map = this.G.D.get_direct_delegation_map(pid, oid) || new Map<string, Array<[string, string, string]>>();
+      console.log("direct_del_map", direct_del_map);
+      var dir_del = direct_del_map.get(a.client_vid) || [];
+      if (dir_del.length == 0) {
+        continue;
+      }
+      var new_dir_del = [];
+      for (var entry of dir_del) {
+        if (entry[0] === did) {
+          new_dir_del.push([did, '1', '']);
+        } else {
+          new_dir_del.push(entry);
+        }
+      }
+      direct_del_map.set(a.client_vid, new_dir_del);
+      this.G.D.save_direct_delegation_map(pid, oid, direct_del_map);
+    }
+    this.activate_delegations_if_acyclic(pid);
+  }
+
   accept(pid: string, did: string, private_key: string) {
     /** accept a delegation request, store response in db */
     const response = {option_spec: {type: "-", oids: []}} as del_response_t, // i.e., exclude no oids, meaning accept all oids. TODO: allow partial acceptance for only some options
@@ -585,6 +685,17 @@ export class DelegationService {
     return true;
   }
 
+  private get_rank_from_did(pid: string, did: string) : number {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    const a = this.get_agreement(pid, did);
+    for (const [did2, rank, active] of dm.get(a.client_vid) || []) {
+      if (did2 == did) {
+        return Number(rank);
+      }
+    }
+    return 0;
+  }
+
   private find_all_paths(pid: string, vid: string, current_path: string[], paths: string[][]) {
     const dm = this.G.D.get_direct_delegation_map(pid);
     for (const [did, _, active] of dm.get(vid) || []) {
@@ -599,17 +710,6 @@ export class DelegationService {
         this.find_all_paths(pid, a.delegate_vid, new_path, paths);
       }
     }
-  }
-
-  private get_rank_from_did(pid: string, did: string) : number {
-    const dm = this.G.D.get_direct_delegation_map(pid);
-    const a = this.get_agreement(pid, did);
-    for (const [did2, rank, active] of dm.get(a.client_vid) || []) {
-      if (did2 == did) {
-        return Number(rank);
-      }
-    }
-    return 0;
   }
 
   private min_sum(pid: string, vid: string) : Array<string> {
@@ -640,6 +740,7 @@ export class DelegationService {
     const dm = this.G.D.get_direct_delegation_map(pid);
     for (let vid of this.delegating_voters(pid)) {
       const minSumPath = this.min_sum(pid, vid);
+      console.log("msp: ", minSumPath, vid);
       for (const did of minSumPath) {
         const a = this.get_agreement(pid, did);
         const delegations = dm.get(a.client_vid) || [];
@@ -654,6 +755,13 @@ export class DelegationService {
           }
         }
         dm.set(a.client_vid, newDelegations);
+      }
+      if (minSumPath.length == 0) {
+        for (const did of dm.get(vid) || []) {
+          if (did[2] === '2') {
+            did[2] = '1';
+          }
+        }
       }
     }
     this.G.D.set_direct_delegation_map(pid, dm);

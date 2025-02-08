@@ -110,6 +110,7 @@ export class DelegationDialogPage implements OnInit {
     }
 
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+    console.log("this voter: ", this.parent.p.myvid);
     console.log("ddm", ddm);
     for (const [uid, dels] of ddm) {
       for (const del of dels) {
@@ -228,13 +229,22 @@ export class DelegationDialogPage implements OnInit {
 
     // [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation_for_options(this.parent.pid, Array.from(this.options_selected));
     [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    const options = Array.from(this.options_selected);
     this.set_delegation_link(this.formGroup.get('from').value);
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
     for (const oid of this.options_selected) {
       this.G.D.setv(this.p.pid, "del_oid." + oid, this.did);
     }
+  }
 
-    // store the selected options locally for the user
-    
+  update_delegation_map_different() {
+    for (const oid of this.options_selected) {
+      var ddm = this.G.D.get_direct_delegation_map(this.parent.pid, oid) || new Map<string, [string, string, string][]>();
+      var dels = ddm.get(this.parent.p.myvid) || [];
+      dels= [[this.did, '0', '']];
+      ddm.set(this.parent.p.myvid, dels);
+      this.G.D.save_direct_delegation_map(this.parent.pid, oid, ddm);
+    }
   }
 
   share_button_clicked() {
@@ -250,7 +260,11 @@ export class DelegationDialogPage implements OnInit {
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
       this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+      if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+        this.update_delegation_map_different();
+      } else {
+        this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+      }
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
@@ -259,12 +273,16 @@ export class DelegationDialogPage implements OnInit {
 
   copy_button_clicked() {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
-    this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
+    this.prepare_if_different_allowed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.update_delegation_map_different();
+    } else {
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    }
     LocalNotifications.schedule({
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
@@ -289,7 +307,11 @@ export class DelegationDialogPage implements OnInit {
     this.delegate_nickname_changed();
     this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.update_delegation_map_different();
+    } else {
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    }
     this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");

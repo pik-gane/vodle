@@ -76,44 +76,82 @@ export class DelegationDialogDifferentPage implements OnInit {
   ionViewWillEnter() {
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
     console.log("ddm", ddm);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-        console.log("ddm", uid, del);
-      }
-    }
     
     const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
     console.log("iim", iim);
 
-    // find unique dids
-    var mp = new Map<string, string>();
-    var idmp = new Map<string, string[]>();
-    console.log("this.parent.option_delegated", this.parent.option_delegated);
+    // Find unique option IDs (oid) instead of did
+    this.delegation_list = [];
+
+    for (const oid of this.parent.p.oids) {
+      var direct_delegation_map = this.G.D.get_direct_delegation_map(this.parent.pid);
+      var list = direct_delegation_map.get(oid) || [];
+      for (let i = 0; i < list.length; i++) {
+        const did = list[i][0];
+        const nickname = this.G.Del.get_delegate_nickname(this.parent.pid, did);
+        const status = list[i][1];
+        const option_name = this.parent.p.options[oid].name;
+
+        switch (status) {
+          case '0':
+            this.delegation_list.push({
+              option: option_name, // Option Name
+              nickname: nickname,  // Delegate Nickname
+              status: 'pending',   // Agreement Status
+              option_id: oid,      // Option ID
+            });
+            break;
+          case '1':
+            this.delegation_list.push({
+              option: option_name, // Option Name
+              nickname: nickname,  // Delegate Nickname
+              status: 'inactive',  // Agreement Status
+              option_id: oid,      // Option ID
+            });
+            break;
+          case '2':
+            this.delegation_list.push({
+              option: option_name, // Option Name
+              nickname: nickname,  // Delegate Nickname
+              status: 'active',    // Agreement Status
+              option_id: oid,      // Option ID
+            });
+            break;
+          case '-1':
+            this.delegation_list.push({
+              option: option_name, // Option Name
+              nickname: nickname,  // Delegate Nickname
+              status: 'declined',  // Agreement Status
+              option_id: oid,      // Option ID
+            });
+            break;
+        }
+      }
+    }
+    
+    
     for (const key of this.parent.option_delegated.keys()) {
       console.log("key", key);
       const did = this.parent.option_delegated.get(key);
       if (did === '') {
         continue;
       }
-      const option_name = this.parent.p.options[key].name
-      if (!mp.has(did)) {
-        mp.set(did, option_name);
-        idmp.set(did, [key]);
-      } else {
-        mp.set(did, mp.get(did) + ", " + option_name);
-        idmp.get(did).push(key);
-      }
-    }
-
-    for (const key of mp.keys()) {
-      const did = key;
+      
+      const option_name = this.parent.p.options[key].name;
       const nickname = this.G.Del.get_delegate_nickname(this.parent.pid, did);
       const a = this.G.Del.get_agreement(this.parent.pid, did);
-      this.delegation_list.push({nickname: nickname, did: did, status: a.status, agreed_options: mp.get(key), option_ids: idmp.get(key)});
+
+      this.delegation_list.push({
+        option: option_name, // Option Name
+        nickname: nickname,  // Delegate Nickname
+        status: a.status,    // Agreement Status
+        option_id: key,      // Option ID
+      });
     }
 
     this.ready = true;
   }
+
 
   @ViewChild('focus_element', { static: false }) focus_element: IonInput;
 

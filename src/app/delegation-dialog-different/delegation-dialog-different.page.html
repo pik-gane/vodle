@@ -1,58 +1,40 @@
-<!--
-(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
-
-This file is part of vodle.
-
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
-any later version.
-
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
-details.
-
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
--->
-
 <ion-content *ngIf="ready">
   <ion-grid>
     <!-- Table Header -->
     <ion-row class="table-header">
-      <!-- Nickname Header -->
+      <!-- Option Header -->
       <ion-col size="3" class="ion-text-center ion-align-self-center">
         <strong>
-          <span [innerHtml]="'delegation-request.nickname' | translate"></span>
+          <span [innerHtml]="'Option' | translate"></span>
         </strong>
       </ion-col>
 
-      <!-- Agreed Options Header-->
+      <!-- Nickname Header -->
       <ion-col size="3" class="ion-text-center ion-align-self-center">
         <strong>
-          <span [innerHtml]="'delegation-request.agreed-options' | translate"></span>
+          <span [innerHtml]="'Nickname' | translate"></span>
         </strong>
       </ion-col>
-  
+
       <!-- Status Header -->
       <ion-col size="3" class="ion-text-center ion-align-self-center">
         <strong>
-          <span [innerHtml]="'delegation-request.status' | translate"></span>
+          <span [innerHtml]="'Status' | translate"></span>
         </strong>
       </ion-col>
     </ion-row>
-  
+
     <!-- Table Rows -->
     <ion-row 
       class="ion-align-items-center ion-border ion-border-bottom" 
       *ngFor="let item of delegation_list">
-      <!-- Nickname Column -->
-      <ion-col size="3" class="ion-text-center ion-align-self-center">
-        {{ item.nickname }}
-      </ion-col>
       
-      <!-- Agreed Options Column -->
+      <!-- Option Column -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        {{ item.option }}
+      </ion-col>
+
+      <!-- Nickname Column -->
       <ion-col size="3" class="ion-text-center ion-align-self-center">
         {{ item.nickname }}
       </ion-col>
@@ -65,22 +47,20 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!-- Revoke Icon -->
       <ion-col size="3" class="ion-text-center ion-align-self-center">
         <ion-button fill="clear" color="danger" shape="round"
-        (click)="call_revoke(item.option_ids)"
-        >
+        (click)="call_revoke([item.option_id])">
           <ion-icon name="trash-outline" style="color:black"></ion-icon>
         </ion-button>
       </ion-col>
     </ion-row>
   </ion-grid>
 
-
   <!-- Buttons Row -->
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-    <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
-      <span [innerHtml]="'Exit'"></span>&nbsp;
-      <ion-icon name="close-circle-outline"></ion-icon>
-    </ion-button>
+      <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+        <span [innerHtml]="'Exit'"></span>&nbsp;
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </ion-button>
     </ion-col>
   </ion-row>
 

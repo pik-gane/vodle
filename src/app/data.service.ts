@@ -1608,7 +1608,51 @@ export class DataService implements OnDestroy {
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
   }
 
-  get_direct_delegation_map(pid: string): Map<string, Array<[string, string, string]>> {
+  save_direct_delegation_map(pid: string, oid: string, val: Map<string, Array<[string, string, string]>>) {
+    // Retrieve the cached delegation map from poll storage
+    const cache = this.poll_caches[pid]?.[`poll.${pid}.direct_delegation_map`];
+
+    // Parse cache into a Map<string, Map<string, Array<[string, string, string]>>>
+    const ps = cache ? JSON.parse(cache) : [];
+    const mp = new Map<string, Map<string, Array<[string, string, string]>>>();
+
+    // Convert parsed JSON back into Map structure
+    ps.forEach(([key, value]) => {
+      mp.set(key, new Map(value));
+    });
+
+    // Update the map with the new delegation entry
+    mp.set(oid, val);
+
+    // Convert the Map back into a JSON-compatible structure (array of entries)
+    const jsonData = JSON.stringify(Array.from(mp.entries(), ([k, v]) => [k, Array.from(v.entries())]));
+
+    // Save to poll database
+    this._setp_in_polldb(pid, `poll.${pid}.direct_delegation_map`, jsonData);
+    console.log("save_direct_delegation_map", mp);
+  }
+
+
+  get_direct_delegation_map(pid: string, option_map?: string): Map<string, Array<[string, string, string]>> {
+    // used when options are delegated to different users
+    if (option_map) {
+      const cache = this.poll_caches[pid]['poll.' + pid + '.direct_delegation_map'] || '[]';
+      const ps = cache ? JSON.parse(cache) : [];
+      const mp = new Map<string, Map<string, Array<[string, string, string]>>>();
+    
+      ps.forEach((outerEntry: [string, Array<[string, Array<[string, string, string]>]>]) => {
+        const innerMap = new Map<string, Array<[string, string, string]>>();
+        outerEntry[1].forEach((innerEntry: [string, Array<[string, string, string]>]) => {
+          innerMap.set(innerEntry[0], innerEntry[1]);
+        });
+        mp.set(outerEntry[0], innerMap);
+      });
+    
+      const option_delegation = mp.get(option_map) || new Map<string, Array<[string, string, string]>>();
+      console.log("get_direct_delegation_map", option_delegation);
+      return option_delegation;
+    }
+
     const cache = this.poll_caches[pid]['poll.' + pid + '.direct_delegation_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, Array<[string, string, string]>>(ps);
@@ -1643,6 +1687,10 @@ export class DataService implements OnDestroy {
 
   get_different_delegation_allowed(pid:string): boolean {
     return this.poll_caches[pid]['allow_different'] == 'true';
+  }
+
+  get_multiple_delegation_allowed(pid:string): boolean {
+    return this.poll_caches[pid]['allow_multiple'] == 'true';
   }
 
   // TODO: delv!

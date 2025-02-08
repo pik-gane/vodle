@@ -36,6 +36,7 @@ export class DelrespondPage implements OnInit {
   pid: string;
   p: Poll;
   did: string;
+  oids: string[];
   from: string;
   private_key: string;
   agreement: del_agreement_t;
@@ -58,6 +59,9 @@ export class DelrespondPage implements OnInit {
       this.from = decodeURIComponent(params['from']);
       this.private_key = params['private_key'];
     } );
+    this.route.queryParamMap.subscribe(queryParams => {
+      this.oids = queryParams.getAll('oids'); // Extract all `oids` values as an array
+    });
   }
 
   ngOnInit() {
@@ -105,6 +109,11 @@ export class DelrespondPage implements OnInit {
 
   // TODO: verify that it is still possible to accept the request
   accept() {
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      this.G.Del.accept_different(this.pid, this.did, this.private_key, this.oids);
+      this.router.navigate(["/poll/" + this.pid]);
+      return;
+    }
     /** store positive response and go to poll page */
     this.G.Del.accept(this.pid, this.did, this.private_key);
     // TODO: notify that response has been sent
