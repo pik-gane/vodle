@@ -22,73 +22,69 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <ion-grid class="table-grid">
     <ion-row class="table-header">
       <!-- Rank Header -->
-      <ion-col class="ion-text-start">
-        <span [innerHtml]="'delegation-request.rank'|translate">
-        </span>
+      <ion-col size="2" class="ion-text-start">
+        <span><strong>{{ 'delegation-request.rank' | translate }}</strong></span>
       </ion-col>
-
-      <!-- Nickname Header -->
-      <ion-col class="ion-text-center">
-        <span [innerHtml]="'delegation-request.nickname'|translate">
-        </span>
+      <ion-col size="4" class="ion-text-center">
+        <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
       </ion-col>
-
-      <!-- Status Header -->
-      <ion-col class="ion-text-end">
-        <span [innerHtml]="'delegation-request.status'|translate">
-        </span>
+      <ion-col size="4" class="ion-text-end">
+        <span><strong>{{ 'delegation-request.status' | translate }}</strong></span>
       </ion-col>
-
-      <!-- Spacer for Reorder Icon -->
-      <ion-col size="auto" class="table-cell table-header-cell" style="width: 32px;"></ion-col>
     </ion-row>
   </ion-grid>
 
-  <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($event)">
-    <ion-item *ngFor="let item of delegation_list" lines="none">
+  <!-- Reorderable Items -->
+  <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($any($event))">
+    <ion-reorder *ngFor="let item of delegation_list" lines="full">
+      <ion-item>
       <ion-grid>
         <ion-row class="ion-align-items-center">
           <!-- Rank (Left-Aligned) -->
-          <ion-col size="auto" class="ion-text-start">
+          <ion-col size="2" class="ion-text-start">
             <strong>{{ item.rank }}</strong>
           </ion-col>
-  
           <!-- Nickname (Centered) -->
-          <ion-col class="ion-text-center">
+          <ion-col size="4" class="ion-text-center">
             {{ item.nickname }}
           </ion-col>
-  
           <!-- Status (Right-Aligned) -->
-          <ion-col size="auto" class="ion-text-end" style="width: 32px;">
+          <ion-col size="4" class="ion-text-end">
             {{ item.status }}
           </ion-col>
-
-          <ion-col *ngIf="reorder_disabled" size="1"></ion-col>
         </ion-row>
       </ion-grid>
-      <ion-reorder slot="end"></ion-reorder>
-    </ion-item>
+      </ion-item>
+    </ion-reorder>
   </ion-reorder-group>
-  
 
+  <!-- Buttons -->
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
       <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
-        <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"></span>&nbsp;
-        <ion-icon name="reorder-two-outline"></ion-icon>
+        <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"> </span>
       </ion-button>
     </ion-col>
   </ion-row>
 
-
-  <!-- Buttons Row -->
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-    <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
-      <span [innerHtml]="'Exit'"></span>&nbsp;
-      <ion-icon name="close-circle-outline"></ion-icon>
-    </ion-button>
+      <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+        <span [innerHtml]="'Exit'"></span>
+      </ion-button>
     </ion-col>
   </ion-row>
-
 </ion-content>
+
+<style>
+  .table-header {
+    font-weight: bold;
+    border-bottom: 2px solid #ccc;
+  }
+
+  .button-row {
+    margin-top: 16px;
+  }
+</style>
+
+
