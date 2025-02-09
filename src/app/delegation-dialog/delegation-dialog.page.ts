@@ -118,8 +118,15 @@ export class DelegationDialogPage implements OnInit {
       }
     }
     
-    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-    console.log("iim", iim);
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      for (const oid of this.parent.p.oids) {
+        const iim = this.G.D.get_inverse_indirect_map(this.parent.pid, oid);
+        console.log("iim", oid, iim);
+      }
+    }else{
+      const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
+      console.log("iim", iim);
+    }
 
     // TODO: what if already some delegation active or pending?
     
@@ -232,6 +239,7 @@ export class DelegationDialogPage implements OnInit {
     const options = Array.from(this.options_selected);
     this.set_delegation_link(this.formGroup.get('from').value);
     this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
+    this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
     for (const oid of this.options_selected) {
       this.G.D.setv(this.p.pid, "del_oid." + oid, this.did);
     }

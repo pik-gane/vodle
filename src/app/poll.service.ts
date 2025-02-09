@@ -862,6 +862,20 @@ export class Poll {
 
   get_n_indirect_clients(vid: string): number {
     /** count how many voters have indirectly delegated to vid for some oid */
+
+    if (this.G.D.get_different_delegation_allowed(this._pid)) {
+      var s = new Set<string>();
+      for (const oid of this.oids) {
+        const mp = this.G.D.get_inverse_indirect_map(this._pid, oid);
+        console.log("mp_n_indirect", mp, oid);
+        const set = new Set<string>(JSON.parse(mp.get(vid) || "[]"));
+        for (const vid of set) {
+          s.add(vid);
+        }
+      }
+      return s.size;
+    }
+
     const map = this.G.D.get_inverse_indirect_map(this._pid);
     const set = new Set<string>(JSON.parse(map.get(vid) || "[]"));
     return set.size;

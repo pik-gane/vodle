@@ -1594,11 +1594,49 @@ export class DataService implements OnDestroy {
     this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
   }
 
-  get_inverse_indirect_map(pid: string): Map<string, string> {
+  get_inverse_indirect_map(pid: string, option_map?: string): Map<string, string> {
+    if (option_map) {
+      const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
+      const ps = cache ? JSON.parse(cache) : [];
+      const mp = new Map<string, Map<string, string>>();
+    
+      ps.forEach((outerEntry: [string, Array<[string, string]>]) => {
+        const innerMap = new Map<string, string>();
+        outerEntry[1].forEach((innerEntry: [string, string]) => {
+          innerMap.set(innerEntry[0], innerEntry[1]);
+        });
+        mp.set(outerEntry[0], innerMap);
+      });
+    
+      const option_delegation = mp.get(option_map) || new Map<string, string>();
+      console.log("get_direct_delegation_map", option_delegation);
+      return option_delegation;
+    }
+
     const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : {};
     const mp = new Map<string, string>(ps);
     return mp;
+  }
+
+  save_inverse_indirect_map(pid: string, oid: string, val: Map<string, string>) {
+    console.log("save_inverse_indirect_map_ntree", val);
+    // Retrieve the cached inverse indirect map from poll storage
+    const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
+    const ps = cache ? JSON.parse(cache) : [];
+    const mp = new Map<string, Map<string, string>>();
+
+    // Convert parsed JSON back into Map structure
+    ps.forEach(([key, value]) => {
+      mp.set(key, new Map(value));
+    });
+
+    // Update the map with the new delegation entry
+    mp.set(oid, val);
+    console.log("save_inverse_indirect_map_fin", mp);
+    
+    const jsonData = JSON.stringify(Array.from(mp.entries(), ([k, v]) => [k, Array.from(v.entries())]));
+    this._setp_in_polldb(pid, `poll.${pid}.inverse_indirect_map`, jsonData);
   }
 
   // direct_delegation_map:- key: voterid, value: [[voterid, rank, is_current_delegation], [voterid2, rank, is_current_delegate]] of the voter that the key has delegated to.

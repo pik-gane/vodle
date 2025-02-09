@@ -460,7 +460,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- INCOMING DELEGATIONS BANNER: -->
 
-      <ion-item *ngIf="(accepted_requests.length > 0 && n_indirect_clients > 0) || declined_requests.length > 0"
+      <ion-item *ngIf="n_indirect_clients > 0 || declined_requests.length > 0"
           color="light">
         <ion-grid class="ion-no-padding ion-no-margin">
 

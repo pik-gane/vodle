@@ -323,66 +323,6 @@ export class DelegationService {
 
     this.G.L.exit("DelegationService.revoke_delegation");
   }
-
-  activate_delegations_if_acyclic(pid: string) {
-    this.G.L.entry("DelegationService.activate_delegations_if_acyclic", pid);
-  
-    // Iterate over all options (oids) in the delegation map
-    for (const oid of this.G.P.polls[pid].oids) {
-      const vidMap = this.G.D.get_direct_delegation_map(pid, oid);
-  
-      // If there are no delegations for this oid, skip
-      if (!vidMap) continue;
-  
-      let visited = new Set<string>();
-      let inCycle = new Set<string>();
-  
-      // Function to detect cycles using DFS
-      const detectCycle = (vid: string, stack: Set<string>): boolean => {
-        if (stack.has(vid)) return true; // Cycle detected
-        if (visited.has(vid)) return false; // Already processed
-  
-        visited.add(vid);
-        stack.add(vid);
-  
-        const delegations = vidMap.get(vid) || [];
-        for (const [did, status] of delegations) {
-          if (status !== '0') { // Ignore inactive delegations
-            const a = this.get_agreement(pid, did);
-            if (a && a.delegate_vid && detectCycle(a.delegate_vid, stack)) {
-              inCycle.add(vid);
-              return true;
-            }
-          }
-        }
-  
-        stack.delete(vid);
-        return false;
-      };
-  
-      // Detect cycles for this `oid`
-      for (const vid of vidMap.keys()) {
-        if (!visited.has(vid) && detectCycle(vid, new Set())) {
-          inCycle.add(vid);
-        }
-      }
-  
-      // Activate delegations that are **not** in a cycle and have status 1 or 2
-      for (const [vid, delegations] of vidMap) {
-        for (const entry of delegations) {
-          const [did, status] = entry;
-          if (!inCycle.has(vid) && (status === '1' || status === '2')) {
-            entry[1] = '2'; // Set status to active
-            this.G.L.debug(`Activated delegation ${did} for oid ${oid} and voter ${vid}`);
-          } else {
-            this.G.L.warn(`Skipping activation for delegation ${did} (oid ${oid}, voter ${vid}) due to cycle`);
-          }
-        }
-      }
-    }
-  
-    this.G.L.exit("DelegationService.activate_delegations_if_acyclic");
-  }
   
 
 
@@ -569,7 +509,50 @@ export class DelegationService {
       direct_del_map.set(a.client_vid, new_dir_del);
       this.G.D.save_direct_delegation_map(pid, oid, direct_del_map);
     }
-    this.activate_delegations_if_acyclic(pid);
+    // update inverse map
+    for (let oid of oids){
+      var sm = this.G.D.get_inverse_indirect_map(pid, oid);
+      const eff_set = new Set<string>(JSON.parse(sm.get(a.client_vid) || "[]"));
+      
+      if (eff_set.has(this.G.P.polls[pid].myvid)){
+        continue;
+      }
+      var delegate_set = new Set<string>(JSON.parse(sm.get(this.G.P.polls[pid].myvid) || "[]"));
+      delegate_set.add(a.client_vid);
+      for (let id of eff_set){
+        delegate_set.add(id);
+      }
+      sm.set(this.G.P.polls[pid].myvid, JSON.stringify(Array.from(delegate_set)));
+      for (let id of this.G.P.polls[pid].T.all_vids_set) {
+        if (id === a.client_vid) {
+          continue;
+        }
+        const old_eff_set = new Set<string>(JSON.parse(sm.get(id) || "[]"));
+        if (old_eff_set.has(this.G.P.polls[pid].myvid)) {
+          var new_eff_set = new Set<string>([...old_eff_set]);
+          for (const id2 of eff_set){
+            new_eff_set.add(id2);
+          }
+          new_eff_set.add(a.client_vid);
+          new_eff_set.add(this.G.P.polls[pid].myvid);
+          sm.set(id, JSON.stringify(Array.from(new_eff_set)));
+        }
+      }
+      console.log("save_inver", sm);
+      this.G.D.save_inverse_indirect_map(pid, oid, sm);
+
+      // update delegation to active in direct delegation map
+      var dir_del_map = this.G.D.get_direct_delegation_map(pid, oid);
+      var dir_del = dir_del_map.get(a.client_vid) || [];
+      for (var entry of dir_del) {
+        if (entry[0] === did) {
+          entry[1] = '2';
+          break;
+        }
+      }
+      dir_del_map.set(a.client_vid, dir_del);
+      this.G.D.save_direct_delegation_map(pid, oid, dir_del_map);
+    }
   }
 
   accept(pid: string, did: string, private_key: string) {

@@ -253,12 +253,15 @@ export class PollPage implements OnInit {
       }
       if (did2) {
         this.option_delegated.set(oid, did2);
+        this.delegation_status = "agreed";
       }else{
         this.option_delegated.set(oid, '');
       }
       console.log("opt_ddm", list);
       console.log("option_delegated", this.option_delegated);
     }
+    // change status
+    this.set_delegate();
     return;
     for (const oid of this.p.oids) {
       // const val = this.G.D.getv(this.pid, "del_oid." + oid);
@@ -287,6 +290,8 @@ export class PollPage implements OnInit {
     this.G.L.entry("PollPage.update_delegation_info");
     if (this.get_different_delegation_allowed()) {
       this.update_options_delegated();
+      this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
+      return;
     }
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
