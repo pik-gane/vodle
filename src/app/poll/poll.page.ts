@@ -28,6 +28,7 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { DelegationDialogWeightedPage } from '../delegation-dialog-weighted/delegation-dialog-weighted.page';
 import { DelegationDialogRankedPage } from '../delegation-dialog-ranked/delegation-dialog-ranked.module';
 import { DelegationDialogDifferentPage } from '../delegation-dialog-different/delegation-dialog-different.module';
 import { AssistPage } from '../assist/assist.module';  
@@ -91,6 +92,15 @@ export class PollPage implements OnInit {
   n_delegated = 0;
 
   news: Set<news_t> = new Set();
+
+  // type of delegation:
+  ranked_delegation_allowed = false;
+  weighted_delegation_allowed = false;
+  different_delegation_allowed = false;
+
+  // voting maps used for weighted delegation:
+  self_rating_map: Map<string, number> = new Map();
+  effective_rating_map: Map<string, number> = new Map();
 
   // LIFECYCLE:
 
@@ -168,6 +178,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
+    this.update_vote_maps();
     this.p.tally_all();
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
@@ -188,6 +199,12 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
+
+    // get type of delegation:
+    this.ranked_delegation_allowed = this.G.D.get_ranked_delegation_allowed(this.pid);
+    this.weighted_delegation_allowed = this.G.D.get_weighted_delegation_allowed(this.pid);
+    this.different_delegation_allowed = this.G.D.get_different_delegation_allowed(this.pid);
+
     this.G.L.exit("PollPage.onDataReady");
   }
 
@@ -200,6 +217,8 @@ export class PollPage implements OnInit {
     this.update_delegation_info();
     this.news = this.G.N.filter({pid: this.pid});
     this.changeDetector.detectChanges();
+    this.update_vote_maps();
+
     this.G.L.exit("PollPage.onDataChange");
   }
 
@@ -212,7 +231,7 @@ export class PollPage implements OnInit {
     for (let oid of this.oidsorted) {
       if (!this.delegate || this.rate_yourself_toggle[oid]
         || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))) {
-        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true, true);
       }
     }
     // dismiss auto-dismissing news:
@@ -286,6 +305,11 @@ export class PollPage implements OnInit {
     }
   }
 
+  update_vote_maps() {
+    this.self_rating_map = this.G.D.get_self_waps(this.pid).get(this.p.myvid);
+    this.effective_rating_map = this.G.D.get_effective_waps(this.pid).get(this.p.myvid);
+  }
+
   update_delegation_info() {
     this.G.L.entry("PollPage.update_delegation_info");
     if (this.get_different_delegation_allowed()) {
@@ -323,7 +347,7 @@ export class PollPage implements OnInit {
       }
     }
     // find outgoing delegation:
-    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+    if (this.get_different_delegation_allowed()) {
       
     }
 
@@ -420,7 +444,9 @@ export class PollPage implements OnInit {
 
     // set rating
     if (this.rate_yourself_toggle[oid]) {
-      this.p.set_my_own_rating(oid, this.p.get_my_effective_rating(oid), true);
+      const rm = this.G.D.get_self_waps(this.pid).get(this.p.myvid);
+      this.p.set_my_own_rating(oid, rm.get(oid), true);
+      this.update_vote_maps();
     } else {
       var d = this.p.delegate_id;
       if (this.get_different_delegation_allowed()) {
@@ -643,8 +669,10 @@ export class PollPage implements OnInit {
      *  but don't store it in the database yet (see also rating_change_ended()).
      */
     if ((!this.delegate || this.rate_yourself_toggle[oid]) 
-      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))) {
-      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
+      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == ''
+      || this.option_delegated.get(oid) == null))) {
+      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false, true);
+      this.update_vote_maps();
     }
     this.show_stats();
   }
@@ -679,11 +707,27 @@ export class PollPage implements OnInit {
     this.G.L.entry("PollPage.rating_change_ended");
     this.p.have_acted = true;
     if (!this.delegate || this.rate_yourself_toggle[oid]
-      || (this.G.D.get_different_delegation_allowed(this.pid) && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))){
-      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))){
+      this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true, true);
+    }
+    if (this.weighted_delegation_allowed){
+      this.self_rating_map.set(this.p.myvid, Math.round(this.get_slider_value(oid)));
+      this.update_effective_votes();
     }
     this.update_order();
     this.G.D.save_state();
+  }
+
+  update_effective_votes(){
+    // new map created so we can compare the before and after values
+    var newEffectiveMap = {}
+    if (Object.keys(this.effective_rating_map).length === 0){
+      newEffectiveMap = new Map(this.self_rating_map);
+    }else{
+      newEffectiveMap = new Map(this.effective_rating_map);
+    }
+
+    
   }
 
   dragged_oid: string = undefined; // used in onRatingColPointerdown
@@ -795,7 +839,7 @@ export class PollPage implements OnInit {
   }
 
   get_my_rating(oid: string) {
-    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+    if (this.get_different_delegation_allowed()) {
       const did = this.option_delegated.get(oid);
       if (did && did != "" && !this.rate_yourself_toggle[oid]) {
         const agr = this.G.Del.get_agreement(this.pid, did);
@@ -813,7 +857,7 @@ export class PollPage implements OnInit {
   }
 
   get_allowed_to_delegate() : boolean {
-    if (!this.G.D.get_ranked_delegation_allowed(this.pid) && this.delegation_status == 'agreed' && !this.G.D.get_different_delegation_allowed(this.pid)) {
+    if (!this.get_ranked_delegation_allowed() && this.delegation_status == 'agreed' && !this.get_different_delegation_allowed()) {
       return false;
     }
     if (this.G.D.get_different_delegation_allowed(this.pid)){
@@ -832,11 +876,15 @@ export class PollPage implements OnInit {
   }
 
   get_ranked_delegation_allowed() : boolean {
-    return this.G.D.get_ranked_delegation_allowed(this.pid);
+    return this.ranked_delegation_allowed;
   }
 
   get_different_delegation_allowed() : boolean {
-    return this.G.D.get_different_delegation_allowed(this.pid);
+    return this.different_delegation_allowed;
+  }
+
+  get_weighted_delegation_allowed(): boolean {
+    return this.weighted_delegation_allowed;
   }
 
   get_knob_pos(oid: string) {
@@ -907,6 +955,15 @@ export class PollPage implements OnInit {
     }
     this.modalController.create({
       component: DelegationDialogRankedPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
+  }
+
+  delegate_dialog_weighted(event: Event) {
+    this.modalController.create({
+      component: DelegationDialogWeightedPage, 
       showBackdrop: true,
       componentProps: {parent: this}
     })

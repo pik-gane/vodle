@@ -19,11 +19,26 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-content *ngIf="ready">
   <!-- Table Header -->
-  <ion-grid class="table-grid">
+  <ion-grid class="table-grid" *ngIf="this.parent.get_ranked_delegation_allowed()">
     <ion-row class="table-header">
       <!-- Rank Header -->
       <ion-col size="2" class="ion-text-start">
         <span><strong>{{ 'delegation-request.rank' | translate }}</strong></span>
+      </ion-col>
+      <ion-col size="4" class="ion-text-center">
+        <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
+      </ion-col>
+      <ion-col size="4" class="ion-text-end">
+        <span><strong>{{ 'delegation-request.status' | translate }}</strong></span>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <ion-grid class="table-grid" *ngIf="this.parent.get_weighted_delegation_allowed()">
+    <ion-row class="table-header">
+      <!-- Rank Header -->
+      <ion-col size="2" class="ion-text-start">
+        <span><strong>{{ 'delegation-request.trust-level' | translate }}</strong></span>
       </ion-col>
       <ion-col size="4" class="ion-text-center">
         <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
@@ -59,7 +74,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-reorder-group>
 
   <!-- Buttons -->
-  <ion-row class="ion-justify-content-center ion-align-items-center button-row">
+  <ion-row *ngIf="this.parent.get_ranked_delegation_allowed()" class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
       <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
         <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"> </span>

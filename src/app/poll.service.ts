@@ -437,6 +437,9 @@ export class Poll {
   get allow_different(): boolean { return this.G.D.getp(this._pid, 'allow_different') == 'true'; }
   set allow_different(value: boolean) { this.G.D.setp(this._pid, 'allow_different', value.toString()); }
 
+  get allow_weighted(): boolean { return this.G.D.getp(this._pid, 'allow_weighted') == 'true'; }
+  set allow_weighted(value: boolean) { this.G.D.setp(this._pid, 'allow_weighted', value.toString()); }
+
   // Date objects are stored as ISO strings:
 
   get start_date(): Date {
@@ -518,13 +521,18 @@ export class Poll {
     return ratings_map.get(this.myvid);
   }
 
-  set_my_own_rating(oid: string, value: number, store: boolean=true) {
+  set_my_own_rating(oid: string, value: number, store: boolean=true, self: boolean=false) {
     /** Set own rating in caches and optionally store it in DB.
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
+    console.log("set_my_own_rating", oid, value, store, self);
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
+      if (self) {
+        console.log("set_self_wap", this._pid, String(value), this.myvid, oid, store, self);
+        this.G.D.set_self_wap(this._pid, String(value), this.myvid, oid);
+      }
     }
     this.update_own_rating(this.myvid, oid, value, true);
   }

@@ -69,6 +69,7 @@ export class DelegationDialogPage implements OnInit {
   rank_options: number[];
   option_names: Option[];
   options_selected: Set<string>;
+  weight_left: number;
 
   constructor(
     private popover: PopoverController,
@@ -86,7 +87,22 @@ export class DelegationDialogPage implements OnInit {
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
       from: new UntypedFormControl(this.G.S.email),
+      trustLevel: new UntypedFormControl(1),
     });
+
+    if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
+      const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+      const uid = this.parent.p.myvid;
+      const dir_del = ddm.get(uid) || [];
+      var weight_used = 0;
+      for (const entry of dir_del) {
+        if (entry === undefined) {
+          continue;
+        }
+        weight_used += Number(entry[1]);
+      }
+      this.weight_left = 99 - weight_used;
+    }
 
     // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
     if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
@@ -288,7 +304,9 @@ export class DelegationDialogPage implements OnInit {
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
       this.update_delegation_map_different();
-    } else {
+    } else if(this.G.D.get_weighted_delegation_allowed(this.parent.pid)){
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, Number(this.formGroup.get('trustLevel').value));
+    }else {
       this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
     }
     LocalNotifications.schedule({
@@ -317,6 +335,8 @@ export class DelegationDialogPage implements OnInit {
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
       this.update_delegation_map_different();
+    } else if(this.G.D.get_weighted_delegation_allowed(this.parent.pid)){
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, Number(this.formGroup.get('trustLevel').value));
     } else {
       this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
     }

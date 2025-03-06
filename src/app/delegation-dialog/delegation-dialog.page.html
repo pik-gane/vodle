@@ -91,6 +91,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </small>
           </ion-item>
         </ng-container>
+
+        <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
+          <ion-item>
+            <ion-label>Trust Level</ion-label>
+            <ion-range formControlName="trustLevel" min="0" [max]="this.weight_left" pin="true"></ion-range>
+          </ion-item>
+        </ng-container>
         
         <ng-container *ngIf="can_share">
           <ion-item lines="none">

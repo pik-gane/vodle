@@ -86,6 +86,7 @@ export class DraftpollPage implements OnInit {
     due_type?, due_custom?,
     allow_ranked?,
     allow_different?,
+    allow_weighted?,
     db?, db_from_pid?, db_custom_server_url?, db_custom_password?,
     options?: option_data_t[] 
   };
@@ -163,6 +164,7 @@ export class DraftpollPage implements OnInit {
           due_type:p.due_type, due_custom:p.due_custom,
           allow_ranked:p.allow_ranked,
           allow_different:p.allow_different,
+          allow_weighted:p.allow_weighted,
           db:p.db, db_from_pid:p.db_from_pid, db_custom_server_url:p.db_custom_server_url, db_custom_password:p.db_custom_password,
           options: [] 
         };
@@ -192,6 +194,7 @@ export class DraftpollPage implements OnInit {
         poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
         poll_allow_ranked_delegation: this.pd.allow_ranked||false,
         poll_allow_different_delegation: this.pd.allow_different||false,
+        poll_allow_weighted_delegation: this.pd.allow_weighted||false,
       });
       if (this.pd.language||this.pd.db_from_pid||this.pd.db_custom_server_url) {
         this.advanced_expanded = true;
@@ -241,6 +244,7 @@ export class DraftpollPage implements OnInit {
         db_custom_password: this.pd.db_custom_password||'',
         db_allow_ranked: this.pd.allow_ranked||false,
         db_allow_different: this.pd.allow_different||false,
+        db_allow_weighted: this.pd.allow_weighted||false,
       });
     }
   }
@@ -276,6 +280,7 @@ export class DraftpollPage implements OnInit {
       p.due_custom = this.pd.due_custom;
       p.allow_ranked = this.pd.allow_ranked || false;
       p.allow_different = this.pd.allow_different || false;
+      p.allow_weighted = this.pd.allow_weighted || false;
       p.set_due();
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
@@ -393,15 +398,42 @@ export class DraftpollPage implements OnInit {
   set_poll_allow_ranked_delegation(){
     this.G.L.trace("set_poll_allow_ranked_delegation",this.pd.allow_ranked);
     this.pd.allow_ranked = this.formGroup.get('poll_allow_ranked_delegation').value;
-    this.pd.allow_different = this.pd.allow_ranked ? false : this.pd.allow_different;
+    if (this.pd.allow_ranked) {
+      this.pd.allow_different = false;
+      this.pd.allow_weighted = false;
+      this.updateForm();
+    }
     this.G.L.trace("set_poll_allow_ranked_delegation result",this.pd.allow_ranked);
   }
 
   set_poll_allow_different_delegation(){
     this.G.L.trace("set_poll_allow_different_delegation",this.pd.allow_different);
     this.pd.allow_different = this.formGroup.get('poll_allow_different_delegation').value;
-    this.pd.allow_ranked = this.pd.allow_different ? false : this.pd.allow_ranked;
+    if (this.pd.allow_different) {
+      this.pd.allow_ranked = false;
+      this.pd.allow_weighted = false;
+      this.updateForm();
+    }
     this.G.L.trace("set_poll_allow_different_delegation result",this.pd.allow_different);
+  }
+
+  set_poll_allow_weighted_delegation(){
+    this.G.L.trace("set_poll_allow_weighted_delegation",this.pd.allow_different);
+    this.pd.allow_weighted = this.formGroup.get('poll_allow_weighted_delegation').value;
+    if (this.pd.allow_weighted) {
+      this.pd.allow_different = false;
+      this.pd.allow_ranked = false;
+      this.updateForm();
+    }
+    this.G.L.trace("set_poll_allow_different_delegation result",this.pd.allow_different);
+  }
+
+  updateForm() {
+    this.formGroup.patchValue({
+      poll_allow_ranked_delegation: this.pd.allow_ranked,
+      poll_allow_different_delegation: this.pd.allow_different,
+      poll_allow_weighted_delegation: this.pd.allow_weighted
+    });
   }
 
   set_option_name(i: number) {
@@ -747,6 +779,7 @@ export class DraftpollPage implements OnInit {
       poll_due_custom: new UntypedFormControl('', this.allowed_date.bind(this)),
       poll_allow_ranked_delegation: new UntypedFormControl(false),
       poll_allow_different_delegation: new UntypedFormControl(false),
+      poll_allow_weighted_delegation: new UntypedFormControl(false),
     });
     this.G.P.update_ref_date();
   }

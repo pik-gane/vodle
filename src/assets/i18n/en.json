@@ -195,6 +195,7 @@
         "nickname": "Nickname",
         "rank": "Rank",
         "agreed-options": "Agreed Options",
+        "trust-level": "Trust Level",
         "status": "Status"
     },
     "delete-all": {
@@ -296,7 +297,8 @@
         "use-example-from-db-none": "(Donʼt use an example)",
         "notification-saved-title": "Draft saved under “My polls”.",
         "del_ranked": "Allow ranked delegation?",
-        "del_different": "Allow delegation of waps to different participants?"
+        "del_different": "Allow delegation of waps to different participants?",
+        "del_weighted": "Allow weighted delegation?"
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
