@@ -270,7 +270,7 @@
         "success-body": "Vodle espère vous revoir bientôt, même si elle ne se souviendra pas de vous :-)",
         "confirm-button": "Oui, supprimez mes données"
     },
-    "_COMMENTS_": "",
+    "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
     "validation": {
         "option-url-valid": "Veuillez entrer une URL valide."
     },
@@ -282,5 +282,11 @@
         "confirm": "Ce lien vers la page Web externe<br/><br/><b>{{url}}</b><br/><br/>a été fourni par un utilisateur de Vodle et n'a pas été examiné par Vodle.<br/><br/>Souhaitez-vous l'ouvrir malgré les risques potentiels ?",
         "copy-link": "Copier le lien",
         "notification-copied-link-title": "Lien externe copié dans le presse-papiers."
-    }
+    },
+    "_HEADER_": [
+        "[COMMENT] (C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.",
+        "[COMMENT] This file is part of vodle.",
+        "[COMMENT] vodle is free software : you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
+        "[COMMENT] vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details."
+    ]
 }
