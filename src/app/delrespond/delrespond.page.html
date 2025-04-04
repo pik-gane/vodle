@@ -27,20 +27,48 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 </ion-header>
 
 <ion-content *ngIf="ready">
-  <!-- Display OIDs for debugging purposes -->
-  <ion-item lines="none" class="ion-text-center">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <h4>Debug: OIDs</h4>
-      <div *ngFor="let oid of oids">
-        <p>{{ oid }}</p>
-      </div>
-    </ion-col>
-  </ion-item>
 
   <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
 
   <!-- Acceptance is possible: -->
   <ng-container *ngIf="status[0]=='ranked'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
+        <p [innerHtml]="'delrespond.intro'|translate"></p> 
+        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="warning"
+            shape="round"
+            (click)="decline()">
+          <ion-icon name="ban"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.decline'|translate"></span>
+        </ion-button>&nbsp;&nbsp;
+        <ion-button size="large" color="primary"
+            shape="round"
+            (click)="accept()">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.accept'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>
+  </ng-container>
+
+  <ng-container *ngIf="status[0]=='weighted'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -403,6 +431,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='is-self')">
     <ion-item [innerHtml]="'delrespond.is-self'|translate">      
+    </ion-item>  
+    <ion-button size="large" color="primary" slot="end"
+        shape="round"
+        (click)="dismiss()">
+      <span [innerHtml]="'OK'|translate"></span>&nbsp;
+    </ion-button>
+  </ng-container>
+
+  <!-- Already accepted a different delegation from user-->
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='accepted-diff')">
+    <ion-item [innerHtml]="'delrespond.accepted-diff'|translate">      
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"
         shape="round"

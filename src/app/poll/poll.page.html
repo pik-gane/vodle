@@ -604,7 +604,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             <ion-col class="ion-no-margin ion-padding-right">
               <small>
                 <p>
-                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                  <span style="font-size: medium;">{{get_delegate()}}</span>&nbsp;
                   <span [innerHtml]="
                     'poll.delegate-controls-' 
                     + (n_delegated == oidsorted.length ? 'all' 
@@ -618,7 +618,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </ion-col>
             
             <!-- More Information Button-->
-            <ion-col *ngIf="get_ranked_delegation_allowed()" size="auto" class="ion-no-margin">
+            <ion-col *ngIf="get_ranked_delegation_allowed() || get_weighted_delegation_allowed()" size="auto" class="ion-no-margin">
               <ion-button fill="clear" (click)="delegation_info_dialog()">
                 <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
               </ion-button>

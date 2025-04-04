@@ -40,10 +40,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-col size="2" class="ion-text-start">
         <span><strong>{{ 'delegation-request.trust-level' | translate }}</strong></span>
       </ion-col>
-      <ion-col size="4" class="ion-text-center">
+      <ion-col size="3" class="ion-text-center">
         <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
       </ion-col>
-      <ion-col size="4" class="ion-text-end">
+      <ion-col size="3" class="ion-text-end">
         <span><strong>{{ 'delegation-request.status' | translate }}</strong></span>
       </ion-col>
     </ion-row>
@@ -60,12 +60,20 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <strong>{{ item.rank }}</strong>
           </ion-col>
           <!-- Nickname (Centered) -->
-          <ion-col size="4" class="ion-text-center">
+          <ion-col size="3" class="ion-text-center">
             {{ item.nickname }}
           </ion-col>
           <!-- Status (Right-Aligned) -->
-          <ion-col size="4" class="ion-text-end">
+          <ion-col size="3" class="ion-text-end">
             {{ item.status }}
+          </ion-col>
+
+          <!-- Revoke Icon -->
+          <ion-col size="2" class="ion-text-end">
+            <ion-button fill="clear" color="danger" shape="round"
+            (click)="call_revoke(item.did)">
+              <ion-icon name="trash-outline" style="color:black"></ion-icon>
+            </ion-button>
           </ion-col>
         </ion-row>
       </ion-grid>

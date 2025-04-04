@@ -46,6 +46,7 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 
 import * as Sodium from 'libsodium-wrappers';
+import { PasswordBasedCipher } from 'crypto-es/lib/cipher-core';
 
 
 /** DATA STORAGE DESIGN
@@ -1772,28 +1773,41 @@ export class DataService implements OnDestroy {
     const key = `poll.${pid}.waps`;
     const cache = this.poll_caches[pid][key] || '[]';
     
-    // Parse the outer map correctly
-    const ps = new Map(JSON.parse(cache));
+    // Parse the cache string into an array of entries
+    const parsedCache = JSON.parse(cache);
     
-    // Get the user map or default to empty array string with proper type assertion
-    let user_map_str = ps.get('effective') as string || '[]';
-    let parsed_user_map = new Map(JSON.parse(user_map_str));
+    // Create the outer Map from the parsed entries
+    const ps = new Map(parsedCache);
+    
+    // Get the 'effectuve' entry as a string, or default to empty array
+    const effectiveWapsStr = ps.get('effective') as string || '[]';
+    
+    // Parse the 'effective' string into an array of entries
+    const effectiveWapsEntries = JSON.parse(effectiveWapsStr);
     
     // Create the result map
     const resultMap = new Map<string, Map<string, number>>();
     
     // Convert the array of entries back to a Map of Maps
-    new Map(parsed_user_map).forEach((oidMapStr, uid) => {
+    new Map(effectiveWapsEntries).forEach((oidMapStr, uid) => {
       // Parse the inner map string
-      const oidEntries = JSON.parse(oidMapStr as string);
+      console.log(oidMapStr);
+      const oidEntries = typeof oidMapStr === "string" 
+            ? JSON.parse(oidMapStr) 
+            : oidMapStr;
       
       // Create the inner Map
-      const innerMap = new Map<string, number>(oidEntries);
+      let innerMap;
+      if (typeof oidEntries === 'object' && Object.keys(oidEntries).length === 0){
+        innerMap = new Map<string, number>();
+      }else{
+        innerMap = new Map<string, number>(oidEntries);
+      }
       
       // Add to result
       resultMap.set(uid as string, innerMap);
     });
-    
+    console.log("get_effective_waps_set", resultMap);
     return resultMap;
   }
 
@@ -1824,6 +1838,60 @@ export class DataService implements OnDestroy {
     ps.set('effective', JSON.stringify(Array.from(parsed_user_map.entries())));
     
     // Update database
+    this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
+  }
+
+  set_effective_waps(pid: string, val: Map<string, Map<string, number>>){
+    const key = `poll.${pid}.waps`;
+    
+    // Get the cache or default to empty array string
+    const cache = this.poll_caches[pid][key] || '[]';
+    
+    // Parse the outer map correctly
+    let ps = new Map(JSON.parse(cache));
+    
+    // Get the user map or default to empty array string with proper type assertion
+    let user_map_str = ps.get('effective') as string || '[]';
+    
+    let new_effective_map = new Map<string, string>();
+    for (let [id, inner] of val){
+      new_effective_map.set(id, JSON.stringify(Array.from(inner.entries())));
+    }
+    ps.set('effective', JSON.stringify(Array.from(new_effective_map.entries())));
+    console.log('dk2', val, new_effective_map, ps);
+    this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
+  }
+
+  set_self_and_effective_waps(pid: string, eff: Map<string, Map<string, number>>, self: Map<string, Map<string, number>>){
+    const key = `poll.${pid}.waps`;
+    
+    // Get the cache or default to empty array string
+    const cache = this.poll_caches[pid][key] || '[]';
+    
+    // Parse the outer map correctly
+    let ps = new Map(JSON.parse(cache));
+    
+    // Get the user map or default to empty array string with proper type assertion
+    let user_map_str = ps.get('effective') as string || '[]';
+    
+    let new_effective_map = new Map<string, string>();
+    for (let [id, inner] of eff){
+      new_effective_map.set(id, JSON.stringify(Array.from(inner.entries())));
+    }
+    ps.set('effective', JSON.stringify(Array.from(new_effective_map.entries())));
+
+
+    user_map_str = ps.get('self') as string || '[]';
+    
+    let new_self_map = new Map<string, string>();
+    for (let [id, inner] of self){
+      new_self_map.set(id, JSON.stringify(Array.from(inner.entries())));
+    }
+    ps.set('self', JSON.stringify(Array.from(new_self_map.entries())));
+    console.log('dbl, dk2', self, new_self_map, ps);
+    
+    
+    
     this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
   }
 
