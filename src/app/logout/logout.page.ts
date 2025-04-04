@@ -28,7 +28,11 @@ import { GlobalService } from "../global.service";
 
 // PAGE:
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-logout',
   templateUrl: './logout.page.html',
   styleUrls: ['./logout.page.scss'],

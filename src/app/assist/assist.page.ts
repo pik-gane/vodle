@@ -25,7 +25,12 @@ import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, FormsModule ],
   selector: 'app-assist',
   templateUrl: './assist.page.html',
   styleUrls: ['./assist.page.scss'],

@@ -30,12 +30,17 @@ import { Capacitor } from '@capacitor/core';
 //import { Share } from '@capacitor/share';
 //import { LocalNotifications } from '@capacitor/local-notifications';
 
+import { ReactiveFormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll, Option } from '../poll.service';
-
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, FormsModule, ReactiveFormsModule ],
   selector: 'app-addoption-dialog',
   templateUrl: './addoption-dialog.page.html',
   styleUrls: ['./addoption-dialog.page.scss'],

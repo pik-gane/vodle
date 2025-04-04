@@ -34,8 +34,8 @@ import { PreviewpollPage } from './previewpoll.page';
     FormsModule,
     IonicModule,
     PreviewpollPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [PreviewpollPage]
+    TranslateModule.forChild(),
+    PreviewpollPage
+  ]
 })
 export class PreviewpollPageModule {}

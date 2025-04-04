@@ -14,7 +14,11 @@ export class SafePipe implements PipeTransform {
   }
 } 
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, SafePipe ],
   selector: 'app-imprint',
   templateUrl: './imprint.page.html',
   styleUrls: ['./imprint.page.scss'],

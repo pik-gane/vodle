@@ -35,8 +35,8 @@ export { AssistPage } from './assist.page';
     FormsModule,
     IonicModule,
     AssistPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [AssistPage]
+    TranslateModule.forChild(),
+    AssistPage
+  ]
 })
 export class AssistPageModule {}

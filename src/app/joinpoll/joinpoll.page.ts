@@ -24,7 +24,11 @@ import { TranslateService } from '@ngx-translate/core';
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-join',
   templateUrl: './joinpoll.page.html',
   styleUrls: ['./joinpoll.page.scss'],

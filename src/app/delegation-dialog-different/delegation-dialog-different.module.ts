@@ -36,9 +36,9 @@ export { DelegationDialogDifferentPage } from './delegation-dialog-different.pag
     IonicModule,
     ReactiveFormsModule,
     DelegationDialogDifferentPageRoutingModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    DelegationDialogDifferentPage
   ],
-  declarations: [DelegationDialogDifferentPage],
   exports: [DelegationDialogDifferentPage]
 })
 export class DelegationDialogPageModule {}

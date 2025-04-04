@@ -26,7 +26,11 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { GlobalService } from "../global.service";
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-delete-all',
   templateUrl: './delete-all.page.html',
   styleUrls: ['./delete-all.page.scss'],

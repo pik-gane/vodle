@@ -37,7 +37,11 @@ const svgcolors = {
   r_avatar = 7,
   stretch = 1.1;
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-analysis',
   templateUrl: './analysis.page.html',
   styleUrls: ['./analysis.page.scss'],

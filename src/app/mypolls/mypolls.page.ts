@@ -23,8 +23,12 @@ import { news_t } from '../data.service';
 
 import { GlobalService } from "../global.service";
 import { Poll } from "../poll.service";
-
+import { RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, RouterModule ],
   selector: 'app-mypolls',
   templateUrl: './mypolls.page.html',
   styleUrls: ['./mypolls.page.scss'],

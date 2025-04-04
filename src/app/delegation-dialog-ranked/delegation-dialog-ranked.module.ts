@@ -36,9 +36,9 @@ export { DelegationDialogRankedPage } from './delegation-dialog-ranked.page';
     IonicModule,
     ReactiveFormsModule,
     DelegationDialogRankedPageRoutingModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    DelegationDialogRankedPage
   ],
-  declarations: [DelegationDialogRankedPage],
   exports: [DelegationDialogRankedPage]
 })
 export class DelegationDialogPageModule {}

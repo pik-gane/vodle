@@ -15,8 +15,9 @@ import { ImprintPage, SafePipe } from './imprint.page';
     FormsModule,
     IonicModule,
     ImprintPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [ImprintPage, SafePipe]
+    TranslateModule.forChild(),
+    ImprintPage,
+    SafePipe
+  ]
 })
 export class ImprintPageModule {}

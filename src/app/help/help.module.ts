@@ -34,8 +34,8 @@ import { HelpPage } from './help.page';
     FormsModule,
     IonicModule,
     HelpPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [HelpPage]
+    TranslateModule.forChild(),
+    HelpPage
+  ]
 })
 export class HelpPageModule {}

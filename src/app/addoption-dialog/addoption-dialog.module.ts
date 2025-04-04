@@ -36,9 +36,8 @@ export { AddoptionDialogPage } from './addoption-dialog.page';
     IonicModule,
     ReactiveFormsModule,
     AddoptionDialogPageRoutingModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    AddoptionDialogPage
   ],
-  declarations: [AddoptionDialogPage],
-  exports: [AddoptionDialogPage]
 })
 export class AddoptionDialogPageModule {}

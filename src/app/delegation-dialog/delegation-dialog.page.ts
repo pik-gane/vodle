@@ -36,9 +36,13 @@ interface Option {
   id: string;
   name: string;
 }
-
-
+import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, FormsModule, ReactiveFormsModule ],
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog.page.html',
   styleUrls: ['./delegation-dialog.page.scss'],

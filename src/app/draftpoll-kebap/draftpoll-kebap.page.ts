@@ -21,7 +21,11 @@ import { Component, OnInit, Input, ViewChild, ChangeDetectorRef } from '@angular
 import { PopoverController, IonSelect } from '@ionic/angular';
 import { DraftpollPage } from '../draftpoll/draftpoll.module';  
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-draftpoll-kebap',
   templateUrl: './draftpoll-kebap.page.html',
   styleUrls: ['./draftpoll-kebap.page.scss'],

@@ -27,7 +27,11 @@ import { Component, OnInit } from '@angular/core';
 - generate _design docs: validation functions, update functions
 */
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-configure-server',
   templateUrl: './configure-server.page.html',
   styleUrls: ['./configure-server.page.scss'],

@@ -15,8 +15,9 @@ import { PrivacyPage, SafePipe } from './privacy.page';
     FormsModule,
     IonicModule,
     PrivacyPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [PrivacyPage, SafePipe]
+    TranslateModule.forChild(),
+    PrivacyPage, 
+    SafePipe
+  ]
 })
 export class PrivacyPageModule {}

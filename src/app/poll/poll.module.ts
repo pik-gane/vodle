@@ -37,8 +37,8 @@ export { PollPage } from './poll.page';
     IonicModule,
     PollPageRoutingModule,
     SharedcomponentsModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [PollPage]
+    TranslateModule.forChild(),
+    PollPage
+  ]
 })
 export class PollPageModule {}

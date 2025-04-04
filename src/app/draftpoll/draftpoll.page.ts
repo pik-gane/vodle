@@ -49,7 +49,14 @@ function is_forward_key(ev: KeyboardEvent) {
   return (ev.key == "Tab" || ev.key == "Enter") && !ev.ctrlKey && !ev.shiftKey && !ev.metaKey && !ev.altKey;
 }
 
+
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
+import { ReactiveFormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, ReactiveFormsModule, SharedcomponentsModule ],
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
   styleUrls: ['./draftpoll.page.scss'],

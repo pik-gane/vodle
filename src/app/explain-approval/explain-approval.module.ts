@@ -35,9 +35,9 @@ export { ExplainApprovalPage } from './explain-approval.page';
     FormsModule,
     IonicModule,
     ExplainApprovalPageRoutingModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    ExplainApprovalPage
   ],
-  declarations: [ExplainApprovalPage],
   exports: [ExplainApprovalPage]
 })
 export class ExplainApprovalPageModule {}

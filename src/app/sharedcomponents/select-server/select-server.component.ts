@@ -17,13 +17,16 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, Input } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { environment } from 'src/environments/environment';
-
+import { ReactiveFormsModule } from '@angular/forms';
 import { GlobalService } from "../../global.service";
-
+import { TranslateModule } from '@ngx-translate/core';
+import { IonicModule } from '@ionic/angular';
 @Component({
+  imports: [ IonicModule, TranslateModule, ReactiveFormsModule, CommonModule ],
   selector: 'app-select-server',
   templateUrl: './select-server.component.html',
   styleUrls: ['./select-server.component.scss'],

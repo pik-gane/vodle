@@ -34,8 +34,8 @@ import { LogoutPage } from './logout.page';
     FormsModule,
     IonicModule,
     LogoutPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [LogoutPage]
+    TranslateModule.forChild(),
+    LogoutPage
+  ]
 })
 export class LogoutPageModule {}

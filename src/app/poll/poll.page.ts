@@ -36,8 +36,15 @@ import { AnalysisPage } from '../analysis/analysis.module';
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
 import { waitForAsync } from '@angular/core/testing';
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
 
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, RouterModule, FormsModule, SharedcomponentsModule ],
   selector: 'app-poll',
   templateUrl: './poll.page.html',
   styleUrls: ['./poll.page.scss'],
@@ -1049,7 +1056,7 @@ export class PollPage implements OnInit {
         cssClass: 'explain-approval',
         showBackdrop: true,
         componentProps: {parent: this, oid: oid},
-        swipeToClose: true,
+//        swipeToClose: true,
         presentingElement: this.routerOutlet.nativeEl
     })
     .then((modalElement)=>{

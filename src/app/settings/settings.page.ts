@@ -34,11 +34,16 @@ TODO:
 
 
 // PAGE:
-
+import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, ReactiveFormsModule, FormsModule, SharedcomponentsModule ],
   selector: 'app-settings',
   templateUrl: './settings.page.html',
-  styleUrls: ['./settings.page.scss'],
+  styleUrls: ['./settings.page.scss']
 })
 export class SettingsPage implements OnInit {
 

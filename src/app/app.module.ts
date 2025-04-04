@@ -47,7 +47,6 @@ export function configureLogging(loggingService: LoggingService): () => void {
 }
 
 @NgModule({
-    declarations: [AppComponent],
     imports: [
         LoggingServiceModule,
         BrowserModule,
@@ -63,6 +62,7 @@ export function configureLogging(loggingService: LoggingService): () => void {
                 deps: [HttpClient]
             }
         }),
+        AppComponent
     ],
     providers: [
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },

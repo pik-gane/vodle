@@ -557,7 +557,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             <!-- More Information Button-->
             <ion-item *ngIf="get_ranked_delegation_allowed() || get_weighted_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
               <ion-col size="auto" class="ion-no-margin">
-                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-button fill="clear" (click)="delegation_info_dialog($event)">
                   <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
                 </ion-button>
               </ion-col>
@@ -565,7 +565,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <ion-item *ngIf="get_different_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
               <ion-col size="auto" class="ion-no-margin">
-                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-button fill="clear" (click)="delegation_info_dialog($event)">
                   <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
                 </ion-button>
               </ion-col>
@@ -619,7 +619,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             
             <!-- More Information Button-->
             <ion-col *ngIf="get_ranked_delegation_allowed() || get_weighted_delegation_allowed()" size="auto" class="ion-no-margin">
-              <ion-button fill="clear" (click)="delegation_info_dialog()">
+              <ion-button fill="clear" (click)="delegation_info_dialog($event)">
                 <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
               </ion-button>
             </ion-col>
@@ -668,7 +668,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             
             <!-- More Information Button-->
             <ion-col size="auto" class="ion-no-margin">
-              <ion-button fill="clear" (click)="delegation_info_dialog()">
+              <ion-button fill="clear" (click)="delegation_info_dialog($event)">
                 <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
               </ion-button>
             </ion-col>

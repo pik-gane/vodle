@@ -34,8 +34,8 @@ import { DeleteAllPage } from './delete-all.page';
     FormsModule,
     IonicModule,
     DeleteAllPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [DeleteAllPage]
+    TranslateModule.forChild(),
+    DeleteAllPage
+  ]
 })
 export class DeleteAllPageModule {}

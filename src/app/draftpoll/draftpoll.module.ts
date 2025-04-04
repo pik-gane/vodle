@@ -38,9 +38,9 @@ export { DraftpollPage } from './draftpoll.page';
     ReactiveFormsModule,
     DraftpollPageRoutingModule,
     SharedcomponentsModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    DraftpollPage
   ],
-  declarations: [DraftpollPage],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class DraftpollPageModule {}

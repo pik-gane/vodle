@@ -35,8 +35,8 @@ export { AnalysisPage } from './analysis.page';
     FormsModule,
     IonicModule,
     AnalysisPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [AnalysisPage]
+    TranslateModule.forChild(),
+    AnalysisPage
+  ]
 })
 export class AnalysisPageModule {}

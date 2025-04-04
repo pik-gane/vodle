@@ -29,8 +29,12 @@ import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
 
 import { environment } from '../../environments/environment';
-
+import { RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, RouterModule ],
   selector: 'app-inviteto',
   templateUrl: './inviteto.page.html',
   styleUrls: ['./inviteto.page.scss'],

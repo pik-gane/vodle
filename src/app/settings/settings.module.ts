@@ -36,8 +36,8 @@ import { SettingsPage } from './settings.page';
     ReactiveFormsModule,
     SettingsPageRoutingModule,
     SharedcomponentsModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [SettingsPage]
+    TranslateModule.forChild(),
+    SettingsPage
+  ]
 })
 export class SettingsPageModule {}

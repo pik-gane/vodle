@@ -84,7 +84,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- Buttons -->
   <ion-row *ngIf="this.parent.get_ranked_delegation_allowed()" class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
+      <ion-button color="primary" shape="round" (click)="reorder_button_clicked()">
         <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"> </span>
       </ion-button>
     </ion-col>
@@ -92,7 +92,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+      <ion-button color="primary" shape="round" (click)="close_button_clicked()">
         <span [innerHtml]="'Exit'"></span>
       </ion-button>
     </ion-col>

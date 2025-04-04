@@ -34,8 +34,8 @@ import { DelrespondPage } from './delrespond.page';
     FormsModule,
     IonicModule,
     DelrespondPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [DelrespondPage]
+    TranslateModule.forChild(),
+    DelrespondPage
+  ]
 })
 export class DelrespondPageModule {}

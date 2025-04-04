@@ -27,13 +27,14 @@ import { ExpandableComponent } from './expandable/expandable.component';
 import { SelectServerComponent } from './select-server/select-server.component';
 
 @NgModule({
-  declarations: [ExpandableComponent, SelectServerComponent],
   imports: [
     CommonModule, 
     IonicModule, 
     FormsModule, 
     ReactiveFormsModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    ExpandableComponent,
+    SelectServerComponent
   ],
   exports: [ExpandableComponent, SelectServerComponent]
 })

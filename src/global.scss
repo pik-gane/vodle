@@ -28,6 +28,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
+@use './app/sharedcomponents/expandable/expandable.component' as *;
+
 /* Core CSS required for Ionic components to work properly */
 @import "~@ionic/angular/css/core.css";
 
@@ -46,7 +48,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 /* custom CSS: */
 
-@import './app/sharedcomponents/expandable/expandable.component';
 
 /* quicksand-regular - vietnamese_latin-ext_latin */
 @font-face {

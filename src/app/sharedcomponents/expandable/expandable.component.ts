@@ -1,6 +1,8 @@
 import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild } from '@angular/core';
 
+import { IonicModule } from '@ionic/angular';
 @Component({
+  imports: [ IonicModule ],
   selector: 'app-expandable',
   templateUrl: './expandable.component.html',
   styleUrls: ['./expandable.component.scss']

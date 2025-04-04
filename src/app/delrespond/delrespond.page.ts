@@ -24,8 +24,12 @@ import { del_agreement_t } from '../data.service';
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
-
+import { RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule, RouterModule ],
   selector: 'app-join',
   templateUrl: './delrespond.page.html',
   styleUrls: ['./delrespond.page.scss'],

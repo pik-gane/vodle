@@ -34,8 +34,8 @@ import { InvitetoPage } from './inviteto.page';
     FormsModule,
     IonicModule,
     InvitetoPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [InvitetoPage]
+    TranslateModule.forChild(),
+    InvitetoPage
+  ]
 })
 export class InvitetoPageModule {}

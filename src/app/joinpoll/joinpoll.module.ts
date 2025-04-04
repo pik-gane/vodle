@@ -34,8 +34,8 @@ import { JoinpollPage } from './joinpoll.page';
     FormsModule,
     IonicModule,
     JoinpollPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [JoinpollPage]
+    TranslateModule.forChild(),
+    JoinpollPage
+  ]
 })
 export class JoinpollPageModule {}

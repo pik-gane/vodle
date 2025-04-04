@@ -35,9 +35,9 @@ export { DraftpollKebapPage } from './draftpoll-kebap.page';
     FormsModule,
     IonicModule,
     DraftpollKebapPageRoutingModule,
-    TranslateModule.forChild()
+    TranslateModule.forChild(),
+    DraftpollKebapPage
   ],
-  declarations: [DraftpollKebapPage],
   exports: [DraftpollKebapPage]
 })
 export class DraftpollKebapPageModule {}

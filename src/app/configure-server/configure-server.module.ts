@@ -32,8 +32,8 @@ import { ConfigureServerPage } from './configure-server.page';
     CommonModule,
     FormsModule,
     IonicModule,
-    ConfigureServerPageRoutingModule
+    ConfigureServerPageRoutingModule,
+    ConfigureServerPage
   ],
-  declarations: [ConfigureServerPage]
 })
 export class ConfigureServerPageModule {}

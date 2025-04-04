@@ -34,8 +34,8 @@ import { AboutPage } from './about.page';
     FormsModule,
     IonicModule,
     AboutPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [AboutPage]
+    TranslateModule.forChild(),
+    AboutPage
+  ]
 })
 export class AboutPageModule {}

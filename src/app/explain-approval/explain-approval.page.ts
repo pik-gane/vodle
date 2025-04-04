@@ -25,7 +25,11 @@ import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll } from '../poll.service';
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-explain-approval',
   templateUrl: './explain-approval.page.html',
   styleUrls: ['./explain-approval.page.scss'],

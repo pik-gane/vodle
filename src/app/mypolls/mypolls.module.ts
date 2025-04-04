@@ -34,8 +34,8 @@ import { MypollsPage } from './mypolls.page';
     FormsModule,
     IonicModule,
     MypollsPageRoutingModule,
-    TranslateModule.forChild()
-  ],
-  declarations: [MypollsPage]
+    TranslateModule.forChild(),
+    MypollsPage
+  ]
 })
 export class MypollsPageModule {}

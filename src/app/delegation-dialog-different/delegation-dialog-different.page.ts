@@ -22,9 +22,6 @@ import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, V
 import {
   IonInput,
   ModalController,
-  IonCol,
-  IonGrid,
-  IonRow,
   ItemReorderEventDetail,
   IonButton,
   IonItem,
@@ -44,11 +41,14 @@ import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
 import { environment } from 'src/environments/environment';
 
+import { IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
 @Component({
+  imports: [ CommonModule, IonicModule, TranslateModule ],
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog-different.page.html',
   styleUrls: ['./delegation-dialog-different.page.scss'],
-  imports: [IonCol, IonGrid, IonRow],
 })
 export class DelegationDialogDifferentPage implements OnInit {
 
