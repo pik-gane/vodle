@@ -27,6 +27,15 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 </ion-header>
 
 <ion-content *ngIf="ready">
+  <!-- Display OIDs for debugging purposes -->
+  <ion-item lines="none" class="ion-text-center">
+    <ion-col class="ion-no-padding ion-no-margin">
+      <h4>Debug: OIDs</h4>
+      <div *ngFor="let oid of oids">
+        <p>{{ oid }}</p>
+      </div>
+    </ion-col>
+  </ion-item>
 
   <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
 

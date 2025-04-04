@@ -1,0 +1,67 @@
+<ion-content *ngIf="ready">
+  <ion-grid>
+    <!-- Table Header -->
+    <ion-row class="table-header">
+      <!-- Option Header -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        <strong>
+          <span [innerHtml]="'Option' | translate"></span>
+        </strong>
+      </ion-col>
+
+      <!-- Nickname Header -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        <strong>
+          <span [innerHtml]="'Nickname' | translate"></span>
+        </strong>
+      </ion-col>
+
+      <!-- Status Header -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        <strong>
+          <span [innerHtml]="'Status' | translate"></span>
+        </strong>
+      </ion-col>
+    </ion-row>
+
+    <!-- Table Rows -->
+    <ion-row 
+      class="ion-align-items-center ion-border ion-border-bottom" 
+      *ngFor="let item of delegation_list">
+      
+      <!-- Option Column -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        {{ item.option }}
+      </ion-col>
+
+      <!-- Nickname Column -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        {{ item.nickname }}
+      </ion-col>
+
+      <!-- Status Column -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        {{ item.status }}
+      </ion-col>
+
+      <!-- Revoke Icon -->
+      <ion-col size="3" class="ion-text-center ion-align-self-center">
+        <ion-button fill="clear" color="danger" shape="round"
+        (click)="call_revoke([item.option_id])">
+          <ion-icon name="trash-outline" style="color:black"></ion-icon>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Buttons Row -->
+  <ion-row class="ion-justify-content-center ion-align-items-center button-row">
+    <ion-col size="auto">
+      <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+        <span [innerHtml]="'Exit'"></span>&nbsp;
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </ion-button>
+    </ion-col>
+  </ion-row>
+
+</ion-content>

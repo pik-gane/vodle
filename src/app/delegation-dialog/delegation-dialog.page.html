@@ -73,6 +73,31 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </small>
         </ion-item>
         </ng-container>
+
+        <ng-container *ngIf="this.G.D.get_different_delegation_allowed(this.parent.pid)">
+          <ion-item>
+            <small>
+              <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.different-label'|translate"></ion-label>
+              <ion-select aria-label="Options"
+              [placeholder]=""
+              [compareWith]="compareWith"
+              [multiple]="true"
+              (ionChange)="options_changed($event)"
+              >
+                <ion-select-option *ngFor="let x of option_names" [value]="x">
+                  {{ x.name }}
+                </ion-select-option>
+              </ion-select>
+            </small>
+          </ion-item>
+        </ng-container>
+
+        <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
+          <ion-item>
+            <ion-label>Trust Level</ion-label>
+            <ion-range formControlName="trustLevel" min="0" [max]="this.weight_left" pin="true"></ion-range>
+          </ion-item>
+        </ng-container>
         
         <ng-container *ngIf="can_share">
           <ion-item lines="none">

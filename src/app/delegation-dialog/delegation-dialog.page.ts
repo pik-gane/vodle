@@ -32,6 +32,12 @@ import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
 import { environment } from 'src/environments/environment';
 
+interface Option {
+  id: string;
+  name: string;
+}
+
+
 @Component({
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog.page.html',
@@ -61,6 +67,9 @@ export class DelegationDialogPage implements OnInit {
   mailto_url: string;
   rank: number;
   rank_options: number[];
+  option_names: Option[];
+  options_selected: Set<string>;
+  weight_left: number;
 
   constructor(
     private popover: PopoverController,
@@ -78,16 +87,71 @@ export class DelegationDialogPage implements OnInit {
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
       from: new UntypedFormControl(this.G.S.email),
+      trustLevel: new UntypedFormControl(1),
     });
+
+    if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
+      const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+      const uid = this.parent.p.myvid;
+      const dir_del = ddm.get(uid) || [];
+      var weight_used = 0;
+      for (const entry of dir_del) {
+        if (entry === undefined) {
+          continue;
+        }
+        weight_used += Number(entry[1]);
+      }
+      this.weight_left = 99 - weight_used;
+    }
 
     // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
     if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
       this.initialise_rank_values();
     }
+    
+    // checks if delegation of specific options is allowed and if so, initialises the values needed for the check-boxes
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.option_names = [];
+      this.options_selected = new Set<string>();
+
+      for (const id of this.parent.p.oids) {
+        if (this.parent.option_delegated.has(id)) {
+          if (this.parent.option_delegated.get(id) !== '') {
+            continue;
+          }
+        }
+        this.option_names.push({id: id, name: this.parent.p.options[id].name});
+        this.options_selected.add(id);
+      }
+    }
+
+    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+    console.log("this voter: ", this.parent.p.myvid);
+    console.log("ddm", ddm);
+    for (const [uid, dels] of ddm) {
+      for (const del of dels) {
+        console.log("ddm", uid, del);
+      }
+    }
+    
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      for (const oid of this.parent.p.oids) {
+        const iim = this.G.D.get_inverse_indirect_map(this.parent.pid, oid);
+        console.log("iim", oid, iim);
+      }
+    }else{
+      const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
+      console.log("iim", iim);
+    }
 
     // TODO: what if already some delegation active or pending?
-    // prepare a new delegation:
-    [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.p = this.G.P.polls[this.parent.pid];
+    } else {
+      [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    }
+    
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
     this.update_request();
@@ -127,12 +191,28 @@ export class DelegationDialogPage implements OnInit {
   from_changed() {
     const from = this.formGroup.get('from').value;
     this.G.D.setp(this.p.pid, "del_from." + this.did, from);
-    this.set_delegation_link(from);
+    if (!this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.set_delegation_link(from);
+    }
     this.update_request();
   }
 
   rank_changed(e) {
     this.rank = e.detail.value;
+  }
+
+  options_changed(event: Event){
+    const target = event.target as HTMLIonSelectElement;
+    console.log("options_changed", JSON.stringify(target.value));
+    var ns = new Set<string>();
+    for (const option of target.value) {
+      ns.add(option.id);
+    }
+    this.options_selected = new Set(ns);
+  }
+
+  get_option_names() {
+    return Array.from(this.option_names.entries());
   }
 
   update_request() {
@@ -165,8 +245,35 @@ export class DelegationDialogPage implements OnInit {
                 + this.translate.instant('delegation-request.message-body-regards'));
   }
 
+  prepare_if_different_allowed() {
+    if (!this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      return;
+    }
+
+    // [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation_for_options(this.parent.pid, Array.from(this.options_selected));
+    [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    const options = Array.from(this.options_selected);
+    this.set_delegation_link(this.formGroup.get('from').value);
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
+    this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
+    for (const oid of this.options_selected) {
+      this.G.D.setv(this.p.pid, "del_oid." + oid, this.did);
+    }
+  }
+
+  update_delegation_map_different() {
+    for (const oid of this.options_selected) {
+      var ddm = this.G.D.get_direct_delegation_map(this.parent.pid, oid) || new Map<string, [string, string, string][]>();
+      var dels = ddm.get(this.parent.p.myvid) || [];
+      dels= [[this.did, '0', '']];
+      ddm.set(this.parent.p.myvid, dels);
+      this.G.D.save_direct_delegation_map(this.parent.pid, oid, ddm);
+    }
+  }
+
   share_button_clicked() {
     this.G.L.entry("DelegationDialogPage.share_button_clicked");
+    this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
     Share.share({
@@ -177,7 +284,11 @@ export class DelegationDialogPage implements OnInit {
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
       this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+      if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+        this.update_delegation_map_different();
+      } else {
+        this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+      }
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
@@ -188,9 +299,16 @@ export class DelegationDialogPage implements OnInit {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
     this.delegate_nickname_changed();
     this.from_changed();
+    this.prepare_if_different_allowed();
     window.navigator.clipboard.writeText(this.delegation_link);
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.update_delegation_map_different();
+    } else if(this.G.D.get_weighted_delegation_allowed(this.parent.pid)){
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, Number(this.formGroup.get('trustLevel').value));
+    }else {
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    }
     LocalNotifications.schedule({
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
@@ -211,10 +329,17 @@ export class DelegationDialogPage implements OnInit {
 
   email_button_clicked(ev: MouseEvent) {
     this.G.L.entry("DelegationDialogPage.email_button_clicked");
+    this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.update_delegation_map_different();
+    } else if(this.G.D.get_weighted_delegation_allowed(this.parent.pid)){
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, Number(this.formGroup.get('trustLevel').value));
+    } else {
+      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+    }
     this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");
