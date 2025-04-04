@@ -241,6 +241,7 @@
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
         "closed": "Unfortunately, this poll has already ended.",
         "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!",
+        "accepted-diff": "You have already accepted a request from the same person.",
         "been-revoked": "Unfortunately, this request has already been revoked."
     },
     "draftpoll": {

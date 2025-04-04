@@ -161,6 +161,22 @@ export class DelegationDialogRankedPage implements OnInit {
     this.modal.dismiss();
     this.G.L.exit("DelegationDialogRankedPage.close_button_clicked");
   }
+
+  async call_revoke(did: string) {
+    const result = await this.parent.revoke_delegation_dialog(did);
+
+    if (!result){
+      return;
+    }
+    var new_del_list = [];
+    this.delegation_list.forEach(element => {
+      if (element.did !== did){
+        new_del_list.push(element);
+      }
+    });
+    
+    this.delegation_list = [...new_del_list];
+  }
   
   close() {
     this.modal.dismiss();

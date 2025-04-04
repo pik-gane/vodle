@@ -185,6 +185,9 @@ export class Poll {
   delegate_id: string = null;
   did: string = null;
 
+  self_rating_map: Map<string, Map<string, number>> = new Map<string, Map<string, number>>()
+  effective_rating_map: Map<string, Map<string, number>> = new Map<string, Map<string, number>>()
+
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
     if (!pid) {
@@ -530,8 +533,15 @@ export class Poll {
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
       if (self) {
-        console.log("set_self_wap", this._pid, String(value), this.myvid, oid, store, self);
-        this.G.D.set_self_wap(this._pid, String(value), this.myvid, oid);
+        console.log("set_self_wap", this.myvid, this._pid, String(value), this.myvid, oid, store, self);
+        console.log(this.self_rating_map, this.effective_rating_map);
+        if (!this.self_rating_map.has(this.myvid)){
+          this.self_rating_map.set(this.myvid, new Map<string, number>());
+        }
+        this.self_rating_map.get(this.myvid).set(oid, value);
+        const ret = this.G.Del.update_effective_votes(this.pid, this.myvid, this.self_rating_map);
+        console.log("new_eff", ret);
+        this.effective_rating_map = new Map(ret);
       }
     }
     this.update_own_rating(this.myvid, oid, value, true);

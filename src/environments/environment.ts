@@ -54,7 +54,8 @@ export const environment = {
   delegation: {
     enabled: true,
     max_weight: 5,
-    max_delegations: 3
+    max_delegations: 3,
+    weighted_epsilon: 1
   },
   no_more_options_time_fraction: 1/2,
   db_put_retry_delay_ms: 100,
