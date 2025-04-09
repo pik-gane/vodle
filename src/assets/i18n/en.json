@@ -208,6 +208,13 @@
         "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
         "failed": "Could not delete all data for some reason."
     },
+    "delegation-dialog": {
+        "ranked-title": "Manage Delegations",
+        "ranked-title-reorder": "Drag to Reorder",
+        "ranked-reorder": "Reorder",
+        "ranked-save": "Save",
+        "ranked-exit": "Exit"
+    },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
         "-page-title": "Act as delegate?",

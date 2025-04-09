@@ -22,23 +22,11 @@
   },
   "keywords": [],
   "license": "AGPL3.0",
-  "main": "karma.conf.js",
-  "directories": {
-    "example": "examples",
-    "test": "test"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pik-gane/vodle.git"
-  },
   "bugs": {
     "url": "https://github.com/pik-gane/vodle/issues"
   },
   "dependencies": {
-    "@angular-devkit/build-angular": "^19.2.6",
+    "@angular-devkit/build-angular": "^19.2.5",
     "@angular/common": "^19.2.5",
     "@angular/core": "^19.2.5",
     "@angular/platform-browser-dynamic": "^19.2.5",

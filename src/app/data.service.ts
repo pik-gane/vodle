@@ -251,12 +251,12 @@ const state_attributes = [
   "outgoing_dids_caches",
   "incoming_dids_caches",
   "delegation_agreements_caches",
-  "direct_delegation_map_caches",
-  "inv_direct_delegation_map_caches",
-  "indirect_delegation_map_caches",
-  "inv_indirect_delegation_map_caches",
-  "effective_delegation_map_caches",
-  "inv_effective_delegation_map_caches",
+  // "direct_delegation_map_caches",
+  // "inv_direct_delegation_map_caches",
+  // "indirect_delegation_map_caches",
+  // "inv_indirect_delegation_map_caches",
+  // "effective_delegation_map_caches",
+  // "inv_effective_delegation_map_caches",
   "tally_caches",
   "news_keys"
 ];
@@ -1779,7 +1779,7 @@ export class DataService implements OnDestroy {
     // Create the outer Map from the parsed entries
     const ps = new Map(parsedCache);
     
-    // Get the 'effectuve' entry as a string, or default to empty array
+    // Get the 'effective' entry as a string, or default to empty array
     const effectiveWapsStr = ps.get('effective') as string || '[]';
     
     // Parse the 'effective' string into an array of entries
@@ -1888,10 +1888,10 @@ export class DataService implements OnDestroy {
       new_self_map.set(id, JSON.stringify(Array.from(inner.entries())));
     }
     ps.set('self', JSON.stringify(Array.from(new_self_map.entries())));
-    console.log('dbl, dk2', self, new_self_map, ps);
-    
-    
-    
+    console.log('dbl, dk2', self, new_self_map);
+    console.log('dbl, dk3', eff, new_effective_map);
+    console.log(ps);
+
     this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
   }
 
@@ -1957,6 +1957,7 @@ export class DataService implements OnDestroy {
      value = value || '';
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
+    this.G.L.info("DataService._setp_in_polldb", pid, key, value);
     this.poll_caches[pid][key] = value;
     const keystart = key.slice(0, (key+'.').indexOf('.'));
     return this.store_poll_data(pid, key, this.poll_caches[pid], key, 

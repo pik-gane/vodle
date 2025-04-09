@@ -17,97 +17,65 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
 
-<ion-content *ngIf="ready">
-  <!-- Table Header -->
-  <ion-grid class="table-grid" *ngIf="this.parent.get_ranked_delegation_allowed()">
-    <ion-row class="table-header">
-      <!-- Rank Header -->
-      <ion-col size="2" class="ion-text-start">
-        <span><strong>{{ 'delegation-request.rank' | translate }}</strong></span>
-      </ion-col>
-      <ion-col size="4" class="ion-text-center">
-        <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
-      </ion-col>
-      <ion-col size="4" class="ion-text-end">
-        <span><strong>{{ 'delegation-request.status' | translate }}</strong></span>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+<ion-content *ngIf="ready" class="delegation-popup">
+  <!-- HEADER STRIP -->
+  <div class="header-bar">
+    <ion-label class="title">
+      {{ reorder_disabled ? ('delegation-dialog.ranked-title' | translate) : ('delegation-dialog.ranked-title-reorder' | translate) }}
+    </ion-label>
+  </div>
 
-  <ion-grid class="table-grid" *ngIf="this.parent.get_weighted_delegation_allowed()">
+  <!-- Table Header -->
+  <ion-grid class="delegation-table">
     <ion-row class="table-header">
-      <!-- Rank Header -->
       <ion-col size="2" class="ion-text-start">
-        <span><strong>{{ 'delegation-request.trust-level' | translate }}</strong></span>
+        <strong>{{ 'delegation-request.rank' | translate }}</strong>
       </ion-col>
-      <ion-col size="3" class="ion-text-center">
-        <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
+      <ion-col size="5" class="ion-text-center">
+        <strong>{{ 'delegation-request.nickname' | translate }}</strong>
       </ion-col>
       <ion-col size="3" class="ion-text-end">
-        <span><strong>{{ 'delegation-request.status' | translate }}</strong></span>
+        <strong>{{ 'delegation-request.status' | translate }}</strong>
+      </ion-col>
+      <ion-col size="2" class="ion-text-end">
+        <ion-icon name="trash-outline" style="opacity: 0;"></ion-icon>
       </ion-col>
     </ion-row>
+
+    <!-- Reorderable Items -->
+    <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($any($event))">
+      <ion-reorder *ngFor="let item of delegation_list">
+        <ion-item class="delegate-row">
+          <ion-grid>
+            <ion-row class="ion-align-items-center">
+              <ion-col size="2" class="ion-text-start">
+                <strong>{{ item.rank }}</strong>
+              </ion-col>
+              <ion-col size="5" class="ion-text-center">
+                {{ item.nickname }}
+              </ion-col>
+              <ion-col size="3" class="ion-text-end">
+                {{ item.status }}
+              </ion-col>
+              <ion-col size="2" class="ion-text-end">
+                <ion-button fill="clear" color="danger" shape="round" (click)="call_revoke(item.did)">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </ion-item>
+      </ion-reorder>
+    </ion-reorder-group>
   </ion-grid>
 
-  <!-- Reorderable Items -->
-  <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($any($event))">
-    <ion-reorder *ngFor="let item of delegation_list" lines="full">
-      <ion-item>
-      <ion-grid>
-        <ion-row class="ion-align-items-center">
-          <!-- Rank (Left-Aligned) -->
-          <ion-col size="2" class="ion-text-start">
-            <strong>{{ item.rank }}</strong>
-          </ion-col>
-          <!-- Nickname (Centered) -->
-          <ion-col size="3" class="ion-text-center">
-            {{ item.nickname }}
-          </ion-col>
-          <!-- Status (Right-Aligned) -->
-          <ion-col size="3" class="ion-text-end">
-            {{ item.status }}
-          </ion-col>
-
-          <!-- Revoke Icon -->
-          <ion-col size="2" class="ion-text-end">
-            <ion-button fill="clear" color="danger" shape="round"
-            (click)="call_revoke(item.did)">
-              <ion-icon name="trash-outline" style="color:black"></ion-icon>
-            </ion-button>
-          </ion-col>
-        </ion-row>
-      </ion-grid>
-      </ion-item>
-    </ion-reorder>
-  </ion-reorder-group>
-
   <!-- Buttons -->
-  <ion-row *ngIf="this.parent.get_ranked_delegation_allowed()" class="ion-justify-content-center ion-align-items-center button-row">
-    <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="reorder_button_clicked()">
-        <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"> </span>
-      </ion-button>
-    </ion-col>
-  </ion-row>
-
-  <ion-row class="ion-justify-content-center ion-align-items-center button-row">
-    <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="close_button_clicked()">
-        <span [innerHtml]="'Exit'"></span>
-      </ion-button>
-    </ion-col>
-  </ion-row>
+  <div class="button-group">
+    <ion-button shape="round" color="primary" (click)="reorder_button_clicked()">
+      {{ reorder_disabled ? ('delegation-dialog.ranked-reorder' | translate) : ('delegation-dialog.ranked-save' | translate) }}
+    </ion-button>
+    <ion-button shape="round" fill="outline" color="primary" (click)="close_button_clicked()">
+      {{ 'delegation-dialog.ranked-exit' | translate }}
+    </ion-button>
+  </div>
 </ion-content>
-
-<style>
-  .table-header {
-    font-weight: bold;
-    border-bottom: 2px solid #ccc;
-  }
-
-  .button-row {
-    margin-top: 16px;
-  }
-</style>
-
-

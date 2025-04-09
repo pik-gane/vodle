@@ -26,6 +26,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { IonicModule } from '@ionic/angular';
 @Component({
+  standalone: true,
   imports: [ CommonModule, IonicModule, TranslateModule, RouterModule ],
   selector: 'app-root',
   templateUrl: 'app.component.html',

@@ -17,15 +17,67 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { enableProdMode } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
-
-import { AppModule } from './app/app.module';
+import { enableProdMode, importProvidersFrom } from '@angular/core';
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
+
+import { IonicModule } from '@ionic/angular';
+import { IonicStorageModule } from '@ionic/storage-angular';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { LoggingServiceModule, LoggingService, LoggingServiceConfiguration } from 'ionic-logging-service';
+
+import { provideRouter } from '@angular/router';
+import { AppRoutingModule } from './app/app-routing.module';
+import { APP_INITIALIZER } from '@angular/core';
+
+import { LocationStrategy, HashLocationStrategy } from '@angular/common';
+import { GlobalService } from './app/global.service';
+
+export function createTranslateLoader(http: HttpClient) {
+  return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
+
+export function configureLogging(loggingService: LoggingService): () => void {
+  return () => {
+    console.log("VODLE configuring logger with " + JSON.stringify(environment.logging));
+    loggingService.configure(environment.logging as LoggingServiceConfiguration);
+  };
+}
 
 if (environment.production) {
   enableProdMode();
 }
 
-platformBrowserDynamic().bootstrapModule(AppModule)
-  .catch(err => console.log(err));
+bootstrapApplication(AppComponent, {
+  providers: [
+    importProvidersFrom(
+      IonicModule.forRoot(),
+      IonicStorageModule.forRoot(),
+      HttpClientModule,
+      LoggingServiceModule,
+      TranslateModule.forRoot({
+        defaultLanguage: 'en',
+        loader: {
+          provide: TranslateLoader,
+          useFactory: createTranslateLoader,
+          deps: [HttpClient]
+        }
+      }),
+      AppRoutingModule // Note: still works here for standalone, or break it into `provideRouter(routes)`
+    ),
+    GlobalService,
+    {
+      provide: LocationStrategy,
+      useClass: HashLocationStrategy
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: configureLogging,
+      deps: [LoggingService],
+      multi: true
+    }
+  ]
+}).catch(err => console.error(err));

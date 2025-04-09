@@ -312,7 +312,6 @@ export class PollPage implements OnInit {
   }
 
   update_vote_maps() {
-    console.log("update vote maps");
     this.p.self_rating_map = this.G.D.get_self_waps(this.pid);
     this.p.effective_rating_map = this.G.D.get_effective_waps(this.pid);
   }
