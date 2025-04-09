@@ -320,13 +320,31 @@ export class PollPage implements OnInit {
     this.p.call_update_effective_votes();
   }
 
+  update_delegation_info_weighted(){
+    const ddm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = ddm.get(this.p.myvid) || [];
+    let pending = 0;
+    let agreed = 0;
+
+    for (const [did,trust,status] of list){
+      if (status == '2' || status == '1'){
+        agreed++;
+      }else if(status == '0'){
+        pending++;
+      }
+    }
+
+    if (agreed > 0){
+      this.delegation_status = "agreed";
+    }else if (pending > 0){
+      this.delegation_status = "pending";
+    }else{
+      this.delegation_status = "none";
+    }
+  }
+
   update_delegation_info() {
     this.G.L.entry("PollPage.update_delegation_info");
-    if (this.get_different_delegation_allowed()) {
-      this.update_options_delegated();
-      this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
-      return;
-    }
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -356,9 +374,14 @@ export class PollPage implements OnInit {
         }
       }
     }
-    // find outgoing delegation:
     if (this.get_different_delegation_allowed()) {
-      
+      this.update_options_delegated();
+      return;
+    }
+
+    if (this.get_weighted_delegation_allowed){
+      this.update_delegation_info_weighted();
+      return;
     }
 
     var did;
