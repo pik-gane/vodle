@@ -316,6 +316,10 @@ export class PollPage implements OnInit {
     this.p.effective_rating_map = this.G.D.get_effective_waps(this.pid);
   }
 
+  call_update_effective_votes() {
+    this.p.call_update_effective_votes();
+  }
+
   update_delegation_info() {
     this.G.L.entry("PollPage.update_delegation_info");
     if (this.get_different_delegation_allowed()) {

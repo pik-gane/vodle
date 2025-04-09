@@ -251,12 +251,6 @@ const state_attributes = [
   "outgoing_dids_caches",
   "incoming_dids_caches",
   "delegation_agreements_caches",
-  // "direct_delegation_map_caches",
-  // "inv_direct_delegation_map_caches",
-  // "indirect_delegation_map_caches",
-  // "inv_indirect_delegation_map_caches",
-  // "effective_delegation_map_caches",
-  // "inv_effective_delegation_map_caches",
   "tally_caches",
   "news_keys"
 ];

@@ -29,13 +29,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <ion-grid class="delegation-table">
     <ion-row class="table-header">
       <ion-col size="2" class="ion-text-start">
-        <strong>{{ 'delegation-request.rank' | translate }}</strong>
+        <strong>{{ 'delegation-dialog.ranked-rank' | translate }}</strong>
       </ion-col>
       <ion-col size="5" class="ion-text-center">
-        <strong>{{ 'delegation-request.nickname' | translate }}</strong>
+        <strong>{{ 'delegation-dialog.nickname' | translate }}</strong>
       </ion-col>
       <ion-col size="3" class="ion-text-end">
-        <strong>{{ 'delegation-request.status' | translate }}</strong>
+        <strong>{{ 'delegation-dialog.status' | translate }}</strong>
       </ion-col>
       <ion-col size="2" class="ion-text-end">
         <ion-icon name="trash-outline" style="opacity: 0;"></ion-icon>
@@ -72,10 +72,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- Buttons -->
   <div class="button-group">
     <ion-button shape="round" color="primary" (click)="reorder_button_clicked()">
-      {{ reorder_disabled ? ('delegation-dialog.ranked-reorder' | translate) : ('delegation-dialog.ranked-save' | translate) }}
+      {{ reorder_disabled ? ('delegation-dialog.ranked-reorder' | translate) : ('delegation-dialog.save' | translate) }}
     </ion-button>
     <ion-button shape="round" fill="outline" color="primary" (click)="close_button_clicked()">
-      {{ 'delegation-dialog.ranked-exit' | translate }}
+      {{ 'delegation-dialog.exit' | translate }}
     </ion-button>
   </div>
 </ion-content>

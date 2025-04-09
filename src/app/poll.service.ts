@@ -538,11 +538,15 @@ export class Poll {
           this.self_rating_map.set(this.myvid, new Map<string, number>());
         }
         this.self_rating_map.get(this.myvid).set(oid, value);
-        const ret = this.G.Del.update_effective_votes(this.pid, this.myvid, this.self_rating_map);
-        this.effective_rating_map = new Map(ret);
+        this.call_update_effective_votes();
       }
     }
     this.update_own_rating(this.myvid, oid, value, true);
+  }
+
+ call_update_effective_votes(){
+    const ret = this.G.Del.update_effective_votes(this.pid, this.self_rating_map);
+    this.effective_rating_map = new Map(ret);
   }
 
   get_my_proxy_rating(oid: string): number {

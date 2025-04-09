@@ -22,13 +22,7 @@ import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, V
 import {
   IonInput,
   ModalController,
-  ItemReorderEventDetail,
-  IonButton,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonReorder,
-  IonReorderGroup, } from '@ionic/angular';
+ } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
@@ -44,8 +38,10 @@ import { environment } from 'src/environments/environment';
 import { IonicModule } from '@ionic/angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { CommonModule } from '@angular/common';
+
+import { FormsModule } from '@angular/forms';
 @Component({
-  imports: [ CommonModule, IonicModule, TranslateModule ],
+  imports: [ CommonModule, IonicModule, TranslateModule, FormsModule ],
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog-weighted.page.html',
   styleUrls: ['./delegation-dialog-weighted.page.scss'],
@@ -58,13 +54,14 @@ export class DelegationDialogWeightedPage implements OnInit {
 
   ready = false;
 
+  expert_mode = false;
   p: Poll;
-  reorder_disabled = true;
   delegation_list = [];
-  order_changed = false;
+
+  values_changed = false;
 
   constructor(
-    private modal: ModalController,
+    private modalCtrl: ModalController,
     public formBuilder: UntypedFormBuilder, 
     public translate: TranslateService,
     public G: GlobalService) { 
@@ -74,6 +71,24 @@ export class DelegationDialogWeightedPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+    console.log("ddm", ddm);
+    for (const [uid, dels] of ddm) {
+      for (const del of dels) {
+        console.log("ddm", uid, del);
+      }
+    }
+    
+    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
+    console.log("iim", iim);
+
+    for (const [did, trust] of ddm.get(this.parent.p.myvid) || []) {
+      // fetch nickname
+      const a = this.G.Del.get_agreement(this.parent.pid, did);
+      const nickname = this.G.Del.get_delegate_nickname(this.parent.pid, did);
+      this.delegation_list.push({nickname: nickname, initial_trust: Number(trust), trust: Number(trust), did: did, status: a.status});
+    }
+    this.ready = true;
   }
 
   @ViewChild('focus_element', { static: false }) focus_element: IonInput;
@@ -81,8 +96,73 @@ export class DelegationDialogWeightedPage implements OnInit {
   ionViewDidEnter() {
   }
 
+  expert_mode_clicked(){
+    if (!this.expert_mode){
+      this.expert_mode = true;
+      return;
+    }
+
+    // evaluate whether sum < 100:
+    let sum = 0
+    for (const entry of this.delegation_list){
+      sum += entry.trust;
+    }
+
+    if (sum > 99){ // revert trust values
+      for (let entry of this.delegation_list){
+        entry.trust = entry.initial_trust;
+      }
+      this.expert_mode = false;
+      return;
+    }
+    this.values_changed = true;
+    this.expert_mode = false;
+  }
+
+  updateRanks() {
+    this.delegation_list.forEach((item, index) => {
+      item.rank = index + 1;
+    });
+  }
+
+  close_button_clicked() {
+    this.G.L.entry("DelegationDialogWeightedPage.close_button_clicked");
+
+    if (this.values_changed){ // check whether we need to update the trust values
+      let ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+      let newlist = [];
+      this.delegation_list.forEach(item => {
+        newlist.push([item.did, item.trust, '2']);
+      });
+
+      ddm.set(this.parent.p.myvid, newlist);
+      this.G.D.set_direct_delegation_map(this.parent.pid, ddm);
+      
+      this.parent.call_update_effective_votes();
+    }
+
+
+    this.modalCtrl.dismiss();
+    this.G.L.exit("DelegationDialogRankedPage.close_button_clicked");
+  }
+
+  async call_revoke(did: string) {
+    const result = await this.parent.revoke_delegation_dialog(did);
+
+    if (!result){
+      return;
+    }
+    var new_del_list = [];
+    this.delegation_list.forEach(element => {
+      if (element.did !== did){
+        new_del_list.push(element);
+      }
+    });
+    
+    this.delegation_list = [...new_del_list];
+  }
   
   close() {
-    this.modal.dismiss();
+    this.modalCtrl.dismiss();
   }
 }

@@ -191,12 +191,7 @@
         "message-body-explanation": "If you accept, vodle will use your waps automatically to set my waps as well, with no additional work required by you.",
         "message-body-before-link": "To accept or decline this request, please use the following link:",
         "message-body-dont-share": "Please do not share this link with anyone else.",
-        "message-body-regards": "Best regards",
-        "nickname": "Nickname",
-        "rank": "Rank",
-        "agreed-options": "Agreed Options",
-        "trust-level": "Trust Level",
-        "status": "Status"
+        "message-body-regards": "Best regards"
     },
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
@@ -212,8 +207,16 @@
         "ranked-title": "Manage Delegations",
         "ranked-title-reorder": "Drag to Reorder",
         "ranked-reorder": "Reorder",
-        "ranked-save": "Save",
-        "ranked-exit": "Exit"
+        "save": "Save",
+        "exit": "Exit",
+        "nickname": "Nickname",
+        "ranked-rank": "Rank",
+        "ranked-agreed-options": "Agreed Options",
+        "status": "Status",
+        "weighted-trust-level": "Trust Level",
+        "weighted-title": "Manage Delegations",
+        "weighted-expert-title": "Edit Trust",
+        "weighted-enable-expert": "Expert Mode"
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",

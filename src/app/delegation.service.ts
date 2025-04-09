@@ -1108,7 +1108,7 @@ export class DelegationService {
     return this.G.D.delegation_agreements_caches[pid];
   }
 
-  update_effective_votes(pid: string, vid: string, self_rating_map: Map<string, Map<string, number>>, effective_map?: Map<string, Map<string, number>>, count?: number) : Map<string, Map<string, number>>{
+  update_effective_votes(pid: string, self_rating_map: Map<string, Map<string, number>>, effective_map?: Map<string, Map<string, number>>, count?: number) : Map<string, Map<string, number>>{
     var effective_rating_map;
     if (effective_map){
       effective_rating_map = new Map(effective_map);
@@ -1186,6 +1186,6 @@ export class DelegationService {
       this.G.D.set_self_and_effective_waps(pid, newEffectiveMap, self_rating_map);
       return newEffectiveMap;
     }
-    return this.update_effective_votes(pid, vid, self_rating_map, newEffectiveMap, count? 1 + count : 1);
+    return this.update_effective_votes(pid, self_rating_map, newEffectiveMap, count? 1 + count : 1);
   }
 }
