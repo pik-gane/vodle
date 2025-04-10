@@ -178,7 +178,7 @@ export class PollPage implements OnInit {
         const orm = this.p.own_ratings_map.get(oid);
         if (!orm.has(this.p.myvid)) {
           this.G.L.info("PollPage setting default wap", this.pid, oid, this.G.S.default_wap);
-          this.p.set_my_own_rating(oid, this.G.S.default_wap, true);
+          this.p.set_my_own_rating(oid, this.G.S.default_wap, true, true);
         }
       }  
     }
@@ -325,12 +325,14 @@ export class PollPage implements OnInit {
     const list = ddm.get(this.p.myvid) || [];
     let pending = 0;
     let agreed = 0;
+    let pending_did = "";
 
     for (const [did,trust,status] of list){
       if (status == '2' || status == '1'){
         agreed++;
       }else if(status == '0'){
         pending++;
+        pending_did = did;
       }
     }
 
@@ -338,6 +340,7 @@ export class PollPage implements OnInit {
       this.delegation_status = "agreed";
     }else if (pending > 0){
       this.delegation_status = "pending";
+      this.delegate = this.G.Del.get_delegate_nickname(this.pid, pending_did);
     }else{
       this.delegation_status = "none";
     }
@@ -1090,14 +1093,17 @@ export class PollPage implements OnInit {
     })
   }
 
-  async revoke_delegation_dialog(dId?: string) : Promise<boolean> { 
+  async revoke_delegation_dialog(dId?: string, nick?: string) : Promise<boolean> { 
     /** open the delegation revokation confirmation dialog alert */
+    if (!nick){
+      nick = this.delegate;
+    }
     this.p.end_if_past_due();
     if (this.p.allow_voting) {
       return new Promise(async (resolve) => {
         const confirm = await this.alertCtrl.create({ 
           message: this.translate.instant(
-            'poll.revoke_delegation', {nickname: this.delegate}), 
+            'poll.revoke_delegation', {nickname: nick}), 
           buttons: [
             { 
               text: this.translate.instant('cancel'), 

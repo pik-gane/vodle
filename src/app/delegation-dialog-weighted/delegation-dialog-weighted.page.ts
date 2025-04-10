@@ -146,8 +146,8 @@ export class DelegationDialogWeightedPage implements OnInit {
     this.G.L.exit("DelegationDialogRankedPage.close_button_clicked");
   }
 
-  async call_revoke(did: string) {
-    const result = await this.parent.revoke_delegation_dialog(did);
+  async call_revoke(did: string, nickname: string) {
+    const result = await this.parent.revoke_delegation_dialog(did, nickname);
 
     if (!result){
       return;
