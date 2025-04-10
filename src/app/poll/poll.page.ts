@@ -282,8 +282,6 @@ export class PollPage implements OnInit {
       }else{
         this.option_delegated.set(oid, '');
       }
-      console.log("opt_ddm", list);
-      console.log("option_delegated", this.option_delegated);
     }
     // change status
     this.set_delegate();
@@ -553,7 +551,6 @@ export class PollPage implements OnInit {
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
 //        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
         if(this.weighted_delegation_allowed && this.p.delegate_id){
-          console.log("eff22_knob", this.p.effective_rating_map);
           const rating = this.p.effective_rating_map.get(this.p.myvid).get(oid);
           if (needle) {
             needle.x2.baseVal.valueAsString = (rating).toString() + '%';

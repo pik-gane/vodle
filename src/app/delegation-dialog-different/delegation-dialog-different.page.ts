@@ -74,12 +74,6 @@ export class DelegationDialogDifferentPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    console.log("ddm", ddm);
-    
-    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-    console.log("iim", iim);
-
     // Find unique option IDs (oid) instead of did
     this.delegation_list = [];
 
@@ -131,7 +125,6 @@ export class DelegationDialogDifferentPage implements OnInit {
     
     
     for (const key of this.parent.option_delegated.keys()) {
-      console.log("key", key);
       const did = this.parent.option_delegated.get(key);
       if (did === '') {
         continue;
@@ -156,7 +149,7 @@ export class DelegationDialogDifferentPage implements OnInit {
   @ViewChild('focus_element', { static: false }) focus_element: IonInput;
 
   ionViewDidEnter() {
-    console.log("DelegationDialogDifferentPage.ionViewDidEnter");
+    this.G.L.entry('DelegationDialogDifferentPage.ionViewDidEnter');
   }
 
   async call_revoke(oids: string[]) {
@@ -169,9 +162,7 @@ export class DelegationDialogDifferentPage implements OnInit {
     // find unique dids
     var mp = new Map<string, string>();
     var idmp = new Map<string, string[]>();
-    console.log("this.parent.option_delegated", this.parent.option_delegated);
     for (const key of this.parent.option_delegated.keys()) {
-      console.log("key", key);
       const did = this.parent.option_delegated.get(key);
       if (did === '') {
         continue;

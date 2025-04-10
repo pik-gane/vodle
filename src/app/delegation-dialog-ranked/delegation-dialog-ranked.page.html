@@ -58,7 +58,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 {{ item.status }}
               </ion-col>
               <ion-col size="2" class="ion-text-end">
-                <ion-button fill="clear" color="danger" shape="round" (click)="call_revoke(item.did)">
+                <ion-button fill="clear" color="danger" shape="round" (click)="call_revoke(item.did, item.nickname)">
                   <ion-icon name="trash-outline"></ion-icon>
                 </ion-button>
               </ion-col>

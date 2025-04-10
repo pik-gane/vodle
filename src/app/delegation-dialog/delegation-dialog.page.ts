@@ -128,26 +128,6 @@ export class DelegationDialogPage implements OnInit {
         this.options_selected.add(id);
       }
     }
-
-    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    console.log("this voter: ", this.parent.p.myvid);
-    console.log("ddm", ddm);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-        console.log("ddm", uid, del);
-      }
-    }
-    
-    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
-      for (const oid of this.parent.p.oids) {
-        const iim = this.G.D.get_inverse_indirect_map(this.parent.pid, oid);
-        console.log("iim", oid, iim);
-      }
-    }else{
-      const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-      console.log("iim", iim);
-    }
-
     // TODO: what if already some delegation active or pending?
     
     if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
@@ -207,7 +187,6 @@ export class DelegationDialogPage implements OnInit {
 
   options_changed(event: Event){
     const target = event.target as HTMLIonSelectElement;
-    console.log("options_changed", JSON.stringify(target.value));
     var ns = new Set<string>();
     for (const option of target.value) {
       ns.add(option.id);

@@ -72,16 +72,6 @@ export class DelegationDialogWeightedPage implements OnInit {
 
   ionViewWillEnter() {
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    console.log("ddm", ddm);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-        console.log("ddm", uid, del);
-      }
-    }
-    
-    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-    console.log("iim", iim);
-
     for (const [did, trust] of ddm.get(this.parent.p.myvid) || []) {
       // fetch nickname
       const a = this.G.Del.get_agreement(this.parent.pid, did);

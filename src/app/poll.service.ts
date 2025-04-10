@@ -529,11 +529,9 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
-    console.log("set_my_own_rating", oid, value, store, self);
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
       if (self) {
-        console.log(this.self_rating_map, this.effective_rating_map);
         if (!this.self_rating_map.has(this.myvid)){
           this.self_rating_map.set(this.myvid, new Map<string, number>());
         }
@@ -887,7 +885,6 @@ export class Poll {
       var s = new Set<string>();
       for (const oid of this.oids) {
         const mp = this.G.D.get_inverse_indirect_map(this._pid, oid);
-        console.log("mp_n_indirect", mp, oid);
         const set = new Set<string>(JSON.parse(mp.get(vid) || "[]"));
         for (const vid of set) {
           s.add(vid);
@@ -1032,7 +1029,6 @@ export class Poll {
               }
               if (this.G.D.get_different_delegation_allowed(this.pid)){
                 const val = this.G.D.getv(this.pid, "del_oid." + oid, vid2);
-                console.log("xyz", this.options[oid].name, oid, val);
                 if (!val){
                   continue;
                 }

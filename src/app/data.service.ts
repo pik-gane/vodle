@@ -1604,7 +1604,6 @@ export class DataService implements OnDestroy {
       });
     
       const option_delegation = mp.get(option_map) || new Map<string, string>();
-      console.log("get_direct_delegation_map", option_delegation);
       return option_delegation;
     }
 
@@ -1615,7 +1614,6 @@ export class DataService implements OnDestroy {
   }
 
   save_inverse_indirect_map(pid: string, oid: string, val: Map<string, string>) {
-    console.log("save_inverse_indirect_map_ntree", val);
     // Retrieve the cached inverse indirect map from poll storage
     const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
     const ps = cache ? JSON.parse(cache) : [];
@@ -1628,7 +1626,6 @@ export class DataService implements OnDestroy {
 
     // Update the map with the new delegation entry
     mp.set(oid, val);
-    console.log("save_inverse_indirect_map_fin", mp);
     
     const jsonData = JSON.stringify(Array.from(mp.entries(), ([k, v]) => [k, Array.from(v.entries())]));
     this._setp_in_polldb(pid, `poll.${pid}.inverse_indirect_map`, jsonData);
@@ -1662,7 +1659,6 @@ export class DataService implements OnDestroy {
 
     // Save to poll database
     this._setp_in_polldb(pid, `poll.${pid}.direct_delegation_map`, jsonData);
-    console.log("save_direct_delegation_map", mp);
   }
 
 
@@ -1682,7 +1678,6 @@ export class DataService implements OnDestroy {
       });
     
       const option_delegation = mp.get(option_map) || new Map<string, Array<[string, string, string]>>();
-      console.log("get_direct_delegation_map", option_delegation);
       return option_delegation;
     }
 
@@ -1728,7 +1723,6 @@ export class DataService implements OnDestroy {
       // Add to result
       resultMap.set(uid as string, innerMap);
     });
-    console.log("get_self_waps_set", resultMap);
     return resultMap;
   }
 
@@ -1785,7 +1779,6 @@ export class DataService implements OnDestroy {
     // Convert the array of entries back to a Map of Maps
     new Map(effectiveWapsEntries).forEach((oidMapStr, uid) => {
       // Parse the inner map string
-      console.log(oidMapStr);
       const oidEntries = typeof oidMapStr === "string" 
             ? JSON.parse(oidMapStr) 
             : oidMapStr;
@@ -1801,7 +1794,6 @@ export class DataService implements OnDestroy {
       // Add to result
       resultMap.set(uid as string, innerMap);
     });
-    console.log("get_effective_waps_set", resultMap);
     return resultMap;
   }
 
@@ -1852,7 +1844,6 @@ export class DataService implements OnDestroy {
       new_effective_map.set(id, JSON.stringify(Array.from(inner.entries())));
     }
     ps.set('effective', JSON.stringify(Array.from(new_effective_map.entries())));
-    console.log('dk2', val, new_effective_map, ps);
     this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
   }
 
@@ -1882,9 +1873,6 @@ export class DataService implements OnDestroy {
       new_self_map.set(id, JSON.stringify(Array.from(inner.entries())));
     }
     ps.set('self', JSON.stringify(Array.from(new_self_map.entries())));
-    console.log('dbl, dk2', self, new_self_map);
-    console.log('dbl, dk3', eff, new_effective_map);
-    console.log(ps);
 
     this._setp_in_polldb(pid, key, JSON.stringify(Array.from(ps.entries())));
   }
@@ -2097,7 +2085,6 @@ export class DataService implements OnDestroy {
       }
     }
     if (change.docs.some((doc) => doc._id.endsWith('shared_set'))) {
-      console.log('shared_set has been updated', change.docs);
     }  
     this.G.L.exit("DataService.handle_poll_db_change", pid, this.pending_changes);
   }

@@ -120,12 +120,10 @@ export class DelegationService {
     let link = `${environment.magic_link_base_url}delrespond/${pid}/${did}/${encodeURIComponent(from)}/${privkey}`;
     
     if (oids && oids.length > 0) {
-      console.log("oids", oids);
       const params = new URLSearchParams();
       oids.forEach(value => params.append('oids', value));
       link = `${link}?${params.toString()}`;
     }
-    console.log("link", link);
     this.G.L.debug("DelegationService.get_delegation_link", link);
     return link;
   }
@@ -415,13 +413,11 @@ export class DelegationService {
       const a = this.get_agreement(pid, did);
       const ddm = this.G.D.get_direct_delegation_map(pid);
       const list = ddm.get(a.client_vid) || [];
-      console.log("asdf", list);
       for (let [did2, _, status] of list){
         if (status === "0"){
           continue;
         }
         const a2 = this.get_agreement(pid, did2);
-        console.log("asdf", a2.delegate_vid, p.myvid);
         if (a2.delegate_vid === p.myvid){
           return ["impossible", "accepted-diff"];
         }
@@ -511,7 +507,6 @@ export class DelegationService {
     // update map
     for (let oid of oids) {
       var direct_del_map = this.G.D.get_direct_delegation_map(pid, oid) || new Map<string, Array<[string, string, string]>>();
-      console.log("direct_del_map", direct_del_map);
       var dir_del = direct_del_map.get(a.client_vid) || [];
       if (dir_del.length == 0) {
         continue;
@@ -556,7 +551,6 @@ export class DelegationService {
           sm.set(id, JSON.stringify(Array.from(new_eff_set)));
         }
       }
-      console.log("save_inver", sm);
       this.G.D.save_inverse_indirect_map(pid, oid, sm);
 
       // update delegation to active in direct delegation map
@@ -750,7 +744,6 @@ export class DelegationService {
     const dm = this.G.D.get_direct_delegation_map(pid);
     for (let vid of this.delegating_voters(pid)) {
       const minSumPath = this.min_sum(pid, vid);
-      console.log("msp: ", minSumPath, vid);
       for (const did of minSumPath) {
         const a = this.get_agreement(pid, did);
         const delegations = dm.get(a.client_vid) || [];
@@ -1109,6 +1102,7 @@ export class DelegationService {
   }
 
   update_effective_votes(pid: string, self_rating_map: Map<string, Map<string, number>>, effective_map?: Map<string, Map<string, number>>, count?: number) : Map<string, Map<string, number>>{
+    this.G.L.entry('DelegationService.update_effective_votes', count, effective_map);
     var effective_rating_map;
     if (effective_map){
       effective_rating_map = new Map(effective_map);
@@ -1138,7 +1132,6 @@ export class DelegationService {
     for(const[id, _] of self_rating_map){
       if (!direct_delegation_map.has(id) || direct_delegation_map.get(id).length === 0){ // no delegations, effective rating is the same as self rating.
         newEffectiveMap.set(id, self_rating_map.get(id));
-        console.log(newEffectiveMap);
         continue;
       }
 
@@ -1182,7 +1175,6 @@ export class DelegationService {
         }
         newEffectiveMap.set(id, flooredRatings);
       }
-      console.log("eff", newEffectiveMap);
       this.G.D.set_self_and_effective_waps(pid, newEffectiveMap, self_rating_map);
       return newEffectiveMap;
     }
