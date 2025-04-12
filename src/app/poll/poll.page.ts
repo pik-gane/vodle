@@ -174,13 +174,34 @@ export class PollPage implements OnInit {
     }
     if (this.p.allow_voting) {
       this.G.L.info("PollPage checking if default waps are needed", this.pid);
+      let default_waps_needed = false;
       for (let oid of this.p.oids) {
         const orm = this.p.own_ratings_map.get(oid);
         if (!orm.has(this.p.myvid)) {
           this.G.L.info("PollPage setting default wap", this.pid, oid, this.G.S.default_wap);
-          this.p.set_my_own_rating(oid, this.G.S.default_wap, true, true);
+          this.p.set_my_own_rating(oid, this.G.S.default_wap, true);
+          default_waps_needed = true;
         }
       }  
+      if (default_waps_needed){
+        // pull maps from database:
+        this.p.self_rating_map = this.G.D.get_self_waps(this.pid);
+        this.p.effective_rating_map = this.G.D.get_effective_waps(this.pid);
+
+        if (!this.p.self_rating_map.get(this.p.myvid)){
+          this.p.self_rating_map.set(this.p.myvid, new Map<string, number>());
+        }
+        if (!this.p.effective_rating_map.get(this.p.myvid)){
+          this.p.effective_rating_map.set(this.p.myvid, new Map<string, number>());
+        }
+
+        for (let oid of this.p.oids){
+          this.p.self_rating_map.get(this.p.myvid).set(oid, this.G.S.default_wap);
+          this.p.effective_rating_map.get(this.p.myvid).set(oid, this.G.S.default_wap);
+        }
+
+        this.G.D.set_self_and_effective_waps(this.pid, this.p.self_rating_map, this.p.effective_rating_map);
+      }
     }
     this.update_vote_maps();
     this.p.tally_all();
