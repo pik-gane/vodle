@@ -218,17 +218,17 @@ export class PollPage implements OnInit {
       this.update_order.bind(this)(true);
       this.show_stats.bind(this)();
     }, 200);
+    // get type of delegation:
+    this.ranked_delegation_allowed = this.G.D.get_ranked_delegation_allowed(this.pid) || false;
+    this.weighted_delegation_allowed = this.G.D.get_weighted_delegation_allowed(this.pid) || false;
+    this.different_delegation_allowed = this.G.D.get_different_delegation_allowed(this.pid) || false;
+
     this.update_delegation_info();
     this.on_delegate_toggle_change();
     this.p.have_seen = true;
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
-
-    // get type of delegation:
-    this.ranked_delegation_allowed = this.G.D.get_ranked_delegation_allowed(this.pid);
-    this.weighted_delegation_allowed = this.G.D.get_weighted_delegation_allowed(this.pid);
-    this.different_delegation_allowed = this.G.D.get_different_delegation_allowed(this.pid);
 
     this.G.L.exit("PollPage.onDataReady");
   }
@@ -366,7 +366,6 @@ export class PollPage implements OnInit {
   }
 
   update_delegation_info() {
-    this.G.L.entry("PollPage.update_delegation_info");
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -401,8 +400,32 @@ export class PollPage implements OnInit {
       return;
     }
 
-    if (this.get_weighted_delegation_allowed){
+    if (this.get_weighted_delegation_allowed()){
       this.update_delegation_info_weighted();
+      return;
+    }
+
+    if(!this.get_ranked_delegation_allowed()){
+      let did = null;
+      const dm = this.G.D.get_direct_delegation_map(this.pid);
+      let agreed = false;
+      const list = dm.get(this.p.myvid) || [];
+      for (const [did_, rank, status] of list) {
+        if (status == '2') {
+          did = did_;
+          agreed = true;
+          break;
+        }else if (status == '0') {
+          did = did_;
+        }
+      }
+      if (did) {
+        this.p.delegate_id = did;
+        this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+        this.delegation_status = agreed ? "agreed" : "pending";
+      }else{
+        this.delegation_status = "none";
+      }
       return;
     }
 
