@@ -613,13 +613,18 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
               <small>
                 <p>
                   <span style="font-size: medium;">{{get_delegate()}}</span>&nbsp;
-                  <span [innerHtml]="
+                  <!-- <span [innerHtml]="
                     'poll.delegate-controls-' 
                     + (n_delegated == oidsorted.length ? 'all' 
                       : 2*n_delegated > oidsorted.length ? 'most' 
                       : n_delegated > 0 ? 'some' : 'none'
                       ) | translate
                     ">
+                  </span> -->
+                  <span [innerHtml]="
+                    delegate_controls_string | translate
+                  ">
+
                   </span>
                 </p>
               </small>

@@ -98,6 +98,7 @@ export class PollPage implements OnInit {
   scroll_position = 0;
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
+  delegate_controls_string = "poll.delegate-controls-none";
 
   news: Set<news_t> = new Set();
 
@@ -395,6 +396,16 @@ export class PollPage implements OnInit {
         }
       }
     }
+
+    // update how many options are controlled:
+    this.n_delegated = 0;
+    for (const oid of this.p.oids) {
+      if (!this.rate_yourself_toggle[oid]) {
+        this.n_delegated++;
+      }
+    }
+    this.delegate_controls_string = this.get_delegate_controls_string();
+
     if (this.get_different_delegation_allowed()) {
       this.update_options_delegated();
       return;
@@ -543,12 +554,13 @@ export class PollPage implements OnInit {
   on_delegate_toggle_change() {
     // update n_delegated: // TODO: make more efficient
     let sum = 0;
-    for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
-      if (!b) {
+    for (const oid of this.p.oids) {
+      if (!this.rate_yourself_toggle[oid]) {
         sum++;
       }
     }
     this.n_delegated = sum;
+    this.delegate_controls_string = this.get_delegate_controls_string();
   }
 
   show_stats() { 
@@ -718,6 +730,13 @@ export class PollPage implements OnInit {
       return this.G.Del.get_delegate_nickname(this.pid, this.option_delegated.get(oid));
     }
     return this.delegate;
+  }
+
+  get_delegate_controls_string(){
+    const all_most_some_none = this.n_delegated === this.oidsorted.length ? 'all' : 
+      2*this.n_delegated > this.oidsorted.length ? 'most' :
+      this.n_delegated > 0 ? 'some' : 'none';
+    return 'poll.delegate-controls-'+all_most_some_none;
   }
 
   // CONTROLS:
