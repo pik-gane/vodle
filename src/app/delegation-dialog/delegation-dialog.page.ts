@@ -151,19 +151,16 @@ export class DelegationDialogPage implements OnInit {
   initialise_rank_values() {
     const uid = this.parent.p.myvid;
     const dir_del_map = this.G.D.get_direct_delegation_map(this.parent.pid);
-    const dir_del = dir_del_map.get(uid) || [];
-    var ranks = Array.from({ length: environment.delegation.max_delegations }, (_, i) => i + 1);
-    for (const entry of dir_del) {
-      if (entry === undefined) {
-        continue;
-      }
-      const indexToRemove: number = ranks.indexOf(Number(entry[1]));
-      if (indexToRemove !== -1) {
-        ranks.splice(indexToRemove, 1);
-      }
-    }
-    this.rank = ranks[0];
-    this.rank_options = ranks;
+    // get ranks that have already been delegated
+    const usedRanks = (dir_del_map.get(uid) || []).map(entry => Number(entry[1]));
+  
+    // create new array from 1..max_delegations
+    // then remove all used ranks
+    this.rank_options = Array
+      .from({ length: environment.delegation.max_delegations }, (_, i) => i + 1)
+      .filter(rank => !usedRanks.includes(rank));
+  
+    this.rank = this.rank_options[0];
   }
 
   delegate_nickname_changed() {
