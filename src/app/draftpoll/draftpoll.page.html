@@ -290,6 +290,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
       
+      <ion-item *ngIf="delegation_allowed">
       <ion-label position="floating" color="primary">
         <span [innerHtml]="'draftpoll.del_ranked'|translate"></span>
       </ion-label>
@@ -316,6 +317,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         [checked]="pd.allow_weighted"
         (ionChange)="set_poll_allow_weighted_delegation()">
       </ion-toggle>
+      </ion-item>
     </ion-item>
 
     <!-- Server: -->
