@@ -549,6 +549,10 @@ export class Poll {
 
   get_my_proxy_rating(oid: string): number {
     var did = this.delegate_id;
+    if (this.G.D.get_weighted_delegation_allowed(this.pid)){
+      const val = this.effective_rating_map.get(this.myvid)?.get(this.myvid);
+      return val || 0;
+    }
     if (this.G.D.get_different_delegation_allowed(this.pid)){
       const val = this.G.D.getv(this.pid, "del_oid." + oid);
       if (!val){
@@ -592,6 +596,24 @@ export class Poll {
 
   get am_abstaining(): boolean {
     /** whether or not I'm currently abstaining and haven't delegated */
+    if (this.G.D.get_weighted_delegation_allowed(this.pid)){
+      const ddm = this.G.D.get_direct_delegation_map(this.pid);
+      const list = ddm.get(this.myvid) || [];
+      for (const entry of list) {
+        if (entry[2] == "2") {
+          const a = this.G.Del.get_agreement(this.pid, entry[0]);
+          this.delegate_id = a.delegate_vid;
+          return false;
+        }
+      }
+      for (const oid of this.oids) {
+        if (this.effective_rating_map.get(this.myvid)?.get(oid) > 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     if (this.have_delegated) {
       return this.T.votes_map.get(this.myvid) === undefined;
     }

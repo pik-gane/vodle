@@ -531,6 +531,10 @@ export class PollPage implements OnInit {
       }
     }
 
+    if (this.weighted_delegation_allowed) {
+      return;
+    }
+
     // set rating
     if (this.rate_yourself_toggle[oid]) {
       const rm = this.G.D.get_self_waps(this.pid).get(this.p.myvid);
@@ -793,6 +797,9 @@ export class PollPage implements OnInit {
 
   onRatingSliderChange(oid: string): boolean {
     /** called whenever a slider is moved */
+    if (this.p.have_delegated && !this.rate_yourself_toggle[oid]) {
+      return false;
+    }
     var slider = this.get_slider(oid),
         value = Number(slider.value);
     // window.alert("onRatingChange " + value);
@@ -802,6 +809,9 @@ export class PollPage implements OnInit {
   }
 
   onRatingSliderBlur(oid: string): boolean {
+    if (this.p.have_delegated && !this.rate_yourself_toggle[oid]) {
+      return false;
+    }
     /** called when the slider loses focus */
     this.G.L.entry("PollPage.onRatingSliderBlur");
     this.rating_change_ended(oid);
@@ -809,6 +819,9 @@ export class PollPage implements OnInit {
   }
 
   rating_change_ended(oid: string) {
+    if (this.p.have_delegated && !this.rate_yourself_toggle[oid]) {
+      return false;
+    }
     /** Called right after releasing the slider. 
      *  Stores slider position in own rating cache AND database. */
     // TODO: make sure this is really always called right after releasing the slider!
