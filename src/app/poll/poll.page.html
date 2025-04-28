@@ -903,24 +903,25 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <!-- DELEGATION TOGGLE: -->
 
-                  <ion-col *ngIf="(delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != '')" 
-                      class="ion-no-margin ion-no-padding" 
-                      size="auto">&nbsp;&nbsp;&nbsp;
-                    <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
+                  <ion-col
+                    *ngIf="(delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]))"
+                    class="ion-no-margin ion-no-padding"
+                    size="auto"
+                    style="display: flex; flex-direction: column; align-items: center; justify-content: center;"
+                  >
+                    <ion-toggle
+                      [id]="'rate_yourself_toggle_' + oidsorted[i]"
                       [disabled]="!p.allow_voting"
                       (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
-                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                      style="position:relative; top:-8px;" 
+                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top"
                       [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
                     </ion-toggle>
-                    <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
-                      <small [innerHtml]="
-                        rate_yourself_toggle[oidsorted[i]] 
-                        ? ('poll.my-own' | translate) 
-                        : ('poll.delegate-s' | translate: {delegate: get_delegate(oidsorted[i])})
-                        " >
-                      </small>
-                    </div>
+
+                    <small style="text-align: center; font-size: 11px; margin-top: 4px;">
+                      {{ rate_yourself_toggle[oidsorted[i]]
+                          ? ('poll.my-own' | translate)
+                          : ('poll.delegate-s' | translate:{delegate: get_delegate(oidsorted[i])}) }}
+                    </small>
                   </ion-col>  
                 </ion-row>
               </ion-grid>
