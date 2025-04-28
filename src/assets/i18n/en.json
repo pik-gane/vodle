@@ -610,7 +610,7 @@
         "delegate-controls-most": "controls most of your waps as your delegate.",
         "delegate-controls-some": "controls some of your waps as your delegate.",
         "delegate-controls-none": "currently controls none of your waps as your delegate.",
-        "delegate-different-info": "Your waps are controlled by a delegate.",
+        "delegate-different-info": "Some of your waps are controlled",
         "delegate-weighted-info": "Your waps are currently controlled",
         "revoke_delegation": "Do you really want to revoke your delegation to {{nickname}}? If you do, you can later send a new delegation request to someone else or again to {{nickname}}. If you donʼt, you can still take control of some of your waps via the toggles to the right.",
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
