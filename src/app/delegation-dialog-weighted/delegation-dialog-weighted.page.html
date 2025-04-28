@@ -17,9 +17,73 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
 
-<ion-content>
-  HI
-  <ion-button (click)="close()">Close</ion-button>
+<ion-content *ngIf="ready" class="delegation-popup">
+  <!-- HEADER STRIP -->
+  <div class="header-bar">
+    <ion-label class="title">
+      {{ expert_mode ? ('delegation-dialog.weighted-expert-title' | translate) : ('delegation-dialog.weighted-title' | translate) }}
+    </ion-label>
+  </div>
+
+  <!-- Table Header -->
+  <ion-grid class="delegation-table">
+    <ion-row class="table-header">
+      <ion-col size="2" class="ion-text-start">
+        <strong>{{ 'delegation-dialog.weighted-trust-level' | translate }}</strong>
+      </ion-col>
+      <ion-col size="5" class="ion-text-center">
+        <strong>{{ 'delegation-dialog.nickname' | translate }}</strong>
+      </ion-col>
+      <ion-col size="3" class="ion-text-end">
+        <strong>{{ 'delegation-dialog.status' | translate }}</strong>
+      </ion-col>
+      <ion-col size="2" class="ion-text-end">
+        <ion-icon name="trash-outline" style="opacity: 0;"></ion-icon>
+      </ion-col>
+    </ion-row>
+
+    <ion-item class="delegate-row" *ngFor="let item of delegation_list">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col size="2" class="ion-text-start">
+            <ng-container *ngIf="expert_mode; else readonlyTrust">
+              <ion-input
+                type="number"
+                [(ngModel)]="item.trust"
+                [value]="item.trust"
+                min="0"
+                max="100"
+                inputmode="decimal"
+                style="max-width: 60px;"
+              ></ion-input>
+            </ng-container>
+            <ng-template #readonlyTrust>
+              <strong>{{ item.trust }}</strong>
+            </ng-template>
+          </ion-col>
+          <ion-col size="5" class="ion-text-center">
+            {{ item.nickname }}
+          </ion-col>
+          <ion-col size="3" class="ion-text-end">
+            {{ item.status }}
+          </ion-col>
+          <ion-col size="2" class="ion-text-end">
+            <ion-button fill="clear" color="danger" shape="round" (click)="call_revoke(item.did, item.nickname)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-item>
+  </ion-grid>
+
+  <!-- Buttons -->
+  <div class="button-group">
+    <ion-button shape="round" color="primary" (click)="expert_mode_clicked()">
+      {{ expert_mode ? ('delegation-dialog.save' | translate) : ('delegation-dialog.weighted-enable-expert' | translate) }}
+    </ion-button>
+    <ion-button shape="round" fill="outline" color="primary" (click)="close_button_clicked()">
+      {{ 'delegation-dialog.exit' | translate }}
+    </ion-button>
+  </div>
 </ion-content>
-
-

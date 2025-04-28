@@ -11,7 +11,8 @@
         "[COMMENT] Thank you for helping translate vodle!",
         "[COMMENT] Please be aware that some entries constitute only pieces of phrases or sentences that are combined automatically to form complete phrases or sentences.",
         "[COMMENT] Please don't remove leading or trailing whitespace if you find them in the English version, since they are used to correctly combine pieces of text",
-        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them."
+        "[COMMENT] In complicated cases, we have added a _COMMENT_XXX_ entry, please don't remove them.",
+        "[COMMENT] Please take special care with the words 'wap', 'approval', 'approve', see comments below."
     ],
     "_OVERALL_CONVENTIONS_": [
         "[COMMENT] Please use gender-neutral language.",
@@ -33,6 +34,7 @@
     "add": "Dodaj",
     "add-option": "Dodaj opcję",
     "add-target": "Dodaj opcję",
+    "_COMMENT_approval": "'approve' and 'approval' here refers to the act of formally endorsing an option or formally agreeing to an option. It does NOT refer to 'liking' or 'preferring' the option. In English, the correct form is hence 'approve an option' and not 'approve OF an option'.",
     "approval": "Akceptacja",
     "cancel": "Anuluj",
     "choose-file": "Wybierz plik",
@@ -67,6 +69,7 @@
     "start": "Start",
     "step-i-of-n": "Krok {{i}} z {{n}}",
     "test": "Test",
+    "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! The willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
     "wap": "Wap",
     "yes": "Tak",
     "about": {
@@ -83,6 +86,7 @@
         "p18": "Dokładna procedura: Opcje są sortowane malejąco według akceptacji. Następnie udział każdej opcji jest obliczany proporcjonalnie do liczby uczestników, którzy zaakceptowali tę opcję, ale jednocześnie nie wybrali żadnej wyższej opcji.",
         "h2": "Kto za tym stoi?",
         "p21": "Algorytm vodle (zwany „maksymalnym częściowym konsensusem”) został opracowany i zoptymalizowany w Potsdam Institute for Climate Impact Research (PIK) przez matematyka Jobsta Heitzig we współpracy z Forest W. Simmons. Jest on zainspirowany „modelem progowym” słynnego socjologa Marka Granovettera. Ta aplikacja jest open-source, a jej kod hostowany jest na <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Główny programista: Jobst Heitzig. Znaczący wkład Marius Amrhein. Konsultowano z: Adrian Lison. Dodatkowe wkłady: zobacz kod programu.",
+        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
         "h3": "Wesprzyj vodle!",
         "p31": "Ponieważ zależy nam, by vodle było darmowe dla wszystkich, nadal potrzebujemy dalszej pomocy. Jeśli jesteś nerdem, osobą twórczą, influencerką, naukowczynią, filantropką, aktywistką, polityczką, lub przyjaznym obcym, który wierzy w przyszłość sprawiedliwego &amp; skutecznego osiągania konsensusu i chce wnieść swój wkład w dowolny mały sposób, mamy kilka pomysłów <a href=\"{{support_vodle_url}}\" target=\"_blank\">jak możesz nas wspierać!</a>"
     },
@@ -235,6 +239,7 @@
         "-page-title": "Edytuj ankietę roboczą",
         "del-poll-confirm-question": "Usunąć tę ankietę roboczą?<br/>(Nie można tego cofnąć!)",
         "general-information": "Informacje ogólne",
+        "details": "Details",
         "type-label": "W tej ankiecie grupa będzie...",
         "type-winner": "wybierała jedną z kilku dostępnych opcji",
         "type-share": "rozdzielała zasoby pomiędzy opcjami",
@@ -456,7 +461,7 @@
         "ask-old-email-2": "W ten sposób możesz uzyskać dostęp do Twoich danych.",
         "consent-privacy-before-privacy": "Tak, przeczytałem ",
         "consent-privacy-privacy": "deklarację o ochronie danych i warunki użytkowania",
-        "consent-privacy-after-privacy": ". Wyrażam zgodę na przetwarzanie moich danych na urządzeniach użytkownika i serwerach bazy danych w opisany sposób, aby móc uczestniczyć w ankietach. Zgadzam się, że niektóre z moich danych zostaną przekazane innym uczestnikom w formie pseudoanimizowanej. Mam świadomość, że moje prawo do usunięcia moich danych jest zatem ograniczone, ponieważ kopie te nie mogą być usuwane na wszystkich urządzeniach użytkowników. Mogę cofnąć tę zgodę, wysyłając e-mail na adres privacy@vodle.it.",
+        "consent-privacy-after-privacy": ". Wyrażam zgodę na przetwarzanie moich danych na urządzeniach użytkownika i serwerach bazy danych w opisany sposób, aby móc uczestniczyć w ankietach. Zgadzam się, że niektóre z moich danych zostaną przekazane innym uczestnikom w formie pseudoanimizowanej. Mam świadomość, że moje prawo do usunięcia moich danych jest zatem ograniczone, ponieważ kopie te nie mogą być usuwane na wszystkich urządzeniach użytkowników. Mogę cofnąć tę zgodę, wysyłając e-mail.",
         "login-as-guest-head": "Alternatively, you can use a guest account:",
         "login-as-guest-button": "Use guest account",
         "login-as-guest-foot": "(Please check the consent box first)",

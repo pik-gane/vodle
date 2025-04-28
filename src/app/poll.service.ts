@@ -529,26 +529,30 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
-    console.log("set_my_own_rating", oid, value, store, self);
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
       if (self) {
-        console.log("set_self_wap", this.myvid, this._pid, String(value), this.myvid, oid, store, self);
-        console.log(this.self_rating_map, this.effective_rating_map);
         if (!this.self_rating_map.has(this.myvid)){
           this.self_rating_map.set(this.myvid, new Map<string, number>());
         }
         this.self_rating_map.get(this.myvid).set(oid, value);
-        const ret = this.G.Del.update_effective_votes(this.pid, this.myvid, this.self_rating_map);
-        console.log("new_eff", ret);
-        this.effective_rating_map = new Map(ret);
+        this.call_update_effective_votes();
       }
     }
     this.update_own_rating(this.myvid, oid, value, true);
   }
 
+ call_update_effective_votes(){
+    const ret = this.G.Del.update_effective_votes(this.pid, this.self_rating_map);
+    this.effective_rating_map = new Map(ret);
+  }
+
   get_my_proxy_rating(oid: string): number {
     var did = this.delegate_id;
+    if (this.G.D.get_weighted_delegation_allowed(this.pid)){
+      const val = this.effective_rating_map.get(this.myvid)?.get(this.myvid);
+      return val || 0;
+    }
     if (this.G.D.get_different_delegation_allowed(this.pid)){
       const val = this.G.D.getv(this.pid, "del_oid." + oid);
       if (!val){
@@ -592,6 +596,24 @@ export class Poll {
 
   get am_abstaining(): boolean {
     /** whether or not I'm currently abstaining and haven't delegated */
+    if (this.G.D.get_weighted_delegation_allowed(this.pid)){
+      const ddm = this.G.D.get_direct_delegation_map(this.pid);
+      const list = ddm.get(this.myvid) || [];
+      for (const entry of list) {
+        if (entry[2] == "2") {
+          const a = this.G.Del.get_agreement(this.pid, entry[0]);
+          this.delegate_id = a.delegate_vid;
+          return false;
+        }
+      }
+      for (const oid of this.oids) {
+        if (this.effective_rating_map.get(this.myvid)?.get(oid) > 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     if (this.have_delegated) {
       return this.T.votes_map.get(this.myvid) === undefined;
     }
@@ -885,7 +907,6 @@ export class Poll {
       var s = new Set<string>();
       for (const oid of this.oids) {
         const mp = this.G.D.get_inverse_indirect_map(this._pid, oid);
-        console.log("mp_n_indirect", mp, oid);
         const set = new Set<string>(JSON.parse(mp.get(vid) || "[]"));
         for (const vid of set) {
           s.add(vid);
@@ -1030,7 +1051,6 @@ export class Poll {
               }
               if (this.G.D.get_different_delegation_allowed(this.pid)){
                 const val = this.G.D.getv(this.pid, "del_oid." + oid, vid2);
-                console.log("xyz", this.options[oid].name, oid, val);
                 if (!val){
                   continue;
                 }

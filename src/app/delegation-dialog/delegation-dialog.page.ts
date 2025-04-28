@@ -128,26 +128,6 @@ export class DelegationDialogPage implements OnInit {
         this.options_selected.add(id);
       }
     }
-
-    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    console.log("this voter: ", this.parent.p.myvid);
-    console.log("ddm", ddm);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-        console.log("ddm", uid, del);
-      }
-    }
-    
-    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
-      for (const oid of this.parent.p.oids) {
-        const iim = this.G.D.get_inverse_indirect_map(this.parent.pid, oid);
-        console.log("iim", oid, iim);
-      }
-    }else{
-      const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-      console.log("iim", iim);
-    }
-
     // TODO: what if already some delegation active or pending?
     
     if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
@@ -171,19 +151,16 @@ export class DelegationDialogPage implements OnInit {
   initialise_rank_values() {
     const uid = this.parent.p.myvid;
     const dir_del_map = this.G.D.get_direct_delegation_map(this.parent.pid);
-    const dir_del = dir_del_map.get(uid) || [];
-    var ranks = Array.from({ length: environment.delegation.max_delegations }, (_, i) => i + 1);
-    for (const entry of dir_del) {
-      if (entry === undefined) {
-        continue;
-      }
-      const indexToRemove: number = ranks.indexOf(Number(entry[1]));
-      if (indexToRemove !== -1) {
-        ranks.splice(indexToRemove, 1);
-      }
-    }
-    this.rank = ranks[0];
-    this.rank_options = ranks;
+    // get ranks that have already been delegated
+    const usedRanks = (dir_del_map.get(uid) || []).map(entry => Number(entry[1]));
+  
+    // create new array from 1..max_delegations
+    // then remove all used ranks
+    this.rank_options = Array
+      .from({ length: environment.delegation.max_delegations }, (_, i) => i + 1)
+      .filter(rank => !usedRanks.includes(rank));
+  
+    this.rank = this.rank_options[0];
   }
 
   delegate_nickname_changed() {
@@ -207,7 +184,6 @@ export class DelegationDialogPage implements OnInit {
 
   options_changed(event: Event){
     const target = event.target as HTMLIonSelectElement;
-    console.log("options_changed", JSON.stringify(target.value));
     var ns = new Set<string>();
     for (const option of target.value) {
       ns.add(option.id);

@@ -120,12 +120,10 @@ export class DelegationService {
     let link = `${environment.magic_link_base_url}delrespond/${pid}/${did}/${encodeURIComponent(from)}/${privkey}`;
     
     if (oids && oids.length > 0) {
-      console.log("oids", oids);
       const params = new URLSearchParams();
       oids.forEach(value => params.append('oids', value));
       link = `${link}?${params.toString()}`;
     }
-    console.log("link", link);
     this.G.L.debug("DelegationService.get_delegation_link", link);
     return link;
   }
@@ -415,13 +413,11 @@ export class DelegationService {
       const a = this.get_agreement(pid, did);
       const ddm = this.G.D.get_direct_delegation_map(pid);
       const list = ddm.get(a.client_vid) || [];
-      console.log("asdf", list);
       for (let [did2, _, status] of list){
         if (status === "0"){
           continue;
         }
         const a2 = this.get_agreement(pid, did2);
-        console.log("asdf", a2.delegate_vid, p.myvid);
         if (a2.delegate_vid === p.myvid){
           return ["impossible", "accepted-diff"];
         }
@@ -511,7 +507,6 @@ export class DelegationService {
     // update map
     for (let oid of oids) {
       var direct_del_map = this.G.D.get_direct_delegation_map(pid, oid) || new Map<string, Array<[string, string, string]>>();
-      console.log("direct_del_map", direct_del_map);
       var dir_del = direct_del_map.get(a.client_vid) || [];
       if (dir_del.length == 0) {
         continue;
@@ -556,7 +551,6 @@ export class DelegationService {
           sm.set(id, JSON.stringify(Array.from(new_eff_set)));
         }
       }
-      console.log("save_inver", sm);
       this.G.D.save_inverse_indirect_map(pid, oid, sm);
 
       // update delegation to active in direct delegation map
@@ -676,6 +670,7 @@ export class DelegationService {
   }
 
   private is_casting_voter(pid: string, vid: string) {
+    this.G.L.entry('is_casting_voter', pid, vid);
     const dir_del_map = this.G.D.get_direct_delegation_map(pid);
     for (const [did, rank, active] of dir_del_map.get(vid) || []) {
       if (active == '0') {
@@ -683,7 +678,15 @@ export class DelegationService {
       }
       return false;
     }
-    return true;
+    
+    // check whether they are abstaining (all ratings are zero)
+    const ratings = this.G.D.get_self_waps(pid).get(vid) || new Map<string, number>();
+    for (const oid of this.G.P.polls[pid].oids){
+      if (ratings.get(oid) && ratings.get(oid) > 0){
+        return true;
+      }
+    }
+    return false;
   }
 
   private get_rank_from_did(pid: string, did: string) : number {
@@ -741,7 +744,6 @@ export class DelegationService {
     const dm = this.G.D.get_direct_delegation_map(pid);
     for (let vid of this.delegating_voters(pid)) {
       const minSumPath = this.min_sum(pid, vid);
-      console.log("msp: ", minSumPath, vid);
       for (const did of minSumPath) {
         const a = this.get_agreement(pid, did);
         const delegations = dm.get(a.client_vid) || [];
@@ -1099,20 +1101,26 @@ export class DelegationService {
     return this.G.D.delegation_agreements_caches[pid];
   }
 
-  update_effective_votes(pid: string, vid: string, self_rating_map: Map<string, Map<string, number>>, effective_map?: Map<string, Map<string, number>>, count?: number) : Map<string, Map<string, number>>{
+  update_effective_votes(pid: string, self_rating_map: Map<string, Map<string, number>>, effective_map?: Map<string, Map<string, number>>, count?: number) : Map<string, Map<string, number>>{
+    this.G.L.entry('DelegationService.update_effective_votes', count, effective_map);
     var effective_rating_map;
     if (effective_map){
-      console.log("Recursing", count);
       effective_rating_map = new Map(effective_map);
       if (count > 15){
+        for (const [id, ratings] of effective_map) {
+          const flooredRatings = new Map<string, number>();
+          for (const [oid, value] of ratings) {
+            flooredRatings.set(oid, Math.floor(value));
+          }
+          effective_map.set(id, flooredRatings);
+        }
         this.G.D.set_self_and_effective_waps(pid, effective_map, self_rating_map);
         return effective_map;
       }
     }else{
-      effective_rating_map = this.G.D.get_effective_waps(pid);
+      effective_rating_map = new Map(self_rating_map);
     }
     const direct_delegation_map = this.G.D.get_direct_delegation_map(pid);
-    const inverse_delegation_map = this.G.D.get_inverse_indirect_map(pid);
     const p = this.G.P.polls[pid];
     var did_to_userid = new Map<string, string>();
     const acceptable_diff = environment.delegation.weighted_epsilon;
@@ -1120,21 +1128,12 @@ export class DelegationService {
 
     // new map created so we can compare the before and after values
     var newEffectiveMap = new Map<string, Map<string, number>>();
-    
-    // first run of update_effective_votes()
-    if (effective_rating_map.size !== self_rating_map.size){
-      effective_rating_map = new Map(self_rating_map);
-    }
-    console.log("dk23", effective_rating_map, self_rating_map, direct_delegation_map);
 
     for(const[id, _] of self_rating_map){
       if (!direct_delegation_map.has(id) || direct_delegation_map.get(id).length === 0){ // no delegations, effective rating is the same as self rating.
         newEffectiveMap.set(id, self_rating_map.get(id));
-        console.log(newEffectiveMap);
         continue;
       }
-
-      console.log("dd", direct_delegation_map, id);
 
       for (let oid of p.oids){
         var weight_done = 0;
@@ -1153,31 +1152,32 @@ export class DelegationService {
           }
           
           var num_trust = parseInt(trust);
-          console.log(oid, delId, num_trust);
           weight_done += num_trust;
           num_trust = num_trust / 100;
           
           const del_eff_rating = effective_rating_map.get(delId);
-          console.log("del_eff_ratin", del_eff_rating);
           new_effective_rating += num_trust * del_eff_rating.get(oid);
         }
-        console.log("self_rtg", self_rating_map.get(id).get(oid));
         new_effective_rating += ((100 - weight_done)/100) * self_rating_map.get(id).get(oid);
         const diff = Math.abs(new_effective_rating - effective_rating_map.get(id).get(oid));
-        console.log("diff: ", diff);
         acceptable_diff_reached = acceptable_diff_reached && (diff < acceptable_diff);
-        console.log("new_eff_rating", new_effective_rating);
         let inner = newEffectiveMap.get(id) || new Map<string, number>();
-        inner.set(oid, Math.floor(new_effective_rating));
-        console.log(inner);
+        inner.set(oid, new_effective_rating);
         newEffectiveMap.set(id, inner);
       }
     }
-    console.log("eff", newEffectiveMap);
     if (acceptable_diff_reached){
+      // Math.floor to every value:
+      for (const [id, ratings] of newEffectiveMap) {
+        const flooredRatings = new Map<string, number>();
+        for (const [oid, value] of ratings) {
+          flooredRatings.set(oid, Math.floor(value));
+        }
+        newEffectiveMap.set(id, flooredRatings);
+      }
       this.G.D.set_self_and_effective_waps(pid, newEffectiveMap, self_rating_map);
       return newEffectiveMap;
     }
-    return this.update_effective_votes(pid, vid, self_rating_map, newEffectiveMap, count? 1 + count : 1);
+    return this.update_effective_votes(pid, self_rating_map, newEffectiveMap, count? 1 + count : 1);
   }
 }

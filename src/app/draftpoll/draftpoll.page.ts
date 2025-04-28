@@ -112,6 +112,8 @@ export class DraftpollPage implements OnInit {
   show_details = false;
   ready = false;  
 
+  delegation_allowed = false;
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -148,6 +150,7 @@ export class DraftpollPage implements OnInit {
   onDataReady() {
     this.G.L.entry("DraftpollPage.onDataReady");
     this.deleted = false;
+    this.delegation_allowed = this.E.delegation.enabled;
     if (!this.pid) {
       this.stage = 0;
       if (!this.pd) {

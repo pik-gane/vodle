@@ -75,16 +75,6 @@ export class DelegationDialogRankedPage implements OnInit {
 
   ionViewWillEnter() {
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    console.log("ddm", ddm);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-        console.log("ddm", uid, del);
-      }
-    }
-    
-    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-    console.log("iim", iim);
-
     for (const [did, rank] of ddm.get(this.parent.p.myvid) || []) {
       // fetch nickname
       const a = this.G.Del.get_agreement(this.parent.pid, did);
@@ -162,8 +152,8 @@ export class DelegationDialogRankedPage implements OnInit {
     this.G.L.exit("DelegationDialogRankedPage.close_button_clicked");
   }
 
-  async call_revoke(did: string) {
-    const result = await this.parent.revoke_delegation_dialog(did);
+  async call_revoke(did: string, nickname: string) {
+    const result = await this.parent.revoke_delegation_dialog(did, nickname);
 
     if (!result){
       return;
