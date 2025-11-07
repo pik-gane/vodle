@@ -40,7 +40,7 @@ def env(render_mode=None):
         env = wrappers.CaptureStdoutWrapper(env)
     # this wrapper helps error handling for discrete action spaces
     env = wrappers.AssertOutOfBoundsWrapper(env)
-    # Provides a wide vareity of helpful user errors
+    # Provides a wide variety of helpful user errors
     # Strongly recommended
     env = wrappers.OrderEnforcingWrapper(env)
     return env
@@ -78,6 +78,8 @@ class parallel_env(ParallelEnv):
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
         self.render_mode = render_mode
+        # Initialize random number generator with default seed
+        self.np_random, self.np_random_seed = seeding.np_random(None)
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
