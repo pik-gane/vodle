@@ -33,6 +33,25 @@ from python.environments.rps_v2 import parallel_env
 game = parallel_env(render_mode="human")
 ```
 
+## Examples
+
+See the `examples/` directory for usage examples:
+- `play_rps.py` - A simple demonstration of the RPS environment
+
+Run an example:
+```bash
+cd examples
+python3 play_rps.py
+```
+
+## Testing
+
+Run the test suite:
+```bash
+cd tests
+python3 test_rps_v2.py
+```
+
 ## Installation
 
 Install the required dependencies:
