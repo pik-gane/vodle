@@ -351,15 +351,14 @@ app-mypolls {
   }
   ion-list ion-item {
     --background: #ffffff; /* Force fully opaque white background */
-    --color: #000000 !important; /* Force black text color to prevent dark mode */
-    color: #000000 !important; /* Force black text color to prevent dark mode */
+    --color: #000000;
     background-color: #ffffff !important; /* Force white background on item itself */
   }
-  /* Ensure text elements inside items are black */
-  ion-list ion-item p,
-  ion-list ion-item small,
-  ion-list ion-item ion-col {
-    color: #000000 !important;
+  /* Ensure text elements inside items are black, but only for items without color */
+  ion-list ion-item:not([color]) p,
+  ion-list ion-item:not([color]) small,
+  ion-list ion-item:not([color]) ion-col {
+    color: #000000;
   }
 }
 

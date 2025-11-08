@@ -47,19 +47,19 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 /* Force light theme colors to prevent system dark theme interference */
 body {
   background-color: #ffffff !important;
-  color: #000000 !important;
+  color: #000000;
   color-scheme: light only; /* Prevent dark mode from system */
 }
 
 ion-content {
   --background: #ffffff;
-  color: #000000 !important;
+  color: #000000;
 }
 
 /* Override Ionic elements to ensure light theme */
 ion-app {
   background-color: #ffffff !important;
-  color: #000000 !important;
+  color: #000000;
 }
 
 ion-toolbar {
@@ -80,34 +80,16 @@ ion-list {
 ion-item {
   --background: #ffffff;
   --color: #000000;
-  color: #000000 !important; /* Force black text on items */
 }
 
-/* More specific selectors to override Ionic's default dark mode styles */
-ion-item ion-label {
-  color: #000000 !important;
+/* Only force black text on items that don't have a specific color attribute */
+ion-item:not([color]) {
+  color: #000000;
 }
 
-ion-list ion-item {
-  --color: #000000;
-  color: #000000 !important;
-}
-
-ion-list ion-item ion-label {
-  color: #000000 !important;
-}
-
-/* Ensure text elements inside ion-items are black */
-ion-item p,
-ion-item small,
-ion-item ion-col {
-  color: #000000 !important;
-}
-
-ion-list ion-item p,
-ion-list ion-item small,
-ion-list ion-item ion-col {
-  color: #000000 !important;
+/* Let labels with in-item-color inherit from their parent's color scheme */
+ion-label:not(.in-item-color) {
+  color: inherit;
 }
 
 ion-card {
