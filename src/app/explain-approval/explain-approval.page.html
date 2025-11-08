@@ -56,11 +56,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <defs>
         <marker id="arrowhead-grey" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
-          <polyline points="0 0, 10 3.5, 0 7" fill="#9abcbd"/>
+          <polyline points="0 0, 10 3.5, 0 7" fill="var(--vodle-dark)"/>
         </marker>
         <marker id="arrowhead-green" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
-          <polyline points="0 0, 10 3.5, 0 7" fill="black"/><!--or #4c822e ?-->
+          <polyline points="0 0, 10 3.5, 0 7" fill="var(--ion-text-color, currentColor)"/>
         </marker>
       </defs>
 
@@ -76,8 +76,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           * at sec. 6, voter's own rating shows
         -->
 
-        <text x="0" y="-11" fill="black">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
-        <text x="0" y="-6" fill="#808080">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
+        <text x="0" y="-11" fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
+        <text x="0" y="-6" fill="var(--vodle-grey)">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
 
         <g transform="scale(1 -1) translate(0 -100)">
 
@@ -88,18 +88,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <g transform="rotate(90)"><!-- initially upwards -->
               <animateTransform attributeName="transform" attributeType="XML" 
                 type="rotate" from="90" to="180" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- rotate to horizontal -->
-              <rect x="-0.5" y="-2.5" width="0" height="5" fill="#bce4e5" stroke="none"><!--not:#62a73ba0-->
+              <rect x="-0.5" y="-2.5" width="0" height="5" fill="var(--vodle-light)" stroke="none"><!--not:var(--vodle-green-transparent)-->
                 <animate attributeName="width" 
                   from="0" [attr.to]="0.5+100*a" [attr.begin]="''+tab1+'s'" [attr.dur]="''+(tab2-tab1)+'s'" fill="freeze" />
               </rect>
-              <line display="none" x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+              <line display="none" x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="var(--vodle-light)" stroke-width="0.5">
                 <set attributeName="display" to="inline" [attr.begin]="''+tab1+'s'" />
               </line>
             </g>
           </g>
 
           <!-- left vertical: -->
-          <line x1="0" y1="0" x2="0" y2="115" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+          <line x1="0" y1="0" x2="0" y2="115" stroke-width="0.2" stroke="var(--vodle-border-grey)" stroke-dasharray="3 2" />
 
           <!-- rating needles: -->
           <g transform="scale(0 1)"><!-- initially zero width -->
@@ -107,17 +107,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               type="scale" from="0 1" to="1 1" [attr.begin]="''+tr1+'s'" [attr.dur]="''+(tr2-tr1)+'s'" fill="freeze" /><!-- grow to real width -->
             <line *ngFor="let item of rs; let i = index" 
                   stroke-width="0.5"
-                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="black">
+                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="var(--ion-text-color, currentColor)">
               <set attributeName="stroke" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
             </line>
             <circle *ngFor="let item of rs; let i = index"
-                  [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="black">
+                  [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="var(--ion-text-color, currentColor)">
               <set attributeName="fill" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
             </circle>
           </g>
 
           <!-- diagonal: -->
-          <line opacity="0" x1="-4" y1="-5" x2="106" y2="105" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2">
+          <line opacity="0" x1="-4" y1="-5" x2="106" y2="105" stroke-width="0.2" stroke="var(--vodle-border-grey)" stroke-dasharray="3 2">
             <animate attributeName="opacity" 
               from="0" to="1" [attr.begin]="''+td1+'s'" [attr.dur]="''+(td2-td1)+'s'" fill="freeze" /><!-- fade in -->
           </line>
@@ -136,7 +136,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
             <g transform="rotate(90)">
               <g transform="translate(0, -1.25) scale(1 -1)">
-                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.vertical-approval-label'|translate"></tspan></text>
+                <text fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.vertical-approval-label'|translate"></tspan></text>
               </g>
             </g>
           </g>
@@ -148,13 +148,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <!-- approval bar -->
             <g display="none" [attr.transform]="'translate(100 '+poss[myi]+') rotate(180)'">
               <set attributeName="display" to="inline" [attr.begin]="''+to2+'s'"></set>
-              <rect x="-0.5" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none"><!--not:#62a73ba0-->
+              <rect x="-0.5" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="var(--vodle-light)" stroke="none"><!--not:var(--vodle-green-transparent)-->
               </rect>
-              <line x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+              <line x1="-0.5" y1="-5" x2="-0.5" y2="5" stroke="var(--vodle-light)" stroke-width="0.5">
               </line>
             </g>
             <!-- threshold vertical: -->
-            <line [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-26" y2="101" stroke-width="0.2" stroke="#444444" stroke-dasharray="3 2" />
+            <line [attr.x1]="100*(1-a)" [attr.x2]="100*(1-a)" y1="-26" y2="101" stroke-width="0.2" stroke="var(--vodle-border-grey)" stroke-dasharray="3 2" />
             <!-- own rating marker: -->
             <ng-container *ngIf="!!myv">
               <line stroke-width="2" 
@@ -162,18 +162,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="3" [attr.fill]="cs[myi]" />
             </ng-container>
             <!-- final annotations: -->
-            <g transform="scale(1 -1)" fill="black">
+            <g transform="scale(1 -1)" fill="var(--ion-text-color, currentColor)">
               <g *ngIf="a<1">
-                <text [attr.x]="100*(1-a)" y="10" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="15" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="20" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-3'|translate"></tspan>&nbsp;&nbsp;</text>
-                <text [attr.x]="100*(1-a)" y="25" fill="#3465a4" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-4'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="10" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="15" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="20" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-3'|translate"></tspan>&nbsp;&nbsp;</text>
+                <text [attr.x]="100*(1-a)" y="25" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-4'|translate"></tspan>&nbsp;&nbsp;</text>
               </g>
               <g *ngIf="a>0">
-                <text [attr.x]="100*(1-a)" y="10" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-1'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="15" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-2'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="20" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-3'|translate"></tspan></text>
-                <text [attr.x]="100*(1-a)" y="25" fill="#62a73b">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-4'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="10" fill="var(--vodle-green)">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-1'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="15" fill="var(--vodle-green)">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-2'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="20" fill="var(--vodle-green)">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-3'|translate"></tspan></text>
+                <text [attr.x]="100*(1-a)" y="25" fill="var(--vodle-green)">&nbsp;&nbsp;<tspan [innerHtml]="'explain.threshold-larger-line-4'|translate"></tspan></text>
               </g>
               <g [attr.transform]="'translate(0 '+(-poss[myi])+')'" font-weight="bold">
                 <ng-container *ngIf="!!myv">
@@ -182,12 +182,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 </ng-container>
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
-                  <rect x="75" y="-16" width="25" height="13" fill="#ffffffd0"></rect>
-                  <text x="100" y="-9.5" fill="#9abcbd" text-anchor="end"><tspan [attr.font-size]="approval_font_size_large" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
-                  <text x="100" y="-4.5" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
+                  <rect x="75" y="-16" width="25" height="13" fill="var(--vodle-white-semi)"></rect>
+                  <text x="100" y="-9.5" fill="var(--vodle-dark)" text-anchor="end"><tspan [attr.font-size]="approval_font_size_large" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
+                  <text x="100" y="-4.5" fill="var(--vodle-dark)" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
               </g>
-              <g *ngIf="!!myv && eff_unequal_proxy" [attr.font-size]="approval_font_size_small" fill="#808080">
+              <g *ngIf="!!myv && eff_unequal_proxy" [attr.font-size]="approval_font_size_small" fill="var(--vodle-grey)">
                 <text x="-20" y="31">*<tspan [innerHtml]="'explain.largest-line-1'|translate"></tspan></text>
                 <text x="-20" y="34">&nbsp;<tspan [innerHtml]="'explain.largest-line-2'|translate"></tspan></text>
               </g>
@@ -199,17 +199,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <animate attributeName="opacity" 
               from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
             <g transform="scale(1.4142, 1)">
-              <rect [attr.x]="0" y="-12.5" width="0" height="5" fill="#3465a4a0" stroke="none">
+              <rect [attr.x]="0" y="-12.5" width="0" height="5" fill="var(--vodle-blue-transparent)" stroke="none">
                 <animate attributeName="width" 
                   from="0" [attr.to]="100*(1-a)-0.5" [attr.begin]="''+tob1+'s'" [attr.dur]="''+(tob2-tob1)+'s'" fill="freeze" />
               </rect>
             </g>
             <g display="none">
               <set attributeName="display" to="inline" [attr.begin]="''+tob1+'s'" />
-              <line x1="0" y1="-15" x2="0" y2="-5" stroke="#3465a4a0" stroke-width="0.5">
+              <line x1="0" y1="-15" x2="0" y2="-5" stroke="var(--vodle-blue-transparent)" stroke-width="0.5">
               </line>
               <g transform="translate(0, -11.25) scale(1 -1)" >
-                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.opposition'|translate"></tspan></text>
+                <text fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.opposition'|translate"></tspan></text>
               </g>   
             </g>
           </g>
@@ -234,7 +234,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <text y="-13" [innerHtml]="'explain.all-abstain-line-1'|translate">
             </text>
             <text y="-8">
-              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(100/p.oids.length).toFixed(1)}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
+              {{'explain.all-abstain-line-2-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">{{(100/p.oids.length).toFixed(1)}}%</tspan>{{'explain.all-abstain-line-2-after-percentage'|translate}}
             </text>
           </g>
 
@@ -249,12 +249,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <g opacity="0">
               <animate attributeName="opacity" 
                 from="0" to="1" begin="0s" dur="1s" fill="freeze" /><!-- fade in -->
-              <text y="-13" fill="#769596" [innerHtml]="'explain.share-intro-line-1'|translate">
+              <text y="-13" fill="var(--vodle-medium)" [innerHtml]="'explain.share-intro-line-1'|translate">
               </text>
-              <text y="-8" fill="#769596" [innerHtml]="'explain.share-intro-line-2'|translate">
+              <text y="-8" fill="var(--vodle-medium)" [innerHtml]="'explain.share-intro-line-2'|translate">
               </text>
             </g>
-            <g opacity="0">
+            <g opacity="0" fill="var(--ion-text-color, currentColor)">
               <animate attributeName="opacity" 
                 from="0" to="1" begin="3s" dur="1s" fill="freeze" /><!-- fade in -->
               <ng-container *ngIf="a == 0">
@@ -295,12 +295,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <animateTransform attributeName="transform" attributeType="XML" 
               type="translate" [attr.from]="'0 15'" [attr.to]="'0 '+(20+15*os.length)" begin="5s" dur="1s" fill="freeze" /><!-- move to bottom -->
           
-            <rect [attr.x]="100*(1-a)" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="#bce4e5" stroke="none">
+            <rect [attr.x]="100*(1-a)" y="-2.5" [attr.width]="0.5+100*a" height="5" fill="var(--vodle-light)" stroke="none">
             </rect>
-            <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="#bce4e5" stroke-width="0.5">
+            <line x1="100.5" y1="-5" x2="100.5" y2="5" stroke="var(--vodle-light)" stroke-width="0.5">
             </line>
-            <text x="100" y="8" fill="#9abcbd" text-anchor="end"><tspan font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
-            <text x="100" y="13" fill="#9abcbd" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
+            <text x="100" y="8" fill="var(--vodle-dark)" text-anchor="end"><tspan font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
+            <text x="100" y="13" fill="var(--vodle-dark)" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
           </g>
 
           <!-- higher-up options' rows: -->
@@ -312,14 +312,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
             <!-- other option's pie chart: -->
             <g transform="translate(-10 0) scale(.3 .3)">
-              <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
-              <path id="_pie_other" [attr.d]="dattrs[i]" fill="#9abcbd" />  
+              <circle cx="0" cy="0" r="20" fill="var(--vodle-light)" stroke="none" />
+              <path id="_pie_other" [attr.d]="dattrs[i]" fill="var(--vodle-dark)" />  
             </g>
 
             <!-- explanation: -->
-            <g transform="translate(0 -1)" fill="#769596">
+            <g transform="translate(0 -1)" fill="var(--ion-text-color, currentColor)">
               <!-- backdrop: -->
-              <rect x="-1" y="-4" width="140" height="9" fill="#ffffffff"></rect>
+              <rect x="-1" y="-4" width="140" height="9" fill="var(--vodle-white)"></rect>
               <!-- text: -->
               <ng-container *ngIf="ps.length == 2 && myv != oids[i]">
                 <text y="0">
@@ -367,11 +367,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </g>
 
             <!-- arrow: -->
-            <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="4+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="#769596" stroke-width="0.2" stroke-dasharray=".5 .5">
+            <line [attr.x1]="100*(1-ss[i]-ps[i]/2)" x2="-4" [attr.y1]="4+(os.length-i)*15" y2="4.8" marker-end="url(#arrowhead-grey)" stroke="var(--vodle-medium)" stroke-width="0.2" stroke-dasharray=".5 .5">
             </line>
 
             <!-- approval share: -->
-            <rect [attr.x]="100*(1-ss[i+1])+0.2" [attr.y]="4+(os.length-i)*15" [attr.width]="100*ps[i]-0.4" height="2" fill="#9abcbd" stroke="none">
+            <rect [attr.x]="100*(1-ss[i+1])+0.2" [attr.y]="4+(os.length-i)*15" [attr.width]="100*ps[i]-0.4" height="2" fill="var(--vodle-dark)" stroke="none">
             </rect>
 
           </g>
@@ -382,65 +382,65 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               from="0" to="1" [attr.begin]="''+(6+3*(ps.length-1))+'s'" dur="1s" fill="freeze" /><!-- fade in -->
 
             <!-- explanation: -->
-            <g transform="translate(-14 -17)">
+            <g transform="translate(-14 -17)" fill="var(--ion-text-color, currentColor)">
               <!-- backdrop: -->
-              <rect x="-10" y="-4" width="140" height="10" fill="#ffffffff"></rect>
+              <rect x="-10" y="-4" width="140" height="10" fill="var(--vodle-white)"></rect>
               <!-- text: -->
               <ng-container *ngIf="ps.length == 1 && myv != oid">
                 <text y="0">
-                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
-                  {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
+                  {{'explain.whole-share-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="var(--vodle-darkgreen)" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.whole-share-line-2-after-optionname'|translate}}
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length == 1 && myv == oid">
                 <text y="0">
-                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.whole-share-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.whole-share-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
-                  {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
+                  {{'explain.whole-share-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="var(--vodle-darkgreen)" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.whole-share-incl-you-line-2-after-optionname'|translate}}
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv != oid">
                 <text y="0">
-                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
-                  {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
+                  {{'explain.remaining-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="var(--vodle-darkgreen)" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.remaining-line-2-after-optionname'|translate}}
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] > 0 && myv == oid">
                 <text y="0">
-                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
+                  {{'explain.remaining-incl-you-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">{{(ps[ps.length-1]*100).toFixed(1)}}%</tspan>{{'explain.remaining-incl-you-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
-                  {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}
+                  {{'explain.remaining-incl-you-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="var(--vodle-darkgreen)" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.remaining-incl-you-line-2-after-optionname'|translate}}
                 </text>
               </ng-container> 
               <ng-container *ngIf="ps.length > 1 && ps[ps.length-1] == 0">
                 <text y="0">
-                  {{'explain.nothing-left-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="#4c822e" [attr.font-size]="share_font_size_large">0%</tspan>{{'explain.nothing-left-line-1-after-percentage'|translate}}
+                  {{'explain.nothing-left-line-1-before-percentage'|translate}}<tspan font-weight="bold" fill="var(--vodle-darkgreen)" [attr.font-size]="share_font_size_large">0%</tspan>{{'explain.nothing-left-line-1-after-percentage'|translate}}
                 </text>
                 <text y="5">
-                  {{'explain.nothing-left-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="#4c822e" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.nothing-left-line-2-after-optionname'|translate}}
+                  {{'explain.nothing-left-line-2-before-optionname'|translate}}<tspan font-style="italic" font-weight="bold" fill="var(--vodle-darkgreen)" [attr.lang]="p.language">{{optionname}}</tspan>{{'explain.nothing-left-line-2-after-optionname'|translate}}
                 </text>
               </ng-container> 
             </g>
 
             <!-- this option's pie chart: -->
             <g transform="translate(-10 0) scale(.45 .45)">
-              <circle cx="0" cy="0" r="20" fill="#bce4e5" stroke="none" />
-              <path id="_pie_own" [attr.d]="dattrs[dattrs.length-1]" fill="#4c822e" />  
+              <circle cx="0" cy="0" r="20" fill="var(--vodle-light)" stroke="none" />
+              <path id="_pie_own" [attr.d]="dattrs[dattrs.length-1]" fill="var(--vodle-darkgreen)" />  
             </g>
             <ng-container *ngIf="ps[ps.length-1] > 0">
 
               <!-- arrow: -->
-              <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5"><!--or #4c822e?-->
+              <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="var(--ion-text-color, currentColor)" stroke-width="0.2" stroke-dasharray=".5 .5">
               </line>
 
               <!-- approval share: -->
-              <rect [attr.x]="100*(1-a)+0.2" y="-1" [attr.width]="100*ps[ps.length-1]-0.4" height="2" fill="#4c822e" stroke="none">
+              <rect [attr.x]="100*(1-a)+0.2" y="-1" [attr.width]="100*ps[ps.length-1]-0.4" height="2" fill="var(--vodle-darkgreen)" stroke="none">
               </rect>
             </ng-container>
           </g>

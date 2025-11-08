@@ -53,6 +53,7 @@ export const environment = {
     enabled: false,
     max_weight: 10
   },
+  no_more_options_time_fraction: 1/2,
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",

@@ -162,7 +162,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
       <ng-container *ngIf="P.oidsorted[i] == favourite">
         <ion-checkbox slot="start" checked="true" disabled="true" style="margin-right:30px;"></ion-checkbox>
-        <ion-text color="black"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
+        <ion-text><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
       </ng-container>
       <ng-container *ngIf="P.oidsorted[i] != favourite">
         <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 

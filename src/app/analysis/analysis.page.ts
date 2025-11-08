@@ -29,10 +29,10 @@ import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 
 const svgcolors = {
-  "vodlered": "#d33939",
-  "vodleblue": "#3465a4",
-  "vodlegreen": "#62a73b",
-  "vodledarkgreen": "#4c822e"
+  "vodlered": "var(--vodle-red)",
+  "vodleblue": "var(--vodle-blue)",
+  "vodlegreen": "var(--vodle-green)",
+  "vodledarkgreen": "var(--vodle-darkgreen)"
   },
   r_avatar = 7,
   stretch = 1.1;
@@ -238,7 +238,7 @@ export class AnalysisPage implements OnInit {
       svg_gs.push(svg_g);
       // put individual voters on that disc:
       for (let k=0; k<n; k++) {
-        var x, y, color = (k == 0 && myvote == oid) ? "yellow" : "black";
+        var x, y, color = (k == 0 && myvote == oid) ? "yellow" : "var(--ion-text-color, currentColor)";
         // find a valid place:
         for (let it=0; it<100; it++) {
           // draw a random point on that disc:

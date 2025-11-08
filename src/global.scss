@@ -120,7 +120,7 @@ html {
 ion-content {
     .error-message
     {
-        color: red;
+        color: var(--ion-color-danger);
         font-size: 14px;
         margin-left: 15px;
         margin-top: 5px;
@@ -251,7 +251,7 @@ ion-icon.poll-type-list {
     position: relative;
     top: 3px;
     z-index: 10;
-    color: grey;
+    color: var(--ion-color-medium);
 }
 
 // make sure link color is the same as surrounding text:
