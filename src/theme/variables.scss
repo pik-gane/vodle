@@ -170,8 +170,8 @@ $font-family-wp-base: "Quicksand Medium";
     --vodle-tint: #4a7a7c;
     --vodle-highlight: #a8ff70;
     --vodle-background-light: #1a1a1a;
-    --vodle-white-semi: #000000c0;
-    --vodle-white: #000000ff;
+    --vodle-white-semi: #1a1a1acc;
+    --vodle-white: #1a1a1a;
     --vodle-landing-circle: #5a9a9c;
 
     /** primary **/
@@ -556,11 +556,13 @@ app-mypolls {
 /* Dark theme specific fixes */
 @media (prefers-color-scheme: dark) {
   /* Fix settings page buttons to not have black background */
-  app-settings ion-button[fill="clear"] {
+  app-settings ion-button[fill="clear"],
+  app-settings ion-button.button-clear {
     --background: transparent !important;
-    --background-activated: var(--ion-color-step-150) !important;
-    --background-focused: var(--ion-color-step-100) !important;
-    --background-hover: var(--ion-color-step-100) !important;
+    --background-activated: rgba(var(--ion-color-primary-rgb), 0.12) !important;
+    --background-focused: rgba(var(--ion-color-primary-rgb), 0.12) !important;
+    --background-hover: rgba(var(--ion-color-primary-rgb), 0.04) !important;
+    --color: var(--ion-color-primary) !important;
   }
   
   /* Fix draftpoll icon color */
