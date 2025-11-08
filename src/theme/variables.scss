@@ -62,6 +62,12 @@ $font-family-wp-base: "Quicksand Medium";
   
   /* Force light theme to prevent system dark theme interference */
   color-scheme: light only;
+  
+  /* Override Ionic's default background and text colors to prevent dark mode */
+  --ion-background-color: #ffffff;
+  --ion-background-color-rgb: 255, 255, 255;
+  --ion-text-color: #000000;
+  --ion-text-color-rgb: 0, 0, 0;
 
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */

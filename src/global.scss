@@ -56,6 +56,47 @@ ion-content {
   color: #000000;
 }
 
+/* Override Ionic elements to ensure light theme */
+ion-app {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #000000;
+}
+
+ion-header {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+ion-list {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+ion-item {
+  --background: #ffffff;
+  --color: #000000;
+}
+
+ion-card {
+  --background: #ffffff;
+  --color: #000000;
+}
+
+ion-modal {
+  --background: #ffffff;
+  --color: #000000;
+}
+
+ion-popover {
+  --background: #ffffff;
+  --color: #000000;
+}
+
 /* custom CSS: */
 
 @import './app/sharedcomponents/expandable/expandable.component';
