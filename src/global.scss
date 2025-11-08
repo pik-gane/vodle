@@ -44,6 +44,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 @import "~@ionic/angular/css/text-transformation.css";
 @import "~@ionic/angular/css/flex-utils.css";
 
+/* Force light theme colors to prevent system dark theme interference */
+body {
+  background-color: #ffffff;
+  color: #000000;
+  color-scheme: light only; /* Prevent dark mode from system */
+}
+
+ion-content {
+  --background: #ffffff;
+  color: #000000;
+}
+
 /* custom CSS: */
 
 @import './app/sharedcomponents/expandable/expandable.component';

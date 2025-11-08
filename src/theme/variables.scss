@@ -59,6 +59,9 @@ $font-family-wp-base: "Quicksand Medium";
 /** Ionic CSS Variables **/
 :root {
   --ion-font-family: "Quicksand";
+  
+  /* Force light theme to prevent system dark theme interference */
+  color-scheme: light only;
 
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */
