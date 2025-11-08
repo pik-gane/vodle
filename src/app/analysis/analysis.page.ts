@@ -29,10 +29,10 @@ import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 
 const svgcolors = {
-  "vodlered": "#d33939",
-  "vodleblue": "#3465a4",
-  "vodlegreen": "#62a73b",
-  "vodledarkgreen": "#4c822e"
+  "vodlered": "var(--vodle-red)",
+  "vodleblue": "var(--vodle-blue)",
+  "vodlegreen": "var(--vodle-green)",
+  "vodledarkgreen": "var(--vodle-darkgreen)"
   },
   r_avatar = 7,
   stretch = 1.1;

@@ -28,31 +28,31 @@ $font-family-wp-base: "Quicksand Medium";
 // TODO: add rgb,contrast etc.
 
 .ion-color-vodlered {
-  --ion-color-base: #d33939;
+  --ion-color-base: var(--vodle-red);
   --ion-color-contrast: #ffffff;
-  --ion-color-tint: #b4dbdb;
+  --ion-color-tint: var(--vodle-tint);
 }
 .ion-color-vodleblue {
-  --ion-color-base: #3465a4;
+  --ion-color-base: var(--vodle-blue);
   --ion-color-contrast: #ffffff;
-  --ion-color-tint: #b4dbdb;
+  --ion-color-tint: var(--vodle-tint);
 }
 .ion-color-vodlegreen {
-  --ion-color-base: #62a73b;
+  --ion-color-base: var(--vodle-green);
   --ion-color-contrast: #ffffff;
-  --ion-color-tint: #b4dbdb;
+  --ion-color-tint: var(--vodle-tint);
 }
 .ion-color-vodledarkgreen {
-  --ion-color-base: #4c822e;
+  --ion-color-base: var(--vodle-darkgreen);
   --ion-color-contrast: #ffffff;
-  --ion-color-tint: #b4dbdb;
+  --ion-color-tint: var(--vodle-tint);
 }
 .ion-color-vodlelight {
-  --ion-color-base: #bce4e5;
+  --ion-color-base: var(--vodle-light);
   --ion-color-contrast: #000000;
 }
 .ion-color-vodledark {
-  --ion-color-base: #9abcbd;
+  --ion-color-base: var(--vodle-dark);
   --ion-color-contrast: #000000;
 }
 
@@ -60,8 +60,27 @@ $font-family-wp-base: "Quicksand Medium";
 :root {
   --ion-font-family: "Quicksand";
 
+  /** vodle custom color variables for dark theme support **/
+  --vodle-red: #d33939;
+  --vodle-blue: #3465a4;
+  --vodle-blue-transparent: #3465a4a0;
+  --vodle-green: #62a73b;
+  --vodle-green-transparent: #62a73ba0;
+  --vodle-darkgreen: #4c822e;
+  --vodle-light: #bce4e5;
+  --vodle-dark: #9abcbd;
+  --vodle-medium: #769596;
+  --vodle-grey: #808080;
+  --vodle-border-grey: #444444;
+  --vodle-tint: #b4dbdb;
+  --vodle-highlight: #88e950;
+  --vodle-background-light: #eeeeee;
+  --vodle-white-semi: #ffffffd0;
+  --vodle-white: #ffffffff;
+  --vodle-landing-circle: #c2e0e0;
+
   /** primary **/
-  --ion-color-primary: #3465a4; /* $vodle-blue; */
+  --ion-color-primary: var(--vodle-blue);
   --ion-color-primary-rgb: 52, 101, 164;
   --ion-color-primary-contrast: #ffffff;
   --ion-color-primary-contrast-rgb: 255, 255, 255;
@@ -74,7 +93,7 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-color-secondary-contrast: #000000;
   --ion-color-secondary-contrast-rgb: 0, 0, 0;
   --ion-color-secondary-shade: #a1c3c4;
-  --ion-color-secondary-tint: #bce4e5; /* $vodle-light; */
+  --ion-color-secondary-tint: var(--vodle-light);
 
   /** tertiary **/
   --ion-color-tertiary: #7044ff;
@@ -85,7 +104,7 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-color-tertiary-tint: #7e57ff;
 
   /** success **/
-  --ion-color-success: #62a73b; /* $vodle-green; */
+  --ion-color-success: var(--vodle-green);
   --ion-color-success-rgb: 98, 167, 59;
   --ion-color-success-contrast: #ffffff;
   --ion-color-success-contrast-rgb: 255, 255, 255;
