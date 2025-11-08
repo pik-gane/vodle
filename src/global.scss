@@ -83,6 +83,20 @@ ion-item {
   color: #000000 !important; /* Force black text on items */
 }
 
+/* More specific selectors to override Ionic's default dark mode styles */
+ion-item ion-label {
+  color: #000000 !important;
+}
+
+ion-list ion-item {
+  --color: #000000;
+  color: #000000 !important;
+}
+
+ion-list ion-item ion-label {
+  color: #000000 !important;
+}
+
 ion-card {
   --background: #ffffff;
   --color: #000000;

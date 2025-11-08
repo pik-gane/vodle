@@ -308,50 +308,51 @@ $font-family-wp-base: "Quicksand Medium";
 /* background images: */
 
 app-login {
-  background: url(../assets/img/bg_arms_outstretched.png) no-repeat;
-  background-position: bottom left;
-  background-size: auto 100%;
-  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+  background: url(../assets/img/bg_arms_outstretched.png) no-repeat, #ffffff; /* Add white background behind image */
+  background-position: bottom left, center;
+  background-size: auto 100%, 100%;
+  --ion-background-color: #ffffff; /* Force white background to prevent dark mode */
   ion-header {
     ion-toolbar {
-      --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+      --background: #ffffff; /* Force white background to prevent dark mode */
     }
   }
   ion-content {
-    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+    --background: transparent; /* Keep transparent to show background image */
   }
 }
 app-logout {
-  background: url(../assets/img/bg_arms_outstretched_reversed.png) no-repeat;
-  background-position: bottom right;
-  background-size: auto 100%;
-  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+  background: url(../assets/img/bg_arms_outstretched_reversed.png) no-repeat, #ffffff; /* Add white background behind image */
+  background-position: bottom right, center;
+  background-size: auto 100%, 100%;
+  --ion-background-color: #ffffff; /* Force white background to prevent dark mode */
   ion-header {
     ion-toolbar {
-      --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+      --background: #ffffff; /* Force white background to prevent dark mode */
     }
   }
   ion-content {
-    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+    --background: transparent; /* Keep transparent to show background image */
   }
 }
 
 app-mypolls {
-  background: url(../assets/img/bg_hands.png) no-repeat;
-  background-position: bottom;
-  background-size: 100% auto;
-  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+  background: url(../assets/img/bg_hands.png) no-repeat, #ffffff; /* Add white background behind image */
+  background-position: bottom, center;
+  background-size: 100% auto, 100%;
+  --ion-background-color: #ffffff; /* Force white background to prevent dark mode */
   ion-header {
     ion-toolbar {
       --background: white;
     }
   }
   ion-content {
-    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
+    --background: transparent; /* Keep transparent to show background image */
   }
   ion-list ion-item {
     --background: #ffffffbb;
-    --color: #000000; /* Force black text color to prevent dark mode */
+    --color: #000000 !important; /* Force black text color to prevent dark mode */
+    color: #000000 !important; /* Force black text color to prevent dark mode */
   }
 }
 
