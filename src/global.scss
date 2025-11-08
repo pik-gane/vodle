@@ -46,20 +46,20 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 /* Force light theme colors to prevent system dark theme interference */
 body {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: #ffffff !important;
+  color: #000000 !important;
   color-scheme: light only; /* Prevent dark mode from system */
 }
 
 ion-content {
   --background: #ffffff;
-  color: #000000;
+  color: #000000 !important;
 }
 
 /* Override Ionic elements to ensure light theme */
 ion-app {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: #ffffff !important;
+  color: #000000 !important;
 }
 
 ion-toolbar {
@@ -80,6 +80,7 @@ ion-list {
 ion-item {
   --background: #ffffff;
   --color: #000000;
+  color: #000000 !important; /* Force black text on items */
 }
 
 ion-card {

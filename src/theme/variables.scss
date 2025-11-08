@@ -68,6 +68,7 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-background-color-rgb: 255, 255, 255;
   --ion-text-color: #000000;
   --ion-text-color-rgb: 0, 0, 0;
+  --ion-item-background: #ffffff; /* Force white background for ion-item */
 
   /** primary **/
   --ion-color-primary: #3465a4; /* $vodle-blue; */
@@ -310,28 +311,28 @@ app-login {
   background: url(../assets/img/bg_arms_outstretched.png) no-repeat;
   background-position: bottom left;
   background-size: auto 100%;
-  --ion-background-color: transparent;
+  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   ion-header {
     ion-toolbar {
-      --background: transparent;
+      --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
     }
   }
   ion-content {
-    --background: transparent;
+    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   }
 }
 app-logout {
   background: url(../assets/img/bg_arms_outstretched_reversed.png) no-repeat;
   background-position: bottom right;
   background-size: auto 100%;
-  --ion-background-color: transparent;
+  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   ion-header {
     ion-toolbar {
-      --background: transparent;
+      --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
     }
   }
   ion-content {
-    --background: transparent;
+    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   }
 }
 
@@ -339,17 +340,18 @@ app-mypolls {
   background: url(../assets/img/bg_hands.png) no-repeat;
   background-position: bottom;
   background-size: 100% auto;
-  --ion-background-color: transparent;
+  --ion-background-color: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   ion-header {
     ion-toolbar {
       --background: white;
     }
   }
   ion-content {
-    --background: transparent;
+    --background: #ffffff; /* Force white background instead of transparent to prevent dark mode */
   }
   ion-list ion-item {
     --background: #ffffffbb;
+    --color: #000000; /* Force black text color to prevent dark mode */
   }
 }
 
