@@ -107,6 +107,49 @@ ion-popover {
   --color: #000000;
 }
 
+/* CRITICAL: Explicitly override dark mode at media query level */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  ion-app {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  ion-content {
+    --background: #ffffff;
+    background-color: #ffffff;
+    color: #000000 !important;
+  }
+  
+  ion-item {
+    --background: #ffffff;
+    --color: #000000;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  
+  ion-label {
+    color: inherit !important;
+  }
+  
+  ion-toolbar {
+    --background: #ffffff;
+  }
+  
+  ion-list {
+    background-color: #ffffff !important;
+  }
+  
+  /* Force all text elements to inherit color properly */
+  p, span, div, h1, h2, h3, h4, h5, h6 {
+    color: inherit;
+  }
+}
+
 /* custom CSS: */
 
 @import './app/sharedcomponents/expandable/expandable.component';
