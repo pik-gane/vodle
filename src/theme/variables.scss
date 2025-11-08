@@ -555,22 +555,17 @@ app-mypolls {
 
 /* Dark theme specific fixes */
 @media (prefers-color-scheme: dark) {
-  /* Fix settings page buttons to match item background */
-  app-settings ion-grid ion-row ion-button[fill="clear"],
-  app-settings ion-grid ion-row ion-button.button-clear,
-  app-settings ion-buttons ion-button[fill="clear"],
-  app-settings ion-buttons ion-button.button-clear {
-    --background: #1e1e1e !important;
-    --background-activated: rgba(var(--ion-color-primary-rgb), 0.12) !important;
-    --background-focused: rgba(var(--ion-color-primary-rgb), 0.12) !important;
-    --background-hover: rgba(var(--ion-color-primary-rgb), 0.04) !important;
-    --color: var(--ion-color-primary) !important;
+  /* Fix settings page buttons container backgrounds to match item background */
+  app-settings ion-grid ion-row,
+  app-settings ion-buttons {
     background: #1e1e1e !important;
   }
   
-  app-settings ion-button[fill="clear"]::part(native),
-  app-settings ion-button.button-clear::part(native) {
-    background: #1e1e1e !important;
+  /* Fix vodle logo background in menu */
+  app-root ion-menu ion-header ion-toolbar img[src*="topleft_icon"] {
+    background: #1f1f1f !important;
+    padding: 4px;
+    border-radius: 4px;
   }
   
   /* Fix draftpoll icon color */
