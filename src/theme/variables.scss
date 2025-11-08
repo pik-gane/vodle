@@ -61,7 +61,7 @@ $font-family-wp-base: "Quicksand Medium";
   --ion-font-family: "Quicksand";
   
   /* Force light theme to prevent system dark theme interference */
-  color-scheme: light only;
+  color-scheme: light dark; /* Inform browser we support dark mode to prevent forced inversion */
   
   /* Override Ionic's default background and text colors to prevent dark mode */
   --ion-background-color: #ffffff;

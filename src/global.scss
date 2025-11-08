@@ -48,7 +48,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 body {
   background-color: #ffffff !important;
   color: #000000;
-  color-scheme: light only; /* Prevent dark mode from system */
+  color-scheme: light dark; /* Inform browser we support dark mode to prevent forced inversion */
 }
 
 ion-content {
