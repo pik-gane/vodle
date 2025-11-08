@@ -1,7 +1,7 @@
 {
     "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
     "_HEADER_": [
-        "[COMMENT] (C) Copyright 2015–2025 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.",
+        "[COMMENT] (C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.",
         "[COMMENT] This file is part of vodle.",
         "[COMMENT] vodle is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
         "[COMMENT] vodle is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.",
@@ -86,7 +86,6 @@
         "p18": "Exact procedure: Options are sorted by descending approval. Then each optionʼs share is proportional to the number of participants who have approved this option but no higher-up option.",
         "h2": "Whoʼs behind it?",
         "p21": "vodleʼs decision rule (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
-        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
         "h3": "Support vodle!",
         "p31": "As we are committed to keep vodle free for everyone, we still need further help. If you are a nerd, creative, influencer, scientist, philanthropist, activist, politician, friendly alien... who believes in the future of fair &amp; efficient consensus making and want to contribute in whatever small way, we have some ideas <a href=\"{{support_vodle_url}}\" target=\"_blank\">how you might support us!</a>"
     },
@@ -461,7 +460,7 @@
         "ask-old-email-2": "This way you can access your existing data.",
         "consent-privacy-before-privacy": "Yes, I have read the ",
         "consent-privacy-privacy": "data protection declaration and terms of use",
-        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.",
+        "consent-privacy-after-privacy": ". I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail to privacy@vodle.it.",
         "login-as-guest-head": "Alternatively, you can use a guest account:",
         "login-as-guest-button": "Use guest account",
         "login-as-guest-foot": "(Please check the consent box first)",
@@ -600,9 +599,8 @@
         "average-rating": "avg. wap {{average}}",
         "explain": "Explain",
         "add-option": "Add option",
-        "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it until {{deadline}}. Once added, options cannot be edited or removed again, however.",
-        "sorting": "Sorting options by approval...",
-        "add-option-expired": "Time to add new options has expired."
+        "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
+        "sorting": "Sorting options by approval..."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

@@ -456,7 +456,7 @@
         "ask-old-email-2": "Tällä tavoin pääset käsiksi omiin tietoihisi.",
         "consent-privacy-before-privacy": "Kyllä, olen lukenut ",
         "consent-privacy-privacy": "tietosuojaselosteen ja käyttöehdot",
-        "consent-privacy-after-privacy": ". Hyväksyn tietojeni käsittelyn kuvatulla tavalla käyttäjien laitteissa ja tietokantapalvelimissa, jotta voin osallistua kyselyihin. Sallin sen, että joitakin tietojani lähetetään muille osallistujille pseudonymisoidussa muodossa. Tiedostan, että oikeuteni vaatia tietojeni poistoa on joiltain osin rajoitettu, sillä kopioita ei välttämättä voi poistaa kaikkien käyttäjien laitteista. Voin perua antamani suostumuksen sähköpostitse osoitteessa.",
+        "consent-privacy-after-privacy": ". Hyväksyn tietojeni käsittelyn kuvatulla tavalla käyttäjien laitteissa ja tietokantapalvelimissa, jotta voin osallistua kyselyihin. Sallin sen, että joitakin tietojani lähetetään muille osallistujille pseudonymisoidussa muodossa. Tiedostan, että oikeuteni vaatia tietojeni poistoa on joiltain osin rajoitettu, sillä kopioita ei välttämättä voi poistaa kaikkien käyttäjien laitteista. Voin perua antamani suostumuksen sähköpostitse osoitteessa privacy@vodle.it.",
         "login-as-guest-head": "Vaihtoehtoisesti voit käyttää vierastiliä:",
         "login-as-guest-button": "Käytä vierastiliä",
         "login-as-guest-foot": "(Valitse ensin suostumusruutu)",
