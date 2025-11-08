@@ -107,7 +107,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               type="scale" from="0 1" to="1 1" [attr.begin]="''+tr1+'s'" [attr.dur]="''+(tr2-tr1)+'s'" fill="freeze" /><!-- grow to real width -->
             <line *ngFor="let item of rs; let i = index" 
                   stroke-width="0.5"
-                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="black">
+                  [attr.y1]="poss[i]" [attr.y2]="poss[i]" x1="0" [attr.x2]="rs[i]" stroke="var(--ion-text-color, currentColor)">
               <set attributeName="stroke" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
             </line>
             <circle *ngFor="let item of rs; let i = index"
@@ -436,7 +436,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <ng-container *ngIf="ps[ps.length-1] > 0">
 
               <!-- arrow: -->
-              <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="black" stroke-width="0.2" stroke-dasharray=".5 .5"><!--or var(--vodle-darkgreen)?-->
+              <line [attr.x1]="100*(1-a)" x2="-4" y1="0" y2="0" marker-end="url(#arrowhead-green)" stroke="var(--ion-text-color, currentColor)" stroke-width="0.2" stroke-dasharray=".5 .5">
               </line>
 
               <!-- approval share: -->

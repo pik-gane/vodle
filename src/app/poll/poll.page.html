@@ -130,7 +130,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </small>  
           </ion-label>
           <ion-button slot="end" class="ion-no-margin ion-no-padding" fill="clear" size="small" (click)="news.delete(n);G.N.dismiss(n.key)">
-            <ion-icon slot="icon-only" name="close-outline" style="color:gray!important">
+            <ion-icon slot="icon-only" name="close-outline" color="medium">
             </ion-icon>    
           </ion-button>  
         </ion-item>
@@ -507,7 +507,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     outline="true">
                   <ion-icon 
                     name="mail-open-outline"
-                    style="color:grey" size="small">
+                    color="medium" size="small">
                   </ion-icon>
                   <small>{{r.from}}</small>
                 </ion-chip>
@@ -526,7 +526,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     outline="true">
                   <ion-icon 
                     name="mail-open-outline"
-                    style="color:grey" size="small">
+                    color="medium" size="small">
                   </ion-icon>
                   <small>{{r.from}}</small>
                 </ion-chip>
@@ -953,7 +953,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     <ng-container *ngIf="E.show_debug_info">
       <ion-item></ion-item>
       <ion-item class="ion-text-right" lines="none">
-        <ion-col><small><p style="color: grey;">
+        <ion-col><small><p color="medium">
           Debugging info: cycle_len={{p.T.my_cycle_len}}, state={{p.state}}, vid={{p.myvid}}, oids={{p.oids}}, oidsorted={{oidsorted}}/{{p.T.oids_descending}}, scores_map={{G.map2str(p.T.scores_map)}}. 
           Simulate state (off:closed, on:running): 
         </p></small></ion-col>

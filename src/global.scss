@@ -120,7 +120,7 @@ html {
 ion-content {
     .error-message
     {
-        color: red;
+        color: var(--ion-color-danger);
         font-size: 14px;
         margin-left: 15px;
         margin-top: 5px;
