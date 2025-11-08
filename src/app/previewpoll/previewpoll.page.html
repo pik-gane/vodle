@@ -52,7 +52,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <ng-container *ngIf="p.due >= G.P.ref_date">
             <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))"></ion-text>
           </ng-container>
-          <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" style="color: red;"></ion-text>
+          <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" color="danger"></ion-text>
         </p>
         <p *ngIf="((p.language||'')!='') && (p.language!=G.S.language)">
           <small>

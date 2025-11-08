@@ -117,7 +117,7 @@ export class ExplainApprovalPage implements OnInit {
     for (let i=0; i<n; i++) {
       let r = i < offset ? 0 : rs0[i-offset];
       rs.push(r);
-      cs.push((r == 0) ? '#d33939' : (r < rmin) ? '#3465a4' : '#62a73b');
+      cs.push((r == 0) ? 'var(--vodle-red)' : (r < rmin) ? 'var(--vodle-blue)' : 'var(--vodle-green)');
       ts.push(''+(this.tob1 + dur*i/n + (r < rmin ? 0 : this.dtt))+'s' )
       poss.push(100*(i+.01)/n);
       if (this.thresholdi < 0 && r >= rmin) {

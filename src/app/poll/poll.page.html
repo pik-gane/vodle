@@ -130,7 +130,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </small>  
           </ion-label>
           <ion-button slot="end" class="ion-no-margin ion-no-padding" fill="clear" size="small" (click)="news.delete(n);G.N.dismiss(n.key)">
-            <ion-icon slot="icon-only" name="close-outline" style="color:gray!important">
+            <ion-icon slot="icon-only" name="close-outline" color="medium">
             </ion-icon>    
           </ion-button>  
         </ion-item>
@@ -203,7 +203,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px; margin-bottom:5px!important;">
-              <ion-label *ngIf="details_expanded" style="color:#88e950; white-space: normal; text-align: right; font-size: 11.5px;"
+              <ion-label *ngIf="details_expanded" style="color:var(--vodle-highlight); white-space: normal; text-align: right; font-size: 11.5px;"
                 [innerHtml]="'poll.assist-me-button' | translate">
               </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
                 <ion-icon name="color-wand-outline" slot="icon-only" 
@@ -292,7 +292,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                   style="position: absolute; right:8.5px; bottom:8px;" 
                   >
                 <ng-container *ngIf="p.allow_voting">
-                  <span style="color:#88e950; white-space: normal; text-align: right; font-size: 11.5px;"
+                  <span style="color:var(--vodle-highlight); white-space: normal; text-align: right; font-size: 11.5px;"
                     [innerHtml]="'poll.show-live' | translate">
                   </span>&nbsp;<ion-button size="small" shape="round" color="success" class="ion-no-border ion-no-padding"><ion-icon slot="icon-only" [name]="show_live?'eye-off-outline':'eye-outline'" style="padding-left:4px;padding-right:5px"></ion-icon></ion-button><!--<ion-toggle [checked]="show_live" color="warning" style="padding-left: 0px!important;"></ion-toggle>-->
                 </ng-container>
@@ -477,7 +477,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 <ion-icon 
                   [name]="(incoming_delegation_expanded) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
                   size="smaller" class="ion-no-margin" 
-                  style="color:black; position: relative; left: -2px; top: 2px;">
+                  style="position: relative; left: -2px; top: 2px;">
                 </ion-icon>
                 <span *ngIf="accepted_requests.length > 0" 
                   [innerHtml]="
@@ -507,7 +507,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     outline="true">
                   <ion-icon 
                     name="mail-open-outline"
-                    style="color:grey" size="small">
+                    color="medium" size="small">
                   </ion-icon>
                   <small>{{r.from}}</small>
                 </ion-chip>
@@ -526,7 +526,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     outline="true">
                   <ion-icon 
                     name="mail-open-outline"
-                    style="color:grey" size="small">
+                    color="medium" size="small">
                   </ion-icon>
                   <small>{{r.from}}</small>
                 </ion-chip>
@@ -562,7 +562,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
               <ion-button 
                   [disabled]="!p.allow_voting"
                   fill="clear" (click)="revoke_delegation_dialog()">
-                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+                <ion-icon name="trash-outline"></ion-icon>
               </ion-button>
             </ion-col>
 
@@ -607,7 +607,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <ion-col size="auto" class="ion-no-margin">
               <ion-button fill="clear" (click)="revoke_delegation_dialog()">
-                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+                <ion-icon name="trash-outline"></ion-icon>
               </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             </ion-col>
 
@@ -635,14 +635,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <ion-item class="ion-no-padding ion-no-margin" lines="none"
             style="--min-height: 0px!important; font-weight: bold;">
-        <small (click)="(show_live||!p.allow_voting)?glossary('share'):null" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: #769596; text-align: center;">
+        <small (click)="(show_live||!p.allow_voting)?glossary('share'):null" style="padding-top: 8px!important;padding-left: 6px; width: 68px!important; color: var(--vodle-medium); text-align: center;">
           <span *ngIf="show_live||!p.allow_voting" style="width: 100%!important" class="externallink" [innerHtml]="'share'|translate"></span>
         </small>
-        <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: #769596;"><!--#62a73b;-->
+        <small (click)="glossary('wap')" style="padding-left: 6px!important; padding-top: 8px!important; flex-grow: 1; color: var(--vodle-medium);"><!--var(--vodle-green);-->
           <span class="externallink" [innerHtml]="'poll.your-wap'|translate"></span><!-- &rarr;-->
         </small>
         <!-- TODO: make padding robustly correct accross devices: -->
-        <small (click)="(show_live||!p.allow_voting)?glossary('approve'):null" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: #769596;'"><!--#9abcbd--><!--&larr; -->
+        <small (click)="(show_live||!p.allow_voting)?glossary('approve'):null" [style]="'padding-top: 8px!important; padding-right: '+(delegation_status=='agreed'?62:10)+'px; color: var(--vodle-medium);'"><!--var(--vodle-dark)--><!--&larr; -->
           <ng-container *ngIf="show_live||!p.allow_voting">
             <ion-icon name="caret-down" style="position: relative; top: 2px;"></ion-icon>&nbsp;<span class="externallink" [innerHtml]="'approval'|translate"></span>
           </ng-container>
@@ -664,10 +664,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             <ion-col size="auto" class="ion-no-padding ion-no-margin">
               <div style="width: 60px!important"></div>
               <svg [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" xmlns="http://www.w3.org/2000/svg" width="60px" height="60px" style="position:absolute; bottom:0px;"><!--top:12px;-->
-                <circle cx="21" cy="25" r="20" fill="#bce4e5" stroke="none" />
-                <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="#9abcbd" />
+                <circle cx="21" cy="25" r="20" fill="var(--vodle-light)" stroke="none" />
+                <path [id]="'pie_'+oidsorted[i]" d="M 21,25 l 0,-20 a 20 20 0 0 1 0 0 Z" fill="var(--vodle-dark)" />
                 <line [attr.display]="option_expanded[oidsorted[i]] ? 'inline' : 'none'"
-                  x1="21" y1="48" x2="21" y2="60" stroke="#769596" stroke-width="1" stroke-dasharray="1 1"></line>
+                  x1="21" y1="48" x2="21" y2="60" stroke="var(--vodle-medium)" stroke-width="1" stroke-dasharray="1 1"></line>
               </svg>
             </ion-col>
 
@@ -685,7 +685,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       <ion-icon 
                         [name]="(option_expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
                         size="small" class="ion-no-margin" 
-                        style="color:black; position: relative; top: 3px;">
+                        style="position: relative; top: 3px;">
                       </ion-icon>
 
                       <!-- OPTION NAME: -->
@@ -742,12 +742,12 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                             <rect [id]="'bar_' + oidsorted[i]"
                               [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" 
                               x="100%" width="0%" y="8" height="18" 
-                              fill="#bce4e5" stroke="none" /><!--Note: width will change dynamically-->
+                              fill="var(--vodle-light)" stroke="none" /><!--Note: width will change dynamically-->
                             <line [attr.display]="(show_live||!p.allow_voting)?'inline':'none'" 
-                              x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="#bce4e5" stroke-width="5" 
+                              x1="100%" y1="0" x2="100%" y2="34" fill="none" stroke="var(--vodle-light)" stroke-width="5" 
                               />
-                            <line x1="0%" x2="100%" y1="17" y2="17" stroke="#b4dbdb" stroke-width="2" stroke-dasharray="2 2" />
-                            <!--<rect x="0%" width="100%" y="16" height="2" fill="#b4dbdb" stroke="none" />-->
+                            <line x1="0%" x2="100%" y1="17" y2="17" stroke="var(--vodle-tint)" stroke-width="2" stroke-dasharray="2 2" />
+                            <!--<rect x="0%" width="100%" y="16" height="2" fill="var(--vodle-tint)" stroke="none" />-->
                           </svg>
                         </div>
 
@@ -763,7 +763,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                             </text>
                             -->
                             <text x="100%" y="15" 
-                              style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="#9abcbd" [innerHtml]="
+                              style="font-weight: bold; font-size: 12px;" text-anchor="end" fill="var(--vodle-dark)" [innerHtml]="
                                 (p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 100).toFixed(1) + '%&nbsp;&nbsp;'
                               ">
                             </text>
@@ -775,8 +775,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
                             [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
-                            <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="#9abcbd" stroke-width="2" stroke-dasharray="3 2" />
-                            <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="#9abcbd" stroke="none"/>
+                            <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="var(--vodle-dark)" stroke-width="2" stroke-dasharray="3 2" />
+                            <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="var(--vodle-dark)" stroke="none"/>
                             <!--FIXME: circle is cropped when close to either endpoint. how to avoid this?-->
                           </svg>
                         </div>
@@ -826,7 +826,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                       <b [style.display]="(show_live||!p.allow_voting)?'inline':'none'">
                         <!-- Winning chance/budget share: -->
-                        <span style="color:#769596;">
+                        <span style="color:var(--vodle-medium);">
                           <span style="white-space: nowrap;" [innerHtml]="
                             (p.type == 'winner' 
                                 ? (p.allow_voting?'poll.chance-to-win':'poll.final-chance-to-win') 
@@ -834,14 +834,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                             | translate: {percentage: 
                               (p.T.shares_map.get(oidsorted[i]) * 100).toFixed(1)
                             }">
-                          </span><small><wbr> <span style="color:#4c822e;" 
+                          </span><small><wbr> <span style="color:var(--vodle-darkgreen);" 
                               [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                               [innerHtml]="'poll.including-your-share' | translate">
                             </span>,
                           </small>
                         </span><small><wbr> </small>
                         <!-- Approval: -->
-                        <span style="color:#9abcbd; white-space: nowrap;">
+                        <span style="color:var(--vodle-dark); white-space: nowrap;">
                           <span [innerHtml]="
                             'poll.approved-by' | translate: {percentage:
                               (p.T.approval_scores_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining) * 100).toFixed(1)
@@ -849,7 +849,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                           </span>
                         </span>
                         <small>
-                          <span style="color:#62a73b" 
+                          <span style="color:var(--vodle-green)" 
                             [style.display]="approved[oidsorted[i]] ? 'inline' : 'none'"
                             [innerHtml]="'poll.including-you' | translate">
                           </span>
@@ -862,7 +862,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                                 || (i<oidsorted.length-1 
                                     && p.T.approval_scores_map.get(oidsorted[i+1]) 
                                     == p.T.approval_scores_map.get(oidsorted[i]))" 
-                                style="color:#9abcbd">,
+                                style="color:var(--vodle-dark)">,
                             <span style="white-space: nowrap;" [innerHtml]="
                               'poll.average-rating' | translate: {average:
                                 (p.T.total_effective_ratings_map.get(oidsorted[i]) / Math.max(1, p.T.n_not_abstaining)).toFixed(1)
@@ -870,7 +870,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                             </span>
                           </span>&nbsp;
                           <!-- explanation link: -->
-                          <span style="color:#9abcbd; white-space: nowrap;">
+                          <span style="color:var(--vodle-dark); white-space: nowrap;">
                             (<a 
                               (click)="explain_approval_dialog(oidsorted[i])"
                               [innerHtml]="'poll.explain' | translate">
@@ -953,7 +953,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     <ng-container *ngIf="E.show_debug_info">
       <ion-item></ion-item>
       <ion-item class="ion-text-right" lines="none">
-        <ion-col><small><p style="color: grey;">
+        <ion-col><small><p color="medium">
           Debugging info: cycle_len={{p.T.my_cycle_len}}, state={{p.state}}, vid={{p.myvid}}, oids={{p.oids}}, oidsorted={{oidsorted}}/{{p.T.oids_descending}}, scores_map={{G.map2str(p.T.scores_map)}}. 
           Simulate state (off:closed, on:running): 
         </p></small></ion-col>
@@ -971,7 +971,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
 <!-- OPTIONAL GLOSSARY: -->
 
-<ion-footer *ngIf="show_glossary" style="box-shadow: 0px -3px 4px #eeeeee;">
+<ion-footer *ngIf="show_glossary" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
   <ion-item color="light">
     <ion-text>
     <ion-button (click)="dismiss_glossary()" fill="clear" class="ion-float-right ion-margin-right ion-margin-left ion-no-padding"

@@ -269,7 +269,7 @@
        transform="matrix(0.68987281,0,0,0.16250677,73.381318,185.49166)"
        style="clip-rule:nonzero">
       <path
-         style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none"
+         style="fill:#ffffff;fill-opacity:0;fill-rule:evenodd;stroke:none"
          d="M 0,0 H 453.51562 V 453.51562 H 0 Z m 0,0"
          id="path69"
          inkscape:connector-curvature="0" />
