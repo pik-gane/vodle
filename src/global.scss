@@ -97,6 +97,19 @@ ion-list ion-item ion-label {
   color: #000000 !important;
 }
 
+/* Ensure text elements inside ion-items are black */
+ion-item p,
+ion-item small,
+ion-item ion-col {
+  color: #000000 !important;
+}
+
+ion-list ion-item p,
+ion-list ion-item small,
+ion-list ion-item ion-col {
+  color: #000000 !important;
+}
+
 ion-card {
   --background: #ffffff;
   --color: #000000;
