@@ -60,7 +60,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </marker>
         <marker id="arrowhead-green" markerWidth="10" markerHeight="7" 
                 refX="0" refY="3.5" orient="auto">
-          <polyline points="0 0, 10 3.5, 0 7" fill="black"/><!--or var(--vodle-darkgreen) ?-->
+          <polyline points="0 0, 10 3.5, 0 7" fill="var(--ion-text-color, currentColor)"/>
         </marker>
       </defs>
 
@@ -76,7 +76,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           * at sec. 6, voter's own rating shows
         -->
 
-        <text x="0" y="-11" fill="black">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
+        <text x="0" y="-11" fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.all-ratings'|translate"></tspan></text>
         <text x="0" y="-6" fill="var(--vodle-grey)">&nbsp;<tspan [innerHtml]="'explain.large-to-small'|translate"></tspan></text>
 
         <g transform="scale(1 -1) translate(0 -100)">
@@ -111,7 +111,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <set attributeName="stroke" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
             </line>
             <circle *ngFor="let item of rs; let i = index"
-                  [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="black">
+                  [attr.cy]="poss[i]" [attr.cx]="rs[i]" r="0.75" fill="var(--ion-text-color, currentColor)">
               <set attributeName="fill" [attr.to]="cs[i]" [attr.begin]="ts[i]" />
             </circle>
           </g>
@@ -136,7 +136,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               from="1" to="0" [attr.begin]="''+to1+'s'" [attr.dur]="''+(to2-to1)+'s'" fill="freeze" /><!-- fade out -->
             <g transform="rotate(90)">
               <g transform="translate(0, -1.25) scale(1 -1)">
-                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.vertical-approval-label'|translate"></tspan></text>
+                <text fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.vertical-approval-label'|translate"></tspan></text>
               </g>
             </g>
           </g>
@@ -162,7 +162,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <circle [attr.cy]="poss[myi]" [attr.cx]="rs[myi]" r="3" [attr.fill]="cs[myi]" />
             </ng-container>
             <!-- final annotations: -->
-            <g transform="scale(1 -1)" fill="black">
+            <g transform="scale(1 -1)" fill="var(--ion-text-color, currentColor)">
               <g *ngIf="a<1">
                 <text [attr.x]="100*(1-a)" y="10" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
                 <text [attr.x]="100*(1-a)" y="15" fill="var(--vodle-blue)" text-anchor="end"><tspan [innerHtml]="'explain.threshold-smaller-line-2'|translate"></tspan>&nbsp;&nbsp;</text>
@@ -209,7 +209,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <line x1="0" y1="-15" x2="0" y2="-5" stroke="var(--vodle-blue-transparent)" stroke-width="0.5">
               </line>
               <g transform="translate(0, -11.25) scale(1 -1)" >
-                <text fill="black">&nbsp;<tspan [innerHtml]="'explain.opposition'|translate"></tspan></text>
+                <text fill="var(--ion-text-color, currentColor)">&nbsp;<tspan [innerHtml]="'explain.opposition'|translate"></tspan></text>
               </g>   
             </g>
           </g>

@@ -49,7 +49,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <span style="color: white" [innerHtml]="'draftpoll.details'|translate"></span>
         <ion-toggle 
           name="detail-toggle" #detailstoggle [checked]="show_details"
-          color="light" style="--handle-background: black; padding-right: 0; margin-right: 0;">
+          color="light" style="--handle-background: var(--ion-text-color, currentColor); padding-right: 0; margin-right: 0;">
         </ion-toggle><!--not (click)="show_details=!show_details" because this is caught by the surrounding button!-->
       </ion-button>
     </ion-item>
@@ -61,8 +61,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             [class]="stage==0?'current-field':''" 
             ><!--style="position:relative;top:3px;z-index:10;" now in class=poll-type-->
           <ion-icon class="poll-type"
-            [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'"
-            style="color:black">
+            [name]="formGroup.get('poll_type').value=='winner'?'trophy':'cut'">
           </ion-icon>&nbsp;
         </span>
         <span [class]="stage==0?'current-field':''" 

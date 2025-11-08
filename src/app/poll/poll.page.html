@@ -477,7 +477,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 <ion-icon 
                   [name]="(incoming_delegation_expanded) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
                   size="smaller" class="ion-no-margin" 
-                  style="color:black; position: relative; left: -2px; top: 2px;">
+                  style="position: relative; left: -2px; top: 2px;">
                 </ion-icon>
                 <span *ngIf="accepted_requests.length > 0" 
                   [innerHtml]="
@@ -562,7 +562,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
               <ion-button 
                   [disabled]="!p.allow_voting"
                   fill="clear" (click)="revoke_delegation_dialog()">
-                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+                <ion-icon name="trash-outline"></ion-icon>
               </ion-button>
             </ion-col>
 
@@ -607,7 +607,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <ion-col size="auto" class="ion-no-margin">
               <ion-button fill="clear" (click)="revoke_delegation_dialog()">
-                <ion-icon name="trash-outline" style="color:black"></ion-icon>
+                <ion-icon name="trash-outline"></ion-icon>
               </ion-button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             </ion-col>
 
@@ -685,7 +685,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       <ion-icon 
                         [name]="(option_expanded[oidsorted[i]]) ? 'chevron-down-outline' : 'chevron-forward-outline'" 
                         size="small" class="ion-no-margin" 
-                        style="color:black; position: relative; top: 3px;">
+                        style="position: relative; top: 3px;">
                       </ion-icon>
 
                       <!-- OPTION NAME: -->

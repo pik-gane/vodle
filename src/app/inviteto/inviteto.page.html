@@ -37,8 +37,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item (click)="details_expanded=!details_expanded">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-icon class="poll-type"
-          [name]="p.type=='winner'?'trophy':'cut'"
-          style="color:black">
+          [name]="p.type=='winner'?'trophy':'cut'">
         </ion-icon>&nbsp;
         <i [innerHtml]="p.title"></i>
         <ng-container *ngIf="details_expanded">
