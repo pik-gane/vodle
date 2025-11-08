@@ -182,7 +182,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 </ng-container>
                 <g [attr.transform]="poss[myi] >= 13 ? 'translate(0 20)' : ''">
                   <!-- backdrop: -->
-                  <rect x="75" y="-16" width="25" height="13" fill="var(--vodle-white-semi)"></rect>
+                  <rect x="75" y="-16" width="25" height="13" fill="var(--ion-background-color, var(--vodle-white-semi))"></rect>
                   <text x="100" y="-9.5" fill="var(--vodle-dark)" text-anchor="end"><tspan [attr.font-size]="approval_font_size_large" font-weight="bold">{{(a*100).toFixed(1)}}%</tspan>&nbsp;</text>
                   <text x="100" y="-4.5" fill="var(--vodle-dark)" text-anchor="end"><tspan [innerHtml]="'explain.horizontal-approval-label'|translate"></tspan>&nbsp;</text>
                 </g>
@@ -254,7 +254,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               <text y="-8" fill="var(--vodle-medium)" [innerHtml]="'explain.share-intro-line-2'|translate">
               </text>
             </g>
-            <g opacity="0">
+            <g opacity="0" fill="var(--ion-text-color, currentColor)">
               <animate attributeName="opacity" 
                 from="0" to="1" begin="3s" dur="1s" fill="freeze" /><!-- fade in -->
               <ng-container *ngIf="a == 0">
@@ -317,9 +317,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </g>
 
             <!-- explanation: -->
-            <g transform="translate(0 -1)" fill="var(--vodle-medium)">
+            <g transform="translate(0 -1)" fill="var(--ion-text-color, currentColor)">
               <!-- backdrop: -->
-              <rect x="-1" y="-4" width="140" height="9" fill="var(--vodle-white)"></rect>
+              <rect x="-1" y="-4" width="140" height="9" fill="var(--ion-background-color, var(--vodle-white))"></rect>
               <!-- text: -->
               <ng-container *ngIf="ps.length == 2 && myv != oids[i]">
                 <text y="0">
@@ -382,9 +382,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               from="0" to="1" [attr.begin]="''+(6+3*(ps.length-1))+'s'" dur="1s" fill="freeze" /><!-- fade in -->
 
             <!-- explanation: -->
-            <g transform="translate(-14 -17)">
+            <g transform="translate(-14 -17)" fill="var(--ion-text-color, currentColor)">
               <!-- backdrop: -->
-              <rect x="-10" y="-4" width="140" height="10" fill="var(--vodle-white)"></rect>
+              <rect x="-10" y="-4" width="140" height="10" fill="var(--ion-background-color, var(--vodle-white))"></rect>
               <!-- text: -->
               <ng-container *ngIf="ps.length == 1 && myv != oid">
                 <text y="0">

@@ -552,3 +552,20 @@ app-mypolls {
   font-weight: bold!important;
   margin-left: 30px!important;
 }
+
+/* Dark theme specific fixes */
+@media (prefers-color-scheme: dark) {
+  /* Fix settings page buttons to not have black background */
+  app-settings ion-button[fill="clear"] {
+    --background: transparent !important;
+    --background-activated: var(--ion-color-step-150) !important;
+    --background-focused: var(--ion-color-step-100) !important;
+    --background-hover: var(--ion-color-step-100) !important;
+  }
+  
+  /* Fix draftpoll icon color */
+  app-draftpoll .poll-type,
+  app-inviteto .poll-type {
+    color: var(--ion-text-color) !important;
+  }
+}
