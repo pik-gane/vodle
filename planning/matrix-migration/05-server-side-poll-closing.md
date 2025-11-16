@@ -86,14 +86,16 @@ async createPollRoom(pollId: string, title: string, dueDate: Date) {
     ],
     power_level_content_override: {
       users: {
-        [this.userId]: 100, // Creator
+        [this.userId]: 100, // Creator (admin for room management)
         '@vodle-bot:matrix.org': 100 // Bot that will close poll
       },
       events: {
-        'm.room.vodle.poll.deadline': 100, // Only creator can set
-        'm.room.vodle.poll.state': 100, // Bot can change state
-        'm.room.power_levels': 100, // Bot can update power levels
-        'm.room.vodle.vote.rating': 50 // Voters can vote (until closed)
+        'm.room.vodle.poll.deadline': 100, // Immutable after opening
+        'm.room.vodle.poll.state': 100, // Only bot can change state
+        'm.room.power_levels': 100, // Only bot can update power levels
+        'm.room.vodle.poll.option': 50, // Voters can add options
+        'm.room.vodle.vote.rating': 50, // Voters can vote (until closed)
+        'm.room.vodle.vote.delegation': 50 // Voters can delegate
       },
       users_default: 50
     }

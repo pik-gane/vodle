@@ -249,12 +249,13 @@ async createPollRoom(pollId: string, title: string, creatorId: string) {
     }],
     power_level_content_override: {
       users: {
-        [creatorId]: 100 // Creator has full power
+        [creatorId]: 100 // Creator has admin power for room management
       },
       events: {
-        'm.room.vodle.poll.meta': 100, // Only creator can change meta
-        'm.room.vodle.poll.option': 100, // Only creator can change options
-        'm.room.vodle.vote.rating': 50 // Voters can vote
+        'm.room.vodle.poll.meta': 100, // Immutable after opening (was 'draft')
+        'm.room.vodle.poll.option': 50, // Voters can add new options (but can't modify existing)
+        'm.room.vodle.vote.rating': 50, // Voters can change their own ratings
+        'm.room.vodle.vote.delegation': 50 // Voters can change their own delegations
       },
       users_default: 50 // Default voters can send events
     }

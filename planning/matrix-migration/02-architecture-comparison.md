@@ -180,9 +180,13 @@ This document compares the current CouchDB/PouchDB architecture with a proposed 
 - **Type**: Private (invite-only, multiple voters)
 - **Encryption**: Enabled (Megolm)
 - **Power Levels**: 
-  - Creator = 100
-  - Voters = 50
+  - Creator = 100 (admin for room management)
+  - Voters = 50 (can vote, add options, delegate)
   - Default = 0
+- **Permission Model**:
+  - After opening: poll metadata immutable (no one can change)
+  - Voters can add new options (but can't modify existing ones)
+  - Voters can change their own ratings/delegations (until deadline)
 
 **State Events** (poll metadata):
 ```json
@@ -249,6 +253,23 @@ client.on("RoomState.events", (event, state) => {
   }
 });
 ```
+
+### Permission Model
+
+**Current CouchDB Behavior:**
+- Once poll opens (state='running'), poll metadata and options become **immutable**
+- No one (including creator) can modify metadata or existing options
+- Voters can ADD new options (but can't change existing ones)
+- Voters can update their own ratings and delegations until deadline
+
+**Matrix Implementation:**
+Power levels enforce this model:
+- `m.room.vodle.poll.meta`: 100 (immutable after opening - only bot for closing)
+- `m.room.vodle.poll.option`: 50 (voters can add via unique state_key, but client prevents modification)
+- `m.room.vodle.vote.rating`: 50 (voters can update their own)
+- `m.room.vodle.vote.delegation`: 50 (voters can update their own)
+
+**Key Insight**: Matrix state events with unique state_keys allow "append-only" behavior - new options can be added (new state_key) but existing ones can't be modified (client-side validation prevents sending updates to existing state_keys).
 
 ## Detailed Comparison
 

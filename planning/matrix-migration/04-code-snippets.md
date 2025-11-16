@@ -483,13 +483,13 @@ export class MatrixService {
       ],
       power_level_content_override: {
         users: {
-          [this.userId]: 100 // Creator has full control
+          [this.userId]: 100 // Creator has admin power for room management
         },
         events: {
-          'm.room.vodle.poll.meta': 100, // Only creator can change
-          'm.room.vodle.poll.option': 100, // Only creator can change
-          'm.room.vodle.vote.rating': 50, // Voters can rate
-          'm.room.vodle.vote.delegation': 50 // Voters can delegate
+          'm.room.vodle.poll.meta': 100, // Immutable after opening (no one can change)
+          'm.room.vodle.poll.option': 50, // Voters can add new options (immutable once added)
+          'm.room.vodle.vote.rating': 50, // Voters can change their own ratings
+          'm.room.vodle.vote.delegation': 50 // Voters can change their own delegations
         },
         users_default: 50, // Default voters
         events_default: 0
@@ -544,12 +544,27 @@ export class MatrixService {
   
   /**
    * Add option to poll
+   * 
+   * NOTE: Options are immutable once added. In Matrix, state events
+   * can be updated, but we use validation to ensure they're not changed
+   * after creation. Each option uses a unique state_key (option ID).
+   * 
+   * Permission model:
+   * - Power level 50 allows voters to ADD new options
+   * - Once added, option content cannot be changed (enforced by client)
+   * - This matches current CouchDB behavior where options are immutable
    */
   async addOption(
     roomId: string,
     optionId: string,
     option: OptionData
   ): Promise<void> {
+    // Check if option already exists
+    const existing = this.getOption(roomId, optionId);
+    if (existing) {
+      throw new Error('Option already exists and cannot be modified');
+    }
+    
     await this.client.sendStateEvent(
       roomId,
       'm.room.vodle.poll.option',
@@ -557,7 +572,8 @@ export class MatrixService {
         name: option.name,
         description: option.description || '',
         url: option.url || '',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        created_by: this.userId
       },
       optionId // state_key is option ID
     );
