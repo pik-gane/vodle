@@ -156,6 +156,32 @@ This directory contains comprehensive planning documentation for migrating Vodle
 
 ---
 
+### 07. Voter Anonymity and Pseudonymity
+**File**: `07-voter-anonymity.md`
+
+**Contents**:
+- Current CouchDB anonymity model (per-poll voter IDs)
+- Matrix protocol challenge (sender field reveals identity)
+- Solution options:
+  - **Option 1**: Ephemeral Matrix accounts per poll (recommended)
+  - **Option 2**: Encrypted voter ID in event content
+  - **Option 3**: Hybrid approach
+- Complete implementation with code examples
+- Security analysis and comparison
+- Edge cases and considerations
+
+**Key Design Decision**:
+Current Vodle generates random `myvid` per poll for anonymity. Matrix sender field is same across polls, breaking this. **Solution: Create ephemeral Matrix account per poll** (`@vodle_voter_{random_vid}:homeserver.com`) to preserve strong anonymity and unlinkability.
+
+**Implementation**:
+- Automatic ephemeral account creation on poll join
+- Credentials stored encrypted in user's private room
+- Each poll uses completely separate Matrix identity
+- Cannot correlate same user across different polls
+- Preserves Vodle's democratic principle of anonymous deliberation
+
+---
+
 ## Executive Summary
 
 ### Problem
@@ -180,6 +206,7 @@ Migrate to Matrix protocol:
 3. **Local-First**: Offline capability maintained
 4. **Distributed Tally**: Computed locally with provable PRNG
 5. **Poll Closing**: Server-side automatic closing with verification
+6. **Voter Anonymity**: Per-poll ephemeral accounts preserve anonymity and unlinkability
 
 ### New Capabilities Enabled
 1. **Automatic Poll Closing**: Server bot closes polls at deadline
