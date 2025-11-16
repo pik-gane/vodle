@@ -182,6 +182,34 @@ Current Vodle generates random `myvid` per poll for anonymity. Matrix sender fie
 
 ---
 
+### 08. Privacy-Preserving Invitation Service
+**File**: `08-invitation-service.md`
+
+**Contents**:
+- Server-side invitation distribution system
+- Privacy-preserving account assignment using blind signatures
+- Email-based voter authorization with unique tokens
+- Cryptographic protocol ensuring server cannot link email to ephemeral account
+- Complete implementation (Python server + TypeScript client)
+- Database schema and API endpoints
+- Security analysis and attack mitigation
+
+**Problem Solved**:
+Poll creator needs to invite specific voters by email, but server distributing invitations shouldn't be able to determine which email address corresponds to which ephemeral voter account.
+
+**Solution: Blind Signature Protocol**:
+1. Server generates ephemeral accounts + tokens, emails tokens to voters
+2. Voter blinds their token before requesting signature
+3. Server signs blinded token (cannot see original)
+4. Voter unblinds signature and claims account
+5. Server verifies signature but cannot link claim to email
+
+**Privacy Guarantee**: Server knows emails and ephemeral accounts exist, but cannot determine which email received which account. Only the voter knows their own mapping.
+
+**Alternative**: Simplified one-time code approach (weaker privacy, easier implementation) for MVP.
+
+---
+
 ## Executive Summary
 
 ### Problem
