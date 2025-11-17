@@ -6053,6 +6053,15 @@ const environment = {
         ]
     },
     show_debug_info: true,
+    // Toggle between Matrix and CouchDB backend
+    // Set to true to use Matrix protocol, false to use CouchDB
+    useMatrixBackend: false,
+    matrix: {
+        // Local Matrix homeserver URL for development
+        homeserver_url: "http://localhost:8008",
+        // Enable Matrix E2EE (Olm/Megolm)
+        enable_e2ee: true,
+    },
     data_service: {
         central_db_server_url: "http://localhost:5984/",
         //    central_db_server_url: "http://localhost/couch/", // use this when you have an nginx docker container running that forwards requests to localhost/couch/ to localhost:5984 
