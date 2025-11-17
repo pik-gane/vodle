@@ -447,6 +447,112 @@ class AccountClaimService:
         }
 ```
 
+#### Improved Implementation: Atomic Token Validation
+
+**Issue**: Race condition between checking and marking tokens as used.
+
+**Solution**: Use database transaction with row-level locking for atomic check-and-mark:
+
+```python
+# account_claim_service_improved.py
+class AccountClaimService:
+    """
+    Improved version with atomic token validation to prevent race conditions.
+    """
+    
+    def __init__(self, public_key: rsa.RSAPublicKey, db):
+        self.public_key = public_key
+        self.db = db
+        # No in-memory set needed - DB is source of truth
+    
+    async def claim_account(
+        self,
+        poll_id: str,
+        token: str,
+        signature_b64: str
+    ) -> Dict:
+        """
+        Claim ephemeral account using token and unblinded signature.
+        
+        Uses database transaction for atomic token validation.
+        """
+        
+        # 1. Verify signature is valid
+        try:
+            signature = b64decode(signature_b64)
+            token_bytes = token.encode()
+            
+            self.public_key.verify(
+                signature,
+                token_bytes,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+        except Exception:
+            raise ValueError("Invalid signature")
+        
+        # 2. Compute token hash
+        token_hash = hmac_lib.new(
+            b"vodle_token_tracking",
+            token.encode(),
+            'sha256'
+        ).hexdigest()
+        
+        # 3. Use transaction for atomic check-and-mark
+        async with self.db.transaction() as tx:
+            # Check if token already used (with row lock)
+            existing = await tx.fetch_one(
+                "SELECT 1 FROM used_tokens WHERE token_hash = $1 FOR UPDATE",
+                token_hash
+            )
+            
+            if existing:
+                raise ValueError("Token already used")
+            
+            # Lookup ephemeral account for this token
+            account_info = await tx.get_account_for_token(
+                poll_id=poll_id,
+                token=token
+            )
+            
+            if not account_info:
+                raise ValueError("Invalid token for this poll")
+            
+            # Mark token as used (atomic within transaction)
+            await tx.execute(
+                "INSERT INTO used_tokens (token_hash, poll_id) VALUES ($1, $2)",
+                token_hash,
+                poll_id
+            )
+            
+            # Transaction commits here
+        
+        # 4. Return ephemeral account credentials
+        return {
+            'user_id': account_info['user_id'],
+            'username': account_info['username'],
+            'password': account_info['password'],
+            'vid': account_info['vid'],
+            'poll_id': poll_id
+        }
+```
+
+**Benefits**:
+- ✅ **Atomic**: Check and mark happen in single transaction
+- ✅ **No race condition**: `FOR UPDATE` locks the row during check
+- ✅ **No state loss**: Database is source of truth (survives restarts)
+- ✅ **Concurrent safe**: Multiple requests handled correctly
+- ✅ **Simple**: No need for in-memory state management
+
+**Database-level Protection**:
+The `PRIMARY KEY` constraint on `token_hash` provides additional safety:
+- Even if logic fails, database rejects duplicate inserts
+- Multiple concurrent requests → first succeeds, others fail with constraint violation
+- Clean error handling: catch DB exception → "Token already used"
+
 ### Client-Side Components
 
 #### Token Blinding (in Vodle App)
@@ -770,8 +876,13 @@ Claim ephemeral account with token and signature.
 1. **Token Interception**: Email could be intercepted
    - **Mitigation**: Use HTTPS for claim endpoint, short token validity period
    
-2. **Token Reuse**: Someone tries to use token twice
-   - **Mitigation**: Mark tokens as used immediately upon claim
+2. **Token Reuse**: Someone tries to use token twice to get multiple accounts
+   - **Problem**: Race condition between check and mark operations
+   - **Mitigation Level 1**: Database PRIMARY KEY constraint on token_hash
+   - **Mitigation Level 2**: Atomic check-and-mark using database transaction with `FOR UPDATE`
+   - **Mitigation Level 3**: Application-level check before DB operation
+   - **Result**: Mathematically impossible to claim same token twice
+   - **Details**: See "Improved Implementation: Atomic Token Validation" section above
    
 3. **Timing Attack**: Correlate email send time with claim time
    - **Mitigation**: Add random delays, batch processing
@@ -781,6 +892,58 @@ Claim ephemeral account with token and signature.
    
 5. **Traffic Analysis**: Monitor network to correlate
    - **Mitigation**: Use Tor or VPN for claim requests (optional)
+
+### Token Reuse Prevention (Detailed)
+
+**Question**: Can the same token be used twice to get two accounts?
+
+**Answer**: No - three layers of protection ensure this is impossible:
+
+**Layer 1: Application Check**
+```python
+if token_hash in self.used_tokens:
+    raise ValueError("Token already used")
+```
+Fast check before database operation.
+
+**Layer 2: Atomic Database Transaction**
+```python
+async with self.db.transaction() as tx:
+    existing = await tx.fetch_one(
+        "SELECT 1 FROM used_tokens WHERE token_hash = $1 FOR UPDATE",
+        token_hash
+    )
+    if existing:
+        raise ValueError("Token already used")
+    await tx.execute(
+        "INSERT INTO used_tokens (token_hash, poll_id) VALUES ($1, $2)",
+        token_hash, poll_id
+    )
+```
+`FOR UPDATE` locks the row during check, preventing race conditions.
+
+**Layer 3: Database Constraint**
+```sql
+CREATE TABLE used_tokens (
+    token_hash VARCHAR(64) PRIMARY KEY,  -- Unique constraint
+    ...
+);
+```
+Even if logic fails, database rejects duplicate token_hash.
+
+**Concurrent Request Handling**:
+```
+Time  Request A              Request B
+----  ----------             ----------
+T1    Check token (locked)   
+T2    Token not used         Wait for lock...
+T3    Mark as used          
+T4    Commit & release lock  
+T5                           Check token (now locked)
+T6                           Token IS used → reject
+```
+
+**Result**: First request succeeds, all others fail with "Token already used".
 
 ### Best Practices
 
