@@ -13,6 +13,7 @@ Phase 1 implements the foundation for Matrix protocol integration:
 ## Prerequisites
 
 - Docker and Docker Compose installed
+  - **Note**: This guide uses `docker-compose` commands. If you have Docker Compose V2 (plugin), replace `docker-compose` with `docker compose` in all commands, or use the `./start-matrix-server.sh` script which automatically detects the correct command.
 - Node.js and npm (already installed for Vodle development)
 - Port 8008 available on localhost
 

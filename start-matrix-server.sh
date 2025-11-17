@@ -17,8 +17,15 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check if Docker Compose is installed
-if ! docker-compose --version &> /dev/null 2>&1; then
+# Check which Docker Compose command is available
+DOCKER_COMPOSE_CMD=""
+if docker compose version &> /dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker compose"
+    echo "✓ Docker Compose (plugin) detected"
+elif docker-compose --version &> /dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+    echo "✓ Docker Compose (standalone) detected"
+else
     echo "ERROR: Docker Compose is not installed. Please install Docker Compose first."
     echo "Visit: https://docs.docker.com/compose/install/"
     exit 1
@@ -66,7 +73,7 @@ fi
 
 # Start the homeserver
 echo "Starting Matrix homeserver..."
-docker-compose -f docker-compose.matrix.yml up -d
+$DOCKER_COMPOSE_CMD -f docker-compose.matrix.yml up -d
 
 echo ""
 echo "Waiting for homeserver to start..."
@@ -82,10 +89,10 @@ if curl -s http://localhost:8008/_matrix/client/versions > /dev/null 2>&1; then
     echo "Homeserver URL: http://localhost:8008"
     echo ""
     echo "To view logs:"
-    echo "  docker-compose -f docker-compose.matrix.yml logs -f"
+    echo "  $DOCKER_COMPOSE_CMD -f docker-compose.matrix.yml logs -f"
     echo ""
     echo "To stop the homeserver:"
-    echo "  docker-compose -f docker-compose.matrix.yml down"
+    echo "  $DOCKER_COMPOSE_CMD -f docker-compose.matrix.yml down"
     echo ""
     echo "To test the API:"
     echo "  curl http://localhost:8008/_matrix/client/versions"
@@ -98,6 +105,6 @@ if curl -s http://localhost:8008/_matrix/client/versions > /dev/null 2>&1; then
 else
     echo ""
     echo "ERROR: Homeserver did not start properly"
-    echo "Check logs with: docker-compose -f docker-compose.matrix.yml logs"
+    echo "Check logs with: $DOCKER_COMPOSE_CMD -f docker-compose.matrix.yml logs"
     exit 1
 fi

@@ -56,6 +56,7 @@ The application will be available at http://localhost:8100
 ### Prerequisites
 
 - Docker and Docker Compose installed
+  - **Note**: Commands in this guide use `docker-compose`. If you have Docker Compose V2 (plugin), replace `docker-compose` with `docker compose`, or use the `./start-matrix-server.sh` script which automatically detects the correct command.
 - Node.js 14+ and npm
 - Port 8008 available (for Matrix homeserver)
 - Port 8100 available (for Vodle dev server)

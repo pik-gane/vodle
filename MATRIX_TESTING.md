@@ -2,6 +2,8 @@
 
 This guide explains how to test the Phase 1 Matrix protocol integration in Vodle.
 
+**Note**: Commands in this guide use `docker-compose`. If you have Docker Compose V2 (plugin), replace `docker-compose` with `docker compose`, or use the `./start-matrix-server.sh` script which automatically detects the correct command.
+
 ## Quick Start
 
 ### 1. Start the Matrix Homeserver
