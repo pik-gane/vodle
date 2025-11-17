@@ -149,16 +149,16 @@ export class MatrixService {
       const onSync = (state: string) => {
         if (state === 'PREPARED') {
           clearTimeout(timeout);
-          this.client!.off('sync', onSync);
+          this.client!.removeListener('sync', onSync);
           resolve();
         } else if (state === 'ERROR') {
           clearTimeout(timeout);
-          this.client!.off('sync', onSync);
+          this.client!.removeListener('sync', onSync);
           reject(new Error('Sync error'));
         }
       };
       
-      this.client!.on('sync', onSync);
+      this.client!.addListener('sync', onSync);
     });
   }
   
@@ -371,5 +371,155 @@ export class MatrixService {
    */
   private async clearCredentials(): Promise<void> {
     await this.storage.remove('matrix_credentials');
+  }
+  
+  // ========================================================================
+  // PHASE 2: USER DATA MANAGEMENT
+  // ========================================================================
+  
+  /**
+   * Create or get user's private room for storing settings
+   * This room stores user preferences like language, theme, etc.
+   */
+  async getUserRoom(): Promise<string> {
+    this.logger?.entry("MatrixService.getUserRoom");
+    
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    // Check cache first
+    if (this.userRoomId) {
+      this.logger?.info("Using cached user room", this.userRoomId);
+      return this.userRoomId;
+    }
+    
+    // Check if user room already exists in storage
+    const storedRoomId = await this.storage.get('user_room_id');
+    if (storedRoomId) {
+      // Verify room still exists
+      const room = this.client.getRoom(storedRoomId);
+      if (room) {
+        this.userRoomId = storedRoomId;
+        this.logger?.info("Found existing user room", this.userRoomId);
+        return this.userRoomId;
+      }
+    }
+    
+    // Create a unique alias for the user room based on user ID
+    const userHash = this.hashUserId(this.userId);
+    const roomAlias = `vodle_user_${userHash}`;
+    
+    try {
+      // Try to find existing room by alias
+      const aliasResponse = await this.client.getRoomIdForAlias(`#${roomAlias}:${this.getHomeserverDomain()}`);
+      this.userRoomId = aliasResponse.room_id;
+      await this.storage.set('user_room_id', this.userRoomId);
+      this.logger?.info("Found user room by alias", this.userRoomId);
+      return this.userRoomId;
+    } catch (error) {
+      // Room doesn't exist, create it
+      this.logger?.info("Creating new user room");
+      
+      const options: ICreateRoomOpts = {
+        name: 'Vodle User Settings',
+        preset: 'private_chat',
+        is_direct: false,
+        room_alias_name: roomAlias,
+        initial_state: [{
+          type: 'm.room.encryption',
+          content: {
+            algorithm: 'm.megolm.v1.aes-sha2'
+          }
+        }],
+        power_level_content_override: {
+          users: {
+            [this.userId]: 100
+          }
+        }
+      };
+      
+      this.userRoomId = await this.createRoom(options);
+      await this.storage.set('user_room_id', this.userRoomId);
+      this.logger?.info("Created new user room", this.userRoomId);
+      return this.userRoomId;
+    }
+    
+    this.logger?.exit("MatrixService.getUserRoom");
+  }
+  
+  /**
+   * Set user data in the user's private room
+   * Data is stored as state events with type 'm.room.vodle.user.<key>'
+   */
+  async setUserData(key: string, value: any): Promise<void> {
+    this.logger?.entry("MatrixService.setUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    await this.sendStateEvent(roomId, eventType, { value }, '');
+    
+    this.logger?.exit("MatrixService.setUserData");
+  }
+  
+  /**
+   * Get user data from the user's private room
+   */
+  async getUserData(key: string): Promise<any> {
+    this.logger?.entry("MatrixService.getUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    try {
+      const content = this.getStateEvent(roomId, eventType, '');
+      const value = content?.value;
+      this.logger?.info("Retrieved user data", key, value);
+      return value;
+    } catch (error) {
+      this.logger?.info("User data not found", key);
+      return null;
+    }
+    
+    this.logger?.exit("MatrixService.getUserData");
+  }
+  
+  /**
+   * Delete user data from the user's private room
+   */
+  async deleteUserData(key: string): Promise<void> {
+    this.logger?.entry("MatrixService.deleteUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    // Delete by sending empty content
+    await this.sendStateEvent(roomId, eventType, {}, '');
+    
+    this.logger?.exit("MatrixService.deleteUserData");
+  }
+  
+  /**
+   * Hash user ID for creating unique room aliases
+   * Uses first 16 characters of hex representation
+   */
+  private hashUserId(userId: string): string {
+    // Simple hash for now - in production might want to use a proper hash function
+    // Remove special characters and take first 16 chars
+    const cleaned = userId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    return cleaned.substring(0, 16) || 'default';
+  }
+  
+  /**
+   * Get homeserver domain from homeserver URL
+   */
+  private getHomeserverDomain(): string {
+    try {
+      const url = new URL(this.homeserverUrl);
+      return url.hostname;
+    } catch (error) {
+      return 'localhost';
+    }
   }
 }

@@ -55,6 +55,33 @@ describe('MatrixService', () => {
     expect(service.getClient()).toBeNull();
   });
   
+  // Phase 2 Tests
+  describe('Phase 2: User Data Management', () => {
+    it('should have getUserRoom method', () => {
+      expect(service.getUserRoom).toBeDefined();
+    });
+    
+    it('should have setUserData method', () => {
+      expect(service.setUserData).toBeDefined();
+    });
+    
+    it('should have getUserData method', () => {
+      expect(service.getUserData).toBeDefined();
+    });
+    
+    it('should have deleteUserData method', () => {
+      expect(service.deleteUserData).toBeDefined();
+    });
+    
+    it('should throw error when getting user room without initialization', async () => {
+      await expectAsync(service.getUserRoom()).toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when setting user data without initialization', async () => {
+      await expectAsync(service.setUserData('language', 'en')).toBeRejectedWithError();
+    });
+  });
+  
   // Note: More comprehensive tests require a running Matrix server
   // and will be added in integration tests
 });
