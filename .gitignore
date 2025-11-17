@@ -39,3 +39,6 @@ UserInterfaceState.xcuserstate
 secret*
 nohup.out
 
+# Matrix homeserver data (local development only)
+matrix-data/
+
