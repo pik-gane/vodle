@@ -42,3 +42,5 @@ nohup.out
 # Matrix homeserver data (local development only)
 matrix-data/
 
+# Build output directory (Angular build artifacts)
+docs/
