@@ -146,19 +146,28 @@ export class MatrixService {
         reject(new Error('Sync timeout'));
       }, 30000); // 30 second timeout
       
+      let handled = false;
       const onSync = (state: string) => {
+        if (handled) return;
+        
         if (state === 'PREPARED') {
+          handled = true;
           clearTimeout(timeout);
-          this.client!.off('sync', onSync);
           resolve();
         } else if (state === 'ERROR') {
+          handled = true;
           clearTimeout(timeout);
-          this.client!.off('sync', onSync);
           reject(new Error('Sync error'));
         }
       };
       
-      this.client!.on('sync', onSync);
+      // Use once to auto-unregister (if supported) or just track with handled flag
+      try {
+        (this.client as any).once('sync', onSync);
+      } catch {
+        // Fallback to regular listener with handled flag
+        (this.client as any).on('sync', onSync);
+      }
     });
   }
   
@@ -177,26 +186,76 @@ export class MatrixService {
       // Convert email to valid Matrix username (replace @ with _at_)
       const username = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
       
-      // Login
-      const response = await tempClient.loginWithPassword(username, password);
-      
-      // Store credentials
-      await this.saveCredentials({
-        accessToken: response.access_token,
-        userId: response.user_id,
-        deviceId: response.device_id
-      });
-      
-      // Initialize with new credentials
-      await this.initializeWithToken(
-        response.access_token,
-        response.user_id,
-        response.device_id
-      );
-      
-      this.logger?.info("Login successful", this.userId);
+      // Try to login first
+      try {
+        const response = await tempClient.loginWithPassword(username, password);
+        
+        // Store credentials
+        await this.saveCredentials({
+          accessToken: response.access_token,
+          userId: response.user_id,
+          deviceId: response.device_id
+        });
+        
+        // Initialize with new credentials
+        await this.initializeWithToken(
+          response.access_token,
+          response.user_id,
+          response.device_id
+        );
+        
+        this.logger?.info("Login successful", this.userId);
+      } catch (loginError: any) {
+        // If user doesn't exist, try to register
+        if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
+          this.logger?.info("User doesn't exist, attempting registration", username);
+          
+          try {
+            // First call to get the registration flows
+            await tempClient.register(username, password);
+          } catch (firstRegError: any) {
+            // Expected: 401 with flows and session
+            if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
+              this.logger?.info("Got registration flows, completing m.login.dummy");
+              
+              // Complete the m.login.dummy authentication
+              const regResponse = await tempClient.register(
+                username,
+                password,
+                firstRegError.data.session,
+                {
+                  type: 'm.login.dummy'
+                }
+              );
+              
+              // Store credentials
+              await this.saveCredentials({
+                accessToken: regResponse.access_token,
+                userId: regResponse.user_id,
+                deviceId: regResponse.device_id
+              });
+              
+              // Initialize with new credentials
+              await this.initializeWithToken(
+                regResponse.access_token,
+                regResponse.user_id,
+                regResponse.device_id
+              );
+              
+              this.logger?.info("Registration successful", this.userId);
+            } else {
+              // Registration failed for other reasons
+              this.logger?.error("Registration failed", firstRegError);
+              throw firstRegError;
+            }
+          }
+        } else {
+          // Other login error, re-throw
+          throw loginError;
+        }
+      }
     } catch (error) {
-      this.logger?.error("MatrixService.login failed", error);
+      this.logger?.error("MatrixService.login/register failed", error);
       throw error;
     }
     
@@ -371,5 +430,155 @@ export class MatrixService {
    */
   private async clearCredentials(): Promise<void> {
     await this.storage.remove('matrix_credentials');
+  }
+  
+  // ========================================================================
+  // PHASE 2: USER DATA MANAGEMENT
+  // ========================================================================
+  
+  /**
+   * Create or get user's private room for storing settings
+   * This room stores user preferences like language, theme, etc.
+   */
+  async getUserRoom(): Promise<string> {
+    this.logger?.entry("MatrixService.getUserRoom");
+    
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    // Check cache first
+    if (this.userRoomId) {
+      this.logger?.info("Using cached user room", this.userRoomId);
+      return this.userRoomId;
+    }
+    
+    // Check if user room already exists in storage
+    const storedRoomId = await this.storage.get('user_room_id');
+    if (storedRoomId) {
+      // Verify room still exists
+      const room = this.client.getRoom(storedRoomId);
+      if (room) {
+        this.userRoomId = storedRoomId;
+        this.logger?.info("Found existing user room", this.userRoomId);
+        return this.userRoomId;
+      }
+    }
+    
+    // Create a unique alias for the user room based on user ID
+    const userHash = this.hashUserId(this.userId);
+    const roomAlias = `vodle_user_${userHash}`;
+    
+    try {
+      // Try to find existing room by alias
+      const aliasResponse = await this.client.getRoomIdForAlias(`#${roomAlias}:${this.getHomeserverDomain()}`);
+      this.userRoomId = aliasResponse.room_id;
+      await this.storage.set('user_room_id', this.userRoomId);
+      this.logger?.info("Found user room by alias", this.userRoomId);
+      return this.userRoomId;
+    } catch (error) {
+      // Room doesn't exist, create it
+      this.logger?.info("Creating new user room");
+      
+      const options: ICreateRoomOpts = {
+        name: 'Vodle User Settings',
+        preset: 'private_chat',
+        is_direct: false,
+        room_alias_name: roomAlias,
+        initial_state: [{
+          type: 'm.room.encryption',
+          content: {
+            algorithm: 'm.megolm.v1.aes-sha2'
+          }
+        }],
+        power_level_content_override: {
+          users: {
+            [this.userId]: 100
+          }
+        }
+      };
+      
+      this.userRoomId = await this.createRoom(options);
+      await this.storage.set('user_room_id', this.userRoomId);
+      this.logger?.info("Created new user room", this.userRoomId);
+      return this.userRoomId;
+    }
+    
+    this.logger?.exit("MatrixService.getUserRoom");
+  }
+  
+  /**
+   * Set user data in the user's private room
+   * Data is stored as state events with type 'm.room.vodle.user.<key>'
+   */
+  async setUserData(key: string, value: any): Promise<void> {
+    this.logger?.entry("MatrixService.setUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    await this.sendStateEvent(roomId, eventType, { value }, '');
+    
+    this.logger?.exit("MatrixService.setUserData");
+  }
+  
+  /**
+   * Get user data from the user's private room
+   */
+  async getUserData(key: string): Promise<any> {
+    this.logger?.entry("MatrixService.getUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    try {
+      const content = this.getStateEvent(roomId, eventType, '');
+      const value = content?.value;
+      this.logger?.info("Retrieved user data", key, value);
+      return value;
+    } catch (error) {
+      this.logger?.info("User data not found", key);
+      return null;
+    }
+    
+    this.logger?.exit("MatrixService.getUserData");
+  }
+  
+  /**
+   * Delete user data from the user's private room
+   */
+  async deleteUserData(key: string): Promise<void> {
+    this.logger?.entry("MatrixService.deleteUserData", key);
+    
+    const roomId = await this.getUserRoom();
+    const eventType = `m.room.vodle.user.${key}`;
+    
+    // Delete by sending empty content
+    await this.sendStateEvent(roomId, eventType, {}, '');
+    
+    this.logger?.exit("MatrixService.deleteUserData");
+  }
+  
+  /**
+   * Hash user ID for creating unique room aliases
+   * Uses first 16 characters of hex representation
+   */
+  private hashUserId(userId: string): string {
+    // Simple hash for now - in production might want to use a proper hash function
+    // Remove special characters and take first 16 chars
+    const cleaned = userId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+    return cleaned.substring(0, 16) || 'default';
+  }
+  
+  /**
+   * Get homeserver domain from homeserver URL
+   */
+  private getHomeserverDomain(): string {
+    try {
+      const url = new URL(this.homeserverUrl);
+      return url.hostname;
+    } catch (error) {
+      return 'localhost';
+    }
   }
 }

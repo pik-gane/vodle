@@ -23,8 +23,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * This interface allows Vodle to switch between different data storage backends
  * (CouchDB/PouchDB or Matrix) without changing the application code.
  * 
- * Phase 1 includes only the basic structure. Full implementation will be done
- * in later phases as we migrate user data, poll data, and voting functionality.
+ * Phase 1-2 includes authentication and user data management.
+ * Later phases will add poll data and voting functionality.
  */
 export interface IDataBackend {
   /**
@@ -54,15 +54,21 @@ export interface IDataBackend {
   
   /**
    * Get user data value by key
-   * In Phase 2+, this will retrieve user settings, language, etc.
+   * Phase 2: Retrieves user settings, language, preferences, etc.
    */
   getUserData(key: string): Promise<any>;
   
   /**
    * Set user data value by key
-   * In Phase 2+, this will store user settings, language, etc.
+   * Phase 2: Stores user settings, language, preferences, etc.
    */
   setUserData(key: string, value: any): Promise<void>;
+  
+  /**
+   * Delete user data by key
+   * Phase 2: Removes user setting or preference
+   */
+  deleteUserData(key: string): Promise<void>;
   
   /**
    * Get backend type identifier

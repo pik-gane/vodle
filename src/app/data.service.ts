@@ -47,6 +47,8 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 import * as Sodium from 'libsodium-wrappers';
 
+import { MatrixService } from './matrix.service';
+
 
 /** DATA STORAGE DESIGN
  * 
@@ -341,7 +343,8 @@ export class DataService implements OnDestroy {
       public alertCtrl: AlertController,
       public translate: TranslateService,
       public storage: Storage,
-      @Inject(DOCUMENT) private document: Document
+      @Inject(DOCUMENT) private document: Document,
+      private matrixService: MatrixService
       ) { 
   }
 
@@ -594,9 +597,47 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.after_user_cache_is_filled");
   }
 
-  private email_and_password_exist() {
+  private async email_and_password_exist() {
     this.G.L.entry("DataService.email_and_password_exist: email", 
       this.user_cache['email'], ", password", this.user_cache['password']);
+
+    // Phase 2: Login to Matrix if flag is set (SYNCHRONOUS/BLOCKING)
+    if (environment.useMatrixBackend) {
+      const email = this.user_cache['email'];
+      const password = this.user_cache['password'];
+      if (email && password) {
+        this.G.L.info("DataService: Logging into Matrix backend (blocking)");
+        this.G.add_spinning_reason("matrix-login");
+        try {
+          await this.matrixService.login(email, password);
+          this.G.L.info("DataService: Matrix login successful, syncing user data");
+          await this.syncUserCacheToMatrix();
+          this.G.L.info("DataService: Matrix initialization complete");
+        } catch (err: any) {
+          this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
+          
+          // Provide specific error messages based on the error type
+          let errorMessage = "Failed to connect to Matrix server.";
+          if (err?.errcode === 'M_FORBIDDEN' && err?.message?.includes('Registration has been disabled')) {
+            errorMessage = 
+              "Matrix registration is disabled on the server.\n\n" +
+              "To enable registration, add this to matrix-data/homeserver.yaml:\n\n" +
+              "enable_registration: true\n\n" +
+              "Then restart the Matrix server:\n" +
+              "docker-compose -f docker-compose.matrix.yml restart";
+          } else if (err?.message?.includes('ECONNREFUSED') || err?.message?.includes('fetch failed')) {
+            errorMessage = 
+              "Cannot connect to Matrix server at " + environment.matrix.homeserver_url + "\n\n" +
+              "Please check that the Matrix homeserver is running:\n" +
+              "./start-matrix-server.sh";
+          }
+          
+          alert(errorMessage);
+        } finally {
+          this.G.remove_spinning_reason("matrix-login");
+        }
+      }
+    }
 
     if (this.restored_user_cache) {
       // user_cache was restored from storage.
@@ -647,6 +688,37 @@ export class DataService implements OnDestroy {
       // TODO: make that page
     }
     this.G.L.exit("DataService.email_and_password_exist"); 
+  }
+
+  /**
+   * Phase 2: Sync user_cache data to Matrix backend
+   * Called after successful Matrix login to sync existing user data
+   */
+  private async syncUserCacheToMatrix(): Promise<void> {
+    this.G.L.entry("DataService.syncUserCacheToMatrix");
+    
+    try {
+      // Sync all non-sensitive user data to Matrix
+      const keysToSync = Object.keys(this.user_cache).filter(key => 
+        !local_only_user_keys.includes(key) && // Don't sync local-only keys like password
+        !key.startsWith('poll.') // Don't sync poll data (Phase 3)
+      );
+      
+      for (const key of keysToSync) {
+        const value = this.user_cache[key];
+        if (value !== undefined && value !== null && value !== '') {
+          await this.matrixService.setUserData(key, value);
+          this.G.L.trace("DataService.syncUserCacheToMatrix synced", key);
+        }
+      }
+      
+      this.G.L.info("DataService.syncUserCacheToMatrix completed successfully");
+    } catch (err) {
+      this.G.L.error("DataService.syncUserCacheToMatrix failed", err);
+      throw err;
+    }
+    
+    this.G.L.exit("DataService.syncUserCacheToMatrix");
   }
 
   private init_poll_data() {
@@ -1429,6 +1501,15 @@ export class DataService implements OnDestroy {
 
   getu(key:string): string {
     // get user data item
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      // For Matrix backend, we need to handle this synchronously but Matrix is async
+      // Store value in cache for now - actual Matrix sync happens via login/init
+      // This is a temporary bridge until full Matrix integration in later phases
+      return this.user_cache[key] || '';
+    }
+    
     let value = this.user_cache[key] || '';
     if (!value && key=='language') {
       value = this.getu('local_language');
@@ -1458,6 +1539,27 @@ export class DataService implements OnDestroy {
     }
     this.user_cache[key] = value;
     this.G.L.trace("DataService.setu", key, value);
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.matrixService.isLoggedIn()) {
+        // Sync to Matrix immediately
+        this.G.L.info("DataService.setu syncing to Matrix:", key);
+        this.matrixService.setUserData(key, value).catch(err => {
+          this.G.L.error("DataService.setu Matrix sync failed", key, err);
+        });
+      } else {
+        // Should not happen - login is now blocking
+        this.G.L.error("DataService.setu Matrix not logged in, cannot sync:", key);
+      }
+      
+      // Skip CouchDB storage when using Matrix backend
+      if (keys_triggering_data_move.includes(key)) {
+        this.move_user_data(old_values);
+      }
+      return true;
+    }
+    
     if (keys_triggering_data_move.includes(key)) {
       this.move_user_data(old_values);
     }
@@ -1471,6 +1573,19 @@ export class DataService implements OnDestroy {
       return;
     }
     delete this.user_cache[key];
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.matrixService.isLoggedIn()) {
+        // Asynchronously delete from Matrix backend (skip CouchDB entirely)
+        this.matrixService.deleteUserData(key).catch(err => {
+          this.G.L.warn("DataService.delu Matrix delete failed", key, err);
+        });
+      }
+      // Skip CouchDB delete when using Matrix backend
+      return;
+    }
+    
     this.delete_user_data(key);
   }
 
@@ -2599,6 +2714,14 @@ export class DataService implements OnDestroy {
     // TODO: disable user interaction
     this._ready = false;
     return new Promise((resolve, reject) => {
+      // Logout from Matrix if using Matrix backend
+      if (environment.useMatrixBackend && this.matrixService?.isLoggedIn()) {
+        this.G.L.info("Logging out of Matrix...");
+        this.matrixService.logout().catch((err) => {
+          this.G.L.warn("Matrix logout failed (continuing anyway)", err);
+        });
+      }
+      
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
       if (!!this.user_db_sync_handler) {
