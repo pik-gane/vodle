@@ -186,26 +186,60 @@ export class MatrixService {
       // Convert email to valid Matrix username (replace @ with _at_)
       const username = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
       
-      // Login
-      const response = await tempClient.loginWithPassword(username, password);
-      
-      // Store credentials
-      await this.saveCredentials({
-        accessToken: response.access_token,
-        userId: response.user_id,
-        deviceId: response.device_id
-      });
-      
-      // Initialize with new credentials
-      await this.initializeWithToken(
-        response.access_token,
-        response.user_id,
-        response.device_id
-      );
-      
-      this.logger?.info("Login successful", this.userId);
+      // Try to login first
+      try {
+        const response = await tempClient.loginWithPassword(username, password);
+        
+        // Store credentials
+        await this.saveCredentials({
+          accessToken: response.access_token,
+          userId: response.user_id,
+          deviceId: response.device_id
+        });
+        
+        // Initialize with new credentials
+        await this.initializeWithToken(
+          response.access_token,
+          response.user_id,
+          response.device_id
+        );
+        
+        this.logger?.info("Login successful", this.userId);
+      } catch (loginError: any) {
+        // If user doesn't exist, try to register
+        if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
+          this.logger?.info("User doesn't exist, attempting registration", username);
+          
+          const regResponse = await tempClient.register(
+            username,
+            password,
+            undefined, // sessionId
+            {}, // auth
+            {} // options
+          );
+          
+          // Store credentials
+          await this.saveCredentials({
+            accessToken: regResponse.access_token,
+            userId: regResponse.user_id,
+            deviceId: regResponse.device_id
+          });
+          
+          // Initialize with new credentials
+          await this.initializeWithToken(
+            regResponse.access_token,
+            regResponse.user_id,
+            regResponse.device_id
+          );
+          
+          this.logger?.info("Registration successful", this.userId);
+        } else {
+          // Other login error, re-throw
+          throw loginError;
+        }
+      }
     } catch (error) {
-      this.logger?.error("MatrixService.login failed", error);
+      this.logger?.error("MatrixService.login/register failed", error);
       throw error;
     }
     
