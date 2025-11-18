@@ -210,29 +210,45 @@ export class MatrixService {
         if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
           this.logger?.info("User doesn't exist, attempting registration", username);
           
-          const regResponse = await tempClient.register(
-            username,
-            password,
-            undefined, // sessionId
-            {}, // auth
-            {} // options
-          );
-          
-          // Store credentials
-          await this.saveCredentials({
-            accessToken: regResponse.access_token,
-            userId: regResponse.user_id,
-            deviceId: regResponse.device_id
-          });
-          
-          // Initialize with new credentials
-          await this.initializeWithToken(
-            regResponse.access_token,
-            regResponse.user_id,
-            regResponse.device_id
-          );
-          
-          this.logger?.info("Registration successful", this.userId);
+          try {
+            // First call to get the registration flows
+            await tempClient.register(username, password);
+          } catch (firstRegError: any) {
+            // Expected: 401 with flows and session
+            if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
+              this.logger?.info("Got registration flows, completing m.login.dummy");
+              
+              // Complete the m.login.dummy authentication
+              const regResponse = await tempClient.register(
+                username,
+                password,
+                firstRegError.data.session,
+                {
+                  type: 'm.login.dummy'
+                }
+              );
+              
+              // Store credentials
+              await this.saveCredentials({
+                accessToken: regResponse.access_token,
+                userId: regResponse.user_id,
+                deviceId: regResponse.device_id
+              });
+              
+              // Initialize with new credentials
+              await this.initializeWithToken(
+                regResponse.access_token,
+                regResponse.user_id,
+                regResponse.device_id
+              );
+              
+              this.logger?.info("Registration successful", this.userId);
+            } else {
+              // Registration failed for other reasons
+              this.logger?.error("Registration failed", firstRegError);
+              throw firstRegError;
+            }
+          }
         } else {
           // Other login error, re-throw
           throw loginError;
