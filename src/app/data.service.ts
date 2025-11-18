@@ -1522,11 +1522,18 @@ export class DataService implements OnDestroy {
     this.G.L.trace("DataService.setu", key, value);
     
     // Phase 2: Delegate to Matrix if flag is set
-    if (environment.useMatrixBackend && this.matrixService.isLoggedIn()) {
-      // Asynchronously sync to Matrix backend
-      this.matrixService.setUserData(key, value).catch(err => {
-        this.G.L.warn("DataService.setu Matrix sync failed", key, err);
-      });
+    if (environment.useMatrixBackend) {
+      if (this.matrixService.isLoggedIn()) {
+        // Asynchronously sync to Matrix backend (skip CouchDB entirely)
+        this.matrixService.setUserData(key, value).catch(err => {
+          this.G.L.warn("DataService.setu Matrix sync failed", key, err);
+        });
+      }
+      // Skip CouchDB storage when using Matrix backend
+      if (keys_triggering_data_move.includes(key)) {
+        this.move_user_data(old_values);
+      }
+      return true;
     }
     
     if (keys_triggering_data_move.includes(key)) {
@@ -1542,6 +1549,19 @@ export class DataService implements OnDestroy {
       return;
     }
     delete this.user_cache[key];
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.matrixService.isLoggedIn()) {
+        // Asynchronously delete from Matrix backend (skip CouchDB entirely)
+        this.matrixService.deleteUserData(key).catch(err => {
+          this.G.L.warn("DataService.delu Matrix delete failed", key, err);
+        });
+      }
+      // Skip CouchDB delete when using Matrix backend
+      return;
+    }
+    
     this.delete_user_data(key);
   }
 
