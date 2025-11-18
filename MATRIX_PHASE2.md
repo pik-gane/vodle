@@ -4,7 +4,7 @@
 
 Phase 2 successfully implements user data management using Matrix protocol, building on the foundation established in Phase 1. This phase enables storing user preferences, settings, and configuration in private Matrix rooms with end-to-end encryption.
 
-**Update**: Phase 2 has been fixed to actually integrate with the application. The initial implementation created the abstraction layer but didn't connect it to the existing DataService-based flow. This has now been corrected.
+**Important**: Phase 2 integrates Matrix directly into DataService for immediate functionality. The adapter classes (DataAdapter, MatrixBackend, CouchDBBackend) remain as infrastructure for future phases when doing complete migration.
 
 ## What's Implemented
 
