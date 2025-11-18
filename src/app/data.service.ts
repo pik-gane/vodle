@@ -613,10 +613,26 @@ export class DataService implements OnDestroy {
           this.G.L.info("DataService: Matrix login successful, syncing user data");
           await this.syncUserCacheToMatrix();
           this.G.L.info("DataService: Matrix initialization complete");
-        } catch (err) {
-          this.G.L.error("DataService: Matrix login failed", err);
-          // Matrix failed - app cannot continue with Matrix backend
-          alert("Failed to connect to Matrix server. Please check that the Matrix homeserver is running.");
+        } catch (err: any) {
+          this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
+          
+          // Provide specific error messages based on the error type
+          let errorMessage = "Failed to connect to Matrix server.";
+          if (err?.errcode === 'M_FORBIDDEN' && err?.message?.includes('Registration has been disabled')) {
+            errorMessage = 
+              "Matrix registration is disabled on the server.\n\n" +
+              "To enable registration, add this to matrix-data/homeserver.yaml:\n\n" +
+              "enable_registration: true\n\n" +
+              "Then restart the Matrix server:\n" +
+              "docker-compose -f docker-compose.matrix.yml restart";
+          } else if (err?.message?.includes('ECONNREFUSED') || err?.message?.includes('fetch failed')) {
+            errorMessage = 
+              "Cannot connect to Matrix server at " + environment.matrix.homeserver_url + "\n\n" +
+              "Please check that the Matrix homeserver is running:\n" +
+              "./start-matrix-server.sh";
+          }
+          
+          alert(errorMessage);
         } finally {
           this.G.remove_spinning_reason("matrix-login");
         }

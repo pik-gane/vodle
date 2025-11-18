@@ -1,6 +1,27 @@
-# Matrix Migration - Phase 1: Local Development Setup
+# Matrix Migration - Setup Guide
 
-This document provides detailed instructions for setting up a local Matrix homeserver for testing the Phase 1 Matrix migration.
+This document provides instructions for setting up a local Matrix homeserver for testing Matrix integration.
+
+## ⚠️ Important: Phase 2 Requirement
+
+**For Phase 2 (User Data Management), you MUST enable registration on the Matrix server.**
+
+### Quick Fix for "Registration has been disabled" Error
+
+If you see this error:
+```
+M_FORBIDDEN: Registration has been disabled
+```
+
+**Solution:**
+1. Edit `matrix-data/homeserver.yaml`
+2. Find the line: `enable_registration: false`
+3. Change it to: `enable_registration: true`
+4. Restart Matrix: `docker-compose -f docker-compose.matrix.yml restart`
+
+## Phase 1: Local Development Setup
+
+This section provides detailed instructions for setting up a local Matrix homeserver for testing the Phase 1 Matrix migration.
 
 ## Overview
 
