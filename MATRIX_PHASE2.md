@@ -4,6 +4,8 @@
 
 Phase 2 successfully implements user data management using Matrix protocol, building on the foundation established in Phase 1. This phase enables storing user preferences, settings, and configuration in private Matrix rooms with end-to-end encryption.
 
+**Update**: Phase 2 has been fixed to actually integrate with the application. The initial implementation created the abstraction layer but didn't connect it to the existing DataService-based flow. This has now been corrected.
+
 ## What's Implemented
 
 ### 1. User Private Rooms
@@ -82,51 +84,109 @@ Clean separation between storage backends:
    - Implements `IDataBackend` using DataService
    - Wraps existing CouchDB/PouchDB functionality
    - Provides backwards compatibility
+   - **Note**: Currently unused, kept for future full migration
 
 5. **`src/app/data-adapter.service.ts`** (new)
-   - Main entry point for data operations
+   - Provides unified interface for data operations
    - Selects backend based on `environment.useMatrixBackend`
-   - Provides unified API regardless of backend
-   - Offers access to underlying services when needed
+   - **Note**: Currently unused, kept for future full migration
+   - **Current Integration**: DataService modified directly for Phase 2
+
+6. **`src/app/data.service.ts`** (modified)
+   - **Phase 2 Integration**: Added MatrixService injection
+   - Auto-login to Matrix when email/password are available
+   - `setu()` syncs data to Matrix when flag is set
+   - `syncUserCacheToMatrix()` syncs existing preferences after login
+   - Graceful fallback if Matrix unavailable
 
 ### Tests
 
-6. **`src/app/matrix.service.spec.ts`** (extended)
+7. **`src/app/matrix.service.spec.ts`** (extended)
    - Tests for Phase 2 user data methods
    - Validates error handling
 
-7. **`src/app/data-adapter.service.spec.ts`** (new)
+8. **`src/app/data-adapter.service.spec.ts`** (new)
    - Tests for DataAdapter functionality
    - Validates backend switching
 
+## How It Actually Works
+
+### Phase 2 Integration Architecture
+
+```
+┌─────────────────┐
+│  Settings Page  │
+└────────┬────────┘
+         │
+┌────────▼────────────┐
+│  SettingsService    │ (uses G.D.setu/getu)
+└────────┬────────────┘
+         │
+┌────────▼────────────┐
+│   DataService       │ ◄── Modified in Phase 2
+└────────┬────────────┘
+         │
+    ┌────▼────────────────────┐
+    │ if useMatrixBackend &&  │
+    │    isLoggedIn()         │
+    └────┬────────────────────┘
+         │
+    ┌────▼────┐
+    │ Matrix  │
+    │ Service │
+    └─────────┘
+```
+
+**Note**: The `DataAdapter`, `MatrixBackend`, and `CouchDBBackend` classes provide the abstraction pattern for future phases but are not yet used by the application. Phase 2 integrates Matrix directly into `DataService` for immediate functionality.
+
+### Tests
+
 ## Usage Examples
 
-### Basic Usage (with DataAdapter)
+### How Settings Are Stored (Current Implementation)
+
+When you change settings in the app:
 
 ```typescript
-import { DataAdapter } from './data-adapter.service';
+// User changes language in settings page
+// SettingsService is called:
+this.G.S.language = 'de';
 
-@Component({...})
-export class MyComponent {
-  constructor(private dataAdapter: DataAdapter) {}
+// Which calls DataService.setu():
+DataService.setu('language', 'de');
+
+// DataService now checks the flag:
+if (environment.useMatrixBackend && this.matrixService.isLoggedIn()) {
+  // Asynchronously sync to Matrix
+  this.matrixService.setUserData('language', 'de');
+}
+// Also stores in user_cache for immediate access
+this.user_cache['language'] = 'de';
+```
+
+### Login Flow with Matrix Backend
+
+```typescript
+// 1. User enters email/password on login page
+// 2. DataService stores them:
+DataService.setu('email', 'user@example.com');
+DataService.setu('password', 'securepass123');
+
+// 3. DataService.email_and_password_exist() is triggered
+// 4. If useMatrixBackend is true:
+if (environment.useMatrixBackend) {
+  // Login to Matrix
+  await matrixService.login(email, password);
   
-  async saveLanguage(lang: string) {
-    // Works with both Matrix and CouchDB backends
-    await this.dataAdapter.setUserData('language', lang);
-  }
-  
-  async loadLanguage(): Promise<string> {
-    return await this.dataAdapter.getUserData('language') || 'en';
-  }
-  
-  checkBackend() {
-    const type = this.dataAdapter.getBackendType();
-    console.log(`Using ${type} backend`);
-  }
+  // Sync all existing user preferences to Matrix
+  await syncUserCacheToMatrix();
+  // This syncs: language, theme, consent, notification settings, etc.
 }
 ```
 
-### Direct Matrix Usage
+### Manual Matrix Usage (Advanced)
+
+For direct Matrix access, you can still use MatrixService:
 
 ```typescript
 import { MatrixService } from './matrix.service';
@@ -151,6 +211,29 @@ export class MyComponent {
     const theme = await this.matrix.getUserData('theme');
     const notifications = await this.matrix.getUserData('notifications');
     return { theme, notifications };
+  }
+}
+```
+
+### Basic Usage (with DataAdapter) - Future
+
+**Note**: DataAdapter is not yet integrated but will be used in later phases:
+
+```typescript
+// Future usage when fully integrated:
+import { DataAdapter } from './data-adapter.service';
+
+@Component({...})
+export class MyComponent {
+  constructor(private dataAdapter: DataAdapter) {}
+  
+  async saveLanguage(lang: string) {
+    // Will work with both Matrix and CouchDB backends
+    await this.dataAdapter.setUserData('language', lang);
+  }
+  
+  async loadLanguage(): Promise<string> {
+    return await this.dataAdapter.getUserData('language') || 'en';
   }
 }
 ```
