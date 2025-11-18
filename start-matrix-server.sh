@@ -71,14 +71,12 @@ if [ -f "matrix-data/homeserver.yaml" ]; then
               if grep -q '^enable_registration:' /data/homeserver.yaml; then \
                 sed -i 's/^enable_registration:.*/enable_registration: true/' /data/homeserver.yaml; \
               else \
-                echo '' >> /data/homeserver.yaml && \
-                echo '# Enable registration for Vodle' >> /data/homeserver.yaml && \
-                echo 'enable_registration: true' >> /data/homeserver.yaml; \
+                printf '\n# Enable registration for Vodle\nenable_registration: true\n' >> /data/homeserver.yaml; \
               fi && \
               if grep -q '^enable_registration_without_verification:' /data/homeserver.yaml; then \
                 sed -i 's/^enable_registration_without_verification:.*/enable_registration_without_verification: true/' /data/homeserver.yaml; \
               else \
-                echo 'enable_registration_without_verification: true' >> /data/homeserver.yaml; \
+                printf 'enable_registration_without_verification: true\n' >> /data/homeserver.yaml; \
               fi"
         
         echo "✓ Registration enabled in homeserver.yaml"
