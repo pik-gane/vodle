@@ -58,19 +58,17 @@ if [ -f "matrix-data/homeserver.yaml" ]; then
     else
         echo "Enabling registration in homeserver.yaml..."
         
-        # Backup original if not already backed up
-        if [ ! -f "matrix-data/homeserver.yaml.backup" ]; then
-            cp matrix-data/homeserver.yaml matrix-data/homeserver.yaml.backup
-            echo "  (Backup saved to homeserver.yaml.backup)"
-        fi
-        
-        # Fix permissions first - use Docker to modify the file
+        # Use Docker to create backup and modify the file
         # This avoids permission issues with files owned by the container
         docker run --rm \
           -v $(pwd)/matrix-data:/data \
           --entrypoint /bin/sh \
           matrixdotorg/synapse:latest \
-          -c "sed -i 's/^enable_registration:.*/enable_registration: true/' /data/homeserver.yaml && \
+          -c "if [ ! -f /data/homeserver.yaml.backup ]; then \
+                cp /data/homeserver.yaml /data/homeserver.yaml.backup && \
+                echo '  (Backup saved to homeserver.yaml.backup)'; \
+              fi && \
+              sed -i 's/^enable_registration:.*/enable_registration: true/' /data/homeserver.yaml && \
               if ! grep -q '^enable_registration_without_verification:' /data/homeserver.yaml; then \
                 echo 'enable_registration_without_verification: true' >> /data/homeserver.yaml; \
               else \
