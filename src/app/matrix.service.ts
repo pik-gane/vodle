@@ -21,16 +21,31 @@ import { Injectable } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
 import { Logger } from 'ionic-logging-service';
 import { environment } from '../environments/environment';
+import BLAKE2s from 'blake2s-js';
 
 // Import Matrix SDK
 import { createClient } from 'matrix-js-sdk/lib/matrix';
 import type { MatrixClient } from 'matrix-js-sdk/lib/client';
 import type { ICreateRoomOpts } from 'matrix-js-sdk/lib/@types/requests';
 
+// TextEncoder for hashing
+const textEncoder = new TextEncoder();
+
 export interface MatrixCredentials {
   accessToken: string;
   userId: string;
   deviceId?: string;
+}
+
+/**
+ * Hash an email address using BLAKE2s for privacy
+ * This prevents the email from being revealed to the Matrix server
+ * Exported for testing purposes
+ */
+export function hashEmail(email: string): string {
+  const blake2s = new BLAKE2s(environment.data_service.hash_n_bytes);
+  blake2s.update(textEncoder.encode(email));
+  return blake2s.hexDigest();
 }
 
 /**
@@ -175,7 +190,9 @@ export class MatrixService {
    * Login to Matrix
    */
   async login(email: string, password: string): Promise<void> {
-    this.logger?.entry("MatrixService.login", email);
+    // Hash email for privacy - never log or send plain email to Matrix server
+    const emailHash = hashEmail(email);
+    this.logger?.entry("MatrixService.login", emailHash);
     
     // Create temporary client for login
     const tempClient = createClient({
@@ -183,8 +200,8 @@ export class MatrixService {
     });
     
     try {
-      // Convert email to valid Matrix username (replace @ with _at_)
-      const username = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
+      // Use hashed email as Matrix username to protect privacy
+      const username = emailHash;
       
       // Try to login first
       try {
@@ -266,15 +283,17 @@ export class MatrixService {
    * Register new user
    */
   async register(email: string, password: string): Promise<void> {
-    this.logger?.entry("MatrixService.register", email);
+    // Hash email for privacy - never log or send plain email to Matrix server
+    const emailHash = hashEmail(email);
+    this.logger?.entry("MatrixService.register", emailHash);
     
     const tempClient = createClient({
       baseUrl: this.homeserverUrl
     });
     
     try {
-      // Convert email to valid Matrix username
-      const username = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
+      // Use hashed email as Matrix username to protect privacy
+      const username = emailHash;
       
       const response = await tempClient.register(
         username,
