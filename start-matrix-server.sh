@@ -47,27 +47,41 @@ if [ ! -d "matrix-data" ]; then
     echo ""
     echo "✓ Synapse configuration generated"
     echo ""
-    echo "IMPORTANT: Editing homeserver.yaml to enable registration..."
-    
-    # Enable registration in homeserver.yaml
-    if [ -f "matrix-data/homeserver.yaml" ]; then
-        # Backup original
-        cp matrix-data/homeserver.yaml matrix-data/homeserver.yaml.backup
+fi
+
+# Always check and enable registration (even if matrix-data exists)
+echo "Checking registration settings..."
+if [ -f "matrix-data/homeserver.yaml" ]; then
+    # Check if registration is already enabled
+    if grep -q "^enable_registration: true" matrix-data/homeserver.yaml; then
+        echo "✓ Registration already enabled"
+    else
+        echo "Enabling registration in homeserver.yaml..."
         
-        # Enable registration
-        sed -i 's/^enable_registration:.*/enable_registration: true/' matrix-data/homeserver.yaml
-        sed -i 's/^enable_registration_without_verification:.*/enable_registration_without_verification: true/' matrix-data/homeserver.yaml
-        
-        # Add registration settings if not present
-        if ! grep -q "enable_registration_without_verification" matrix-data/homeserver.yaml; then
-            echo "enable_registration_without_verification: true" >> matrix-data/homeserver.yaml
+        # Backup original if not already backed up
+        if [ ! -f "matrix-data/homeserver.yaml.backup" ]; then
+            cp matrix-data/homeserver.yaml matrix-data/homeserver.yaml.backup
+            echo "  (Backup saved to homeserver.yaml.backup)"
         fi
+        
+        # Fix permissions first - use Docker to modify the file
+        # This avoids permission issues with files owned by the container
+        docker run --rm \
+          -v $(pwd)/matrix-data:/data \
+          --entrypoint /bin/sh \
+          matrixdotorg/synapse:latest \
+          -c "sed -i 's/^enable_registration:.*/enable_registration: true/' /data/homeserver.yaml && \
+              if ! grep -q '^enable_registration_without_verification:' /data/homeserver.yaml; then \
+                echo 'enable_registration_without_verification: true' >> /data/homeserver.yaml; \
+              else \
+                sed -i 's/^enable_registration_without_verification:.*/enable_registration_without_verification: true/' /data/homeserver.yaml; \
+              fi"
         
         echo "✓ Registration enabled in homeserver.yaml"
         echo ""
     fi
 else
-    echo "✓ Synapse configuration already exists (matrix-data/)"
+    echo "WARNING: homeserver.yaml not found. Will be generated on first run."
     echo ""
 fi
 
@@ -87,6 +101,7 @@ if curl -s http://localhost:8008/_matrix/client/versions > /dev/null 2>&1; then
     echo "========================================"
     echo ""
     echo "Homeserver URL: http://localhost:8008"
+    echo "Registration: ENABLED (auto-registration on first login)"
     echo ""
     echo "To view logs:"
     echo "  $DOCKER_COMPOSE_CMD -f docker-compose.matrix.yml logs -f"
@@ -100,7 +115,7 @@ if curl -s http://localhost:8008/_matrix/client/versions > /dev/null 2>&1; then
     echo "Next steps:"
     echo "  1. Enable Matrix backend in src/environments/environment.ts"
     echo "  2. Run 'npm start' to start the Vodle application"
-    echo "  3. See MATRIX_TESTING.md for detailed testing instructions"
+    echo "  3. Login to Vodle - users will be auto-registered in Matrix"
     echo ""
 else
     echo ""
