@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: vodle-matrix-synapse
+    ports:
+      - "8008:8008"
+    volumes:
+      - ./matrix-data:/data
+    environment:
+      - SYNAPSE_SERVER_NAME=localhost
+      - SYNAPSE_REPORT_STATS=no
+    restart: unless-stopped
+    command: run
