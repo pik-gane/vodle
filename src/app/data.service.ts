@@ -47,6 +47,8 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 import * as Sodium from 'libsodium-wrappers';
 
+import { MatrixService } from './matrix.service';
+
 
 /** DATA STORAGE DESIGN
  * 
@@ -341,7 +343,8 @@ export class DataService implements OnDestroy {
       public alertCtrl: AlertController,
       public translate: TranslateService,
       public storage: Storage,
-      @Inject(DOCUMENT) private document: Document
+      @Inject(DOCUMENT) private document: Document,
+      private matrixService: MatrixService
       ) { 
   }
 
@@ -598,6 +601,25 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.email_and_password_exist: email", 
       this.user_cache['email'], ", password", this.user_cache['password']);
 
+    // Phase 2: Login to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      const email = this.user_cache['email'];
+      const password = this.user_cache['password'];
+      if (email && password) {
+        this.G.L.info("DataService: Logging into Matrix backend");
+        this.matrixService.login(email, password)
+          .then(() => {
+            this.G.L.info("DataService: Matrix login successful, syncing user data");
+            // Sync existing user_cache to Matrix
+            return this.syncUserCacheToMatrix();
+          })
+          .catch(err => {
+            this.G.L.warn("DataService: Matrix login failed", err);
+            // Continue with CouchDB as fallback
+          });
+      }
+    }
+
     if (this.restored_user_cache) {
       // user_cache was restored from storage.
 
@@ -647,6 +669,37 @@ export class DataService implements OnDestroy {
       // TODO: make that page
     }
     this.G.L.exit("DataService.email_and_password_exist"); 
+  }
+
+  /**
+   * Phase 2: Sync user_cache data to Matrix backend
+   * Called after successful Matrix login to sync existing user data
+   */
+  private async syncUserCacheToMatrix(): Promise<void> {
+    this.G.L.entry("DataService.syncUserCacheToMatrix");
+    
+    try {
+      // Sync all non-sensitive user data to Matrix
+      const keysToSync = Object.keys(this.user_cache).filter(key => 
+        !local_only_user_keys.includes(key) && // Don't sync local-only keys like password
+        !key.startsWith('poll.') // Don't sync poll data (Phase 3)
+      );
+      
+      for (const key of keysToSync) {
+        const value = this.user_cache[key];
+        if (value !== undefined && value !== null && value !== '') {
+          await this.matrixService.setUserData(key, value);
+          this.G.L.trace("DataService.syncUserCacheToMatrix synced", key);
+        }
+      }
+      
+      this.G.L.info("DataService.syncUserCacheToMatrix completed successfully");
+    } catch (err) {
+      this.G.L.error("DataService.syncUserCacheToMatrix failed", err);
+      throw err;
+    }
+    
+    this.G.L.exit("DataService.syncUserCacheToMatrix");
   }
 
   private init_poll_data() {
@@ -1429,6 +1482,15 @@ export class DataService implements OnDestroy {
 
   getu(key:string): string {
     // get user data item
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      // For Matrix backend, we need to handle this synchronously but Matrix is async
+      // Store value in cache for now - actual Matrix sync happens via login/init
+      // This is a temporary bridge until full Matrix integration in later phases
+      return this.user_cache[key] || '';
+    }
+    
     let value = this.user_cache[key] || '';
     if (!value && key=='language') {
       value = this.getu('local_language');
@@ -1458,6 +1520,15 @@ export class DataService implements OnDestroy {
     }
     this.user_cache[key] = value;
     this.G.L.trace("DataService.setu", key, value);
+    
+    // Phase 2: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend && this.matrixService.isLoggedIn()) {
+      // Asynchronously sync to Matrix backend
+      this.matrixService.setUserData(key, value).catch(err => {
+        this.G.L.warn("DataService.setu Matrix sync failed", key, err);
+      });
+    }
+    
     if (keys_triggering_data_move.includes(key)) {
       this.move_user_data(old_values);
     }

@@ -146,19 +146,28 @@ export class MatrixService {
         reject(new Error('Sync timeout'));
       }, 30000); // 30 second timeout
       
+      let handled = false;
       const onSync = (state: string) => {
+        if (handled) return;
+        
         if (state === 'PREPARED') {
+          handled = true;
           clearTimeout(timeout);
-          this.client!.removeListener('sync', onSync);
           resolve();
         } else if (state === 'ERROR') {
+          handled = true;
           clearTimeout(timeout);
-          this.client!.removeListener('sync', onSync);
           reject(new Error('Sync error'));
         }
       };
       
-      this.client!.addListener('sync', onSync);
+      // Use once to auto-unregister (if supported) or just track with handled flag
+      try {
+        (this.client as any).once('sync', onSync);
+      } catch {
+        // Fallback to regular listener with handled flag
+        (this.client as any).on('sync', onSync);
+      }
     });
   }
   
