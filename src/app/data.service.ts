@@ -2714,6 +2714,14 @@ export class DataService implements OnDestroy {
     // TODO: disable user interaction
     this._ready = false;
     return new Promise((resolve, reject) => {
+      // Logout from Matrix if using Matrix backend
+      if (environment.useMatrixBackend && this.matrixService?.isLoggedIn()) {
+        this.G.L.info("Logging out of Matrix...");
+        this.matrixService.logout().catch((err) => {
+          this.G.L.warn("Matrix logout failed (continuing anyway)", err);
+        });
+      }
+      
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
       if (!!this.user_db_sync_handler) {
