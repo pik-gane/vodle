@@ -597,26 +597,29 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.after_user_cache_is_filled");
   }
 
-  private email_and_password_exist() {
+  private async email_and_password_exist() {
     this.G.L.entry("DataService.email_and_password_exist: email", 
       this.user_cache['email'], ", password", this.user_cache['password']);
 
-    // Phase 2: Login to Matrix if flag is set
+    // Phase 2: Login to Matrix if flag is set (SYNCHRONOUS/BLOCKING)
     if (environment.useMatrixBackend) {
       const email = this.user_cache['email'];
       const password = this.user_cache['password'];
       if (email && password) {
-        this.G.L.info("DataService: Logging into Matrix backend");
-        this.matrixService.login(email, password)
-          .then(() => {
-            this.G.L.info("DataService: Matrix login successful, syncing user data");
-            // Sync existing user_cache to Matrix
-            return this.syncUserCacheToMatrix();
-          })
-          .catch(err => {
-            this.G.L.warn("DataService: Matrix login failed", err);
-            // Continue with CouchDB as fallback
-          });
+        this.G.L.info("DataService: Logging into Matrix backend (blocking)");
+        this.G.add_spinning_reason("matrix-login");
+        try {
+          await this.matrixService.login(email, password);
+          this.G.L.info("DataService: Matrix login successful, syncing user data");
+          await this.syncUserCacheToMatrix();
+          this.G.L.info("DataService: Matrix initialization complete");
+        } catch (err) {
+          this.G.L.error("DataService: Matrix login failed", err);
+          // Matrix failed - app cannot continue with Matrix backend
+          alert("Failed to connect to Matrix server. Please check that the Matrix homeserver is running.");
+        } finally {
+          this.G.remove_spinning_reason("matrix-login");
+        }
       }
     }
 
@@ -1524,11 +1527,16 @@ export class DataService implements OnDestroy {
     // Phase 2: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
       if (this.matrixService.isLoggedIn()) {
-        // Asynchronously sync to Matrix backend (skip CouchDB entirely)
+        // Sync to Matrix immediately
+        this.G.L.info("DataService.setu syncing to Matrix:", key);
         this.matrixService.setUserData(key, value).catch(err => {
-          this.G.L.warn("DataService.setu Matrix sync failed", key, err);
+          this.G.L.error("DataService.setu Matrix sync failed", key, err);
         });
+      } else {
+        // Should not happen - login is now blocking
+        this.G.L.error("DataService.setu Matrix not logged in, cannot sync:", key);
       }
+      
       // Skip CouchDB storage when using Matrix backend
       if (keys_triggering_data_move.includes(key)) {
         this.move_user_data(old_values);
