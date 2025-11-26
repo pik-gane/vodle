@@ -88,6 +88,8 @@ export class PollPage implements OnInit {
 
   news: Set<news_t> = new Set();
 
+  rating_update_timeout: any = null;
+
   // LIFECYCLE:
 
   ready = false;  
@@ -499,6 +501,18 @@ export class PollPage implements OnInit {
     // window.alert("onRatingChange " + value);
     this.set_slider_color(oid, value);
     this.apply_sliders_rating(oid);
+
+    if (this.rating_update_timeout) {
+      clearTimeout(this.rating_update_timeout);
+    }
+    this.rating_update_timeout = setTimeout(() => {
+      this.p.tally_all();
+      if (!this.dragged_oid) {
+        this.update_order();
+      }
+      this.rating_update_timeout = null;
+    }, 200);
+
     return true;
   }
 
@@ -510,14 +524,21 @@ export class PollPage implements OnInit {
   }
 
   rating_change_ended(oid: string) {
-    /** Called right after releasing the slider. 
+    /** Called right after releasing the slider.
      *  Stores slider position in own rating cache AND database. */
     // TODO: make sure this is really always called right after releasing the slider!
     this.G.L.entry("PollPage.rating_change_ended");
+
+    if (this.rating_update_timeout) {
+      clearTimeout(this.rating_update_timeout);
+      this.rating_update_timeout = null;
+    }
+
     this.p.have_acted = true;
     if (!this.delegate || this.rate_yourself_toggle[oid]) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
+    this.p.tally_all();
     this.update_order();
     this.G.D.save_state();
   }
