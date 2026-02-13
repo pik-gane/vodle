@@ -117,6 +117,48 @@ export interface IDataBackend {
    */
   deleteVoterData(pollId: string, voterId: string, key: string): Promise<void>;
   
+  // ========================================================================
+  // Phase 4: Voting Implementation
+  // ========================================================================
+  
+  /**
+   * Submit a rating for an option in a poll
+   * Phase 4: Stores the current user's rating for a specific option
+   * @param rating - Number between 0 and 100
+   */
+  submitRating(pollId: string, optionId: string, rating: number): Promise<void>;
+  
+  /**
+   * Get aggregated ratings for all voters in a poll
+   * Phase 4: Returns voterId -> (optionId -> rating)
+   */
+  getRatings(pollId: string): Promise<Map<string, Map<string, number>>>;
+  
+  /**
+   * Request delegation of voting to another user
+   * Phase 4: Sends a delegation request for specified options
+   * @returns The delegation ID for tracking
+   */
+  requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string>;
+  
+  /**
+   * Respond to a delegation request
+   * Phase 4: Accept or decline a delegation
+   */
+  respondToDelegation(pollId: string, delegationId: string, accept: boolean, acceptedOptions?: string[]): Promise<void>;
+  
+  /**
+   * Set up real-time event handlers for a poll
+   * Phase 4: Enables live updates for ratings, delegations, and metadata
+   */
+  setupPollEventHandlers(pollId: string): Promise<void>;
+  
+  /**
+   * Remove event handlers for a poll
+   * Phase 4: Cleans up event listeners when no longer needed
+   */
+  teardownPollEventHandlers(pollId: string): void;
+  
   /**
    * Get backend type identifier
    */

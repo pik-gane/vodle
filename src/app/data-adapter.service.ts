@@ -119,6 +119,34 @@ export class DataAdapter implements IDataBackend {
     return await this.backend.deleteVoterData(pollId, voterId, key);
   }
   
+  // ========================================================================
+  // Phase 4: Voting Implementation
+  // ========================================================================
+  
+  async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
+    return await this.backend.submitRating(pollId, optionId, rating);
+  }
+  
+  async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    return await this.backend.getRatings(pollId);
+  }
+  
+  async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {
+    return await this.backend.requestDelegation(pollId, delegateId, optionIds);
+  }
+  
+  async respondToDelegation(pollId: string, delegationId: string, accept: boolean, acceptedOptions?: string[]): Promise<void> {
+    return await this.backend.respondToDelegation(pollId, delegationId, accept, acceptedOptions);
+  }
+  
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    return await this.backend.setupPollEventHandlers(pollId);
+  }
+  
+  teardownPollEventHandlers(pollId: string): void {
+    return this.backend.teardownPollEventHandlers(pollId);
+  }
+  
   getBackendType(): 'couchdb' | 'matrix' {
     return this.backend.getBackendType();
   }

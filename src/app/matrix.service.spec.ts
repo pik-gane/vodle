@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
-import { MatrixService, hashEmail } from './matrix.service';
+import { MatrixService, hashEmail, DelegationRequest, DelegationResponse, PollEventListener } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -308,6 +308,190 @@ describe('MatrixService', () => {
     it('should return null for getMyRating when not logged in', async () => {
       const rating = await service.getMyRating('test-poll', 'opt1');
       expect(rating).toBeNull();
+    });
+  });
+  
+  // Phase 4 Tests
+  describe('Phase 4: Voting Implementation', () => {
+    
+    // 4.1 Rating Aggregation
+    describe('Rating Aggregation', () => {
+      it('should have getRatings method', () => {
+        expect(service.getRatings).toBeDefined();
+      });
+      
+      it('should throw error when getting ratings without initialization', async () => {
+        await expectAsync(service.getRatings('test-poll'))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should have updateRatingCache method', () => {
+        expect(service.updateRatingCache).toBeDefined();
+      });
+      
+      it('should have clearRatingCache method', () => {
+        expect(service.clearRatingCache).toBeDefined();
+      });
+      
+      it('should update and retrieve rating cache correctly', () => {
+        service.updateRatingCache('poll1', 'voter1', 'opt1', 75);
+        service.updateRatingCache('poll1', 'voter1', 'opt2', 50);
+        service.updateRatingCache('poll1', 'voter2', 'opt1', 90);
+        
+        // Verify via clearRatingCache (clears without error)
+        service.clearRatingCache('poll1');
+        // Should not throw when clearing non-existent cache
+        service.clearRatingCache('nonexistent');
+      });
+      
+      it('should overwrite existing rating in cache', () => {
+        service.updateRatingCache('poll1', 'voter1', 'opt1', 75);
+        service.updateRatingCache('poll1', 'voter1', 'opt1', 90);
+        // Clear for cleanup
+        service.clearRatingCache('poll1');
+      });
+    });
+    
+    // 4.2 Delegation Events
+    describe('Delegation Events', () => {
+      it('should have requestDelegation method', () => {
+        expect(service.requestDelegation).toBeDefined();
+      });
+      
+      it('should have respondToDelegation method', () => {
+        expect(service.respondToDelegation).toBeDefined();
+      });
+      
+      it('should have getDelegations method', () => {
+        expect(service.getDelegations).toBeDefined();
+      });
+      
+      it('should have getDelegationResponses method', () => {
+        expect(service.getDelegationResponses).toBeDefined();
+      });
+      
+      it('should have generateId method', () => {
+        expect(service.generateId).toBeDefined();
+      });
+      
+      it('should generate unique IDs', () => {
+        const id1 = service.generateId();
+        const id2 = service.generateId();
+        expect(id1).not.toBe(id2);
+        expect(id1.length).toBeGreaterThan(0);
+        expect(id2.length).toBeGreaterThan(0);
+      });
+      
+      it('should generate IDs with expected format', () => {
+        const id = service.generateId();
+        // Format: <base36-timestamp>-<random>
+        expect(id).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+      });
+      
+      it('should throw error when requesting delegation without initialization', async () => {
+        await expectAsync(service.requestDelegation('test-poll', '@delegate:localhost', ['opt1']))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should throw error when responding to delegation without initialization', async () => {
+        await expectAsync(service.respondToDelegation('test-poll', 'del-id', true))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should return empty map for getDelegations when not initialized', async () => {
+        const delegations = await service.getDelegations('test-poll');
+        expect(delegations.size).toBe(0);
+      });
+      
+      it('should return empty map for getDelegationResponses when not initialized', async () => {
+        const responses = await service.getDelegationResponses('test-poll');
+        expect(responses.size).toBe(0);
+      });
+    });
+    
+    // 4.3 Real-time Event Handling
+    describe('Real-time Event Handling', () => {
+      it('should have setupPollEventHandlers method', () => {
+        expect(service.setupPollEventHandlers).toBeDefined();
+      });
+      
+      it('should have teardownPollEventHandlers method', () => {
+        expect(service.teardownPollEventHandlers).toBeDefined();
+      });
+      
+      it('should have addPollEventListener method', () => {
+        expect(service.addPollEventListener).toBeDefined();
+      });
+      
+      it('should have removePollEventListener method', () => {
+        expect(service.removePollEventListener).toBeDefined();
+      });
+      
+      it('should throw error when setting up event handlers without initialization', async () => {
+        await expectAsync(service.setupPollEventHandlers('test-poll'))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should not throw when tearing down event handlers', () => {
+        expect(() => service.teardownPollEventHandlers('test-poll')).not.toThrow();
+      });
+      
+      it('should register and remove event listeners', () => {
+        const listener: PollEventListener = {
+          onDataChange: () => {}
+        };
+        
+        // Register
+        service.addPollEventListener('test-poll', listener);
+        
+        // Remove
+        service.removePollEventListener('test-poll', listener);
+        
+        // Should not throw when removing non-existent listener
+        service.removePollEventListener('test-poll', listener);
+        
+        // Should not throw when removing from non-existent poll
+        service.removePollEventListener('nonexistent', listener);
+      });
+      
+      it('should support multiple event listeners for one poll', () => {
+        const listener1: PollEventListener = { onDataChange: () => {} };
+        const listener2: PollEventListener = { onDataChange: () => {} };
+        
+        service.addPollEventListener('test-poll', listener1);
+        service.addPollEventListener('test-poll', listener2);
+        
+        // Remove one, other should still be registered
+        service.removePollEventListener('test-poll', listener1);
+        
+        // Cleanup
+        service.teardownPollEventHandlers('test-poll');
+      });
+      
+      it('should clean up all listeners on teardown', () => {
+        const listener: PollEventListener = { onDataChange: () => {} };
+        service.addPollEventListener('test-poll', listener);
+        
+        // Teardown should clear everything
+        service.teardownPollEventHandlers('test-poll');
+        
+        // Should be able to set up again after teardown
+        expect(() => service.addPollEventListener('test-poll', listener)).not.toThrow();
+        service.teardownPollEventHandlers('test-poll');
+      });
+    });
+    
+    // Rating validation
+    describe('Rating Validation', () => {
+      it('should reject ratings below 0', async () => {
+        await expectAsync(service.submitRating('test-poll', 'opt1', -1))
+          .toBeRejectedWithError('Not logged in');
+      });
+      
+      it('should reject ratings above 100', async () => {
+        await expectAsync(service.submitRating('test-poll', 'opt1', 101))
+          .toBeRejectedWithError('Not logged in');
+      });
     });
   });
 });

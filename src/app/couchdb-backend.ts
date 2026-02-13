@@ -126,6 +126,44 @@ export class CouchDBBackend implements IDataBackend {
     this.dataService.delv(pollId, key);
   }
   
+  // ========================================================================
+  // Phase 4: Voting Implementation
+  // ========================================================================
+  
+  async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
+    // In CouchDB, ratings are stored as voter data with key 'rating.{optionId}'
+    this.dataService.setv_in_polldb(pollId, `rating.${optionId}`, String(rating));
+  }
+  
+  async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    // CouchDB backend does not aggregate ratings across voters;
+    // the existing PollService/TallyService handles this via doc scanning.
+    // Return an empty map — the app uses PollService for tallying.
+    return new Map();
+  }
+  
+  async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {
+    // CouchDB delegation is handled by DelegationService directly.
+    // This stub generates an ID for interface compatibility.
+    const delegationId = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
+    return delegationId;
+  }
+  
+  async respondToDelegation(pollId: string, delegationId: string, accept: boolean, acceptedOptions?: string[]): Promise<void> {
+    // CouchDB delegation responses are handled by DelegationService directly.
+    // This stub is a no-op for interface compatibility.
+  }
+  
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    // CouchDB uses PouchDB change listeners set up in DataService.
+    // This stub is a no-op for interface compatibility.
+  }
+  
+  teardownPollEventHandlers(pollId: string): void {
+    // CouchDB uses PouchDB change listeners set up in DataService.
+    // This stub is a no-op for interface compatibility.
+  }
+  
   getBackendType(): 'couchdb' | 'matrix' {
     return 'couchdb';
   }
