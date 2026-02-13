@@ -105,6 +105,34 @@ export class MatrixBackend implements IDataBackend {
     await this.matrixService.deleteVoterData(pollId, voterId, key);
   }
   
+  // ========================================================================
+  // Phase 4: Voting Implementation
+  // ========================================================================
+  
+  async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
+    await this.matrixService.submitRating(pollId, optionId, rating);
+  }
+  
+  async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    return await this.matrixService.getRatings(pollId);
+  }
+  
+  async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {
+    return await this.matrixService.requestDelegation(pollId, delegateId, optionIds);
+  }
+  
+  async respondToDelegation(pollId: string, delegationId: string, accept: boolean, acceptedOptions?: string[]): Promise<void> {
+    await this.matrixService.respondToDelegation(pollId, delegationId, accept, acceptedOptions);
+  }
+  
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    await this.matrixService.setupPollEventHandlers(pollId);
+  }
+  
+  teardownPollEventHandlers(pollId: string): void {
+    this.matrixService.teardownPollEventHandlers(pollId);
+  }
+  
   getBackendType(): 'couchdb' | 'matrix' {
     return 'matrix';
   }

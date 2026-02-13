@@ -62,16 +62,58 @@ export function hashEmail(email: string): string {
 }
 
 /**
- * MatrixService - Phase 1 Foundation
+ * Delegation agreement status as tracked by the Matrix backend.
+ * Mirrors the lifecycle used in DelegationService.
+ */
+export type DelegationStatus = 'pending' | 'accepted' | 'declined';
+
+/**
+ * A delegation request sent from a delegator to a delegate.
+ */
+export interface DelegationRequest {
+  delegation_id: string;
+  delegator_id: string;
+  delegate_id: string;
+  option_ids: string[];
+  status: DelegationStatus;
+  timestamp: number;
+}
+
+/**
+ * A delegation response from a delegate.
+ */
+export interface DelegationResponse {
+  delegation_id: string;
+  responder_id: string;
+  status: 'accepted' | 'declined';
+  accepted_options: string[];
+  timestamp: number;
+}
+
+/**
+ * Callback interface for real-time poll event notifications.
+ * Components can register a listener to receive updates when
+ * poll data changes (ratings, delegations, metadata).
+ */
+export interface PollEventListener {
+  onRatingUpdate?(pollId: string, voterId: string, optionId: string, rating: number): void;
+  onDelegationRequest?(pollId: string, request: DelegationRequest): void;
+  onDelegationResponse?(pollId: string, response: DelegationResponse): void;
+  onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
+  onDataChange?(): void;
+}
+
+/**
+ * MatrixService - Phase 1-4 Implementation
  * 
- * This service provides basic Matrix protocol functionality for Vodle,
- * including client initialization, authentication, and room management.
+ * This service provides Matrix protocol functionality for Vodle,
+ * including client initialization, authentication, room management,
+ * voting, delegation, and real-time event handling.
  * 
- * Phase 1 Implementation includes:
- * - Client initialization and authentication
- * - Basic room creation and management
- * - State event handling
- * - Error handling and logging
+ * Phase 1: Client initialization and authentication
+ * Phase 2: User data management
+ * Phase 3: Poll room management, voter rooms, ratings
+ * Phase 4: Rating aggregation, delegation, real-time event handling
  */
 @Injectable({
   providedIn: 'root'
@@ -90,9 +132,25 @@ export class MatrixService {
   // Cache of voter rooms: "pollId:voterId" -> roomId
   // Each voter gets a dedicated room per poll for server-side write enforcement.
   private voterRooms: Map<string, string> = new Map();
+  // Reverse lookup: roomId -> { pollId, voterId } for O(1) event routing
+  private voterRoomReverseLookup: Map<string, { pollId: string; voterId: string }> = new Map();
   // Cache of poll options indexed by pollId -> (optionId -> option data)
   // Built from timeline scan on first access, then maintained locally.
   private optionCaches: Map<string, Map<string, { name: string; description: string; url: string }>> = new Map();
+  
+  // Phase 4: Rating cache — pollId -> (voterId -> (optionId -> rating))
+  // Aggregated from all voter rooms for a poll.
+  private ratingCaches: Map<string, Map<string, Map<string, number>>> = new Map();
+  // Phase 4: Delegation cache — pollId -> delegationId -> DelegationRequest
+  private delegationRequestCaches: Map<string, Map<string, DelegationRequest>> = new Map();
+  // Phase 4: Delegation response cache — pollId -> delegationId -> DelegationResponse
+  private delegationResponseCaches: Map<string, Map<string, DelegationResponse>> = new Map();
+  // Phase 4: Registered event listeners per poll
+  private pollEventListeners: Map<string, PollEventListener[]> = new Map();
+  // Phase 4: Track which polls have event handlers set up
+  private pollEventHandlersSetup: Set<string> = new Set();
+  // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
+  private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
   
   constructor(
     private storage: Storage
@@ -410,7 +468,21 @@ export class MatrixService {
     this.userRoomId = null;
     this.pollRooms.clear();
     this.voterRooms.clear();
+    this.voterRoomReverseLookup.clear();
     this.optionCaches.clear();
+    this.ratingCaches.clear();
+    this.delegationRequestCaches.clear();
+    this.delegationResponseCaches.clear();
+    // Unregister Matrix SDK event listeners before clearing tracking structures
+    // to prevent memory leaks from orphaned handlers.
+    for (const [, handlers] of this.pollEventHandlerRefs) {
+      for (const { event, handler } of handlers) {
+        (this.client as any)?.removeListener(event, handler);
+      }
+    }
+    this.pollEventListeners.clear();
+    this.pollEventHandlersSetup.clear();
+    this.pollEventHandlerRefs.clear();
     
     this.logger?.exit("MatrixService.logout");
   }
@@ -1366,6 +1438,7 @@ export class MatrixService {
     
     const cacheKey = `${pollId}:${voterId}`;
     this.voterRooms.set(cacheKey, roomId);
+    this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
     await this.storage.set(`voter_room_${cacheKey}`, roomId);
     
     this.logger?.info("Voter room created", pollId, voterId, roomId);
@@ -1409,6 +1482,7 @@ export class MatrixService {
       const room = this.client.getRoom(stored);
       if (room) {
         this.voterRooms.set(cacheKey, stored);
+        this.voterRoomReverseLookup.set(stored, { pollId, voterId });
         return stored;
       }
     }
@@ -1421,6 +1495,7 @@ export class MatrixService {
       );
       const roomId = aliasResponse.room_id;
       this.voterRooms.set(cacheKey, roomId);
+      this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
       await this.storage.set(`voter_room_${cacheKey}`, roomId);
       return roomId;
     } catch (error) {
@@ -1618,5 +1693,757 @@ export class MatrixService {
       return null;
     }
     return await this.getVoterRating(pollId, this.userId, optionId);
+  }
+  
+  // ========================================================================
+  // PHASE 4: VOTING IMPLEMENTATION
+  // ========================================================================
+  
+  // ========================================================================
+  // 4.1 Rating Aggregation
+  // ========================================================================
+  
+  /**
+   * Get the latest ratings for all voters in a poll.
+   * 
+   * Scans voter rooms to build a map of:
+   *   voterId -> (optionId -> rating)
+   * 
+   * Each voter's ratings are stored as state events in their dedicated
+   * voter room (set up in Phase 3). Only the latest rating per option
+   * is kept since state events overwrite previous values.
+   * 
+   * Note: This method requires knowledge of which voters have rooms.
+   * It checks the voterRooms cache and storage for known voter rooms.
+   * New voters discovered via real-time events will also be included
+   * once their rooms are resolved.
+   * 
+   * @returns Map of voterId -> Map of optionId -> rating
+   */
+  async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    this.logger?.entry("MatrixService.getRatings", pollId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    // Check cache — return defensive copy so callers cannot corrupt internal state
+    const cached = this.ratingCaches.get(pollId);
+    if (cached) {
+      const copy = new Map<string, Map<string, number>>();
+      for (const [voterId, voterRatings] of cached) {
+        copy.set(voterId, new Map(voterRatings));
+      }
+      return copy;
+    }
+    
+    const ratings = new Map<string, Map<string, number>>();
+    
+    // Get all options for this poll to know which rating keys to look for
+    const options = await this.getOptions(pollId);
+    
+    // Scan all known voter rooms for this poll
+    // Look through cache and storage for voter rooms matching this pollId
+    const voterRoomEntries: Array<{ voterId: string; roomId: string }> = [];
+    
+    // Check in-memory cache
+    for (const [cacheKey, roomId] of this.voterRooms.entries()) {
+      if (cacheKey.startsWith(`${pollId}:`)) {
+        const voterId = cacheKey.substring(pollId.length + 1);
+        voterRoomEntries.push({ voterId, roomId });
+      }
+    }
+    
+    // For each voter room, scan state events for ratings
+    for (const { voterId, roomId } of voterRoomEntries) {
+      const room = this.client.getRoom(roomId);
+      if (!room) continue;
+      
+      const voterRatings = new Map<string, number>();
+      
+      for (const [optionId] of options) {
+        const eventType = `m.room.vodle.voter.rating.${optionId}`;
+        try {
+          const event = room.currentState.getStateEvents(eventType, '');
+          const content = event?.getContent();
+          if (content && content.value !== undefined && content.value !== null) {
+            // Validate: rating must be a finite number in range [0, 100]
+            const rawValue = content.value;
+            const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+            if (Number.isFinite(numericValue) && numericValue >= 0 && numericValue <= 100) {
+              voterRatings.set(optionId, numericValue);
+            }
+          }
+        } catch {
+          // Rating not found for this option — skip
+        }
+      }
+      
+      if (voterRatings.size > 0) {
+        ratings.set(voterId, voterRatings);
+      }
+    }
+    
+    // Cache the result
+    this.ratingCaches.set(pollId, ratings);
+    
+    // Return a defensive copy so callers cannot mutate the cached map
+    const result = new Map<string, Map<string, number>>();
+    for (const [voterId, voterRatings] of ratings) {
+      result.set(voterId, new Map(voterRatings));
+    }
+    
+    this.logger?.exit("MatrixService.getRatings");
+    return result;
+  }
+  
+  /**
+   * Update the rating cache for a single voter/option.
+   * Called by real-time event handlers when a rating event arrives.
+   */
+  updateRatingCache(pollId: string, voterId: string, optionId: string, rating: number): void {
+    let pollRatings = this.ratingCaches.get(pollId);
+    if (!pollRatings) {
+      pollRatings = new Map();
+      this.ratingCaches.set(pollId, pollRatings);
+    }
+    
+    let voterRatings = pollRatings.get(voterId);
+    if (!voterRatings) {
+      voterRatings = new Map();
+      pollRatings.set(voterId, voterRatings);
+    }
+    
+    voterRatings.set(optionId, rating);
+  }
+  
+  /**
+   * Clear the rating cache for a poll, forcing re-fetch on next access.
+   */
+  clearRatingCache(pollId: string): void {
+    this.ratingCaches.delete(pollId);
+  }
+  
+  // ========================================================================
+  // 4.2 Delegation Events
+  // ========================================================================
+  
+  /**
+   * Generate a unique identifier for delegation tracking.
+   * Uses a combination of timestamp and cryptographically secure random bytes.
+   */
+  generateId(): string {
+    const timestamp = Date.now().toString(36);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const randomPart = Array.from(randomBytes, b => b.toString(16).padStart(2, '0')).join('');
+    return `${timestamp}-${randomPart}`;
+  }
+  
+  /**
+   * Send a delegation request from the current user to a delegate.
+   * 
+   * The request is stored as a timeline event in the poll room so
+   * all participants can see delegation relationships. This matches
+   * the existing DelegationService pattern where delegation data
+   * is stored in the poll database.
+   * 
+   * @param pollId - The poll to delegate in
+   * @param delegateId - Matrix user ID of the delegate
+   * @param optionIds - List of option IDs to delegate
+   * @returns The delegation ID for tracking
+   */
+  async requestDelegation(
+    pollId: string,
+    delegateId: string,
+    optionIds: string[]
+  ): Promise<string> {
+    this.logger?.entry("MatrixService.requestDelegation", pollId, delegateId);
+    
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    const delegationId = this.generateId();
+    const timestamp = Date.now();
+    
+    await this.client.sendEvent(
+      roomId,
+      'm.room.vodle.vote.delegation_request' as any,
+      {
+        delegation_id: delegationId,
+        delegate_id: delegateId,
+        option_ids: optionIds,
+        status: 'pending',
+        timestamp
+      }
+    );
+    
+    // Update local cache
+    const request: DelegationRequest = {
+      delegation_id: delegationId,
+      delegator_id: this.userId,
+      delegate_id: delegateId,
+      option_ids: optionIds,
+      status: 'pending',
+      timestamp
+    };
+    
+    let pollDelegations = this.delegationRequestCaches.get(pollId);
+    if (!pollDelegations) {
+      pollDelegations = new Map();
+      this.delegationRequestCaches.set(pollId, pollDelegations);
+    }
+    pollDelegations.set(delegationId, request);
+    
+    this.logger?.info("Delegation requested", pollId, delegationId);
+    this.logger?.exit("MatrixService.requestDelegation");
+    return delegationId;
+  }
+  
+  /**
+   * Respond to a delegation request (accept or decline).
+   * 
+   * The response is stored as a timeline event in the poll room.
+   * The delegate can optionally specify which options they accept.
+   * 
+   * @param pollId - The poll containing the delegation
+   * @param delegationId - The delegation to respond to
+   * @param accept - Whether to accept or decline
+   * @param acceptedOptions - Subset of options to accept (if accepting)
+   */
+  async respondToDelegation(
+    pollId: string,
+    delegationId: string,
+    accept: boolean,
+    acceptedOptions?: string[]
+  ): Promise<void> {
+    this.logger?.entry("MatrixService.respondToDelegation", pollId, delegationId, accept);
+    
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    const timestamp = Date.now();
+    const resolvedStatus: 'accepted' | 'declined' = accept ? 'accepted' : 'declined';
+    
+    await this.client.sendEvent(
+      roomId,
+      'm.room.vodle.vote.delegation_response' as any,
+      {
+        delegation_id: delegationId,
+        status: resolvedStatus,
+        accepted_options: acceptedOptions || [],
+        timestamp
+      }
+    );
+    
+    // Update local cache
+    const response: DelegationResponse = {
+      delegation_id: delegationId,
+      responder_id: this.userId,
+      status: resolvedStatus,
+      accepted_options: acceptedOptions || [],
+      timestamp
+    };
+    
+    let pollResponses = this.delegationResponseCaches.get(pollId);
+    if (!pollResponses) {
+      pollResponses = new Map();
+      this.delegationResponseCaches.set(pollId, pollResponses);
+    }
+    pollResponses.set(delegationId, response);
+    
+    // Update the request status in cache
+    const pollDelegations = this.delegationRequestCaches.get(pollId);
+    if (pollDelegations) {
+      const request = pollDelegations.get(delegationId);
+      if (request) {
+        request.status = resolvedStatus;
+      }
+    }
+    
+    this.logger?.info("Delegation response sent", pollId, delegationId, accept);
+    this.logger?.exit("MatrixService.respondToDelegation");
+  }
+  
+  /**
+   * Get all delegation requests for a poll.
+   * Scans the poll room timeline for delegation events.
+   * 
+   * @returns Map of delegationId -> DelegationRequest
+   */
+  async getDelegations(pollId: string): Promise<Map<string, DelegationRequest>> {
+    this.logger?.entry("MatrixService.getDelegations", pollId);
+    
+    // Check cache — return defensive copy so callers cannot corrupt internal state.
+    // Note: the DelegationRequest objects are shared references — treat as read-only.
+    const cached = this.delegationRequestCaches.get(pollId);
+    if (cached) {
+      return new Map<string, DelegationRequest>(cached);
+    }
+    
+    const delegations = new Map<string, DelegationRequest>();
+    
+    if (!this.client) {
+      return delegations;
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return delegations;
+    }
+    
+    const room = this.client.getRoom(roomId);
+    if (!room) {
+      return delegations;
+    }
+    
+    const timeline = room.getLiveTimeline();
+    const events = timeline.getEvents();
+    
+    for (const event of events) {
+      if (event.getType() === 'm.room.vodle.vote.delegation_request') {
+        const content = event.getContent();
+        const sender = event.getSender();
+        
+        if (content.delegation_id) {
+          delegations.set(content.delegation_id, {
+            delegation_id: content.delegation_id,
+            delegator_id: sender,
+            delegate_id: content.delegate_id,
+            option_ids: content.option_ids || [],
+            status: content.status || 'pending',
+            timestamp: content.timestamp || 0
+          });
+        }
+      }
+      
+      // Update delegation status from responses
+      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
+        const content = event.getContent();
+        
+        if (content.delegation_id && delegations.has(content.delegation_id)) {
+          const request = delegations.get(content.delegation_id);
+          // Only accept valid statuses, to mirror handleDelegationResponse logic
+          if (content.status === 'accepted' || content.status === 'declined') {
+            request.status = content.status;
+          }
+        }
+      }
+    }
+    
+    // Cache the result
+    this.delegationRequestCaches.set(pollId, delegations);
+    
+    this.logger?.exit("MatrixService.getDelegations");
+    // Return a defensive copy so callers cannot mutate the cached map.
+    // Note: the DelegationRequest objects are shared references — treat as read-only.
+    return new Map<string, DelegationRequest>(delegations);
+  }
+  
+  /**
+   * Get all delegation responses for a poll.
+   * Scans the poll room timeline for delegation response events.
+   * 
+   * @returns Map of delegationId -> DelegationResponse
+   */
+  async getDelegationResponses(pollId: string): Promise<Map<string, DelegationResponse>> {
+    this.logger?.entry("MatrixService.getDelegationResponses", pollId);
+    
+    // Check cache — return defensive copy so callers cannot corrupt internal state.
+    // Note: the DelegationResponse objects are shared references — treat as read-only.
+    const cached = this.delegationResponseCaches.get(pollId);
+    if (cached) {
+      return new Map<string, DelegationResponse>(cached);
+    }
+    
+    const responses = new Map<string, DelegationResponse>();
+    
+    if (!this.client) {
+      return responses;
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return responses;
+    }
+    
+    const room = this.client.getRoom(roomId);
+    if (!room) {
+      return responses;
+    }
+    
+    const timeline = room.getLiveTimeline();
+    const events = timeline.getEvents();
+    
+    for (const event of events) {
+      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
+        const content = event.getContent();
+        const sender = event.getSender();
+        
+        if (content.delegation_id) {
+          responses.set(content.delegation_id, {
+            delegation_id: content.delegation_id,
+            responder_id: sender,
+            status: content.status === 'accepted' ? 'accepted' : 'declined',
+            accepted_options: content.accepted_options || [],
+            timestamp: content.timestamp || 0
+          });
+        }
+      }
+    }
+    
+    // Cache the result
+    this.delegationResponseCaches.set(pollId, responses);
+    
+    this.logger?.exit("MatrixService.getDelegationResponses");
+    // Return a defensive copy so callers cannot mutate the cached map.
+    // Note: the DelegationResponse objects are shared references — treat as read-only.
+    return new Map<string, DelegationResponse>(responses);
+  }
+  
+  // ========================================================================
+  // 4.3 Real-time Event Handling
+  // ========================================================================
+  
+  /**
+   * Register an event listener for a poll.
+   * The listener will be notified when rating, delegation, or metadata
+   * events arrive for the specified poll.
+   */
+  addPollEventListener(pollId: string, listener: PollEventListener): void {
+    let listeners = this.pollEventListeners.get(pollId);
+    if (!listeners) {
+      listeners = [];
+      this.pollEventListeners.set(pollId, listeners);
+    }
+    listeners.push(listener);
+  }
+  
+  /**
+   * Remove an event listener for a poll.
+   */
+  removePollEventListener(pollId: string, listener: PollEventListener): void {
+    const listeners = this.pollEventListeners.get(pollId);
+    if (listeners) {
+      const index = listeners.indexOf(listener);
+      if (index >= 0) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+  
+  /**
+   * Set up real-time event handlers for a poll.
+   * 
+   * Listens for:
+   * - Rating events in voter rooms (m.room.vodle.voter.rating.*)
+   * - Delegation requests in the poll room (m.room.vodle.vote.delegation_request)
+   * - Delegation responses in the poll room (m.room.vodle.vote.delegation_response)
+   * - Poll metadata updates in the poll room (m.room.vodle.poll.meta)
+   * 
+   * Uses Matrix's Room.timeline and RoomState.events listeners
+   * following the existing DataService pattern for real-time updates.
+   * 
+   * Calling this method multiple times for the same poll is safe — it will
+   * not register duplicate handlers.
+   */
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.setupPollEventHandlers", pollId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    // Prevent duplicate handler registration
+    if (this.pollEventHandlersSetup.has(pollId)) {
+      this.logger?.info("Event handlers already set up for poll", pollId);
+      return;
+    }
+    
+    // Mark as set up immediately to avoid races with concurrent calls.
+    this.pollEventHandlersSetup.add(pollId);
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      // Undo the flag if room lookup fails
+      this.pollEventHandlersSetup.delete(pollId);
+      throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    const handlers: Array<{ event: string; handler: (...args: any[]) => void }> = [];
+    
+    // Listen for timeline events in the poll room (delegation requests/responses)
+    const timelineHandler = (event: any, room: any) => {
+      if (room.roomId !== roomId) return;
+      
+      const eventType = event.getType();
+      
+      switch (eventType) {
+        case 'm.room.vodle.vote.delegation_request':
+          this.handleDelegationRequest(pollId, event);
+          break;
+        
+        case 'm.room.vodle.vote.delegation_response':
+          this.handleDelegationResponse(pollId, event);
+          break;
+      }
+    };
+    (this.client as any).on("Room.timeline", timelineHandler);
+    handlers.push({ event: "Room.timeline", handler: timelineHandler });
+    
+    // Listen for state events in the poll room (metadata updates)
+    const stateMetaHandler = (event: any, state: any) => {
+      if (state.roomId !== roomId) return;
+      
+      if (event.getType() === 'm.room.vodle.poll.meta') {
+        this.handlePollMetaUpdate(pollId, event);
+      }
+    };
+    (this.client as any).on("RoomState.events", stateMetaHandler);
+    handlers.push({ event: "RoomState.events", handler: stateMetaHandler });
+    
+    // Listen for state events across all rooms to catch voter rating updates.
+    // Voter rooms are separate from the poll room, so we need a broader
+    // listener that matches any voter room for this poll.
+    // Uses reverse lookup map for O(1) room identification instead of iterating.
+    const stateRatingHandler = (event: any, state: any) => {
+      const eventType = event.getType() as string;
+      
+      // Match rating events: m.room.vodle.voter.rating.{optionId}
+      if (eventType.startsWith('m.room.vodle.voter.rating.')) {
+        // O(1) lookup via reverse map
+        const lookup = this.voterRoomReverseLookup.get(state.roomId);
+        if (lookup && lookup.pollId === pollId) {
+          const optionId = eventType.substring('m.room.vodle.voter.rating.'.length);
+          this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
+        }
+      }
+    };
+    (this.client as any).on("RoomState.events", stateRatingHandler);
+    handlers.push({ event: "RoomState.events", handler: stateRatingHandler });
+    
+    // Store handler references for cleanup
+    this.pollEventHandlerRefs.set(pollId, handlers);
+    
+    this.logger?.info("Event handlers set up for poll", pollId);
+    this.logger?.exit("MatrixService.setupPollEventHandlers");
+  }
+  
+  /**
+   * Handle an incoming rating event from a voter room.
+   * Updates the local cache and notifies listeners.
+   */
+  private handleRatingEvent(pollId: string, voterId: string, optionId: string, event: any): void {
+    this.logger?.entry("MatrixService.handleRatingEvent", pollId, voterId, optionId);
+    
+    const content = event.getContent();
+    const rating = content?.value;
+    
+    // Validate: rating must be a finite number in range [0, 100]
+    if (typeof rating !== 'number' || !isFinite(rating) || rating < 0 || rating > 100) {
+      this.logger?.info("Ignoring invalid rating value", pollId, voterId, optionId, rating);
+      return;
+    }
+    
+    // Update cache
+    this.updateRatingCache(pollId, voterId, optionId, rating);
+    
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
+    const listeners = this.pollEventListeners.get(pollId);
+    if (listeners) {
+      for (const listener of listeners) {
+        try {
+          if (listener.onRatingUpdate) {
+            listener.onRatingUpdate(pollId, voterId, optionId, rating);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (rating)", error);
+        }
+      }
+    }
+    
+    this.logger?.exit("MatrixService.handleRatingEvent");
+  }
+  
+  /**
+   * Handle an incoming delegation request event from the poll room.
+   * Updates the local cache and notifies listeners.
+   */
+  private handleDelegationRequest(pollId: string, event: any): void {
+    this.logger?.entry("MatrixService.handleDelegationRequest", pollId);
+    
+    const sender = event.getSender();
+    const content = event.getContent();
+    
+    if (!content.delegation_id) {
+      return;
+    }
+    
+    const request: DelegationRequest = {
+      delegation_id: content.delegation_id,
+      delegator_id: sender,
+      delegate_id: content.delegate_id,
+      option_ids: content.option_ids || [],
+      status: content.status || 'pending',
+      timestamp: content.timestamp || 0
+    };
+    
+    // Update cache
+    let pollDelegations = this.delegationRequestCaches.get(pollId);
+    if (!pollDelegations) {
+      pollDelegations = new Map();
+      this.delegationRequestCaches.set(pollId, pollDelegations);
+    }
+    pollDelegations.set(content.delegation_id, request);
+    
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
+    const listeners = this.pollEventListeners.get(pollId);
+    if (listeners) {
+      for (const listener of listeners) {
+        try {
+          if (listener.onDelegationRequest) {
+            listener.onDelegationRequest(pollId, request);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (delegation request)", error);
+        }
+      }
+    }
+    
+    this.logger?.exit("MatrixService.handleDelegationRequest");
+  }
+  
+  /**
+   * Handle an incoming delegation response event from the poll room.
+   * Updates both the response cache and the request status.
+   */
+  private handleDelegationResponse(pollId: string, event: any): void {
+    this.logger?.entry("MatrixService.handleDelegationResponse", pollId);
+    
+    const sender = event.getSender();
+    const content = event.getContent();
+    
+    if (!content.delegation_id) {
+      return;
+    }
+    
+    // Validate status: must be 'accepted' or 'declined'
+    const validStatuses = ['accepted', 'declined'];
+    const status: 'accepted' | 'declined' = validStatuses.includes(content.status) ? content.status : 'declined';
+    
+    const response: DelegationResponse = {
+      delegation_id: content.delegation_id,
+      responder_id: sender,
+      status,
+      accepted_options: content.accepted_options || [],
+      timestamp: content.timestamp || 0
+    };
+    
+    // Update response cache
+    let pollResponses = this.delegationResponseCaches.get(pollId);
+    if (!pollResponses) {
+      pollResponses = new Map();
+      this.delegationResponseCaches.set(pollId, pollResponses);
+    }
+    pollResponses.set(content.delegation_id, response);
+    
+    // Update request status
+    const pollDelegations = this.delegationRequestCaches.get(pollId);
+    if (pollDelegations) {
+      const request = pollDelegations.get(content.delegation_id);
+      if (request) {
+        request.status = status;
+      }
+    }
+    
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
+    const listeners = this.pollEventListeners.get(pollId);
+    if (listeners) {
+      for (const listener of listeners) {
+        try {
+          if (listener.onDelegationResponse) {
+            listener.onDelegationResponse(pollId, response);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (delegation response)", error);
+        }
+      }
+    }
+    
+    this.logger?.exit("MatrixService.handleDelegationResponse");
+  }
+  
+  /**
+   * Handle a poll metadata state event update.
+   * Notifies listeners when poll metadata changes (e.g., state transitions).
+   */
+  private handlePollMetaUpdate(pollId: string, event: any): void {
+    this.logger?.entry("MatrixService.handlePollMetaUpdate", pollId);
+    
+    const content = event.getContent();
+    
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
+    const listeners = this.pollEventListeners.get(pollId);
+    if (listeners) {
+      for (const listener of listeners) {
+        try {
+          if (listener.onPollMetaUpdate) {
+            listener.onPollMetaUpdate(pollId, content);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (poll meta update)", error);
+        }
+      }
+    }
+    
+    this.logger?.exit("MatrixService.handlePollMetaUpdate");
+  }
+  
+  /**
+   * Remove all event handlers and listeners for a poll.
+   * Properly unregisters Matrix SDK event listeners to prevent memory leaks.
+   * Called when the user navigates away from a poll or when
+   * the poll is closed.
+   */
+  teardownPollEventHandlers(pollId: string): void {
+    this.logger?.entry("MatrixService.teardownPollEventHandlers", pollId);
+    
+    // Unregister Matrix SDK event listeners
+    const handlers = this.pollEventHandlerRefs.get(pollId);
+    if (handlers && this.client) {
+      for (const { event, handler } of handlers) {
+        (this.client as any).removeListener(event, handler);
+      }
+    }
+    
+    this.pollEventHandlerRefs.delete(pollId);
+    this.pollEventListeners.delete(pollId);
+    this.pollEventHandlersSetup.delete(pollId);
+    
+    this.logger?.exit("MatrixService.teardownPollEventHandlers");
   }
 }
