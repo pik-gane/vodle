@@ -40,11 +40,24 @@ export interface MatrixCredentials {
 /**
  * Hash an email address using BLAKE2s for privacy
  * This prevents the email from being revealed to the Matrix server
+ * 
+ * Email is normalized (trimmed and lowercased) to ensure consistent hashing
+ * regardless of case variations (user@example.com === USER@example.com).
+ * 
+ * Note: This hash is deterministic without salt/pepper, making it theoretically
+ * vulnerable to rainbow table attacks. Adding salt would be a breaking change
+ * requiring migration of all existing Matrix accounts.
+ * 
  * Exported for testing purposes
  */
 export function hashEmail(email: string): string {
-  const blake2s = new BLAKE2s(environment.data_service.hash_n_bytes);
-  blake2s.update(textEncoder.encode(email));
+  // Normalize email: trim whitespace and convert to lowercase for consistency
+  const normalizedEmail = email.trim().toLowerCase();
+  
+  // Enforce minimum hash length of 16 bytes to reduce collision risk
+  const hashBytes = Math.max(environment.data_service.hash_n_bytes ?? 0, 16);
+  const blake2s = new BLAKE2s(hashBytes);
+  blake2s.update(textEncoder.encode(normalizedEmail));
   return blake2s.hexDigest();
 }
 
@@ -203,7 +216,7 @@ export class MatrixService {
       // Use hashed email as Matrix username to protect privacy
       const username = emailHash;
       
-      // Try to login first
+      // Try to login first with new hash-based username
       try {
         const response = await tempClient.loginWithPassword(username, password);
         
@@ -223,47 +236,78 @@ export class MatrixService {
         
         this.logger?.info("Login successful", this.userId);
       } catch (loginError: any) {
-        // If user doesn't exist, try to register
+        // If user doesn't exist with new format, try legacy username format for backward compatibility
         if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
-          this.logger?.info("User doesn't exist, attempting registration", username);
+          const legacyUsername = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
           
           try {
-            // First call to get the registration flows
-            await tempClient.register(username, password);
-          } catch (firstRegError: any) {
-            // Expected: 401 with flows and session
-            if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
-              this.logger?.info("Got registration flows, completing m.login.dummy");
+            // Try login with old username format
+            const response = await tempClient.loginWithPassword(legacyUsername, password);
+            
+            this.logger?.info("Login successful with legacy username format", response.user_id);
+            
+            // Store credentials
+            await this.saveCredentials({
+              accessToken: response.access_token,
+              userId: response.user_id,
+              deviceId: response.device_id
+            });
+            
+            // Initialize with new credentials
+            await this.initializeWithToken(
+              response.access_token,
+              response.user_id,
+              response.device_id
+            );
+            
+            this.logger?.info("Login successful (legacy format)", this.userId);
+          } catch (legacyLoginError: any) {
+            // Neither format worked, try to register with new hash-based username
+            if (legacyLoginError?.errcode === 'M_FORBIDDEN' || legacyLoginError?.httpStatus === 403) {
+              this.logger?.info("User doesn't exist, attempting registration", username);
               
-              // Complete the m.login.dummy authentication
-              const regResponse = await tempClient.register(
-                username,
-                password,
-                firstRegError.data.session,
-                {
-                  type: 'm.login.dummy'
+              try {
+                // First call to get the registration flows
+                await tempClient.register(username, password);
+              } catch (firstRegError: any) {
+                // Expected: 401 with flows and session
+                if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
+                  this.logger?.info("Got registration flows, completing m.login.dummy");
+                  
+                  // Complete the m.login.dummy authentication
+                  const regResponse = await tempClient.register(
+                    username,
+                    password,
+                    firstRegError.data.session,
+                    {
+                      type: 'm.login.dummy'
+                    }
+                  );
+                  
+                  // Store credentials
+                  await this.saveCredentials({
+                    accessToken: regResponse.access_token,
+                    userId: regResponse.user_id,
+                    deviceId: regResponse.device_id
+                  });
+                  
+                  // Initialize with new credentials
+                  await this.initializeWithToken(
+                    regResponse.access_token,
+                    regResponse.user_id,
+                    regResponse.device_id
+                  );
+                  
+                  this.logger?.info("Registration successful", this.userId);
+                } else {
+                  // Registration failed for other reasons
+                  this.logger?.error("Registration failed", firstRegError);
+                  throw firstRegError;
                 }
-              );
-              
-              // Store credentials
-              await this.saveCredentials({
-                accessToken: regResponse.access_token,
-                userId: regResponse.user_id,
-                deviceId: regResponse.device_id
-              });
-              
-              // Initialize with new credentials
-              await this.initializeWithToken(
-                regResponse.access_token,
-                regResponse.user_id,
-                regResponse.device_id
-              );
-              
-              this.logger?.info("Registration successful", this.userId);
+              }
             } else {
-              // Registration failed for other reasons
-              this.logger?.error("Registration failed", firstRegError);
-              throw firstRegError;
+              // Other login error, re-throw
+              throw legacyLoginError;
             }
           }
         } else {

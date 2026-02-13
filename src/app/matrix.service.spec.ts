@@ -86,6 +86,14 @@ describe('MatrixService', () => {
       const hash = hashEmail(email);
       expect(hash).toMatch(/^[0-9a-f]+$/);
     });
+
+    it('should hash emails case-insensitively', () => {
+      const mixedCaseEmail = 'Test@Example.com';
+      const lowerCaseEmail = 'test@example.com';
+      const hashMixed = hashEmail(mixedCaseEmail);
+      const hashLower = hashEmail(lowerCaseEmail);
+      expect(hashMixed).toBe(hashLower);
+    });
   });
 
   // Phase 2 Tests
