@@ -685,13 +685,14 @@ export class MatrixService {
         },
         events: {
           'm.room.vodle.poll.meta': 50,
-          'm.room.vodle.poll.option': 50,
           'm.room.vodle.vote.rating': 50,
           'm.room.vodle.vote.delegation': 50
         },
-        // Only explicitly listed event types are sendable at 50.
+        // Only explicitly listed event types are sendable as state events at 50.
         // All other state events require power level 100 (nobody has it).
         state_default: 100,
+        // Timeline events (including poll options) use events_default.
+        // Options are sent as timeline events for server-side immutability.
         events_default: 50,
         users_default: 50
       }
@@ -800,35 +801,46 @@ export class MatrixService {
   
   /**
    * Add a new option to a poll room.
-   * Each option is stored as a separate state event with the option ID as state_key.
-   * Options are immutable once created — attempting to overwrite an existing
-   * option will throw an error, matching the CouchDB backend behavior.
+   * Options are sent as timeline (message) events, which are inherently
+   * immutable at the Matrix server level — once sent they cannot be
+   * modified or deleted. This provides server-side enforcement of
+   * option immutability, matching the CouchDB backend behavior.
+   * 
+   * A client-side duplicate check is included as defense-in-depth,
+   * but the primary guarantee comes from the append-only timeline.
    */
   async addOption(pollId: string, optionId: string, option: { name: string; description?: string; url?: string }): Promise<void> {
     this.logger?.entry("MatrixService.addOption", pollId, optionId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
     
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
-    // Options are immutable: reject if this option ID already exists
+    // Defense-in-depth: reject if this option ID already exists locally
     const existing = this.getOption(pollId, optionId);
     if (existing) {
       throw new Error(`Option ${optionId} already exists in poll ${pollId} and cannot be modified`);
     }
     
-    await this.sendStateEvent(roomId, 'm.room.vodle.poll.option', {
+    // Send as timeline event (immutable by Matrix protocol)
+    await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
+      option_id: optionId,
       name: option.name,
       description: option.description || '',
       url: option.url || ''
-    }, optionId);
+    });
     
     this.logger?.exit("MatrixService.addOption");
   }
   
   /**
-   * Get a specific option from a poll room
+   * Get a specific option from a poll room by scanning timeline events.
+   * Returns the first occurrence of the option ID (timeline events are immutable).
    */
   getOption(pollId: string, optionId: string): { name: string; description: string; url: string } | null {
     this.logger?.entry("MatrixService.getOption", pollId, optionId);
@@ -838,17 +850,34 @@ export class MatrixService {
       return null;
     }
     
-    try {
-      const content = this.getStateEvent(roomId, 'm.room.vodle.poll.option', optionId);
-      return content || null;
-    } catch (error) {
+    const room = this.client.getRoom(roomId);
+    if (!room) {
       return null;
     }
+    
+    const timeline = room.getLiveTimeline();
+    const events = timeline.getEvents();
+    
+    for (const event of events) {
+      if (event.getType() === 'm.room.vodle.poll.option') {
+        const content = event.getContent();
+        if (content.option_id === optionId) {
+          return {
+            name: content.name,
+            description: content.description || '',
+            url: content.url || ''
+          };
+        }
+      }
+    }
+    
+    return null;
   }
   
   /**
-   * Get all options for a poll from the room state
-   * Returns a map of optionId -> option data
+   * Get all options for a poll by scanning timeline events.
+   * Returns a map of optionId -> option data.
+   * Only the first occurrence of each option ID is used (immutable).
    */
   getOptions(pollId: string): Map<string, { name: string; description: string; url: string }> {
     this.logger?.entry("MatrixService.getOptions", pollId);
@@ -865,12 +894,20 @@ export class MatrixService {
       return options;
     }
     
-    const events = room.currentState.getStateEvents('m.room.vodle.poll.option');
-    if (events && Array.isArray(events)) {
-      for (const event of events) {
-        const stateKey = event.getStateKey();
-        if (stateKey) {
-          options.set(stateKey, event.getContent());
+    const timeline = room.getLiveTimeline();
+    const events = timeline.getEvents();
+    
+    for (const event of events) {
+      if (event.getType() === 'm.room.vodle.poll.option') {
+        const content = event.getContent();
+        const oid = content.option_id;
+        // Only use the first occurrence (immutable — ignore any duplicates)
+        if (oid && !options.has(oid)) {
+          options.set(oid, {
+            name: content.name,
+            description: content.description || '',
+            url: content.url || ''
+          });
         }
       }
     }

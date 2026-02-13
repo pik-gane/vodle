@@ -36,15 +36,16 @@ Poll metadata stored as a single state event:
 
 ### 4. Option Management
 
-Options stored as individual state events with option ID as state key:
+Options stored as timeline (message) events for server-side immutability:
 
-- **Event Type**: `m.room.vodle.poll.option`
-- **State Key**: Option ID (e.g., `opt1`, `opt2`)
-- **Content**: `{ name, description, url }`
+- **Event Type**: `m.room.vodle.poll.option` (timeline event, not state event)
+- **Content**: `{ option_id, name, description, url }`
+- **Immutability**: Timeline events cannot be modified or deleted by the Matrix server — this provides server-side enforcement that options are immutable once added
+- **Adding**: Any voter can add new options until the poll closes
 - **Operations**:
-  - `addOption(pollId, optionId, option)`: Add/update option
-  - `getOption(pollId, optionId)`: Get single option
-  - `getOptions(pollId)`: Get all options as Map
+  - `addOption(pollId, optionId, option)`: Add new option (rejects duplicates)
+  - `getOption(pollId, optionId)`: Get single option by scanning timeline
+  - `getOptions(pollId)`: Get all options as Map by scanning timeline
 
 ### 5. Voter Invitation
 
@@ -83,18 +84,19 @@ Generic key-value storage scoped to polls and voters:
 
 ```
 Poll Room (vodle_poll_{pollId})
-├── m.room.encryption          (Megolm E2EE)
-├── m.room.power_levels        (All participants: 50, equal permissions)
-├── m.room.vodle.poll.meta     (Poll metadata - state_key: '')
-├── m.room.vodle.poll.option   (Options - state_key: optionId)
-│   ├── state_key: "opt1"      → { name, description, url }
-│   ├── state_key: "opt2"      → { name, description, url }
-│   └── ...
-├── m.room.vodle.poll.data.*   (Poll-level data - state_key: '')
-└── m.room.vodle.voter.*       (Voter data - state_key: voterId)
-    ├── state_key: "voter1"    → { value }
-    ├── state_key: "voter2"    → { value }
-    └── ...
+├── State events:
+│   ├── m.room.encryption          (Megolm E2EE)
+│   ├── m.room.power_levels        (All participants: 50, equal permissions)
+│   ├── m.room.vodle.poll.meta     (Poll metadata - state_key: '')
+│   ├── m.room.vodle.poll.data.*   (Poll-level data - state_key: '')
+│   └── m.room.vodle.voter.*       (Voter data - state_key: voterId)
+│       ├── state_key: "voter1"    → { value }
+│       └── state_key: "voter2"    → { value }
+└── Timeline events (immutable, append-only):
+    └── m.room.vodle.poll.option   (Options - server-side immutable)
+        ├── { option_id: "opt1", name, description, url }
+        ├── { option_id: "opt2", name, description, url }
+        └── ...
 ```
 
 ### Backend Abstraction (Updated)
@@ -258,23 +260,24 @@ await matrixService.changePollState('poll123', 'closed');
 All participants (including the poll creator) have **equal power levels**.
 Once a poll leaves draft state, the creator becomes a simple voter with no
 special privileges. Nobody can change poll metadata after the poll starts.
+Options are immutable once added (server-side enforced via timeline events).
 
 ### Power Levels by Poll State
 
 | Poll State | All Participants | Can Do |
 |-----------|-----------------|--------|
 | Draft | 50 | Set metadata, add options, vote |
-| Running | 50 | Submit ratings, delegate (metadata & options locked) |
+| Running | 50 | Add new options, submit ratings, delegate (metadata locked) |
 | Closed | 0 | Read-only access |
 
 ### Event Power Requirements
 
-| Event Type | Draft | Running/Closed | Description |
-|-----------|-------|---------------|-------------|
-| `m.room.vodle.poll.meta` | 50 | 100 (locked) | Metadata immutable after draft |
-| `m.room.vodle.poll.option` | 50 | 100 (locked) | No new options after draft |
-| `m.room.vodle.vote.rating` | 50 | 50 → 0 | Voters can rate until closed |
-| `m.room.vodle.vote.delegation` | 50 | 50 → 0 | Voters can delegate until closed |
+| Event Type | Kind | Draft | Running | Closed | Description |
+|-----------|------|-------|---------|--------|-------------|
+| `m.room.vodle.poll.meta` | state | 50 | 100 (locked) | 100 (locked) | Metadata immutable after draft |
+| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | Options addable until close; immutable once sent (server-side) |
+| `m.room.vodle.vote.rating` | state | 50 | 50 | 0 | Voters can rate until closed |
+| `m.room.vodle.vote.delegation` | state | 50 | 50 | 0 | Voters can delegate until closed |
 
 ## Testing
 
