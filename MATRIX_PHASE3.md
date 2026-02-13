@@ -275,7 +275,7 @@ Options are immutable once added (server-side enforced via timeline events).
 | Event Type | Kind | Draft | Running | Closed | Description |
 |-----------|------|-------|---------|--------|-------------|
 | `m.room.vodle.poll.meta` | state | 50 | 100 (locked) | 100 (locked) | Metadata immutable after draft |
-| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | Options addable until close; immutable once sent (server-side) |
+| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | New options can be added until close; immutable once sent (server-side) |
 | `m.room.vodle.vote.rating` | state | 50 | 50 | 0 | Voters can rate until closed |
 | `m.room.vodle.vote.delegation` | state | 50 | 50 | 0 | Voters can delegate until closed |
 

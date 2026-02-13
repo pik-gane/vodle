@@ -87,6 +87,9 @@ export class MatrixService {
   // Cache for quick access
   private userRoomId: string | null = null;
   private pollRooms: Map<string, string> = new Map(); // pollId -> roomId
+  // Cache of poll options indexed by pollId -> (optionId -> option data)
+  // Built from timeline scan on first access, then maintained locally.
+  private optionCaches: Map<string, Map<string, { name: string; description: string; url: string }>> = new Map();
   
   constructor(
     private storage: Storage
@@ -806,8 +809,11 @@ export class MatrixService {
    * modified or deleted. This provides server-side enforcement of
    * option immutability, matching the CouchDB backend behavior.
    * 
-   * A client-side duplicate check is included as defense-in-depth,
-   * but the primary guarantee comes from the append-only timeline.
+   * A client-side duplicate check is included as defense-in-depth.
+   * In a race condition where two clients add the same option_id
+   * simultaneously, both timeline events will exist but getOption/
+   * getOptions use first-occurrence semantics, so the result is
+   * deterministic and the option data remains immutable.
    */
   async addOption(pollId: string, optionId: string, option: { name: string; description?: string; url?: string }): Promise<void> {
     this.logger?.entry("MatrixService.addOption", pollId, optionId);
@@ -827,92 +833,83 @@ export class MatrixService {
       throw new Error(`Option ${optionId} already exists in poll ${pollId} and cannot be modified`);
     }
     
-    // Send as timeline event (immutable by Matrix protocol)
-    await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
-      option_id: optionId,
+    const optionData = {
       name: option.name,
       description: option.description || '',
       url: option.url || ''
+    };
+    
+    // Send as timeline event (immutable by Matrix protocol)
+    await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
+      option_id: optionId,
+      ...optionData
     });
+    
+    // Update local cache immediately
+    this.ensureOptionCache(pollId);
+    this.optionCaches.get(pollId)!.set(optionId, optionData);
     
     this.logger?.exit("MatrixService.addOption");
   }
   
   /**
-   * Get a specific option from a poll room by scanning timeline events.
-   * Returns the first occurrence of the option ID (timeline events are immutable).
+   * Build or return the option cache for a poll by scanning timeline events.
+   * Only the first occurrence of each option_id is kept (immutable).
    */
-  getOption(pollId: string, optionId: string): { name: string; description: string; url: string } | null {
-    this.logger?.entry("MatrixService.getOption", pollId, optionId);
-    
-    const roomId = this.pollRooms.get(pollId);
-    if (!roomId || !this.client) {
-      return null;
+  private ensureOptionCache(pollId: string): Map<string, { name: string; description: string; url: string }> {
+    const cached = this.optionCaches.get(pollId);
+    if (cached) {
+      return cached;
     }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return null;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.poll.option') {
-        const content = event.getContent();
-        if (content.option_id === optionId) {
-          return {
-            name: content.name,
-            description: content.description || '',
-            url: content.url || ''
-          };
-        }
-      }
-    }
-    
-    return null;
-  }
-  
-  /**
-   * Get all options for a poll by scanning timeline events.
-   * Returns a map of optionId -> option data.
-   * Only the first occurrence of each option ID is used (immutable).
-   */
-  getOptions(pollId: string): Map<string, { name: string; description: string; url: string }> {
-    this.logger?.entry("MatrixService.getOptions", pollId);
     
     const options = new Map<string, { name: string; description: string; url: string }>();
     
     const roomId = this.pollRooms.get(pollId);
-    if (!roomId || !this.client) {
-      return options;
-    }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return options;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.poll.option') {
-        const content = event.getContent();
-        const oid = content.option_id;
-        // Only use the first occurrence (immutable — ignore any duplicates)
-        if (oid && !options.has(oid)) {
-          options.set(oid, {
-            name: content.name,
-            description: content.description || '',
-            url: content.url || ''
-          });
+    if (roomId && this.client) {
+      const room = this.client.getRoom(roomId);
+      if (room) {
+        const timeline = room.getLiveTimeline();
+        const events = timeline.getEvents();
+        
+        for (const event of events) {
+          if (event.getType() === 'm.room.vodle.poll.option') {
+            const content = event.getContent();
+            const oid = content.option_id;
+            // Only use the first occurrence (immutable — ignore any duplicates)
+            if (oid && !options.has(oid)) {
+              options.set(oid, {
+                name: content.name,
+                description: content.description || '',
+                url: content.url || ''
+              });
+            }
+          }
         }
       }
     }
     
+    this.optionCaches.set(pollId, options);
     return options;
+  }
+  
+  /**
+   * Get a specific option from a poll room.
+   * Uses a local cache built from the timeline on first access.
+   */
+  getOption(pollId: string, optionId: string): { name: string; description: string; url: string } | null {
+    this.logger?.entry("MatrixService.getOption", pollId, optionId);
+    
+    const options = this.ensureOptionCache(pollId);
+    return options.get(optionId) || null;
+  }
+  
+  /**
+   * Get all options for a poll.
+   * Uses a local cache built from the timeline on first access.
+   */
+  getOptions(pollId: string): Map<string, { name: string; description: string; url: string }> {
+    this.logger?.entry("MatrixService.getOptions", pollId);
+    return this.ensureOptionCache(pollId);
   }
   
   /**
