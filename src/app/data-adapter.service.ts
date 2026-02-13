@@ -26,7 +26,7 @@ import { DataService } from './data.service';
 import { environment } from '../environments/environment';
 
 /**
- * DataAdapter - Phase 2 Implementation
+ * DataAdapter - Phase 2-3 Implementation
  * 
  * This service provides a unified interface for data operations,
  * automatically selecting between Matrix and CouchDB backends
@@ -85,6 +85,38 @@ export class DataAdapter implements IDataBackend {
   
   async deleteUserData(key: string): Promise<void> {
     return await this.backend.deleteUserData(key);
+  }
+  
+  // ========================================================================
+  // Phase 3: Poll Data Management
+  // ========================================================================
+  
+  async createPoll(pollId: string, title: string): Promise<string> {
+    return await this.backend.createPoll(pollId, title);
+  }
+  
+  async getPollData(pollId: string, key: string): Promise<any> {
+    return await this.backend.getPollData(pollId, key);
+  }
+  
+  async setPollData(pollId: string, key: string, value: any): Promise<void> {
+    return await this.backend.setPollData(pollId, key, value);
+  }
+  
+  async deletePollData(pollId: string, key: string): Promise<void> {
+    return await this.backend.deletePollData(pollId, key);
+  }
+  
+  async getVoterData(pollId: string, voterId: string, key: string): Promise<any> {
+    return await this.backend.getVoterData(pollId, voterId, key);
+  }
+  
+  async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
+    return await this.backend.setVoterData(pollId, voterId, key, value);
+  }
+  
+  async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
+    return await this.backend.deleteVoterData(pollId, voterId, key);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {

@@ -36,7 +36,7 @@ describe('DataAdapter', () => {
     ]);
     
     const dataSpy = jasmine.createSpyObj('DataService', [
-      'setu', 'getu', 'delu'
+      'setu', 'getu', 'delu', 'setp', 'getp', 'delp', 'getv', 'setv', 'delv'
     ], {
       ready: true
     });
@@ -85,5 +85,36 @@ describe('DataAdapter', () => {
   it('should provide access to underlying backend', () => {
     const backend = service.getBackend();
     expect(backend).toBeTruthy();
+  });
+  
+  // Phase 3 Tests
+  describe('Phase 3: Poll Data Methods', () => {
+    it('should have createPoll method', () => {
+      expect(service.createPoll).toBeDefined();
+    });
+    
+    it('should have getPollData method', () => {
+      expect(service.getPollData).toBeDefined();
+    });
+    
+    it('should have setPollData method', () => {
+      expect(service.setPollData).toBeDefined();
+    });
+    
+    it('should have deletePollData method', () => {
+      expect(service.deletePollData).toBeDefined();
+    });
+    
+    it('should have getVoterData method', () => {
+      expect(service.getVoterData).toBeDefined();
+    });
+    
+    it('should have setVoterData method', () => {
+      expect(service.setVoterData).toBeDefined();
+    });
+    
+    it('should have deleteVoterData method', () => {
+      expect(service.deleteVoterData).toBeDefined();
+    });
   });
 });
