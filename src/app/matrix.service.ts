@@ -1101,11 +1101,24 @@ export class MatrixService {
   }
   
   /**
-   * Set voter-specific data in the poll room
-   * Uses the voter ID as the state key to scope data per voter
+   * Set voter-specific data in the poll room.
+   * Uses the voter ID as the state key to scope data per voter.
+   * 
+   * Ratings and other voter data are stored as state events, not timeline
+   * events. State events only keep the latest value per (type, state_key),
+   * so frequent updates do NOT clutter the timeline with outdated values.
+   * 
+   * Voter ownership is enforced: a voter can only modify their own data.
+   * This matches the CouchDB backend behavior where setv() rejects writes
+   * to other voters' data.
    */
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setVoterData", pollId, key);
+    
+    // Enforce voter ownership: only the authenticated user can set their own data
+    if (this.userId && voterId !== this.userId) {
+      throw new Error(`Cannot modify another voter's data: ${voterId} !== ${this.userId}`);
+    }
     
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
@@ -1119,7 +1132,8 @@ export class MatrixService {
   }
   
   /**
-   * Get voter-specific data from the poll room
+   * Get voter-specific data from the poll room.
+   * Any participant can read any voter's data (ratings are public within the poll).
    */
   async getVoterData(pollId: string, voterId: string, key: string): Promise<any> {
     this.logger?.entry("MatrixService.getVoterData", pollId, key);
@@ -1139,10 +1153,16 @@ export class MatrixService {
   }
   
   /**
-   * Delete voter-specific data by sending empty content
+   * Delete voter-specific data by sending empty content.
+   * Voter ownership is enforced: a voter can only delete their own data.
    */
   async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
     this.logger?.entry("MatrixService.deleteVoterData", pollId, key);
+    
+    // Enforce voter ownership: only the authenticated user can delete their own data
+    if (this.userId && voterId !== this.userId) {
+      throw new Error(`Cannot delete another voter's data: ${voterId} !== ${this.userId}`);
+    }
     
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
@@ -1153,5 +1173,59 @@ export class MatrixService {
     await this.sendStateEvent(roomId, eventType, {}, voterId);
     
     this.logger?.exit("MatrixService.deleteVoterData");
+  }
+  
+  // ========================================================================
+  // RATING CONVENIENCE METHODS
+  // ========================================================================
+  
+  /**
+   * Submit or update a rating for an option in a poll.
+   * 
+   * Ratings are stored as state events with event type
+   * `m.room.vodle.voter.rating.{optionId}` and state_key = voterId.
+   * Since state events only keep the latest value per (type, state_key),
+   * frequent rating changes do NOT clutter the timeline.
+   * 
+   * Enforcement:
+   * - Voter ownership: only the authenticated user can set their own rating
+   *   (enforced by setVoterData)
+   * - Deadline: when the poll closes, makeRoomReadOnly() sets all power
+   *   levels to 0, so the Matrix server rejects further state events
+   * - Range: rating must be between 0 and 100
+   */
+  async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
+    this.logger?.entry("MatrixService.submitRating", pollId, optionId, rating);
+    
+    if (!this.userId) {
+      throw new Error("Not logged in");
+    }
+    
+    if (rating < 0 || rating > 100) {
+      throw new Error('Rating must be between 0 and 100');
+    }
+    
+    await this.setVoterData(pollId, this.userId, `rating.${optionId}`, rating);
+    
+    this.logger?.exit("MatrixService.submitRating");
+  }
+  
+  /**
+   * Get a specific voter's rating for a specific option.
+   * Returns null if not rated.
+   */
+  async getVoterRating(pollId: string, voterId: string, optionId: string): Promise<number | null> {
+    return await this.getVoterData(pollId, voterId, `rating.${optionId}`);
+  }
+  
+  /**
+   * Get the current user's rating for a specific option.
+   * Returns null if not rated.
+   */
+  async getMyRating(pollId: string, optionId: string): Promise<number | null> {
+    if (!this.userId) {
+      return null;
+    }
+    return await this.getVoterRating(pollId, this.userId, optionId);
   }
 }
