@@ -44,3 +44,4 @@ matrix-data/
 
 # Build output directory (Angular build artifacts)
 docs/
+node_modules/

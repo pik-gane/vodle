@@ -21,15 +21,20 @@ import { IDataBackend } from './data-backend.interface';
 import { MatrixService } from './matrix.service';
 
 /**
- * MatrixBackend - Phase 2 Implementation
+ * MatrixBackend - Phase 2-3 Implementation
  * 
  * This class implements the IDataBackend interface using Matrix protocol
- * for user data storage and synchronization.
+ * for user data storage, poll management, and synchronization.
  * 
  * Phase 2 Implementation includes:
  * - User authentication via Matrix
  * - User data storage in private Matrix rooms
  * - User settings and preferences management
+ * 
+ * Phase 3 Implementation includes:
+ * - Poll room creation and management
+ * - Poll metadata and option storage
+ * - Voter data management within poll rooms
  */
 export class MatrixBackend implements IDataBackend {
   
@@ -65,6 +70,39 @@ export class MatrixBackend implements IDataBackend {
   
   async deleteUserData(key: string): Promise<void> {
     await this.matrixService.deleteUserData(key);
+  }
+  
+  // ========================================================================
+  // Phase 3: Poll Data Management
+  // ========================================================================
+  
+  async createPoll(pollId: string, title: string): Promise<string> {
+    await this.matrixService.createPollRoom(pollId, title);
+    return pollId;
+  }
+  
+  async getPollData(pollId: string, key: string): Promise<any> {
+    return await this.matrixService.getPollData(pollId, key);
+  }
+  
+  async setPollData(pollId: string, key: string, value: any): Promise<void> {
+    await this.matrixService.setPollData(pollId, key, value);
+  }
+  
+  async deletePollData(pollId: string, key: string): Promise<void> {
+    await this.matrixService.deletePollData(pollId, key);
+  }
+  
+  async getVoterData(pollId: string, voterId: string, key: string): Promise<any> {
+    return await this.matrixService.getVoterData(pollId, voterId, key);
+  }
+  
+  async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
+    await this.matrixService.setVoterData(pollId, voterId, key, value);
+  }
+  
+  async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
+    await this.matrixService.deleteVoterData(pollId, voterId, key);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {
