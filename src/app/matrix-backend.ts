@@ -77,7 +77,8 @@ export class MatrixBackend implements IDataBackend {
   // ========================================================================
   
   async createPoll(pollId: string, title: string): Promise<string> {
-    return await this.matrixService.createPollRoom(pollId, title);
+    await this.matrixService.createPollRoom(pollId, title);
+    return pollId;
   }
   
   async getPollData(pollId: string, key: string): Promise<any> {

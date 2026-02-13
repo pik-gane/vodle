@@ -12,7 +12,7 @@ Each poll gets a dedicated encrypted Matrix room for shared data:
 
 - **Room Creation**: `createPollRoom(pollId, title)` creates a private, encrypted room
 - **Room Alias**: `vodle_poll_{pollId}` for consistent lookup
-- **Encryption**: Uses Matrix Megolm (m.megolm.v1.aes-sha2) encryption
+- **Encryption**: Uses Matrix Megolm (m.megolm.v1.aes-sha2). Note: state events (metadata, deadline, lifecycle state) are NOT end-to-end encrypted by the Matrix protocol — they are visible to the homeserver. Only timeline events (options) are encrypted.
 - **Equal Permissions**: All human participants have power level 50
 - **Guard Bot**: A guard bot (`@vodle-guard:server`) is invited with admin power (100) to enforce deadlines server-side
 
@@ -124,20 +124,21 @@ A dedicated Matrix bot that enforces deadlines server-side:
 
 ```
 Poll Room (vodle_poll_{pollId}) — shared by all participants
-├── State events:
-│   ├── m.room.encryption          (Megolm E2EE)
+├── State events (NOT end-to-end encrypted; visible to homeserver):
+│   ├── m.room.encryption          (Megolm E2EE config — for timeline events only)
 │   ├── m.room.power_levels        (Voters: 50, Guard bot: 100; redact: 100)
-│   ├── m.room.vodle.poll.meta     (Poll metadata — encrypted)
+│   ├── m.room.vodle.poll.meta     (Poll metadata — NOT encrypted)
 │   ├── m.room.vodle.poll.state    (Poll lifecycle state — separate from metadata)
-│   ├── m.room.vodle.poll.deadline (Due date — UNENCRYPTED, readable by guard bot)
+│   ├── m.room.vodle.poll.deadline (Due date — readable by guard bot)
 │   └── m.room.vodle.poll.data.*   (Poll-level data)
-└── Timeline events (immutable, append-only, non-redactable):
+└── Timeline events (encrypted, immutable, append-only, non-redactable):
     └── m.room.vodle.poll.option   (Options — server-side immutable)
         ├── { option_id: "opt1", name, description, url }
         └── { option_id: "opt2", name, description, url }
 
 Voter Room (vodle_voter_{pollId}_{base64url(voterId)}) — per (poll, voter) pair
 ├── Power levels: voter=50, guard bot=100, everyone else=0
+│   invite/kick/ban/redact: 50 (prevents read-only members from inviting others)
 └── State events (only writable by the voter):
     ├── m.room.vodle.voter.rating.opt1  → { value: 75 }
     ├── m.room.vodle.voter.rating.opt2  → { value: 30 }
@@ -190,7 +191,7 @@ interface IDataBackend {
   deleteUserData(key): Promise<void>;
   
   // Phase 3 (new)
-  createPoll(pollId, title): Promise<string>;
+  createPoll(pollId, title): Promise<string>;  // Returns pollId (consistent across backends)
   getPollData(pollId, key): Promise<any>;
   setPollData(pollId, key, value): Promise<void>;
   deletePollData(pollId, key): Promise<void>;
@@ -388,8 +389,10 @@ ng test --no-watch --browsers=ChromeHeadless --include='**/data-adapter.service.
 ### Current Constraints
 
 1. **Guard Bot Not Yet Implemented**: The guard bot user is invited to rooms and configured, but the actual bot service (monitoring deadlines, closing rooms) is a separate server-side component to be implemented in Phase 4
-2. **No Delegation**: Delegation events are defined but not yet handled in Phase 4
-3. **Client-Side Fallback**: Until the guard bot is deployed, `makeRoomReadOnly()` and `makeVoterRoomReadOnly()` are called from the client as a fallback
+2. **lockPollMetadata requires guard bot**: `lockPollMetadata()` will skip locking if the guard bot is not joined to the room, to avoid bricking the room. Until the guard bot service is deployed (Phase 4), metadata locks are best-effort
+3. **makeRoomReadOnly requires guard bot after lock**: After `lockPollMetadata()` raises `m.room.power_levels` to 100, only the guard bot can call `makeRoomReadOnly()` — human participants (power 50) cannot
+4. **No Delegation**: Delegation events are defined but not yet handled in Phase 4
+5. **Client-Side Fallback**: Until the guard bot is deployed, `makeRoomReadOnly()` and `makeVoterRoomReadOnly()` should be called before `lockPollMetadata()` if needed, or rely on the guard bot once deployed
 
 ## Next Steps - Phase 4
 

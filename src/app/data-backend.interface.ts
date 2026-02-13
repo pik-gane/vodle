@@ -77,6 +77,7 @@ export interface IDataBackend {
   /**
    * Create a new poll room/database
    * Phase 3: Creates storage for a new poll with the given title
+   * @returns The pollId (not a storage-internal identifier like roomId)
    */
   createPoll(pollId: string, title: string): Promise<string>;
   

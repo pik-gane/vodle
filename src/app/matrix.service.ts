@@ -676,15 +676,21 @@ export class MatrixService {
   
   /**
    * Create a new poll room in Matrix.
-   * Each poll gets its own encrypted room where poll metadata is stored
-   * as state events, while poll options are sent as timeline events for
+   * Each poll gets its own room where poll metadata is stored
+   * as state events and poll options are sent as timeline events for
    * server-side immutability. Voter data (ratings, delegations) is stored
    * in separate per-voter rooms for server-side write enforcement.
-   * 
+   *
+   * Note: while the room has E2EE enabled, Matrix state events (including
+   * poll metadata, deadline, and lifecycle state) are NOT encrypted on the
+   * wire — they are visible to the homeserver. Only timeline message events
+   * are encrypted by Megolm. If metadata confidentiality is required,
+   * consider storing sensitive fields in encrypted timeline events instead.
+   *
    * A guard bot is invited with admin power (100) to enforce deadlines
    * server-side: at the deadline it drops all power levels to 0, making
    * the room read-only. This is analogous to CouchDB validation scripts.
-   * 
+   *
    * All human participants (including the creator) have equal power levels (50).
    * During draft, everyone at level 50 can set metadata and options.
    * When the poll starts, metadata is locked (required power raised to 100,
@@ -862,12 +868,15 @@ export class MatrixService {
   }
   
   /**
-   * Set the poll deadline as an unencrypted state event.
-   * 
-   * The deadline is stored separately from encrypted poll metadata so that
-   * the guard bot can read it without decryption keys. The guard bot uses
-   * this to know when to close the poll and voter rooms.
-   * 
+   * Set the poll deadline as a Matrix state event.
+   *
+   * Note: Matrix state events (including this deadline and the poll metadata
+   * state in {@link setPollMetadata}) are not end-to-end encrypted — they are
+   * visible to the homeserver and any service with access to the room.
+   * The guard bot reads this deadline to know when to close the poll and
+   * voter rooms. If confidentiality is required for additional poll metadata,
+   * store that metadata in encrypted timeline events instead of state events.
+   *
    * @param due - ISO 8601 date string (e.g., '2024-03-15T12:00:00Z')
    * @throws Error if due is not a valid ISO 8601 date string
    */
@@ -946,11 +955,14 @@ export class MatrixService {
   /**
    * Build or return the option cache for a poll by scanning timeline events.
    * Only the first occurrence of each option_id is kept (immutable).
-   * 
+   *
    * Resolves the room via getPollRoom() (async) to ensure the room is
    * available even on first access before pollRooms is populated.
    * The cache is not set until a successful room lookup, so it will
    * retry on next access if the room isn't available yet.
+   *
+   * Paginates backward through the room timeline to ensure older option
+   * events (beyond the initial sync window) are included.
    */
   private async ensureOptionCache(pollId: string): Promise<Map<string, { name: string; description: string; url: string }>> {
     const cached = this.optionCaches.get(pollId);
@@ -969,6 +981,23 @@ export class MatrixService {
     if (roomId) {
       const room = this.client.getRoom(roomId);
       if (room) {
+        // Paginate backward to load full history before scanning.
+        // This ensures option events beyond the initial sync window are included.
+        try {
+          let hasMore = true;
+          while (hasMore) {
+            hasMore = await this.client.paginateEventTimeline(
+              room.getLiveTimeline(),
+              { backwards: true, limit: 100 }
+            );
+          }
+        } catch (error) {
+          // Pagination may fail if the room has no more history or the
+          // server doesn't support it. We proceed with whatever events
+          // are available.
+          this.logger?.info("Timeline pagination ended or failed for poll", pollId, error);
+        }
+
         const timeline = room.getLiveTimeline();
         const events = timeline.getEvents();
         
@@ -1111,15 +1140,32 @@ export class MatrixService {
     
     const content = { ...powerLevels.getContent() };
     const events = { ...(content.events || {}) };
-    // Lock metadata: raise required power to 100 (only guard bot has 100)
-    events['m.room.vodle.poll.meta'] = 100;
+    // Determine the lock level based on whether the guard bot is actually
+    // present in the room. If it is, we lock to 100 (only the bot can change).
+    // If not, we skip raising power levels to avoid bricking the room.
+    const guardBotId = this.getValidatedGuardBotId();
+    let lockLevel = 100;
+    if (!guardBotId) {
+      this.logger?.warn("No guard bot configured — skipping metadata lock to avoid bricking room");
+      this.logger?.exit("MatrixService.lockPollMetadata");
+      return;
+    }
+    const guardBotMember = room.getMember(guardBotId);
+    if (!guardBotMember || guardBotMember.membership !== 'join') {
+      this.logger?.warn("Guard bot not joined — skipping metadata lock to avoid bricking room");
+      this.logger?.exit("MatrixService.lockPollMetadata");
+      return;
+    }
+
+    // Lock metadata: raise required power to lockLevel (only guard bot has 100)
+    events['m.room.vodle.poll.meta'] = lockLevel;
     // Lock deadline: prevent changes after poll starts
-    events['m.room.vodle.poll.deadline'] = 100;
+    events['m.room.vodle.poll.deadline'] = lockLevel;
     // Lock power levels themselves so participants can't undo the lock.
     // Only the guard bot (100) can change power levels after this.
-    events['m.room.power_levels'] = 100;
+    events['m.room.power_levels'] = lockLevel;
     // Poll state transitions are now handled by the guard bot only
-    events['m.room.vodle.poll.state'] = 100;
+    events['m.room.vodle.poll.state'] = lockLevel;
     content.events = events;
     
     await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
@@ -1132,9 +1178,12 @@ export class MatrixService {
    * Make a poll room read-only by setting the default user power level to 0.
    * All human participants lose the ability to send events.
    * The guard bot retains admin power (100) for future administrative actions.
-   * 
-   * This method can be called by a client as a fallback, but the primary
-   * enforcement is done by the guard bot at the deadline.
+   *
+   * Note: After {@link lockPollMetadata}, the m.room.power_levels event itself
+   * is locked to required power level 100. This means that, in normal
+   * operation, only the guard bot (power 100) can successfully call this
+   * method once the poll has left the draft phase; human participants
+   * (typically power 50) cannot close the room by invoking it directly.
    */
   async makeRoomReadOnly(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.makeRoomReadOnly", pollId);
@@ -1235,19 +1284,23 @@ export class MatrixService {
   
   /**
    * Create a voter room for a specific voter in a poll.
-   * 
-   * Each voter gets a dedicated Matrix room per poll. Only the voter
-   * has write power (50); all other participants are invited with
-   * read-only power (0). The guard bot has admin power (100) to enforce
-   * the deadline by dropping all power levels to 0 when the poll closes.
-   * 
+   *
+   * Each voter gets a dedicated Matrix room per poll. The voter
+   * has write power (50), and the guard bot has admin power (100)
+   * to enforce the deadline (e.g. by adjusting power levels or
+   * otherwise preventing further writes when the poll closes).
+   *
+   * Note: this method does not automatically invite all other poll
+   * participants; their access to voter data must be handled via
+   * other rooms or mechanisms in the application.
+   *
    * This provides server-side enforcement that:
    * - A voter can only modify their own data (only they have power 50)
    * - Ratings can only be changed until the deadline (guard bot closes room)
-   * 
+   *
    * This is analogous to CouchDB validation scripts that reject writes
    * to other voters' documents and enforce the due date.
-   * 
+   *
    * Ratings are stored as state events in the voter room. Since state
    * events only keep the latest value per (event_type, state_key),
    * frequent rating changes do NOT clutter the timeline.
@@ -1288,7 +1341,14 @@ export class MatrixService {
         state_default: 50,
         events_default: 50,
         // Everyone else (invited for read access) defaults to 0 (read-only)
-        users_default: 0
+        users_default: 0,
+        // Restrict membership management to voter/guard bot (power >= 50)
+        // to prevent read-only participants from inviting others and
+        // potentially leaking voter data.
+        invite: 50,
+        kick: 50,
+        ban: 50,
+        redact: 50
       }
     };
     
