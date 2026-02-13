@@ -700,6 +700,16 @@ describe('MatrixService', () => {
           .toBeRejectedWithError('Not logged in');
       });
       
+      it('should reject encrypted rating below 0', async () => {
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', -1, 'password'))
+          .toBeRejectedWithError('Not logged in');
+      });
+      
+      it('should reject encrypted rating above 100', async () => {
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 101, 'password'))
+          .toBeRejectedWithError('Not logged in');
+      });
+      
       it('should throw error for decryptRating when client not initialized', async () => {
         await expectAsync(service.decryptRating('nonexistent', 'voter1', 'opt1', 'password'))
           .toBeRejectedWithError('Matrix client not initialized');

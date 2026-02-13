@@ -28,7 +28,7 @@ Store pending events when the Matrix client is disconnected, and process them wh
 
 Additional encryption on top of Matrix E2EE (Megolm) using the Web Crypto API:
 
-- **Key Derivation**: PBKDF2 with 100,000 iterations and SHA-256, using `vodle-poll-{pollId}` as salt
+- **Key Derivation**: PBKDF2 with 600,000 iterations and SHA-256, using `vodle-poll-{pollId}` as salt
 - **Encryption**: AES-GCM with 256-bit keys and random 12-byte IVs
 - **Double Encryption**: Rating → AES-GCM (poll password) → Megolm (Matrix E2EE)
 - **Encrypted Ratings**: `submitEncryptedRating()` stores encrypted ratings in voter rooms

@@ -2741,7 +2741,7 @@ export class MatrixService {
       {
         name: 'PBKDF2',
         salt: enc.encode(`vodle-poll-${pollId}`),
-        iterations: 100000,
+        iterations: 600000,
         hash: 'SHA-256'
       },
       keyMaterial,
@@ -2785,6 +2785,8 @@ export class MatrixService {
     combined.set(new Uint8Array(ciphertext), iv.length);
     
     this.logger?.exit("MatrixService.encryptWithPassword");
+    // Build base64 string using a loop instead of String.fromCharCode(...combined)
+    // to avoid "Maximum call stack size exceeded" on large arrays.
     let binary = '';
     for (let i = 0; i < combined.length; i++) {
       binary += String.fromCharCode(combined[i]);
@@ -2993,7 +2995,7 @@ export class MatrixService {
     for (const key of keys) {
       try {
         const value = await this.getUserData(key);
-        if (value !== null && value !== undefined) {
+        if (value != null) {
           this.userDataCache.set(key, value);
         }
       } catch (error) {
