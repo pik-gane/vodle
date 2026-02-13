@@ -23,8 +23,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * This interface allows Vodle to switch between different data storage backends
  * (CouchDB/PouchDB or Matrix) without changing the application code.
  * 
- * Phase 1-2 includes authentication and user data management.
- * Later phases will add poll data and voting functionality.
+ * Phase 1-2: Authentication and user data management.
+ * Phase 3: Poll room creation, metadata, options, and voter management.
  */
 export interface IDataBackend {
   /**
@@ -69,6 +69,53 @@ export interface IDataBackend {
    * Phase 2: Removes user setting or preference
    */
   deleteUserData(key: string): Promise<void>;
+  
+  // ========================================================================
+  // Phase 3: Poll Data Management
+  // ========================================================================
+  
+  /**
+   * Create a new poll room/database
+   * Phase 3: Creates storage for a new poll with the given title
+   * @returns The pollId (not a storage-internal identifier like roomId)
+   */
+  createPoll(pollId: string, title: string): Promise<string>;
+  
+  /**
+   * Get poll data value by key
+   * Phase 3: Retrieves poll-level data (metadata, options, etc.)
+   */
+  getPollData(pollId: string, key: string): Promise<any>;
+  
+  /**
+   * Set poll data value by key
+   * Phase 3: Stores poll-level data
+   */
+  setPollData(pollId: string, key: string, value: any): Promise<void>;
+  
+  /**
+   * Delete poll data by key
+   * Phase 3: Removes poll-level data
+   */
+  deletePollData(pollId: string, key: string): Promise<void>;
+  
+  /**
+   * Get voter-specific data within a poll
+   * Phase 3: Retrieves data scoped to a specific voter in a poll
+   */
+  getVoterData(pollId: string, voterId: string, key: string): Promise<any>;
+  
+  /**
+   * Set voter-specific data within a poll
+   * Phase 3: Stores data scoped to a specific voter in a poll
+   */
+  setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void>;
+  
+  /**
+   * Delete voter-specific data within a poll
+   * Phase 3: Removes data scoped to a specific voter in a poll
+   */
+  deleteVoterData(pollId: string, voterId: string, key: string): Promise<void>;
   
   /**
    * Get backend type identifier

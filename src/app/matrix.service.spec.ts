@@ -125,4 +125,189 @@ describe('MatrixService', () => {
   
   // Note: More comprehensive tests require a running Matrix server
   // and will be added in integration tests
+  
+  // Phase 3 Tests
+  describe('Phase 3: Poll Room Management', () => {
+    it('should have createPollRoom method', () => {
+      expect(service.createPollRoom).toBeDefined();
+    });
+    
+    it('should have getPollRoom method', () => {
+      expect(service.getPollRoom).toBeDefined();
+    });
+    
+    it('should have getOrCreatePollRoom method', () => {
+      expect(service.getOrCreatePollRoom).toBeDefined();
+    });
+    
+    it('should have setPollMetadata method', () => {
+      expect(service.setPollMetadata).toBeDefined();
+    });
+    
+    it('should have getPollMetadata method', () => {
+      expect(service.getPollMetadata).toBeDefined();
+    });
+    
+    it('should have addOption method', () => {
+      expect(service.addOption).toBeDefined();
+    });
+    
+    it('should have getOption method', () => {
+      expect(service.getOption).toBeDefined();
+    });
+    
+    it('should have getOptions method', () => {
+      expect(service.getOptions).toBeDefined();
+    });
+    
+    it('should have inviteVoter method', () => {
+      expect(service.inviteVoter).toBeDefined();
+    });
+    
+    it('should have changePollState method', () => {
+      expect(service.changePollState).toBeDefined();
+    });
+    
+    it('should have makeRoomReadOnly method', () => {
+      expect(service.makeRoomReadOnly).toBeDefined();
+    });
+    
+    it('should have setPollData method', () => {
+      expect(service.setPollData).toBeDefined();
+    });
+    
+    it('should have getPollData method', () => {
+      expect(service.getPollData).toBeDefined();
+    });
+    
+    it('should have deletePollData method', () => {
+      expect(service.deletePollData).toBeDefined();
+    });
+    
+    it('should have setVoterData method', () => {
+      expect(service.setVoterData).toBeDefined();
+    });
+    
+    it('should have getVoterData method', () => {
+      expect(service.getVoterData).toBeDefined();
+    });
+    
+    it('should have deleteVoterData method', () => {
+      expect(service.deleteVoterData).toBeDefined();
+    });
+    
+    it('should throw error when creating poll room without initialization', async () => {
+      await expectAsync(service.createPollRoom('test-poll', 'Test Poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when getting poll room without initialization', async () => {
+      await expectAsync(service.getPollRoom('test-poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when inviting voter without initialization', async () => {
+      await expectAsync(service.inviteVoter('test-poll', '@voter:localhost'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should return null for getOption when not initialized', async () => {
+      const option = await service.getOption('nonexistent', 'opt1');
+      expect(option).toBeNull();
+    });
+    
+    it('should return empty map for getOptions when not initialized', async () => {
+      const options = await service.getOptions('nonexistent');
+      expect(options.size).toBe(0);
+    });
+    
+    it('should have lockPollMetadata method', () => {
+      expect(service.lockPollMetadata).toBeDefined();
+    });
+    
+    it('should throw error when locking poll metadata without initialization', async () => {
+      await expectAsync(service.lockPollMetadata('test-poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when making room read-only without initialization', async () => {
+      await expectAsync(service.makeRoomReadOnly('test-poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    // Deadline method
+    it('should have setPollDeadline method', () => {
+      expect(service.setPollDeadline).toBeDefined();
+    });
+    
+    it('should reject invalid deadline date format', async () => {
+      await expectAsync(service.setPollDeadline('test-poll', 'not-a-date'))
+        .toBeRejectedWithError(/Invalid deadline date format/);
+    });
+    
+    it('should reject empty deadline date', async () => {
+      await expectAsync(service.setPollDeadline('test-poll', ''))
+        .toBeRejectedWithError(/Invalid deadline date format/);
+    });
+    
+    // Voter room methods
+    it('should have createVoterRoom method', () => {
+      expect(service.createVoterRoom).toBeDefined();
+    });
+    
+    it('should have getVoterRoom method', () => {
+      expect(service.getVoterRoom).toBeDefined();
+    });
+    
+    it('should have getOrCreateMyVoterRoom method', () => {
+      expect(service.getOrCreateMyVoterRoom).toBeDefined();
+    });
+    
+    it('should have makeVoterRoomReadOnly method', () => {
+      expect(service.makeVoterRoomReadOnly).toBeDefined();
+    });
+    
+    it('should throw error when creating voter room without initialization', async () => {
+      await expectAsync(service.createVoterRoom('test-poll', '@voter:localhost'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when getting voter room without initialization', async () => {
+      await expectAsync(service.getVoterRoom('test-poll', '@voter:localhost'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when getting/creating voter room without login', async () => {
+      await expectAsync(service.getOrCreateMyVoterRoom('test-poll'))
+        .toBeRejectedWithError('Not logged in');
+    });
+    
+    it('should throw error when making voter room read-only without initialization', async () => {
+      await expectAsync(service.makeVoterRoomReadOnly('test-poll', '@voter:localhost'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    // Rating methods
+    it('should have submitRating method', () => {
+      expect(service.submitRating).toBeDefined();
+    });
+    
+    it('should have getVoterRating method', () => {
+      expect(service.getVoterRating).toBeDefined();
+    });
+    
+    it('should have getMyRating method', () => {
+      expect(service.getMyRating).toBeDefined();
+    });
+    
+    it('should throw error when submitting rating without login', async () => {
+      await expectAsync(service.submitRating('test-poll', 'opt1', 50))
+        .toBeRejectedWithError('Not logged in');
+    });
+    
+    it('should return null for getMyRating when not logged in', async () => {
+      const rating = await service.getMyRating('test-poll', 'opt1');
+      expect(rating).toBeNull();
+    });
+  });
 });

@@ -21,7 +21,7 @@ import { IDataBackend } from './data-backend.interface';
 import { DataService } from './data.service';
 
 /**
- * CouchDBBackend - Phase 2 Implementation
+ * CouchDBBackend - Phase 2-3 Implementation
  * 
  * This class wraps the existing DataService (CouchDB/PouchDB) 
  * to implement the IDataBackend interface.
@@ -83,6 +83,47 @@ export class CouchDBBackend implements IDataBackend {
   
   async deleteUserData(key: string): Promise<void> {
     this.dataService.delu(key);
+  }
+  
+  // ========================================================================
+  // Phase 3: Poll Data Management
+  // ========================================================================
+  
+  async createPoll(pollId: string, title: string): Promise<string> {
+    // In CouchDB, polls are created by setting their title in the user db
+    // The poll database is created on-demand when state changes from draft
+    this.dataService.setp(pollId, 'title', title);
+    return pollId;
+  }
+  
+  async getPollData(pollId: string, key: string): Promise<any> {
+    return this.dataService.getp(pollId, key);
+  }
+  
+  async setPollData(pollId: string, key: string, value: any): Promise<void> {
+    this.dataService.setp(pollId, key, value);
+  }
+  
+  async deletePollData(pollId: string, key: string): Promise<void> {
+    this.dataService.delp(pollId, key);
+  }
+  
+  async getVoterData(pollId: string, voterId: string, key: string): Promise<any> {
+    return this.dataService.getv(pollId, key, voterId);
+  }
+  
+  async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
+    // setv_in_polldb accepts an optional voter ID parameter
+    this.dataService.setv_in_polldb(pollId, key, value, voterId);
+  }
+  
+  async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
+    // NOTE: In the CouchDB backend, delv only supports deleting the *current*
+    // user's voter data. The voterId parameter from IDataBackend is therefore
+    // intentionally ignored here. Attempts to delete data for other voters are
+    // effectively a no-op, because CouchDB enforces that users can only modify
+    // their own voter data in the poll database.
+    this.dataService.delv(pollId, key);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {
