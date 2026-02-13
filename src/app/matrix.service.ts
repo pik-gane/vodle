@@ -799,8 +799,10 @@ export class MatrixService {
   }
   
   /**
-   * Add or update an option in a poll room
-   * Each option is stored as a separate state event with the option ID as state_key
+   * Add a new option to a poll room.
+   * Each option is stored as a separate state event with the option ID as state_key.
+   * Options are immutable once created — attempting to overwrite an existing
+   * option will throw an error, matching the CouchDB backend behavior.
    */
   async addOption(pollId: string, optionId: string, option: { name: string; description?: string; url?: string }): Promise<void> {
     this.logger?.entry("MatrixService.addOption", pollId, optionId);
@@ -808,6 +810,12 @@ export class MatrixService {
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
       throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    // Options are immutable: reject if this option ID already exists
+    const existing = this.getOption(pollId, optionId);
+    if (existing) {
+      throw new Error(`Option ${optionId} already exists in poll ${pollId} and cannot be modified`);
     }
     
     await this.sendStateEvent(roomId, 'm.room.vodle.poll.option', {
