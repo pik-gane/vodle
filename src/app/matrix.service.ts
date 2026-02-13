@@ -925,7 +925,8 @@ export class MatrixService {
   /**
    * Lock poll metadata by raising its required power level above all users.
    * After this, no participant (including the original creator) can modify
-   * poll metadata. All participants remain equal voters.
+   * poll metadata. All participants remain equal voters and can still add
+   * options until the poll closes.
    */
   async lockPollMetadata(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.lockPollMetadata", pollId);
@@ -953,8 +954,7 @@ export class MatrixService {
     const events = { ...(content.events || {}) };
     // Set metadata power requirement to 100, which nobody has (all users are at 50)
     events['m.room.vodle.poll.meta'] = 100;
-    // Also lock option addition — no new options after poll starts
-    events['m.room.vodle.poll.option'] = 100;
+    // Options remain at 50 — voters can still add options until the poll closes
     content.events = events;
     
     await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
