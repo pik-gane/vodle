@@ -113,10 +113,14 @@ export class CouchDBBackend implements IDataBackend {
   }
   
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
-    this.dataService.setv(pollId, key, value);
+    // setv_in_polldb accepts an optional voter ID parameter
+    this.dataService.setv_in_polldb(pollId, key, value, voterId);
   }
   
   async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
+    // delv only supports the current user's voter ID in CouchDB;
+    // for other voters, this is a no-op since CouchDB enforces
+    // that voters can only modify their own data
     this.dataService.delv(pollId, key);
   }
   

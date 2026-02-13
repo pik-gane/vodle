@@ -36,7 +36,7 @@ describe('DataAdapter', () => {
     ]);
     
     const dataSpy = jasmine.createSpyObj('DataService', [
-      'setu', 'getu', 'delu', 'setp', 'getp', 'delp', 'getv', 'setv', 'delv'
+      'setu', 'getu', 'delu', 'setp', 'getp', 'delp', 'getv', 'setv', 'delv', 'setv_in_polldb'
     ], {
       ready: true
     });
