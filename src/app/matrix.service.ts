@@ -689,7 +689,10 @@ export class MatrixService {
           'm.room.vodle.vote.rating': 50,
           'm.room.vodle.vote.delegation': 50
         },
-        state_default: 50,
+        // Only explicitly listed event types are sendable at 50.
+        // All other state events require power level 100 (nobody has it).
+        state_default: 100,
+        events_default: 50,
         users_default: 50
       }
     };
@@ -989,7 +992,9 @@ export class MatrixService {
     
     const content = { ...powerLevels.getContent() };
     content.users_default = 0;
-    // Also reset any per-user overrides so nobody retains elevated power
+    // Clear per-user overrides so nobody retains elevated power.
+    // This is intentionally the final room operation — after this,
+    // no participant (including the sender) can modify room state.
     content.users = {};
     
     await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
