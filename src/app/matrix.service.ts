@@ -132,6 +132,8 @@ export class MatrixService {
   // Cache of voter rooms: "pollId:voterId" -> roomId
   // Each voter gets a dedicated room per poll for server-side write enforcement.
   private voterRooms: Map<string, string> = new Map();
+  // Reverse lookup: roomId -> { pollId, voterId } for O(1) event routing
+  private voterRoomReverseLookup: Map<string, { pollId: string; voterId: string }> = new Map();
   // Cache of poll options indexed by pollId -> (optionId -> option data)
   // Built from timeline scan on first access, then maintained locally.
   private optionCaches: Map<string, Map<string, { name: string; description: string; url: string }>> = new Map();
@@ -466,10 +468,18 @@ export class MatrixService {
     this.userRoomId = null;
     this.pollRooms.clear();
     this.voterRooms.clear();
+    this.voterRoomReverseLookup.clear();
     this.optionCaches.clear();
     this.ratingCaches.clear();
     this.delegationRequestCaches.clear();
     this.delegationResponseCaches.clear();
+    // Unregister Matrix SDK event listeners before clearing tracking structures
+    // to prevent memory leaks from orphaned handlers.
+    for (const [, handlers] of this.pollEventHandlerRefs) {
+      for (const { event, handler } of handlers) {
+        (this.client as any)?.removeListener(event, handler);
+      }
+    }
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
     this.pollEventHandlerRefs.clear();
@@ -1428,6 +1438,7 @@ export class MatrixService {
     
     const cacheKey = `${pollId}:${voterId}`;
     this.voterRooms.set(cacheKey, roomId);
+    this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
     await this.storage.set(`voter_room_${cacheKey}`, roomId);
     
     this.logger?.info("Voter room created", pollId, voterId, roomId);
@@ -1471,6 +1482,7 @@ export class MatrixService {
       const room = this.client.getRoom(stored);
       if (room) {
         this.voterRooms.set(cacheKey, stored);
+        this.voterRoomReverseLookup.set(stored, { pollId, voterId });
         return stored;
       }
     }
@@ -1483,6 +1495,7 @@ export class MatrixService {
       );
       const roomId = aliasResponse.room_id;
       this.voterRooms.set(cacheKey, roomId);
+      this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
       await this.storage.set(`voter_room_${cacheKey}`, roomId);
       return roomId;
     } catch (error) {
@@ -1714,10 +1727,14 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
-    // Check cache
+    // Check cache — return defensive copy so callers cannot corrupt internal state
     const cached = this.ratingCaches.get(pollId);
     if (cached) {
-      return cached;
+      const copy = new Map<string, Map<string, number>>();
+      for (const [voterId, voterRatings] of cached) {
+        copy.set(voterId, new Map(voterRatings));
+      }
+      return copy;
     }
     
     const ratings = new Map<string, Map<string, number>>();
@@ -1750,7 +1767,12 @@ export class MatrixService {
           const event = room.currentState.getStateEvents(eventType, '');
           const content = event?.getContent();
           if (content && content.value !== undefined && content.value !== null) {
-            voterRatings.set(optionId, content.value);
+            // Validate: rating must be a finite number in range [0, 100]
+            const rawValue = content.value;
+            const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+            if (Number.isFinite(numericValue) && numericValue >= 0 && numericValue <= 100) {
+              voterRatings.set(optionId, numericValue);
+            }
           }
         } catch {
           // Rating not found for this option — skip
@@ -1842,6 +1864,7 @@ export class MatrixService {
     }
     
     const delegationId = this.generateId();
+    const timestamp = Date.now();
     
     await this.client.sendEvent(
       roomId,
@@ -1851,7 +1874,7 @@ export class MatrixService {
         delegate_id: delegateId,
         option_ids: optionIds,
         status: 'pending',
-        timestamp: Date.now()
+        timestamp
       }
     );
     
@@ -1862,7 +1885,7 @@ export class MatrixService {
       delegate_id: delegateId,
       option_ids: optionIds,
       status: 'pending',
-      timestamp: Date.now()
+      timestamp
     };
     
     let pollDelegations = this.delegationRequestCaches.get(pollId);
@@ -1905,14 +1928,17 @@ export class MatrixService {
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
+    const timestamp = Date.now();
+    const resolvedStatus: 'accepted' | 'declined' = accept ? 'accepted' : 'declined';
+    
     await this.client.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_response' as any,
       {
         delegation_id: delegationId,
-        status: accept ? 'accepted' : 'declined',
+        status: resolvedStatus,
         accepted_options: acceptedOptions || [],
-        timestamp: Date.now()
+        timestamp
       }
     );
     
@@ -1920,9 +1946,9 @@ export class MatrixService {
     const response: DelegationResponse = {
       delegation_id: delegationId,
       responder_id: this.userId,
-      status: accept ? 'accepted' : 'declined',
+      status: resolvedStatus,
       accepted_options: acceptedOptions || [],
-      timestamp: Date.now()
+      timestamp
     };
     
     let pollResponses = this.delegationResponseCaches.get(pollId);
@@ -1954,10 +1980,10 @@ export class MatrixService {
   async getDelegations(pollId: string): Promise<Map<string, DelegationRequest>> {
     this.logger?.entry("MatrixService.getDelegations", pollId);
     
-    // Check cache
+    // Check cache — return defensive copy so callers cannot corrupt internal state
     const cached = this.delegationRequestCaches.get(pollId);
     if (cached) {
-      return cached;
+      return new Map<string, DelegationRequest>(cached);
     }
     
     const delegations = new Map<string, DelegationRequest>();
@@ -2023,10 +2049,10 @@ export class MatrixService {
   async getDelegationResponses(pollId: string): Promise<Map<string, DelegationResponse>> {
     this.logger?.entry("MatrixService.getDelegationResponses", pollId);
     
-    // Check cache
+    // Check cache — return defensive copy so callers cannot corrupt internal state
     const cached = this.delegationResponseCaches.get(pollId);
     if (cached) {
-      return cached;
+      return new Map<string, DelegationResponse>(cached);
     }
     
     const responses = new Map<string, DelegationResponse>();
@@ -2131,8 +2157,13 @@ export class MatrixService {
       return;
     }
     
+    // Mark as set up immediately to avoid races with concurrent calls.
+    this.pollEventHandlersSetup.add(pollId);
+    
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
+      // Undo the flag if room lookup fails
+      this.pollEventHandlersSetup.delete(pollId);
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
@@ -2171,20 +2202,17 @@ export class MatrixService {
     // Listen for state events across all rooms to catch voter rating updates.
     // Voter rooms are separate from the poll room, so we need a broader
     // listener that matches any voter room for this poll.
+    // Uses reverse lookup map for O(1) room identification instead of iterating.
     const stateRatingHandler = (event: any, state: any) => {
       const eventType = event.getType() as string;
       
       // Match rating events: m.room.vodle.voter.rating.{optionId}
       if (eventType.startsWith('m.room.vodle.voter.rating.')) {
-        // Check if this room is a voter room for our poll
-        const eventRoomId = state.roomId;
-        for (const [cacheKey, voterRoomId] of this.voterRooms.entries()) {
-          if (voterRoomId === eventRoomId && cacheKey.startsWith(`${pollId}:`)) {
-            const voterId = cacheKey.substring(pollId.length + 1);
-            const optionId = eventType.substring('m.room.vodle.voter.rating.'.length);
-            this.handleRatingEvent(pollId, voterId, optionId, event);
-            break;
-          }
+        // O(1) lookup via reverse map
+        const lookup = this.voterRoomReverseLookup.get(state.roomId);
+        if (lookup && lookup.pollId === pollId) {
+          const optionId = eventType.substring('m.room.vodle.voter.rating.'.length);
+          this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
         }
       }
     };
@@ -2193,7 +2221,6 @@ export class MatrixService {
     
     // Store handler references for cleanup
     this.pollEventHandlerRefs.set(pollId, handlers);
-    this.pollEventHandlersSetup.add(pollId);
     
     this.logger?.info("Event handlers set up for poll", pollId);
     this.logger?.exit("MatrixService.setupPollEventHandlers");
@@ -2320,7 +2347,7 @@ export class MatrixService {
     if (pollDelegations) {
       const request = pollDelegations.get(content.delegation_id);
       if (request) {
-        request.status = content.status === 'accepted' ? 'accepted' : 'declined';
+        request.status = status;
       }
     }
     

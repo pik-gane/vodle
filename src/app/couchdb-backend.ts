@@ -131,7 +131,9 @@ export class CouchDBBackend implements IDataBackend {
   // ========================================================================
   
   async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
-    // In CouchDB, ratings are stored as voter data with key 'rating.{optionId}'
+    // CouchDB's setv_in_polldb requires a string value; the Matrix backend
+    // stores numbers natively. Callers should use the IDataBackend interface
+    // which takes a number; the backend handles serialization internally.
     this.dataService.setv_in_polldb(pollId, `rating.${optionId}`, String(rating));
   }
   
