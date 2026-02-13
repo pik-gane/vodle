@@ -874,8 +874,9 @@ export class MatrixService {
   async setPollDeadline(pollId: string, due: string): Promise<void> {
     this.logger?.entry("MatrixService.setPollDeadline", pollId, due);
     
-    // Validate ISO 8601 format
-    if (!due || isNaN(Date.parse(due))) {
+    // Validate ISO 8601 format with regex for reliability
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+    if (!due || !iso8601Regex.test(due)) {
       throw new Error(`Invalid deadline date format: '${due}'. Must be ISO 8601 (e.g., '2024-03-15T12:00:00Z')`);
     }
     
@@ -1258,7 +1259,7 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
-    const roomAlias = `vodle_voter_${pollId}_${this.sanitizeForAlias(voterId)}`;
+    const roomAlias = `vodle_voter_${pollId}_${this.encodeUserIdForAlias(voterId)}`;
     const guardBotId = this.getValidatedGuardBotId();
     
     const users: Record<string, number> = {
@@ -1313,13 +1314,14 @@ export class MatrixService {
   }
   
   /**
-   * Sanitize a Matrix user ID for use in a room alias.
-   * Uses base64url encoding to prevent collisions between different user IDs
-   * (e.g., '@alice:server' vs '@alice_server' would produce the same result
-   * with simple character replacement, but different results with base64url).
+   * Encode a Matrix user ID for use in a room alias.
+   * Uses base64url encoding of UTF-8 bytes to prevent collisions between
+   * different user IDs and to handle non-ASCII characters safely.
    */
-  private sanitizeForAlias(userId: string): string {
-    return btoa(userId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  private encodeUserIdForAlias(userId: string): string {
+    // Encode to UTF-8 bytes first, then base64url-encode
+    const utf8 = encodeURIComponent(userId);
+    return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
   
   /**
@@ -1353,7 +1355,7 @@ export class MatrixService {
     
     // Try to find by alias
     try {
-      const alias = `vodle_voter_${pollId}_${this.sanitizeForAlias(voterId)}`;
+      const alias = `vodle_voter_${pollId}_${this.encodeUserIdForAlias(voterId)}`;
       const aliasResponse = await this.client.getRoomIdForAlias(
         `#${alias}:${this.getHomeserverDomain()}`
       );
