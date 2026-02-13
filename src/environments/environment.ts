@@ -43,6 +43,11 @@ export const environment = {
     homeserver_url: "http://localhost:8008",
     // Enable Matrix E2EE (Olm/Megolm)
     enable_e2ee: true,
+    // Guard bot Matrix user ID — this bot is invited to all poll and voter
+    // rooms with admin power (100). It monitors deadlines and closes rooms
+    // by dropping all power levels to 0 when the deadline arrives.
+    // Server-side enforcement: the bot runs on the server, not in the client.
+    guard_bot_user_id: "@vodle-guard:localhost",
   },
   data_service: {
     central_db_server_url: "http://localhost:5984/", // use this if you want to use your local couchdb on localhost:5984 without proxy 

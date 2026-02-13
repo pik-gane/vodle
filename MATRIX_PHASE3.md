@@ -2,18 +2,19 @@
 
 ## Overview
 
-Phase 3 implements poll room creation and management using Matrix protocol, building on the user data foundation established in Phases 1-2. Each poll gets its own encrypted Matrix room where poll metadata, options, and voter data are stored as state events.
+Phase 3 implements poll room creation and management using Matrix protocol, building on the user data foundation established in Phases 1-2. Each poll uses a shared poll room for metadata and options, plus a dedicated voter room per (poll, voter) pair for server-side write enforcement of ratings.
 
 ## What's Implemented
 
 ### 1. Poll Room Creation
 
-Each poll gets a dedicated encrypted Matrix room:
+Each poll gets a dedicated encrypted Matrix room for shared data:
 
 - **Room Creation**: `createPollRoom(pollId, title)` creates a private, encrypted room
 - **Room Alias**: `vodle_poll_{pollId}` for consistent lookup
 - **Encryption**: Uses Matrix Megolm (m.megolm.v1.aes-sha2) encryption
-- **Equal Permissions**: All participants (including the creator) have power level 50 — no elevated creator privileges
+- **Equal Permissions**: All human participants have power level 50
+- **Guard Bot**: A guard bot (`@vodle-guard:server`) is invited with admin power (100) to enforce deadlines server-side
 
 ### 2. Poll Room Lookup
 
@@ -49,54 +50,93 @@ Options stored as timeline (message) events for server-side immutability:
 
 ### 5. Voter Invitation
 
-Voters are invited to poll rooms with equal power levels:
+Voters are invited to the shared poll room with equal power levels:
 
-- **Invitation**: `inviteVoter(pollId, voterId)` invites a Matrix user
+- **Invitation**: `inviteVoter(pollId, voterId)` invites a Matrix user to the poll room
 - **Power Level**: Same default power level 50 as all other participants including the creator
-- **Equal Permissions**: All participants can send rating and delegation events; nobody has elevated privileges
+- **Equal Permissions**: All human participants can add options; nobody has elevated privileges
+- **Voter Room**: Each voter also gets a dedicated voter room (see section 8)
 
 ### 6. Poll State Transitions
 
 Poll lifecycle management with room-level enforcement:
 
 - **State Changes**: `changePollState(pollId, newState)`
-- **Metadata Lock**: `lockPollMetadata(pollId)` raises metadata power requirement to 100 when poll starts — since all users are at 50, metadata becomes immutable
-- **Read-Only Mode**: `makeRoomReadOnly(pollId)` sets all user power levels to 0 when closed — nobody can send events
+- **Metadata Lock**: `lockPollMetadata(pollId)` raises metadata power requirement to 100 when poll starts — only the guard bot has 100, so metadata is immutable for all human participants
+- **Read-Only Mode**: `makeRoomReadOnly(pollId)` sets all human user power levels to 0 when closed — guard bot retains admin power
 - **Supported States**: draft → running → closing → closed
 
-### 7. Poll & Voter Data CRUD
+### 7. Poll Data CRUD
 
-Generic key-value storage scoped to polls and voters:
+Generic key-value storage scoped to polls (in poll room):
 
 - **Poll Data**:
   - `setPollData(pollId, key, value)`: Store via `m.room.vodle.poll.data.{key}`
   - `getPollData(pollId, key)`: Retrieve poll data
   - `deletePollData(pollId, key)`: Remove poll data
+  - `setPollDeadline(pollId, due)`: Store deadline as unencrypted event for guard bot
 
-- **Voter Data**:
-  - `setVoterData(pollId, voterId, key, value)`: Store via `m.room.vodle.voter.{key}` with voter ID as state key
-  - `getVoterData(pollId, voterId, key)`: Retrieve voter data
-  - `deleteVoterData(pollId, voterId, key)`: Remove voter data
+### 8. Per-Voter Rooms (Server-Side Write Enforcement)
+
+Each voter gets a dedicated Matrix room per poll for storing ratings and other voter data. This provides **server-side enforcement** analogous to CouchDB validation scripts:
+
+- **Room Creation**: `createVoterRoom(pollId, voterId)` creates a room where only the voter has write power (50)
+- **Room Alias**: `vodle_voter_{pollId}_{voterId}` for consistent lookup
+- **Power Levels**: Only the voter has write power (50); all others have read-only (0); guard bot has admin (100)
+- **Server-Side Enforcement**:
+  - **Voter ownership**: The Matrix server rejects writes from anyone except the voter (M_FORBIDDEN)
+  - **Deadline**: The guard bot drops the voter's power to 0 at the deadline, so the Matrix server rejects further writes
+- **No Timeline Clutter**: Ratings are state events — only the latest value per event type is kept
+- **Operations**:
+  - `getOrCreateMyVoterRoom(pollId)`: Get or create the current user's voter room
+  - `setVoterData(pollId, voterId, key, value)`: Write to voter room (server enforces ownership)
+  - `getVoterData(pollId, voterId, key)`: Read from voter room
+  - `deleteVoterData(pollId, voterId, key)`: Delete from voter room (server enforces ownership)
+  - `makeVoterRoomReadOnly(pollId, voterId)`: Drop voter's power to 0 (called by guard bot at deadline)
+
+### 9. Rating Convenience Methods
+
+Convenience methods for submitting and retrieving ratings:
+
+- **Submit**: `submitRating(pollId, optionId, rating)` — validates range (0-100), writes to voter room
+- **Get**: `getVoterRating(pollId, voterId, optionId)` — read any voter's rating
+- **Get Own**: `getMyRating(pollId, optionId)` — read current user's rating
+
+### 10. Guard Bot
+
+A dedicated Matrix bot that enforces deadlines server-side:
+
+- **Bot User ID**: Configured in `environment.matrix.guard_bot_user_id`
+- **Power Level**: 100 (admin) in all poll and voter rooms
+- **Responsibilities**:
+  - Monitor poll deadlines via unencrypted `m.room.vodle.poll.deadline` events
+  - At deadline: drop all human power levels to 0 in poll room and all voter rooms
+  - The bot runs on the server, not in the client — malicious clients cannot prevent it
+- **Analogous to**: CouchDB validation scripts that enforce due date checks
 
 ## Architecture
 
 ### Matrix Room Structure
 
 ```
-Poll Room (vodle_poll_{pollId})
+Poll Room (vodle_poll_{pollId}) — shared by all participants
 ├── State events:
 │   ├── m.room.encryption          (Megolm E2EE)
-│   ├── m.room.power_levels        (All participants: 50, equal permissions)
-│   ├── m.room.vodle.poll.meta     (Poll metadata - state_key: '')
-│   ├── m.room.vodle.poll.data.*   (Poll-level data - state_key: '')
-│   └── m.room.vodle.voter.*       (Voter data - state_key: voterId)
-│       ├── state_key: "voter1"    → { value }
-│       └── state_key: "voter2"    → { value }
+│   ├── m.room.power_levels        (Voters: 50, Guard bot: 100)
+│   ├── m.room.vodle.poll.meta     (Poll metadata — encrypted)
+│   ├── m.room.vodle.poll.deadline (Due date — UNENCRYPTED, readable by guard bot)
+│   └── m.room.vodle.poll.data.*   (Poll-level data)
 └── Timeline events (immutable, append-only):
-    └── m.room.vodle.poll.option   (Options - server-side immutable)
+    └── m.room.vodle.poll.option   (Options — server-side immutable)
         ├── { option_id: "opt1", name, description, url }
-        ├── { option_id: "opt2", name, description, url }
-        └── ...
+        └── { option_id: "opt2", name, description, url }
+
+Voter Room (vodle_voter_{pollId}_{voterId}) — per (poll, voter) pair
+├── Power levels: voter=50, guard bot=100, everyone else=0
+└── State events (only writable by the voter):
+    ├── m.room.vodle.voter.rating.opt1  → { value: 75 }
+    ├── m.room.vodle.voter.rating.opt2  → { value: 30 }
+    └── m.room.vodle.voter.*            → { value: ... }
 ```
 
 ### Backend Abstraction (Updated)
@@ -162,15 +202,19 @@ interface IDataBackend {
 ### Core Implementation
 
 1. **`src/app/matrix.service.ts`** (extended with Phase 3 methods)
-   - `createPollRoom()`: Create encrypted poll rooms
+   - `createPollRoom()`: Create encrypted poll rooms with guard bot
    - `getPollRoom()`: Look up poll rooms with caching
    - `getOrCreatePollRoom()`: Get or create poll room
    - `setPollMetadata()` / `getPollMetadata()`: Poll metadata management
-   - `addOption()` / `getOption()` / `getOptions()`: Option management
+   - `setPollDeadline()`: Store deadline as unencrypted event for guard bot
+   - `addOption()` / `getOption()` / `getOptions()`: Option management (timeline events)
    - `inviteVoter()`: Voter invitation
-   - `changePollState()` / `lockPollMetadata()` / `makeRoomReadOnly()`: State transitions with equal permissions
+   - `changePollState()` / `lockPollMetadata()` / `makeRoomReadOnly()`: State transitions
    - `setPollData()` / `getPollData()` / `deletePollData()`: Poll data CRUD
-   - `setVoterData()` / `getVoterData()` / `deleteVoterData()`: Voter data CRUD
+   - `createVoterRoom()` / `getVoterRoom()` / `getOrCreateMyVoterRoom()`: Per-voter rooms
+   - `setVoterData()` / `getVoterData()` / `deleteVoterData()`: Voter data (server-side enforced)
+   - `makeVoterRoomReadOnly()`: Deadline enforcement for voter rooms
+   - `submitRating()` / `getVoterRating()` / `getMyRating()`: Rating convenience methods
 
 2. **`src/app/data-backend.interface.ts`** (extended)
    - Added `createPoll()`, poll data, and voter data methods
@@ -257,27 +301,40 @@ await matrixService.changePollState('poll123', 'closed');
 
 ## Permission Model
 
-All participants (including the poll creator) have **equal power levels**.
-Once a poll leaves draft state, the creator becomes a simple voter with no
-special privileges. Nobody can change poll metadata after the poll starts.
-Options are immutable once added (server-side enforced via timeline events).
+All human participants (including the poll creator) have **equal power levels (50)**.
+A guard bot has admin power (100) in all rooms for deadline enforcement.
+This is analogous to CouchDB validation scripts.
 
-### Power Levels by Poll State
+### Server-Side Enforcement (CouchDB → Matrix)
 
-| Poll State | All Participants | Can Do |
-|-----------|-----------------|--------|
-| Draft | 50 | Set metadata, add options, vote |
-| Running | 50 | Add new options, submit ratings, delegate (metadata locked) |
-| Closed | 0 | Read-only access |
+| CouchDB Enforcement | Matrix Equivalent |
+|---------------------|-------------------|
+| `validate_doc_update` rejects writes to other voters' data | Per-voter rooms: only the voter has write power (50) |
+| `validate_doc_update` checks `doc.due` date | Guard bot drops power to 0 at deadline |
+| Poll metadata immutable after opening | `lockPollMetadata()` raises required power to 100 |
+| Options immutable once added | Options are timeline events (append-only by protocol) |
 
-### Event Power Requirements
+### Power Levels
+
+| Role | Poll Room | Voter Room (own) | Voter Room (other's) |
+|------|----------|-----------------|---------------------|
+| Guard Bot | 100 (admin) | 100 (admin) | 100 (admin) |
+| Human Voter | 50 | 50 (write) | 0 (read-only) |
+| After Deadline | 0 | 0 | 0 |
+
+### Event Power Requirements (Poll Room)
 
 | Event Type | Kind | Draft | Running | Closed | Description |
 |-----------|------|-------|---------|--------|-------------|
 | `m.room.vodle.poll.meta` | state | 50 | 100 (locked) | 100 (locked) | Metadata immutable after draft |
-| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | New options can be added until close; immutable once sent (server-side) |
-| `m.room.vodle.vote.rating` | state | 50 | 50 | 0 | Voters can rate until closed |
-| `m.room.vodle.vote.delegation` | state | 50 | 50 | 0 | Voters can delegate until closed |
+| `m.room.vodle.poll.deadline` | state | 50 | 50 | 100 | Deadline readable by guard bot |
+| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | New options can be added until close; immutable once sent |
+
+### Event Power Requirements (Voter Room)
+
+| Event Type | Kind | Before Deadline | After Deadline | Description |
+|-----------|------|----------------|---------------|-------------|
+| `m.room.vodle.voter.*` | state | 50 (voter only) | 0 (nobody) | Only the voter can write; guard bot closes at deadline |
 
 ## Testing
 
@@ -309,28 +366,30 @@ ng test --no-watch --browsers=ChromeHeadless --include='**/data-adapter.service.
 
 ### Phase 3 Scope
 
-- ✅ Poll room creation and management
-- ✅ Poll metadata storage
-- ✅ Option management
+- ✅ Poll room creation and management (with guard bot)
+- ✅ Poll metadata storage (with deadline event for guard bot)
+- ✅ Option management (timeline events — server-side immutable)
 - ✅ Voter invitation
 - ✅ Poll state transitions
-- ✅ Poll & voter data CRUD
-- ❌ Real-time rating events (Phase 4)
+- ✅ Per-voter rooms for server-side write enforcement
+- ✅ Rating submission and retrieval (via voter rooms)
+- ✅ Guard bot integration (invited to all rooms with admin power)
+- ❌ Guard bot implementation (server-side service — Phase 4)
 - ❌ Delegation events (Phase 4)
 - ❌ Offline queue (Phase 5)
 
 ### Current Constraints
 
-1. **No Real-time Voting**: Voting with ratings will be implemented in Phase 4
+1. **Guard Bot Not Yet Implemented**: The guard bot user is invited to rooms and configured, but the actual bot service (monitoring deadlines, closing rooms) is a separate server-side component to be implemented in Phase 4
 2. **No Delegation**: Delegation events are defined but not yet handled in Phase 4
-3. **Single Room Per Poll**: Each poll has one room; federation is not yet tested
+3. **Client-Side Fallback**: Until the guard bot is deployed, `makeRoomReadOnly()` and `makeVoterRoomReadOnly()` are called from the client as a fallback
 
 ## Next Steps - Phase 4
 
 Phase 4 will implement:
-- Rating submission as Matrix timeline events
-- Real-time tally updates via Matrix sync
+- Guard bot service (monitors deadlines, closes poll and voter rooms)
 - Delegation request/response events
+- Real-time tally updates via Matrix sync
 - Event handlers for live updates
 
 ## References

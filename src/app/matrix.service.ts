@@ -87,6 +87,9 @@ export class MatrixService {
   // Cache for quick access
   private userRoomId: string | null = null;
   private pollRooms: Map<string, string> = new Map(); // pollId -> roomId
+  // Cache of voter rooms: "pollId:voterId" -> roomId
+  // Each voter gets a dedicated room per poll for server-side write enforcement.
+  private voterRooms: Map<string, string> = new Map();
   // Cache of poll options indexed by pollId -> (optionId -> option data)
   // Built from timeline scan on first access, then maintained locally.
   private optionCaches: Map<string, Map<string, { name: string; description: string; url: string }>> = new Map();
@@ -654,13 +657,18 @@ export class MatrixService {
   
   /**
    * Create a new poll room in Matrix
-   * Each poll gets its own encrypted room where poll metadata, options,
-   * and voter data are stored as state events.
+   * Each poll gets its own encrypted room where poll metadata and options
+   * are stored. Voter data (ratings, delegations) is stored in separate
+   * per-voter rooms for server-side write enforcement.
    * 
-   * All participants (including the creator) have equal power levels.
+   * A guard bot is invited with admin power (100) to enforce deadlines
+   * server-side: at the deadline it drops all power levels to 0, making
+   * the room read-only. This is analogous to CouchDB validation scripts.
+   * 
+   * All human participants (including the creator) have equal power levels (50).
    * During draft, everyone at level 50 can set metadata and options.
    * When the poll starts, metadata is locked (required power raised to 100,
-   * which nobody has) so it becomes immutable.
+   * which only the guard bot has) so it becomes immutable.
    */
   async createPollRoom(pollId: string, title: string): Promise<string> {
     this.logger?.entry("MatrixService.createPollRoom", pollId);
@@ -670,6 +678,15 @@ export class MatrixService {
     }
     
     const roomAlias = `vodle_poll_${pollId}`;
+    const guardBotId = environment.matrix.guard_bot_user_id;
+    
+    const users: Record<string, number> = {
+      [this.userId]: 50
+    };
+    // Guard bot gets admin power (100) for deadline enforcement
+    if (guardBotId) {
+      users[guardBotId] = 100;
+    }
     
     const options: ICreateRoomOpts = {
       name: title,
@@ -683,16 +700,16 @@ export class MatrixService {
         }
       }],
       power_level_content_override: {
-        users: {
-          [this.userId]: 50
-        },
+        users,
         events: {
           'm.room.vodle.poll.meta': 50,
-          'm.room.vodle.vote.rating': 50,
-          'm.room.vodle.vote.delegation': 50
+          // Deadline is stored unencrypted so the guard bot can read it
+          'm.room.vodle.poll.deadline': 50
         },
         // Only explicitly listed event types are sendable as state events at 50.
-        // All other state events require power level 100 (nobody has it).
+        // All other state events require power level 100 (only the guard bot).
+        // Voter data (ratings, delegations) is stored in per-voter rooms,
+        // not in the poll room, for server-side write enforcement.
         state_default: 100,
         // Timeline events (including poll options) use events_default.
         // Options are sent as timeline events for server-side immutability.
@@ -702,6 +719,18 @@ export class MatrixService {
     };
     
     const roomId = await this.createRoom(options);
+    
+    // Invite the guard bot to the room
+    if (guardBotId) {
+      try {
+        await this.client.invite(roomId, guardBotId);
+        this.logger?.info("Guard bot invited to poll room", pollId);
+      } catch (error) {
+        this.logger?.error("Failed to invite guard bot", error);
+        // Non-fatal: poll can still work without the bot,
+        // but deadline enforcement will rely on client-side fallback
+      }
+    }
     
     // Cache the mapping
     this.pollRooms.set(pollId, roomId);
@@ -800,6 +829,29 @@ export class MatrixService {
       this.logger?.info("Poll metadata not found", pollId);
       return null;
     }
+  }
+  
+  /**
+   * Set the poll deadline as an unencrypted state event.
+   * 
+   * The deadline is stored separately from encrypted poll metadata so that
+   * the guard bot can read it without decryption keys. The guard bot uses
+   * this to know when to close the poll and voter rooms.
+   */
+  async setPollDeadline(pollId: string, due: string): Promise<void> {
+    this.logger?.entry("MatrixService.setPollDeadline", pollId, due);
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    await this.sendStateEvent(roomId, 'm.room.vodle.poll.deadline', {
+      due,
+      poll_id: pollId
+    }, '');
+    
+    this.logger?.exit("MatrixService.setPollDeadline");
   }
   
   /**
@@ -965,10 +1017,11 @@ export class MatrixService {
   }
   
   /**
-   * Lock poll metadata by raising its required power level above all users.
-   * After this, no participant (including the original creator) can modify
-   * poll metadata. All participants remain equal voters and can still add
-   * options until the poll closes.
+   * Lock poll metadata by raising its required power level above all human users.
+   * After this, no human participant (including the original creator) can modify
+   * poll metadata. Only the guard bot (power 100) retains the ability to
+   * send state events for poll closing. All participants remain equal voters
+   * and can still add options until the poll closes.
    */
   async lockPollMetadata(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.lockPollMetadata", pollId);
@@ -1007,8 +1060,11 @@ export class MatrixService {
   
   /**
    * Make a poll room read-only by setting the default user power level to 0.
-   * All participants (including the original creator) lose the ability to
-   * send events. Nobody has elevated permissions.
+   * All human participants lose the ability to send events.
+   * The guard bot retains admin power (100) for future administrative actions.
+   * 
+   * This method can be called by a client as a fallback, but the primary
+   * enforcement is done by the guard bot at the deadline.
    */
   async makeRoomReadOnly(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.makeRoomReadOnly", pollId);
@@ -1034,10 +1090,13 @@ export class MatrixService {
     
     const content = { ...powerLevels.getContent() };
     content.users_default = 0;
-    // Clear per-user overrides so nobody retains elevated power.
-    // This is intentionally the final room operation — after this,
-    // no participant (including the sender) can modify room state.
-    content.users = {};
+    // Preserve guard bot's admin power; clear all other per-user overrides
+    const guardBotId = environment.matrix.guard_bot_user_id;
+    const users: Record<string, number> = {};
+    if (guardBotId) {
+      users[guardBotId] = 100;
+    }
+    content.users = users;
     
     await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     
@@ -1100,52 +1159,255 @@ export class MatrixService {
     this.logger?.exit("MatrixService.deletePollData");
   }
   
+  // ========================================================================
+  // VOTER ROOMS: Per-(poll, voter) rooms for server-side write enforcement
+  // ========================================================================
+  
   /**
-   * Set voter-specific data in the poll room.
-   * Uses the voter ID as the state key to scope data per voter.
+   * Create a voter room for a specific voter in a poll.
    * 
-   * Ratings and other voter data are stored as state events, not timeline
-   * events. State events only keep the latest value per (type, state_key),
-   * so frequent updates do NOT clutter the timeline with outdated values.
+   * Each voter gets a dedicated Matrix room per poll. Only the voter
+   * has write power (50); all other participants are invited with
+   * read-only power (0). The guard bot has admin power (100) to enforce
+   * the deadline by dropping all power levels to 0 when the poll closes.
    * 
-   * Voter ownership is enforced: a voter can only modify their own data.
-   * This matches the CouchDB backend behavior where setv() rejects writes
-   * to other voters' data.
+   * This provides server-side enforcement that:
+   * - A voter can only modify their own data (only they have power 50)
+   * - Ratings can only be changed until the deadline (guard bot closes room)
+   * 
+   * This is analogous to CouchDB validation scripts that reject writes
+   * to other voters' documents and enforce the due date.
+   * 
+   * Ratings are stored as state events in the voter room. Since state
+   * events only keep the latest value per (event_type, state_key),
+   * frequent rating changes do NOT clutter the timeline.
+   */
+  async createVoterRoom(pollId: string, voterId: string): Promise<string> {
+    this.logger?.entry("MatrixService.createVoterRoom", pollId, voterId);
+    
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomAlias = `vodle_voter_${pollId}_${this.sanitizeForAlias(voterId)}`;
+    const guardBotId = environment.matrix.guard_bot_user_id;
+    
+    const users: Record<string, number> = {
+      // Only the voter has write power
+      [voterId]: 50
+    };
+    // Guard bot gets admin power (100) for deadline enforcement
+    if (guardBotId) {
+      users[guardBotId] = 100;
+    }
+    
+    const options: ICreateRoomOpts = {
+      name: `Vodle Voter: ${pollId}`,
+      topic: `Voter data for poll ${pollId}, voter ${voterId}`,
+      preset: 'private_chat',
+      room_alias_name: roomAlias,
+      initial_state: [{
+        type: 'm.room.encryption',
+        content: {
+          algorithm: 'm.megolm.v1.aes-sha2'
+        }
+      }],
+      power_level_content_override: {
+        users,
+        // All voter data event types require power level 50 to send
+        state_default: 50,
+        events_default: 50,
+        // Everyone else (invited for read access) defaults to 0 (read-only)
+        users_default: 0
+      }
+    };
+    
+    const roomId = await this.createRoom(options);
+    
+    // Invite the guard bot to the voter room
+    if (guardBotId) {
+      try {
+        await this.client.invite(roomId, guardBotId);
+        this.logger?.info("Guard bot invited to voter room", pollId, voterId);
+      } catch (error) {
+        this.logger?.error("Failed to invite guard bot to voter room", error);
+      }
+    }
+    
+    const cacheKey = `${pollId}:${voterId}`;
+    this.voterRooms.set(cacheKey, roomId);
+    await this.storage.set(`voter_room_${cacheKey}`, roomId);
+    
+    this.logger?.info("Voter room created", pollId, voterId, roomId);
+    this.logger?.exit("MatrixService.createVoterRoom");
+    return roomId;
+  }
+  
+  /**
+   * Sanitize a Matrix user ID for use in a room alias.
+   * Room aliases cannot contain '@', ':', or other special characters.
+   */
+  private sanitizeForAlias(userId: string): string {
+    return userId.replace(/[@:]/g, '_').replace(/[^a-zA-Z0-9._\-]/g, '_');
+  }
+  
+  /**
+   * Get the voter room ID for a (poll, voter) pair.
+   * Checks cache, persistent storage, and alias lookup.
+   */
+  async getVoterRoom(pollId: string, voterId: string): Promise<string | null> {
+    this.logger?.entry("MatrixService.getVoterRoom", pollId, voterId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const cacheKey = `${pollId}:${voterId}`;
+    
+    // Check in-memory cache
+    const cached = this.voterRooms.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
+    // Check persistent storage
+    const stored = await this.storage.get(`voter_room_${cacheKey}`);
+    if (stored) {
+      const room = this.client.getRoom(stored);
+      if (room) {
+        this.voterRooms.set(cacheKey, stored);
+        return stored;
+      }
+    }
+    
+    // Try to find by alias
+    try {
+      const alias = `vodle_voter_${pollId}_${this.sanitizeForAlias(voterId)}`;
+      const aliasResponse = await this.client.getRoomIdForAlias(
+        `#${alias}:${this.getHomeserverDomain()}`
+      );
+      const roomId = aliasResponse.room_id;
+      this.voterRooms.set(cacheKey, roomId);
+      await this.storage.set(`voter_room_${cacheKey}`, roomId);
+      return roomId;
+    } catch (error) {
+      this.logger?.info("Voter room not found", pollId, voterId);
+      return null;
+    }
+  }
+  
+  /**
+   * Get or create the current user's voter room for a poll.
+   */
+  async getOrCreateMyVoterRoom(pollId: string): Promise<string> {
+    if (!this.userId) {
+      throw new Error("Not logged in");
+    }
+    const existing = await this.getVoterRoom(pollId, this.userId);
+    if (existing) {
+      return existing;
+    }
+    return await this.createVoterRoom(pollId, this.userId);
+  }
+  
+  /**
+   * Make a voter room read-only by setting the voter's power level to 0.
+   * After this, the Matrix server rejects any further writes from the voter.
+   * The guard bot retains admin power (100) for future administrative actions.
+   * 
+   * This is called by the guard bot when the poll deadline arrives.
+   * Can also be called by a client as a fallback.
+   */
+  async makeVoterRoomReadOnly(pollId: string, voterId: string): Promise<void> {
+    this.logger?.entry("MatrixService.makeVoterRoomReadOnly", pollId, voterId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomId = await this.getVoterRoom(pollId, voterId);
+    if (!roomId) {
+      this.logger?.info("Voter room not found, skipping", pollId, voterId);
+      return;
+    }
+    
+    const room = this.client.getRoom(roomId);
+    if (!room) {
+      return;
+    }
+    
+    const powerLevels = room.currentState.getStateEvents('m.room.power_levels', '');
+    if (!powerLevels) {
+      return;
+    }
+    
+    const content = { ...powerLevels.getContent() };
+    // Preserve guard bot's admin power; drop everyone else to 0
+    const guardBotId = environment.matrix.guard_bot_user_id;
+    const users: Record<string, number> = {};
+    if (guardBotId) {
+      users[guardBotId] = 100;
+    }
+    content.users = users;
+    content.users_default = 0;
+    
+    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    
+    this.logger?.info("Voter room made read-only", pollId, voterId);
+    this.logger?.exit("MatrixService.makeVoterRoomReadOnly");
+  }
+  
+  // ========================================================================
+  // VOTER DATA: Read/write via per-voter rooms (server-side enforced)
+  // ========================================================================
+  
+  /**
+   * Set voter-specific data in the voter's dedicated room.
+   * 
+   * Each voter has their own Matrix room per poll. Only the voter has
+   * write power (50); the Matrix server rejects writes from anyone else.
+   * This is analogous to CouchDB validation scripts.
+   * 
+   * Ratings and other voter data are stored as state events, so only
+   * the latest value is kept — no timeline clutter from frequent updates.
    */
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setVoterData", pollId, key);
     
-    // Enforce voter ownership: only the authenticated user can set their own data
-    if (this.userId && voterId !== this.userId) {
-      throw new Error(`Cannot modify another voter's data: ${voterId} !== ${this.userId}`);
-    }
-    
-    const roomId = await this.getPollRoom(pollId);
+    // Get or create the voter's room (creates if this is the current user)
+    let roomId = await this.getVoterRoom(pollId, voterId);
     if (!roomId) {
-      throw new Error(`Poll room not found for poll ${pollId}`);
+      // Only the voter themselves can create their voter room
+      if (this.userId && voterId === this.userId) {
+        roomId = await this.createVoterRoom(pollId, voterId);
+      } else {
+        throw new Error(`Voter room not found for poll ${pollId}, voter ${voterId}`);
+      }
     }
     
     const eventType = `m.room.vodle.voter.${key}`;
-    await this.sendStateEvent(roomId, eventType, { value }, voterId);
+    // The Matrix server enforces that only the voter (power 50) can send.
+    // If a different user tries, the server returns M_FORBIDDEN.
+    await this.sendStateEvent(roomId, eventType, { value }, '');
     
     this.logger?.exit("MatrixService.setVoterData");
   }
   
   /**
-   * Get voter-specific data from the poll room.
-   * Any participant can read any voter's data (ratings are public within the poll).
+   * Get voter-specific data from the voter's dedicated room.
+   * Any participant with read access to the voter room can read the data.
    */
   async getVoterData(pollId: string, voterId: string, key: string): Promise<any> {
     this.logger?.entry("MatrixService.getVoterData", pollId, key);
     
-    const roomId = await this.getPollRoom(pollId);
+    const roomId = await this.getVoterRoom(pollId, voterId);
     if (!roomId) {
       return null;
     }
     
     try {
       const eventType = `m.room.vodle.voter.${key}`;
-      const content = this.getStateEvent(roomId, eventType, voterId);
+      const content = this.getStateEvent(roomId, eventType, '');
       return content?.value ?? null;
     } catch (error) {
       return null;
@@ -1154,23 +1416,20 @@ export class MatrixService {
   
   /**
    * Delete voter-specific data by sending empty content.
-   * Voter ownership is enforced: a voter can only delete their own data.
+   * Only the voter can delete their own data (server-side enforced
+   * via power levels in the voter room).
    */
   async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
     this.logger?.entry("MatrixService.deleteVoterData", pollId, key);
     
-    // Enforce voter ownership: only the authenticated user can delete their own data
-    if (this.userId && voterId !== this.userId) {
-      throw new Error(`Cannot delete another voter's data: ${voterId} !== ${this.userId}`);
-    }
-    
-    const roomId = await this.getPollRoom(pollId);
+    const roomId = await this.getVoterRoom(pollId, voterId);
     if (!roomId) {
-      throw new Error(`Poll room not found for poll ${pollId}`);
+      throw new Error(`Voter room not found for poll ${pollId}, voter ${voterId}`);
     }
     
     const eventType = `m.room.vodle.voter.${key}`;
-    await this.sendStateEvent(roomId, eventType, {}, voterId);
+    // Server enforces: only the voter (power 50) can send state events
+    await this.sendStateEvent(roomId, eventType, {}, '');
     
     this.logger?.exit("MatrixService.deleteVoterData");
   }
@@ -1182,17 +1441,15 @@ export class MatrixService {
   /**
    * Submit or update a rating for an option in a poll.
    * 
-   * Ratings are stored as state events with event type
-   * `m.room.vodle.voter.rating.{optionId}` and state_key = voterId.
-   * Since state events only keep the latest value per (type, state_key),
-   * frequent rating changes do NOT clutter the timeline.
+   * The rating is stored as a state event in the voter's dedicated room:
+   * event type `m.room.vodle.voter.rating.{optionId}`, state_key = ''.
    * 
-   * Enforcement:
-   * - Voter ownership: only the authenticated user can set their own rating
-   *   (enforced by setVoterData)
-   * - Deadline: when the poll closes, makeRoomReadOnly() sets all power
-   *   levels to 0, so the Matrix server rejects further state events
-   * - Range: rating must be between 0 and 100
+   * Server-side enforcement:
+   * - Voter ownership: only the voter has write power in their voter room;
+   *   the Matrix server rejects writes from anyone else (M_FORBIDDEN)
+   * - Deadline: when the poll closes, makeVoterRoomReadOnly() drops the
+   *   voter's power to 0, so the Matrix server rejects further writes
+   * - No timeline clutter: state events only keep the latest value
    */
   async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
     this.logger?.entry("MatrixService.submitRating", pollId, optionId, rating);
