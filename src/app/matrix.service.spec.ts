@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
-import { MatrixService } from './matrix.service';
+import { MatrixService, hashEmail } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -55,6 +55,47 @@ describe('MatrixService', () => {
     expect(service.getClient()).toBeNull();
   });
   
+  // Email Hashing Tests
+  describe('Email Hashing for Privacy', () => {
+    it('should hash email addresses consistently', () => {
+      const email = 'test@example.com';
+      const hash1 = hashEmail(email);
+      const hash2 = hashEmail(email);
+      expect(hash1).toBe(hash2);
+      expect(hash1.length).toBeGreaterThan(0);
+    });
+
+    it('should produce different hashes for different emails', () => {
+      const email1 = 'test1@example.com';
+      const email2 = 'test2@example.com';
+      const hash1 = hashEmail(email1);
+      const hash2 = hashEmail(email2);
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('should not contain the original email in the hash', () => {
+      const email = 'user@example.com';
+      const hash = hashEmail(email);
+      expect(hash).not.toContain('user');
+      expect(hash).not.toContain('example');
+      expect(hash).not.toContain('@');
+    });
+
+    it('should produce hexadecimal hash', () => {
+      const email = 'test@example.com';
+      const hash = hashEmail(email);
+      expect(hash).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it('should hash emails case-insensitively', () => {
+      const mixedCaseEmail = 'Test@Example.com';
+      const lowerCaseEmail = 'test@example.com';
+      const hashMixed = hashEmail(mixedCaseEmail);
+      const hashLower = hashEmail(lowerCaseEmail);
+      expect(hashMixed).toBe(hashLower);
+    });
+  });
+
   // Phase 2 Tests
   describe('Phase 2: User Data Management', () => {
     it('should have getUserRoom method', () => {
