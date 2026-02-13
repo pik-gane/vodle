@@ -653,6 +653,11 @@ export class MatrixService {
    * Create a new poll room in Matrix
    * Each poll gets its own encrypted room where poll metadata, options,
    * and voter data are stored as state events.
+   * 
+   * All participants (including the creator) have equal power levels.
+   * During draft, everyone at level 50 can set metadata and options.
+   * When the poll starts, metadata is locked (required power raised to 100,
+   * which nobody has) so it becomes immutable.
    */
   async createPollRoom(pollId: string, title: string): Promise<string> {
     this.logger?.entry("MatrixService.createPollRoom", pollId);
@@ -676,14 +681,15 @@ export class MatrixService {
       }],
       power_level_content_override: {
         users: {
-          [this.userId]: 100
+          [this.userId]: 50
         },
         events: {
-          'm.room.vodle.poll.meta': 100,
+          'm.room.vodle.poll.meta': 50,
           'm.room.vodle.poll.option': 50,
           'm.room.vodle.vote.rating': 50,
           'm.room.vodle.vote.delegation': 50
         },
+        state_default: 50,
         users_default: 50
       }
     };
@@ -863,7 +869,8 @@ export class MatrixService {
   
   /**
    * Invite a voter to a poll room
-   * The voter receives default power level (50) allowing them to vote
+   * The voter receives the same default power level (50) as all other
+   * participants, including the creator. All participants are equal.
    */
   async inviteVoter(pollId: string, voterId: string): Promise<void> {
     this.logger?.entry("MatrixService.inviteVoter", pollId, voterId);
@@ -885,7 +892,8 @@ export class MatrixService {
   
   /**
    * Change the state of a poll (draft -> running -> closing -> closed)
-   * When closing, makes the room read-only by reducing user power levels.
+   * When leaving draft, metadata is locked so nobody can change it.
+   * When closing, makes the room read-only for all participants equally.
    */
   async changePollState(pollId: string, newState: string): Promise<void> {
     this.logger?.entry("MatrixService.changePollState", pollId, newState);
@@ -898,6 +906,11 @@ export class MatrixService {
     meta.state = newState;
     await this.setPollMetadata(pollId, meta);
     
+    // When leaving draft (entering 'running'), lock metadata so nobody can change it
+    if (newState === 'running') {
+      await this.lockPollMetadata(pollId);
+    }
+    
     if (newState === 'closed') {
       await this.makeRoomReadOnly(pollId);
     }
@@ -907,8 +920,50 @@ export class MatrixService {
   }
   
   /**
-   * Make a poll room read-only by setting the default user power level to 0
-   * Only the room creator (power level 100) can still send events.
+   * Lock poll metadata by raising its required power level above all users.
+   * After this, no participant (including the original creator) can modify
+   * poll metadata. All participants remain equal voters.
+   */
+  async lockPollMetadata(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.lockPollMetadata", pollId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    
+    const room = this.client.getRoom(roomId);
+    if (!room) {
+      throw new Error(`Room ${roomId} not found`);
+    }
+    
+    const powerLevels = room.currentState.getStateEvents('m.room.power_levels', '');
+    if (!powerLevels) {
+      throw new Error(`Power levels not found for room ${roomId}`);
+    }
+    
+    const content = { ...powerLevels.getContent() };
+    const events = { ...(content.events || {}) };
+    // Set metadata power requirement to 100, which nobody has (all users are at 50)
+    events['m.room.vodle.poll.meta'] = 100;
+    // Also lock option addition — no new options after poll starts
+    events['m.room.vodle.poll.option'] = 100;
+    content.events = events;
+    
+    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    
+    this.logger?.info("Poll metadata locked", pollId);
+    this.logger?.exit("MatrixService.lockPollMetadata");
+  }
+  
+  /**
+   * Make a poll room read-only by setting the default user power level to 0.
+   * All participants (including the original creator) lose the ability to
+   * send events. Nobody has elevated permissions.
    */
   async makeRoomReadOnly(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.makeRoomReadOnly", pollId);
@@ -934,6 +989,8 @@ export class MatrixService {
     
     const content = { ...powerLevels.getContent() };
     content.users_default = 0;
+    // Also reset any per-user overrides so nobody retains elevated power
+    content.users = {};
     
     await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     

@@ -13,7 +13,7 @@ Each poll gets a dedicated encrypted Matrix room:
 - **Room Creation**: `createPollRoom(pollId, title)` creates a private, encrypted room
 - **Room Alias**: `vodle_poll_{pollId}` for consistent lookup
 - **Encryption**: Uses Matrix Megolm (m.megolm.v1.aes-sha2) encryption
-- **Power Levels**: Creator gets power level 100, voters get 50
+- **Equal Permissions**: All participants (including the creator) have power level 50 — no elevated creator privileges
 
 ### 2. Poll Room Lookup
 
@@ -48,18 +48,19 @@ Options stored as individual state events with option ID as state key:
 
 ### 5. Voter Invitation
 
-Voters are invited to poll rooms with appropriate power levels:
+Voters are invited to poll rooms with equal power levels:
 
 - **Invitation**: `inviteVoter(pollId, voterId)` invites a Matrix user
-- **Power Level**: Default power level 50 allows voting and adding options
-- **Permissions**: Voters can send rating and delegation events but not modify poll metadata
+- **Power Level**: Same default power level 50 as all other participants including the creator
+- **Equal Permissions**: All participants can send rating and delegation events; nobody has elevated privileges
 
 ### 6. Poll State Transitions
 
 Poll lifecycle management with room-level enforcement:
 
 - **State Changes**: `changePollState(pollId, newState)`
-- **Read-Only Mode**: `makeRoomReadOnly(pollId)` sets default power to 0 when closed
+- **Metadata Lock**: `lockPollMetadata(pollId)` raises metadata power requirement to 100 when poll starts — since all users are at 50, metadata becomes immutable
+- **Read-Only Mode**: `makeRoomReadOnly(pollId)` sets all user power levels to 0 when closed — nobody can send events
 - **Supported States**: draft → running → closing → closed
 
 ### 7. Poll & Voter Data CRUD
@@ -83,7 +84,7 @@ Generic key-value storage scoped to polls and voters:
 ```
 Poll Room (vodle_poll_{pollId})
 ├── m.room.encryption          (Megolm E2EE)
-├── m.room.power_levels        (Creator: 100, Voters: 50)
+├── m.room.power_levels        (All participants: 50, equal permissions)
 ├── m.room.vodle.poll.meta     (Poll metadata - state_key: '')
 ├── m.room.vodle.poll.option   (Options - state_key: optionId)
 │   ├── state_key: "opt1"      → { name, description, url }
@@ -165,7 +166,7 @@ interface IDataBackend {
    - `setPollMetadata()` / `getPollMetadata()`: Poll metadata management
    - `addOption()` / `getOption()` / `getOptions()`: Option management
    - `inviteVoter()`: Voter invitation
-   - `changePollState()` / `makeRoomReadOnly()`: State transitions
+   - `changePollState()` / `lockPollMetadata()` / `makeRoomReadOnly()`: State transitions with equal permissions
    - `setPollData()` / `getPollData()` / `deletePollData()`: Poll data CRUD
    - `setVoterData()` / `getVoterData()` / `deleteVoterData()`: Voter data CRUD
 
@@ -247,27 +248,33 @@ await matrixService.inviteVoter('poll123', '@bob:matrix.org');
 ### Closing a Poll
 
 ```typescript
-// Change state to closed - makes room read-only
+// Change state to closed - makes room read-only for everyone
 await matrixService.changePollState('poll123', 'closed');
-// Voters can no longer send events (power level set to 0)
+// Nobody can send events (all power levels set to 0)
 ```
 
-## Power Level Model
+## Permission Model
 
-| Role | Power Level | Can Do |
-|------|------------|--------|
-| Creator | 100 | Modify poll metadata, manage room |
-| Voter | 50 | Add options, submit ratings, delegate |
-| Closed Voter | 0 | Read-only access |
+All participants (including the poll creator) have **equal power levels**.
+Once a poll leaves draft state, the creator becomes a simple voter with no
+special privileges. Nobody can change poll metadata after the poll starts.
+
+### Power Levels by Poll State
+
+| Poll State | All Participants | Can Do |
+|-----------|-----------------|--------|
+| Draft | 50 | Set metadata, add options, vote |
+| Running | 50 | Submit ratings, delegate (metadata & options locked) |
+| Closed | 0 | Read-only access |
 
 ### Event Power Requirements
 
-| Event Type | Required Power | Description |
-|-----------|---------------|-------------|
-| `m.room.vodle.poll.meta` | 100 | Only creator can modify metadata |
-| `m.room.vodle.poll.option` | 50 | Voters can add options |
-| `m.room.vodle.vote.rating` | 50 | Voters can submit ratings |
-| `m.room.vodle.vote.delegation` | 50 | Voters can delegate |
+| Event Type | Draft | Running/Closed | Description |
+|-----------|-------|---------------|-------------|
+| `m.room.vodle.poll.meta` | 50 | 100 (locked) | Metadata immutable after draft |
+| `m.room.vodle.poll.option` | 50 | 100 (locked) | No new options after draft |
+| `m.room.vodle.vote.rating` | 50 | 50 → 0 | Voters can rate until closed |
+| `m.room.vodle.vote.delegation` | 50 | 50 → 0 | Voters can delegate until closed |
 
 ## Testing
 

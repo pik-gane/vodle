@@ -220,5 +220,19 @@ describe('MatrixService', () => {
       const options = service.getOptions('nonexistent');
       expect(options.size).toBe(0);
     });
+    
+    it('should have lockPollMetadata method', () => {
+      expect(service.lockPollMetadata).toBeDefined();
+    });
+    
+    it('should throw error when locking poll metadata without initialization', async () => {
+      await expectAsync(service.lockPollMetadata('test-poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
+    
+    it('should throw error when making room read-only without initialization', async () => {
+      await expectAsync(service.makeRoomReadOnly('test-poll'))
+        .toBeRejectedWithError('Matrix client not initialized');
+    });
   });
 });
