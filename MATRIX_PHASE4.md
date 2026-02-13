@@ -22,7 +22,7 @@ Support for delegating voting authority to other participants:
 - **Request**: `requestDelegation(pollId, delegateId, optionIds)` sends a delegation request as a timeline event in the poll room
 - **Response**: `respondToDelegation(pollId, delegationId, accept, acceptedOptions?)` sends acceptance or declination
 - **Retrieval**: `getDelegations(pollId)` and `getDelegationResponses(pollId)` scan the poll room timeline for delegation events
-- **ID Generation**: `generateId()` creates unique delegation IDs using timestamp + random component
+- **ID Generation**: `generateId()` creates unique delegation IDs using timestamp + cryptographically secure random bytes
 - **Event Types**:
   - `m.room.vodle.vote.delegation_request` — sent by delegator
   - `m.room.vodle.vote.delegation_response` — sent by delegate
@@ -33,7 +33,7 @@ Support for delegating voting authority to other participants:
 Live updates when poll data changes via Matrix sync:
 
 - **Setup**: `setupPollEventHandlers(pollId)` registers Matrix event listeners for a poll
-- **Teardown**: `teardownPollEventHandlers(pollId)` removes all listeners and cleans up
+- **Teardown**: `teardownPollEventHandlers(pollId)` removes all listeners and properly unregisters Matrix SDK event listeners to prevent memory leaks
 - **Listener Interface**: `PollEventListener` allows components to receive typed callbacks
 - **Events Monitored**:
   - Rating updates in voter rooms (`m.room.vodle.voter.rating.*`)
@@ -291,7 +291,7 @@ ng test --no-watch --browsers=ChromeHeadless --include='**/data-adapter.service.
 1. **Rating Aggregation Scope**: `getRatings()` only includes voter rooms that are already known (cached). New voter rooms discovered via real-time events are included once their rooms are resolved
 2. **Guard Bot Not Yet Deployed**: The guard bot user is configured in rooms but the actual server-side service is a separate component. Deadline enforcement relies on client-side fallback until the bot is deployed
 3. **CouchDB Stubs**: The CouchDB backend provides stub implementations for Phase 4 methods since CouchDB already handles voting through DelegationService and PollService directly
-4. **Matrix SDK Listeners**: Event listeners use the Matrix SDK's `on()` method. While `teardownPollEventHandlers()` clears the internal state, the underlying Matrix SDK listeners remain registered. Full cleanup requires stopping the Matrix client
+4. **Matrix SDK Listeners**: Event listeners are properly cleaned up via `removeListener()` when `teardownPollEventHandlers()` is called. Handler references are stored to enable proper cleanup.
 
 ## Next Steps - Phase 5
 
