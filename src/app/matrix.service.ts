@@ -147,6 +147,8 @@ export class MatrixService {
   private pollEventListeners: Map<string, PollEventListener[]> = new Map();
   // Phase 4: Track which polls have event handlers set up
   private pollEventHandlersSetup: Set<string> = new Set();
+  // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
+  private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
   
   constructor(
     private storage: Storage
@@ -470,6 +472,7 @@ export class MatrixService {
     this.delegationResponseCaches.clear();
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
+    this.pollEventHandlerRefs.clear();
     
     this.logger?.exit("MatrixService.logout");
   }
@@ -1799,11 +1802,13 @@ export class MatrixService {
   
   /**
    * Generate a unique identifier for delegation tracking.
-   * Uses a combination of timestamp and random bytes for uniqueness.
+   * Uses a combination of timestamp and cryptographically secure random bytes.
    */
   generateId(): string {
     const timestamp = Date.now().toString(36);
-    const randomPart = Math.random().toString(36).substring(2, 10);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const randomPart = Array.from(randomBytes, b => b.toString(16).padStart(2, '0')).join('');
     return `${timestamp}-${randomPart}`;
   }
   
@@ -2131,8 +2136,10 @@ export class MatrixService {
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
+    const handlers: Array<{ event: string; handler: (...args: any[]) => void }> = [];
+    
     // Listen for timeline events in the poll room (delegation requests/responses)
-    (this.client as any).on("Room.timeline", (event: any, room: any) => {
+    const timelineHandler = (event: any, room: any) => {
       if (room.roomId !== roomId) return;
       
       const eventType = event.getType();
@@ -2146,29 +2153,33 @@ export class MatrixService {
           this.handleDelegationResponse(pollId, event);
           break;
       }
-    });
+    };
+    (this.client as any).on("Room.timeline", timelineHandler);
+    handlers.push({ event: "Room.timeline", handler: timelineHandler });
     
     // Listen for state events in the poll room (metadata updates)
-    (this.client as any).on("RoomState.events", (event: any, state: any) => {
+    const stateMetaHandler = (event: any, state: any) => {
       if (state.roomId !== roomId) return;
       
       if (event.getType() === 'm.room.vodle.poll.meta') {
         this.handlePollMetaUpdate(pollId, event);
       }
-    });
+    };
+    (this.client as any).on("RoomState.events", stateMetaHandler);
+    handlers.push({ event: "RoomState.events", handler: stateMetaHandler });
     
     // Listen for state events across all rooms to catch voter rating updates.
     // Voter rooms are separate from the poll room, so we need a broader
     // listener that matches any voter room for this poll.
-    (this.client as any).on("RoomState.events", (event: any, state: any) => {
+    const stateRatingHandler = (event: any, state: any) => {
       const eventType = event.getType() as string;
       
       // Match rating events: m.room.vodle.voter.rating.{optionId}
       if (eventType.startsWith('m.room.vodle.voter.rating.')) {
         // Check if this room is a voter room for our poll
-        const roomId = state.roomId;
+        const eventRoomId = state.roomId;
         for (const [cacheKey, voterRoomId] of this.voterRooms.entries()) {
-          if (voterRoomId === roomId && cacheKey.startsWith(`${pollId}:`)) {
+          if (voterRoomId === eventRoomId && cacheKey.startsWith(`${pollId}:`)) {
             const voterId = cacheKey.substring(pollId.length + 1);
             const optionId = eventType.substring('m.room.vodle.voter.rating.'.length);
             this.handleRatingEvent(pollId, voterId, optionId, event);
@@ -2176,8 +2187,12 @@ export class MatrixService {
           }
         }
       }
-    });
+    };
+    (this.client as any).on("RoomState.events", stateRatingHandler);
+    handlers.push({ event: "RoomState.events", handler: stateRatingHandler });
     
+    // Store handler references for cleanup
+    this.pollEventHandlerRefs.set(pollId, handlers);
     this.pollEventHandlersSetup.add(pollId);
     
     this.logger?.info("Event handlers set up for poll", pollId);
@@ -2194,7 +2209,9 @@ export class MatrixService {
     const content = event.getContent();
     const rating = content?.value;
     
-    if (rating === undefined || rating === null) {
+    // Validate: rating must be a finite number in range [0, 100]
+    if (typeof rating !== 'number' || !isFinite(rating) || rating < 0 || rating > 100) {
+      this.logger?.info("Ignoring invalid rating value", pollId, voterId, optionId, rating);
       return;
     }
     
@@ -2278,10 +2295,14 @@ export class MatrixService {
       return;
     }
     
+    // Validate status: must be 'accepted' or 'declined'
+    const validStatuses = ['accepted', 'declined'];
+    const status: 'accepted' | 'declined' = validStatuses.includes(content.status) ? content.status : 'declined';
+    
     const response: DelegationResponse = {
       delegation_id: content.delegation_id,
       responder_id: sender,
-      status: content.status || 'declined',
+      status,
       accepted_options: content.accepted_options || [],
       timestamp: content.timestamp || 0
     };
@@ -2346,12 +2367,22 @@ export class MatrixService {
   
   /**
    * Remove all event handlers and listeners for a poll.
+   * Properly unregisters Matrix SDK event listeners to prevent memory leaks.
    * Called when the user navigates away from a poll or when
    * the poll is closed.
    */
   teardownPollEventHandlers(pollId: string): void {
     this.logger?.entry("MatrixService.teardownPollEventHandlers", pollId);
     
+    // Unregister Matrix SDK event listeners
+    const handlers = this.pollEventHandlerRefs.get(pollId);
+    if (handlers && this.client) {
+      for (const { event, handler } of handlers) {
+        (this.client as any).removeListener(event, handler);
+      }
+    }
+    
+    this.pollEventHandlerRefs.delete(pollId);
     this.pollEventListeners.delete(pollId);
     this.pollEventHandlersSetup.delete(pollId);
     

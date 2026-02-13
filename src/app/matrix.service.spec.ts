@@ -384,8 +384,8 @@ describe('MatrixService', () => {
       
       it('should generate IDs with expected format', () => {
         const id = service.generateId();
-        // Format: <base36-timestamp>-<random>
-        expect(id).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+        // Format: <base36-timestamp>-<hex-random>
+        expect(id).toMatch(/^[a-z0-9]+-[a-f0-9]+$/);
       });
       
       it('should throw error when requesting delegation without initialization', async () => {

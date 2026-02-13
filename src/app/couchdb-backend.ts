@@ -145,8 +145,11 @@ export class CouchDBBackend implements IDataBackend {
   async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {
     // CouchDB delegation is handled by DelegationService directly.
     // This stub generates an ID for interface compatibility.
-    const delegationId = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
-    return delegationId;
+    const timestamp = Date.now().toString(36);
+    const randomBytes = new Uint8Array(8);
+    crypto.getRandomValues(randomBytes);
+    const randomPart = Array.from(randomBytes, b => b.toString(16).padStart(2, '0')).join('');
+    return `${timestamp}-${randomPart}`;
   }
   
   async respondToDelegation(pollId: string, delegationId: string, accept: boolean, acceptedOptions?: string[]): Promise<void> {
