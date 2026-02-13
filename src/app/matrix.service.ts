@@ -1787,8 +1787,14 @@ export class MatrixService {
     // Cache the result
     this.ratingCaches.set(pollId, ratings);
     
+    // Return a defensive copy so callers cannot mutate the cached map
+    const result = new Map<string, Map<string, number>>();
+    for (const [voterId, voterRatings] of ratings) {
+      result.set(voterId, new Map(voterRatings));
+    }
+    
     this.logger?.exit("MatrixService.getRatings");
-    return ratings;
+    return result;
   }
   
   /**
@@ -1963,7 +1969,7 @@ export class MatrixService {
     if (pollDelegations) {
       const request = pollDelegations.get(delegationId);
       if (request) {
-        request.status = accept ? 'accepted' : 'declined';
+        request.status = resolvedStatus;
       }
     }
     
@@ -1980,7 +1986,8 @@ export class MatrixService {
   async getDelegations(pollId: string): Promise<Map<string, DelegationRequest>> {
     this.logger?.entry("MatrixService.getDelegations", pollId);
     
-    // Check cache — return defensive copy so callers cannot corrupt internal state
+    // Check cache — return defensive copy so callers cannot corrupt internal state.
+    // Note: the DelegationRequest objects are shared references — treat as read-only.
     const cached = this.delegationRequestCaches.get(pollId);
     if (cached) {
       return new Map<string, DelegationRequest>(cached);
@@ -2028,7 +2035,10 @@ export class MatrixService {
         
         if (content.delegation_id && delegations.has(content.delegation_id)) {
           const request = delegations.get(content.delegation_id);
-          request.status = content.status || 'declined';
+          // Only accept valid statuses, to mirror handleDelegationResponse logic
+          if (content.status === 'accepted' || content.status === 'declined') {
+            request.status = content.status;
+          }
         }
       }
     }
@@ -2037,7 +2047,9 @@ export class MatrixService {
     this.delegationRequestCaches.set(pollId, delegations);
     
     this.logger?.exit("MatrixService.getDelegations");
-    return delegations;
+    // Return a defensive copy so callers cannot mutate the cached map.
+    // Note: the DelegationRequest objects are shared references — treat as read-only.
+    return new Map<string, DelegationRequest>(delegations);
   }
   
   /**
@@ -2049,7 +2061,8 @@ export class MatrixService {
   async getDelegationResponses(pollId: string): Promise<Map<string, DelegationResponse>> {
     this.logger?.entry("MatrixService.getDelegationResponses", pollId);
     
-    // Check cache — return defensive copy so callers cannot corrupt internal state
+    // Check cache — return defensive copy so callers cannot corrupt internal state.
+    // Note: the DelegationResponse objects are shared references — treat as read-only.
     const cached = this.delegationResponseCaches.get(pollId);
     if (cached) {
       return new Map<string, DelegationResponse>(cached);
@@ -2083,7 +2096,7 @@ export class MatrixService {
           responses.set(content.delegation_id, {
             delegation_id: content.delegation_id,
             responder_id: sender,
-            status: content.status || 'declined',
+            status: content.status === 'accepted' ? 'accepted' : 'declined',
             accepted_options: content.accepted_options || [],
             timestamp: content.timestamp || 0
           });
@@ -2095,7 +2108,9 @@ export class MatrixService {
     this.delegationResponseCaches.set(pollId, responses);
     
     this.logger?.exit("MatrixService.getDelegationResponses");
-    return responses;
+    // Return a defensive copy so callers cannot mutate the cached map.
+    // Note: the DelegationResponse objects are shared references — treat as read-only.
+    return new Map<string, DelegationResponse>(responses);
   }
   
   // ========================================================================
@@ -2245,15 +2260,19 @@ export class MatrixService {
     // Update cache
     this.updateRatingCache(pollId, voterId, optionId, rating);
     
-    // Notify listeners
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
     const listeners = this.pollEventListeners.get(pollId);
     if (listeners) {
       for (const listener of listeners) {
-        if (listener.onRatingUpdate) {
-          listener.onRatingUpdate(pollId, voterId, optionId, rating);
-        }
-        if (listener.onDataChange) {
-          listener.onDataChange();
+        try {
+          if (listener.onRatingUpdate) {
+            listener.onRatingUpdate(pollId, voterId, optionId, rating);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (rating)", error);
         }
       }
     }
@@ -2292,15 +2311,19 @@ export class MatrixService {
     }
     pollDelegations.set(content.delegation_id, request);
     
-    // Notify listeners
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
     const listeners = this.pollEventListeners.get(pollId);
     if (listeners) {
       for (const listener of listeners) {
-        if (listener.onDelegationRequest) {
-          listener.onDelegationRequest(pollId, request);
-        }
-        if (listener.onDataChange) {
-          listener.onDataChange();
+        try {
+          if (listener.onDelegationRequest) {
+            listener.onDelegationRequest(pollId, request);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (delegation request)", error);
         }
       }
     }
@@ -2351,15 +2374,19 @@ export class MatrixService {
       }
     }
     
-    // Notify listeners
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
     const listeners = this.pollEventListeners.get(pollId);
     if (listeners) {
       for (const listener of listeners) {
-        if (listener.onDelegationResponse) {
-          listener.onDelegationResponse(pollId, response);
-        }
-        if (listener.onDataChange) {
-          listener.onDataChange();
+        try {
+          if (listener.onDelegationResponse) {
+            listener.onDelegationResponse(pollId, response);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (delegation response)", error);
         }
       }
     }
@@ -2376,15 +2403,19 @@ export class MatrixService {
     
     const content = event.getContent();
     
-    // Notify listeners
+    // Notify listeners — wrap each in try-catch so one failure doesn't block others
     const listeners = this.pollEventListeners.get(pollId);
     if (listeners) {
       for (const listener of listeners) {
-        if (listener.onPollMetaUpdate) {
-          listener.onPollMetaUpdate(pollId, content);
-        }
-        if (listener.onDataChange) {
-          listener.onDataChange();
+        try {
+          if (listener.onPollMetaUpdate) {
+            listener.onPollMetaUpdate(pollId, content);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("Error in poll event listener (poll meta update)", error);
         }
       }
     }

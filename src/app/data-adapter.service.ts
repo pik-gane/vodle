@@ -144,7 +144,7 @@ export class DataAdapter implements IDataBackend {
   }
   
   teardownPollEventHandlers(pollId: string): void {
-    return this.backend.teardownPollEventHandlers(pollId);
+    this.backend.teardownPollEventHandlers(pollId);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {
