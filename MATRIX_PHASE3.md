@@ -45,8 +45,8 @@ Options stored as timeline (message) events for server-side immutability:
 - **Adding**: Any voter can add new options until the poll closes
 - **Operations**:
   - `addOption(pollId, optionId, option)`: Add new option (rejects duplicates)
-  - `getOption(pollId, optionId)`: Get single option by scanning timeline
-  - `getOptions(pollId)`: Get all options as Map by scanning timeline
+  - `getOption(pollId, optionId)`: Get single option (async, resolves room on first access)
+  - `getOptions(pollId)`: Get all options as Map (async, resolves room on first access)
 
 ### 5. Voter Invitation
 
@@ -61,9 +61,13 @@ Voters are invited to the shared poll room with equal power levels:
 
 Poll lifecycle management with room-level enforcement:
 
-- **State Changes**: `changePollState(pollId, newState)`
-- **Metadata Lock**: `lockPollMetadata(pollId)` raises metadata power requirement to 100 when poll starts — only the guard bot has 100, so metadata is immutable for all human participants
+- **State Changes**: `changePollState(pollId, newState)` — stores poll state as a
+  separate event type (`m.room.vodle.poll.state`) from metadata, so state transitions
+  work even after metadata is locked
+- **Metadata Lock**: `lockPollMetadata(pollId)` raises metadata, deadline, and power-level
+  power requirements to 100. Only the guard bot retains the ability to change these.
 - **Read-Only Mode**: `makeRoomReadOnly(pollId)` sets all human user power levels to 0 when closed — guard bot retains admin power
+- **Redaction Prevention**: `redact` power level is set to 100 to prevent deletion of timeline events (options)
 - **Supported States**: draft → running → closing → closed
 
 ### 7. Poll Data CRUD
@@ -74,7 +78,7 @@ Generic key-value storage scoped to polls (in poll room):
   - `setPollData(pollId, key, value)`: Store via `m.room.vodle.poll.data.{key}`
   - `getPollData(pollId, key)`: Retrieve poll data
   - `deletePollData(pollId, key)`: Remove poll data
-  - `setPollDeadline(pollId, due)`: Store deadline as unencrypted event for guard bot
+  - `setPollDeadline(pollId, due)`: Store deadline as unencrypted event for guard bot (validates ISO 8601 format)
 
 ### 8. Per-Voter Rooms (Server-Side Write Enforcement)
 
@@ -122,16 +126,17 @@ A dedicated Matrix bot that enforces deadlines server-side:
 Poll Room (vodle_poll_{pollId}) — shared by all participants
 ├── State events:
 │   ├── m.room.encryption          (Megolm E2EE)
-│   ├── m.room.power_levels        (Voters: 50, Guard bot: 100)
+│   ├── m.room.power_levels        (Voters: 50, Guard bot: 100; redact: 100)
 │   ├── m.room.vodle.poll.meta     (Poll metadata — encrypted)
+│   ├── m.room.vodle.poll.state    (Poll lifecycle state — separate from metadata)
 │   ├── m.room.vodle.poll.deadline (Due date — UNENCRYPTED, readable by guard bot)
 │   └── m.room.vodle.poll.data.*   (Poll-level data)
-└── Timeline events (immutable, append-only):
+└── Timeline events (immutable, append-only, non-redactable):
     └── m.room.vodle.poll.option   (Options — server-side immutable)
         ├── { option_id: "opt1", name, description, url }
         └── { option_id: "opt2", name, description, url }
 
-Voter Room (vodle_voter_{pollId}_{voterId}) — per (poll, voter) pair
+Voter Room (vodle_voter_{pollId}_{base64url(voterId)}) — per (poll, voter) pair
 ├── Power levels: voter=50, guard bot=100, everyone else=0
 └── State events (only writable by the voter):
     ├── m.room.vodle.voter.rating.opt1  → { value: 75 }
@@ -311,8 +316,8 @@ This is analogous to CouchDB validation scripts.
 |---------------------|-------------------|
 | `validate_doc_update` rejects writes to other voters' data | Per-voter rooms: only the voter has write power (50) |
 | `validate_doc_update` checks `doc.due` date | Guard bot drops power to 0 at deadline |
-| Poll metadata immutable after opening | `lockPollMetadata()` raises required power to 100 |
-| Options immutable once added | Options are timeline events (append-only by protocol) |
+| Poll metadata immutable after opening | `lockPollMetadata()` raises metadata + power_levels to 100 |
+| Options immutable once added | Timeline events (append-only) + redact power 100 (non-redactable) |
 
 ### Power Levels
 
@@ -327,8 +332,10 @@ This is analogous to CouchDB validation scripts.
 | Event Type | Kind | Draft | Running | Closed | Description |
 |-----------|------|-------|---------|--------|-------------|
 | `m.room.vodle.poll.meta` | state | 50 | 100 (locked) | 100 (locked) | Metadata immutable after draft |
-| `m.room.vodle.poll.deadline` | state | 50 | 50 | 100 | Deadline readable by guard bot |
-| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | New options can be added until close; immutable once sent |
+| `m.room.vodle.poll.state` | state | 50 | 100 (bot only) | 100 (bot only) | Lifecycle state separate from metadata |
+| `m.room.vodle.poll.deadline` | state | 50 | 100 (locked) | 100 (locked) | Deadline locked after draft |
+| `m.room.power_levels` | state | 50 | 100 (bot only) | 100 (bot only) | Power levels locked after draft |
+| `m.room.vodle.poll.option` | timeline | 50 | 50 | 0 | Options addable until close; immutable + non-redactable |
 
 ### Event Power Requirements (Voter Room)
 

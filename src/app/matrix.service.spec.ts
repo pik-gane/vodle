@@ -211,13 +211,13 @@ describe('MatrixService', () => {
         .toBeRejectedWithError('Matrix client not initialized');
     });
     
-    it('should return null for getOption when not initialized', () => {
-      const option = service.getOption('nonexistent', 'opt1');
+    it('should return null for getOption when not initialized', async () => {
+      const option = await service.getOption('nonexistent', 'opt1');
       expect(option).toBeNull();
     });
     
-    it('should return empty map for getOptions when not initialized', () => {
-      const options = service.getOptions('nonexistent');
+    it('should return empty map for getOptions when not initialized', async () => {
+      const options = await service.getOptions('nonexistent');
       expect(options.size).toBe(0);
     });
     
@@ -238,6 +238,16 @@ describe('MatrixService', () => {
     // Deadline method
     it('should have setPollDeadline method', () => {
       expect(service.setPollDeadline).toBeDefined();
+    });
+    
+    it('should reject invalid deadline date format', async () => {
+      await expectAsync(service.setPollDeadline('test-poll', 'not-a-date'))
+        .toBeRejectedWithError(/Invalid deadline date format/);
+    });
+    
+    it('should reject empty deadline date', async () => {
+      await expectAsync(service.setPollDeadline('test-poll', ''))
+        .toBeRejectedWithError(/Invalid deadline date format/);
     });
     
     // Voter room methods
