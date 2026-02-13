@@ -295,12 +295,6 @@ describe('MatrixService', () => {
         .toBeRejectedWithError('Not logged in');
     });
     
-    it('should reject rating below 0', async () => {
-      // Even though not logged in, range check should happen first... but login check is first
-      // Test by checking the method exists; full range tests need a mock client
-      expect(service.submitRating).toBeDefined();
-    });
-    
     it('should return null for getMyRating when not logged in', async () => {
       const rating = await service.getMyRating('test-poll', 'opt1');
       expect(rating).toBeNull();

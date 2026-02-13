@@ -1459,7 +1459,7 @@ export class MatrixService {
     }
     
     if (rating < 0 || rating > 100) {
-      throw new Error('Rating must be between 0 and 100');
+      throw new Error('Rating must be between 0 and 100 (inclusive)');
     }
     
     await this.setVoterData(pollId, this.userId, `rating.${optionId}`, rating);
