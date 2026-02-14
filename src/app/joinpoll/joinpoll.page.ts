@@ -21,6 +21,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
+import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
 
@@ -96,16 +97,27 @@ export class JoinpollPage implements OnInit {
       this.p = new Poll(this.G, this.pid);
       this.p._state = "running";
       this.p.allow_voting = true;
-      this.p.db_server_url = this.db_server_url;
-      this.p.db_password = this.db_password;
       this.p.password = this.poll_password;
       this.p.init_myvid();
-      this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
-        // remote poll db has been replicated completely to local poll db
-        this.ready = true;
-        this.p.set_timeouts();
-        this.p.tally_all();
-      });
+
+      if (environment.useMatrixBackend) {
+        // Phase 13: Join via Matrix — ignore CouchDB params (db_server_url, db_password)
+        this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
+          this.ready = true;
+          this.p.set_timeouts();
+          this.p.tally_all();
+          this.router.navigate(['/poll/' + this.pid]);
+        });
+      } else {
+        this.p.db_server_url = this.db_server_url;
+        this.p.db_password = this.db_password;
+        this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
+          // remote poll db has been replicated completely to local poll db
+          this.ready = true;
+          this.p.set_timeouts();
+          this.p.tally_all();
+        });
+      }
     }
     this.G.L.exit("JoinpollPage.onDataReady");
   }

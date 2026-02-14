@@ -1505,6 +1505,24 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.start_poll_sync", pid);
     var result: boolean;
 
+    // Phase 14: Use Matrix event handlers for real-time sync
+    if (environment.useMatrixBackend) {
+      this.G.L.info("DataService starting Matrix poll sync", pid);
+      const listener = {
+        onDataChange: () => {
+          this.after_changes();
+          if (this.page.onDataChange) this.page.onDataChange();
+        }
+      };
+      this.matrixService.addPollEventListener(pid, listener);
+      this.matrixService.setupPollEventHandlers(pid).catch(err => {
+        this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
+      });
+      result = true;
+      this.G.L.exit("DataService.start_poll_sync", pid, result);
+      return result;
+    }
+
     if (this.remote_poll_dbs[pid]) { 
       this.G.L.info("DataService starting poll data sync", pid);
 
@@ -1554,6 +1572,11 @@ export class DataService implements OnDestroy {
   }
 
   stop_poll_sync(pid: string) {
+    // Phase 14: Tear down Matrix event handlers
+    if (environment.useMatrixBackend) {
+      this.matrixService.teardownPollEventHandlers(pid);
+      return;
+    }
     if (pid in this.G.D.poll_db_sync_handlers && !!this.G.D.poll_db_sync_handlers[pid]) {
       this.G.D.poll_db_sync_handlers[pid].cancel();
     }

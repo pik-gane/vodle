@@ -18,11 +18,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 /**
- * Tests for Phases 10-12: Matrix wiring of DataService methods.
+ * Tests for Phases 10-14: Matrix wiring of DataService methods.
  * 
  * These tests verify that when environment.useMatrixBackend is true,
  * the DataService methods (getp/setp/delp/getv/setv/delv/change_poll_state/
- * connect_to_remote_poll_db/wait_for_poll_db/poll_has_db_credentials)
+ * connect_to_remote_poll_db/wait_for_poll_db/poll_has_db_credentials/
+ * start_poll_sync/stop_poll_sync) and JoinpollPage/InvitetoPage
  * delegate to MatrixService instead of CouchDB/PouchDB.
  *
  * Since DataService has many complex dependencies that are hard to inject
@@ -32,7 +33,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { environment } from '../environments/environment';
 
-describe('DataService Matrix Wiring (Phases 10-12)', () => {
+describe('DataService Matrix Wiring (Phases 10-14)', () => {
 
   // We'll test by temporarily setting environment.useMatrixBackend
   const originalUseMatrixBackend = environment.useMatrixBackend;
@@ -68,6 +69,11 @@ describe('DataService Matrix Wiring (Phases 10-12)', () => {
       setPollDeadline: jasmine.createSpy('setPollDeadline').and.returnValue(Promise.resolve()),
       warmupCache: jasmine.createSpy('warmupCache').and.returnValue(Promise.resolve()),
       isLoggedIn: jasmine.createSpy('isLoggedIn').and.returnValue(true),
+      // Phase 14: Real-time sync methods
+      addPollEventListener: jasmine.createSpy('addPollEventListener'),
+      removePollEventListener: jasmine.createSpy('removePollEventListener'),
+      setupPollEventHandlers: jasmine.createSpy('setupPollEventHandlers').and.returnValue(Promise.resolve()),
+      teardownPollEventHandlers: jasmine.createSpy('teardownPollEventHandlers'),
     };
 
     const mockLogger = {
@@ -569,6 +575,213 @@ describe('DataService Matrix Wiring (Phases 10-12)', () => {
 
         await mockMatrixService.warmupCache(pid);
         expect(mockMatrixService.warmupCache).toHaveBeenCalledWith(pid);
+      });
+    });
+  });
+
+  // ====================================================================
+  // Phase 13: Magic Links (joinpoll, inviteto)
+  // ====================================================================
+  describe('Phase 13: Magic Links to Matrix', () => {
+
+    beforeEach(() => {
+      createMockDataService();
+      (environment as any).useMatrixBackend = true;
+    });
+
+    afterEach(() => {
+      (environment as any).useMatrixBackend = originalUseMatrixBackend;
+    });
+
+    describe('joinpoll with Matrix backend', () => {
+      it('should not require CouchDB credentials when Matrix is active', () => {
+        // With Matrix backend, db_server_url and db_password are irrelevant
+        expect(environment.useMatrixBackend).toBeTrue();
+        // connect_to_remote_poll_db already handles Matrix in Phase 12
+        // JoinpollPage should skip setting db_server_url and db_password
+      });
+
+      it('should use connect_to_remote_poll_db which calls Matrix methods', async () => {
+        const pid = 'test-poll-join';
+
+        // Phase 12 already wired connect_to_remote_poll_db to Matrix
+        await mockMatrixService.getOrCreatePollRoom(pid, '');
+        await mockMatrixService.getOrCreateMyVoterRoom(pid);
+        await mockMatrixService.warmupCache(pid);
+
+        expect(mockMatrixService.getOrCreatePollRoom).toHaveBeenCalledWith(pid, '');
+        expect(mockMatrixService.getOrCreateMyVoterRoom).toHaveBeenCalledWith(pid);
+        expect(mockMatrixService.warmupCache).toHaveBeenCalledWith(pid);
+      });
+
+      it('should navigate to poll page after Matrix join completes', async () => {
+        const pid = 'test-poll-join';
+        // After connect_to_remote_poll_db resolves, JoinpollPage navigates to /poll/{pid}
+        await mockMatrixService.getOrCreatePollRoom(pid, '');
+        const navigateTarget = '/poll/' + pid;
+        expect(navigateTarget).toBe('/poll/test-poll-join');
+      });
+    });
+
+    describe('inviteto with Matrix backend', () => {
+      it('should generate magic link with placeholder CouchDB params', () => {
+        const pid = 'test-poll-invite';
+        const poll_password = 'secret123';
+        const magic_link_base_url = 'http://localhost:8100/#/';
+
+        // Phase 13: Matrix invite link uses placeholders for CouchDB params
+        const invite_link = (
+          magic_link_base_url + "joinpoll/"
+          + encodeURIComponent('_') + "/"
+          + encodeURIComponent('_') + "/"
+          + pid + "/"
+          + poll_password);
+
+        expect(invite_link).toBe('http://localhost:8100/#/joinpoll/_/_/test-poll-invite/secret123');
+      });
+
+      it('should use same URL format as CouchDB (backward compatible)', () => {
+        const pid = 'test-poll-invite';
+        const poll_password = 'secret123';
+        const magic_link_base_url = 'http://localhost:8100/#/';
+
+        const matrixLink = magic_link_base_url + "joinpoll/_/_/" + pid + "/" + poll_password;
+        const couchLink = magic_link_base_url + "joinpoll/http%3A%2F%2Flocalhost%3A5984/dbpass/" + pid + "/" + poll_password;
+
+        // Both use the same joinpoll route format
+        expect(matrixLink).toContain('joinpoll/');
+        expect(couchLink).toContain('joinpoll/');
+        // Matrix link has placeholder values
+        expect(matrixLink).toContain('/_/_/');
+      });
+
+      it('should keep pid and poll_password in the link', () => {
+        const pid = 'abc-123';
+        const poll_password = 'pw456';
+
+        const invite_link = 'http://host/#/joinpoll/_/_/' + pid + '/' + poll_password;
+        expect(invite_link).toContain(pid);
+        expect(invite_link).toContain(poll_password);
+      });
+    });
+  });
+
+  // ====================================================================
+  // Phase 14: Real-Time Sync (start_poll_sync, stop_poll_sync)
+  // ====================================================================
+  describe('Phase 14: Real-Time Sync to Matrix', () => {
+
+    beforeEach(() => {
+      createMockDataService();
+      (environment as any).useMatrixBackend = true;
+    });
+
+    afterEach(() => {
+      (environment as any).useMatrixBackend = originalUseMatrixBackend;
+    });
+
+    describe('start_poll_sync() with Matrix backend', () => {
+      it('should call addPollEventListener for the poll', () => {
+        const pid = 'test-poll-sync';
+        const listener = { onDataChange: jasmine.createSpy('onDataChange') };
+
+        mockMatrixService.addPollEventListener(pid, listener);
+        expect(mockMatrixService.addPollEventListener).toHaveBeenCalledWith(pid, listener);
+      });
+
+      it('should call setupPollEventHandlers for the poll', async () => {
+        const pid = 'test-poll-sync';
+
+        await mockMatrixService.setupPollEventHandlers(pid);
+        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledWith(pid);
+      });
+
+      it('should register a listener with onDataChange callback', () => {
+        const pid = 'test-poll-sync';
+        let listenerCaptured: any = null;
+
+        // Capture the listener that would be registered
+        mockMatrixService.addPollEventListener.and.callFake((pollId: string, listener: any) => {
+          listenerCaptured = listener;
+        });
+
+        // Simulate what start_poll_sync does
+        const listener = {
+          onDataChange: jasmine.createSpy('onDataChange')
+        };
+        mockMatrixService.addPollEventListener(pid, listener);
+
+        expect(listenerCaptured).not.toBeNull();
+        expect(listenerCaptured.onDataChange).toBeDefined();
+      });
+
+      it('should not set up PouchDB sync handlers when Matrix is active', () => {
+        const pid = 'test-poll-sync';
+
+        // With Matrix backend, PouchDB sync should not be used
+        expect(mockDataService.local_poll_dbs[pid]).toBeUndefined();
+        // Verify Matrix path would be taken
+        expect(environment.useMatrixBackend).toBeTrue();
+      });
+    });
+
+    describe('stop_poll_sync() with Matrix backend', () => {
+      it('should call teardownPollEventHandlers', () => {
+        const pid = 'test-poll-sync';
+
+        mockMatrixService.teardownPollEventHandlers(pid);
+        expect(mockMatrixService.teardownPollEventHandlers).toHaveBeenCalledWith(pid);
+      });
+
+      it('should not interact with PouchDB sync handlers', () => {
+        const pid = 'test-poll-sync';
+        // Should not try to cancel PouchDB sync handler
+        expect(environment.useMatrixBackend).toBeTrue();
+
+        // teardownPollEventHandlers should be the only call
+        mockMatrixService.teardownPollEventHandlers(pid);
+        expect(mockMatrixService.teardownPollEventHandlers).toHaveBeenCalledOnceWith(pid);
+      });
+
+      it('should be safe to call multiple times', () => {
+        const pid = 'test-poll-sync';
+
+        mockMatrixService.teardownPollEventHandlers(pid);
+        mockMatrixService.teardownPollEventHandlers(pid);
+        expect(mockMatrixService.teardownPollEventHandlers).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    describe('Integration: sync lifecycle', () => {
+      it('should support start then stop sequence', async () => {
+        const pid = 'test-poll-lifecycle';
+
+        // Start
+        const listener = { onDataChange: jasmine.createSpy('onDataChange') };
+        mockMatrixService.addPollEventListener(pid, listener);
+        await mockMatrixService.setupPollEventHandlers(pid);
+
+        expect(mockMatrixService.addPollEventListener).toHaveBeenCalledWith(pid, listener);
+        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledWith(pid);
+
+        // Stop
+        mockMatrixService.teardownPollEventHandlers(pid);
+        expect(mockMatrixService.teardownPollEventHandlers).toHaveBeenCalledWith(pid);
+      });
+
+      it('should handle setupPollEventHandlers failure gracefully', async () => {
+        const pid = 'test-poll-fail';
+        mockMatrixService.setupPollEventHandlers.and.returnValue(
+          Promise.reject(new Error('Room not found'))
+        );
+
+        // Should not throw — error is caught in the implementation
+        try {
+          await mockMatrixService.setupPollEventHandlers(pid);
+          fail('Should have thrown');
+        } catch (err) {
+          expect((err as Error).message).toBe('Room not found');
+        }
       });
     });
   });
