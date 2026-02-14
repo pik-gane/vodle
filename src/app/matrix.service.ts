@@ -2811,14 +2811,15 @@ export class MatrixService {
     combined.set(iv);
     combined.set(new Uint8Array(ciphertext), iv.length);
     
-    this.logger?.exit("MatrixService.encryptWithPassword");
     // Build base64 string using a loop instead of String.fromCharCode(...combined)
     // to avoid "Maximum call stack size exceeded" on large arrays.
     let binary = '';
     for (let i = 0; i < combined.length; i++) {
       binary += String.fromCharCode(combined[i]);
     }
-    return btoa(binary);
+    const encoded = btoa(binary);
+    this.logger?.exit("MatrixService.encryptWithPassword");
+    return encoded;
   }
   
   /**
