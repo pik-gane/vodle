@@ -1404,6 +1404,14 @@ export class MatrixService {
     this.logger?.exit("MatrixService.deletePollData");
   }
   
+  /**
+   * List all poll IDs known to this MatrixService instance.
+   * Returns poll IDs from the internal pollRooms cache.
+   */
+  listPolls(): string[] {
+    return Array.from(this.pollRooms.keys());
+  }
+
   // ========================================================================
   // VOTER ROOMS: Per-(poll, voter) rooms for server-side write enforcement
   // ========================================================================

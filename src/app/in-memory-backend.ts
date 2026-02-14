@@ -278,6 +278,10 @@ export class InMemoryBackend implements IDataBackend {
     // No cache warmup needed — all data is already in memory.
   }
   
+  async listPolls(): Promise<string[]> {
+    return Array.from(this.pollData.keys());
+  }
+
   getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return 'memory';
   }

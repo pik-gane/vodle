@@ -22,9 +22,12 @@ import { Component, OnInit } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { MigrationService, MigrationStatus } from '../migration.service';
 import { IDataBackend } from '../data-backend.interface';
+import { DataAdapter } from '../data-adapter.service';
+import { CouchDBBackend } from '../couchdb-backend';
+import { MatrixBackend } from '../matrix-backend';
 
 /**
- * MigrationPage — Phase 7 In-App Migration Controls
+ * MigrationPage — Phase 7-8 In-App Migration Controls
  * 
  * Provides a user-facing interface for initiating and monitoring the
  * CouchDB-to-Matrix data migration. Displays:
@@ -32,6 +35,8 @@ import { IDataBackend } from '../data-backend.interface';
  * - Per-step progress with item counts
  * - Error details for failed steps
  * - Controls to start, verify, complete, and rollback migration
+ * - Auto-discovery of polls from the source backend (Phase 8)
+ * - Automatic backend wiring via DataAdapter (Phase 8)
  */
 @Component({
   selector: 'app-migration',
@@ -55,6 +60,12 @@ export class MigrationPage implements OnInit {
   /** Poll ID input for poll-specific migration operations */
   pollIdInput = '';
 
+  /** Discovered poll IDs from the source backend */
+  discoveredPolls: string[] = [];
+
+  /** Whether poll discovery is in progress */
+  isDiscovering = false;
+
   /** Whether the Matrix backend is enabled */
   get isMatrixEnabled(): boolean {
     return environment.useMatrixBackend;
@@ -66,10 +77,29 @@ export class MigrationPage implements OnInit {
   /** Poll metadata keys to migrate */
   private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
 
-  constructor() {}
+  constructor(private dataAdapter: DataAdapter) {}
 
   ngOnInit() {
+    this.autoInitMigration();
     this.refreshStatus();
+  }
+
+  /**
+   * Auto-initialize the migration service using the DataAdapter.
+   * When Matrix backend is enabled, the DataAdapter's underlying backends
+   * are used as source (CouchDB) and target (Matrix).
+   */
+  autoInitMigration(): void {
+    if (!this.isMatrixEnabled) return;
+
+    const couchDB = this.dataAdapter.getDataService();
+    const matrixService = this.dataAdapter.getMatrixService();
+    if (couchDB && matrixService) {
+      const source = new CouchDBBackend(couchDB);
+      const target = new MatrixBackend(matrixService);
+      this.initMigration(source, target);
+      this.addLog('Migration auto-initialized via DataAdapter');
+    }
   }
 
   /**
@@ -226,6 +256,92 @@ export class MigrationPage implements OnInit {
       }
     } catch (error) {
       this.addLog(`Rollback error: ${error}`);
+    } finally {
+      this.isRunning = false;
+      this.refreshStatus();
+    }
+  }
+
+  /**
+   * Rollback poll data from target back to source.
+   */
+  async rollbackPollData(pollId: string): Promise<void> {
+    if (!this.migrationService || this.isRunning) return;
+
+    const trimmedPollId = pollId.trim();
+    if (!trimmedPollId) {
+      this.addLog('Cannot rollback poll data: poll ID is empty or whitespace-only');
+      return;
+    }
+
+    this.isRunning = true;
+    this.addLog(`Rolling back poll ${trimmedPollId} data...`);
+
+    try {
+      const step = await this.migrationService.rollbackPollData(trimmedPollId, this.pollMetadataKeys);
+      this.addLog(`Poll ${trimmedPollId} rollback ${step.status}: ${step.itemsMigrated} items restored, ${step.itemsFailed} failed`);
+      if (step.errors.length > 0) {
+        for (const error of step.errors) {
+          this.addLog(`  Error: ${error}`);
+        }
+      }
+    } catch (error) {
+      this.addLog(`Rollback error: ${error}`);
+    } finally {
+      this.isRunning = false;
+      this.refreshStatus();
+    }
+  }
+
+  /**
+   * Discover polls from the source backend.
+   */
+  async discoverPolls(): Promise<void> {
+    if (!this.migrationService || this.isRunning) return;
+
+    this.isDiscovering = true;
+    this.addLog('Discovering polls from source backend...');
+
+    try {
+      this.discoveredPolls = await this.migrationService.getSourcePollIds();
+      this.addLog(`Discovered ${this.discoveredPolls.length} poll(s): ${this.discoveredPolls.join(', ') || '(none)'}`);
+    } catch (error) {
+      this.addLog(`Poll discovery error: ${error}`);
+      this.discoveredPolls = [];
+    } finally {
+      this.isDiscovering = false;
+    }
+  }
+
+  /**
+   * Migrate all discovered polls at once.
+   */
+  async migrateAllPolls(): Promise<void> {
+    if (!this.migrationService || this.isRunning) return;
+
+    this.isRunning = true;
+    this.addLog('Starting migration of all polls from source...');
+
+    try {
+      const steps = await this.migrationService.migrateAllPolls(this.pollMetadataKeys);
+      let succeeded = 0;
+      let failed = 0;
+      for (const step of steps) {
+        if (step.status === 'completed') {
+          succeeded++;
+        } else {
+          failed++;
+        }
+        this.addLog(`  Poll migration ${step.description}: ${step.status} (${step.itemsMigrated} items, ${step.itemsFailed} failed)`);
+        if (step.errors.length > 0) {
+          for (const error of step.errors) {
+            this.addLog(`    Error: ${error}`);
+          }
+        }
+      }
+      this.addLog(`All polls migration complete: ${succeeded} succeeded, ${failed} failed`);
+    } catch (error) {
+      this.addLog(`All polls migration error: ${error}`);
     } finally {
       this.isRunning = false;
       this.refreshStatus();

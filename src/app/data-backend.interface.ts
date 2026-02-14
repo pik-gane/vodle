@@ -211,6 +211,13 @@ export interface IDataBackend {
   warmupCache(pollId: string): Promise<void>;
   
   /**
+   * List all poll IDs known to this backend.
+   * Phase 8: Enables auto-discovery of polls for migration.
+   * @returns Array of poll ID strings
+   */
+  listPolls(): Promise<string[]>;
+
+  /**
    * Get backend type identifier
    */
   getBackendType(): 'couchdb' | 'matrix' | 'memory';

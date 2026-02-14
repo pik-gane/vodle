@@ -139,6 +139,50 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-card-title>Poll Data Migration</ion-card-title>
     </ion-card-header>
     <ion-card-content>
+      <!-- Poll auto-discovery -->
+      <ion-button expand="block" color="tertiary"
+                  [disabled]="!migrationService || isRunning || isDiscovering"
+                  (click)="discoverPolls()">
+        <ion-icon name="search-outline" slot="start"></ion-icon>
+        Discover Polls
+      </ion-button>
+
+      <ion-list *ngIf="discoveredPolls.length > 0">
+        <ion-list-header>
+          <ion-label>Discovered Polls ({{ discoveredPolls.length }})</ion-label>
+        </ion-list-header>
+        <ion-item *ngFor="let poll of discoveredPolls" lines="full">
+          <ion-label>{{ poll }}</ion-label>
+          <ion-button slot="end" size="small" color="primary"
+                      [disabled]="!migrationService || isRunning"
+                      (click)="migratePollData(poll)">
+            Migrate
+          </ion-button>
+          <ion-button slot="end" size="small" color="secondary"
+                      [disabled]="!migrationService || isRunning"
+                      (click)="verifyPollData(poll)">
+            Verify
+          </ion-button>
+          <ion-button slot="end" size="small" color="warning"
+                      [disabled]="!migrationService || isRunning"
+                      (click)="rollbackPollData(poll)">
+            Rollback
+          </ion-button>
+        </ion-item>
+      </ion-list>
+
+      <ion-button expand="block" color="primary"
+                  *ngIf="discoveredPolls.length > 0"
+                  [disabled]="!migrationService || isRunning"
+                  (click)="migrateAllPolls()">
+        <ion-icon name="documents-outline" slot="start"></ion-icon>
+        Migrate All Polls
+      </ion-button>
+
+      <ion-item-divider *ngIf="discoveredPolls.length > 0">
+        <ion-label>Or migrate a specific poll by ID</ion-label>
+      </ion-item-divider>
+
       <ion-item>
         <ion-label position="stacked">Poll ID</ion-label>
         <ion-input [(ngModel)]="pollIdInput"
@@ -159,6 +203,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                   (click)="verifyPollData(pollIdInput)">
         <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
         Verify Poll Data
+      </ion-button>
+
+      <ion-button expand="block" color="warning"
+                  [disabled]="!migrationService || isRunning || !pollIdInput"
+                  (click)="rollbackPollData(pollIdInput)">
+        <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+        Rollback Poll Data
       </ion-button>
     </ion-card-content>
   </ion-card>

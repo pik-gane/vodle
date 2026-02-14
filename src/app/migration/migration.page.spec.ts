@@ -23,6 +23,16 @@ import { FormsModule } from '@angular/forms';
 
 import { MigrationPage } from './migration.page';
 import { InMemoryBackend } from '../in-memory-backend';
+import { DataAdapter } from '../data-adapter.service';
+
+/**
+ * Mock DataAdapter that returns null for both services
+ * (simulates CouchDB-only mode where Matrix is not enabled).
+ */
+class MockDataAdapter {
+  getDataService() { return null; }
+  getMatrixService() { return null; }
+}
 
 describe('MigrationPage', () => {
   let component: MigrationPage;
@@ -31,7 +41,10 @@ describe('MigrationPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [MigrationPage],
-      imports: [IonicModule.forRoot(), FormsModule]
+      imports: [IonicModule.forRoot(), FormsModule],
+      providers: [
+        { provide: DataAdapter, useClass: MockDataAdapter }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(MigrationPage);
@@ -355,6 +368,129 @@ describe('MigrationPage', () => {
       expect(formatted).not.toBe('—');
       // Verify the formatted string contains numeric date/time components
       expect(formatted).toMatch(/\d/);
+    });
+  });
+
+  describe('discoverPolls', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should discover polls from source backend', async () => {
+      await source.createPoll('poll1', 'First Poll');
+      await source.createPoll('poll2', 'Second Poll');
+
+      await component.discoverPolls();
+
+      expect(component.discoveredPolls.length).toBe(2);
+      expect(component.discoveredPolls).toContain('poll1');
+      expect(component.discoveredPolls).toContain('poll2');
+      expect(component.logMessages.some(m => m.includes('Discovered 2 poll(s)'))).toBeTrue();
+    });
+
+    it('should discover zero polls from empty source', async () => {
+      await component.discoverPolls();
+
+      expect(component.discoveredPolls.length).toBe(0);
+      expect(component.logMessages.some(m => m.includes('Discovered 0 poll(s)'))).toBeTrue();
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      await component.discoverPolls();
+
+      expect(component.discoveredPolls.length).toBe(0);
+    });
+
+    it('should not run if already running', async () => {
+      component.isRunning = true;
+      await component.discoverPolls();
+
+      expect(component.discoveredPolls.length).toBe(0);
+    });
+  });
+
+  describe('migrateAllPolls', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should migrate all polls from source', async () => {
+      await source.createPoll('poll1', 'First');
+      await source.setPollData('poll1', 'description', 'Desc1');
+      await source.createPoll('poll2', 'Second');
+      await source.setPollData('poll2', 'description', 'Desc2');
+
+      await component.migrateAllPolls();
+
+      expect(await target.getPollData('poll1', 'title')).toBe('First');
+      expect(await target.getPollData('poll1', 'description')).toBe('Desc1');
+      expect(await target.getPollData('poll2', 'title')).toBe('Second');
+      expect(await target.getPollData('poll2', 'description')).toBe('Desc2');
+      expect(component.logMessages.some(m => m.includes('succeeded'))).toBeTrue();
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      const initialLogLength = component.logMessages.length;
+
+      await component.migrateAllPolls();
+
+      expect(component.logMessages.length).toBe(initialLogLength);
+    });
+  });
+
+  describe('rollbackPollData', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should rollback poll data', async () => {
+      await target.createPoll('poll1', 'Target Title');
+      await target.setPollData('poll1', 'description', 'Target Desc');
+
+      await component.rollbackPollData('poll1');
+
+      expect(await source.getPollData('poll1', 'title')).toBe('Target Title');
+      expect(await source.getPollData('poll1', 'description')).toBe('Target Desc');
+      expect(component.migrationStatus!.overallStatus).toBe('rolled_back');
+    });
+
+    it('should reject whitespace-only poll ID', async () => {
+      await component.rollbackPollData('   ');
+
+      expect(component.logMessages.some(m => m.includes('empty or whitespace-only'))).toBeTrue();
+      expect(component.isRunning).toBeFalse();
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      const initialLogLength = component.logMessages.length;
+
+      await component.rollbackPollData('poll1');
+
+      expect(component.logMessages.length).toBe(initialLogLength);
     });
   });
 });
