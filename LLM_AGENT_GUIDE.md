@@ -3,7 +3,7 @@
 This document describes the semantic `data-vodle` HTML attributes added to vodle's
 UI to help LLM-based browser agents navigate and interact with the application.
 These attributes are invisible to human users and do not affect the app's
-appearance or behaviour.
+appearance or behavior.
 
 ## Why `data-vodle` attributes?
 
