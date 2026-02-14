@@ -107,6 +107,8 @@ export class JoinpollPage implements OnInit {
           this.p.set_timeouts();
           this.p.tally_all();
           this.router.navigate(['/poll/' + this.pid]);
+        }).catch(err => {
+          this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
         });
       } else {
         this.p.db_server_url = this.db_server_url;

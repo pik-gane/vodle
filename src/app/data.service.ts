@@ -297,6 +297,8 @@ export class DataService implements OnDestroy {
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
   private poll_db_sync_handlers: Record<string, any>;
+  // Phase 14: Track Matrix poll event listeners per pid to prevent duplicates
+  private _matrixPollListeners: Record<string, any> = {};
 
   // Caches with redundant information, not stored in database:
 
@@ -908,6 +910,9 @@ export class DataService implements OnDestroy {
         // Sync poll data from Matrix to local cache
         await this.matrixService.warmupCache(pid);
 
+        // Phase 14: Start real-time sync via Matrix event handlers
+        this.start_poll_sync(pid);
+
         this.G.L.exit("DataService.connect_to_remote_poll_db (Matrix)", pid);
       });
     }
@@ -1508,13 +1513,16 @@ export class DataService implements OnDestroy {
     // Phase 14: Use Matrix event handlers for real-time sync
     if (environment.useMatrixBackend) {
       this.G.L.info("DataService starting Matrix poll sync", pid);
-      const listener = {
-        onDataChange: () => {
-          this.after_changes();
-          if (this.page && this.page.onDataChange) this.page.onDataChange();
-        }
-      };
-      this.matrixService.addPollEventListener(pid, listener);
+      // Prevent duplicate listener registration on repeated calls
+      if (!this._matrixPollListeners[pid]) {
+        const listener = {
+          onDataChange: () => {
+            if (this.page && this.page.onDataChange) this.page.onDataChange();
+          }
+        };
+        this._matrixPollListeners[pid] = listener;
+        this.matrixService.addPollEventListener(pid, listener);
+      }
       this.matrixService.setupPollEventHandlers(pid).catch(err => {
         this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
       });
@@ -1574,6 +1582,7 @@ export class DataService implements OnDestroy {
   stop_poll_sync(pid: string) {
     // Phase 14: Tear down Matrix event handlers
     if (environment.useMatrixBackend) {
+      delete this._matrixPollListeners[pid];
       this.matrixService.teardownPollEventHandlers(pid);
       return;
     }
@@ -2157,7 +2166,7 @@ export class DataService implements OnDestroy {
           this.G.L.debug("DataService.after_changes creating poll object", pid);
           const p = new Poll(this.G, pid);
         }
-        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
+        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs) && !(environment.useMatrixBackend && this._matrixPollListeners[pid])) {
           // try syncing with remote db:
           // check if db credentials are set:
           if (this.poll_has_db_credentials(pid)) {
