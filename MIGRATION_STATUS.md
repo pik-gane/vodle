@@ -7,9 +7,13 @@ is still active (`useMatrixBackend: false` in both `environment.ts` and
 `environment.prod.ts`). The app is **not yet fully functional with Matrix** and
 cannot be tested end-to-end in the browser with the Matrix backend.
 
+**For the actionable path forward, see [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md).**
+
 ## What Has Been Built (Phases 1–9)
 
-Phases 1–9 built the **infrastructure layer** for the Matrix backend:
+Phases 1–9 built the **infrastructure layer** — MatrixService is fully
+implemented with 52+ methods covering auth, user data, poll rooms, voter rooms,
+ratings, delegation, encryption, offline queue, and caching:
 
 | Phase | What | Status |
 |-------|------|--------|
@@ -26,114 +30,52 @@ Phases 1–9 built the **infrastructure layer** for the Matrix backend:
 **125 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
 41 MigrationPage).
 
-## What Is Missing Before You Can Test in the Browser
+## What Remains (Phases 10–17)
 
-### The Core Gap: DataService → Matrix Integration
+The main app uses `GlobalService.D` (DataService) for all data access.
+DataService delegates to MatrixService for **user data only** (getu/setu/delu).
+Poll data and voter data always fall through to CouchDB.
 
-The main app uses `GlobalService.D` (which is `DataService`) for all data
-access. DataService has its own CouchDB-specific API (`getu`/`setu`/`getp`/
-`setp`/`getv`/`setv` etc.). While DataService does check `useMatrixBackend`
-for **user data** operations (getu, setu, delu), it does **not** check the flag
-for **poll data** or **voter data** operations:
+The remaining work is **wiring** — adding the same
+`if (environment.useMatrixBackend)` conditional branches to the remaining
+DataService methods. No app component refactoring needed.
 
-| Data Category | Methods | Matrix Support in DataService |
-|--------------|---------|-------------------------------|
-| User data | `getu`, `setu`, `delu` | ✅ Yes (conditional checks exist) |
-| Poll data | `getp`, `setp`, `delp` | ❌ No (falls through to CouchDB) |
-| Voter data | `getv`, `setv`, `delv`, `setv_in_polldb` | ❌ No (falls through to CouchDB) |
+| Phase | What | Status |
+|-------|------|--------|
+| 10 | Wire poll data (getp/setp/delp) to Matrix | ❌ Not started |
+| 11 | Wire voter data (getv/setv/delv) to Matrix | ❌ Not started |
+| 12 | Wire poll lifecycle (change_poll_state, connect_to_remote) | ❌ Not started |
+| 13 | Wire poll joining (magic links) to Matrix | ❌ Not started |
+| 14 | Wire real-time sync to Matrix | ❌ Not started |
+| 15 | Wire ratings & delegation to Matrix | ❌ Not started |
+| 16 | Enable Matrix backend & end-to-end testing | ❌ Not started |
+| 17 | Remove CouchDB code (optional cleanup) | ❌ Not started |
 
-### Why the DataAdapter Isn't Enough
+**See [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** for detailed, actionable steps
+for each phase, including exact methods, files, code patterns, and dependencies.
 
-`DataAdapter` was built as a clean abstraction layer implementing `IDataBackend`,
-and both `MatrixBackend` and `CouchDBBackend` implement this interface. However:
-
-1. **The main app does NOT use DataAdapter** — all app components use
-   `GlobalService → DataService` directly
-2. **DataService has a synchronous API** (`getu()` returns `string`) while
-   `IDataBackend` is async (`getUserData()` returns `Promise<any>`)
-3. **PollService, DelegationService, SettingsService** all access data through
-   `GlobalService.D` (DataService), not DataAdapter
-
-### What Specifically Needs to Happen
-
-To make the app functional with the Matrix backend, one of two approaches is
-needed:
-
-#### Option A: Extend DataService's conditional checks (smaller change)
-
-Add `if (environment.useMatrixBackend)` branches to the remaining DataService
-methods (`getp`, `setp`, `delp`, `getv`, `setv`, `delv`, `setv_in_polldb`)
-to delegate to MatrixService, similar to what was done for `getu`/`setu`/`delu`.
-
-**Pros**: Minimal refactoring, preserves existing app structure.
-**Cons**: Adds more conditional complexity to DataService, doesn't leverage the
-clean DataAdapter abstraction.
-
-#### Option B: Refactor app to use DataAdapter (larger change)
-
-Replace all `GlobalService.D` (DataService) usage throughout the app with
-DataAdapter, converting synchronous data access patterns to async.
-
-**Pros**: Clean architecture, leverages existing DataAdapter/IDataBackend.
-**Cons**: Touches every component in the app, requires async refactoring.
-
-### Additional Requirements
-
-Beyond the data layer wiring, these are also needed:
-
-1. **Matrix homeserver** — A running Synapse/Dendrite instance must be available
-   at the URL configured in `environment.matrix.homeserver_url`
-2. **Guard bot** — The server-side guard bot (for deadline enforcement) is not
-   yet implemented as a deployable service
-3. **matrix-js-sdk** — Must be properly bundled (it's imported in MatrixService
-   but the package may not be in `package.json` dependencies yet)
-
-## Current Architecture Diagram
+## Current Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    App Components                       │
-│  (poll.page, mypolls.page, settings.page, etc.)         │
-│                        │                                │
-│                        ▼                                │
-│              ┌──────────────────┐                       │
-│              │  GlobalService   │                       │
-│              │    (G.D, G.P)    │                       │
-│              └──────────────────┘                       │
-│                        │                                │
-│                        ▼                                │
-│              ┌──────────────────┐    ┌────────────────┐ │
-│              │  DataService     │───▶│ MatrixService  │ │
-│              │  (CouchDB API)   │    │ (Matrix SDK)   │ │
-│              │                  │    │                │ │
-│              │  getu/setu ──────┼──▶ │ ✅ Connected   │ │
-│              │  getp/setp ──────┼──✗ │ ❌ Not wired   │ │
-│              │  getv/setv ──────┼──✗ │ ❌ Not wired   │ │
-│              └──────────────────┘    └────────────────┘ │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  DataAdapter (IDataBackend)  ─── Used ONLY by    │   │
-│  │  ├─ MatrixBackend            ─── MigrationPage   │   │
-│  │  └─ CouchDBBackend                              │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+App Components → GlobalService → DataService
+                                   │
+                                   ├─ getu/setu/delu → ✅ MatrixService
+                                   ├─ getp/setp/delp → ❌ CouchDB only
+                                   ├─ getv/setv/delv → ❌ CouchDB only
+                                   ├─ change_poll_state → ❌ CouchDB only
+                                   └─ connect_to_remote → ❌ CouchDB only
 ```
 
 ## How to Test What Exists Today
 
-You **can** test the existing CouchDB-based app normally — it works as before.
-The Matrix code that was added is dormant (behind the `useMatrixBackend: false`
-flag) and does not affect normal CouchDB operation.
-
-To test the migration tools:
-1. Navigate to `/migration` in the app
-2. The migration page shows backend status and migration controls
-3. Note: Migration requires both CouchDB and Matrix backends to be available
+The existing CouchDB-based app works normally — Matrix code is dormant behind
+the `useMatrixBackend: false` flag. The migration tools are at `/migration`.
 
 ## References
 
+- **[MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** — Actionable path to Matrix-only app
 - Phase docs: `MATRIX_PHASE1.md` through `MATRIX_PHASE9.md`
 - Implementation strategy: `planning/matrix-migration/03-implementation-strategy.md`
 - DataAdapter: `src/app/data-adapter.service.ts`
-- MatrixService: `src/app/matrix.service.ts`
+- MatrixService: `src/app/matrix.service.ts` (52+ methods, all implemented)
 - DataService Matrix checks: `src/app/data.service.ts` (search for `useMatrixBackend`)

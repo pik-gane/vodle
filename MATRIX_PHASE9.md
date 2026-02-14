@@ -167,19 +167,27 @@ even if the operation fails or throws.
 
 ## Next Steps
 
-Future work beyond Phase 9:
+**See [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** for the complete, actionable
+path forward (Phases 10–17).
 
-- **Wire poll/voter data to Matrix in DataService** — The most critical gap.
-  DataService's `getp`/`setp`/`delp`/`getv`/`setv`/`delv` methods do not yet
-  delegate to MatrixService when `useMatrixBackend` is true. Only user data
-  methods (`getu`/`setu`/`delu`) have Matrix conditionals. This must be done
-  before the app can function with the Matrix backend.
-- Set `useMatrixBackend: true` in environment files once the above is complete
-- Progressive migration (background migration during normal app usage)
-- Log message persistence (optional — logs are informational)
-- Remove CouchDB dependency after full migration is complete
+Summary of remaining phases:
 
-See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for a full status report.
+| Phase | What | Effort |
+|-------|------|--------|
+| 10 | Wire poll data (getp/setp/delp) to Matrix | Small |
+| 11 | Wire voter data (getv/setv/delv) to Matrix | Small |
+| 12 | Wire poll lifecycle (change_poll_state) to Matrix | Medium |
+| 13 | Wire poll joining (magic links) to Matrix | Small |
+| 14 | Wire real-time sync to Matrix | Medium |
+| 15 | Wire ratings & delegation to Matrix | Small |
+| 16 | Enable Matrix backend & end-to-end testing | Medium |
+| 17 | Remove CouchDB code (optional cleanup) | Small |
+
+The approach: extend the existing `if (environment.useMatrixBackend)` pattern
+in DataService (same pattern used in `getu`/`setu`/`delu`) to all remaining
+data methods. No app component refactoring needed.
+
+See also [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for current status.
 
 ## References
 
