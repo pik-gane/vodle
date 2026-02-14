@@ -104,7 +104,41 @@ export interface PollEventListener {
 }
 
 /**
- * MatrixService - Phase 1-4 Implementation
+ * Queued event for offline processing.
+ * When the Matrix client is disconnected, events are stored in this format
+ * and replayed when the connection is restored.
+ */
+export interface QueuedEvent {
+  id: string;
+  type: 'rating' | 'delegation_request' | 'delegation_response' | 'poll_data' | 'voter_data' | 'user_data';
+  pollId?: string;
+  optionId?: string;
+  rating?: number;
+  delegateId?: string;
+  optionIds?: string[];
+  delegationId?: string;
+  accept?: boolean;
+  acceptedOptions?: string[];
+  key?: string;
+  value?: any;
+  voterId?: string;
+  timestamp: number;
+  retryCount: number;
+}
+
+/**
+ * Status of the offline queue.
+ */
+export interface OfflineQueueStatus {
+  queueSize: number;
+  isProcessing: boolean;
+  isOnline: boolean;
+  lastProcessedAt: number | null;
+  failedCount: number;
+}
+
+/**
+ * MatrixService - Phase 1-5 Implementation
  * 
  * This service provides Matrix protocol functionality for Vodle,
  * including client initialization, authentication, room management,
@@ -114,6 +148,7 @@ export interface PollEventListener {
  * Phase 2: User data management
  * Phase 3: Poll room management, voter rooms, ratings
  * Phase 4: Rating aggregation, delegation, real-time event handling
+ * Phase 5: Offline event queue, poll-password encryption, caching strategy
  */
 @Injectable({
   providedIn: 'root'
@@ -151,6 +186,18 @@ export class MatrixService {
   private pollEventHandlersSetup: Set<string> = new Set();
   // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
   private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
+  
+  // Phase 5: Offline queue for pending events when disconnected
+  private offlineQueue: QueuedEvent[] = [];
+  private offlineQueueProcessing: boolean = false;
+  private offlineQueueLastProcessed: number | null = null;
+  private offlineQueueFailedCount: number = 0;
+  private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
+  private static readonly MAX_RETRY_COUNT = 5;
+  private static readonly MAX_QUEUE_SIZE = 1000;
+  
+  // Phase 5: User data cache for fast synchronous reads
+  private userDataCache: Map<string, any> = new Map();
   
   constructor(
     private storage: Storage
@@ -483,6 +530,13 @@ export class MatrixService {
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
     this.pollEventHandlerRefs.clear();
+    this.offlineQueue = [];
+    this.offlineQueueProcessing = false;
+    this.offlineQueueFailedCount = 0;
+    this.userDataCache.clear();
+    // Clear persisted offline queue so it is not reused after logout
+    // (e.g., if a different user logs in next).
+    await this.storage.remove(MatrixService.OFFLINE_QUEUE_STORAGE_KEY);
     
     this.logger?.exit("MatrixService.logout");
   }
@@ -2445,5 +2499,560 @@ export class MatrixService {
     this.pollEventHandlersSetup.delete(pollId);
     
     this.logger?.exit("MatrixService.teardownPollEventHandlers");
+  }
+  
+  // ========================================================================
+  // PHASE 5: ADVANCED FEATURES
+  // ========================================================================
+  
+  // ========================================================================
+  // 5.1 Offline Event Queue
+  // ========================================================================
+  
+  /**
+   * Check if the Matrix client currently has a working connection.
+   * Returns false if the client is not initialized or if the sync state
+   * indicates the client is not connected.
+   */
+  isOnline(): boolean {
+    if (!this.client) {
+      return false;
+    }
+    try {
+      const syncState = (this.client as any).getSyncState?.();
+      // PREPARED or SYNCING means we have a working connection
+      return syncState === 'PREPARED' || syncState === 'SYNCING';
+    } catch {
+      return false;
+    }
+  }
+  
+  /**
+   * Enqueue an event for later processing when offline.
+   * The event is persisted to Ionic Storage so it survives app restarts.
+   * 
+   * @param event - The event to enqueue (id and timestamp will be set automatically)
+   */
+  async enqueueOfflineEvent(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
+    this.logger?.entry("MatrixService.enqueueOfflineEvent", event.type);
+    
+    if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
+      this.logger?.error("Offline queue is full, discarding oldest event");
+      this.offlineQueue.shift();
+    }
+    
+    const queuedEvent: QueuedEvent = {
+      ...event,
+      id: this.generateId(),
+      timestamp: Date.now(),
+      retryCount: 0
+    };
+    
+    this.offlineQueue.push(queuedEvent);
+    await this.saveOfflineQueue();
+    
+    this.logger?.info("Event enqueued for offline processing", event.type, queuedEvent.id);
+    this.logger?.exit("MatrixService.enqueueOfflineEvent");
+  }
+  
+  /**
+   * Process all queued offline events.
+   * Events are processed in order (FIFO). If an event fails after
+   * MAX_RETRY_COUNT attempts, it is discarded.
+   * 
+   * @returns Number of events successfully processed
+   */
+  async processOfflineQueue(): Promise<number> {
+    this.logger?.entry("MatrixService.processOfflineQueue");
+    
+    if (this.offlineQueueProcessing) {
+      this.logger?.info("Queue already being processed");
+      return 0;
+    }
+    
+    if (this.offlineQueue.length === 0) {
+      this.logger?.info("No events in offline queue");
+      return 0;
+    }
+    
+    this.offlineQueueProcessing = true;
+    let processedCount = 0;
+    
+    try {
+      while (this.offlineQueue.length > 0) {
+        const event = this.offlineQueue[0];
+        
+        try {
+          await this.processQueuedEvent(event);
+          this.offlineQueue.shift();
+          processedCount++;
+          this.offlineQueueFailedCount = 0;
+          await this.saveOfflineQueue();
+        } catch (error) {
+          this.logger?.error("Failed to process queued event", event.id, error);
+          event.retryCount++;
+          // Persist updated retry count so it survives app restarts
+          await this.saveOfflineQueue();
+          
+          if (event.retryCount >= MatrixService.MAX_RETRY_COUNT) {
+            this.logger?.error("Event exceeded max retries, discarding", event.id);
+            this.offlineQueue.shift();
+            this.offlineQueueFailedCount++;
+            await this.saveOfflineQueue();
+          } else {
+            // Stop processing — connection may be down
+            break;
+          }
+        }
+      }
+      
+      this.offlineQueueLastProcessed = Date.now();
+    } finally {
+      this.offlineQueueProcessing = false;
+    }
+    
+    this.logger?.info("Processed offline queue", processedCount, "events");
+    this.logger?.exit("MatrixService.processOfflineQueue");
+    return processedCount;
+  }
+  
+  /**
+   * Process a single queued event by dispatching to the appropriate method.
+   */
+  private async processQueuedEvent(event: QueuedEvent): Promise<void> {
+    switch (event.type) {
+      case 'rating':
+        if (event.pollId && event.optionId !== undefined && event.rating !== undefined) {
+          await this.submitRating(event.pollId, event.optionId, event.rating);
+        } else {
+          throw new Error(`Malformed rating event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      case 'delegation_request':
+        if (event.pollId && event.delegateId && event.optionIds) {
+          await this.requestDelegation(event.pollId, event.delegateId, event.optionIds);
+        } else {
+          throw new Error(`Malformed delegation_request event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      case 'delegation_response':
+        if (event.pollId && event.delegationId !== undefined && event.accept !== undefined) {
+          await this.respondToDelegation(event.pollId, event.delegationId, event.accept, event.acceptedOptions);
+        } else {
+          throw new Error(`Malformed delegation_response event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      case 'poll_data':
+        if (event.pollId && event.key !== undefined) {
+          await this.setPollData(event.pollId, event.key, event.value);
+        } else {
+          throw new Error(`Malformed poll_data event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      case 'voter_data':
+        if (event.pollId && event.voterId && event.key !== undefined) {
+          await this.setVoterData(event.pollId, event.voterId, event.key, event.value);
+        } else {
+          throw new Error(`Malformed voter_data event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      case 'user_data':
+        if (event.key !== undefined) {
+          await this.setUserData(event.key, event.value);
+        } else {
+          throw new Error(`Malformed user_data event: missing required fields (id: ${event.id})`);
+        }
+        break;
+      
+      default:
+        throw new Error(`Unknown queued event type: ${event.type} (id: ${event.id})`);
+    }
+  }
+  
+  /**
+   * Get the current size of the offline queue.
+   */
+  getOfflineQueueSize(): number {
+    return this.offlineQueue.length;
+  }
+  
+  /**
+   * Get the current status of the offline queue.
+   */
+  getOfflineQueueStatus(): OfflineQueueStatus {
+    return {
+      queueSize: this.offlineQueue.length,
+      isProcessing: this.offlineQueueProcessing,
+      isOnline: this.isOnline(),
+      lastProcessedAt: this.offlineQueueLastProcessed,
+      failedCount: this.offlineQueueFailedCount
+    };
+  }
+  
+  /**
+   * Clear all events from the offline queue.
+   */
+  async clearOfflineQueue(): Promise<void> {
+    this.logger?.entry("MatrixService.clearOfflineQueue");
+    
+    this.offlineQueue = [];
+    this.offlineQueueFailedCount = 0;
+    await this.saveOfflineQueue();
+    
+    this.logger?.exit("MatrixService.clearOfflineQueue");
+  }
+  
+  /**
+   * Load the offline queue from persistent storage.
+   * Called during initialization to restore any pending events.
+   */
+  async loadOfflineQueue(): Promise<void> {
+    this.logger?.entry("MatrixService.loadOfflineQueue");
+    
+    try {
+      const stored = await this.storage.get(MatrixService.OFFLINE_QUEUE_STORAGE_KEY);
+      if (stored && Array.isArray(stored)) {
+        this.offlineQueue = stored;
+        this.logger?.info("Loaded offline queue", this.offlineQueue.length, "events");
+      }
+    } catch (error) {
+      this.logger?.error("Failed to load offline queue", error);
+    }
+    
+    this.logger?.exit("MatrixService.loadOfflineQueue");
+  }
+  
+  /**
+   * Save the offline queue to persistent storage.
+   */
+  private async saveOfflineQueue(): Promise<void> {
+    try {
+      await this.storage.set(MatrixService.OFFLINE_QUEUE_STORAGE_KEY, this.offlineQueue);
+    } catch (error) {
+      this.logger?.error("Failed to save offline queue", error);
+    }
+  }
+  
+  // ========================================================================
+  // 5.2 Poll-Password Encryption Layer
+  // ========================================================================
+  
+  /**
+   * Derive a cryptographic key from a poll password using PBKDF2.
+   * Uses a deterministic salt based on the poll ID for consistency.
+   * 
+   * @param password - The poll password
+   * @param pollId - Used as salt for key derivation
+   * @returns CryptoKey suitable for AES-GCM encryption
+   */
+  private async deriveKeyFromPassword(password: string, pollId: string): Promise<CryptoKey> {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(password),
+      'PBKDF2',
+      false,
+      ['deriveBits', 'deriveKey']
+    );
+    
+    return crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: enc.encode(`vodle-poll-${pollId}`),
+        iterations: 600000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+  
+  /**
+   * Encrypt data with a poll password using AES-GCM.
+   * Provides an additional encryption layer on top of Matrix E2EE.
+   * 
+   * The encrypted output includes a random IV prepended to the ciphertext,
+   * base64-encoded for safe storage in Matrix events.
+   * 
+   * @param data - The data to encrypt (will be JSON-serialized)
+   * @param password - The poll password
+   * @param pollId - The poll ID (used for key derivation salt)
+   * @returns Base64-encoded encrypted data (IV + ciphertext)
+   */
+  async encryptWithPassword(data: any, password: string, pollId: string): Promise<string> {
+    this.logger?.entry("MatrixService.encryptWithPassword");
+    
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+    
+    const key = await this.deriveKeyFromPassword(password, pollId);
+    const enc = new TextEncoder();
+    const plaintext = enc.encode(JSON.stringify(data));
+    
+    // Generate random IV (12 bytes for AES-GCM)
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      plaintext
+    );
+    
+    // Combine IV + ciphertext and base64-encode
+    const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+    combined.set(iv);
+    combined.set(new Uint8Array(ciphertext), iv.length);
+    
+    // Build base64 string using a loop instead of String.fromCharCode(...combined)
+    // to avoid "Maximum call stack size exceeded" on large arrays.
+    let binary = '';
+    for (let i = 0; i < combined.length; i++) {
+      binary += String.fromCharCode(combined[i]);
+    }
+    const encoded = btoa(binary);
+    this.logger?.exit("MatrixService.encryptWithPassword");
+    return encoded;
+  }
+  
+  /**
+   * Decrypt data that was encrypted with encryptWithPassword.
+   * 
+   * @param encryptedData - Base64-encoded encrypted data (IV + ciphertext)
+   * @param password - The poll password
+   * @param pollId - The poll ID (used for key derivation salt)
+   * @returns The decrypted data (JSON-parsed)
+   */
+  async decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any> {
+    this.logger?.entry("MatrixService.decryptWithPassword");
+    
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+    
+    const key = await this.deriveKeyFromPassword(password, pollId);
+    
+    // Decode base64
+    let combined: Uint8Array;
+    try {
+      combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    } catch (e) {
+      throw new Error('Invalid encrypted data format');
+    }
+    
+    // Validate minimum length: 12 bytes IV + at least 1 byte ciphertext = 13 bytes
+    if (combined.length < 13) {
+      throw new Error('Malformed encrypted data: too short to contain IV and ciphertext');
+    }
+    
+    // Extract IV (first 12 bytes) and ciphertext (rest)
+    const iv = combined.slice(0, 12);
+    const ciphertext = combined.slice(12);
+    
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      ciphertext
+    );
+    
+    const dec = new TextDecoder();
+    const result = JSON.parse(dec.decode(decrypted));
+    
+    this.logger?.exit("MatrixService.decryptWithPassword");
+    return result;
+  }
+  
+  /**
+   * Submit an encrypted rating for an option in a poll.
+   * The rating is first encrypted with the poll password (AES-GCM),
+   * then sent via Matrix which applies its own E2EE (Megolm).
+   * This provides double encryption for sensitive rating data.
+   * 
+   * @param pollId - The poll to rate in
+   * @param optionId - The option to rate
+   * @param rating - Rating value (0-100)
+   * @param pollPassword - The poll password for encryption
+   */
+  async submitEncryptedRating(
+    pollId: string,
+    optionId: string,
+    rating: number,
+    pollPassword: string
+  ): Promise<void> {
+    this.logger?.entry("MatrixService.submitEncryptedRating", pollId, optionId);
+    
+    if (!this.userId) {
+      throw new Error("Not logged in");
+    }
+    
+    if (rating < 0 || rating > 100) {
+      throw new Error('Rating must be between 0 and 100 (inclusive)');
+    }
+    
+    const encryptedData = await this.encryptWithPassword(
+      { rating, timestamp: Date.now() },
+      pollPassword,
+      pollId
+    );
+    
+    // Store encrypted rating in voter room
+    await this.setVoterData(pollId, this.userId, `rating.encrypted.${optionId}`, encryptedData);
+    
+    this.logger?.exit("MatrixService.submitEncryptedRating");
+  }
+  
+  /**
+   * Decrypt a rating that was submitted with submitEncryptedRating.
+   * 
+   * @param pollId - The poll containing the rating
+   * @param voterId - The voter who submitted the rating
+   * @param optionId - The option that was rated
+   * @param pollPassword - The poll password for decryption
+   * @returns The decrypted rating value, or null if not found
+   */
+  async decryptRating(
+    pollId: string,
+    voterId: string,
+    optionId: string,
+    pollPassword: string
+  ): Promise<number | null> {
+    this.logger?.entry("MatrixService.decryptRating", pollId, voterId, optionId);
+    
+    const encryptedData = await this.getVoterData(pollId, voterId, `rating.encrypted.${optionId}`);
+    if (!encryptedData) {
+      return null;
+    }
+    
+    try {
+      const decrypted = await this.decryptWithPassword(encryptedData, pollPassword, pollId);
+      
+      this.logger?.exit("MatrixService.decryptRating");
+      return decrypted.rating;
+    } catch (error) {
+      this.logger?.error("Failed to decrypt rating", error);
+      return null;
+    }
+  }
+  
+  // ========================================================================
+  // 5.3 Caching Strategy
+  // ========================================================================
+  
+  /**
+   * Warm up the cache for a room by preloading all state events
+   * and recent timeline events into memory.
+   * 
+   * This reduces latency for subsequent reads by avoiding
+   * individual state event lookups.
+   * 
+   * @param pollId - The poll to warm up cache for
+   */
+  async warmupCache(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.warmupCache", pollId);
+    
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      this.logger?.info("Poll room not found, skipping cache warmup", pollId);
+      return;
+    }
+    
+    const room = this.client.getRoom(roomId);
+    if (!room) {
+      this.logger?.info("Room not available, skipping cache warmup", pollId);
+      return;
+    }
+    
+    // Pre-load options cache
+    await this.ensureOptionCache(pollId);
+    
+    // Pre-load ratings cache
+    try {
+      await this.getRatings(pollId);
+    } catch (error) {
+      this.logger?.error("Failed to warm up ratings cache", pollId, error);
+    }
+    
+    // Pre-load delegation caches
+    try {
+      await this.getDelegations(pollId);
+    } catch (error) {
+      this.logger?.error("Failed to warm up delegations cache", pollId, error);
+    }
+    
+    try {
+      await this.getDelegationResponses(pollId);
+    } catch (error) {
+      this.logger?.error("Failed to warm up delegation responses cache", pollId, error);
+    }
+    
+    this.logger?.info("Cache warmup complete for poll", pollId);
+    this.logger?.exit("MatrixService.warmupCache");
+  }
+  
+  /**
+   * Get user data from the in-memory cache for fast synchronous access.
+   * Returns undefined if the key is not cached.
+   * Use getUserData() for the authoritative async version.
+   */
+  getCachedUserData(key: string): any | undefined {
+    return this.userDataCache.get(key);
+  }
+  
+  /**
+   * Set user data in both the in-memory cache and the Matrix room.
+   * The cache is updated after successful persistence to avoid inconsistencies.
+   */
+  async setUserDataCached(key: string, value: any): Promise<void> {
+    this.logger?.entry("MatrixService.setUserDataCached", key);
+    
+    // Persist to Matrix room first to ensure consistency
+    await this.setUserData(key, value);
+    
+    // Update cache only after successful persistence
+    this.userDataCache.set(key, value);
+    
+    this.logger?.exit("MatrixService.setUserDataCached");
+  }
+  
+  /**
+   * Warm up the user data cache by loading all known user preferences.
+   * Should be called after login to populate the cache for fast access.
+   * 
+   * @param keys - List of user data keys to preload
+   */
+  async warmupUserDataCache(keys: string[]): Promise<void> {
+    this.logger?.entry("MatrixService.warmupUserDataCache");
+    
+    for (const key of keys) {
+      try {
+        const value = await this.getUserData(key);
+        if (value != null) {
+          this.userDataCache.set(key, value);
+        }
+      } catch (error) {
+        this.logger?.error("Failed to warm up user data cache for key", key, error);
+      }
+    }
+    
+    this.logger?.info("User data cache warmup complete", this.userDataCache.size, "keys loaded");
+    this.logger?.exit("MatrixService.warmupUserDataCache");
+  }
+  
+  /**
+   * Clear the user data cache. Called on logout.
+   */
+  clearUserDataCache(): void {
+    this.userDataCache.clear();
   }
 }

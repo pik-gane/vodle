@@ -26,7 +26,7 @@ import { DataService } from './data.service';
 import { environment } from '../environments/environment';
 
 /**
- * DataAdapter - Phase 2-3 Implementation
+ * DataAdapter - Phase 2-5 Implementation
  * 
  * This service provides a unified interface for data operations,
  * automatically selecting between Matrix and CouchDB backends
@@ -145,6 +145,38 @@ export class DataAdapter implements IDataBackend {
   
   teardownPollEventHandlers(pollId: string): void {
     this.backend.teardownPollEventHandlers(pollId);
+  }
+  
+  // ========================================================================
+  // Phase 5: Advanced Features
+  // ========================================================================
+  
+  isOnline(): boolean {
+    return this.backend.isOnline();
+  }
+  
+  getOfflineQueueSize(): number {
+    return this.backend.getOfflineQueueSize();
+  }
+  
+  async processOfflineQueue(): Promise<number> {
+    return await this.backend.processOfflineQueue();
+  }
+  
+  async clearOfflineQueue(): Promise<void> {
+    return await this.backend.clearOfflineQueue();
+  }
+  
+  async encryptWithPassword(data: any, password: string, pollId: string): Promise<string> {
+    return await this.backend.encryptWithPassword(data, password, pollId);
+  }
+  
+  async decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any> {
+    return await this.backend.decryptWithPassword(encryptedData, password, pollId);
+  }
+  
+  async warmupCache(pollId: string): Promise<void> {
+    return await this.backend.warmupCache(pollId);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {

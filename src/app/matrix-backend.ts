@@ -21,7 +21,7 @@ import { IDataBackend } from './data-backend.interface';
 import { MatrixService } from './matrix.service';
 
 /**
- * MatrixBackend - Phase 2-3 Implementation
+ * MatrixBackend - Phase 2-5 Implementation
  * 
  * This class implements the IDataBackend interface using Matrix protocol
  * for user data storage, poll management, and synchronization.
@@ -35,6 +35,16 @@ import { MatrixService } from './matrix.service';
  * - Poll room creation and management
  * - Poll metadata and option storage
  * - Voter data management within poll rooms
+ * 
+ * Phase 4 Implementation includes:
+ * - Rating aggregation across voter rooms
+ * - Delegation request/response events
+ * - Real-time event handling
+ * 
+ * Phase 5 Implementation includes:
+ * - Offline event queue for disconnected operation
+ * - Poll-password encryption layer (AES-GCM)
+ * - Cache warmup for performance optimization
  */
 export class MatrixBackend implements IDataBackend {
   
@@ -131,6 +141,38 @@ export class MatrixBackend implements IDataBackend {
   
   teardownPollEventHandlers(pollId: string): void {
     this.matrixService.teardownPollEventHandlers(pollId);
+  }
+  
+  // ========================================================================
+  // Phase 5: Advanced Features
+  // ========================================================================
+  
+  isOnline(): boolean {
+    return this.matrixService.isOnline();
+  }
+  
+  getOfflineQueueSize(): number {
+    return this.matrixService.getOfflineQueueSize();
+  }
+  
+  async processOfflineQueue(): Promise<number> {
+    return await this.matrixService.processOfflineQueue();
+  }
+  
+  async clearOfflineQueue(): Promise<void> {
+    await this.matrixService.clearOfflineQueue();
+  }
+  
+  async encryptWithPassword(data: any, password: string, pollId: string): Promise<string> {
+    return await this.matrixService.encryptWithPassword(data, password, pollId);
+  }
+  
+  async decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any> {
+    return await this.matrixService.decryptWithPassword(encryptedData, password, pollId);
+  }
+  
+  async warmupCache(pollId: string): Promise<void> {
+    await this.matrixService.warmupCache(pollId);
   }
   
   getBackendType(): 'couchdb' | 'matrix' {
