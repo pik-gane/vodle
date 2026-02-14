@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  matrix-poll-bot:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - poll_data:/data
+    secrets:
+      - matrix_username
+      - matrix_password
+    environment:
+      - MATRIX_SERVER=your_matrix_homeserver_url
+    # If you prefer environment variables instead of secrets (less secure):
+    # environment:
+    #   - MATRIX_USERNAME=your_matrix_username
+    #   - MATRIX_PASSWORD=your_matrix_password
+    #   - MATRIX_SERVER=your_matrix_homeserver_url
+
+secrets:
+  matrix_username:
+    file: ./secrets/matrix_username.txt
+  matrix_password:
+    file: ./secrets/matrix_password.txt
+
+volumes:
+  poll_data:
