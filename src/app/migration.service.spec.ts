@@ -582,4 +582,112 @@ describe('MigrationService', () => {
       expect(status.overallStatus).toBe('rolled_back');
     });
   });
+
+  // ========================================================================
+  // State Export/Import
+  // ========================================================================
+
+  describe('State Export/Import', () => {
+    it('should export state with steps and status', async () => {
+      await source.setUserData('language', 'de');
+      await migration.migrateUserData(['language']);
+      
+      const exported = migration.exportState() as any;
+      
+      expect(exported.overallStatus).toBe('in_progress');
+      expect(exported.startedAt).toBeDefined();
+      expect(exported.steps.length).toBe(1);
+      expect(exported.steps[0].id).toBe('user_data');
+      expect(exported.steps[0].status).toBe('completed');
+      expect(exported.steps[0].itemsMigrated).toBe(1);
+    });
+
+    it('should export empty state when not started', () => {
+      const exported = migration.exportState() as any;
+      
+      expect(exported.overallStatus).toBe('not_started');
+      expect(exported.steps.length).toBe(0);
+    });
+
+    it('should import previously exported state', async () => {
+      await source.setUserData('language', 'de');
+      await source.setUserData('theme', 'dark');
+      await migration.migrateUserData(['language', 'theme']);
+      
+      const exported = migration.exportState();
+      
+      // Create a new migration service and import the state
+      const newMigration = new MigrationService(source, target);
+      newMigration.importState(exported);
+      
+      const status = newMigration.getMigrationStatus();
+      expect(status.overallStatus).toBe('in_progress');
+      expect(status.steps.length).toBe(1);
+      expect(status.steps[0].id).toBe('user_data');
+      expect(status.steps[0].itemsMigrated).toBe(2);
+    });
+
+    it('should survive JSON round-trip (serialization/deserialization)', async () => {
+      await source.setUserData('language', 'de');
+      await migration.migrateUserData(['language']);
+      migration.completeMigration();
+      
+      const exported = migration.exportState();
+      const json = JSON.stringify(exported);
+      const parsed = JSON.parse(json);
+      
+      const newMigration = new MigrationService(source, target);
+      newMigration.importState(parsed);
+      
+      const status = newMigration.getMigrationStatus();
+      expect(status.overallStatus).toBe('completed');
+      expect(status.completedAt).toBeDefined();
+      expect(status.steps.length).toBe(1);
+    });
+
+    it('should handle import of null/undefined gracefully', () => {
+      migration.importState(null);
+      expect(migration.getMigrationStatus().overallStatus).toBe('not_started');
+      
+      migration.importState(undefined);
+      expect(migration.getMigrationStatus().overallStatus).toBe('not_started');
+    });
+
+    it('should handle import of invalid state gracefully', () => {
+      migration.importState({ overallStatus: 'completed', steps: 'not-an-array' });
+      const status = migration.getMigrationStatus();
+      expect(status.overallStatus).toBe('completed');
+      expect(status.steps.length).toBe(0);
+    });
+
+    it('should skip steps without an id during import', () => {
+      migration.importState({
+        overallStatus: 'in_progress',
+        steps: [
+          { id: 'user_data', description: 'test', status: 'completed', itemsMigrated: 1, itemsFailed: 0, errors: [] },
+          { description: 'no id', status: 'pending' },
+          null,
+        ],
+      });
+      
+      const status = migration.getMigrationStatus();
+      expect(status.steps.length).toBe(1);
+      expect(status.steps[0].id).toBe('user_data');
+    });
+
+    it('should preserve error messages through export/import', async () => {
+      await source.setUserData('language', 'en');
+      spyOn(target, 'setUserData').and.returnValue(Promise.reject(new Error('write failed')));
+      
+      await migration.migrateUserData(['language']);
+      
+      const exported = migration.exportState();
+      const newMigration = new MigrationService(source, target);
+      newMigration.importState(exported);
+      
+      const status = newMigration.getMigrationStatus();
+      expect(status.steps[0].errors.length).toBe(1);
+      expect(status.steps[0].errors[0]).toContain('write failed');
+    });
+  });
 });

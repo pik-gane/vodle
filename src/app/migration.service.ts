@@ -507,6 +507,51 @@ export class MigrationService {
     this.completedAt = undefined;
   }
   
+  /**
+   * Export the current migration state as a JSON-serializable object.
+   * Used to persist migration progress across page reloads.
+   */
+  exportState(): object {
+    return {
+      overallStatus: this.overallStatus,
+      startedAt: this.startedAt,
+      completedAt: this.completedAt,
+      steps: Array.from(this.steps.values()),
+    };
+  }
+  
+  /**
+   * Import a previously exported migration state.
+   * Restores steps, overall status, and timestamps.
+   * 
+   * @param state - A state object previously returned by exportState()
+   */
+  importState(state: any): void {
+    if (!state || typeof state !== 'object') return;
+    
+    this.overallStatus = state.overallStatus || 'not_started';
+    this.startedAt = state.startedAt;
+    this.completedAt = state.completedAt;
+    
+    this.steps.clear();
+    if (Array.isArray(state.steps)) {
+      for (const step of state.steps) {
+        if (step && step.id) {
+          this.steps.set(step.id, {
+            id: step.id,
+            description: step.description || '',
+            status: step.status || 'pending',
+            itemsMigrated: step.itemsMigrated || 0,
+            itemsFailed: step.itemsFailed || 0,
+            errors: Array.isArray(step.errors) ? step.errors : [],
+            startedAt: step.startedAt,
+            completedAt: step.completedAt,
+          });
+        }
+      }
+    }
+  }
+  
   // ========================================================================
   // Private helpers
   // ========================================================================
