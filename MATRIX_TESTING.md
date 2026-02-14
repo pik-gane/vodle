@@ -30,6 +30,9 @@ npx ng test --no-watch --browsers=ChromeHeadless --include='**/in-memory-backend
 # Run DataAdapter tests (no backend needed)
 npx ng test --no-watch --browsers=ChromeHeadless --include='**/data-adapter.service.spec.ts'
 
+# Run MigrationService tests (no backend needed)
+npx ng test --no-watch --browsers=ChromeHeadless --include='**/migration.service.spec.ts'
+
 # Run all unit tests at once
 npx ng test --no-watch --browsers=ChromeHeadless
 ```
@@ -79,6 +82,7 @@ console.log(backend.getBackendType()); // 'memory'
 | Matrix service (Phases 1–5) | 121 | `matrix.service.spec.ts` |
 | In-memory backend (all phases) | 30+ | `in-memory-backend.spec.ts` |
 | Data adapter (all phases) | 27+ | `data-adapter.service.spec.ts` |
+| Migration service (Phase 6) | 31 | `migration.service.spec.ts` |
 | Email hashing (BLAKE2s) | 5 | `matrix.service.spec.ts` |
 | Offline queue | 13 | `matrix.service.spec.ts` |
 | AES-GCM encryption | 12 | `matrix.service.spec.ts` |
@@ -185,6 +189,13 @@ The application will start on http://localhost:8100
 - Poll-password encryption (AES-GCM + PBKDF2)
 - Cache warmup for performance
 
+✅ **Phase 6 — Data Migration Tools**:
+- MigrationService for CouchDB → Matrix data transfer
+- User data, poll data, voter data, and ratings migration
+- Data integrity verification
+- Rollback support
+- Migration status tracking
+
 ✅ **Backend Abstraction**:
 - `IDataBackend` interface covers all phases
 - `MatrixBackend` implements interface via MatrixService
@@ -195,7 +206,6 @@ The application will start on http://localhost:8100
 ### What's NOT Yet Implemented
 
 ❌ **UI Integration** — The UI still uses DataService (CouchDB) directly  
-❌ **Data Migration** — No CouchDB → Matrix migration tools (Phase 6)  
 ❌ **Guard Bot** — Server-side deadline enforcement service  
 
 ## Testing the MatrixService
@@ -365,8 +375,7 @@ docker-compose -f docker-compose.matrix.yml logs -f synapse
 
 ## Next Steps
 
-Phases 1–5 are complete. Remaining work:
-- **Phase 6**: Data migration tools (CouchDB → Matrix) and staged rollout
+Phases 1–6 are complete. Remaining work:
 - **Phase 7**: UI integration (connect components to DataAdapter)
 
 ## Questions?
