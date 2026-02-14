@@ -3,36 +3,16 @@
 ## Overview
 
 Phase 8 connects the migration infrastructure (Phases 6–7) to the production
-backends through the `DataAdapter` service and adds poll auto-discovery so
-that users no longer have to provide poll IDs manually.
+backends through the `DataAdapter` service and adds poll rollback UI.
+
+**Important design constraint**: Polls in Vodle are strictly invitation-only.
+Voters send invitations with magic links. There is no poll search, poll
+discovery, or poll listing functionality. The migration tool requires the
+user to provide specific poll IDs for migration. This is by design.
 
 ## Changes
 
-### 1. `listPolls()` added to `IDataBackend` interface
-
-A new method was added to the `IDataBackend` interface:
-
-```typescript
-listPolls(): Promise<string[]>;
-```
-
-This enables any backend to expose the set of poll IDs it knows about.
-
-### 2. Implementations in all backends
-
-| Backend | Implementation |
-|---------|---------------|
-| `InMemoryBackend` | Returns keys from internal `pollData` Map |
-| `CouchDBBackend` | Returns `Array.from(this.dataService.pids)` |
-| `MatrixBackend` | Delegates to `MatrixService.listPolls()` (returns keys from `pollRooms` Map) |
-| `DataAdapter` | Delegates to the active backend |
-
-### 3. `MigrationService` additions
-
-- **`getSourcePollIds()`** — Returns all poll IDs from the source backend via `listPolls()`.
-- **`migrateAllPolls(metadataKeys)`** — Auto-discovers all polls from the source backend and migrates each one. Returns an array of `MigrationStep` results.
-
-### 4. `MigrationPage` DataAdapter wiring
+### 1. `MigrationPage` DataAdapter wiring
 
 The `MigrationPage` now injects `DataAdapter` and calls `autoInitMigration()` on load:
 
@@ -53,23 +33,16 @@ creates `CouchDBBackend` and `MatrixBackend` instances from the
 The manual `initMigration(source, target)` method remains available for
 testing and advanced use.
 
-### 5. Poll auto-discovery UI
+### 2. Poll rollback UI
 
-The migration page now includes:
+The migration page now includes a **Rollback Poll Data** button alongside
+the existing Migrate and Verify buttons. Poll IDs must be provided manually
+by the user (no poll search or auto-discovery).
 
-- **Discover Polls** button — calls `listPolls()` on the source backend
-- **Discovered poll list** — shows each poll with per-poll Migrate, Verify, and Rollback buttons
-- **Migrate All Polls** button — migrates every discovered poll in sequence
-- **Poll rollback** — new Rollback Poll Data button (both for discovered polls and manual poll ID input)
-
-### 6. New properties and methods on `MigrationPage`
+### 3. New properties and methods on `MigrationPage`
 
 | Property / Method | Description |
 |---|---|
-| `discoveredPolls: string[]` | Poll IDs found by the discovery operation |
-| `isDiscovering: boolean` | Whether discovery is currently running |
-| `discoverPolls()` | Calls `getSourcePollIds()` and populates `discoveredPolls` |
-| `migrateAllPolls()` | Migrates all discovered polls |
 | `rollbackPollData(pollId)` | Rollback a single poll's data |
 | `autoInitMigration()` | Auto-wire backends from DataAdapter |
 
@@ -77,12 +50,12 @@ The migration page now includes:
 
 ### Test counts
 
-| Spec file | Previous | New | Total |
-|---|---|---|---|
-| `in-memory-backend.spec.ts` | 34 | 3 | 37 |
-| `migration.service.spec.ts` | 42 | 6 | 48 |
-| `migration/migration.page.spec.ts` | 26 | 9 | 35 |
-| **Total** | **102** | **18** | **120** |
+| Spec file | Total |
+|---|---|
+| `in-memory-backend.spec.ts` | 34 |
+| `migration.service.spec.ts` | 42 |
+| `migration/migration.page.spec.ts` | 29 |
+| **Total** | **105** |
 
 ### Running tests
 
@@ -94,48 +67,45 @@ CHROME_BIN=$(which chromium-browser) npx ng test --no-watch \
   --include='**/migration/migration.page.spec.ts'
 ```
 
-All 120 tests pass.
+All 105 tests pass.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/app/data-backend.interface.ts` | Added `listPolls()` method |
-| `src/app/in-memory-backend.ts` | Implemented `listPolls()` |
-| `src/app/couchdb-backend.ts` | Implemented `listPolls()` |
-| `src/app/matrix-backend.ts` | Implemented `listPolls()` |
-| `src/app/matrix.service.ts` | Added `listPolls()` method |
-| `src/app/data-adapter.service.ts` | Added `listPolls()` delegation |
-| `src/app/migration.service.ts` | Added `getSourcePollIds()` and `migrateAllPolls()` |
-| `src/app/migration/migration.page.ts` | DataAdapter injection, auto-init, discovery, rollback, migrateAll |
-| `src/app/migration/migration.page.html` | Discovery UI, per-poll controls, rollback button |
-| `src/app/in-memory-backend.spec.ts` | 3 new tests for `listPolls()` |
-| `src/app/migration.service.spec.ts` | 6 new tests for discovery and batch migration |
-| `src/app/migration/migration.page.spec.ts` | 9 new tests for Phase 8 UI features |
+| `src/app/migration/migration.page.ts` | DataAdapter injection, auto-init, poll rollback method |
+| `src/app/migration/migration.page.html` | Rollback Poll Data button |
+| `src/app/migration/migration.page.spec.ts` | Tests for rollback and DataAdapter mock |
+
+## Design Decisions
+
+### No poll discovery / listing
+
+The `IDataBackend` interface deliberately does **not** include a `listPolls()`
+method. Polls are invitation-only and accessed via magic links. Adding a
+poll listing API would violate this design principle. During migration,
+the user must provide specific poll IDs to migrate — these are the polls
+they already participate in and know about.
 
 ## Known Limitations
 
 ### Phase 8 Scope
 
-- ✅ Poll auto-discovery via `listPolls()` on all backends
-- ✅ Batch migration of all discovered polls
-- ✅ Per-poll migrate, verify, and rollback controls
 - ✅ DataAdapter auto-wiring on page load
+- ✅ Poll rollback via manual poll ID
 - ❌ Progressive background migration (future work)
 - ❌ CouchDB code removal (requires full migration completion first)
 
 ### Current Constraints
 
-1. **Sequential Operations**: Poll migration runs sequentially (one poll at a time) to prevent conflicts.
-2. **CouchDB `listPolls()`**: Returns poll IDs from `DataService.pids`, which is populated during initialization. If initialization is not yet complete, some polls may be missing.
-3. **Matrix `listPolls()`**: Returns poll IDs from the `pollRooms` cache, which is populated as rooms are discovered. Rooms not yet synced will not appear.
+1. **Manual Poll ID Entry**: Poll migration requires the user to provide poll IDs. This is intentional — polls are invitation-only.
+2. **Sequential Operations**: Only one migration operation runs at a time to prevent conflicts.
 
 ## Next Steps
 
 Future work beyond Phase 8:
 
 - Progressive migration (background migration during normal app usage)
-- Voter data auto-discovery and batch migration
 - Migration progress persistence (survive page reloads)
 - Remove CouchDB dependency after full migration is complete
 
@@ -152,4 +122,4 @@ Future work beyond Phase 8:
 
 ---
 
-**Phase 8 Complete! DataAdapter integration and poll auto-discovery are ready.** 🎉
+**Phase 8 Complete! DataAdapter integration and poll rollback UI are ready.** 🎉

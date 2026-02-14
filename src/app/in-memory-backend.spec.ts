@@ -237,30 +237,4 @@ describe('InMemoryBackend', () => {
       await expectAsync(backend.warmupCache('poll1')).toBeResolved();
     });
   });
-
-  describe('Phase 8: Poll Discovery', () => {
-    it('should return empty array when no polls exist', async () => {
-      const polls = await backend.listPolls();
-      expect(polls).toEqual([]);
-    });
-
-    it('should list all created polls', async () => {
-      await backend.createPoll('poll1', 'First');
-      await backend.createPoll('poll2', 'Second');
-      await backend.createPoll('poll3', 'Third');
-
-      const polls = await backend.listPolls();
-      expect(polls.length).toBe(3);
-      expect(polls).toContain('poll1');
-      expect(polls).toContain('poll2');
-      expect(polls).toContain('poll3');
-    });
-
-    it('should include polls created via setPollData', async () => {
-      await backend.setPollData('poll_x', 'title', 'Created via setPollData');
-
-      const polls = await backend.listPolls();
-      expect(polls).toContain('poll_x');
-    });
-  });
 });

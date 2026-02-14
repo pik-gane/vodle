@@ -175,10 +175,6 @@ export class MatrixBackend implements IDataBackend {
     await this.matrixService.warmupCache(pollId);
   }
   
-  async listPolls(): Promise<string[]> {
-    return this.matrixService.listPolls();
-  }
-
   getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return 'matrix';
   }

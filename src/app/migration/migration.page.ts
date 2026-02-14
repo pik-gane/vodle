@@ -35,7 +35,6 @@ import { MatrixBackend } from '../matrix-backend';
  * - Per-step progress with item counts
  * - Error details for failed steps
  * - Controls to start, verify, complete, and rollback migration
- * - Auto-discovery of polls from the source backend (Phase 8)
  * - Automatic backend wiring via DataAdapter (Phase 8)
  */
 @Component({
@@ -59,12 +58,6 @@ export class MigrationPage implements OnInit {
 
   /** Poll ID input for poll-specific migration operations */
   pollIdInput = '';
-
-  /** Discovered poll IDs from the source backend */
-  discoveredPolls: string[] = [];
-
-  /** Whether poll discovery is in progress */
-  isDiscovering = false;
 
   /** Whether the Matrix backend is enabled */
   get isMatrixEnabled(): boolean {
@@ -287,61 +280,6 @@ export class MigrationPage implements OnInit {
       }
     } catch (error) {
       this.addLog(`Rollback error: ${error}`);
-    } finally {
-      this.isRunning = false;
-      this.refreshStatus();
-    }
-  }
-
-  /**
-   * Discover polls from the source backend.
-   */
-  async discoverPolls(): Promise<void> {
-    if (!this.migrationService || this.isRunning) return;
-
-    this.isDiscovering = true;
-    this.addLog('Discovering polls from source backend...');
-
-    try {
-      this.discoveredPolls = await this.migrationService.getSourcePollIds();
-      this.addLog(`Discovered ${this.discoveredPolls.length} poll(s): ${this.discoveredPolls.join(', ') || '(none)'}`);
-    } catch (error) {
-      this.addLog(`Poll discovery error: ${error}`);
-      this.discoveredPolls = [];
-    } finally {
-      this.isDiscovering = false;
-    }
-  }
-
-  /**
-   * Migrate all discovered polls at once.
-   */
-  async migrateAllPolls(): Promise<void> {
-    if (!this.migrationService || this.isRunning) return;
-
-    this.isRunning = true;
-    this.addLog('Starting migration of all polls from source...');
-
-    try {
-      const steps = await this.migrationService.migrateAllPolls(this.pollMetadataKeys);
-      let succeeded = 0;
-      let failed = 0;
-      for (const step of steps) {
-        if (step.status === 'completed') {
-          succeeded++;
-        } else {
-          failed++;
-        }
-        this.addLog(`  Poll migration ${step.description}: ${step.status} (${step.itemsMigrated} items, ${step.itemsFailed} failed)`);
-        if (step.errors.length > 0) {
-          for (const error of step.errors) {
-            this.addLog(`    Error: ${error}`);
-          }
-        }
-      }
-      this.addLog(`All polls migration complete: ${succeeded} succeeded, ${failed} failed`);
-    } catch (error) {
-      this.addLog(`All polls migration error: ${error}`);
     } finally {
       this.isRunning = false;
       this.refreshStatus();

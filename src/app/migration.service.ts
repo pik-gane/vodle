@@ -254,40 +254,6 @@ export class MigrationService {
   }
   
   /**
-   * Auto-discover and migrate all polls from the source backend.
-   * Uses listPolls() to find all polls, then migrates each one.
-   * 
-   * @param metadataKeys - Keys of poll-level metadata to migrate per poll
-   * @returns Array of migration steps, one per poll
-   */
-  async migrateAllPolls(metadataKeys: string[]): Promise<MigrationStep[]> {
-    this.startMigration();
-    const results: MigrationStep[] = [];
-    
-    let pollIds: string[];
-    try {
-      pollIds = await this.source.listPolls();
-    } catch (error) {
-      const stepId = 'discover_polls';
-      const step = this.createStep(stepId, 'Discover polls from source');
-      step.status = 'failed';
-      step.startedAt = Date.now();
-      step.completedAt = Date.now();
-      step.itemsFailed = 1;
-      step.errors.push(`Failed to list polls from source backend: ${error}`);
-      results.push(step);
-      return results;
-    }
-    
-    for (const pollId of pollIds) {
-      const step = await this.migratePollData(pollId, metadataKeys);
-      results.push(step);
-    }
-    
-    return results;
-  }
-  
-  /**
    * Verify that user data was migrated correctly by comparing values
    * between source and target backends.
    * 
@@ -531,14 +497,6 @@ export class MigrationService {
     this.completedAt = Date.now();
   }
   
-  /**
-   * Get all poll IDs from the source backend.
-   * Useful for auto-discovering polls to migrate.
-   */
-  async getSourcePollIds(): Promise<string[]> {
-    return await this.source.listPolls();
-  }
-
   /**
    * Reset the migration status. Clears all steps and resets to 'not_started'.
    */

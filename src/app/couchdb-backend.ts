@@ -210,10 +210,6 @@ export class CouchDBBackend implements IDataBackend {
     // This stub is a no-op for interface compatibility.
   }
   
-  async listPolls(): Promise<string[]> {
-    return Array.from(this.dataService.pids);
-  }
-
   getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return 'couchdb';
   }

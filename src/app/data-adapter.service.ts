@@ -179,10 +179,6 @@ export class DataAdapter implements IDataBackend {
     return await this.backend.warmupCache(pollId);
   }
   
-  async listPolls(): Promise<string[]> {
-    return await this.backend.listPolls();
-  }
-
   getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return this.backend.getBackendType();
   }
