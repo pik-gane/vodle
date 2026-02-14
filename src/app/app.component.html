@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <ion-app>
   <ion-split-pane contentId="main">
-    <ion-menu contentId="main">
+    <ion-menu contentId="main" data-vodle="navigation-menu">
       <ion-header>
         <ion-toolbar>
           <ion-title>
@@ -28,9 +28,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </ion-toolbar>
       </ion-header>
       <ion-content>
-        <ion-list>
+        <ion-list data-vodle="navigation-list">
           <ion-menu-toggle auto-hide="false" *ngFor="let p of appPages">
-            <ion-item [routerDirection]="'root'" [routerLink]="[p.url]">
+            <ion-item [routerDirection]="'root'" [routerLink]="[p.url]" [attr.data-vodle]="'nav-item-' + p.url.replace('/', '')">
               <ion-icon slot="start" [name]="p.icon"></ion-icon>
               <ion-label>
                 {{p.title|translate}}

@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 -->
 
-<ion-content *ngIf="ready">
+<ion-content *ngIf="ready" data-vodle="add-option-dialog">
   <form [formGroup]="formGroup">
     <ion-list lines="full">
 
@@ -49,7 +49,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                           ? 'draftpoll.option-name-placeholder' 
                           : 'draftpoll.target-name-placeholder') | translate"
           type="text" required [maxlength]="E.max_len.name" 
-          style="font-weight: bold; font-style: italic;">
+          style="font-weight: bold; font-style: italic;"
+          data-vodle="new-option-name-input">
         </ion-input>
       </ion-item>
       <div class="validation-errors">
@@ -74,7 +75,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           formControlName="option_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
           rows="1" auto-grow type="text" 
-          style="font-style: italic;">
+          style="font-style: italic;"
+          data-vodle="new-option-description-input">
         </ion-textarea>
       </ion-item>
       <div class="validation-errors">
@@ -129,7 +131,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <span [innerHtml]="'cancel'|translate"></span>
           </ion-button>&nbsp;&nbsp;
           <ion-button color="primary" [disabled]="isAddButtonDisabled()"
-              shape="round" fill="solid"
+              shape="round" fill="solid" data-vodle="confirm-add-option-button"
               (click)="OK_button_clicked()"><!--type="submit" button-type="submit"-->
             <ion-icon name="checkmark"></ion-icon>&nbsp;
             <span [innerHtml]="'add'|translate"></span>
