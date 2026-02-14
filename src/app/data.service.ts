@@ -1110,7 +1110,7 @@ export class DataService implements OnDestroy {
           // Lock metadata (raises power levels)
           await this.matrixService.lockPollMetadata(pid);
         }).catch(err => {
-          this.G.L.error("DataService.change_poll_state Matrix room creation failed", pid, err);
+          this.G.L.error("DataService.change_poll_state failed to create Matrix poll room and move draft data during draft→running transition", pid, err);
         });
       }
 
