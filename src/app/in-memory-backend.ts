@@ -120,10 +120,12 @@ export class InMemoryBackend implements IDataBackend {
   // ========================================================================
   
   async createPoll(pollId: string, title: string): Promise<string> {
-    if (!this.pollData.has(pollId)) {
-      this.pollData.set(pollId, new Map());
+    let poll = this.pollData.get(pollId);
+    if (!poll) {
+      poll = new Map();
+      this.pollData.set(pollId, poll);
     }
-    this.pollData.get(pollId).set('title', title);
+    poll.set('title', title);
     return pollId;
   }
   
@@ -133,10 +135,12 @@ export class InMemoryBackend implements IDataBackend {
   }
   
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
-    if (!this.pollData.has(pollId)) {
-      this.pollData.set(pollId, new Map());
+    let poll = this.pollData.get(pollId);
+    if (!poll) {
+      poll = new Map();
+      this.pollData.set(pollId, poll);
     }
-    this.pollData.get(pollId).set(key, value);
+    poll.set(key, value);
   }
   
   async deletePollData(pollId: string, key: string): Promise<void> {
@@ -154,14 +158,17 @@ export class InMemoryBackend implements IDataBackend {
   }
   
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
-    if (!this.voterData.has(pollId)) {
-      this.voterData.set(pollId, new Map());
+    let poll = this.voterData.get(pollId);
+    if (!poll) {
+      poll = new Map();
+      this.voterData.set(pollId, poll);
     }
-    const poll = this.voterData.get(pollId);
-    if (!poll.has(voterId)) {
-      poll.set(voterId, new Map());
+    let voter = poll.get(voterId);
+    if (!voter) {
+      voter = new Map();
+      poll.set(voterId, voter);
     }
-    poll.get(voterId).set(key, value);
+    voter.set(key, value);
   }
   
   async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
@@ -179,14 +186,17 @@ export class InMemoryBackend implements IDataBackend {
   
   async submitRating(pollId: string, optionId: string, rating: number): Promise<void> {
     const voterId = this.currentEmail || 'anonymous';
-    if (!this.ratings.has(pollId)) {
-      this.ratings.set(pollId, new Map());
+    let pollRatings = this.ratings.get(pollId);
+    if (!pollRatings) {
+      pollRatings = new Map();
+      this.ratings.set(pollId, pollRatings);
     }
-    const pollRatings = this.ratings.get(pollId);
-    if (!pollRatings.has(voterId)) {
-      pollRatings.set(voterId, new Map());
+    let voterRatings = pollRatings.get(voterId);
+    if (!voterRatings) {
+      voterRatings = new Map();
+      pollRatings.set(voterId, voterRatings);
     }
-    pollRatings.get(voterId).set(optionId, rating);
+    voterRatings.set(optionId, rating);
   }
   
   async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
