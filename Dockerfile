@@ -25,4 +25,6 @@ EXPOSE 4200
 
 # Start the Angular dev server, binding to 0.0.0.0 so it is
 # reachable from outside the container.
+# --disable-host-check is needed for Docker but should NOT be used
+# in production — it disables DNS rebinding protection.
 CMD ["npx", "ng", "serve", "--host", "0.0.0.0", "--disable-host-check"]

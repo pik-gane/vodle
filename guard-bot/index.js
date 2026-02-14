@@ -68,7 +68,17 @@ async function main() {
   console.log(`[guard-bot] Sync started — listening for invitations`);
 
   // --- 4. Periodic deadline scan ------------------------------------------
-  setInterval(() => scanForExpiredDeadlines(client), SCAN_INTERVAL);
+  const scanTimer = setInterval(() => scanForExpiredDeadlines(client), SCAN_INTERVAL);
+
+  // --- 5. Graceful shutdown -----------------------------------------------
+  const shutdown = () => {
+    console.log("[guard-bot] Shutting down...");
+    clearInterval(scanTimer);
+    client.stopClient();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 /**
@@ -98,10 +108,10 @@ async function scanForExpiredDeadlines(client) {
       // If the default user power is already 0, the room is closed
       if ((pl.users_default || 0) === 0) {
         // Check if any non-bot user still has power > 0
-        const hasActivePower = Object.entries(pl.users || {}).some(
+        const hasNonBotUsersWithPower = Object.entries(pl.users || {}).some(
           ([uid, level]) => uid !== client.getUserId() && level > 0
         );
-        if (!hasActivePower) continue; // already closed
+        if (!hasNonBotUsersWithPower) continue; // already closed
       }
 
       console.log(`[guard-bot] Deadline expired for room ${room.roomId} (${deadline}) — closing`);

@@ -77,7 +77,7 @@ services:
     container_name: vodle-guard-bot
     environment:
       - MATRIX_HOMESERVER_URL=http://synapse:8008
-      - BOT_USER=vodle-guard
+      - BOT_USER=@vodle-guard:localhost
       - BOT_PASSWORD=vodle-guard-password
       - SCAN_INTERVAL_MS=30000
     depends_on:
