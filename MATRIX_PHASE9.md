@@ -169,9 +169,17 @@ even if the operation fails or throws.
 
 Future work beyond Phase 9:
 
+- **Wire poll/voter data to Matrix in DataService** — The most critical gap.
+  DataService's `getp`/`setp`/`delp`/`getv`/`setv`/`delv` methods do not yet
+  delegate to MatrixService when `useMatrixBackend` is true. Only user data
+  methods (`getu`/`setu`/`delu`) have Matrix conditionals. This must be done
+  before the app can function with the Matrix backend.
+- Set `useMatrixBackend: true` in environment files once the above is complete
 - Progressive migration (background migration during normal app usage)
 - Log message persistence (optional — logs are informational)
 - Remove CouchDB dependency after full migration is complete
+
+See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for a full status report.
 
 ## References
 
