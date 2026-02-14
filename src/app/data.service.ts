@@ -665,6 +665,20 @@ export class DataService implements OnDestroy {
       });
     }
 
+    // Phase 16: When using Matrix backend, skip CouchDB remote connection entirely.
+    // Matrix handles all remote data sync via MatrixService.
+    // If Matrix login failed, the app can still work with local-only data (drafts).
+    if (environment.useMatrixBackend) {
+      this.G.L.info("DataService: Matrix backend active, skipping CouchDB connection");
+      if (this.router.url.includes('/login')) {
+        this.G.remove_spinning_reason("login");
+        const then_url = (!!this.page) ? this.page.then_url || '' : '';
+        this.router.navigate(['/login/connected/' + then_url]);
+      }
+      this.G.L.exit("DataService.email_and_password_exist");
+      return;
+    }
+
     // check if db credentials are set:
     if (this.has_user_db_credentials()) {
 

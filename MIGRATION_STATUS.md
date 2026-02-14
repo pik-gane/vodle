@@ -72,18 +72,51 @@ App Components → GlobalService → DataService
                                    └─ DelegationService → ✅ MatrixService
 ```
 
+## Is the app fully functional without CouchDB?
+
+**Partially.** The app can start, navigate, and create/edit draft polls without
+any backend server. But operations that involve other voters (opening polls,
+joining, rating, delegation) require a running Matrix homeserver.
+
+See **[MATRIX_TESTING_GUIDE.md](MATRIX_TESTING_GUIDE.md)** for full details,
+including screenshots of end-user testing and step-by-step instructions.
+
 ## How to Test
 
-The development environment now uses the Matrix backend by default. To test:
+### Without a Matrix homeserver (limited)
 
-1. Start a local Matrix homeserver (Synapse) on `localhost:8008`
-2. Run the app with `ng serve`
-3. The app will use the Matrix backend for all data operations
+```bash
+npm install
+npm start
+# Open http://localhost:4200
+# Dismiss the Matrix error alert → app proceeds to "My polls"
+# You can create and edit draft polls locally
+```
 
-To revert to CouchDB, set `useMatrixBackend: false` in `environment.ts`.
+### With a local Matrix homeserver (full)
+
+```bash
+# Start Synapse:
+docker run -d --name synapse -p 8008:8008 \
+  -v /tmp/synapse-data:/data \
+  -e SYNAPSE_SERVER_NAME=localhost \
+  -e SYNAPSE_REPORT_STATS=no \
+  matrixdotorg/synapse:latest generate
+docker start synapse
+
+# Start vodle:
+npm install
+npm start
+# Open http://localhost:4200
+```
+
+### Revert to CouchDB
+
+Set `useMatrixBackend: false` in `src/environments/environment.ts`.
 
 ## References
 
+- **[MATRIX_TESTING_GUIDE.md](MATRIX_TESTING_GUIDE.md)** — End-user testing guide with screenshots
 - **[MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** — Actionable path to Matrix-only app
 - Phase docs: `MATRIX_PHASE1.md` through `MATRIX_PHASE9.md`, `MATRIX_PHASE10_12.md`
 - Implementation strategy: `planning/matrix-migration/03-implementation-strategy.md`
@@ -91,3 +124,4 @@ To revert to CouchDB, set `useMatrixBackend: false` in `environment.ts`.
 - MatrixService: `src/app/matrix.service.ts` (52+ methods, all implemented)
 - DataService Matrix checks: `src/app/data.service.ts` (search for `useMatrixBackend`)
 - DelegationService Matrix wiring: `src/app/delegation.service.ts` (Phase 15)
+- Screenshots: `screenshots/` folder
