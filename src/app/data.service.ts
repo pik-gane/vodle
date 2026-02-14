@@ -1091,8 +1091,10 @@ export class DataService implements OnDestroy {
         // Create Matrix poll room and move data from user cache to Matrix
         const title = this.getp(pid, 'title');
         this.matrixService.createPollRoom(pid, title).then(async () => {
-          // Set deadline
-          await this.matrixService.setPollDeadline(pid, p.due.toISOString());
+          // Set deadline (if present)
+          if (p.due) {
+            await this.matrixService.setPollDeadline(pid, p.due.toISOString());
+          }
 
           // Move data from user cache to Matrix poll room
           for (const [ukey, value] of Object.entries(this.user_cache)) {
