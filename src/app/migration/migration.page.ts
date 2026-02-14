@@ -40,8 +40,6 @@ import { IDataBackend } from '../data-backend.interface';
 })
 export class MigrationPage implements OnInit {
 
-  environment = environment;
-
   /** The migration service instance */
   migrationService: MigrationService | null = null;
 
