@@ -70,15 +70,19 @@ This is required for testing the complete poll lifecycle.
 #### Step 1: Start a Matrix homeserver (Synapse)
 
 ```bash
-# Using Docker:
-docker run -d --name synapse \
-  -p 8008:8008 \
-  -v /tmp/synapse-data:/data \
+# Using Docker (first time setup):
+
+# 1. Generate config:
+docker run --rm -v /tmp/synapse-data:/data \
   -e SYNAPSE_SERVER_NAME=localhost \
   -e SYNAPSE_REPORT_STATS=no \
   matrixdotorg/synapse:latest generate
 
-docker start synapse
+# 2. Run the homeserver:
+docker run -d --name synapse \
+  -p 8008:8008 \
+  -v /tmp/synapse-data:/data \
+  matrixdotorg/synapse:latest
 ```
 
 Or if the repo has a docker-compose file:

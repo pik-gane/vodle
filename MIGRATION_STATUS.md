@@ -97,12 +97,20 @@ npm start
 
 ```bash
 # Start Synapse:
-docker run -d --name synapse -p 8008:8008 \
-  -v /tmp/synapse-data:/data \
+# 1. Generate config (first time only):
+docker run --rm -v /tmp/synapse-data:/data \
   -e SYNAPSE_SERVER_NAME=localhost \
   -e SYNAPSE_REPORT_STATS=no \
   matrixdotorg/synapse:latest generate
-docker start synapse
+
+# 2. Enable registration in /tmp/synapse-data/homeserver.yaml:
+#    enable_registration: true
+#    enable_registration_without_verification: true
+
+# 3. Run the homeserver:
+docker run -d --name synapse -p 8008:8008 \
+  -v /tmp/synapse-data:/data \
+  matrixdotorg/synapse:latest
 
 # Start vodle:
 npm install
