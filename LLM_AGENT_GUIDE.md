@@ -18,8 +18,8 @@ attributes are maintained specifically for agent consumption and remain stable.
 |---|---|
 | `data-vodle="<name>"` | Static semantic label for an element (e.g. `data-vodle="rating-slider"`) |
 | `data-vodle-poll-title="<title>"` | Dynamic poll title on a container or list item |
-| `data-vodle-poll-type="<winner\|share>"` | Poll type indicator |
-| `data-vodle-poll-state="<open\|closed>"` | Whether voting is still allowed |
+| `data-vodle-poll-type="<winner|share>"` | Poll type indicator |
+| `data-vodle-poll-state="<open|closed>"` | Whether voting is still allowed |
 | `data-vodle-option-name="<name>"` | Name of a poll option |
 | `data-vodle-option-index="<n>"` | Zero-based index of an option |
 | `data-vodle-current-rating="<0-100>"` | Current rating value on a slider |
