@@ -22,9 +22,12 @@ import { Component, OnInit } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { MigrationService, MigrationStatus } from '../migration.service';
 import { IDataBackend } from '../data-backend.interface';
+import { DataAdapter } from '../data-adapter.service';
+import { CouchDBBackend } from '../couchdb-backend';
+import { MatrixBackend } from '../matrix-backend';
 
 /**
- * MigrationPage — Phase 7 In-App Migration Controls
+ * MigrationPage — Phase 7-8 In-App Migration Controls
  * 
  * Provides a user-facing interface for initiating and monitoring the
  * CouchDB-to-Matrix data migration. Displays:
@@ -32,6 +35,7 @@ import { IDataBackend } from '../data-backend.interface';
  * - Per-step progress with item counts
  * - Error details for failed steps
  * - Controls to start, verify, complete, and rollback migration
+ * - Automatic backend wiring via DataAdapter (Phase 8)
  */
 @Component({
   selector: 'app-migration',
@@ -66,10 +70,31 @@ export class MigrationPage implements OnInit {
   /** Poll metadata keys to migrate */
   private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
 
-  constructor() {}
+  constructor(private dataAdapter: DataAdapter) {}
 
   ngOnInit() {
+    this.autoInitMigration();
     this.refreshStatus();
+  }
+
+  /**
+   * Auto-initialize the migration service using the DataAdapter.
+   * If both a CouchDB data service and a Matrix service are available
+   * from the DataAdapter, they are used as source (CouchDB) and target
+   * (Matrix) backends for the migration.
+   */
+  autoInitMigration(): void {
+    const couchDB = this.dataAdapter.getDataServiceForMigration();
+    const matrixService = this.dataAdapter.getMatrixServiceForMigration();
+
+    if (couchDB && matrixService) {
+      const source = new CouchDBBackend(couchDB);
+      const target = new MatrixBackend(matrixService);
+      this.initMigration(source, target);
+      this.addLog('Migration auto-initialized via DataAdapter');
+    } else {
+      this.addLog('Migration auto-initialization skipped: required backends not available via DataAdapter');
+    }
   }
 
   /**
@@ -219,6 +244,37 @@ export class MigrationPage implements OnInit {
     try {
       const step = await this.migrationService.rollbackUserData(this.userDataKeys);
       this.addLog(`User data rollback ${step.status}: ${step.itemsMigrated} items restored, ${step.itemsFailed} failed`);
+      if (step.errors.length > 0) {
+        for (const error of step.errors) {
+          this.addLog(`  Error: ${error}`);
+        }
+      }
+    } catch (error) {
+      this.addLog(`Rollback error: ${error}`);
+    } finally {
+      this.isRunning = false;
+      this.refreshStatus();
+    }
+  }
+
+  /**
+   * Rollback poll data from target back to source.
+   */
+  async rollbackPollData(pollId: string): Promise<void> {
+    if (!this.migrationService || this.isRunning) return;
+
+    const trimmedPollId = pollId.trim();
+    if (!trimmedPollId) {
+      this.addLog('Cannot rollback poll data: poll ID is empty or whitespace-only');
+      return;
+    }
+
+    this.isRunning = true;
+    this.addLog(`Rolling back poll ${trimmedPollId} data...`);
+
+    try {
+      const step = await this.migrationService.rollbackPollData(trimmedPollId, this.pollMetadataKeys);
+      this.addLog(`Poll ${trimmedPollId} rollback ${step.status}: ${step.itemsMigrated} items restored, ${step.itemsFailed} failed`);
       if (step.errors.length > 0) {
         for (const error of step.errors) {
           this.addLog(`  Error: ${error}`);

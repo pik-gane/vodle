@@ -23,6 +23,18 @@ import { FormsModule } from '@angular/forms';
 
 import { MigrationPage } from './migration.page';
 import { InMemoryBackend } from '../in-memory-backend';
+import { DataAdapter } from '../data-adapter.service';
+
+/**
+ * Mock DataAdapter that returns null for both services
+ * (simulates environment where services are not available).
+ */
+class MockDataAdapter {
+  getDataService() { return null; }
+  getMatrixService() { return null; }
+  getDataServiceForMigration() { return null; }
+  getMatrixServiceForMigration() { return null; }
+}
 
 describe('MigrationPage', () => {
   let component: MigrationPage;
@@ -31,7 +43,10 @@ describe('MigrationPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [MigrationPage],
-      imports: [IonicModule.forRoot(), FormsModule]
+      imports: [IonicModule.forRoot(), FormsModule],
+      providers: [
+        { provide: DataAdapter, useClass: MockDataAdapter }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(MigrationPage);
@@ -52,8 +67,46 @@ describe('MigrationPage', () => {
     expect(component.isRunning).toBeFalse();
   });
 
-  it('should have empty log messages initially', () => {
-    expect(component.logMessages.length).toBe(0);
+  it('should have skip log message initially when backends not available', () => {
+    // autoInitMigration logs a skip message when DataAdapter returns null services
+    expect(component.logMessages.length).toBe(1);
+    expect(component.logMessages[0]).toContain('skipped');
+  });
+
+  describe('autoInitMigration', () => {
+    it('should skip auto-init when DataAdapter returns null services', () => {
+      // The default MockDataAdapter returns null for both services
+      // so autoInitMigration (called in ngOnInit) should have logged a skip message
+      // and not initialized the migration service
+      expect(component.migrationService).toBeNull();
+    });
+
+    it('should log skip message when backends are not available', () => {
+      // Reset log and call again to verify message
+      component.logMessages = [];
+      component.autoInitMigration();
+
+      expect(component.logMessages.some(m => m.includes('skipped'))).toBeTrue();
+      expect(component.migrationService).toBeNull();
+    });
+
+    it('should auto-init when DataAdapter provides both services', () => {
+      // Create a mock DataAdapter that returns non-null services
+      const mockDataService = {} as any;
+      const mockMatrixService = {} as any;
+      const mockAdapter = {
+        getDataServiceForMigration: () => mockDataService,
+        getMatrixServiceForMigration: () => mockMatrixService,
+      } as any;
+
+      // Replace the adapter and call autoInit
+      (component as any).dataAdapter = mockAdapter;
+      component.logMessages = [];
+      component.autoInitMigration();
+
+      expect(component.migrationService).toBeTruthy();
+      expect(component.logMessages.some(m => m.includes('auto-initialized'))).toBeTrue();
+    });
   });
 
   describe('initMigration', () => {
@@ -355,6 +408,46 @@ describe('MigrationPage', () => {
       expect(formatted).not.toBe('—');
       // Verify the formatted string contains numeric date/time components
       expect(formatted).toMatch(/\d/);
+    });
+  });
+
+  describe('rollbackPollData', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should rollback poll data', async () => {
+      await target.createPoll('poll1', 'Target Title');
+      await target.setPollData('poll1', 'description', 'Target Desc');
+
+      await component.rollbackPollData('poll1');
+
+      expect(await source.getPollData('poll1', 'title')).toBe('Target Title');
+      expect(await source.getPollData('poll1', 'description')).toBe('Target Desc');
+      expect(component.migrationStatus!.overallStatus).toBe('rolled_back');
+    });
+
+    it('should reject whitespace-only poll ID', async () => {
+      await component.rollbackPollData('   ');
+
+      expect(component.logMessages.some(m => m.includes('empty or whitespace-only'))).toBeTrue();
+      expect(component.isRunning).toBeFalse();
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      const initialLogLength = component.logMessages.length;
+
+      await component.rollbackPollData('poll1');
+
+      expect(component.logMessages.length).toBe(initialLogLength);
     });
   });
 });
