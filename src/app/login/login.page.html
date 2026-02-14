@@ -67,7 +67,7 @@ TODO:
       - otherwise, notify error, ask to verify conn. info, return to form 
     - if yes: ask for old conn. info or recovery file, ...
 -->
-<ion-content *ngIf="ready">
+<ion-content *ngIf="ready" [attr.data-vodle-step]="step">
   <ion-grid>
 
     <ng-container *ngIf="step=='language'||step=='start'">
@@ -91,7 +91,7 @@ TODO:
               <ion-icon name="language-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'language'|translate"></span>
             </ion-label>
-            <ion-select #ionSelects interface="popover" formControlName="language" 
+            <ion-select #ionSelects interface="popover" formControlName="language" data-vodle="language-select"
                 [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
                 (ionChange)="set_language()">
               <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
@@ -103,7 +103,7 @@ TODO:
         </ion-item>
         <ion-item lines="none">
           <ion-button size="larger" color="primary" slot="end" [disabled]="!languageFormGroup.valid" 
-              shape="round"
+              shape="round" data-vodle="submit-language-button"
               (click)="submit_language()">
             <span [innerHtml]="'next'|translate"></span>
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
@@ -116,12 +116,12 @@ TODO:
         <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-used-before'|translate"></h1>
       </ion-item>
       <ion-item lines="none">
-        <ion-button slot="end" size="large" color="primary" shape="round" 
+        <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-yes-button"
           (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
         </ion-button>
       </ion-item>
       <ion-item lines="none">
-        <ion-button slot="end" size="large" color="primary" shape="round" 
+        <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-no-button"
           (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
         </ion-button>
       </ion-item>
@@ -143,6 +143,7 @@ TODO:
                 <ion-input #input_email
                   formControlName="email" [maxlength]="E.max_len.name"
                   type="text" inputmode="email" [autofocus]="step=='old_email'"
+                  data-vodle="email-input"
                   (ionChange)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
@@ -162,7 +163,7 @@ TODO:
       </form>
       <ng-container *ngIf="E.privacy_statement_url">
         <ion-item lines="none" class="item-text-wrap">
-          <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy"></ion-checkbox>
+          <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy" data-vodle="accept-privacy-checkbox"></ion-checkbox>
           <small><p>
             <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
           </p></small>
@@ -174,7 +175,7 @@ TODO:
       <ion-item lines="none">
         <ion-button type="submit" size="larger" color="primary" slot="end" 
             [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''" 
-            shape="round"
+            shape="round" data-vodle="submit-email-button"
             (click)="submit_email()">
           <span [innerHtml]="'next'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
@@ -188,7 +189,7 @@ TODO:
             <span [innerHtml]="'login.login-as-guest-head'|translate"></span><br/>
             <ion-button type="submit" color="primary" slot="start" 
                 [disabled]="!accept_privacy" 
-                shape="round"
+                shape="round" data-vodle="login-as-guest-button"
                 (click)="login_as_guest()">
               <span [innerHtml]="'login.login-as-guest-button'|translate"></span>
             </ion-button><br/>
@@ -216,6 +217,7 @@ TODO:
                   clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
+                  data-vodle="new-password-input"
                   (ionChange)="set_password()" debounce="100"
                   (ionBlur)="blur_password()">
                 </ion-input>
@@ -246,6 +248,7 @@ TODO:
                 clearOnEdit="false" clearInput="true"
                 [type]="showing_password?'text':'password'" required
                 autocomplete="off" autocorrect="off"
+                data-vodle="confirm-password-input"
                 (ionChange)="set_password()" debounce="100"
                 (keydown.enter)="submit_new_password()">
               </ion-input>
@@ -273,7 +276,7 @@ TODO:
       </ion-item>
       <ion-item lines="none">
         <ion-button size="larger" color="primary" slot="end" [disabled]="!passwordFormGroup.get('pw').valid" 
-            shape="round"
+            shape="round" data-vodle="submit-new-password-button"
             (click)="submit_new_password()">
           <span [innerHtml]="'next'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
@@ -296,6 +299,7 @@ TODO:
                   clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
+                  data-vodle="old-password-input"
                   (ionChange)="set_old_password()" debounce="100"
                   (keydown.enter)="submit_old_password()">
                 </ion-input>
@@ -330,7 +334,7 @@ TODO:
       </ion-item>
       <ion-item lines="none">
         <ion-button size="larger" color="primary" slot="end" [disabled]="!oldPasswordFormGroup.valid" 
-            shape="round"
+            shape="round" data-vodle="submit-old-password-button"
             (click)="submit_old_password()">
           <span [innerHtml]="'next'|translate"></span>
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
@@ -353,7 +357,7 @@ TODO:
         <ion-item lines="none">
           <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
           <ion-button size="larger" color="primary" slot="end"
-              shape="round" type="submit" id="dismiss_button" 
+              shape="round" type="submit" id="dismiss_button" data-vodle="start-button"
               (click)="connected_dismissed()">
             <span [innerHtml]="'start'|translate"></span>
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
