@@ -2846,7 +2846,7 @@ export class MatrixService {
       throw new Error('Invalid encrypted data format');
     }
     
-    // Validate minimum length: 12 bytes IV + at least 1 byte ciphertext
+    // Validate minimum length: 12 bytes IV + at least 1 byte ciphertext = 13 bytes
     if (combined.length < 13) {
       throw new Error('Malformed encrypted data: too short to contain IV and ciphertext');
     }
