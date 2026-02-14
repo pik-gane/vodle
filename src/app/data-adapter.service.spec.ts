@@ -118,6 +118,33 @@ describe('DataAdapter', () => {
     });
   });
   
+  // Phase 4 Tests
+  describe('Phase 4: Voting Implementation', () => {
+    it('should have submitRating method', () => {
+      expect(service.submitRating).toBeDefined();
+    });
+    
+    it('should have getRatings method', () => {
+      expect(service.getRatings).toBeDefined();
+    });
+    
+    it('should have requestDelegation method', () => {
+      expect(service.requestDelegation).toBeDefined();
+    });
+    
+    it('should have respondToDelegation method', () => {
+      expect(service.respondToDelegation).toBeDefined();
+    });
+    
+    it('should have setupPollEventHandlers method', () => {
+      expect(service.setupPollEventHandlers).toBeDefined();
+    });
+    
+    it('should have teardownPollEventHandlers method', () => {
+      expect(service.teardownPollEventHandlers).toBeDefined();
+    });
+  });
+  
   // Phase 5 Tests
   describe('Phase 5: Advanced Features', () => {
     it('should have isOnline method', () => {
