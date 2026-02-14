@@ -784,7 +784,13 @@ describe('DataService Matrix Wiring (Phases 10-14)', () => {
             if (!this._matrixPollListeners[pid]) {
               const listener = {
                 onDataChange: () => {
-                  if (this.page && this.page.onDataChange) this.page.onDataChange();
+                  if (this.page && this.page.onDataChange) {
+                    try {
+                      this.page.onDataChange();
+                    } catch (err) {
+                      this.G.L.error('DataService page.onDataChange() failed', err);
+                    }
+                  }
                 }
               };
               this._matrixPollListeners[pid] = listener;
