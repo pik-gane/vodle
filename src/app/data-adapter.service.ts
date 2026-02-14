@@ -204,4 +204,22 @@ export class DataAdapter implements IDataBackend {
   getDataService(): DataService | null {
     return !environment.useMatrixBackend ? this.dataService : null;
   }
+  
+  /**
+   * Get the underlying DataService regardless of active backend.
+   * Used by migration tools that need access to CouchDB even when
+   * the Matrix backend is active.
+   */
+  getDataServiceForMigration(): DataService {
+    return this.dataService;
+  }
+  
+  /**
+   * Get the underlying MatrixService regardless of active backend.
+   * Used by migration tools that need access to Matrix even when
+   * the CouchDB backend is active.
+   */
+  getMatrixServiceForMigration(): MatrixService {
+    return this.matrixService;
+  }
 }

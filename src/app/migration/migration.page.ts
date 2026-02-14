@@ -79,19 +79,21 @@ export class MigrationPage implements OnInit {
 
   /**
    * Auto-initialize the migration service using the DataAdapter.
-   * When Matrix backend is enabled, the DataAdapter's underlying backends
-   * are used as source (CouchDB) and target (Matrix).
+   * If both a CouchDB data service and a Matrix service are available
+   * from the DataAdapter, they are used as source (CouchDB) and target
+   * (Matrix) backends for the migration.
    */
   autoInitMigration(): void {
-    if (!this.isMatrixEnabled) return;
+    const couchDB = this.dataAdapter.getDataServiceForMigration();
+    const matrixService = this.dataAdapter.getMatrixServiceForMigration();
 
-    const couchDB = this.dataAdapter.getDataService();
-    const matrixService = this.dataAdapter.getMatrixService();
     if (couchDB && matrixService) {
       const source = new CouchDBBackend(couchDB);
       const target = new MatrixBackend(matrixService);
       this.initMigration(source, target);
       this.addLog('Migration auto-initialized via DataAdapter');
+    } else {
+      this.addLog('Migration auto-initialization skipped: required backends not available via DataAdapter');
     }
   }
 

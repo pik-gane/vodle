@@ -27,11 +27,13 @@ import { DataAdapter } from '../data-adapter.service';
 
 /**
  * Mock DataAdapter that returns null for both services
- * (simulates CouchDB-only mode where Matrix is not enabled).
+ * (simulates environment where services are not available).
  */
 class MockDataAdapter {
   getDataService() { return null; }
   getMatrixService() { return null; }
+  getDataServiceForMigration() { return null; }
+  getMatrixServiceForMigration() { return null; }
 }
 
 describe('MigrationPage', () => {
@@ -65,8 +67,46 @@ describe('MigrationPage', () => {
     expect(component.isRunning).toBeFalse();
   });
 
-  it('should have empty log messages initially', () => {
-    expect(component.logMessages.length).toBe(0);
+  it('should have skip log message initially when backends not available', () => {
+    // autoInitMigration logs a skip message when DataAdapter returns null services
+    expect(component.logMessages.length).toBe(1);
+    expect(component.logMessages[0]).toContain('skipped');
+  });
+
+  describe('autoInitMigration', () => {
+    it('should skip auto-init when DataAdapter returns null services', () => {
+      // The default MockDataAdapter returns null for both services
+      // so autoInitMigration (called in ngOnInit) should have logged a skip message
+      // and not initialized the migration service
+      expect(component.migrationService).toBeNull();
+    });
+
+    it('should log skip message when backends are not available', () => {
+      // Reset log and call again to verify message
+      component.logMessages = [];
+      component.autoInitMigration();
+
+      expect(component.logMessages.some(m => m.includes('skipped'))).toBeTrue();
+      expect(component.migrationService).toBeNull();
+    });
+
+    it('should auto-init when DataAdapter provides both services', () => {
+      // Create a mock DataAdapter that returns non-null services
+      const mockDataService = {} as any;
+      const mockMatrixService = {} as any;
+      const mockAdapter = {
+        getDataServiceForMigration: () => mockDataService,
+        getMatrixServiceForMigration: () => mockMatrixService,
+      } as any;
+
+      // Replace the adapter and call autoInit
+      (component as any).dataAdapter = mockAdapter;
+      component.logMessages = [];
+      component.autoInitMigration();
+
+      expect(component.migrationService).toBeTruthy();
+      expect(component.logMessages.some(m => m.includes('auto-initialized'))).toBeTrue();
+    });
   });
 
   describe('initMigration', () => {

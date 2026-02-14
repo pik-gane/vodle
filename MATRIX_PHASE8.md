@@ -25,21 +25,37 @@ ngOnInit() {
 }
 ```
 
-When `environment.useMatrixBackend` is `true`, the page automatically
-creates `CouchDBBackend` and `MatrixBackend` instances from the
-`DataAdapter`'s underlying services, eliminating the need for manual
-`initMigration()` calls.
+The `autoInitMigration()` method uses `DataAdapter.getDataServiceForMigration()`
+and `DataAdapter.getMatrixServiceForMigration()` to obtain both underlying
+services regardless of which backend is currently active. This is necessary
+because during migration, both the source (CouchDB) and target (Matrix)
+services must be available simultaneously.
 
-The manual `initMigration(source, target)` method remains available for
-testing and advanced use.
+If both services are available, the migration service is auto-initialized.
+Otherwise, a skip message is logged and manual `initMigration(source, target)`
+remains available for testing and advanced use.
 
-### 2. Poll rollback UI
+### 2. DataAdapter migration APIs
+
+Two new methods were added to `DataAdapter` specifically for migration:
+
+```typescript
+getDataServiceForMigration(): DataService    // Always returns DataService
+getMatrixServiceForMigration(): MatrixService // Always returns MatrixService
+```
+
+These differ from the existing `getDataService()` / `getMatrixService()` which
+return null when the respective backend is not the active one. The migration
+APIs always return the underlying service instances so that both CouchDB and
+Matrix can be accessed simultaneously during migration.
+
+### 3. Poll rollback UI
 
 The migration page now includes a **Rollback Poll Data** button alongside
 the existing Migrate and Verify buttons. Poll IDs must be provided manually
 by the user (no poll search or auto-discovery).
 
-### 3. New properties and methods on `MigrationPage`
+### 4. New properties and methods on `MigrationPage`
 
 | Property / Method | Description |
 |---|---|
@@ -54,8 +70,8 @@ by the user (no poll search or auto-discovery).
 |---|---|
 | `in-memory-backend.spec.ts` | 34 |
 | `migration.service.spec.ts` | 42 |
-| `migration/migration.page.spec.ts` | 29 |
-| **Total** | **105** |
+| `migration/migration.page.spec.ts` | 32 |
+| **Total** | **108** |
 
 ### Running tests
 
@@ -67,15 +83,16 @@ CHROME_BIN=$(which chromium-browser) npx ng test --no-watch \
   --include='**/migration/migration.page.spec.ts'
 ```
 
-All 105 tests pass.
+All 108 tests pass.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/app/migration/migration.page.ts` | DataAdapter injection, auto-init, poll rollback method |
+| `src/app/data-adapter.service.ts` | Added `getDataServiceForMigration()` and `getMatrixServiceForMigration()` |
+| `src/app/migration/migration.page.ts` | DataAdapter injection, auto-init using migration APIs, poll rollback method |
 | `src/app/migration/migration.page.html` | Rollback Poll Data button |
-| `src/app/migration/migration.page.spec.ts` | Tests for rollback and DataAdapter mock |
+| `src/app/migration/migration.page.spec.ts` | Tests for auto-init, rollback, and DataAdapter mock |
 
 ## Design Decisions
 
