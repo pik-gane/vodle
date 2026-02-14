@@ -1,0 +1,91 @@
+# vodle — full local development stack
+#
+# Three services on one Docker network:
+#
+#   vodle-web      Angular/Ionic dev server       http://localhost:4200
+#   synapse        Matrix homeserver               http://localhost:8008
+#   guard-bot      Deadline enforcement bot         (internal)
+#
+# Quick start:
+#
+#   # First time only — generate Synapse config:
+#   docker run --rm -v "$(pwd)/matrix-data:/data" \
+#     -e SYNAPSE_SERVER_NAME=localhost \
+#     -e SYNAPSE_REPORT_STATS=no \
+#     matrixdotorg/synapse:latest generate
+#
+#   # Enable registration in matrix-data/homeserver.yaml:
+#   #   enable_registration: true
+#   #   enable_registration_without_verification: true
+#
+#   # Start everything:
+#   docker compose up --build
+#
+#   # Open http://localhost:4200 in your browser.
+#
+# See MATRIX_TESTING_GUIDE.md for the full walkthrough.
+
+services:
+  # -------------------------------------------------------------------
+  # 1. vodle web app — Angular/Ionic dev server
+  # -------------------------------------------------------------------
+  vodle-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vodle-web
+    ports:
+      - "4200:4200"
+    volumes:
+      # Mount source for live-reload during development.
+      # node_modules inside the container are NOT overwritten because
+      # the anonymous volume below takes precedence.
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - synapse
+    networks:
+      - vodle-net
+
+  # -------------------------------------------------------------------
+  # 2. Matrix homeserver (Synapse)
+  # -------------------------------------------------------------------
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: vodle-matrix-synapse
+    ports:
+      - "8008:8008"
+    volumes:
+      - ./matrix-data:/data
+    environment:
+      - SYNAPSE_SERVER_NAME=localhost
+      - SYNAPSE_REPORT_STATS=no
+    restart: unless-stopped
+    command: run
+    networks:
+      - vodle-net
+
+  # -------------------------------------------------------------------
+  # 3. Guard bot — enforces poll deadlines
+  # -------------------------------------------------------------------
+  guard-bot:
+    build:
+      context: ./guard-bot
+      dockerfile: Dockerfile
+    container_name: vodle-guard-bot
+    environment:
+      - MATRIX_HOMESERVER_URL=http://synapse:8008
+      - BOT_USER=vodle-guard
+      - BOT_PASSWORD=vodle-guard-password
+      - SCAN_INTERVAL_MS=30000
+    depends_on:
+      - synapse
+    restart: unless-stopped
+    networks:
+      - vodle-net
+
+networks:
+  vodle-net:
+    driver: bridge

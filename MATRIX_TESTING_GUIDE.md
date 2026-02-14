@@ -4,59 +4,131 @@ This guide walks you through setting up a local Matrix homeserver
 and testing the vodle app end-to-end in your browser — including
 loading pre-built test polls with simulated voters.
 
+**You only need Docker installed.** The vodle web server, Matrix
+homeserver, and guard bot all run inside Docker containers — no
+Node.js, npm, or other tools are needed on your machine.
+
 ---
 
 ## Prerequisites
 
 You need the following installed on your machine:
 
-- **Docker** (for running the Matrix homeserver)
-- **Node.js** (v16+ recommended) and **npm**
+- **Docker** and **Docker Compose** (Docker Desktop includes both)
 - A modern browser (Chrome, Firefox, Edge)
+
+That's it — Node.js and npm are **not** required. They run inside
+the container.
 
 ---
 
-## 1. Start a Local Matrix Homeserver (Synapse)
+## 1. Quick Start (Docker Compose — recommended)
 
-vodle uses the [Matrix protocol](https://matrix.org/) as its backend.
-You need a homeserver running locally on port 8008.
+The repository includes a `docker-compose.yml` that starts three
+services on one network:
 
-### Option A: Using docker-compose (recommended)
+| Service | Container | Port | Purpose |
+|---------|-----------|------|---------|
+| `vodle-web` | vodle-web | 4200 | Angular/Ionic dev server |
+| `synapse` | vodle-matrix-synapse | 8008 | Matrix homeserver |
+| `guard-bot` | vodle-guard-bot | — | Deadline enforcement bot |
 
-The repository includes a ready-made config:
+### First-time setup
 
 ```bash
 cd /path/to/vodle
 
-# First time: generate the Synapse config
+# 1. Generate the Synapse homeserver config
 docker run --rm -v "$(pwd)/matrix-data:/data" \
   -e SYNAPSE_SERVER_NAME=localhost \
   -e SYNAPSE_REPORT_STATS=no \
   matrixdotorg/synapse:latest generate
 
-# Enable guest-style registration (required for vodle login)
-# Edit matrix-data/homeserver.yaml and add these lines:
-#   enable_registration: true
-#   enable_registration_without_verification: true
+# 2. Enable registration — edit matrix-data/homeserver.yaml and add:
+#      enable_registration: true
+#      enable_registration_without_verification: true
 
-# Start the homeserver
+# 3. Start everything
+docker compose up --build
+```
+
+The first build takes a few minutes (downloads Node.js image, runs
+`npm ci`). Subsequent starts are fast because Docker caches the
+`node_modules` layer.
+
+Once all three services are running, open **http://localhost:4200**
+in your browser.
+
+### Subsequent runs
+
+```bash
+# Start (no rebuild needed unless package.json changed)
+docker compose up
+
+# Start in the background
+docker compose up -d
+
+# Stop
+docker compose down
+```
+
+### Setting up the guard bot account
+
+The guard bot needs a Matrix account on Synapse. After the first
+`docker compose up`, register it:
+
+```bash
+docker exec vodle-matrix-synapse register_new_matrix_user \
+  -c /data/homeserver.yaml \
+  -u vodle-guard -p vodle-guard-password --admin
+```
+
+Then restart the guard-bot container:
+
+```bash
+docker compose restart guard-bot
+```
+
+---
+
+## 2. Alternative: Manual setup (without Docker for the web app)
+
+If you prefer to run the web app natively (e.g. for IDE integration):
+
+### Start only Synapse and the guard bot in Docker
+
+```bash
+docker compose up synapse guard-bot -d
+```
+
+### Run the vodle dev server natively
+
+```bash
+npm install
+npx ng serve
+```
+
+---
+
+## 3. Alternative: Synapse-only Docker (legacy)
+
+The repository also includes `docker-compose.matrix.yml` which
+starts only Synapse (no web app, no guard bot):
+
+```bash
 docker compose -f docker-compose.matrix.yml up -d
 ```
 
-### Option B: Using plain Docker
+Or using plain Docker:
 
 ```bash
-# 1. Generate config
 docker run --rm -v /tmp/synapse-data:/data \
   -e SYNAPSE_SERVER_NAME=localhost \
   -e SYNAPSE_REPORT_STATS=no \
   matrixdotorg/synapse:latest generate
 
-# 2. Enable registration in /tmp/synapse-data/homeserver.yaml:
-#    enable_registration: true
-#    enable_registration_without_verification: true
+# Edit /tmp/synapse-data/homeserver.yaml — enable registration
 
-# 3. Start the homeserver
 docker run -d --name synapse \
   -p 8008:8008 \
   -v /tmp/synapse-data:/data \
@@ -73,29 +145,7 @@ You should see a JSON response listing supported Matrix versions.
 
 ---
 
-## 2. Start the vodle Dev Server
-
-```bash
-cd /path/to/vodle
-
-# Install dependencies
-npm install
-
-# Verify the Matrix backend is enabled (it is by default in dev)
-# In src/environments/environment.ts, check:
-#   useMatrixBackend: true
-#   matrix.homeserver_url: "http://localhost:8008"
-
-# Start the dev server
-npx ng serve
-# or: npm start
-```
-
-The app will be available at **http://localhost:4200**.
-
----
-
-## 3. Log In
+## 4. Log In
 
 1. Open **http://localhost:4200** in your browser
 2. Select your language (e.g. English), click **Next**
@@ -109,7 +159,7 @@ and takes you to the **My polls** page.
 
 ---
 
-## 4. Load a Test Poll with Simulated Voters
+## 5. Load a Test Poll with Simulated Voters
 
 The repository includes pre-built test polls in `couchdb/vodle/examples§*.json`.
 The easiest way to load one is via a special URL.
@@ -181,7 +231,7 @@ Key fields:
 
 ---
 
-## 5. Start the Poll and Vote
+## 6. Start the Poll and Vote
 
 After loading the test poll, the draft editor opens:
 
@@ -220,7 +270,7 @@ after starting. When the deadline passes:
 
 ---
 
-## 6. What Works and What Doesn't
+## 7. What Works and What Doesn't
 
 | Feature | Without homeserver | With homeserver |
 |---------|-------------------|-----------------|
@@ -240,7 +290,7 @@ after starting. When the deadline passes:
 
 ---
 
-## 7. Reverting to CouchDB Backend
+## 8. Reverting to CouchDB Backend
 
 If you prefer to test with the old CouchDB backend:
 
@@ -251,7 +301,7 @@ If you prefer to test with the old CouchDB backend:
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 ### "Cannot connect to Matrix server" alert on login
 
@@ -284,7 +334,7 @@ or re-load the test poll URL to generate a fresh draft with a future deadline.
 
 ---
 
-## 9. Screenshots from Automated E2E Testing
+## 10. Screenshots from Automated E2E Testing
 
 The following screenshots were taken during automated end-to-end testing
 with a real Synapse homeserver running locally in Docker. They document
