@@ -118,6 +118,8 @@ export class JoinpollPage implements OnInit {
           this.ready = true;
           this.p.set_timeouts();
           this.p.tally_all();
+        }).catch(err => {
+          this.G.L.error("JoinpollPage CouchDB join failed", this.pid, err);
         });
       }
     }

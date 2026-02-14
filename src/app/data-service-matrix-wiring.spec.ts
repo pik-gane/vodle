@@ -627,18 +627,26 @@ describe('DataService Matrix Wiring (Phases 10-14)', () => {
 
             if (environment.useMatrixBackend) {
               // Phase 13: Skip CouchDB params
-              await this.connect_to_remote_poll_db(this.pid, true);
-              this.ready = true;
-              this.p.set_timeouts();
-              this.p.tally_all();
-              this.router.navigate(['/poll/' + this.pid]);
+              try {
+                await this.connect_to_remote_poll_db(this.pid, true);
+                this.ready = true;
+                this.p.set_timeouts();
+                this.p.tally_all();
+                this.router.navigate(['/poll/' + this.pid]);
+              } catch (err) {
+                this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
+              }
             } else {
               this.p.db_server_url = this.db_server_url;
               this.p.db_password = this.db_password;
-              await this.connect_to_remote_poll_db(this.pid, true);
-              this.ready = true;
-              this.p.set_timeouts();
-              this.p.tally_all();
+              try {
+                await this.connect_to_remote_poll_db(this.pid, true);
+                this.ready = true;
+                this.p.set_timeouts();
+                this.p.tally_all();
+              } catch (err) {
+                this.G.L.error("JoinpollPage CouchDB join failed", this.pid, err);
+              }
             }
           },
         };
@@ -681,6 +689,23 @@ describe('DataService Matrix Wiring (Phases 10-14)', () => {
         expect(joinpollHarness.ready).toBeFalse();
         await joinpollHarness.onDataReady();
         expect(joinpollHarness.ready).toBeTrue();
+      });
+
+      it('should log error and not navigate when connect_to_remote_poll_db rejects', async () => {
+        joinpollHarness.pid = 'test-poll-fail';
+        joinpollHarness.poll_password = 'secret123';
+        const errorSpy = jasmine.createSpy('error');
+        joinpollHarness.G = { L: { ...mockDataService.G.L, error: errorSpy } };
+        joinpollHarness.connect_to_remote_poll_db = jasmine.createSpy('connect_to_remote_poll_db')
+          .and.returnValue(Promise.reject(new Error('Room join failed')));
+
+        await joinpollHarness.onDataReady();
+
+        expect(errorSpy).toHaveBeenCalledWith(
+          'JoinpollPage Matrix join failed', 'test-poll-fail', jasmine.any(Error)
+        );
+        expect(joinpollHarness.ready).toBeFalse();
+        expect(mockRouter.navigate).not.toHaveBeenCalled();
       });
     });
 
