@@ -97,12 +97,22 @@ export class InvitetoPage implements OnInit {
       this.G.L.warn("InvitetoPage unknown pid ignored, redirecting to mypolls page", this.pid, this.G.P.polls);
       this.router.navigate(["/mypolls"]);
     }
-    this.invite_link = (
-      environment.magic_link_base_url + "joinpoll/" 
-      + encodeURIComponent(this.p.db_server_url) + "/" 
-      + encodeURIComponent(this.p.db_password) + "/" 
-      + this.pid + "/" 
-      + this.p.password);
+    if (environment.useMatrixBackend) {
+      // Phase 13: Matrix doesn't use CouchDB credentials — use placeholder values
+      this.invite_link = (
+        environment.magic_link_base_url + "joinpoll/"
+        + encodeURIComponent('_') + "/"
+        + encodeURIComponent('_') + "/"
+        + this.pid + "/"
+        + this.p.password);
+    } else {
+      this.invite_link = (
+        environment.magic_link_base_url + "joinpoll/" 
+        + encodeURIComponent(this.p.db_server_url) + "/" 
+        + encodeURIComponent(this.p.db_password) + "/" 
+        + this.pid + "/" 
+        + this.p.password);
+    }
     this.G.L.info("InvitetoPage invite link:", this.invite_link);
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('invite-email.subject', {due: this.G.D.format_date(this.p.due)});

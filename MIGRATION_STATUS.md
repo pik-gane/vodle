@@ -9,11 +9,15 @@ cannot be tested end-to-end in the browser with the Matrix backend.
 
 **For the actionable path forward, see [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md).**
 
-## What Has Been Built (Phases 1–9)
+## What Has Been Built (Phases 1–12)
 
 Phases 1–9 built the **infrastructure layer** — MatrixService is fully
 implemented with 52+ methods covering auth, user data, poll rooms, voter rooms,
-ratings, delegation, encryption, offline queue, and caching:
+ratings, delegation, encryption, offline queue, and caching.
+
+Phases 10–12 **wire the main app** to use Matrix for poll data, voter data, and
+poll lifecycle — adding `if (environment.useMatrixBackend)` branches to
+DataService methods.
 
 | Phase | What | Status |
 |-------|------|--------|
@@ -26,25 +30,21 @@ ratings, delegation, encryption, offline queue, and caching:
 | 7 | Migration UI page at `/migration` | ✅ Complete |
 | 8 | DataAdapter wiring, poll rollback UI | ✅ Complete |
 | 9 | Migration state persistence (survives page reloads) | ✅ Complete |
+| 10 | Wire poll data (getp/setp/delp) to Matrix | ✅ Complete |
+| 11 | Wire voter data (getv/setv/delv) to Matrix | ✅ Complete |
+| 12 | Wire poll lifecycle (change_poll_state, connect_to_remote) | ✅ Complete |
 
-**125 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
-41 MigrationPage).
+**313 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
+41 MigrationPage + 34 Matrix Wiring + 154 MatrixService/DataAdapter).
 
-## What Remains (Phases 10–17)
+## What Remains (Phases 13–17)
 
-The main app uses `GlobalService.D` (DataService) for all data access.
-DataService delegates to MatrixService for **user data only** (getu/setu/delu).
-Poll data and voter data always fall through to CouchDB.
-
-The remaining work is **wiring** — adding the same
-`if (environment.useMatrixBackend)` conditional branches to the remaining
-DataService methods. No app component refactoring needed.
+The main app's core data paths are now wired to Matrix. What remains is wiring
+poll joining (magic links), real-time sync, delegation service, and then
+enabling the Matrix backend for end-to-end testing.
 
 | Phase | What | Status |
 |-------|------|--------|
-| 10 | Wire poll data (getp/setp/delp) to Matrix | ❌ Not started |
-| 11 | Wire voter data (getv/setv/delv) to Matrix | ❌ Not started |
-| 12 | Wire poll lifecycle (change_poll_state, connect_to_remote) | ❌ Not started |
 | 13 | Wire poll joining (magic links) to Matrix | ❌ Not started |
 | 14 | Wire real-time sync to Matrix | ❌ Not started |
 | 15 | Wire ratings & delegation to Matrix | ❌ Not started |
@@ -60,10 +60,10 @@ for each phase, including exact methods, files, code patterns, and dependencies.
 App Components → GlobalService → DataService
                                    │
                                    ├─ getu/setu/delu → ✅ MatrixService
-                                   ├─ getp/setp/delp → ❌ CouchDB only
-                                   ├─ getv/setv/delv → ❌ CouchDB only
-                                   ├─ change_poll_state → ❌ CouchDB only
-                                   └─ connect_to_remote → ❌ CouchDB only
+                                   ├─ getp/setp/delp → ✅ MatrixService
+                                   ├─ getv/setv/delv → ✅ MatrixService
+                                   ├─ change_poll_state → ✅ MatrixService
+                                   └─ connect_to_remote → ✅ MatrixService
 ```
 
 ## How to Test What Exists Today
@@ -74,7 +74,7 @@ the `useMatrixBackend: false` flag. The migration tools are at `/migration`.
 ## References
 
 - **[MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** — Actionable path to Matrix-only app
-- Phase docs: `MATRIX_PHASE1.md` through `MATRIX_PHASE9.md`
+- Phase docs: `MATRIX_PHASE1.md` through `MATRIX_PHASE9.md`, `MATRIX_PHASE10_12.md`
 - Implementation strategy: `planning/matrix-migration/03-implementation-strategy.md`
 - DataAdapter: `src/app/data-adapter.service.ts`
 - MatrixService: `src/app/matrix.service.ts` (52+ methods, all implemented)

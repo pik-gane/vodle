@@ -297,6 +297,8 @@ export class DataService implements OnDestroy {
 
   private remote_poll_dbs: Record<string, PouchDB.Database>; // persistent remote copies of complete poll data
   private poll_db_sync_handlers: Record<string, any>;
+  // Phase 14: Track Matrix poll event listeners per pid to prevent duplicates
+  private _matrixPollListeners: Record<string, any> = {};
 
   // Caches with redundant information, not stored in database:
 
@@ -897,6 +899,24 @@ export class DataService implements OnDestroy {
   connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
     // called at poll initialization or when joining a poll
     this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication);
+
+    // Phase 12: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      // For Matrix backend, join the poll room and create voter room instead of PouchDB replication
+      return this.matrixService.getOrCreatePollRoom(pid, '').then(async () => {
+        // Create voter room
+        await this.matrixService.getOrCreateMyVoterRoom(pid);
+
+        // Sync poll data from Matrix to local cache
+        await this.matrixService.warmupCache(pid);
+
+        // Phase 14: Start real-time sync via Matrix event handlers
+        this.start_poll_sync(pid);
+
+        this.G.L.exit("DataService.connect_to_remote_poll_db (Matrix)", pid);
+      });
+    }
+
     // In order to be able to write our own voter docs, we connect as a voter dbuser (not as a poll dbuser!),
     // who has the same password as the overall user:
     const poll_db_private_username = "vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid');
@@ -1048,6 +1068,10 @@ export class DataService implements OnDestroy {
   }
 
   wait_for_poll_db(pid: string): Promise<any> {
+    // Phase 12: For Matrix backend, no PouchDB to wait for
+    if (environment.useMatrixBackend) {
+      return Promise.resolve(true);
+    }
     // TODO: is there a better way for doing this?
     if (pid in this.local_poll_dbs) {
       return this.local_poll_dbs[pid].info();
@@ -1063,6 +1087,49 @@ export class DataService implements OnDestroy {
     const pid = p.pid, prefix = get_poll_key_prefix(pid);
     this.G.L.entry("DataService.change_poll_state", pid, new_state);
     const old_state = this.user_cache[prefix + 'state'];
+
+    // Phase 12: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (old_state == 'draft') {
+        this.G.L.debug("DataService.change_poll_state (Matrix) old state was draft, creating poll room and moving data", pid, new_state);
+
+        // Create Matrix poll room and move data from user cache to Matrix
+        const title = this.getp(pid, 'title');
+        this.matrixService.createPollRoom(pid, title).then(async () => {
+          // Set deadline (if present)
+          if (p.due) {
+            await this.matrixService.setPollDeadline(pid, p.due.toISOString());
+          }
+
+          // Move data from user cache to Matrix poll room
+          for (const [ukey, value] of Object.entries(this.user_cache)) {
+            if (ukey.startsWith(prefix)) {
+              const key = ukey.substring(prefix.length),
+                    pos = (key+'.').indexOf('.'),
+                    subkey = (key+'.').slice(0, pos);
+              if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
+                await this.matrixService.setPollData(pid, key, value as string);
+                this.delu(ukey);
+              }
+            }
+          }
+
+          // Lock metadata (raises power levels)
+          await this.matrixService.lockPollMetadata(pid);
+        }).catch(err => {
+          this.G.L.error("DataService.change_poll_state failed to create Matrix poll room and move draft data during draft→running transition", pid, err);
+        });
+      }
+
+      if (new_state != 'draft' && new_state != 'closing') {
+        this.matrixService.changePollState(pid, new_state).catch(err => {
+          this.G.L.error("DataService.change_poll_state Matrix state change failed", pid, new_state, err);
+        });
+      }
+      this.setu(prefix + 'state', new_state);
+      this.G.L.exit("DataService.change_poll_state");
+      return;
+    }
 
     if (old_state == 'draft') {
 
@@ -1443,6 +1510,31 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.start_poll_sync", pid);
     var result: boolean;
 
+    // Phase 14: Use Matrix event handlers for real-time sync
+    if (environment.useMatrixBackend) {
+      this.G.L.info("DataService starting Matrix poll sync", pid);
+      // Prevent duplicate listener registration on repeated calls
+      if (!this._matrixPollListeners[pid]) {
+        const listener = {
+          onDataChange: () => {
+            try {
+              if (this.page && this.page.onDataChange) this.page.onDataChange();
+            } catch (err) {
+              this.G.L.error("DataService Matrix onDataChange callback failed", pid, err);
+            }
+          }
+        };
+        this._matrixPollListeners[pid] = listener;
+        this.matrixService.addPollEventListener(pid, listener);
+      }
+      this.matrixService.setupPollEventHandlers(pid).catch(err => {
+        this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
+      });
+      result = true;
+      this.G.L.exit("DataService.start_poll_sync", pid, result);
+      return result;
+    }
+
     if (this.remote_poll_dbs[pid]) { 
       this.G.L.info("DataService starting poll data sync", pid);
 
@@ -1492,6 +1584,12 @@ export class DataService implements OnDestroy {
   }
 
   stop_poll_sync(pid: string) {
+    // Phase 14: Tear down Matrix event handlers
+    if (environment.useMatrixBackend) {
+      delete this._matrixPollListeners[pid];
+      this.matrixService.teardownPollEventHandlers(pid);
+      return;
+    }
     if (pid in this.G.D.poll_db_sync_handlers && !!this.G.D.poll_db_sync_handlers[pid]) {
       this.G.D.poll_db_sync_handlers[pid].cancel();
     }
@@ -1595,6 +1693,21 @@ export class DataService implements OnDestroy {
 
   getp(pid:string, key:string): string {
     // get poll data item
+
+    // Phase 10: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      // For Matrix backend, draft polls and user-db keys stay in user_cache.
+      // Non-draft poll data comes from poll_caches (populated from Matrix).
+      const pos = (key+'.').indexOf('.'),
+            subkey = (key+'.').slice(0, pos);
+      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+        const ukey = get_poll_key_prefix(pid) + key;
+        return this.user_cache[ukey] || '';
+      }
+      this.ensure_poll_cache(pid);
+      return this.poll_caches[pid][key] || '';
+    }
+
     let value = null;
     const pos = (key+'.').indexOf('.'),
           subkey = (key+'.').slice(0, pos);
@@ -1629,6 +1742,21 @@ export class DataService implements OnDestroy {
     // decide where to store data:
     const pos = (key+'.').indexOf('.'),
           subkey = (key+'.').slice(0, pos);
+
+    // Phase 10: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+        return this._setp_in_userdb(pid, key, value);
+      }
+      // Non-draft, non-userdb key: store in local cache and sync to Matrix
+      this.ensure_poll_cache(pid);
+      this.poll_caches[pid][key] = value;
+      this.matrixService.setPollData(pid, key, value).catch(err => {
+        this.G.L.error("DataService.setp Matrix sync failed", pid, key, err);
+      });
+      return true;
+    }
+
     if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
@@ -1657,6 +1785,22 @@ export class DataService implements OnDestroy {
     }
     const pos = (key+'.').indexOf('.'),
           subkey = (key+'.').slice(0, pos);
+
+    // Phase 10: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+        const ukey = get_poll_key_prefix(pid) + key;
+        this.delu(ukey);
+      } else {
+        this.ensure_poll_cache(pid);
+        delete this.poll_caches[pid][key];
+        this.matrixService.deletePollData(pid, key).catch(err => {
+          this.G.L.warn("DataService.delp Matrix delete failed", pid, key, err);
+        });
+      }
+      return;
+    }
+
     if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
       // construct key for user db:
       const ukey = get_poll_key_prefix(pid) + key;
@@ -1673,6 +1817,18 @@ export class DataService implements OnDestroy {
 
   getv(pid: string, key: string, vid?: string): string {
     // get own voter data item
+
+    // Phase 11: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.pid_is_draft(pid)) {
+        const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid, vid) + key;
+        return this.user_cache[ukey] || '';
+      }
+      const pkey = this.get_voter_key_prefix(pid, vid) + key;
+      this.ensure_poll_cache(pid);
+      return this.poll_caches[pid][pkey] || '';
+    }
+
     let value = null;
     if (this.pid_is_draft(pid)) {
       // draft polls' data is stored in user's database.
@@ -1708,6 +1864,29 @@ export class DataService implements OnDestroy {
 
   delv(pid: string, key: string) {
     // delete a voter data item
+
+    // Phase 11: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      if (this.pid_is_draft(pid)) {
+        const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+        delete this.user_cache[ukey];
+        if (this.matrixService.isLoggedIn()) {
+          this.matrixService.deleteUserData(ukey).catch(err => {
+            this.G.L.warn("DataService.delv Matrix delete failed", pid, key, err);
+          });
+        }
+      } else {
+        const pkey = this.get_voter_key_prefix(pid) + key;
+        this.ensure_poll_cache(pid);
+        delete this.poll_caches[pid][pkey];
+        const vid = this.getp(pid, 'myvid');
+        this.matrixService.deleteVoterData(pid, vid, key).catch(err => {
+          this.G.L.warn("DataService.delv Matrix delete failed", pid, key, err);
+        });
+      }
+      return;
+    }
+
     if (this.pid_is_draft(pid)) {
       const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
       delete this.user_cache[ukey];
@@ -1754,6 +1933,15 @@ export class DataService implements OnDestroy {
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService._setp_in_polldb", pid, key, value);
     this.poll_caches[pid][key] = value;
+
+    // Phase 10: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      this.matrixService.setPollData(pid, key, value).catch(err => {
+        this.G.L.error("DataService._setp_in_polldb Matrix sync failed", pid, key, err);
+      });
+      return true;
+    }
+
     const keystart = key.slice(0, (key+'.').indexOf('.'));
     return this.store_poll_data(pid, key, this.poll_caches[pid], key, 
                                 poll_keystarts_requiring_due.includes(keystart));
@@ -1780,6 +1968,16 @@ export class DataService implements OnDestroy {
     this.ensure_poll_cache(pid);
     this.G.L.trace("DataService.setv_in_polldb", pid, key, value);
     this.poll_caches[pid][pkey] = value;
+
+    // Phase 11: Delegate to Matrix if flag is set
+    if (environment.useMatrixBackend) {
+      const effectiveVid = vid || this.getp(pid, 'myvid');
+      this.matrixService.setVoterData(pid, effectiveVid, key, value).catch(err => {
+        this.G.L.error("DataService.setv_in_polldb Matrix sync failed", pid, key, err);
+      });
+      return true;
+    }
+
     const subkeystart = key.slice(0, (key+'.').indexOf('.'));
     return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, 
                                 voter_subkeystarts_requiring_due.includes(subkeystart));
@@ -1972,7 +2170,7 @@ export class DataService implements OnDestroy {
           this.G.L.debug("DataService.after_changes creating poll object", pid);
           const p = new Poll(this.G, pid);
         }
-        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs)) {
+        if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs) && !(environment.useMatrixBackend && this._matrixPollListeners[pid])) {
           // try syncing with remote db:
           // check if db credentials are set:
           if (this.poll_has_db_credentials(pid)) {
@@ -2027,6 +2225,10 @@ export class DataService implements OnDestroy {
   }
 
   private poll_has_db_credentials(pid:string) {
+    // Phase 12: Matrix backend handles auth differently — always has "credentials"
+    if (environment.useMatrixBackend) {
+      return true;
+    }
     // return whether poll db credentials are nonempty:
     return this.getp(pid, 'db_server_url')!='' && this.getp(pid, 'db_password')!='' && this.getp(pid, 'myvid')!='';
   }
