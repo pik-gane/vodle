@@ -242,8 +242,11 @@ describe('MigrationPage', () => {
 
     it('should format timestamps', () => {
       expect(component.formatTimestamp(undefined)).toBe('—');
-      expect(component.formatTimestamp(1700000000000)).toBeTruthy();
-      expect(component.formatTimestamp(1700000000000)).not.toBe('—');
+      const formatted = component.formatTimestamp(1700000000000);
+      expect(formatted).toBeTruthy();
+      expect(formatted).not.toBe('—');
+      // Verify the formatted string contains numeric date/time components
+      expect(formatted).toMatch(/\d/);
     });
   });
 });

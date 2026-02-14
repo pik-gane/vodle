@@ -66,7 +66,7 @@ export class MigrationPage implements OnInit, OnDestroy {
   /** Poll metadata keys to migrate */
   private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
 
-  private statusRefreshInterval: any = null;
+  private statusRefreshInterval: number | null = null;
 
   constructor() {}
 
@@ -290,7 +290,7 @@ export class MigrationPage implements OnInit, OnDestroy {
   }
 
   private addLog(message: string): void {
-    const timestamp = new Date().toLocaleTimeString();
+    const timestamp = new Date().toLocaleString();
     this.logMessages.push(`[${timestamp}] ${message}`);
   }
 }
