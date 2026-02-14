@@ -194,6 +194,7 @@ export class MatrixService {
   private offlineQueueFailedCount: number = 0;
   private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
   private static readonly MAX_RETRY_COUNT = 5;
+  private static readonly MAX_QUEUE_SIZE = 1000;
   
   // Phase 5: User data cache for fast synchronous reads
   private userDataCache: Map<string, any> = new Map();
@@ -533,6 +534,9 @@ export class MatrixService {
     this.offlineQueueProcessing = false;
     this.offlineQueueFailedCount = 0;
     this.userDataCache.clear();
+    // Clear persisted offline queue so it is not reused after logout
+    // (e.g., if a different user logs in next).
+    await this.storage.remove(MatrixService.OFFLINE_QUEUE_STORAGE_KEY);
     
     this.logger?.exit("MatrixService.logout");
   }
@@ -2532,6 +2536,11 @@ export class MatrixService {
   async enqueueOfflineEvent(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
     this.logger?.entry("MatrixService.enqueueOfflineEvent", event.type);
     
+    if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
+      this.logger?.error("Offline queue is full, discarding oldest event");
+      this.offlineQueue.shift();
+    }
+    
     const queuedEvent: QueuedEvent = {
       ...event,
       id: this.generateId(),
@@ -2582,6 +2591,8 @@ export class MatrixService {
         } catch (error) {
           this.logger?.error("Failed to process queued event", event.id, error);
           event.retryCount++;
+          // Persist updated retry count so it survives app restarts
+          await this.saveOfflineQueue();
           
           if (event.retryCount >= MatrixService.MAX_RETRY_COUNT) {
             this.logger?.error("Event exceeded max retries, discarding", event.id);
@@ -2613,41 +2624,53 @@ export class MatrixService {
       case 'rating':
         if (event.pollId && event.optionId !== undefined && event.rating !== undefined) {
           await this.submitRating(event.pollId, event.optionId, event.rating);
+        } else {
+          throw new Error(`Malformed rating event: missing required fields (id: ${event.id})`);
         }
         break;
       
       case 'delegation_request':
         if (event.pollId && event.delegateId && event.optionIds) {
           await this.requestDelegation(event.pollId, event.delegateId, event.optionIds);
+        } else {
+          throw new Error(`Malformed delegation_request event: missing required fields (id: ${event.id})`);
         }
         break;
       
       case 'delegation_response':
         if (event.pollId && event.delegationId !== undefined && event.accept !== undefined) {
           await this.respondToDelegation(event.pollId, event.delegationId, event.accept, event.acceptedOptions);
+        } else {
+          throw new Error(`Malformed delegation_response event: missing required fields (id: ${event.id})`);
         }
         break;
       
       case 'poll_data':
         if (event.pollId && event.key !== undefined) {
           await this.setPollData(event.pollId, event.key, event.value);
+        } else {
+          throw new Error(`Malformed poll_data event: missing required fields (id: ${event.id})`);
         }
         break;
       
       case 'voter_data':
         if (event.pollId && event.voterId && event.key !== undefined) {
           await this.setVoterData(event.pollId, event.voterId, event.key, event.value);
+        } else {
+          throw new Error(`Malformed voter_data event: missing required fields (id: ${event.id})`);
         }
         break;
       
       case 'user_data':
         if (event.key !== undefined) {
           await this.setUserData(event.key, event.value);
+        } else {
+          throw new Error(`Malformed user_data event: missing required fields (id: ${event.id})`);
         }
         break;
       
       default:
-        this.logger?.error("Unknown queued event type", event.type);
+        throw new Error(`Unknown queued event type: ${event.type} (id: ${event.id})`);
     }
   }
   
@@ -2766,6 +2789,10 @@ export class MatrixService {
   async encryptWithPassword(data: any, password: string, pollId: string): Promise<string> {
     this.logger?.entry("MatrixService.encryptWithPassword");
     
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+    
     const key = await this.deriveKeyFromPassword(password, pollId);
     const enc = new TextEncoder();
     const plaintext = enc.encode(JSON.stringify(data));
@@ -2805,10 +2832,24 @@ export class MatrixService {
   async decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any> {
     this.logger?.entry("MatrixService.decryptWithPassword");
     
+    if (!password || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+    
     const key = await this.deriveKeyFromPassword(password, pollId);
     
     // Decode base64
-    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    let combined: Uint8Array;
+    try {
+      combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    } catch (e) {
+      throw new Error('Invalid encrypted data format');
+    }
+    
+    // Validate minimum length: 12 bytes IV + at least 1 byte ciphertext
+    if (combined.length < 13) {
+      throw new Error('Malformed encrypted data: too short to contain IV and ciphertext');
+    }
     
     // Extract IV (first 12 bytes) and ciphertext (rest)
     const iv = combined.slice(0, 12);
@@ -2969,16 +3010,16 @@ export class MatrixService {
   
   /**
    * Set user data in both the in-memory cache and the Matrix room.
-   * The cache is updated immediately for fast reads.
+   * The cache is updated after successful persistence to avoid inconsistencies.
    */
   async setUserDataCached(key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setUserDataCached", key);
     
-    // Update cache immediately for fast reads
-    this.userDataCache.set(key, value);
-    
-    // Persist to Matrix room
+    // Persist to Matrix room first to ensure consistency
     await this.setUserData(key, value);
+    
+    // Update cache only after successful persistence
+    this.userDataCache.set(key, value);
     
     this.logger?.exit("MatrixService.setUserDataCached");
   }

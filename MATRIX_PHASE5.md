@@ -197,7 +197,7 @@ interface IDataBackend {
 ### Tests
 
 6. **`src/app/matrix.service.spec.ts`** (extended)
-   - 35 new tests for Phase 5 methods covering:
+   - 37 new tests for Phase 5 methods covering:
      - Offline queue: enqueue, process, clear, status, load, persistence
      - Encryption: encrypt/decrypt, different IVs, wrong password/pollId, complex data
      - Caching: warmup, cached user data, clear cache
@@ -316,7 +316,7 @@ const processed = await dataAdapter.processOfflineQueue();
 ### Unit Tests
 
 ```bash
-# Run MatrixService tests (119 tests)
+# Run MatrixService tests (121 tests)
 ng test --no-watch --browsers=ChromeHeadless --include='**/matrix.service.spec.ts'
 
 # Run DataAdapter tests (21 tests)

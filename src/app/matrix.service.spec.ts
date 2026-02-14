@@ -628,6 +628,36 @@ describe('MatrixService', () => {
         // Should not crash, queue should remain unchanged
         expect(service.getOfflineQueueSize()).toBeGreaterThanOrEqual(0);
       });
+      
+      it('should discard oldest event when queue is full', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        // Fill queue to MAX_QUEUE_SIZE (1000) by directly setting the internal array
+        const events: QueuedEvent[] = [];
+        for (let i = 0; i < 1000; i++) {
+          events.push({
+            id: `event-${i}`,
+            type: 'rating',
+            pollId: 'poll1',
+            optionId: 'opt1',
+            rating: 50,
+            timestamp: Date.now(),
+            retryCount: 0
+          });
+        }
+        (service as any).offlineQueue = events;
+        expect(service.getOfflineQueueSize()).toBe(1000);
+        
+        // Enqueue one more — should discard oldest
+        await service.enqueueOfflineEvent({
+          type: 'rating',
+          pollId: 'poll2',
+          optionId: 'opt2',
+          rating: 75
+        });
+        
+        expect(service.getOfflineQueueSize()).toBe(1000);
+      });
     });
     
     // 5.2 Poll-Password Encryption
@@ -682,36 +712,38 @@ describe('MatrixService', () => {
         const encrypted = await service.encryptWithPassword(data, 'correct-password', 'poll1');
         
         await expectAsync(
-          service.decryptWithPassword(encrypted, 'wrong-password', 'poll1')
+          service.decryptWithPassword(encrypted, 'wrong-password-here', 'poll1')
         ).toBeRejected();
       });
       
       it('should fail to decrypt with wrong pollId', async () => {
         const data = { rating: 75 };
-        const encrypted = await service.encryptWithPassword(data, 'password', 'poll1');
+        const encrypted = await service.encryptWithPassword(data, 'password-long', 'poll1');
         
         await expectAsync(
-          service.decryptWithPassword(encrypted, 'password', 'poll2')
+          service.decryptWithPassword(encrypted, 'password-long', 'poll2')
         ).toBeRejected();
       });
       
       it('should throw when submitting encrypted rating without login', async () => {
-        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 50, 'password'))
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 50, 'password-long'))
           .toBeRejectedWithError('Not logged in');
       });
       
       it('should reject encrypted rating below 0', async () => {
-        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', -1, 'password'))
-          .toBeRejectedWithError('Not logged in');
+        (service as any).userId = 'test-user';
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', -1, 'password-long-enough'))
+          .toBeRejectedWithError('Rating must be between 0 and 100 (inclusive)');
       });
       
       it('should reject encrypted rating above 100', async () => {
-        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 101, 'password'))
-          .toBeRejectedWithError('Not logged in');
+        (service as any).userId = 'test-user';
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 101, 'password-long-enough'))
+          .toBeRejectedWithError('Rating must be between 0 and 100 (inclusive)');
       });
       
       it('should throw error for decryptRating when client not initialized', async () => {
-        await expectAsync(service.decryptRating('nonexistent', 'voter1', 'opt1', 'password'))
+        await expectAsync(service.decryptRating('nonexistent', 'voter1', 'opt1', 'password-long'))
           .toBeRejectedWithError('Matrix client not initialized');
       });
       
@@ -722,12 +754,39 @@ describe('MatrixService', () => {
           unicode: '日本語テスト'
         };
         
-        const encrypted = await service.encryptWithPassword(complexData, 'pass', 'poll1');
-        const decrypted = await service.decryptWithPassword(encrypted, 'pass', 'poll1');
+        const encrypted = await service.encryptWithPassword(complexData, 'pass-long-enough', 'poll1');
+        const decrypted = await service.decryptWithPassword(encrypted, 'pass-long-enough', 'poll1');
         
         expect(decrypted.nested.values).toEqual([1, 2, 3]);
         expect(decrypted.text).toBe('Hello, World!');
         expect(decrypted.unicode).toBe('日本語テスト');
+      });
+      
+      it('should reject empty password for encryption', async () => {
+        await expectAsync(service.encryptWithPassword({ data: 1 }, '', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should reject short password for encryption', async () => {
+        await expectAsync(service.encryptWithPassword({ data: 1 }, 'short', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should reject empty password for decryption', async () => {
+        await expectAsync(service.decryptWithPassword('somedata', '', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should throw descriptive error for invalid base64 input', async () => {
+        await expectAsync(service.decryptWithPassword('not valid base64!!!', 'password-long', 'poll1'))
+          .toBeRejectedWithError('Invalid encrypted data format');
+      });
+      
+      it('should throw error for too-short encrypted data', async () => {
+        // Base64-encode just 5 bytes (less than 12-byte IV + 1 byte ciphertext)
+        const shortData = btoa(String.fromCharCode(1, 2, 3, 4, 5));
+        await expectAsync(service.decryptWithPassword(shortData, 'password-long', 'poll1'))
+          .toBeRejectedWithError('Malformed encrypted data: too short to contain IV and ciphertext');
       });
     });
     
