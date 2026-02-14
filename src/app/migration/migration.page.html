@@ -160,6 +160,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
         Verify Poll Data
       </ion-button>
+
+      <ion-button expand="block" color="warning"
+                  [disabled]="!migrationService || isRunning || !pollIdInput"
+                  (click)="rollbackPollData(pollIdInput)">
+        <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+        Rollback Poll Data
+      </ion-button>
     </ion-card-content>
   </ion-card>
 
