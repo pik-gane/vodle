@@ -1511,7 +1511,7 @@ export class DataService implements OnDestroy {
       const listener = {
         onDataChange: () => {
           this.after_changes();
-          if (this.page.onDataChange) this.page.onDataChange();
+          if (this.page && this.page.onDataChange) this.page.onDataChange();
         }
       };
       this.matrixService.addPollEventListener(pid, listener);
