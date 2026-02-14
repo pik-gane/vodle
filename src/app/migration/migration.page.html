@@ -1,0 +1,162 @@
+<!--
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the 
+terms of the GNU Affero General Public License as published by the Free 
+Software Foundation, either version 3 of the License, or (at your option) 
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+details.
+
+You should have received a copy of the GNU Affero General Public License 
+along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+-->
+
+<ion-header>
+  <ion-toolbar style="padding-right:11px;">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Data Migration</ion-title>
+    <ion-thumbnail slot="end">
+      <ion-img src="./assets/topright_icon.png"></ion-img>
+    </ion-thumbnail>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <!-- Matrix backend status -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Backend Status</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>Matrix Backend</ion-label>
+        <ion-badge [color]="isMatrixEnabled ? 'success' : 'medium'" slot="end">
+          {{ isMatrixEnabled ? 'Enabled' : 'Disabled' }}
+        </ion-badge>
+      </ion-item>
+      <p *ngIf="!isMatrixEnabled" class="hint-text">
+        Enable the Matrix backend in the environment configuration to use migration features.
+      </p>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Overall migration status -->
+  <ion-card *ngIf="migrationStatus">
+    <ion-card-header>
+      <ion-card-title>Migration Status</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label>Overall Status</ion-label>
+        <ion-badge [class]="getStatusClass(migrationStatus.overallStatus)" slot="end">
+          {{ getStatusLabel(migrationStatus.overallStatus) }}
+        </ion-badge>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>Items Migrated</ion-label>
+        <ion-note slot="end">{{ migrationStatus.totalItemsMigrated }}</ion-note>
+      </ion-item>
+      <ion-item lines="none">
+        <ion-label>Items Failed</ion-label>
+        <ion-note slot="end" [color]="migrationStatus.totalItemsFailed > 0 ? 'danger' : ''">
+          {{ migrationStatus.totalItemsFailed }}
+        </ion-note>
+      </ion-item>
+      <ion-item lines="none" *ngIf="migrationStatus.startedAt">
+        <ion-label>Started</ion-label>
+        <ion-note slot="end">{{ formatTimestamp(migrationStatus.startedAt) }}</ion-note>
+      </ion-item>
+      <ion-item lines="none" *ngIf="migrationStatus.completedAt">
+        <ion-label>Completed</ion-label>
+        <ion-note slot="end">{{ formatTimestamp(migrationStatus.completedAt) }}</ion-note>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Migration steps -->
+  <ion-card *ngIf="migrationStatus && migrationStatus.steps.length > 0">
+    <ion-card-header>
+      <ion-card-title>Migration Steps</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item *ngFor="let step of migrationStatus.steps" lines="full">
+        <ion-label>
+          <h3>{{ step.description }}</h3>
+          <p>{{ step.itemsMigrated }} migrated, {{ step.itemsFailed }} failed</p>
+          <p *ngIf="step.errors.length > 0" class="error-text">
+            {{ step.errors[0] }}
+            <span *ngIf="step.errors.length > 1"> (+{{ step.errors.length - 1 }} more)</span>
+          </p>
+        </ion-label>
+        <ion-badge [class]="getStatusClass(step.status)" slot="end">
+          {{ getStatusLabel(step.status) }}
+        </ion-badge>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Migration controls -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Migration Controls</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-button expand="block" color="primary"
+                  [disabled]="!migrationService || isRunning"
+                  (click)="migrateUserData()">
+        <ion-icon name="person-outline" slot="start"></ion-icon>
+        Migrate User Data
+      </ion-button>
+
+      <ion-button expand="block" color="secondary"
+                  [disabled]="!migrationService || isRunning"
+                  (click)="verifyUserData()">
+        <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+        Verify User Data
+      </ion-button>
+
+      <ion-button expand="block" color="success"
+                  [disabled]="!migrationService || isRunning || migrationStatus?.overallStatus !== 'in_progress'"
+                  (click)="completeMigration()">
+        <ion-icon name="flag-outline" slot="start"></ion-icon>
+        Complete Migration
+      </ion-button>
+
+      <ion-button expand="block" color="warning"
+                  [disabled]="!migrationService || isRunning"
+                  (click)="rollbackUserData()">
+        <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+        Rollback User Data
+      </ion-button>
+
+      <ion-button expand="block" color="medium"
+                  [disabled]="!migrationService || isRunning"
+                  (click)="resetMigration()">
+        <ion-icon name="refresh-outline" slot="start"></ion-icon>
+        Reset Migration
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Log output -->
+  <ion-card *ngIf="logMessages.length > 0">
+    <ion-card-header>
+      <ion-card-title>Migration Log</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="log-container">
+        <p *ngFor="let msg of logMessages" class="log-entry">{{ msg }}</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+</ion-content>

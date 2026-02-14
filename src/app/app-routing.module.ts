@@ -109,6 +109,10 @@ const routes: Routes = [
     loadChildren: () => import('./delete-all/delete-all.module').then( m => m.DeleteAllPageModule)
   },
   {
+    path: 'migration',
+    loadChildren: () => import('./migration/migration.module').then( m => m.MigrationPageModule)
+  },
+  {
     path: '*',
     redirectTo: '/mypolls'
   },
