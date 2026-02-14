@@ -46,8 +46,8 @@ Phase 16 enables the Matrix backend in the development environment.
 | 15 | Wire ratings & delegation to Matrix | ✅ Complete |
 | 16 | Enable Matrix backend (development environment) | ✅ Complete |
 
-**327 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
-41 MigrationPage + 67 Matrix Wiring + 135 MatrixService/DataAdapter).
+**346 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
+41 MigrationPage + 67 Matrix Wiring + 154 MatrixService/DataAdapter).
 
 ## What Remains (Phase 17)
 

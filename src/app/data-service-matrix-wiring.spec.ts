@@ -1263,7 +1263,7 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
       (environment as any).useMatrixBackend = originalUseMatrixBackend;
     });
 
-    it('should have useMatrixBackend true by default (Phase 16)', () => {
+    it('should have useMatrixBackend true by default', () => {
       expect(environment.useMatrixBackend).toBeTrue();
     });
 
