@@ -37,7 +37,7 @@ export const environment = {
   show_debug_info: true,
   // Toggle between Matrix and CouchDB backend
   // Set to true to use Matrix protocol, false to use CouchDB
-  useMatrixBackend: false,
+  useMatrixBackend: true,
   matrix: {
     // Local Matrix homeserver URL for development
     homeserver_url: "http://localhost:8008",

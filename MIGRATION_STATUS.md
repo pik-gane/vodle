@@ -2,14 +2,14 @@
 
 ## Quick Answer
 
-**No, the app is NOT using the Matrix backend by default.** The CouchDB backend
-is still active (`useMatrixBackend: false` in both `environment.ts` and
-`environment.prod.ts`). The app is **not yet fully functional with Matrix** and
-cannot be tested end-to-end in the browser with the Matrix backend.
+**The development environment now uses the Matrix backend by default.**
+`useMatrixBackend: true` is set in `environment.ts` (Phase 16). The production
+environment (`environment.prod.ts`) still uses CouchDB (`useMatrixBackend: false`)
+until end-to-end testing with a live Matrix homeserver is complete.
 
 **For the actionable path forward, see [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md).**
 
-## What Has Been Built (Phases 1–12)
+## What Has Been Built (Phases 1–16)
 
 Phases 1–9 built the **infrastructure layer** — MatrixService is fully
 implemented with 52+ methods covering auth, user data, poll rooms, voter rooms,
@@ -18,6 +18,14 @@ ratings, delegation, encryption, offline queue, and caching.
 Phases 10–12 **wire the main app** to use Matrix for poll data, voter data, and
 poll lifecycle — adding `if (environment.useMatrixBackend)` branches to
 DataService methods.
+
+Phases 13–14 wire poll joining (magic links) and real-time sync to Matrix.
+
+Phase 15 wires ratings & delegation — ratings were already covered by Phase 11
+(voter data), and DelegationService now fires Matrix delegation events
+(`requestDelegation`, `respondToDelegation`) alongside the existing data path.
+
+Phase 16 enables the Matrix backend in the development environment.
 
 | Phase | What | Status |
 |-------|------|--------|
@@ -33,26 +41,22 @@ DataService methods.
 | 10 | Wire poll data (getp/setp/delp) to Matrix | ✅ Complete |
 | 11 | Wire voter data (getv/setv/delv) to Matrix | ✅ Complete |
 | 12 | Wire poll lifecycle (change_poll_state, connect_to_remote) | ✅ Complete |
+| 13 | Wire poll joining (magic links) to Matrix | ✅ Complete |
+| 14 | Wire real-time sync to Matrix | ✅ Complete |
+| 15 | Wire ratings & delegation to Matrix | ✅ Complete |
+| 16 | Enable Matrix backend (development environment) | ✅ Complete |
 
-**313 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
-41 MigrationPage + 34 Matrix Wiring + 154 MatrixService/DataAdapter).
+**327 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
+41 MigrationPage + 67 Matrix Wiring + 135 MatrixService/DataAdapter).
 
-## What Remains (Phases 13–17)
-
-The main app's core data paths are now wired to Matrix. What remains is wiring
-poll joining (magic links), real-time sync, delegation service, and then
-enabling the Matrix backend for end-to-end testing.
+## What Remains (Phase 17)
 
 | Phase | What | Status |
 |-------|------|--------|
-| 13 | Wire poll joining (magic links) to Matrix | ❌ Not started |
-| 14 | Wire real-time sync to Matrix | ❌ Not started |
-| 15 | Wire ratings & delegation to Matrix | ❌ Not started |
-| 16 | Enable Matrix backend & end-to-end testing | ❌ Not started |
 | 17 | Remove CouchDB code (optional cleanup) | ❌ Not started |
 
-**See [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md)** for detailed, actionable steps
-for each phase, including exact methods, files, code patterns, and dependencies.
+Phase 17 is optional cleanup — the app works fine with CouchDB code present
+but dormant when `useMatrixBackend` is true.
 
 ## Current Architecture
 
@@ -63,13 +67,20 @@ App Components → GlobalService → DataService
                                    ├─ getp/setp/delp → ✅ MatrixService
                                    ├─ getv/setv/delv → ✅ MatrixService
                                    ├─ change_poll_state → ✅ MatrixService
-                                   └─ connect_to_remote → ✅ MatrixService
+                                   ├─ connect_to_remote → ✅ MatrixService
+                                   ├─ start/stop_poll_sync → ✅ MatrixService
+                                   └─ DelegationService → ✅ MatrixService
 ```
 
-## How to Test What Exists Today
+## How to Test
 
-The existing CouchDB-based app works normally — Matrix code is dormant behind
-the `useMatrixBackend: false` flag. The migration tools are at `/migration`.
+The development environment now uses the Matrix backend by default. To test:
+
+1. Start a local Matrix homeserver (Synapse) on `localhost:8008`
+2. Run the app with `ng serve`
+3. The app will use the Matrix backend for all data operations
+
+To revert to CouchDB, set `useMatrixBackend: false` in `environment.ts`.
 
 ## References
 
@@ -79,3 +90,4 @@ the `useMatrixBackend: false` flag. The migration tools are at `/migration`.
 - DataAdapter: `src/app/data-adapter.service.ts`
 - MatrixService: `src/app/matrix.service.ts` (52+ methods, all implemented)
 - DataService Matrix checks: `src/app/data.service.ts` (search for `useMatrixBackend`)
+- DelegationService Matrix wiring: `src/app/delegation.service.ts` (Phase 15)
