@@ -213,5 +213,5 @@ export interface IDataBackend {
   /**
    * Get backend type identifier
    */
-  getBackendType(): 'couchdb' | 'matrix';
+  getBackendType(): 'couchdb' | 'matrix' | 'memory';
 }

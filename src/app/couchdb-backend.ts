@@ -210,7 +210,7 @@ export class CouchDBBackend implements IDataBackend {
     // This stub is a no-op for interface compatibility.
   }
   
-  getBackendType(): 'couchdb' | 'matrix' {
+  getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return 'couchdb';
   }
 }

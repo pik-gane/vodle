@@ -175,7 +175,7 @@ export class MatrixBackend implements IDataBackend {
     await this.matrixService.warmupCache(pollId);
   }
   
-  getBackendType(): 'couchdb' | 'matrix' {
+  getBackendType(): 'couchdb' | 'matrix' | 'memory' {
     return 'matrix';
   }
 }
