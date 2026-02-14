@@ -105,6 +105,43 @@ describe('MigrationService', () => {
       const migrated = await target.getUserData('preferences');
       expect(migrated).toEqual(complexValue);
     });
+
+    it('should increment itemsFailed when getUserData throws', async () => {
+      await source.setUserData('language', 'en');
+      spyOn(source, 'getUserData').and.returnValue(Promise.reject(new Error('getUserData failure')));
+
+      const step = await migration.migrateUserData(['language']);
+
+      expect(step.itemsMigrated).toBe(0);
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors.length).toBe(1);
+      expect(step.errors[0]).toContain('getUserData failure');
+    });
+
+    it('should increment itemsFailed when setUserData throws', async () => {
+      await source.setUserData('language', 'en');
+      spyOn(target, 'setUserData').and.returnValue(Promise.reject(new Error('setUserData failure')));
+
+      const step = await migration.migrateUserData(['language']);
+
+      expect(step.itemsMigrated).toBe(0);
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors.length).toBe(1);
+      expect(step.errors[0]).toContain('setUserData failure');
+    });
+
+    it('should accumulate multiple errors', async () => {
+      await source.setUserData('key1', 'val1');
+      await source.setUserData('key2', 'val2');
+      spyOn(target, 'setUserData').and.returnValue(Promise.reject(new Error('write failed')));
+
+      const step = await migration.migrateUserData(['key1', 'key2']);
+
+      expect(step.itemsFailed).toBe(2);
+      expect(step.errors.length).toBe(2);
+      expect(step.errors[0]).toContain("key 'key1'");
+      expect(step.errors[1]).toContain("key 'key2'");
+    });
   });
 
   // ========================================================================
@@ -128,11 +165,13 @@ describe('MigrationService', () => {
       expect(await target.getPollData('poll1', 'deadline')).toBe('2026-03-01');
     });
 
-    it('should create poll with empty title if title is not set', async () => {
+    it('should fail when source poll has no title', async () => {
       const step = await migration.migratePollData('poll2', []);
       
-      expect(step.status).toBe('completed');
-      expect(step.itemsMigrated).toBe(1); // createPoll counts as 1
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors.length).toBe(1);
+      expect(step.errors[0]).toContain('has no title');
     });
 
     it('should skip null poll data keys', async () => {
@@ -142,6 +181,31 @@ describe('MigrationService', () => {
       
       expect(step.status).toBe('completed');
       expect(step.itemsMigrated).toBe(1); // Only title via createPoll
+    });
+
+    it('should record failure when createPoll throws an error', async () => {
+      await source.createPoll('poll-error', 'Error poll');
+      spyOn(target, 'createPoll').and.returnValue(Promise.reject(new Error('createPoll failed')));
+
+      const step = await migration.migratePollData('poll-error', ['title', 'description']);
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBeGreaterThanOrEqual(1);
+      expect(step.errors.length).toBeGreaterThan(0);
+      expect(step.errors[0]).toContain('createPoll failed');
+    });
+
+    it('should record failure when setPollData throws an error', async () => {
+      await source.createPoll('poll-error-data', 'Poll with failing data');
+      await source.setPollData('poll-error-data', 'description', 'This will fail on data set');
+      spyOn(target, 'setPollData').and.returnValue(Promise.reject(new Error('setPollData failed')));
+
+      const step = await migration.migratePollData('poll-error-data', ['title', 'description']);
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBeGreaterThanOrEqual(1);
+      expect(step.errors.length).toBeGreaterThan(0);
+      expect(step.errors[0]).toContain('setPollData failed');
     });
   });
 
@@ -203,6 +267,33 @@ describe('MigrationService', () => {
       
       expect(step.status).toBe('completed');
       expect(step.itemsMigrated).toBe(0);
+    });
+
+    it('should capture errors when getRatings fails', async () => {
+      await source.createPoll('poll1', 'Test');
+      spyOn(source, 'getRatings').and.returnValue(Promise.reject(new Error('getRatings failed')));
+
+      const step = await migration.migrateRatings('poll1');
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBeGreaterThan(0);
+      expect(step.errors.length).toBeGreaterThan(0);
+      expect(step.errors[0]).toContain('getRatings failed');
+    });
+
+    it('should capture errors when submitRating fails', async () => {
+      await source.createPoll('poll1', 'Test');
+      await target.createPoll('poll1', 'Test');
+      await source.submitRating('poll1', 'opt1', 80);
+      await source.submitRating('poll1', 'opt2', 60);
+      spyOn(target, 'submitRating').and.returnValue(Promise.reject(new Error('submitRating failed')));
+
+      const step = await migration.migrateRatings('poll1');
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBe(2);
+      expect(step.errors.length).toBe(2);
+      expect(step.errors[0]).toContain('submitRating failed');
     });
   });
 
@@ -315,6 +406,40 @@ describe('MigrationService', () => {
       expect(step.itemsMigrated).toBe(1);
       expect(await source.getPollData('poll1', 'description')).toBe('Rolled back desc');
     });
+
+    it('should track failures when getUserData throws during rollback', async () => {
+      await target.setUserData('language', 'en');
+      spyOn(target, 'getUserData').and.returnValue(Promise.reject(new Error('getUserData failed')));
+
+      const step = await migration.rollbackUserData(['language']);
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors.length).toBeGreaterThan(0);
+      expect(step.errors[0]).toContain('getUserData failed');
+    });
+
+    it('should track failures when setUserData throws during rollback', async () => {
+      await target.setUserData('language', 'en');
+      spyOn(source, 'setUserData').and.returnValue(Promise.reject(new Error('setUserData failed')));
+
+      const step = await migration.rollbackUserData(['language']);
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors.length).toBeGreaterThan(0);
+      expect(step.errors[0]).toContain('setUserData failed');
+    });
+
+    it('should set overall status to failed when rollback fails', async () => {
+      await target.setUserData('language', 'en');
+      spyOn(source, 'setUserData').and.returnValue(Promise.reject(new Error('rollback error')));
+
+      await migration.rollbackUserData(['language']);
+
+      const status = migration.getMigrationStatus();
+      expect(status.overallStatus).toBe('failed');
+    });
   });
 
   // ========================================================================
@@ -378,6 +503,14 @@ describe('MigrationService', () => {
       expect(step.startedAt).toBeDefined();
       expect(step.completedAt).toBeDefined();
       expect(step.completedAt!).toBeGreaterThanOrEqual(step.startedAt!);
+    });
+
+    it('should throw when creating a duplicate step ID', async () => {
+      await source.setUserData('lang', 'en');
+      await migration.migrateUserData(['lang']);
+      
+      await expectAsync(migration.migrateUserData(['lang']))
+        .toBeRejectedWithError(/already exists/);
     });
   });
 

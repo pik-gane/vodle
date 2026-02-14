@@ -38,8 +38,8 @@ export interface MigrationStep {
   itemsMigrated: number;
   /** Number of items that failed */
   itemsFailed: number;
-  /** Error message if status is 'failed' */
-  error?: string;
+  /** All error messages accumulated during this step */
+  errors: string[];
   /** Timestamp when the step started */
   startedAt?: number;
   /** Timestamp when the step completed or failed */
@@ -113,7 +113,7 @@ export class MigrationService {
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Failed to migrate user data key '${key}': ${error}`;
+        step.errors.push(`Failed to migrate user data key '${key}': ${error}`);
       }
     }
     
@@ -143,13 +143,16 @@ export class MigrationService {
         await this.target.createPoll(pollId, title);
         step.itemsMigrated++;
       } else {
-        // Create poll with empty title if none exists
-        await this.target.createPoll(pollId, '');
-        step.itemsMigrated++;
+        // Source poll has no title — poll may not exist on the source
+        step.itemsFailed++;
+        step.errors.push(`Source poll '${pollId}' has no title (poll may not exist); aborting poll migration.`);
+        step.status = 'failed';
+        step.completedAt = Date.now();
+        return step;
       }
     } catch (error) {
       step.itemsFailed++;
-      step.error = `Failed to create poll '${pollId}' on target: ${error}`;
+      step.errors.push(`Failed to create poll '${pollId}' on target: ${error}`);
       step.status = 'failed';
       step.completedAt = Date.now();
       return step;
@@ -166,7 +169,7 @@ export class MigrationService {
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Failed to migrate poll data key '${key}' for poll '${pollId}': ${error}`;
+        step.errors.push(`Failed to migrate poll data key '${key}' for poll '${pollId}': ${error}`);
       }
     }
     
@@ -199,7 +202,7 @@ export class MigrationService {
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Failed to migrate voter data key '${key}' for voter '${voterId}' in poll '${pollId}': ${error}`;
+        step.errors.push(`Failed to migrate voter data key '${key}' for voter '${voterId}' in poll '${pollId}': ${error}`);
       }
     }
     
@@ -211,6 +214,10 @@ export class MigrationService {
   /**
    * Migrate ratings for a poll. Reads all ratings from the source and
    * submits them to the target backend.
+   * 
+   * Note: submitRating() on the target backend submits ratings under the
+   * currently logged-in user. For multi-user migration, each user must be
+   * logged in to the target backend separately.
    * 
    * @param pollId - The poll ID
    * @returns The migration step with results
@@ -232,13 +239,13 @@ export class MigrationService {
             step.itemsMigrated++;
           } catch (error) {
             step.itemsFailed++;
-            step.error = `Failed to migrate rating for voter '${voterId}', option '${optionId}' in poll '${pollId}': ${error}`;
+            step.errors.push(`Failed to migrate rating for option '${optionId}' in poll '${pollId}' (source voter: '${voterId}'): ${error}`);
           }
         }
       }
     } catch (error) {
       step.itemsFailed++;
-      step.error = `Failed to read ratings for poll '${pollId}': ${error}`;
+      step.errors.push(`Failed to read ratings for poll '${pollId}': ${error}`);
     }
     
     step.status = step.itemsFailed > 0 ? 'failed' : 'completed';
@@ -268,11 +275,11 @@ export class MigrationService {
           step.itemsMigrated++;
         } else {
           step.itemsFailed++;
-          step.error = `Verification failed for user data key '${key}': source and target values differ`;
+          step.errors.push(`Verification failed for user data key '${key}': source and target values differ`);
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Verification error for user data key '${key}': ${error}`;
+        step.errors.push(`Verification error for user data key '${key}': ${error}`);
       }
     }
     
@@ -312,11 +319,11 @@ export class MigrationService {
           step.itemsMigrated++;
         } else {
           step.itemsFailed++;
-          step.error = `Verification failed for poll data key '${key}' in poll '${pollId}': source and target values differ`;
+          step.errors.push(`Verification failed for poll data key '${key}' in poll '${pollId}': source and target values differ`);
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Verification error for poll data key '${key}' in poll '${pollId}': ${error}`;
+        step.errors.push(`Verification error for poll data key '${key}' in poll '${pollId}': ${error}`);
       }
     }
     
@@ -357,11 +364,11 @@ export class MigrationService {
           step.itemsMigrated++;
         } else {
           step.itemsFailed++;
-          step.error = `Verification failed for voter data key '${key}' for voter '${voterId}' in poll '${pollId}'`;
+          step.errors.push(`Verification failed for voter data key '${key}' for voter '${voterId}' in poll '${pollId}'`);
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Verification error for voter data key '${key}' for voter '${voterId}' in poll '${pollId}': ${error}`;
+        step.errors.push(`Verification error for voter data key '${key}' for voter '${voterId}' in poll '${pollId}': ${error}`);
       }
     }
     
@@ -401,7 +408,7 @@ export class MigrationService {
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Failed to rollback user data key '${key}': ${error}`;
+        step.errors.push(`Failed to rollback user data key '${key}': ${error}`);
       }
     }
     
@@ -410,6 +417,8 @@ export class MigrationService {
     
     if (step.status === 'completed') {
       this.overallStatus = 'rolled_back';
+    } else {
+      this.overallStatus = 'failed';
     }
     
     return step;
@@ -437,7 +446,7 @@ export class MigrationService {
         }
       } catch (error) {
         step.itemsFailed++;
-        step.error = `Failed to rollback poll data key '${key}' for poll '${pollId}': ${error}`;
+        step.errors.push(`Failed to rollback poll data key '${key}' for poll '${pollId}': ${error}`);
       }
     }
     
@@ -446,6 +455,8 @@ export class MigrationService {
     
     if (step.status === 'completed') {
       this.overallStatus = 'rolled_back';
+    } else {
+      this.overallStatus = 'failed';
     }
     
     return step;
@@ -501,12 +512,16 @@ export class MigrationService {
   // ========================================================================
   
   private createStep(id: string, description: string): MigrationStep {
+    if (this.steps.has(id)) {
+      throw new Error(`Migration step '${id}' already exists. Use resetMigration() to clear previous steps.`);
+    }
     const step: MigrationStep = {
       id,
       description,
       status: 'pending',
       itemsMigrated: 0,
       itemsFailed: 0,
+      errors: [],
     };
     this.steps.set(id, step);
     return step;
@@ -521,6 +536,15 @@ export class MigrationService {
   
   /**
    * Compare two values for equality, handling objects and arrays.
+   * 
+   * Uses JSON.stringify for deep object comparison. Known limitations:
+   * - Object key ordering may differ for equivalent objects (JSON.stringify
+   *   preserves insertion order, so {a:1, b:2} !== {b:2, a:1})
+   * - undefined values in objects are omitted by JSON.stringify
+   * - Does not handle Date objects, RegExp, or circular references
+   * 
+   * These limitations are acceptable for Vodle's data model, which uses
+   * simple key-value pairs with string/number/boolean/array values.
    */
   private valuesEqual(a: any, b: any): boolean {
     if (a === b) return true;
