@@ -301,7 +301,102 @@ If you prefer to test with the old CouchDB backend:
 
 ---
 
-## 9. Troubleshooting
+## 9. Production Deployment
+
+The repository includes a separate production Docker Compose setup that
+builds an optimised Angular bundle and serves it via nginx.
+
+### Architecture
+
+```
+                    ┌─────────────────────────────────────┐
+                    │          Docker Network              │
+   Browser ────►   │  nginx (:80)  ──►  Synapse (:8008)  │
+                    │    │                    ▲            │
+                    │    │              guard-bot          │
+                    │    ▼                                 │
+                    │  /usr/share/nginx/html (static SPA)  │
+                    └─────────────────────────────────────┘
+```
+
+- **nginx** serves the compiled Angular app and reverse-proxies
+  `/_matrix/*` requests to Synapse — no CORS issues
+- **Synapse** runs internally (port 8008 is NOT exposed to the host)
+- **guard-bot** connects to Synapse internally to enforce deadlines
+
+### Setup
+
+```bash
+cd /path/to/vodle
+
+# 1. Generate Synapse config for your domain
+docker run --rm -v "$(pwd)/matrix-data:/data" \
+  -e SYNAPSE_SERVER_NAME=vodle.example.com \
+  -e SYNAPSE_REPORT_STATS=no \
+  matrixdotorg/synapse:latest generate
+
+# 2. Edit matrix-data/homeserver.yaml:
+#    enable_registration: true
+#    enable_registration_without_verification: true
+
+# 3. Start Synapse to register the guard bot
+docker compose -f docker-compose.prod.yml up synapse -d
+docker exec vodle-matrix-synapse register_new_matrix_user \
+  -c /data/homeserver.yaml \
+  -u vodle-guard -p YOUR_STRONG_PASSWORD --admin
+
+# 4. Create a .env file with your secrets
+echo 'BOT_PASSWORD=YOUR_STRONG_PASSWORD' > .env
+echo 'SYNAPSE_SERVER_NAME=vodle.example.com' >> .env
+echo 'BOT_USER=@vodle-guard:vodle.example.com' >> .env
+
+# 5. Build and start everything
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+The app is available at **http://localhost** (port 80).
+
+### Customising for your domain
+
+Before deploying, update `src/environments/environment.prod.ts`:
+
+- **`matrix.homeserver_url`**: set to `"/"` for same-origin (nginx proxy)
+  or `"https://matrix.yourdomain.com"` for a separate homeserver
+- **`matrix.guard_bot_user_id`**: e.g. `"@vodle-guard:yourdomain.com"`
+- **`magic_link_base_url`**: e.g. `"https://yourdomain.com/#/"`
+
+Then rebuild: `docker compose -f docker-compose.prod.yml up --build -d`
+
+### Adding TLS (HTTPS)
+
+The production setup serves HTTP on port 80. For real deployments,
+put a TLS-terminating reverse proxy in front:
+
+- **Caddy** (easiest — automatic HTTPS):
+  ```
+  yourdomain.com {
+      reverse_proxy localhost:80
+  }
+  ```
+- **Traefik**: add labels to the `vodle-web` service
+- **nginx on the host**: `proxy_pass http://localhost:80`
+
+### Differences from the dev setup
+
+| | Dev (`docker-compose.yml`) | Prod (`docker-compose.prod.yml`) |
+|--|---------------------------|----------------------------------|
+| Web server | Angular dev server (`ng serve`) | nginx (static files) |
+| Source mounting | Yes (live reload) | No (built into image) |
+| Port | 4200 | 80 |
+| Synapse port exposed | 8008 (host) | Internal only |
+| Matrix API access | Direct to localhost:8008 | Via nginx reverse proxy |
+| Angular build | JIT (dev mode) | AOT (production, optimised) |
+| Bot password | Hardcoded (`vodle-guard-password`) | Required via `.env` / environment |
+| Environment | `environment.ts` (debug on) | `environment.prod.ts` (debug off) |
+
+---
+
+## 10. Troubleshooting
 
 ### "Cannot connect to Matrix server" alert on login
 
@@ -334,7 +429,7 @@ or re-load the test poll URL to generate a fresh draft with a future deadline.
 
 ---
 
-## 10. Screenshots from Automated E2E Testing
+## 11. Screenshots from Automated E2E Testing
 
 The following screenshots were taken during automated end-to-end testing
 with a real Synapse homeserver running locally in Docker. They document
