@@ -89,7 +89,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- DELEGATE BUTTON: -->
       <ion-button *ngIf="!!p && delegation_status!='agreed' && p.allow_voting"
-          (click)="delegate_dialog($event)" 
+          (click)="delegate_dialog($event)" data-vodle="delegate-button"
           shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
@@ -112,7 +112,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
     (pointerup)="onBodyPointerup($event)"
     (touchup)="onBodyTouchup($event)"
     [scrollEvents]="true"
-    (ionScroll)="onScroll($event)"    
+    (ionScroll)="onScroll($event)"
+    data-vodle="poll-voting-page"
+    [attr.data-vodle-poll-title]="p.title"
+    [attr.data-vodle-poll-type]="p.type"
+    [attr.data-vodle-poll-state]="p.allow_voting ? 'open' : 'closed'"
     >
   <ion-list lines="full" class="ion-no-margin ion-no-padding">
 
@@ -287,7 +291,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
               <!-- LIVE SCORES TOGGLE: -->
 
               <ion-button [disabled]="!p.allow_voting"
-                  (click)="toggle_show_live()" 
+                  (click)="toggle_show_live()" data-vodle="toggle-live-scores-button" 
                   size="small" fill="clear" class="ion-no-padding ion-no-margin"
                   style="position: absolute; right:8.5px; bottom:8px;" 
                   >
@@ -651,7 +655,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- OPTIONS: -->
 
-      <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start">
+      <ion-item *ngFor="let item of [].constructor(oidsorted.length); let i = index" style="align-items:flex-start"
+        data-vodle="poll-option-item" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name" [attr.data-vodle-option-index]="i">
 
         <!-- ALWAYS VISIBLE STUFF: -->
 
@@ -723,6 +728,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"
                         mode="md" pin="true"
                         min="0" max="100" step="1" snaps="true" ticks="false"
+                        data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
+                        [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
                         [style]="''
                           + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
                           ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
@@ -931,7 +938,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
           <ion-fab-button 
             size="small" (click)="add_option($event)" fill="clear" color="primary"
-            [disabled]="!p.can_add_option()">
+            [disabled]="!p.can_add_option()" data-vodle="add-option-button">
             <ion-icon name="add"></ion-icon>
 
           </ion-fab-button>

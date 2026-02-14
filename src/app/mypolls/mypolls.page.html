@@ -56,7 +56,7 @@ TODO:
     - make bg image align bottom of screen when too few polls to fill screen.
 -->
 
-<ion-content *ngIf="ready">
+<ion-content *ngIf="ready" data-vodle="my-polls-page">
   <ion-list lines="full" class="ion-no-margin ion-no-padding">
 
     <!-- NEWS -->
@@ -108,11 +108,11 @@ TODO:
 
     <!--RUNNING-->
 
-    <ion-item color="primary" class="ion-no-margin">
+    <ion-item color="primary" class="ion-no-margin" data-vodle="running-polls-section">
       <ion-label><b [innerHtml]="'mypolls.running'|translate"></b></ion-label>
     </ion-item>
     <ng-container *ngFor="let p of running_polls">
-      <ion-item>
+      <ion-item data-vodle="running-poll-item" [attr.data-vodle-poll-title]="p.title">
         <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
           <!--<ion-icon *ngIf="p.type=='share'" class="poll-type-list" size="small" src="./assets/icon/flowers.svg"></ion-icon>-->
           <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
@@ -159,13 +159,13 @@ TODO:
 
     <!-- CLOSED: -->
 
-    <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: pointer;">
+    <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: pointer;" data-vodle="closed-polls-section">
       <ion-icon size="small" [name]="closed_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="closed_expanded">
       <ng-container *ngFor="let p of closed_polls">
-        <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
+        <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;" data-vodle="closed-poll-item" [attr.data-vodle-poll-title]="p.title">
           <ion-label>
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [lang]="p.language" [innerHtml]="p.title"></i>
@@ -211,13 +211,13 @@ TODO:
 
     <!--DRAFTS:-->
 
-    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: pointer;">
+    <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: pointer;" data-vodle="drafts-section">
       <ion-icon size="small" [name]="drafts_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
       &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
     </ion-item>
     <ng-container *ngIf="drafts_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
-        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: pointer;">
+        <ion-item *ngIf="p.state=='draft'" [routerLink]="'/draftpoll/'+p.pid" style="cursor: pointer;" data-vodle="draft-poll-item" [attr.data-vodle-poll-title]="p.title">
           <ion-label>
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [lang]="p.language" [innerHtml]="p.title"></i>
@@ -244,7 +244,7 @@ TODO:
   </ion-list>
 
   <ion-fab vertical="bottom" horizontal="end" slot="fixed" class="ion-margin">
-    <ion-fab-button routerLink="/draftpoll">
+    <ion-fab-button routerLink="/draftpoll" data-vodle="create-new-poll-button">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
   </ion-fab>

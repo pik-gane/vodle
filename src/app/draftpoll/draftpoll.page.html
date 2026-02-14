@@ -34,7 +34,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="ready">
+<ion-content *ngIf="ready" data-vodle="draft-poll-page">
   <form [formGroup]="formGroup">
 
     <!-- A hidden input needed to enable file upload from the kebap: -->
@@ -71,7 +71,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-select 
           formControlName="poll_type" 
           text-wrap autofocus tabindex="0" 
-          #ionSelects #type_select  
+          #ionSelects #type_select data-vodle="poll-type-select"
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           (ionChange)="set_poll_type();changed_poll_type()">
         <ion-select-option text-wrap value="winner" [innerHtml]="'draftpoll.type-winner'|translate"></ion-select-option>
@@ -102,6 +102,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [placeholder]="'draftpoll.title-placeholder'|translate"
           tabindex="0" type="text" required inputmode="text"
           style="font-weight: bold; font-style: italic; font-size: larger;"
+          data-vodle="poll-title-input"
           (ionChange)="set_poll_title();" debounce="100"
           (keydown)="poll_title_onKeydown($event)"
           (ionBlur)="blur_poll_title()">
@@ -133,6 +134,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [placeholder]="'draftpoll.desc-placeholder'|translate"
           autofocus tabindex="0" rows="1" auto-grow type="text" inputmode="text" 
           style="font-style: italic;"
+          data-vodle="poll-description-input"
           (ionChange)="set_poll_desc()" debounce="100"
           (keydown)="poll_desc_onKeydown($event)"
           (ionBlur)="blur_poll_desc()">
@@ -208,7 +210,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             id="due_select" #due_select
             formControlName="poll_due_type" 
             [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-            #ionSelects tabindex="0" required 
+            #ionSelects tabindex="0" required data-vodle="poll-due-type-select"
             (ionChange)="set_poll_due_type();changed_due_type()">
           <ion-select-option value="custom" [innerHtml]="'draftpoll.due-type-custom'|translate"></ion-select-option>
           <ion-select-option value="10min" [innerHtml]="'draftpoll.due-type-10min'|translate"></ion-select-option>
@@ -332,6 +334,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                             : 'draftpoll.target-name-placeholder') | translate"
             type="text" required tabindex="0" [maxlength]="E.max_len.name"
             style="font-weight: bold; font-style: italic;"
+            data-vodle="option-name-input" [attr.data-vodle-option-index]="i"
             (ionChange)="set_option_name(i)" debounce="100"
             (keydown)="option_name_onKeydown($event, i, show_details)"
             (ionBlur)="blur_option_name(i)">
@@ -468,7 +471,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <small [innerHtml]="'('+('draftpoll.draft-saved'|translate)+')'"></small>
       </ion-label>
       <ion-button size="large" color="primary" slot="end" [disabled]="n_options<2 || !formGroup.valid" 
-          shape="round" tabindex="0" 
+          shape="round" tabindex="0" data-vodle="start-poll-button"
           (click)="ready_button_clicked()">
         <ion-icon name="checkmark"></ion-icon>&nbsp;
         <span [innerHtml]="'ready'|translate"></span>

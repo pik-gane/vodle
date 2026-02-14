@@ -73,7 +73,7 @@ TODO:
   </ion-item>
 </ion-content>
 
-<ion-content *ngIf="ready && (p!=null)">
+<ion-content *ngIf="ready && (p!=null)" data-vodle="join-poll-page">
   <ion-item class="ion-text-center" color="warning">
     <ion-col class="ion-no-padding ion-no-margin">
       <h4 [innerHtml]="'joinpoll.header'|translate:{poll_title:p.title}"></h4>
@@ -107,7 +107,7 @@ TODO:
   <ion-item class="ion-text-center" lines="none">
     <ion-col class="ion-no-padding ion-no-margin">
       <ion-button size="large" fill="solid" color="primary" 
-          shape="round" type="submit"
+          shape="round" type="submit" data-vodle="join-poll-go-button"
           (click)="go_button_clicked()">
         <span [innerHtml]="'joinpoll.lets-go-button'|translate"></span>&nbsp;
         <ion-icon name="arrow-forward-outline"></ion-icon>

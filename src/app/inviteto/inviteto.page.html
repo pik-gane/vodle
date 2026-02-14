@@ -26,7 +26,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="ready && (p!=null)">
+<ion-content *ngIf="ready && (p!=null)" data-vodle="invite-to-poll-page">
   <ion-list lines="full">
     <ion-item color="warning">
       <ion-col class="ion-no-padding ion-no-margin">
@@ -72,7 +72,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-item>
       <ion-item lines="none" class="ion-text-end" text-wrap>
         <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-            shape="round"
+            shape="round" data-vodle="share-invite-button"
             (click)="share_button_clicked()">
           <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
           <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
@@ -102,7 +102,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         lines="none" class="ion-text-end" text-wrap>
       <!--TODO: disable if due is in the past by now-->
       <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-          shape="round"
+          shape="round" data-vodle="copy-invite-link-button"
           (click)="copy_button_clicked()">
         <span [innerHtml]="'inviteto.copy-link'|translate"></span>&nbsp;
         <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
@@ -112,7 +112,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
         <p>&nbsp;</p>
         <p>&nbsp;</p>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid" data-vodle="go-to-poll-button">
           <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
         </ion-button>  
     </ion-item>  
