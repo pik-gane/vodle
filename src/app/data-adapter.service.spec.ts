@@ -117,4 +117,35 @@ describe('DataAdapter', () => {
       expect(service.deleteVoterData).toBeDefined();
     });
   });
+  
+  // Phase 5 Tests
+  describe('Phase 5: Advanced Features', () => {
+    it('should have isOnline method', () => {
+      expect(service.isOnline).toBeDefined();
+    });
+    
+    it('should have getOfflineQueueSize method', () => {
+      expect(service.getOfflineQueueSize).toBeDefined();
+    });
+    
+    it('should have processOfflineQueue method', () => {
+      expect(service.processOfflineQueue).toBeDefined();
+    });
+    
+    it('should have clearOfflineQueue method', () => {
+      expect(service.clearOfflineQueue).toBeDefined();
+    });
+    
+    it('should have encryptWithPassword method', () => {
+      expect(service.encryptWithPassword).toBeDefined();
+    });
+    
+    it('should have decryptWithPassword method', () => {
+      expect(service.decryptWithPassword).toBeDefined();
+    });
+    
+    it('should have warmupCache method', () => {
+      expect(service.warmupCache).toBeDefined();
+    });
+  });
 });

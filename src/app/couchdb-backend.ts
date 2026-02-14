@@ -169,6 +169,47 @@ export class CouchDBBackend implements IDataBackend {
     // This stub is a no-op for interface compatibility.
   }
   
+  // ========================================================================
+  // Phase 5: Advanced Features
+  // ========================================================================
+  
+  isOnline(): boolean {
+    // CouchDB/PouchDB has its own offline-first sync model.
+    // Return true as PouchDB handles offline transparently.
+    return true;
+  }
+  
+  getOfflineQueueSize(): number {
+    // PouchDB handles offline sync internally; no separate queue needed.
+    return 0;
+  }
+  
+  async processOfflineQueue(): Promise<number> {
+    // PouchDB handles offline sync internally; no separate queue needed.
+    return 0;
+  }
+  
+  async clearOfflineQueue(): Promise<void> {
+    // PouchDB handles offline sync internally; no separate queue needed.
+  }
+  
+  async encryptWithPassword(data: any, password: string, pollId: string): Promise<string> {
+    // CouchDB backend uses its own encryption via DataService.
+    // This stub returns a JSON string for interface compatibility.
+    return JSON.stringify(data);
+  }
+  
+  async decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any> {
+    // CouchDB backend uses its own encryption via DataService.
+    // This stub parses the JSON string for interface compatibility.
+    return JSON.parse(encryptedData);
+  }
+  
+  async warmupCache(pollId: string): Promise<void> {
+    // CouchDB/PouchDB caches data through its built-in sync mechanism.
+    // This stub is a no-op for interface compatibility.
+  }
+  
   getBackendType(): 'couchdb' | 'matrix' {
     return 'couchdb';
   }

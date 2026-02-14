@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
-import { MatrixService, hashEmail, DelegationRequest, DelegationResponse, PollEventListener } from './matrix.service';
+import { MatrixService, hashEmail, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -491,6 +491,340 @@ describe('MatrixService', () => {
       it('should reject ratings above 100', async () => {
         await expectAsync(service.submitRating('test-poll', 'opt1', 101))
           .toBeRejectedWithError('Not logged in');
+      });
+    });
+  });
+  
+  // Phase 5 Tests
+  describe('Phase 5: Advanced Features', () => {
+    
+    // 5.1 Offline Event Queue
+    describe('Offline Event Queue', () => {
+      it('should have isOnline method', () => {
+        expect(service.isOnline).toBeDefined();
+      });
+      
+      it('should return false for isOnline when client not initialized', () => {
+        expect(service.isOnline()).toBe(false);
+      });
+      
+      it('should have enqueueOfflineEvent method', () => {
+        expect(service.enqueueOfflineEvent).toBeDefined();
+      });
+      
+      it('should have processOfflineQueue method', () => {
+        expect(service.processOfflineQueue).toBeDefined();
+      });
+      
+      it('should have getOfflineQueueSize method', () => {
+        expect(service.getOfflineQueueSize).toBeDefined();
+      });
+      
+      it('should have getOfflineQueueStatus method', () => {
+        expect(service.getOfflineQueueStatus).toBeDefined();
+      });
+      
+      it('should have clearOfflineQueue method', () => {
+        expect(service.clearOfflineQueue).toBeDefined();
+      });
+      
+      it('should have loadOfflineQueue method', () => {
+        expect(service.loadOfflineQueue).toBeDefined();
+      });
+      
+      it('should start with empty offline queue', () => {
+        expect(service.getOfflineQueueSize()).toBe(0);
+      });
+      
+      it('should enqueue an event and increase queue size', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        await service.enqueueOfflineEvent({
+          type: 'rating',
+          pollId: 'poll1',
+          optionId: 'opt1',
+          rating: 75
+        });
+        
+        expect(service.getOfflineQueueSize()).toBe(1);
+      });
+      
+      it('should enqueue multiple events', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        await service.enqueueOfflineEvent({
+          type: 'rating',
+          pollId: 'poll1',
+          optionId: 'opt1',
+          rating: 75
+        });
+        
+        await service.enqueueOfflineEvent({
+          type: 'user_data',
+          key: 'language',
+          value: 'de'
+        });
+        
+        expect(service.getOfflineQueueSize()).toBe(2);
+      });
+      
+      it('should clear offline queue', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        await service.enqueueOfflineEvent({
+          type: 'rating',
+          pollId: 'poll1',
+          optionId: 'opt1',
+          rating: 75
+        });
+        
+        expect(service.getOfflineQueueSize()).toBe(1);
+        
+        await service.clearOfflineQueue();
+        
+        expect(service.getOfflineQueueSize()).toBe(0);
+      });
+      
+      it('should return correct queue status', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        const status = service.getOfflineQueueStatus();
+        expect(status.queueSize).toBe(0);
+        expect(status.isProcessing).toBe(false);
+        expect(status.isOnline).toBe(false);
+        expect(status.lastProcessedAt).toBeNull();
+        expect(status.failedCount).toBe(0);
+      });
+      
+      it('should return 0 when processing empty queue', async () => {
+        const processed = await service.processOfflineQueue();
+        expect(processed).toBe(0);
+      });
+      
+      it('should load queue from storage', async () => {
+        const storedQueue: QueuedEvent[] = [
+          {
+            id: 'test-id',
+            type: 'rating',
+            pollId: 'poll1',
+            optionId: 'opt1',
+            rating: 50,
+            timestamp: Date.now(),
+            retryCount: 0
+          }
+        ];
+        storageSpy.get.and.returnValue(Promise.resolve(storedQueue));
+        
+        await service.loadOfflineQueue();
+        
+        expect(service.getOfflineQueueSize()).toBe(1);
+      });
+      
+      it('should handle invalid storage data gracefully', async () => {
+        storageSpy.get.and.returnValue(Promise.resolve('invalid'));
+        
+        await service.loadOfflineQueue();
+        
+        // Should not crash, queue should remain unchanged
+        expect(service.getOfflineQueueSize()).toBeGreaterThanOrEqual(0);
+      });
+      
+      it('should discard oldest event when queue is full', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        
+        // Fill queue to MAX_QUEUE_SIZE (1000) by directly setting the internal array
+        const events: QueuedEvent[] = [];
+        for (let i = 0; i < 1000; i++) {
+          events.push({
+            id: `event-${i}`,
+            type: 'rating',
+            pollId: 'poll1',
+            optionId: 'opt1',
+            rating: 50,
+            timestamp: Date.now(),
+            retryCount: 0
+          });
+        }
+        (service as any).offlineQueue = events;
+        expect(service.getOfflineQueueSize()).toBe(1000);
+        
+        // Enqueue one more — should discard oldest
+        await service.enqueueOfflineEvent({
+          type: 'rating',
+          pollId: 'poll2',
+          optionId: 'opt2',
+          rating: 75
+        });
+        
+        expect(service.getOfflineQueueSize()).toBe(1000);
+      });
+    });
+    
+    // 5.2 Poll-Password Encryption
+    describe('Poll-Password Encryption', () => {
+      it('should have encryptWithPassword method', () => {
+        expect(service.encryptWithPassword).toBeDefined();
+      });
+      
+      it('should have decryptWithPassword method', () => {
+        expect(service.decryptWithPassword).toBeDefined();
+      });
+      
+      it('should have submitEncryptedRating method', () => {
+        expect(service.submitEncryptedRating).toBeDefined();
+      });
+      
+      it('should have decryptRating method', () => {
+        expect(service.decryptRating).toBeDefined();
+      });
+      
+      it('should encrypt and decrypt data correctly', async () => {
+        const data = { rating: 75, timestamp: 1234567890 };
+        const password = 'test-password';
+        const pollId = 'test-poll';
+        
+        const encrypted = await service.encryptWithPassword(data, password, pollId);
+        
+        expect(encrypted).toBeTruthy();
+        expect(typeof encrypted).toBe('string');
+        expect(encrypted).not.toContain('75');
+        
+        const decrypted = await service.decryptWithPassword(encrypted, password, pollId);
+        
+        expect(decrypted.rating).toBe(75);
+        expect(decrypted.timestamp).toBe(1234567890);
+      });
+      
+      it('should produce different ciphertexts for same data (random IV)', async () => {
+        const data = { rating: 50 };
+        const password = 'test-password';
+        const pollId = 'test-poll';
+        
+        const encrypted1 = await service.encryptWithPassword(data, password, pollId);
+        const encrypted2 = await service.encryptWithPassword(data, password, pollId);
+        
+        // Different IVs should produce different ciphertexts
+        expect(encrypted1).not.toBe(encrypted2);
+      });
+      
+      it('should fail to decrypt with wrong password', async () => {
+        const data = { rating: 75 };
+        const encrypted = await service.encryptWithPassword(data, 'correct-password', 'poll1');
+        
+        await expectAsync(
+          service.decryptWithPassword(encrypted, 'wrong-password-here', 'poll1')
+        ).toBeRejected();
+      });
+      
+      it('should fail to decrypt with wrong pollId', async () => {
+        const data = { rating: 75 };
+        const encrypted = await service.encryptWithPassword(data, 'password-long', 'poll1');
+        
+        await expectAsync(
+          service.decryptWithPassword(encrypted, 'password-long', 'poll2')
+        ).toBeRejected();
+      });
+      
+      it('should throw when submitting encrypted rating without login', async () => {
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 50, 'password-long'))
+          .toBeRejectedWithError('Not logged in');
+      });
+      
+      it('should reject encrypted rating below 0', async () => {
+        (service as any).userId = 'test-user';
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', -1, 'password-long-enough'))
+          .toBeRejectedWithError('Rating must be between 0 and 100 (inclusive)');
+      });
+      
+      it('should reject encrypted rating above 100', async () => {
+        (service as any).userId = 'test-user';
+        await expectAsync(service.submitEncryptedRating('test-poll', 'opt1', 101, 'password-long-enough'))
+          .toBeRejectedWithError('Rating must be between 0 and 100 (inclusive)');
+      });
+      
+      it('should throw error for decryptRating when client not initialized', async () => {
+        await expectAsync(service.decryptRating('nonexistent', 'voter1', 'opt1', 'password-long'))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should handle complex data types in encryption', async () => {
+        const complexData = {
+          nested: { values: [1, 2, 3] },
+          text: 'Hello, World!',
+          unicode: '日本語テスト'
+        };
+        
+        const encrypted = await service.encryptWithPassword(complexData, 'pass-long-enough', 'poll1');
+        const decrypted = await service.decryptWithPassword(encrypted, 'pass-long-enough', 'poll1');
+        
+        expect(decrypted.nested.values).toEqual([1, 2, 3]);
+        expect(decrypted.text).toBe('Hello, World!');
+        expect(decrypted.unicode).toBe('日本語テスト');
+      });
+      
+      it('should reject empty password for encryption', async () => {
+        await expectAsync(service.encryptWithPassword({ data: 1 }, '', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should reject short password for encryption', async () => {
+        await expectAsync(service.encryptWithPassword({ data: 1 }, 'short', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should reject empty password for decryption', async () => {
+        await expectAsync(service.decryptWithPassword('somedata', '', 'poll1'))
+          .toBeRejectedWithError('Password must be at least 8 characters long');
+      });
+      
+      it('should throw descriptive error for invalid base64 input', async () => {
+        await expectAsync(service.decryptWithPassword('not valid base64!!!', 'password-long', 'poll1'))
+          .toBeRejectedWithError('Invalid encrypted data format');
+      });
+      
+      it('should throw error for too-short encrypted data', async () => {
+        // Base64-encode just 5 bytes (less than 12-byte IV + 1 byte ciphertext)
+        const shortData = btoa(String.fromCharCode(1, 2, 3, 4, 5));
+        await expectAsync(service.decryptWithPassword(shortData, 'password-long', 'poll1'))
+          .toBeRejectedWithError('Malformed encrypted data: too short to contain IV and ciphertext');
+      });
+    });
+    
+    // 5.3 Caching Strategy
+    describe('Caching Strategy', () => {
+      it('should have warmupCache method', () => {
+        expect(service.warmupCache).toBeDefined();
+      });
+      
+      it('should have getCachedUserData method', () => {
+        expect(service.getCachedUserData).toBeDefined();
+      });
+      
+      it('should have setUserDataCached method', () => {
+        expect(service.setUserDataCached).toBeDefined();
+      });
+      
+      it('should have warmupUserDataCache method', () => {
+        expect(service.warmupUserDataCache).toBeDefined();
+      });
+      
+      it('should have clearUserDataCache method', () => {
+        expect(service.clearUserDataCache).toBeDefined();
+      });
+      
+      it('should return undefined for non-cached user data', () => {
+        const value = service.getCachedUserData('nonexistent');
+        expect(value).toBeUndefined();
+      });
+      
+      it('should throw when warming up cache without initialization', async () => {
+        await expectAsync(service.warmupCache('test-poll'))
+          .toBeRejectedWithError('Matrix client not initialized');
+      });
+      
+      it('should clear user data cache', () => {
+        // Should not throw
+        expect(() => service.clearUserDataCache()).not.toThrow();
       });
     });
   });

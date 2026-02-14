@@ -25,6 +25,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * 
  * Phase 1-2: Authentication and user data management.
  * Phase 3: Poll room creation, metadata, options, and voter management.
+ * Phase 4: Voting, delegation, and real-time event handling.
+ * Phase 5: Offline event queue, poll-password encryption, caching strategy.
  */
 export interface IDataBackend {
   /**
@@ -158,6 +160,55 @@ export interface IDataBackend {
    * Phase 4: Cleans up event listeners when no longer needed
    */
   teardownPollEventHandlers(pollId: string): void;
+  
+  // ========================================================================
+  // Phase 5: Advanced Features
+  // ========================================================================
+  
+  /**
+   * Check if the backend has a working connection
+   * Phase 5: Used to determine whether to enqueue events for offline processing
+   */
+  isOnline(): boolean;
+  
+  /**
+   * Get the current size of the offline event queue
+   * Phase 5: Returns the number of events waiting to be sent
+   */
+  getOfflineQueueSize(): number;
+  
+  /**
+   * Process all queued offline events
+   * Phase 5: Sends pending events that were stored while disconnected
+   * @returns Number of events successfully processed
+   */
+  processOfflineQueue(): Promise<number>;
+  
+  /**
+   * Clear all events from the offline queue
+   * Phase 5: Discards any pending events
+   */
+  clearOfflineQueue(): Promise<void>;
+  
+  /**
+   * Encrypt data with a poll password
+   * Phase 5: Provides additional encryption layer on top of backend encryption
+   * @returns Base64-encoded encrypted data
+   */
+  encryptWithPassword(data: any, password: string, pollId: string): Promise<string>;
+  
+  /**
+   * Decrypt data that was encrypted with encryptWithPassword
+   * Phase 5: Decrypts the additional encryption layer
+   * @returns The decrypted data
+   */
+  decryptWithPassword(encryptedData: string, password: string, pollId: string): Promise<any>;
+  
+  /**
+   * Warm up caches for a poll
+   * Phase 5: Preloads poll data into memory for faster access
+   */
+  warmupCache(pollId: string): Promise<void>;
   
   /**
    * Get backend type identifier
