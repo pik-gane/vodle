@@ -24,8 +24,10 @@ The page provides the following user-facing actions:
 |---------|-------------|
 | **Migrate User Data** | Copies user settings (language, theme, etc.) from CouchDB to Matrix |
 | **Verify User Data** | Compares source and target values to confirm data integrity |
-| **Complete Migration** | Marks the overall migration as successfully completed |
 | **Rollback User Data** | Copies data from Matrix back to CouchDB in case of issues |
+| **Migrate Poll Data** | Copies poll metadata for a specified poll ID from CouchDB to Matrix |
+| **Verify Poll Data** | Compares poll data between source and target for a specified poll ID |
+| **Complete Migration** | Marks the overall migration as successfully completed |
 | **Reset Migration** | Clears all migration state and starts fresh |
 
 ### 3. Status Visualization
@@ -60,11 +62,16 @@ MigrationPage
 │   └── Timestamps (started, completed)
 ├── Migration Steps Card
 │   └── Per-step list with status badges
-├── Migration Controls Card
+├── User Data Migration Card
 │   ├── Migrate User Data button
 │   ├── Verify User Data button
+│   └── Rollback User Data button
+├── Poll Data Migration Card
+│   ├── Poll ID input
+│   ├── Migrate Poll Data button
+│   └── Verify Poll Data button
+├── Migration Controls Card
 │   ├── Complete Migration button
-│   ├── Rollback User Data button
 │   └── Reset Migration button
 └── Migration Log Card
     └── Timestamped operation log
@@ -78,8 +85,10 @@ MigrationPage
 │  ├── initMigration(source, target)              │
 │  ├── migrateUserData()                          │
 │  ├── verifyUserData()                           │
-│  ├── completeMigration()                        │
 │  ├── rollbackUserData()                         │
+│  ├── migratePollData(pollId)                    │
+│  ├── verifyPollData(pollId)                     │
+│  ├── completeMigration()                        │
 │  └── resetMigration()                           │
 └─────────────────┬───────────────────────────────┘
                   │
@@ -137,13 +146,15 @@ MigrationPage
 ### Tests
 
 7. **`src/app/migration/migration.page.spec.ts`** (new)
-   - 17 tests covering:
+   - 26 tests covering:
      - Component creation
      - Initial state
      - Migration service initialization
      - User data migration with status updates
      - Guard against double-running
-     - Verification workflow
+     - User data verification workflow
+     - Poll data migration (success, failure, guards, whitespace validation)
+     - Poll data verification (success, mismatch detection, guards, whitespace validation)
      - Migration completion
      - Rollback workflow
      - Reset functionality
@@ -161,10 +172,10 @@ MigrationPage
 ### Unit Tests
 
 ```bash
-# Run MigrationPage tests (17 tests)
+# Run MigrationPage tests (26 tests)
 CHROME_BIN=$(which chromium-browser) npx ng test --no-watch --browsers=ChromeHeadlessNoSandbox --include='**/migration/migration.page.spec.ts'
 
-# Run all migration-related tests (76 + 17 = 93 tests)
+# Run all migration-related tests (42 + 34 + 26 = 102 tests)
 CHROME_BIN=$(which chromium-browser) npx ng test --no-watch --browsers=ChromeHeadlessNoSandbox --include='**/migration.service.spec.ts' --include='**/in-memory-backend.spec.ts' --include='**/migration/migration.page.spec.ts'
 ```
 
@@ -175,12 +186,14 @@ CHROME_BIN=$(which chromium-browser) npx ng test --no-watch --browsers=ChromeHea
 | Migration page component | 4 | `migration.page.spec.ts` |
 | Migration initialization | 2 | `migration.page.spec.ts` |
 | User data migration | 3 | `migration.page.spec.ts` |
-| Verification | 1 | `migration.page.spec.ts` |
+| User data verification | 1 | `migration.page.spec.ts` |
+| Poll data migration | 5 | `migration.page.spec.ts` |
+| Poll data verification | 4 | `migration.page.spec.ts` |
 | Completion | 1 | `migration.page.spec.ts` |
 | Rollback | 1 | `migration.page.spec.ts` |
 | Reset | 2 | `migration.page.spec.ts` |
 | Utility methods | 3 | `migration.page.spec.ts` |
-| **Total** | **17** | |
+| **Total** | **26** | |
 
 ## Usage
 
@@ -192,9 +205,11 @@ Navigate to `/migration` in the app to access the migration controls.
 
 1. **Initialize**: The migration service is initialized with source (CouchDB) and target (Matrix) backends
 2. **Migrate User Data**: Click "Migrate User Data" to copy settings
-3. **Verify**: Click "Verify User Data" to confirm data integrity
-4. **Complete**: Click "Complete Migration" to finalize
-5. **Monitor**: Watch the log and step cards for progress and errors
+3. **Verify User Data**: Click "Verify User Data" to confirm data integrity
+4. **Migrate Poll Data**: Enter a poll ID and click "Migrate Poll Data" to copy poll metadata
+5. **Verify Poll Data**: Click "Verify Poll Data" to confirm poll data integrity
+6. **Complete**: Click "Complete Migration" to finalize
+7. **Monitor**: Watch the log and step cards for progress and errors
 
 ### Emergency Rollback
 

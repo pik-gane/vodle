@@ -195,6 +195,13 @@ describe('MigrationPage', () => {
       expect(component.migrationStatus!.totalItemsFailed).toBeGreaterThan(0);
       expect(component.logMessages.some(m => m.includes('failed'))).toBeTrue();
     });
+
+    it('should reject whitespace-only poll ID', async () => {
+      await component.migratePollData('   ');
+
+      expect(component.logMessages.some(m => m.includes('empty or whitespace-only'))).toBeTrue();
+      expect(component.isRunning).toBeFalse();
+    });
   });
 
   describe('verifyPollData', () => {
@@ -240,6 +247,13 @@ describe('MigrationPage', () => {
       await component.verifyPollData('poll1');
 
       expect(component.logMessages.length).toBe(1); // Only the init message
+    });
+
+    it('should reject whitespace-only poll ID', async () => {
+      await component.verifyPollData('   ');
+
+      expect(component.logMessages.some(m => m.includes('empty or whitespace-only'))).toBeTrue();
+      expect(component.isRunning).toBeFalse();
     });
   });
 

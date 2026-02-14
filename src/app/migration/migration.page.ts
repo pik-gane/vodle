@@ -115,12 +115,18 @@ export class MigrationPage implements OnInit {
   async migratePollData(pollId: string): Promise<void> {
     if (!this.migrationService || this.isRunning) return;
 
+    const trimmedPollId = pollId.trim();
+    if (!trimmedPollId) {
+      this.addLog('Cannot start poll data migration: poll ID is empty or whitespace-only');
+      return;
+    }
+
     this.isRunning = true;
-    this.addLog(`Starting poll data migration for ${pollId}...`);
+    this.addLog(`Starting poll data migration for ${trimmedPollId}...`);
 
     try {
-      const step = await this.migrationService.migratePollData(pollId, this.pollMetadataKeys);
-      this.addLog(`Poll ${pollId} migration ${step.status}: ${step.itemsMigrated} items migrated, ${step.itemsFailed} failed`);
+      const step = await this.migrationService.migratePollData(trimmedPollId, this.pollMetadataKeys);
+      this.addLog(`Poll ${trimmedPollId} migration ${step.status}: ${step.itemsMigrated} items migrated, ${step.itemsFailed} failed`);
       if (step.errors.length > 0) {
         for (const error of step.errors) {
           this.addLog(`  Error: ${error}`);
@@ -165,12 +171,18 @@ export class MigrationPage implements OnInit {
   async verifyPollData(pollId: string): Promise<void> {
     if (!this.migrationService || this.isRunning) return;
 
+    const trimmedPollId = pollId.trim();
+    if (!trimmedPollId) {
+      this.addLog('Cannot verify poll data: poll ID is empty or whitespace-only');
+      return;
+    }
+
     this.isRunning = true;
-    this.addLog(`Verifying poll ${pollId} migration...`);
+    this.addLog(`Verifying poll ${trimmedPollId} migration...`);
 
     try {
-      const step = await this.migrationService.verifyPollData(pollId, this.pollMetadataKeys);
-      this.addLog(`Poll ${pollId} verification ${step.status}: ${step.itemsMigrated} verified, ${step.itemsFailed} mismatched`);
+      const step = await this.migrationService.verifyPollData(trimmedPollId, this.pollMetadataKeys);
+      this.addLog(`Poll ${trimmedPollId} verification ${step.status}: ${step.itemsMigrated} verified, ${step.itemsFailed} mismatched`);
       if (step.errors.length > 0) {
         for (const error of step.errors) {
           this.addLog(`  Error: ${error}`);
