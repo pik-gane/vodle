@@ -1517,7 +1517,11 @@ export class DataService implements OnDestroy {
       if (!this._matrixPollListeners[pid]) {
         const listener = {
           onDataChange: () => {
-            if (this.page && this.page.onDataChange) this.page.onDataChange();
+            try {
+              if (this.page && this.page.onDataChange) this.page.onDataChange();
+            } catch (err) {
+              this.G.L.error("DataService Matrix onDataChange callback failed", pid, err);
+            }
           }
         };
         this._matrixPollListeners[pid] = listener;
