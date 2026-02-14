@@ -70,10 +70,14 @@ export class MigrationPage implements OnInit {
   /** Poll metadata keys to migrate */
   private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
 
+  /** localStorage key for persisting migration state */
+  private static readonly STORAGE_KEY = 'vodle_migration_state';
+
   constructor(private dataAdapter: DataAdapter) {}
 
   ngOnInit() {
     this.autoInitMigration();
+    this.loadState();
     this.refreshStatus();
   }
 
@@ -131,6 +135,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -162,6 +167,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -187,6 +193,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -218,6 +225,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -230,6 +238,7 @@ export class MigrationPage implements OnInit {
     this.migrationService.completeMigration();
     this.addLog('Migration marked as completed');
     this.refreshStatus();
+    this.saveState();
   }
 
   /**
@@ -254,6 +263,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -285,6 +295,7 @@ export class MigrationPage implements OnInit {
     } finally {
       this.isRunning = false;
       this.refreshStatus();
+      this.saveState();
     }
   }
 
@@ -298,6 +309,7 @@ export class MigrationPage implements OnInit {
     this.logMessages = [];
     this.addLog('Migration reset');
     this.refreshStatus();
+    this.clearSavedState();
   }
 
   /**
@@ -351,5 +363,47 @@ export class MigrationPage implements OnInit {
   private addLog(message: string): void {
     const timestamp = new Date().toLocaleString();
     this.logMessages.push(`[${timestamp}] ${message}`);
+  }
+
+  /**
+   * Save the current migration state to localStorage.
+   * Called automatically after each migration operation.
+   */
+  saveState(): void {
+    if (!this.migrationService) return;
+
+    try {
+      const state = this.migrationService.exportState();
+      localStorage.setItem(MigrationPage.STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      this.addLog(`Failed to save migration state: ${error}`);
+    }
+  }
+
+  /**
+   * Load previously saved migration state from localStorage.
+   * Called during page initialization to restore progress after reload.
+   */
+  loadState(): void {
+    if (!this.migrationService) return;
+
+    try {
+      const raw = localStorage.getItem(MigrationPage.STORAGE_KEY);
+      if (raw) {
+        const state = JSON.parse(raw);
+        this.migrationService.importState(state);
+        this.addLog('Restored migration state from previous session');
+      }
+    } catch (error) {
+      this.addLog(`Failed to load migration state: ${error}`);
+    }
+  }
+
+  /**
+   * Clear saved migration state from localStorage.
+   */
+  clearSavedState(): void {
+    localStorage.removeItem(MigrationPage.STORAGE_KEY);
+    this.addLog('Cleared saved migration state');
   }
 }

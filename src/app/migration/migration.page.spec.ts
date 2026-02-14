@@ -376,7 +376,9 @@ describe('MigrationPage', () => {
     it('should clear log messages on reset', () => {
       component.resetMigration();
 
-      expect(component.logMessages.length).toBe(1); // Only the reset message
+      expect(component.logMessages.length).toBe(2); // Reset message + cleared state message
+      expect(component.logMessages[0]).toContain('reset');
+      expect(component.logMessages[1]).toContain('Cleared saved');
     });
   });
 
@@ -448,6 +450,110 @@ describe('MigrationPage', () => {
       await component.rollbackPollData('poll1');
 
       expect(component.logMessages.length).toBe(initialLogLength);
+    });
+  });
+
+  describe('state persistence', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+      localStorage.removeItem('vodle_migration_state');
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('vodle_migration_state');
+    });
+
+    it('should save state to localStorage after migrateUserData', async () => {
+      await source.setUserData('language', 'de');
+      await component.migrateUserData();
+
+      const saved = localStorage.getItem('vodle_migration_state');
+      expect(saved).toBeTruthy();
+      const parsed = JSON.parse(saved!);
+      expect(parsed.overallStatus).toBe('in_progress');
+      expect(parsed.steps.length).toBeGreaterThan(0);
+    });
+
+    it('should save state to localStorage after migratePollData', async () => {
+      await source.createPoll('poll1', 'Test');
+      await component.migratePollData('poll1');
+
+      const saved = localStorage.getItem('vodle_migration_state');
+      expect(saved).toBeTruthy();
+    });
+
+    it('should save state after completeMigration', async () => {
+      await source.setUserData('language', 'en');
+      await component.migrateUserData();
+      component.completeMigration();
+
+      const saved = localStorage.getItem('vodle_migration_state');
+      expect(saved).toBeTruthy();
+      const parsed = JSON.parse(saved!);
+      expect(parsed.overallStatus).toBe('completed');
+    });
+
+    it('should restore state from localStorage on loadState', async () => {
+      await source.setUserData('language', 'de');
+      await component.migrateUserData();
+
+      // Re-init with fresh migration service (simulating page reload)
+      component.initMigration(source, target);
+      component.loadState();
+      component.refreshStatus();
+
+      expect(component.migrationStatus!.overallStatus).toBe('in_progress');
+      expect(component.migrationStatus!.steps.length).toBe(1);
+      expect(component.logMessages.some(m => m.includes('Restored migration state'))).toBeTrue();
+    });
+
+    it('should clear saved state on resetMigration', async () => {
+      await source.setUserData('language', 'de');
+      await component.migrateUserData();
+
+      expect(localStorage.getItem('vodle_migration_state')).toBeTruthy();
+
+      component.resetMigration();
+
+      expect(localStorage.getItem('vodle_migration_state')).toBeNull();
+    });
+
+    it('should not fail when localStorage has invalid JSON', () => {
+      localStorage.setItem('vodle_migration_state', 'not-valid-json');
+      component.loadState();
+
+      expect(component.logMessages.some(m => m.includes('Failed to load'))).toBeTrue();
+    });
+
+    it('should not save when no migration service', () => {
+      component.migrationService = null;
+      component.saveState();
+
+      expect(localStorage.getItem('vodle_migration_state')).toBeNull();
+    });
+
+    it('should not load when no migration service', () => {
+      localStorage.setItem('vodle_migration_state', '{"overallStatus":"completed"}');
+      component.migrationService = null;
+      const initialLogLength = component.logMessages.length;
+      component.loadState();
+
+      expect(component.logMessages.length).toBe(initialLogLength);
+    });
+
+    it('should clear saved state via clearSavedState', () => {
+      localStorage.setItem('vodle_migration_state', '{"overallStatus":"completed"}');
+      component.clearSavedState();
+
+      expect(localStorage.getItem('vodle_migration_state')).toBeNull();
+      expect(component.logMessages.some(m => m.includes('Cleared saved'))).toBeTrue();
     });
   });
 });
