@@ -1721,14 +1721,13 @@ export class DataService implements OnDestroy {
         return this.user_cache[ukey] || '';
       }
       this.ensure_poll_cache(pid);
-      const value = this.poll_caches[pid][key] || '';
-      if (value === '') {
-        // Fall back to user_cache for keys not yet moved to Matrix
-        // (e.g. when Matrix room creation failed during draft→running)
-        const ukey = get_poll_key_prefix(pid) + key;
-        return this.user_cache[ukey] || '';
+      if (key in this.poll_caches[pid]) {
+        return this.poll_caches[pid][key] || '';
       }
-      return value;
+      // Fall back to user_cache for keys not yet moved to Matrix
+      // (e.g. when Matrix room creation failed during draft→running)
+      const ukey = get_poll_key_prefix(pid) + key;
+      return this.user_cache[ukey] || '';
     }
 
     let value = null;
