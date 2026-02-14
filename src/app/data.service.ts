@@ -165,8 +165,10 @@ const poll_keystarts_in_user_db = [
   'password', 'myvid', 
   'del_private_key', 'del_nickname', 'del_from', 
   'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
+  'is_test',
   'poll_page',
   'simulated_ratings',
+  'start_date',
   'final_rand', 'winner'
 ];
 
@@ -1719,7 +1721,14 @@ export class DataService implements OnDestroy {
         return this.user_cache[ukey] || '';
       }
       this.ensure_poll_cache(pid);
-      return this.poll_caches[pid][key] || '';
+      const value = this.poll_caches[pid][key] || '';
+      if (value === '') {
+        // Fall back to user_cache for keys not yet moved to Matrix
+        // (e.g. when Matrix room creation failed during draft→running)
+        const ukey = get_poll_key_prefix(pid) + key;
+        return this.user_cache[ukey] || '';
+      }
+      return value;
     }
 
     let value = null;
