@@ -19,6 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
+import { FormsModule } from '@angular/forms';
 
 import { MigrationPage } from './migration.page';
 import { InMemoryBackend } from '../in-memory-backend';
@@ -30,7 +31,7 @@ describe('MigrationPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [MigrationPage],
-      imports: [IonicModule.forRoot()]
+      imports: [IonicModule.forRoot(), FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(MigrationPage);
@@ -146,6 +147,99 @@ describe('MigrationPage', () => {
 
       const verifyStep = component.migrationStatus!.steps.find(s => s.id === 'verify:user_data');
       expect(verifyStep).toBeTruthy();
+    });
+  });
+
+  describe('migratePollData', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should migrate poll data and update status', async () => {
+      await source.createPoll('poll1', 'Lunch venue');
+      await source.setPollData('poll1', 'description', 'Where to eat?');
+
+      await component.migratePollData('poll1');
+
+      expect(component.migrationStatus!.overallStatus).toBe('in_progress');
+      expect(component.migrationStatus!.totalItemsMigrated).toBeGreaterThan(0);
+      expect(component.logMessages.length).toBeGreaterThan(1);
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      await component.migratePollData('poll1');
+
+      expect(component.logMessages.length).toBe(1); // Only the init message
+    });
+
+    it('should not run if already running', async () => {
+      component.isRunning = true;
+      const initialLogLength = component.logMessages.length;
+
+      await component.migratePollData('poll1');
+
+      expect(component.logMessages.length).toBe(initialLogLength);
+    });
+
+    it('should log failure when source poll has no title', async () => {
+      await component.migratePollData('nonexistent');
+
+      expect(component.migrationStatus!.totalItemsFailed).toBeGreaterThan(0);
+      expect(component.logMessages.some(m => m.includes('failed'))).toBeTrue();
+    });
+  });
+
+  describe('verifyPollData', () => {
+    let source: InMemoryBackend;
+    let target: InMemoryBackend;
+
+    beforeEach(async () => {
+      source = new InMemoryBackend();
+      target = new InMemoryBackend();
+      await source.login('test@example.com', 'password');
+      await target.login('test@example.com', 'password');
+      component.initMigration(source, target);
+    });
+
+    it('should verify poll data after migration', async () => {
+      await source.createPoll('poll1', 'Lunch');
+      await source.setPollData('poll1', 'description', 'Where?');
+
+      await component.migratePollData('poll1');
+      await component.verifyPollData('poll1');
+
+      const verifyStep = component.migrationStatus!.steps.find(s => s.id === 'verify:poll:poll1');
+      expect(verifyStep).toBeTruthy();
+      expect(verifyStep!.status).toBe('verified');
+    });
+
+    it('should detect verification mismatches', async () => {
+      await source.createPoll('poll1', 'Lunch');
+      await component.migratePollData('poll1');
+
+      // Modify target to create mismatch
+      await target.setPollData('poll1', 'title', 'Different Title');
+
+      await component.verifyPollData('poll1');
+
+      const verifyStep = component.migrationStatus!.steps.find(s => s.id === 'verify:poll:poll1');
+      expect(verifyStep).toBeTruthy();
+      expect(verifyStep!.status).toBe('failed');
+    });
+
+    it('should do nothing when no migration service is initialized', async () => {
+      component.migrationService = null;
+      await component.verifyPollData('poll1');
+
+      expect(component.logMessages.length).toBe(1); // Only the init message
     });
   });
 

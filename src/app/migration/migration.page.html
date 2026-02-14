@@ -67,7 +67,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-item>
       <ion-item lines="none">
         <ion-label>Items Failed</ion-label>
-        <ion-note slot="end" [color]="migrationStatus.totalItemsFailed > 0 ? 'danger' : ''">
+        <ion-note slot="end" [color]="migrationStatus.totalItemsFailed > 0 ? 'danger' : null">
           {{ migrationStatus.totalItemsFailed }}
         </ion-note>
       </ion-item>
@@ -107,7 +107,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- Migration controls -->
   <ion-card>
     <ion-card-header>
-      <ion-card-title>Migration Controls</ion-card-title>
+      <ion-card-title>User Data Migration</ion-card-title>
     </ion-card-header>
     <ion-card-content>
       <ion-button expand="block" color="primary"
@@ -124,18 +124,56 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         Verify User Data
       </ion-button>
 
-      <ion-button expand="block" color="success"
-                  [disabled]="!migrationService || isRunning || migrationStatus?.overallStatus !== 'in_progress'"
-                  (click)="completeMigration()">
-        <ion-icon name="flag-outline" slot="start"></ion-icon>
-        Complete Migration
-      </ion-button>
-
       <ion-button expand="block" color="warning"
                   [disabled]="!migrationService || isRunning"
                   (click)="rollbackUserData()">
         <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
         Rollback User Data
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Poll data migration controls -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Poll Data Migration</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Poll ID</ion-label>
+        <ion-input [(ngModel)]="pollIdInput"
+                   placeholder="Enter poll ID to migrate"
+                   [disabled]="!migrationService || isRunning">
+        </ion-input>
+      </ion-item>
+
+      <ion-button expand="block" color="primary"
+                  [disabled]="!migrationService || isRunning || !pollIdInput"
+                  (click)="migratePollData(pollIdInput)">
+        <ion-icon name="document-outline" slot="start"></ion-icon>
+        Migrate Poll Data
+      </ion-button>
+
+      <ion-button expand="block" color="secondary"
+                  [disabled]="!migrationService || isRunning || !pollIdInput"
+                  (click)="verifyPollData(pollIdInput)">
+        <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+        Verify Poll Data
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Overall migration controls -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Migration Controls</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-button expand="block" color="success"
+                  [disabled]="!migrationService || isRunning || migrationStatus?.overallStatus !== 'in_progress'"
+                  (click)="completeMigration()">
+        <ion-icon name="flag-outline" slot="start"></ion-icon>
+        Complete Migration
       </ion-button>
 
       <ion-button expand="block" color="medium"

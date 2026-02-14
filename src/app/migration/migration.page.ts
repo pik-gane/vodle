@@ -17,11 +17,10 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 import { environment } from '../../environments/environment';
-import { MigrationService, MigrationStatus, MigrationStep } from '../migration.service';
-import { InMemoryBackend } from '../in-memory-backend';
+import { MigrationService, MigrationStatus } from '../migration.service';
 import { IDataBackend } from '../data-backend.interface';
 
 /**
@@ -39,7 +38,7 @@ import { IDataBackend } from '../data-backend.interface';
   templateUrl: './migration.page.html',
   styleUrls: ['./migration.page.scss'],
 })
-export class MigrationPage implements OnInit, OnDestroy {
+export class MigrationPage implements OnInit {
 
   environment = environment;
 
@@ -55,30 +54,24 @@ export class MigrationPage implements OnInit, OnDestroy {
   /** User-facing log messages */
   logMessages: string[] = [];
 
+  /** Poll ID input for poll-specific migration operations */
+  pollIdInput = '';
+
   /** Whether the Matrix backend is enabled */
   get isMatrixEnabled(): boolean {
     return environment.useMatrixBackend;
   }
 
-  /** User data keys to migrate */
-  private userDataKeys = ['language', 'theme', 'notifications', 'consent', 'email', 'displayname'];
+  /** User data keys to migrate (matches settings.service.ts keys, excluding local-only keys) */
+  private userDataKeys = ['consent', 'email', 'language', 'theme', 'default_wap'];
 
   /** Poll metadata keys to migrate */
   private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
-
-  private statusRefreshInterval: number | null = null;
 
   constructor() {}
 
   ngOnInit() {
     this.refreshStatus();
-  }
-
-  ngOnDestroy() {
-    if (this.statusRefreshInterval) {
-      clearInterval(this.statusRefreshInterval);
-      this.statusRefreshInterval = null;
-    }
   }
 
   /**
