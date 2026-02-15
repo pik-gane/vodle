@@ -2,10 +2,8 @@
 
 ## Quick Answer
 
-**The development environment now uses the Matrix backend by default.**
-`useMatrixBackend: true` is set in `environment.ts` (Phase 16). The production
-environment (`environment.prod.ts`) still uses CouchDB (`useMatrixBackend: false`)
-until end-to-end testing with a live Matrix homeserver is complete.
+**Both the development and production environments now use the Matrix backend by default.**
+`useMatrixBackend: true` is set in `environment.ts` and `environment.prod.ts`.
 
 **For the actionable path forward, see [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md).**
 
