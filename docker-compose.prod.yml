@@ -1,0 +1,96 @@
+# vodle — production deployment stack
+#
+# Three services on one Docker network:
+#
+#   vodle-web      nginx serving the built Angular app   http://localhost:80
+#   synapse        Matrix homeserver                      (internal + :8448)
+#   guard-bot      Deadline enforcement bot               (internal)
+#
+# Quick start:
+#
+#   # First time only — generate Synapse config:
+#   docker run --rm -v "$(pwd)/matrix-data:/data" \
+#     -e SYNAPSE_SERVER_NAME=vodle.example.com \
+#     -e SYNAPSE_REPORT_STATS=no \
+#     matrixdotorg/synapse:latest generate
+#
+#   # Edit matrix-data/homeserver.yaml:
+#   #   enable_registration: true
+#   #   enable_registration_without_verification: true
+#   #   (or configure your own registration policy)
+#
+#   # Register the guard bot account:
+#   docker compose -f docker-compose.prod.yml up synapse -d
+#   docker exec vodle-matrix-synapse register_new_matrix_user \
+#     -c /data/homeserver.yaml \
+#     -u vodle-guard -p <STRONG_PASSWORD> --admin
+#
+#   # Build and start everything:
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# The app will be available at http://localhost (port 80).
+# Put a TLS-terminating reverse proxy (e.g. Caddy, Traefik) in front
+# for HTTPS in real deployments.
+#
+# See MATRIX_TESTING_GUIDE.md for details.
+
+services:
+  # -------------------------------------------------------------------
+  # 1. vodle web app — nginx serving the production Angular build
+  # -------------------------------------------------------------------
+  vodle-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: vodle-web-prod
+    ports:
+      - "80:80"
+    depends_on:
+      - synapse
+    restart: unless-stopped
+    networks:
+      - vodle-net
+
+  # -------------------------------------------------------------------
+  # 2. Matrix homeserver (Synapse)
+  # -------------------------------------------------------------------
+  synapse:
+    image: matrixdotorg/synapse:latest
+    container_name: vodle-matrix-synapse
+    # Port 8008 is NOT exposed to the host in production —
+    # all Matrix traffic goes through the nginx reverse proxy.
+    # Uncomment if you need direct access for debugging:
+    # ports:
+    #   - "8008:8008"
+    volumes:
+      - ./matrix-data:/data
+    environment:
+      - SYNAPSE_SERVER_NAME=${SYNAPSE_SERVER_NAME:-vodle.example.com}
+      - SYNAPSE_REPORT_STATS=no
+    restart: unless-stopped
+    command: run
+    networks:
+      - vodle-net
+
+  # -------------------------------------------------------------------
+  # 3. Guard bot — enforces poll deadlines
+  # -------------------------------------------------------------------
+  guard-bot:
+    build:
+      context: ./guard-bot
+      dockerfile: Dockerfile
+    container_name: vodle-guard-bot
+    environment:
+      - MATRIX_HOMESERVER_URL=http://synapse:8008
+      - BOT_USER=${BOT_USER:-@vodle-guard:vodle.example.com}
+      - BOT_PASSWORD=${BOT_PASSWORD:?Set BOT_PASSWORD in .env or environment}
+      - SCAN_INTERVAL_MS=30000
+    depends_on:
+      - synapse
+    restart: unless-stopped
+    networks:
+      - vodle-net
+
+networks:
+  vodle-net:
+    driver: bridge

@@ -165,8 +165,10 @@ const poll_keystarts_in_user_db = [
   'password', 'myvid', 
   'del_private_key', 'del_nickname', 'del_from', 
   'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
+  'is_test',
   'poll_page',
   'simulated_ratings',
+  'start_date',
   'final_rand', 'winner'
 ];
 
@@ -663,6 +665,20 @@ export class DataService implements OnDestroy {
         this.G.L.error("DataService could not read local_synced_user_DB", err);
 
       });
+    }
+
+    // Phase 16: When using Matrix backend, skip CouchDB remote connection entirely.
+    // Matrix handles all remote data sync via MatrixService.
+    // If Matrix login failed, the app can still work with local-only data (drafts).
+    if (environment.useMatrixBackend) {
+      this.G.L.info("DataService: Matrix backend active, skipping CouchDB connection");
+      if (this.router.url.includes('/login')) {
+        this.G.remove_spinning_reason("login");
+        const then_url = (!!this.page) ? this.page.then_url || '' : '';
+        this.router.navigate(['/login/connected/' + then_url]);
+      }
+      this.G.L.exit("DataService.email_and_password_exist");
+      return;
     }
 
     // check if db credentials are set:
@@ -1705,7 +1721,13 @@ export class DataService implements OnDestroy {
         return this.user_cache[ukey] || '';
       }
       this.ensure_poll_cache(pid);
-      return this.poll_caches[pid][key] || '';
+      if (key in this.poll_caches[pid]) {
+        return this.poll_caches[pid][key] || '';
+      }
+      // Fall back to user_cache for keys not yet moved to Matrix
+      // (e.g. when Matrix room creation failed during draft→running)
+      const ukey = get_poll_key_prefix(pid) + key;
+      return this.user_cache[ukey] || '';
     }
 
     let value = null;
