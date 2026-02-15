@@ -485,6 +485,6 @@ User Action → DataService → if (useMatrixBackend) → MatrixService → Syna
 
 | Setting | Dev (`environment.ts`) | Prod (`environment.prod.ts`) |
 |---------|----------------------|----------------------------|
-| `useMatrixBackend` | `true` | `false` |
+| `useMatrixBackend` | `true` | `true` |
 | `matrix.homeserver_url` | `http://localhost:8008` | (to be configured) |
 | `matrix.enable_e2ee` | `true` | `true` |
