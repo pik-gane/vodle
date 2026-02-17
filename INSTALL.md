@@ -8,7 +8,66 @@ This page describes
 
 ## Setting up a development and testing environment
 
+### Option A: Docker Compose (recommended — no Node.js required)
+
+The easiest way to run vodle locally is via Docker Compose. This starts
+the web app, Matrix homeserver, and guard bot in containers — you only
+need [Docker](https://www.docker.com/) installed.
+
+```bash
+git clone https://github.com/pik-gane/vodle.git
+cd vodle
+
+# First time: generate the Matrix homeserver config
+docker run --rm -v "$(pwd)/matrix-data:/data" \
+  -e SYNAPSE_SERVER_NAME=localhost \
+  -e SYNAPSE_REPORT_STATS=no \
+  matrixdotorg/synapse:latest generate
+
+# Enable registration and disable rate limiting in
+# matrix-data/homeserver.yaml — add these lines at the end of the file:
+#   enable_registration: true
+#   enable_registration_without_verification: true
+#   rc_login:
+#     address:
+#       per_second: 0
+#       burst_count: 0
+#     account:
+#       per_second: 0
+#       burst_count: 0
+
+# Start Synapse first so we can register the guard bot
+docker compose up --build -d synapse
+
+# Wait a few seconds for Synapse to be ready, then register the bot
+sleep 5
+docker exec -it vodle-matrix-synapse register_new_matrix_user \
+  -c /data/homeserver.yaml \
+  -u vodle-guard -p vodle-guard-password --admin
+
+# Now start all services (guard-bot will be able to log in)
+docker compose up --build -d
+
+# Follow the logs (Ctrl-C to stop watching)
+docker compose logs -f
+```
+
+> **Note:** The guard bot account only needs to be registered once. If
+> you see repeated `Login failed` messages from `vodle-guard-bot`, the
+> bot account may not exist yet — run the `register_new_matrix_user`
+> command above, then `docker compose restart guard-bot`.
+
+Open **http://localhost:4200** in your browser. See
+[MATRIX_TESTING_GUIDE.md](./MATRIX_TESTING_GUIDE.md) for a detailed
+walkthrough including how to load test polls with simulated voters.
+
+### Option B: Native Node.js + Docker Matrix homeserver
+
 ### Setting up Node, Ionic, and the vodle web app
+
+If you prefer to run the web app natively (e.g. for IDE integration,
+breakpoints, or faster live-reload), install Node.js and npm on your
+machine:
 
 - We assume you have `git` already installed on your system. If you are on Windows, some of the commands below may have to be issued in [`git bash`](https://gitforwindows.org/) instead of the Windows command line.
 - Follow [these instructions](https://ionicframework.com/docs/intro/environment) to set up a basic environment for working with Ionic, basically consisting of [Node.js](https://ionicframework.com/docs/reference/glossary#node) and [npm](https://ionicframework.com/docs/reference/glossary#npm).
@@ -45,7 +104,29 @@ This page describes
 - Choose a language or click *No* to test whether the app is responsive at all, but stop when you get asked for your email address.
 - In the terminal, quit the development server by pressing Ctrl-C (or whatever the log said instead).
 
-### Setting up a local CouchDB for development
+### Setting up a local backend for development
+
+vodle supports two backends: **Matrix** (recommended) and **CouchDB** (legacy).
+
+#### Option 1: Matrix homeserver (recommended)
+
+If you are using the Docker Compose setup (Option A above), the Matrix
+homeserver is already running. If you chose the native Node.js setup
+(Option B), start just the Matrix services:
+
+```
+$ docker compose up synapse guard-bot -d
+```
+
+The dev environment (`src/environments/environment.ts`) has
+`useMatrixBackend: true` by default, so the app will connect to the
+Matrix homeserver at `localhost:8008`.
+
+#### Option 2: CouchDB (legacy)
+
+If you need the old CouchDB backend (e.g. for testing CouchDB-specific
+features), set `useMatrixBackend: false` in
+`src/environments/environment.ts`, then follow these steps:
 
 - Now install the [docker engine](https://docs.docker.com/engine/install/) and pull the [CouchDB docker image](https://hub.docker.com/_/couchdb). Depending on your operating system, you might again have to do this as an administrator, e.g. on Linux by saying
   ```
@@ -198,7 +279,78 @@ For iOS, we have not tested it yet, but [it should work like this](https://ionic
 
 ## Setting up a production environment
 
-### Download, configure and build vodle
+### Option A: Docker Compose (recommended)
+
+The repository includes a production Docker Compose setup that builds
+an optimised Angular bundle, serves it via nginx, and runs the Matrix
+homeserver and guard bot — all in containers.
+
+```bash
+git clone https://github.com/pik-gane/vodle.git
+cd vodle
+
+# 1. Generate Synapse config for your domain
+docker run --rm -v "$(pwd)/matrix-data:/data" \
+  -e SYNAPSE_SERVER_NAME=vodle.example.com \
+  -e SYNAPSE_REPORT_STATS=no \
+  matrixdotorg/synapse:latest generate
+
+# 2. Edit matrix-data/homeserver.yaml:
+#    enable_registration: true
+#    enable_registration_without_verification: true
+
+# 3. Start Synapse to register the guard bot
+docker compose -f docker-compose.prod.yml up synapse -d
+docker exec vodle-matrix-synapse register_new_matrix_user \
+  -c /data/homeserver.yaml \
+  -u vodle-guard -p YOUR_STRONG_PASSWORD --admin
+
+# 4. Create a .env file with your secrets
+echo 'BOT_PASSWORD=YOUR_STRONG_PASSWORD' > .env
+echo 'SYNAPSE_SERVER_NAME=vodle.example.com' >> .env
+echo 'BOT_USER=@vodle-guard:vodle.example.com' >> .env
+
+# 5. Customise src/environments/environment.prod.ts:
+#    - matrix.guard_bot_user_id: "@vodle-guard:vodle.example.com"
+#    - magic_link_base_url: "https://vodle.example.com/#/"
+
+# 6. Build and start everything
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+The app is available at **http://localhost** (port 80). For HTTPS,
+put a TLS-terminating reverse proxy in front (e.g. Caddy, Traefik,
+or nginx on the host). See
+[MATRIX_TESTING_GUIDE.md](./MATRIX_TESTING_GUIDE.md) for details.
+
+#### Architecture
+
+```
+Browser ──► nginx (:80) ─┬─► static SPA (Angular build)
+                         └─► /_matrix/* ──► Synapse (:8008, internal)
+                                               ▲
+                                           guard-bot
+```
+
+- **nginx** serves the compiled Angular app and reverse-proxies Matrix
+  API requests to Synapse (no CORS issues)
+- **Synapse** runs on the internal Docker network only
+- **guard-bot** monitors poll deadlines and closes rooms when they expire
+
+#### Start / Stop / Restart
+
+```bash
+docker compose -f docker-compose.prod.yml up -d       # start
+docker compose -f docker-compose.prod.yml down         # stop
+docker compose -f docker-compose.prod.yml up --build -d  # rebuild after code changes
+```
+
+### Option B: Manual setup with CouchDB (legacy)
+
+### Download, configure and build vodle (legacy CouchDB setup)
+
+The following instructions are for the legacy CouchDB backend. For the
+recommended Matrix-based setup, see Option A above.
 
 - Install [Node.js](https://nodejs.org/en/download/).
 - Clone the vodle repository:

@@ -23,7 +23,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
-import { Poll } from '../poll.service';
+import { Poll, Option } from '../poll.service';
 
 @Component({
   selector: 'app-join',
@@ -46,6 +46,7 @@ export class JoinpollPage implements OnInit {
   // LIFECYCLE:
 
   ready = false;  
+  join_error: string = null;
 
   constructor(
     public router: Router,
@@ -103,12 +104,28 @@ export class JoinpollPage implements OnInit {
       if (environment.useMatrixBackend) {
         // Phase 13: Join via Matrix — ignore CouchDB params (db_server_url, db_password)
         this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
+          // Re-read state from poll_caches now that it has been populated
+          this.p._state = (this.G.D.getp(this.pid, 'state') as any) || 'running';
           this.ready = true;
+
+          // Create Option objects for every oid discovered during
+          // connect_to_remote_poll_db (they were registered in _pid_oids
+          // but Option instances don't exist yet).
+          const oids = (this.G.D as any)._pid_oids[this.pid] as Set<string> | undefined;
+          if (oids) {
+            for (const oid of oids) {
+              if (!this.p.oids.includes(oid)) {
+                new Option(this.G, this.p, oid);
+              }
+            }
+          }
+
           this.p.set_timeouts();
           this.p.tally_all();
           this.router.navigate(['/poll/' + this.pid]);
         }).catch(err => {
           this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
+          this.join_error = String(err?.message || err);
         });
       } else {
         this.p.db_server_url = this.db_server_url;

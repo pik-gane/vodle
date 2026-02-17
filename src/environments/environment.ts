@@ -24,7 +24,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 export const environment = {
   production: false,
   imprint_url: "./assets/impressum.html",
-  privacy_statement_url: "./assets/privacy.html",
+  privacy_statement_url: "", // empty = skip data protection check on login page (dev mode)
   privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
   logging: {
     logLevels: [
@@ -37,7 +37,7 @@ export const environment = {
   show_debug_info: true,
   // Toggle between Matrix and CouchDB backend
   // Set to true to use Matrix protocol, false to use CouchDB
-  useMatrixBackend: false,
+  useMatrixBackend: true,
   matrix: {
     // Local Matrix homeserver URL for development
     homeserver_url: "http://localhost:8008",
@@ -73,7 +73,7 @@ export const environment = {
   db_put_retry_delay_ms: 100,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle/",
-  magic_link_base_url: "http://localhost:8100/#/",
+  magic_link_base_url: "http://localhost:4200/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: true

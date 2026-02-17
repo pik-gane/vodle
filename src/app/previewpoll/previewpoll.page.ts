@@ -112,36 +112,57 @@ export class PreviewpollPage implements OnInit {
     this.p.init_myvid();
     this.p.start_date = new Date();
     // wait for these changes to user db to be finished before continuing!
-    this.G.D.wait_for_user_db().finally(() => {
+    this.G.D.wait_for_user_db().finally(async () => {
       // set state to running, which will cause the poll data to be stored in the designated server:
       this.p.state = 'running';
+      
+      // For Matrix backend: wait for poll room creation + all poll data
+      // to be committed before proceeding. Otherwise a fast-joining voter
+      // would see an empty or incomplete poll.
+      const statePromise = this.G.D._matrixStateChangePromises[this.pid];
+      if (statePromise) {
+        try {
+          await statePromise;
+          console.log("[publish_button_clicked] Matrix state change complete for", this.pid);
+        } catch (err) {
+          console.error("[publish_button_clicked] Matrix state change failed:", err);
+        }
+      }
+      
       // wait for these changes to poll db to be finished before continuing!
-      this.G.D.wait_for_poll_db(this.pid).finally(() => {
-        // NO LONGER: set own ratings to zero:
-        // this.p.init_myratings();
-        this.p.creator = this.G.S.email;
-        // if test, register simulated voters:
-        this.G.L.trace("PreviewpollPage.publish_button_clicked poll is_test", this.p.is_test, this.G.D.getp(this.pid, 'is_test'));
-        if (this.p.is_test) {
-          for (const oid of this.p.oids) {
-            const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
-            if (Array.isArray(ratings)) {
-              this.G.L.trace("PreviewpollPage.publish_button_clicked registering simulated voters...");
-              for (const i in ratings) {
-                const vid = "simulated"+i,
-                      r = ratings[i];
-                this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
-                this.G.P.update_own_rating(this.pid, vid, oid, r, false);
-                this.G.L.trace("PreviewpollPage.publish_button_clicked registered simulated voter", i);
-              }
+      await this.G.D.wait_for_poll_db(this.pid);
+      // NO LONGER: set own ratings to zero:
+      // this.p.init_myratings();
+      this.p.creator = this.G.S.email;
+      // if test, register simulated voters:
+      this.G.L.trace("PreviewpollPage.publish_button_clicked poll is_test", this.p.is_test, this.G.D.getp(this.pid, 'is_test'));
+      if (this.p.is_test) {
+        // Collect all simulated voter setVoterData promises so we can
+        // await them before navigating. The room creation mutex in
+        // getOrCreateMyVoterRoom serialises the first call; subsequent
+        // calls reuse the cached room and run concurrently.
+        const simulatedPromises: Promise<void>[] = [];
+        for (const oid of this.p.oids) {
+          const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
+          if (Array.isArray(ratings)) {
+            this.G.L.trace("PreviewpollPage.publish_button_clicked registering simulated voters...");
+            for (const i in ratings) {
+              const vid = "simulated"+i,
+                    r = ratings[i];
+              // setv_in_polldb returns true synchronously but fires the
+              // Matrix call internally. We call setVoterData directly
+              // to get the promise for awaiting.
+              this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
+              this.G.P.update_own_rating(this.pid, vid, oid, r, false);
+              this.G.L.trace("PreviewpollPage.publish_button_clicked registered simulated voter", i);
             }
           }
-          this.p.tally_all();
         }
-        // go to invitation page:
-        this.router.navigate(['/inviteto/'+this.pid]);
-        this.G.L.exit("PreviewpollPage.publish_button_clicked");
-      });
+        this.p.tally_all();
+      }
+      // go to invitation page:
+      this.router.navigate(['/inviteto/'+this.pid]);
+      this.G.L.exit("PreviewpollPage.publish_button_clicked");
     });
   }
 

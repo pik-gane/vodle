@@ -36,6 +36,7 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
 import { Poll } from './poll.service';
+import { MatrixService } from './matrix.service';
 
 @Injectable({
   providedIn: 'root'
@@ -45,7 +46,8 @@ export class DelegationService {
   private G: GlobalService;
 
   constructor(
-    public translate: TranslateService
+    public translate: TranslateService,
+    private matrixService: MatrixService
   ) { }
 
 
@@ -110,6 +112,16 @@ export class DelegationService {
     this.get_delegation_agreements_cache(pid).set(did, agreement);
     this.G.P.polls[pid].have_acted = true;
     this.G.D.save_state();
+
+    // Phase 15: Also fire Matrix delegation event for real-time notification
+    if (environment.useMatrixBackend) {
+      const optionIds = request.option_spec
+        ? (request.option_spec.type === '-' ? [] : request.option_spec.oids)
+        : [];
+      this.matrixService.requestDelegation(pid, did, optionIds).catch(err => {
+        this.G.L.error("DelegationService.after_request_was_sent Matrix sync failed", pid, did, err);
+      });
+    }
   }
 
   get_potential_effective_delegate(pid: string, oid: string): string {
@@ -299,6 +311,13 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.accept", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+
+    // Phase 15: Also fire Matrix delegation response for real-time notification
+    if (environment.useMatrixBackend) {
+      this.matrixService.respondToDelegation(pid, did, true).catch(err => {
+        this.G.L.error("DelegationService.accept Matrix sync failed", pid, did, err);
+      });
+    }
   }
 
   decline(pid: string, did: string, private_key?: string) {
@@ -310,6 +329,13 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+
+    // Phase 15: Also fire Matrix delegation response for real-time notification
+    if (environment.useMatrixBackend) {
+      this.matrixService.respondToDelegation(pid, did, false).catch(err => {
+        this.G.L.error("DelegationService.decline Matrix sync failed", pid, did, err);
+      });
+    }
   }
 
   // DATA HANDLING:

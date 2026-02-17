@@ -37,15 +37,19 @@ export const environment = {
   show_debug_info: false, // must be false in production!
   // Toggle between Matrix and CouchDB backend
   // Set to true to use Matrix protocol, false to use CouchDB
-  useMatrixBackend: false,
+  useMatrixBackend: true,
   matrix: {
-    // Production Matrix homeserver URL
-    homeserver_url: "https://matrix.example.com",
+    // In production, Matrix API is served via nginx reverse proxy on the
+    // same origin. The browser talks to /_matrix/* which nginx forwards
+    // to Synapse internally. The SDK uses this as the base URL and appends
+    // /_matrix/client/... paths to it.  Override with your actual domain
+    // (e.g. "https://vodle.example.com") if not using the reverse proxy.
+    homeserver_url: "/",
     // Enable Matrix E2EE (Olm/Megolm)
     enable_e2ee: true,
     // Guard bot Matrix user ID — this bot is invited to all poll and voter
     // rooms with admin power (100) for server-side deadline enforcement.
-    guard_bot_user_id: "@vodle-guard:matrix.example.com",
+    guard_bot_user_id: "@vodle-guard:vodle.example.com",
   },
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",

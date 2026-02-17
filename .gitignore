@@ -42,6 +42,9 @@ nohup.out
 # Matrix homeserver data (local development only)
 matrix-data/
 
+# Guard bot dependencies
+guard-bot/node_modules/
+
 # Build output directory (Angular build artifacts)
 docs/
 node_modules/

@@ -1,0 +1,76 @@
+{
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "Free vintage sci-fi movie night",
+
+    "desc": "Let's watch a vintage sci-fi movie together for free! (This is an example of a poll with many options on which most voters might not have much information and only weak preferences)",
+    
+    "url": "https://www.youtube.com/results?sp=CAMSBBAEGAI%253D&search_query=full+movie+english+science+fiction",
+
+    "due_type": "friday-noon",
+
+    "options": [
+        {
+            "name": "Voyage to the prehistoric planet",
+            "desc": "In 2020, after the colonization of the moon, the spaceships Vega, Sirius and Capella are launched from Lunar Station 7. They are to explore Venus under the command of Professor Hartman, but an asteroid collides and explodes Capella.",
+            "url": "https://www.youtube.com/watch?v=sh2nLzOVHeQ"
+        },
+        {
+            "name": "Shubian's rift (fan movie)",
+            "desc": "Earth's future space exploration leads to its first contact ever with an alien race that may not be so alien after all.",
+            "url": "https://www.youtube.com/watch?v=B6V_w25B1Ac"
+        },
+        {
+            "name": "Star pilot",
+            "desc": "Aliens from the constellation Hydra crash-land on the island of Sardinia. A prominent scientist, his daughter, several young technicians, and a pair of Oriental spies are taken hostage by the beings so they can use them to repair their spaceship's broken engine.",
+            "url": "https://www.youtube.com/watch?v=jAvllP_YEdU"
+        },
+        {
+            "name": "Escape from galaxy 3",
+            "desc": "The crew of a space ship confronts an evil galactic ruler out to rule the universe.",
+            "url": "https://www.youtube.com/watch?v=5kvCgeNog1U"
+        },
+        {
+            "name": "Mission stardust",
+            "desc": "A team of astronauts is sent to the moon to rescue an alien who is seeking help to save her dying race. They are attacked by a force of bandit robots and discover that enemy spies are out to kill the alien.",
+            "url": "https://www.youtube.com/watch?v=oeRTDJ3MC2I"
+        },
+        {
+            "name": "Fugitive alien",
+            "desc": "An alien is pursued as a traitor by his own race because he refuses to kill humans.",
+            "url": "https://www.youtube.com/watch?v=Z71MyPmmGZI"
+        },
+        {
+            "name": "Warrior of the lost world",
+            "desc": "A group of diverse individuals are suddenly taken from their homes and flown via helicopter to a futuristic bomb shelter in the desert, one-third of a mile below the surface of the Earth.",
+            "url": "https://www.youtube.com/watch?v=xS5obnI5Y5Q"
+        },
+        {
+            "name": "Battle of the worlds",
+            "desc": "A runaway asteroid dubbed 'The Outsider' mysteriously begins orbiting the Earth and threatens it with lethal flying saucers.",
+            "url": "https://www.youtube.com/watch?v=LK6ugtd1Xdg"
+        },
+        {
+            "name": "Abraxas, guardian of the universe",
+            "desc": "An alien 'policeman' arrives on Earth to apprehend a renegade of his own race who impregnates a woman with a potentially destructive mutant embryo.",
+            "url": "https://www.youtube.com/watch?v=lZzZyNB81wI"
+        },
+        {
+            "name": "Zontar, the thing from Venus",
+            "desc": "A young scientist who helps a lone alien from Venus, finds out it wants to destroy man.",
+            "url": "https://www.youtube.com/watch?v=-e9Cs87gbwg"
+        },
+        {
+            "name": "Hyper sapien: people from another star",
+            "desc": "Three aliens from the planet Taros land on Earth and are befriended by a Wyoming rancher's son.",
+            "url": "https://www.youtube.com/watch?v=64GfUeJJLUs"
+        },
+        {
+            "name": "The giant of Metropolis",
+            "desc": "Muscleman Ohro travels to the sinful capital of Atlantis to rebuke its godlessness and hubris and becomes involved in the battle against its evil lord Yoh-tar and his hideous super-science schemes.",
+            "url": "https://www.youtube.com/watch?v=KPHasT4o9sg"
+        }
+    ]
+}
