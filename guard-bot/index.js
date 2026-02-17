@@ -22,7 +22,7 @@
  * -----------------------------------------------------------------
  */
 
-const sdk = require("matrix-js-sdk");
+import * as sdk from "matrix-js-sdk";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";

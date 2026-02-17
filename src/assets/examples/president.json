@@ -1,0 +1,28 @@
+{
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "President of the world",
+
+    "desc": "Imagine we elect this person for four years of office and the following candidates were all available... (This is an example of a poll whose outcome would have rather vast consequences)",
+    
+    "due_type": "two-weeks",
+
+    "options": [
+        { "name": "Solina Chau", "url": "https://en.wikipedia.org/wiki/Solina_Chau" },
+        { "name": "Princess Leia", "url": "https://en.wikipedia.org/wiki/Princess_Leia" },
+        { "name": "Ada Lovelace", "url": "https://en.wikipedia.org/wiki/Ada_Lovelace" },
+        { "name": "Wilma Mankiller", "url": "https://en.wikipedia.org/wiki/Wilma_Mankiller" },
+        { "name": "Rigoberta Menchú", "url": "https://en.wikipedia.org/wiki/Rigoberta_Mench%C3%BA" },
+        { "name": "Angela Merkel", "url": "https://en.wikipedia.org/wiki/Angela_Merkel" },
+        { "name": "Nadia Murad", "url": "https://en.wikipedia.org/wiki/Nadia_Murad" },
+        { "name": "Emmy Noether", "url": "https://en.wikipedia.org/wiki/Emmy_Noether" },
+        { "name": "Michelle Obama", "url": "https://en.wikipedia.org/wiki/Michelle_Obama" },
+        { "name": "Lisa Simpson", "url": "https://en.wikipedia.org/wiki/Lisa_Simpson" },
+        { "name": "Ellen Johnson Sirleaf", "url": "https://en.wikipedia.org/wiki/Ellen_Johnson_Sirleaf" },
+        { "name": "Marie Skłodowska Curie", "url": "https://en.wikipedia.org/wiki/Marie_Curie" },
+        { "name": "Mother Teresa", "url": "https://en.wikipedia.org/wiki/Mother_Teresa" },
+        { "name": "Malala Yousafzai", "url": "https://en.wikipedia.org/wiki/Malala_Yousafzai" }
+      ]
+}

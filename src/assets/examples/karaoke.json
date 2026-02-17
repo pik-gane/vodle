@@ -1,0 +1,147 @@
+{
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "Which Karaoke song shall the boss sing?",
+
+    "desc": "At our next celebration, which of the following freely available Karaoke songs shall the boss sing for our entertainment? (If you add further options, please make sure they are available at https://www.youtube.com/user/karafun and add the corresponding Youtube link.)",
+    
+    "url": "https://www.youtube.com/user/karafun",
+
+    "due_type": "friday-noon",
+
+    "options": [
+        {
+            "name": "La Isla Bonita - Madonna",
+            "url": "https://youtu.be/zV4K9_cne8Y"
+        },
+        {
+            "name": "My Heart Will Go On - Céline Dion (Titanic)",
+            "url": "https://youtu.be/IQEzFe9-bsg"
+        },
+        {
+            "name": "Imagine - John Lennon",
+            "url": "https://youtu.be/f2bcREkpE0I"
+        },
+        {
+            "name": "Tears in Heaven - Eric Clapton",
+            "url": "https://youtu.be/7GyxwQHNfYQ"
+        },
+        {
+            "name": "Can't Take My Eyes Off You - Frankie Valli & The Four Seasons",
+            "url": "https://youtu.be/zf2V3HG6YgU"
+        },
+        {
+            "name": "Every Breath You Take - The Police",
+            "url": "https://youtu.be/4C7Fmg3_mkw"
+        },
+        {
+            "name": "We Will Rock You - Queen",
+            "url": "https://youtu.be/blikQus8IQ4"
+        },
+        {
+            "name": "Twist and Shout - The Beatles",
+            "url": "https://youtu.be/wf_uABo-ljc"
+        },
+        {
+            "name": "Beat It - Michael Jackson",
+            "url": "https://youtu.be/pvdrN3GJFZo"
+        },
+        {
+            "name": "Twistin' The Night Away - Sam Cooke",
+            "url": "https://youtu.be/D5L6kcGu-5w"
+        },
+        {
+            "name": "L-O-V-E - Natalie Cole",
+            "url": "https://youtu.be/k3qmSVRA_i4"
+        },
+        {
+            "name": "Sing - The Carpenters",
+            "url": "https://youtu.be/BOiEcsr9Udw"
+        },
+        {
+            "name": "Total Eclipse of the Heart - Bonnie Tyler",
+            "url": "https://youtu.be/HTXiC8g3F40"
+        },
+        {
+            "name": "Don't Stop 'Til You Get Enough - Michael Jackson",
+            "url": "https://youtu.be/ZE5UtdyiOOQ"
+        },
+        {
+            "name": "Layla - Eric Clapton",
+            "url": "https://youtu.be/L0Qd1lkOigI"
+        },
+        {
+            "name": "I Could Have Danced All Night - My Fair Lady",
+            "url": "https://youtu.be/kfEAYnsq9FM"
+        },
+        {
+            "name": "Sorry Seems to Be the Hardest Word - Elton John",
+            "url": "https://youtu.be/d0JGwAxkDC0"
+        },
+        {
+            "name": "The Way We Were - Barbra Streisand",
+            "url": "https://youtu.be/N5sUkY0_wxw"
+        },
+        {
+            "name": "Time Warp - Rocky Horror Show (but you must all dance along then!)",
+            "url": "https://youtu.be/qSjXWndxJAc"
+        },
+        {
+            "name": "Dust in the Wind - Kansas",
+            "url": "https://youtu.be/58soUmYN2dI"
+        }
+    ],
+    "unused": [
+        {
+            "name": "You Are the Sunshine of My Life - Stevie Wonder",
+            "url": "https://youtu.be/UsYn8GS5wWc"
+        },
+        {
+            "name": "Sweet Child o' Mine - Guns N' Roses",
+            "url": "https://youtu.be/uhiamj_I7II"
+        },
+        {
+            "name": "(They Long to Be) Close to You - The Carpenters",
+            "url": "https://youtu.be/7dAS3M6salg"
+        },
+        {
+            "name": "Easy (Like Sunday Morning) - The Commodores",
+            "url": "https://youtu.be/McaDoZHvcdw"
+        },
+        {
+            "name": "Zombie - The Cranberries",
+            "url": "https://youtu.be/81_2Xb0XB_E"
+        },
+        {
+            "name": "Lemon Tree - Fool's Garden",
+            "url": "https://youtu.be/NMUFavYTN1o"
+        },
+        {
+            "name": "Jolene - Miley Cyrus",
+            "url": "https://youtu.be/qLt1vAn8wTM"
+        },
+        {
+            "name": "Whatever Lola Wants (Lola Gets) - Sarah Vaughan",
+            "url": "https://youtu.be/3WcgEJnOk2o"
+        },
+        {
+            "name": "Fields of Gold - Sting",
+            "url": "https://youtu.be/8saIbDHYuFg"
+        },
+        {
+            "name": "Dream a Little Dream of Me - Ella Fitzgerald",
+            "url": "https://youtu.be/wtgz-sUB4XQ"
+        },
+        {
+            "name": "Tainted Love - Imelda May",
+            "url": "https://youtu.be/IisUDdCAfuY"
+        },
+        {
+            "name": "My Cherie Amour - Stevie Wonder",
+            "url": "https://youtu.be/VfNth5H7jHU"
+        },
+        {}
+    ]
+}

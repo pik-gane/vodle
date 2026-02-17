@@ -1,0 +1,62 @@
+[
+  {
+    "file": "TEST_50voters.json",
+    "title": "Icecream flavour (Large test poll)",
+    "language": "en",
+    "type": "winner"
+  },
+  {
+    "file": "TEST_icecream.json",
+    "title": "Icecream flavour (Test poll)",
+    "language": "en",
+    "type": "winner"
+  },
+  {
+    "file": "TEST_urlaub.json",
+    "title": "Gemeinsamer Urlaub des Fledermausz\u00fcchtervereins Telegrafenberg",
+    "language": "de",
+    "type": "winner"
+  },
+  {
+    "file": "dish.json",
+    "title": "What dish to serve at our next meeting",
+    "language": "en",
+    "type": "winner"
+  },
+  {
+    "file": "ea-charity-de.json",
+    "title": "Where shall Jobst's next donation go?",
+    "language": "en",
+    "type": "share"
+  },
+  {
+    "file": "ea-charity.json",
+    "title": "Where shall Jobst's next donation go?",
+    "language": "en",
+    "type": "share"
+  },
+  {
+    "file": "karaoke.json",
+    "title": "Which Karaoke song shall the boss sing?",
+    "language": "en",
+    "type": "winner"
+  },
+  {
+    "file": "president.json",
+    "title": "President of the world",
+    "language": "en",
+    "type": "winner"
+  },
+  {
+    "file": "regular-meeting-time-budget.json",
+    "title": "Use of regular team meeting time",
+    "language": "en",
+    "type": "share"
+  },
+  {
+    "file": "scify.json",
+    "title": "Free vintage sci-fi movie night",
+    "language": "en",
+    "type": "winner"
+  }
+]

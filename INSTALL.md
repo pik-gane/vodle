@@ -24,13 +24,38 @@ docker run --rm -v "$(pwd)/matrix-data:/data" \
   -e SYNAPSE_REPORT_STATS=no \
   matrixdotorg/synapse:latest generate
 
-# Enable registration in matrix-data/homeserver.yaml — add these lines:
+# Enable registration and disable rate limiting in
+# matrix-data/homeserver.yaml — add these lines at the end of the file:
 #   enable_registration: true
 #   enable_registration_without_verification: true
+#   rc_login:
+#     address:
+#       per_second: 0
+#       burst_count: 0
+#     account:
+#       per_second: 0
+#       burst_count: 0
 
-# Start all three services
-docker compose up --build
+# Start Synapse first so we can register the guard bot
+docker compose up --build -d synapse
+
+# Wait a few seconds for Synapse to be ready, then register the bot
+sleep 5
+docker exec -it vodle-matrix-synapse register_new_matrix_user \
+  -c /data/homeserver.yaml \
+  -u vodle-guard -p vodle-guard-password --admin
+
+# Now start all services (guard-bot will be able to log in)
+docker compose up --build -d
+
+# Follow the logs (Ctrl-C to stop watching)
+docker compose logs -f
 ```
+
+> **Note:** The guard bot account only needs to be registered once. If
+> you see repeated `Login failed` messages from `vodle-guard-bot`, the
+> bot account may not exist yet — run the `register_new_matrix_user`
+> command above, then `docker compose restart guard-bot`.
 
 Open **http://localhost:4200** in your browser. See
 [MATRIX_TESTING_GUIDE.md](./MATRIX_TESTING_GUIDE.md) for a detailed

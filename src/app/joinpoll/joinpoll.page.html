@@ -47,7 +47,7 @@ TODO:
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="!ready">
+<ion-content *ngIf="!ready && !join_error">
   <ion-item class="ion-text-center" lines="none">
     <h3>
       <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
@@ -57,6 +57,17 @@ TODO:
     <h1>
       <ion-spinner name="crescent" size="large"></ion-spinner>
     </h1>
+  </ion-item>
+</ion-content>
+
+<ion-content *ngIf="join_error">
+  <ion-item class="ion-text-center" color="danger" lines="none">
+    <ion-col>
+      <h3>Failed to join this poll</h3>
+      <p>{{ join_error }}</p>
+      <p><small>The invite link may be invalid or the poll may no longer exist. Please ask the poll creator for a new link.</small></p>
+      <p><small><i>joinpoll v5</i></small></p>
+    </ion-col>
   </ion-item>
 </ion-content>
 

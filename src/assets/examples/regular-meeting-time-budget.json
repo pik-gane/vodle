@@ -1,0 +1,25 @@
+{
+    "type": "share",
+
+    "language": "en",
+
+    "title": "Use of regular team meeting time",
+
+    "desc": "How do we want to use the time during our regular team meetings in the future?",
+    
+    "due_type": "sunday-night",
+
+    "options": [
+        { "name": "Intro round for newbies" },
+        { "name": "Everyone's work update round" },
+        { "name": "Mutual feedback" },
+        { "name": "Presentation of someone's own work" },
+        { "name": "Presentation of relevant media items" },
+        { "name": "Help with a current problem in someone's work" },
+        { "name": "Planning of activities" },
+        { "name": "Strategic discussions" },
+        { "name": "Open discussion on work-related topics" },
+        { "name": "Open discussion on other topics" },
+        { "name": "Small talk" }
+      ]
+}

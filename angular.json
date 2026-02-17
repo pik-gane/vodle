@@ -76,7 +76,12 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "browserTarget": "app:build",
-            "proxyConfig": "src/proxy.conf.json"
+            "proxyConfig": "src/proxy.conf.json",
+            "headers": {
+              "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+              "Pragma": "no-cache",
+              "Expires": "0"
+            }
           },
           "configurations": {
             "production": {
