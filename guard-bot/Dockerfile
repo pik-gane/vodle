@@ -1,7 +1,7 @@
 # vodle guard bot — runs inside Docker, does not need its own Dockerfile
-# for development. Uses node:18-slim as base.
+# for development. Uses node:20-slim as base.
 
-FROM node:18-slim
+FROM node:20-slim
 
 WORKDIR /bot
 

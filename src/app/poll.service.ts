@@ -1822,6 +1822,23 @@ export class Poll {
     this.G.L.entry("Poll.end", this._pid);
     // 1. disable voting:
     this.allow_voting = false;
+    
+    // For Matrix backend, skip PouchDB-specific replication & doc fetch.
+    // Just close the poll, tally, and notify.
+    if (environment.useMatrixBackend) {
+      window.setTimeout((() => {
+        this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
+        this.state = "closed";
+        window.setTimeout((() => {
+          this.G.D.stop_poll_sync(this.pid);
+          // Final tally
+          this.tally_all();
+          this.notify_of_end();
+        }).bind(this), environment.closing.grace_period_2_ms);
+      }).bind(this), environment.closing.grace_period_1_ms);
+      return;
+    }
+    
     // 2. wait some "grace" period for potentially ongoing sync to finish 
     // and potential clock discrepancies between local and CouchDB server.
     window.setTimeout((() => {
@@ -1923,6 +1940,9 @@ export class Poll {
   }
 
   add_option_deadline(): Date {
+    if (!this.start_date || !this.due) {
+      return null;
+    }
     const t0 = this.start_date.getTime(),
           t2 = this.due.getTime();
     return new Date(t2 - (t2 - t0) * environment.no_more_options_time_fraction);  

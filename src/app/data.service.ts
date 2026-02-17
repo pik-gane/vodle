@@ -301,6 +301,11 @@ export class DataService implements OnDestroy {
   private poll_db_sync_handlers: Record<string, any>;
   // Phase 14: Track Matrix poll event listeners per pid to prevent duplicates
   private _matrixPollListeners: Record<string, any> = {};
+  // Promise for the async Matrix state-change work (draft→running).
+  // Callers (e.g. publish_button_clicked) can await this to ensure all
+  // poll data, options, and state have been committed to Matrix before
+  // proceeding (e.g. navigating to the share page).
+  _matrixStateChangePromises: Record<string, Promise<void>> = {};
 
   // Caches with redundant information, not stored in database:
 
@@ -919,12 +924,94 @@ export class DataService implements OnDestroy {
     // Phase 12: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
       // For Matrix backend, join the poll room and create voter room instead of PouchDB replication
-      return this.matrixService.getOrCreatePollRoom(pid, '').then(async () => {
-        // Create voter room
-        await this.matrixService.getOrCreateMyVoterRoom(pid);
+      return this.matrixService.getOrCreatePollRoom(pid, '').then(async (roomId) => {
+        console.log("[connect_to_remote_poll_db] getOrCreatePollRoom returned roomId:", roomId, "for pid:", pid);
+
+        // DIAGNOSTIC: Direct fetch test to verify API connectivity from browser
+        try {
+          const diagToken = (this.matrixService as any).client?.getAccessToken();
+          const diagUrl = `${(this.matrixService as any).homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`;
+          console.log("[DIAG] Direct fetch test: url=", diagUrl, "token=", diagToken ? diagToken.substring(0, 15) + "..." : "NULL");
+          const diagResp = await fetch(diagUrl, {
+            headers: { 'Authorization': `Bearer ${diagToken}` },
+            cache: 'no-store',
+          });
+          console.log("[DIAG] Direct fetch response:", diagResp.status, diagResp.statusText);
+          if (diagResp.ok) {
+            const diagData = await diagResp.json();
+            const vodleEvents = diagData.filter((e: any) => (e.type || '').includes('vodle'));
+            console.log("[DIAG] Direct fetch got", diagData.length, "total events,", vodleEvents.length, "vodle events");
+            vodleEvents.forEach((e: any) => console.log("[DIAG]  ", e.type, "=", JSON.stringify(e.content).substring(0, 100)));
+          } else {
+            const errText = await diagResp.text();
+            console.error("[DIAG] Direct fetch FAILED:", errText.substring(0, 200));
+          }
+        } catch (diagErr) {
+          console.error("[DIAG] Direct fetch ERROR:", diagErr);
+        }
+
+        // Create voter room (pass vodle vid so it gets stored in the room + announce event)
+        const myVid = this.getp(pid, 'myvid');
+        await this.matrixService.getOrCreateMyVoterRoom(pid, myVid);
 
         // Sync poll data from Matrix to local cache
         await this.matrixService.warmupCache(pid);
+
+        // Load poll metadata (state, title, due, type, etc.) into poll_caches
+        const pollData = await this.matrixService.getAllPollData(pid);
+        this.ensure_poll_cache(pid);
+        for (const [key, value] of Object.entries(pollData)) {
+          this.poll_caches[pid][key] = value;
+        }
+
+        // Load options from timeline events (immutable) and register
+        // their oids + data in poll_caches so Option objects get created.
+        const options = await this.matrixService.getOptions(pid);
+        if (!(pid in this._pid_oids)) {
+          this._pid_oids[pid] = new Set();
+        }
+        for (const [oid, opt] of options) {
+          this._pid_oids[pid].add(oid);
+          this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
+          this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
+          this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
+          this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
+        }
+        
+        // Bridge other voters' ratings from Matrix into poll_caches and tally system.
+        // getRatings() returns cached results (already fetched during warmupCache).
+        // Keys are vodle vids when available, or Matrix user IDs as fallback.
+        const ratings = await this.matrixService.getRatings(pid);
+        let bridgedVoters = 0;
+        let bridgedRatings = 0;
+        for (const [vid, voterRatings] of ratings) {
+          if (vid === myVid) continue; // Skip own ratings — already handled locally
+          bridgedVoters++;
+          for (const [oid, rating] of voterRatings) {
+            // Store in poll_caches in the format expected by getv():
+            //   voter.<vid>§rating.<oid> = stringified rating
+            const pkey = this.get_voter_key_prefix(pid, vid) + 'rating.' + oid;
+            this.poll_caches[pid][pkey] = String(rating);
+            // Register in the tally system's own_ratings_map so tally_all() finds it
+            this.G.P.update_own_rating(pid, vid, oid, rating, false);
+            bridgedRatings++;
+          }
+        }
+        
+        console.log("[connect_to_remote_poll_db] poll:", pid,
+                     "pollData keys:", Object.keys(pollData),
+                     "options:", options.size,
+                     "state:", pollData['state'],
+                     "bridgedVoters:", bridgedVoters,
+                     "bridgedRatings:", bridgedRatings);
+        this.G.L.info("DataService.connect_to_remote_poll_db loaded poll data keys:", Object.keys(pollData),
+                       "options:", options.size);
+
+        // Persist poll state in user_cache so the app remembers this poll after refresh
+        if (pollData['state']) {
+          const prefix = get_poll_key_prefix(pid);
+          this.setu(prefix + 'state', pollData['state']);
+        }
 
         // Phase 14: Start real-time sync via Matrix event handlers
         this.start_poll_sync(pid);
@@ -1111,37 +1198,104 @@ export class DataService implements OnDestroy {
 
         // Create Matrix poll room and move data from user cache to Matrix
         const title = this.getp(pid, 'title');
-        this.matrixService.createPollRoom(pid, title).then(async () => {
+        this._matrixStateChangePromises[pid] = this.matrixService.createPollRoom(pid, title).then(async () => {
           // Set deadline (if present)
           if (p.due) {
             await this.matrixService.setPollDeadline(pid, p.due.toISOString());
           }
 
-          // Move data from user cache to Matrix poll room
+          // Move data from user cache to Matrix poll room.
+          // Option keys are collected separately and sent as immutable
+          // timeline events via addOption() (not as state events).
+          const optionData: Record<string, Record<string, string>> = {};
+          const allPrefixedKeys = Object.keys(this.user_cache).filter(k => k.startsWith(prefix));
+          console.error("OPTION_DEBUG change_poll_state: prefix='" + prefix + "' allPrefixedKeys=" + JSON.stringify(allPrefixedKeys));
+          const optionKeys = allPrefixedKeys.filter(k => {
+            const key = k.substring(prefix.length);
+            const pos2 = (key+'.').indexOf('.');
+            const subkey2 = (key+'.').slice(0, pos2);
+            return subkey2 === 'option';
+          });
+          console.error("OPTION_DEBUG change_poll_state: optionKeys=" + JSON.stringify(optionKeys));
           for (const [ukey, value] of Object.entries(this.user_cache)) {
             if (ukey.startsWith(prefix)) {
               const key = ukey.substring(prefix.length),
                     pos = (key+'.').indexOf('.'),
                     subkey = (key+'.').slice(0, pos);
+              this.G.L.warn("change_poll_state: processing key", key, "subkey", subkey, "inUserDb", poll_keystarts_in_user_db.includes(subkey));
+              console.error("OPTION_DEBUG processing key='" + key + "' subkey='" + subkey + "' inUserDb=" + poll_keystarts_in_user_db.includes(subkey));
               if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
-                await this.matrixService.setPollData(pid, key, value as string);
-                this.delu(ukey);
+                if (subkey === 'option') {
+                  // Collect option fields: key = "option.<oid>.<field>"
+                  const rest = key.slice('option.'.length);  // "<oid>.<field>"
+                  const dotPos = rest.indexOf('.');
+                  if (dotPos > 0) {
+                    const oid = rest.slice(0, dotPos);
+                    const field = rest.slice(dotPos + 1);
+                    if (!optionData[oid]) optionData[oid] = {};
+                    optionData[oid][field] = value as string;
+                  }
+                  // DON'T delu() here — option data must stay in user_cache
+                  // as fallback until addOption() has confirmed the timeline
+                  // events exist. The delu() is called below after addOption()
+                  // succeeds for each option.
+                } else {
+                  await this.matrixService.setPollData(pid, key, value as string);
+                  // Also store in poll_caches so getp() finds it immediately
+                  this.ensure_poll_cache(pid);
+                  this.poll_caches[pid][key] = value as string;
+                  this.delu(ukey);
+                }
               }
             }
           }
 
-          // Lock metadata (raises power levels)
-          await this.matrixService.lockPollMetadata(pid);
+          // Send options as immutable timeline events
+          console.error("OPTION_DEBUG change_poll_state: collected optionData=" + JSON.stringify(optionData));
+          this.ensure_poll_cache(pid);
+          for (const [oid, fields] of Object.entries(optionData)) {
+            console.error("OPTION_DEBUG change_poll_state: sending option oid=" + oid + " fields=" + JSON.stringify(fields));
+            if (fields['name']) {
+              await this.matrixService.addOption(pid, oid, {
+                name: fields['name'],
+                description: fields['desc'] || '',
+                url: fields['url'] || ''
+              });
+              this.G.L.warn("change_poll_state: option sent successfully", oid);
+              // Populate poll_caches so getp() finds option data immediately
+              // (before ensureOptionCache has a chance to fetch from the timeline)
+              this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
+              this.poll_caches[pid]['option.' + oid + '.name'] = fields['name'];
+              this.poll_caches[pid]['option.' + oid + '.desc'] = fields['desc'] || '';
+              this.poll_caches[pid]['option.' + oid + '.url'] = fields['url'] || '';
+              if (!(pid in this._pid_oids)) this._pid_oids[pid] = new Set();
+              this._pid_oids[pid].add(oid);
+              // NOW safe to delete option keys from user_cache since the
+              // option is confirmed in the Matrix timeline:
+              const optKeyPrefix = prefix + 'option.' + oid + '.';
+              for (const ukey of Object.keys(this.user_cache)) {
+                if (ukey.startsWith(optKeyPrefix)) {
+                  this.delu(ukey);
+                }
+              }
+            }
+          }
+
+          // Set poll state to 'running' BEFORE locking metadata,
+          // because lockPollMetadata raises m.room.vodle.poll.state to
+          // power 100 so the creator (50) can no longer send it.
+          if (new_state != 'draft' && new_state != 'closing') {
+            await this.matrixService.changePollState(pid, new_state);
+          }
+          
+          // Start real-time sync so the creator receives rating updates
+          // from other voters via SDK event listeners.
+          this.start_poll_sync(pid);
         }).catch(err => {
           this.G.L.error("DataService.change_poll_state failed to create Matrix poll room and move draft data during draft→running transition", pid, err);
         });
       }
 
-      if (new_state != 'draft' && new_state != 'closing') {
-        this.matrixService.changePollState(pid, new_state).catch(err => {
-          this.G.L.error("DataService.change_poll_state Matrix state change failed", pid, new_state, err);
-        });
-      }
       this.setu(prefix + 'state', new_state);
       this.G.L.exit("DataService.change_poll_state");
       return;
@@ -1197,6 +1351,13 @@ export class DataService implements OnDestroy {
 
   replicate_once(pid: string): Promise<boolean> {
     this.G.L.entry("DataService.replicate_once", pid);
+    
+    // Matrix backend has no PouchDB replication
+    if (environment.useMatrixBackend) {
+      this.G.L.exit("DataService.replicate_once (Matrix noop)", pid);
+      return Promise.resolve(true);
+    }
+    
     return new Promise<boolean>((resolve, reject) => {
 
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
@@ -1246,6 +1407,10 @@ export class DataService implements OnDestroy {
   }
 
   get_remote_poll_state_doc(pid: string): Promise<any> {
+    // Matrix backend has no PouchDB remote_poll_dbs
+    if (environment.useMatrixBackend) {
+      return Promise.resolve({ _id: pid, _rev: 'matrix-' + Date.now() });
+    }
     const _id = poll_doc_id_prefix + pid + "§state";
     return this.remote_poll_dbs[pid].get(_id);
   }
@@ -1532,6 +1697,23 @@ export class DataService implements OnDestroy {
       // Prevent duplicate listener registration on repeated calls
       if (!this._matrixPollListeners[pid]) {
         const listener = {
+          onRatingUpdate: (pollId: string, vid: string, optionId: string, rating: number) => {
+            try {
+              this.G.L.info("DataService Matrix onRatingUpdate", pollId, vid, optionId, rating);
+              // Bridge the incoming rating into poll_caches so getv() returns it
+              if (!this.poll_caches[pollId]) {
+                this.poll_caches[pollId] = {};
+              }
+              const pkey = this.get_voter_key_prefix(pollId, vid) + 'rating.' + optionId;
+              this.poll_caches[pollId][pkey] = String(rating);
+              // Feed the tally system — update_own_rating is idempotent (no-op if
+              // the value hasn't changed) and with update_tally=true it calls
+              // tally_all() which recomputes scores and updates the UI.
+              this.G.P.update_own_rating(pollId, vid, optionId, rating, true);
+            } catch (err) {
+              this.G.L.error("DataService Matrix onRatingUpdate callback failed", pollId, err);
+            }
+          },
           onDataChange: () => {
             try {
               if (this.page && this.page.onDataChange) this.page.onDataChange();
@@ -1924,6 +2106,23 @@ export class DataService implements OnDestroy {
   // TODO: delv!
 
   get_example_docs(): Promise<any> {
+    if (environment.useMatrixBackend) {
+      // For Matrix backend, fetch example polls from static JSON assets
+      return this.G.http.get<any[]>('assets/examples/index.json').toPromise()
+        .then(async (index: any[]) => {
+          const rows = [];
+          for (const entry of index) {
+            try {
+              const doc = await this.G.http.get<any>('assets/examples/' + entry.file).toPromise();
+              doc._id = 'examples§' + entry.file.replace('.json', '');
+              rows.push({ doc });
+            } catch (e) {
+              this.G.L.warn("DataService.get_example_docs: failed to load", entry.file, e);
+            }
+          }
+          return { rows };
+        });
+    }
     const promise = this.remote_user_db.allDocs({
       include_docs: true,
       startkey: 'examples§',

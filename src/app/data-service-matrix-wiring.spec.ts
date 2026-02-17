@@ -717,7 +717,7 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
       it('should generate magic link with placeholder CouchDB params', () => {
         const pid = 'test-poll-invite';
         const poll_password = 'secret123';
-        const magic_link_base_url = 'http://localhost:8100/#/';
+        const magic_link_base_url = 'http://localhost:4200/#/';
 
         // Phase 13: Matrix invite link uses placeholders for CouchDB params
         const invite_link = (
@@ -727,13 +727,13 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
           + pid + "/"
           + poll_password);
 
-        expect(invite_link).toBe('http://localhost:8100/#/joinpoll/_/_/test-poll-invite/secret123');
+        expect(invite_link).toBe('http://localhost:4200/#/joinpoll/_/_/test-poll-invite/secret123');
       });
 
       it('should use same URL format as CouchDB (backward compatible)', () => {
         const pid = 'test-poll-invite';
         const poll_password = 'secret123';
-        const magic_link_base_url = 'http://localhost:8100/#/';
+        const magic_link_base_url = 'http://localhost:4200/#/';
 
         const matrixLink = magic_link_base_url + "joinpoll/_/_/" + pid + "/" + poll_password;
         const couchLink = magic_link_base_url + "joinpoll/http%3A%2F%2Flocalhost%3A5984/dbpass/" + pid + "/" + poll_password;
