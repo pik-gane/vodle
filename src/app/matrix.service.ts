@@ -3068,12 +3068,16 @@ export class MatrixService {
    * Updates the local cache and notifies listeners.
    */
   private handleRatingEvent(pollId: string, voterId: string, optionId: string, event: any): void {
-    console.log("[handleRatingEvent] ENTER", pollId, voterId, optionId);
+    if (environment.show_debug_info) {
+      console.log("[handleRatingEvent] ENTER", pollId, voterId, optionId);
+    }
     
     try {
       const content = event.getContent();
       const rawValue = content?.value;
-      console.log("[handleRatingEvent] rawValue:", rawValue, typeof rawValue, "content:", JSON.stringify(content));
+      if (environment.show_debug_info) {
+        console.log("[handleRatingEvent] rawValue:", rawValue, typeof rawValue, "content:", JSON.stringify(content));
+      }
       
       // setv_in_polldb passes ratings as strings (e.g. "75"), so we must
       // convert to number before validation.
@@ -3081,7 +3085,9 @@ export class MatrixService {
       
       // Validate: rating must be a finite number in range [0, 100]
       if (!Number.isFinite(rating) || rating < 0 || rating > 100) {
-        console.log("[handleRatingEvent] INVALID rating", pollId, voterId, optionId, rawValue, typeof rawValue, "parsed:", rating);
+        if (environment.show_debug_info) {
+          console.log("[handleRatingEvent] INVALID rating", pollId, voterId, optionId, rawValue, typeof rawValue, "parsed:", rating);
+        }
         return;
       }
       
@@ -3094,19 +3100,25 @@ export class MatrixService {
         || this.voterVidMap.get(`${pollId}:${voterId}`)
         || voterId;
       
-      console.log("[handleRatingEvent] VALID", pollId, "voter:", voterId, "→ vid:", vodleVid, "option:", optionId, "rating:", rating);
+      if (environment.show_debug_info) {
+        console.log("[handleRatingEvent] VALID", pollId, "voter:", voterId, "→ vid:", vodleVid, "option:", optionId, "rating:", rating);
+      }
       
       // Update cache using vodle vid
       this.updateRatingCache(pollId, vodleVid, optionId, rating);
       
       // Notify listeners with vodle vid (not Matrix user ID)
       const listeners = this.pollEventListeners.get(pollId);
-      console.log("[handleRatingEvent] listeners count:", listeners ? listeners.length : 0);
+      if (environment.show_debug_info) {
+        console.log("[handleRatingEvent] listeners count:", listeners ? listeners.length : 0);
+      }
       if (listeners) {
         for (const listener of listeners) {
           try {
             if (listener.onRatingUpdate) {
-              console.log("[handleRatingEvent] calling onRatingUpdate", pollId, vodleVid, optionId, rating);
+              if (environment.show_debug_info) {
+                console.log("[handleRatingEvent] calling onRatingUpdate", pollId, vodleVid, optionId, rating);
+              }
               listener.onRatingUpdate(pollId, vodleVid, optionId, rating);
             }
             if (listener.onDataChange) {
