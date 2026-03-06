@@ -64,7 +64,7 @@
             "name": "Heat pump + gas backup",
             "desc": "Hybrid system: electric heat pump for most of the year, gas boiler for peak cold spells.",
             "ratings":
-            [0, 0, 0, 0, 0, 29, 29, 29, 29, 29, 25, 25, 25, 25, 6, 6, 6, 38, 38, 38]
+            [0, 0, 0, 0, 0, 29, 29, 29, 29, 29, 25, 25, 25, 25, 25, 25, 25, 38, 38, 38]
         }
     ]
 }
