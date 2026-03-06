@@ -1,0 +1,70 @@
+{
+    "is_test": true,
+
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "House heating system",
+
+    "desc": "What type of heating and fuel source should our house use? (You and 20 simulated residents)",
+
+    "due_type": "10min",
+
+    "options": [
+        {
+            "name": "Gas condensing boiler",
+            "desc": "Efficient gas boiler with low running costs but high CO₂ emissions.",
+            "ratings":
+            [100, 100, 100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 0, 0, 0]
+        },
+        {
+            "name": "Oil boiler",
+            "desc": "Conventional oil-fired boiler. Moderate cost, high emissions, requires on-site fuel storage.",
+            "ratings":
+            [59, 59, 59, 59, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 25, 25, 0, 0, 0]
+        },
+        {
+            "name": "Air-source heat pump",
+            "desc": "Electric heat pump using outdoor air, powered by a green electricity tariff.",
+            "ratings":
+            [0, 0, 0, 0, 0, 100, 100, 100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 58, 58, 58]
+        },
+        {
+            "name": "Ground-source heat pump",
+            "desc": "Geothermal heat pump. High upfront investment but very efficient year-round.",
+            "ratings":
+            [0, 0, 0, 0, 0, 53, 53, 53, 53, 53, 0, 0, 0, 0, 0, 0, 0, 79, 79, 79]
+        },
+        {
+            "name": "District heating",
+            "desc": "Connection to the municipal district heating network. Reliable and low-maintenance.",
+            "ratings":
+            [38, 38, 38, 38, 38, 6, 6, 6, 6, 6, 100, 100, 100, 100, 0, 0, 0, 0, 0, 0]
+        },
+        {
+            "name": "Wood pellet boiler",
+            "desc": "Biomass boiler using locally sourced wood pellets. Renewable but needs storage space.",
+            "ratings":
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100, 0, 0, 0]
+        },
+        {
+            "name": "Heat pump + solar thermal",
+            "desc": "Combined system with rooftop solar collectors. Highest upfront cost, lowest running cost.",
+            "ratings":
+            [0, 0, 0, 0, 0, 76, 76, 76, 76, 76, 0, 0, 0, 0, 0, 0, 0, 100, 100, 100]
+        },
+        {
+            "name": "Cooperative biomass CHP",
+            "desc": "Resident-run combined heat and power plant using biomass. Requires collective commitment.",
+            "ratings":
+            [18, 18, 18, 18, 18, 6, 6, 6, 6, 6, 25, 25, 25, 25, 6, 6, 6, 17, 17, 17]
+        },
+        {
+            "name": "Heat pump + gas backup",
+            "desc": "Hybrid system: electric heat pump for most of the year, gas boiler for peak cold spells.",
+            "ratings":
+            [0, 0, 0, 0, 0, 29, 29, 29, 29, 29, 25, 25, 25, 25, 6, 6, 6, 38, 38, 38]
+        }
+    ]
+}
