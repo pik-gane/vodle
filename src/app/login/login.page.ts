@@ -146,9 +146,15 @@ export class LoginPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("LoginPage.ionViewDidEnter");
-    const default_lang = navigator.language.slice(0,2);
+    // never leave the language selection empty, since that would disable the "next" 
+    // button and block the login altogether (see issue #273). 
+    // note that navigator.language may be undefined in rare environments,
+    // and a stored language might no longer be among the registered ones:
+    const default_lang = (navigator.language || 'en').slice(0,2),
+          stored_lang = this.G.S.language;
     this.languageFormGroup.get('language').setValue(
-      this.G.S.language||((this.translate.langs.includes(default_lang))?default_lang:''));
+      (!!stored_lang && this.translate.langs.includes(stored_lang)) ? stored_lang
+      : (this.translate.langs.includes(default_lang) ? default_lang : 'en'));
     // browser might have prefilled fields, so check this:
     /*
     this.set_language();
@@ -214,11 +220,15 @@ export class LoginPage implements OnInit {
   }
 
   submit_language() {
-    this.set_language();
-    if (this.languageFormGroup.valid) {
-      this.G.go_fullscreen_on_mobile();
-      this.router.navigate(['/login/used_before/'+this.then_url]);  
+    // never let a missing language selection block the login;
+    // fall back to English instead (see issue #273):
+    const c = this.languageFormGroup.get('language');
+    if (!c.value || !this.languageFormGroup.valid) {
+      c.setValue('en');
     }
+    this.set_language();
+    this.G.go_fullscreen_on_mobile();
+    this.router.navigate(['/login/used_before/'+this.then_url]);  
   }
 
   ask_used_before_no() {

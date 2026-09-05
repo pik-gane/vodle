@@ -97,8 +97,12 @@ export class ExplainApprovalPage implements OnInit {
 
   ngOnInit() {
     // approval:
-    const p = this.p = this.parent.p,
-          oid = this.oid,
+    const p = this.p = this.parent.p;
+    // recompute the tally freshly from the authoritative effective (post-delegation) ratings,
+    // so that stale incremental tally caches can never make this page depict proxy waps
+    // instead of effective waps or a wrong cutoff (see issue #186):
+    p.tally_all();
+    const oid = this.oid,
           rs0 = (p.T.effective_ratings_ascending_map||new Map()).get(oid)||[],
           rs = this.rs = [],
           rmin = this.rmin = p.T.thresholds_map.get(oid) || 100,
@@ -124,7 +128,8 @@ export class ExplainApprovalPage implements OnInit {
         this.thresholdi = i;
       }
     }
-    this.myi = rs.indexOf(myr);
+    // guard against the own rating not being contained in the (possibly empty) ratings array:
+    this.myi = Math.max(0, rs.indexOf(myr));
     this.eff_unequal_proxy = (myr != p.get_my_proxy_rating(oid));
 
     this.parent.G.L.trace("ANIMATION:",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);

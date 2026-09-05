@@ -80,14 +80,16 @@ export class AppComponent {
       @Inject(DOCUMENT) private document: Document
       ) {
     console.log("APP CONSTRUCTOR");
-    translate.addLangs(['de','en','es','ko','pl']);
+    // all languages having a (nearly) complete translation in src/assets/i18n (see issue #273):
+    translate.addLangs(['de','en','es','fi','hi','it','ko','pl','zh']);
 
     // this language will be used as a fallback when a translation isn't found in the current language
     translate.setDefaultLang('en');
 //    translate.setDefaultLang('nn'); // uncomment to produce translate key screenshots
 
-    // the lang to use, if the lang isn't available, it will use the current loader to get them
-    const preferred_lang = navigator.language.slice(0,2),
+    // the lang to use, if the lang isn't available, it will use the current loader to get them.
+    // note that navigator.language may be undefined in rare environments (see issue #273):
+    const preferred_lang = (navigator.language || 'en').slice(0,2),
           used_lang = translate.langs.includes(preferred_lang)?preferred_lang:'en';
     translate.use(used_lang);
     this.document.documentElement.lang = used_lang; 
