@@ -1,4 +1,53 @@
 # Real-Time Sync Debugging State — February 17, 2026
+## (Updated September 5, 2026 — root cause closed, see "Session 2 Findings" below)
+
+## Session 2 Findings (September 5, 2026)
+
+Automated two-browser reproduction (real app served by `ng serve`, fresh local
+Synapse, creator + joiner in isolated Chromium instances) settled the open
+questions from February 17:
+
+### 1. SDK incremental-sync event emission WORKS — root cause was Finding 2
+- A Node harness running vodle's exact SDK usage (matrix-js-sdk v37.5.0,
+  in-memory store, `initialSyncLimit: 10`, `lazyLoadMembers: true`, custom
+  `m.room.vodle.voter.rating.rating.{oid}` state events, runtime `joinRoom`)
+  emits `RoomState.events` for every incremental sync, including for rooms
+  joined at runtime.
+- The browser repro confirmed the same in the real app: a joiner's rating
+  change reached the creator's `stateRatingHandler` **event-driven in ~53 ms**
+  (and ~270 ms in a second run after reload) — far inside the 15 s periodic
+  discovery window, proving the push path works end-to-end.
+- Conclusion: the "zero events after initial sync" of Finding 1 was not an SDK
+  emission failure. The creator's client simply was **not joined to the voter
+  rooms** (Finding 2: `discoverVoterRooms` was never called), so no voter-room
+  events could arrive via /sync. The February 17 fix (discoverVoterRooms from
+  setupPollEventHandlers + retroactive scan) removed the root cause; the
+  15 s periodic discovery remains as defense-in-depth for missed
+  announcements (e.g. rooms announced while the client was offline).
+
+### 2. "Option resorting on reload" — root-caused and fixed
+- Cause: with the Matrix backend, other voters' ratings are restored
+  asynchronously (voter-room discovery + retroactive state scan) *after*
+  `PollPage.onDataReady` has already done its one forced sort. The later
+  `onDataChange` notifications recompute the tally (bars/scores update) but
+  `update_order()` without `force` only re-sorts when the user enabled
+  `show_live` — by design, options must not jump around while viewing.
+  With CouchDB the data was already in the local PouchDB before the page
+  entered, so `onDataReady`'s forced sort saw complete data.
+- Fix (no design change — one-time forced sort at restoration, live sorting
+  still only with `show_live`):
+  - `matrix.service.ts`: new optional `PollEventListener.onInitialScanComplete`
+    callback, dispatched once by `setupPollEventHandlers` right after
+    `retroactiveScanVoterRooms` (restoration of pre-existing ratings complete).
+  - `data.service.ts`: `start_poll_sync`'s listener forwards it to the current
+    page when `page.pid` matches.
+  - `poll.page.ts`: new `onInitialScanComplete()` → `tally_all()` +
+    `update_order(true)` + `detectChanges()` (skipped while a slider is being
+    dragged).
+- Verified in the browser repro: after creator reload, all 4 ratings are
+  restored, `onInitialScanComplete` fires, and the option order reflects the
+  restored ratings; a joiner rating sent after the reload still arrives
+  event-driven.
 
 ## Current Status
 
@@ -92,14 +141,15 @@ Every 15 seconds, re-runs `discoverVoterRooms` (1 REST request to poll room time
 ## Known Remaining Issues
 
 ### Option resorting on reload
-After creator reloads, shows updated results but doesn't resort options. Not investigated yet.
+~~After creator reloads, shows updated results but doesn't resort options.~~
+**FIXED September 5, 2026** — see "Session 2 Findings" above.
 
 ### SDK incremental sync event emission
-Even with the periodic discovery + retroactive scan workaround, real-time event-driven sync may not work if the SDK doesn't emit `RoomState.events` during incremental sync. The periodic discovery (15s) provides near-real-time updates as a fallback. Root cause of SDK event emission failure is unknown — could be:
-- matrix-js-sdk v37.5.0 bug with in-memory store
-- Missing store configuration
-- Issue with how `_createAndReEmitRoom` works for rooms joined via `joinRoom` during runtime vs initial sync
-- The SDK's `setStateEvents` at room-state.js L333 DOES emit `RoomStateEvent.Events` for every state event during `injectRoomEvents`, so the issue may be in the sync response processing path
+~~Even with the periodic discovery + retroactive scan workaround, real-time event-driven sync may not work if the SDK doesn't emit `RoomState.events` during incremental sync.~~
+**RESOLVED September 5, 2026** — event emission verified working in Node and in
+the real app (see "Session 2 Findings"). The original symptom was caused by the
+client not being joined to the voter rooms (Finding 2). The periodic discovery
+(15s) is kept as a fallback for announcements missed while offline.
 
 ### User constraints
 - "DON'T CHANGE ANY DESIGN CHOICES!"
