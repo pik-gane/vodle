@@ -199,6 +199,22 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.onDataChange");
   }
 
+  onInitialScanComplete() {
+    /** called by the Matrix backend (via DataService) once the initial
+     *  restoration of this poll's ratings has completed after app start.
+     *  Re-sorts the options once so a reloaded page shows the current order
+     *  (with CouchDB the data is already local when onDataReady sorts).
+     *  Not called on later live updates, so sorting stays stable while
+     *  the user is viewing/rating (unless show_live is on). */
+    this.G.L.entry("PollPage.onInitialScanComplete");
+    if (this.ready && !this.dragged_oid) {
+      this.p.tally_all();
+      this.update_order(true);
+      this.changeDetector.detectChanges();
+    }
+    this.G.L.exit("PollPage.onInitialScanComplete");
+  }
+
   ionViewWillLeave() {
     // cancel pending debounced keyboard persistence before the view/DOM is removed:
     if (this.rating_update_timeout) {

@@ -1720,6 +1720,17 @@ export class DataService implements OnDestroy {
             } catch (err) {
               this.G.L.error("DataService Matrix onDataChange callback failed", pid, err);
             }
+          },
+          onInitialScanComplete: (pollId: string) => {
+            // initial restoration of this poll's ratings finished — let the
+            // poll page re-sort its options once with the complete data:
+            try {
+              if (this.page && this.page.pid == pollId && this.page.onInitialScanComplete) {
+                this.page.onInitialScanComplete();
+              }
+            } catch (err) {
+              this.G.L.error("DataService Matrix onInitialScanComplete callback failed", pid, err);
+            }
           }
         };
         this._matrixPollListeners[pid] = listener;
