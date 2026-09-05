@@ -101,6 +101,10 @@ export interface PollEventListener {
   onDelegationResponse?(pollId: string, response: DelegationResponse): void;
   onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
   onDataChange?(): void;
+  /** Fired once after setupPollEventHandlers has finished restoring the poll's
+   *  existing ratings (voter room discovery + retroactive state scan).
+   *  Lets pages re-sort options once with the complete restored data. */
+  onInitialScanComplete?(pollId: string): void;
 }
 
 /**
@@ -3054,6 +3058,22 @@ export class MatrixService {
     // would have been missed by the stateRatingHandler. This one-time scan
     // processes the SDK's in-memory room state to catch them.
     this.retroactiveScanVoterRooms(pollId);
+    
+    // Restoration of pre-existing ratings is now complete — notify listeners
+    // so the poll page can re-sort options once with the full data
+    // (fixes "options not resorted after reload", see SYNC_DEBUG_STATE.md).
+    const initListeners = this.pollEventListeners.get(pollId);
+    if (initListeners) {
+      for (const listener of initListeners) {
+        try {
+          if (listener.onInitialScanComplete) {
+            listener.onInitialScanComplete(pollId);
+          }
+        } catch (error) {
+          console.error("[setupPollEventHandlers] onInitialScanComplete listener error:", error);
+        }
+      }
+    }
     
     // Start periodic voter re-discovery to catch newly-joined voters.
     // This makes a single REST request to the poll room timeline, NOT N×M
