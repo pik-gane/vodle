@@ -2560,13 +2560,14 @@ export class DataService implements OnDestroy {
     this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally});
     if (!this.change_queue_scheduled) {
       this.change_queue_scheduled = true;
-      // process soon, when the browser is idle (fallback: next tick):
-      const schedule = (typeof (window as any).requestIdleCallback === 'function')
-        ? (callback: () => void) => (window as any).requestIdleCallback(callback, {timeout: 50})
-        : (callback: () => void) => setTimeout(callback, 0);
-      schedule(() => {
+      // process on the next tick, so that changes arriving in a burst are
+      // coalesced. Deliberately setTimeout and not requestIdleCallback: the
+      // latter is not patched by zone.js 0.11, so Angular change detection
+      // would no longer be triggered for pages whose onDataChange does not
+      // call detectChanges() itself:
+      setTimeout(() => {
         this.process_change_queue();
-      });
+      }, 0);
     }
   }
 
