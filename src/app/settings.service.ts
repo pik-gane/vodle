@@ -151,12 +151,13 @@ export class SettingsService {
     de: 'Deutsch',
     en: 'English',
     es: 'Español',
-//    fr: 'Français',
-//    hi: 'हिन्दी',
+//    fr: 'Français',  // translation still incomplete
+    hi: 'हिन्दी',
+    it: 'Italiano',
     ko: '한국어',
     pl: 'Polski',
-//    fi: 'Suomi',
-//    zh: '中文'
+    fi: 'Suomi',
+    zh: '中文',
     nn: '[JSON file keys]'
   };
 

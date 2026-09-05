@@ -54,6 +54,8 @@ export class ExplainApprovalPage implements OnInit {
   n: number;
   myr: number;
   myi: number;
+  has_my_rating: boolean;
+  mypos: number;
   myv: string;
   thresholdi: number;
   poss: number[];
@@ -97,8 +99,12 @@ export class ExplainApprovalPage implements OnInit {
 
   ngOnInit() {
     // approval:
-    const p = this.p = this.parent.p,
-          oid = this.oid,
+    const p = this.p = this.parent.p;
+    // recompute the tally freshly from the authoritative effective (post-delegation) ratings,
+    // so that stale incremental tally caches can never make this page depict proxy waps
+    // instead of effective waps or a wrong cutoff (see issue #186):
+    p.tally_all();
+    const oid = this.oid,
           rs0 = (p.T.effective_ratings_ascending_map||new Map()).get(oid)||[],
           rs = this.rs = [],
           rmin = this.rmin = p.T.thresholds_map.get(oid) || 100,
@@ -124,7 +130,11 @@ export class ExplainApprovalPage implements OnInit {
         this.thresholdi = i;
       }
     }
-    this.myi = rs.indexOf(myr);
+    // own rating can be absent from rs (e.g. abstaining / no effective own rating):
+    const i_am_in_tallied_voters = p.T.all_vids_set.has(p.myvid);
+    this.myi = i_am_in_tallied_voters ? rs.indexOf(myr) : -1;
+    this.has_my_rating = this.myi >= 0;
+    this.mypos = this.has_my_rating ? poss[this.myi] : 100*(1-a);
     this.eff_unequal_proxy = (myr != p.get_my_proxy_rating(oid));
 
     this.parent.G.L.trace("ANIMATION:",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);
