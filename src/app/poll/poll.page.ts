@@ -200,6 +200,12 @@ export class PollPage implements OnInit {
   }
 
   ionViewWillLeave() {
+    // cancel pending debounced keyboard persistence before the view/DOM is removed:
+    if (this.rating_update_timeout) {
+      clearTimeout(this.rating_update_timeout);
+      this.rating_update_timeout = null;
+    }
+
     if (this.p.has_results) {
       // register that results have been seen:
       this.p.have_seen_results = true;

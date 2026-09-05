@@ -131,7 +131,8 @@ export class ExplainApprovalPage implements OnInit {
       }
     }
     // own rating can be absent from rs (e.g. abstaining / no effective own rating):
-    this.myi = rs.indexOf(myr);
+    const i_am_in_tallied_voters = p.T.all_vids_set.has(p.myvid);
+    this.myi = i_am_in_tallied_voters ? rs.indexOf(myr) : -1;
     this.has_my_rating = this.myi >= 0;
     this.mypos = this.has_my_rating ? poss[this.myi] : 100*(1-a);
     this.eff_unequal_proxy = (myr != p.get_my_proxy_rating(oid));
