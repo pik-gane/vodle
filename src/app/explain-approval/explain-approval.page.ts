@@ -54,6 +54,8 @@ export class ExplainApprovalPage implements OnInit {
   n: number;
   myr: number;
   myi: number;
+  has_my_rating: boolean;
+  mypos: number;
   myv: string;
   thresholdi: number;
   poss: number[];
@@ -128,8 +130,10 @@ export class ExplainApprovalPage implements OnInit {
         this.thresholdi = i;
       }
     }
-    // guard against the own rating not being contained in the (possibly empty) ratings array:
-    this.myi = Math.max(0, rs.indexOf(myr));
+    // own rating can be absent from rs (e.g. abstaining / no effective own rating):
+    this.myi = rs.indexOf(myr);
+    this.has_my_rating = this.myi >= 0;
+    this.mypos = this.has_my_rating ? poss[this.myi] : 100*(1-a);
     this.eff_unequal_proxy = (myr != p.get_my_proxy_rating(oid));
 
     this.parent.G.L.trace("ANIMATION:",oid,rs,rmin,cs,myr,n,this.myi,this.a,poss,this.thresholdi);
