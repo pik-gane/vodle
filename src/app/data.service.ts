@@ -363,7 +363,7 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing: incoming db change docs are queued and processed
   // in batches, keeping only the newest change per doc id:
-  private change_queue: {pid: string, doc: any, deleted: boolean, tally: boolean}[] = [];
+  private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
   private change_queue_scheduled = false;
 
   // Replication watchdog: per-replication progress tracking; keys are
@@ -1192,7 +1192,7 @@ export class DataService implements OnDestroy {
               resolve(true);  
             }
 
-          }).on('error', function (err) {
+          }).on('error', err => {
 
             this.G.L.warn("DataService.connect_to_remote_poll_db failed", pid, err);
   
@@ -1509,7 +1509,7 @@ export class DataService implements OnDestroy {
           resolve(true);  
         }
 
-      }).on('error', function (err) {
+      }).on('error', err => {
 
         this.G.L.warn("DataService.replicate_once failed", pid, err);
 
@@ -2554,7 +2554,7 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing (issue #292):
 
-  private enqueue_db_change(pid: string, doc: any, deleted: boolean, tally: boolean) {
+  private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean) {
     /** queue an incoming db change doc (pid == null means user db)
      *  for coalesced batch processing. */
     this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally});
@@ -2585,7 +2585,7 @@ export class DataService implements OnDestroy {
      *  once per batch instead of once per change event. */
     this.G.L.entry("DataService.process_change_queue", this.change_queue.length);
     // keep only the latest change for each doc id:
-    const latest = new Map<string, {pid: string, doc: any, deleted: boolean, tally: boolean}>();
+    const latest = new Map<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean}>();
     for (const entry of this.change_queue) {
       latest.set((entry.pid || '') + '|' + entry.doc._id, entry);
     }
