@@ -754,12 +754,37 @@ export class DataService implements OnDestroy {
     }
 
     if (this.restored_user_cache) {
-      // user_cache was restored from storage.
+      // user_cache was restored from storage. A replication may have committed
+      // documents to local PouchDB (and advanced its checkpoint) after that
+      // cache was last persisted, so still reconcile the cache (including
+      // deletions) from local PouchDB before resolving the user db bootstrap
+      // gate (#292):
 
-      // cache is already complete, so user db syncing may start right away (#292):
-      this.mark_user_db_bootstrapped();
+      // ASYNC:
+      this.local_synced_user_db.info()
+      .then(info => {
 
-      this.init_poll_data();
+        // store last_seq as reference point for the changes feed:
+        this.user_cache['user_last_seq'] = info.update_seq;
+        this.G.L.trace("DataService recorded user db update_seq at bootstrap", info.update_seq);
+
+        return this.local_synced_user_db.allDocs({
+          include_docs:true
+        });
+
+      }).then(result => {
+
+        this.reconcile_restored_user_cache.bind(this)(result);
+        this.mark_user_db_bootstrapped();
+
+        this.init_poll_data();
+
+      }).catch(err => {
+
+        this.G.L.error("DataService could not reconcile restored user cache with local_synced_user_DB", err);
+        this.reject_user_db_bootstrapped(err);
+
+      });
 
     } else {
       // try restoring from local PouchDB:
@@ -901,6 +926,35 @@ export class DataService implements OnDestroy {
       this.local_docs2cache_finished();
     } // else that will only be called after poll initialization has finished.
     this.G.L.exit("DataService.local_user_docs2cache");
+  }
+
+  private reconcile_restored_user_cache(result) {
+    // called when the user_cache was restored from storage, to reconcile it
+    // with the current state of local PouchDB before the user db bootstrap
+    // gate is resolved (#292):
+    this.G.L.entry("DataService.reconcile_restored_user_cache");
+    // documents deleted from the local db since the cache was last persisted
+    // are not returned by allDocs(), so explicitly apply such deletions:
+    const snapshot_ids = new Set<string>();
+    for (const row of result.rows) {
+      snapshot_ids.add(row.id);
+    }
+    const prefix = user_doc_id_prefix + this.get_email_and_pw_hash() + "§";
+    for (const key of Object.keys(this.user_cache)) {
+      if (local_only_user_keys.includes(key) || key == 'user_last_seq') {
+        // not backed by a synced user db doc:
+        continue;
+      }
+      if (!snapshot_ids.has(prefix + key)) {
+        this.G.L.trace("DataService.reconcile_restored_user_cache dropping cache entry without backing doc", key);
+        this.handle_deleted_user_doc({_id: prefix + key});
+      }
+    }
+    // then overlay the snapshot's current document values:
+    for (const row of result.rows) {
+      this.doc2user_cache(row.doc);
+    }
+    this.G.L.exit("DataService.reconcile_restored_user_cache");
   }
 
   private connect_to_remote_user_db() {
