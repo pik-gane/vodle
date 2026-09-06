@@ -3048,13 +3048,20 @@ export class DataService implements OnDestroy {
       this.change_queue_timeout = null;
       this.change_queue_scheduled = false;
     }
-    if (this.change_queue.length > 0) {
-      const applied_without_drop = this.process_change_queue(false);
-      if (!applied_without_drop || this.change_queue.length > 0) {
-        return false;
-      }
+    let applied_without_drop = true;
+    // exhaust the bounded per-document retries synchronously: a conversion
+    // failure keeps its entry in change_queue, and process_change_queue(false)
+    // deliberately schedules no retry timer, so without this loop such an
+    // entry would never reach its remaining attempts or terminal
+    // invalidation and a later save_state() could persist the stale
+    // cache (#292). Each pass increments the failing entries' retry counts,
+    // so at most change_retry_max_attempts passes are needed:
+    for (let pass = 0;
+         this.change_queue.length > 0 && pass < change_retry_max_attempts;
+         pass++) {
+      applied_without_drop = this.process_change_queue(false) && applied_without_drop;
     }
-    return true;
+    return applied_without_drop && this.change_queue.length == 0;
   }
 
   private invalidate_persisted_cache() {

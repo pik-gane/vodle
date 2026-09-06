@@ -153,7 +153,11 @@ describe('DataService consistency hardening (#292)', () => {
 
       expect(svc.flush_change_queue()).toBe(false);
       expect(svc.pending_changes).toBe(0);
-      expect(svc.change_queue.length).toBe(1);
+      // the flush exhausts the bounded retries synchronously, so the failing
+      // entry is terminally dropped instead of being left unscheduled:
+      expect(svc.doc2poll_cache).toHaveBeenCalledTimes(3);
+      expect(svc.change_queue.length).toBe(0);
+      expect(svc.persisted_cache_invalid).toBe(true);
     });
 
     it('continues processing non-failing changes when one queued change fails', () => {
@@ -170,8 +174,11 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.flush_change_queue()).toBe(false);
 
       expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'good'}));
-      expect(svc.change_queue.length).toBe(1);
-      expect(svc.change_queue[0].doc._id).toBe('bad');
+      // the failing entry is retried up to the bounded maximum during the
+      // flush and then terminally dropped, so nothing stays queued:
+      expect(svc.doc2poll_cache.calls.allArgs().filter(args => args[1]._id == 'bad').length).toBe(3);
+      expect(svc.change_queue.length).toBe(0);
+      expect(Object.keys(svc.change_retry_counts).length).toBe(0);
     });
   });
 
