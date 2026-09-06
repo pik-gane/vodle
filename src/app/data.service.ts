@@ -978,18 +978,20 @@ export class DataService implements OnDestroy {
 
   private mark_poll_db_bootstrapped_now(pid: string) {
     this.register_poll_db_bootstrap(pid);
-    this.mark_poll_db_bootstrapped[pid]();
+    if (this.mark_poll_db_bootstrapped[pid]) {
+      this.mark_poll_db_bootstrapped[pid]();
+    }
     delete this.mark_poll_db_bootstrapped[pid];
     delete this.reject_poll_db_bootstrapped[pid];
-    delete this.poll_db_bootstrapped[pid];
   }
 
   private fail_poll_db_bootstrap(pid: string, err: any) {
     this.register_poll_db_bootstrap(pid);
-    this.reject_poll_db_bootstrapped[pid](err);
+    if (this.reject_poll_db_bootstrapped[pid]) {
+      this.reject_poll_db_bootstrapped[pid](err);
+    }
     delete this.mark_poll_db_bootstrapped[pid];
     delete this.reject_poll_db_bootstrapped[pid];
-    delete this.poll_db_bootstrapped[pid];
   }
 
   private wait_for_poll_db_bootstrap(pid: string): Promise<void> {
@@ -2731,14 +2733,13 @@ export class DataService implements OnDestroy {
       this.change_queue_timeout = null;
       this.change_queue_scheduled = false;
     }
-    let all_applied = true;
-    while (this.change_queue.length > 0) {
-      all_applied = this.process_change_queue(false) && all_applied;
-      if (!all_applied && this.change_queue.length == 0) {
-        break;
+    if (this.change_queue.length > 0) {
+      const applied_without_drop = this.process_change_queue();
+      if (!applied_without_drop || this.change_queue.length > 0) {
+        return false;
       }
     }
-    return all_applied;
+    return true;
   }
 
   private process_change_queue(schedule_retries: boolean = true): boolean {

@@ -153,7 +153,7 @@ describe('DataService consistency hardening (#292)', () => {
 
       expect(svc.flush_change_queue()).toBe(false);
       expect(svc.pending_changes).toBe(0);
-      expect(svc.change_queue.length).toBe(0);
+      expect(svc.change_queue.length).toBe(1);
     });
 
     it('continues processing non-failing changes when one queued change fails', () => {
@@ -170,7 +170,8 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.flush_change_queue()).toBe(false);
 
       expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'good'}));
-      expect(svc.change_queue.length).toBe(0);
+      expect(svc.change_queue.length).toBe(1);
+      expect(svc.change_queue[0].doc._id).toBe('bad');
     });
   });
 
