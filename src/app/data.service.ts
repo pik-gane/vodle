@@ -382,6 +382,7 @@ export class DataService implements OnDestroy {
   private poll_sync_start_pending: Record<string, boolean> = {};
   private poll_sync_start_generation: Record<string, number> = {};
   private shutting_down = false;
+  private persisted_cache_invalid = false;
   private replication_watchdog_id: any = null;
 
   constructor(
@@ -405,6 +406,28 @@ export class DataService implements OnDestroy {
     this.user_sync_start_generation += 1;
     this.poll_sync_start_generation = {};
     this.stop_replication_watchdog();
+    // cancel live replication handlers so no further change events can
+    // re-enqueue work after destruction:
+    if (this.user_db_sync_handler) {
+      try {
+        this.user_db_sync_handler.cancel();
+      } catch (err) {
+        console.warn("DataService.ngOnDestroy could not cancel user data sync", err);
+      }
+      this.user_db_sync_handler = null;
+    }
+    if (this.poll_db_sync_handlers) {
+      for (const pid in this.poll_db_sync_handlers) {
+        if (this.poll_db_sync_handlers[pid]) {
+          try {
+            this.poll_db_sync_handlers[pid].cancel();
+          } catch (err) {
+            console.warn("DataService.ngOnDestroy could not cancel poll data sync", pid, err);
+          }
+        }
+      }
+      this.poll_db_sync_handlers = {};
+    }
     const flushed = this.flush_change_queue();
     if (flushed) {
       this.save_state();
@@ -425,6 +448,17 @@ export class DataService implements OnDestroy {
 
   save_state(): Promise<any> {
     this.G.L.entry("DataService.save_state");
+    if (this.persisted_cache_invalid) {
+      // a replicated change was terminally dropped, so the in-memory caches
+      // may be stale. Do not persist them; instead make sure the next startup
+      // rebuilds the caches from local PouchDB (#292):
+      this.G.L.warn("DataService.save_state not persisting caches since a change was dropped; next startup will bootstrap from local db");
+      this.G.L.exit("DataService.save_state");
+      if (!this.storage) {
+        return null;
+      }
+      return this.storage.remove('state');
+    }
 /*
     this.G.L.trace("DataService.save_state _pids", [...this._pids]);
     this.G.L.trace("DataService.save_state _pid_oids", JSON.stringify(this._pid_oids));
@@ -2835,6 +2869,22 @@ export class DataService implements OnDestroy {
     return true;
   }
 
+  private invalidate_persisted_cache() {
+    /** a replicated change was terminally dropped, so the in-memory caches
+     *  can be permanently stale while the local PouchDB and the replication
+     *  checkpoint already contain the update. Invalidate the persisted state
+     *  so the next startup rebuilds the caches from local PouchDB instead of
+     *  restoring the stale caches (#292): */
+    if (this.persisted_cache_invalid) {
+      return;
+    }
+    this.persisted_cache_invalid = true;
+    this.G.L.warn("DataService invalidating persisted caches after a dropped change; next startup will bootstrap from local db");
+    if (this.storage) {
+      this.storage.remove('state');
+    }
+  }
+
   private process_change_queue(schedule_retries: boolean = true): boolean {
     /** process queued db changes, keeping only the newest change per doc id,
      *  then perform the after-changes work (tallying, UI notification) only
@@ -2902,6 +2952,7 @@ export class DataService implements OnDestroy {
           dropped_changes = true;
           delete this.change_retry_counts[key];
           this.G.L.error("DataService.process_change_queue dropped repeatedly failing change", key, err);
+          this.invalidate_persisted_cache();
         }
       }
     }
