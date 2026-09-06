@@ -404,6 +404,13 @@ export class DataService implements OnDestroy {
     if (flushed) {
       this.save_state();
     } else if (this.storage) {
+      if (this.change_queue_timeout != null) {
+        clearTimeout(this.change_queue_timeout);
+        this.change_queue_timeout = null;
+      }
+      this.change_queue_scheduled = false;
+      this.change_queue = [];
+      this.change_retry_counts = {};
       this.storage.remove('state');
     }
     console.log("DataService.ngOnDestroy exit");
@@ -926,7 +933,7 @@ export class DataService implements OnDestroy {
       // this poll's cache was not reconstructed properly from storage, so get it from local PouchDB.
       // Register a bootstrap promise so that syncing/replication of this poll
       // is deferred until the cache bootstrap has completed (#292):
-      this.register_poll_db_bootstrap(pid);
+      this.register_poll_db_bootstrap(pid, true);
 
       // ASYNC:
       // record the local db's update_seq before taking the allDocs snapshot,
@@ -967,8 +974,15 @@ export class DataService implements OnDestroy {
 
   // Bootstrap gating helpers (issue #292):
 
-  private register_poll_db_bootstrap(pid: string) {
-    if (!(pid in this.poll_db_bootstrapped)) {
+  private register_poll_db_bootstrap(pid: string, recreate_if_stale: boolean = false) {
+    if (
+      !(pid in this.poll_db_bootstrapped) ||
+      (
+        recreate_if_stale &&
+        !this.mark_poll_db_bootstrapped[pid] &&
+        !this.reject_poll_db_bootstrapped[pid]
+      )
+    ) {
       this.poll_db_bootstrapped[pid] = new Promise<void>((resolve, reject) => {
         this.mark_poll_db_bootstrapped[pid] = resolve;
         this.reject_poll_db_bootstrapped[pid] = reject;
@@ -1880,6 +1894,21 @@ export class DataService implements OnDestroy {
             // totally unhandled error (shouldn't happen)
             this.set_replication_active('user', false);
             this.G.L.error("DataService error at user data sync", err);
+            this.user_db_sync_handler = null;
+            this.user_sync_start_pending = false;
+            if (!this.shutting_down && this.remote_user_db) {
+              this.replication_restart_pending['user'] = true;
+              window.setTimeout(() => {
+                if (!this.replication_restart_pending['user']) {
+                  return;
+                }
+                this.replication_restart_pending['user'] = false;
+                if (this.shutting_down || !this.remote_user_db || this.user_db_sync_handler || this.user_sync_start_pending) {
+                  return;
+                }
+                this.start_user_sync();
+              }, replication_watchdog_interval_ms);
+            }
           });
         } finally {
           this.user_sync_start_pending = false;
@@ -2056,6 +2085,25 @@ export class DataService implements OnDestroy {
             // totally unhandled error (shouldn't happen)
             this.set_replication_active(pid, false);
             this.G.L.error("DataService error at poll data sync", pid, err);
+            delete this.poll_db_sync_handlers[pid];
+            if (pid in this.G.P.polls) {
+              this.G.P.polls[pid].syncing = false;
+            }
+            this.G.remove_spinning_reason(pid);
+            this.poll_sync_start_pending[pid] = false;
+            if (!this.shutting_down && (pid in this.remote_poll_dbs)) {
+              this.replication_restart_pending[pid] = true;
+              window.setTimeout(() => {
+                if (!this.replication_restart_pending[pid]) {
+                  return;
+                }
+                this.replication_restart_pending[pid] = false;
+                if (this.shutting_down || !(pid in this.remote_poll_dbs) || this.poll_db_sync_handlers[pid] || this.poll_sync_start_pending[pid]) {
+                  return;
+                }
+                this.start_poll_sync(pid);
+              }, replication_watchdog_interval_ms);
+            }
           });
         } finally {
           this.poll_sync_start_pending[pid] = false;
@@ -2734,7 +2782,7 @@ export class DataService implements OnDestroy {
       this.change_queue_scheduled = false;
     }
     if (this.change_queue.length > 0) {
-      const applied_without_drop = this.process_change_queue();
+      const applied_without_drop = this.process_change_queue(false);
       if (!applied_without_drop || this.change_queue.length > 0) {
         return false;
       }

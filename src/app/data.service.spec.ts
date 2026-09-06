@@ -481,6 +481,22 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.uninitialized_pids.has('p9')).toBe(false);
       expect(svc.local_docs2cache_finished).toHaveBeenCalled();
     });
+
+    it('recreates a stale poll bootstrap gate after a failed attempt', async () => {
+      const err = new Error('bootstrap failed');
+      svc.register_poll_db_bootstrap('p10');
+      const failed_gate = svc.poll_db_bootstrapped['p10'];
+      svc.fail_poll_db_bootstrap('p10', err);
+      let failed_with: any = null;
+      await failed_gate.catch((e: any) => { failed_with = e; });
+      expect(failed_with).toBe(err);
+
+      svc.register_poll_db_bootstrap('p10', true);
+      const retried_gate = svc.poll_db_bootstrapped['p10'];
+      expect(retried_gate).not.toBe(failed_gate);
+      svc.mark_poll_db_bootstrapped_now('p10');
+      await retried_gate;
+    });
   });
 
   describe('replication watchdog', () => {
@@ -593,6 +609,74 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.replication_active['user']).toBe(true);
     });
 
+    it('clears terminal user sync handlers and schedules a restart', async () => {
+      const callbacks: any[] = [];
+      const make_handler = () => {
+        const cbs: any = {};
+        callbacks.push(cbs);
+        const handler: any = {
+          on: (event: string, cb: any) => { cbs[event] = cb; return handler; },
+          cancel: noop
+        };
+        return handler;
+      };
+      const handler1 = make_handler();
+      const handler2 = make_handler();
+      const sync_spy = jasmine.createSpy('sync').and.returnValues(handler1, handler2);
+      spyOn(window, 'setTimeout').and.callFake((cb: any) => { cb(); return 1 as any; });
+      svc.local_synced_user_db = { sync: sync_spy };
+      svc.remote_user_db = {};
+      svc.get_email_and_pw_hash = () => 'hash';
+      svc.user_db_bootstrapped = Promise.resolve();
+
+      expect(svc.start_user_sync()).toBe(true);
+      await Promise.resolve();
+      callbacks[0]['error'] && callbacks[0]['error'](new Error('boom'));
+      await Promise.resolve();
+
+      expect(sync_spy).toHaveBeenCalledTimes(2);
+      expect(svc.user_db_sync_handler).toBe(handler2);
+      expect(svc.replication_restart_pending['user']).toBe(false);
+    });
+
+    it('clears terminal poll sync handlers/UI state and schedules a restart', async () => {
+      const prev = environment.useMatrixBackend;
+      (environment as any).useMatrixBackend = false;
+      try {
+        const callbacks: any[] = [];
+        const make_handler = () => {
+          const cbs: any = {};
+          callbacks.push(cbs);
+          const handler: any = {
+            on: (event: string, cb: any) => { cbs[event] = cb; return handler; },
+            cancel: noop
+          };
+          return handler;
+        };
+        const handler1 = make_handler();
+        const handler2 = make_handler();
+        const sync_spy = jasmine.createSpy('sync').and.returnValues(handler1, handler2);
+        spyOn(window, 'setTimeout').and.callFake((cb: any) => { cb(); return 1 as any; });
+        svc.local_poll_dbs = { p11: { sync: sync_spy } };
+        svc.remote_poll_dbs = { p11: {} };
+        svc.G.P.polls['p11'] = { syncing: true };
+        svc.G.remove_spinning_reason = jasmine.createSpy('remove_spinning_reason');
+
+        expect(svc.start_poll_sync('p11')).toBe(true);
+        await Promise.resolve();
+        callbacks[0]['error'] && callbacks[0]['error'](new Error('boom'));
+        await Promise.resolve();
+
+        expect(sync_spy).toHaveBeenCalledTimes(2);
+        expect(svc.poll_db_sync_handlers['p11']).toBe(handler2);
+        expect(svc.G.P.polls['p11'].syncing).toBe(false);
+        expect(svc.G.remove_spinning_reason).toHaveBeenCalledWith('p11');
+        expect(svc.replication_restart_pending['p11']).toBe(false);
+      } finally {
+        (environment as any).useMatrixBackend = prev;
+      }
+    });
+
     it('ngOnDestroy stops watchdog and queued change processing', () => {
       const clear_interval_spy = spyOn(window, 'clearInterval');
       const clear_timeout_spy = spyOn(window, 'clearTimeout');
@@ -608,6 +692,24 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.replication_watchdog_id).toBeNull();
       expect(svc.change_queue_timeout).toBeNull();
       expect(svc.change_queue_scheduled).toBe(false);
+    });
+
+    it('ngOnDestroy clears retries and pending queue when flush fails', () => {
+      const set_timeout_spy = spyOn(window, 'setTimeout').and.returnValue(999 as any);
+      const clear_timeout_spy = spyOn(window, 'clearTimeout');
+      svc.storage = { remove: jasmine.createSpy('remove') };
+      svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.throwError('boom');
+      svc.enqueue_db_change('p1', {_id: 'd1', value: 'v'}, false, true);
+
+      svc.ngOnDestroy();
+
+      expect(set_timeout_spy).toHaveBeenCalledTimes(1);
+      expect(clear_timeout_spy).toHaveBeenCalledWith(999 as any);
+      expect(svc.change_queue_timeout).toBeNull();
+      expect(svc.change_queue_scheduled).toBe(false);
+      expect(svc.change_queue.length).toBe(0);
+      expect(Object.keys(svc.change_retry_counts).length).toBe(0);
+      expect(svc.storage.remove).toHaveBeenCalledWith('state');
     });
 
     it('clear_all_local cancels queued change processing and queue state', async () => {
