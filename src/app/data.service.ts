@@ -378,7 +378,9 @@ export class DataService implements OnDestroy {
   replication_stalled: Record<string, boolean> = {}; // exposed for UI/diagnostics
   private replication_restart_pending: Record<string, boolean> = {};
   private user_sync_start_pending = false;
+  private user_sync_start_generation = 0;
   private poll_sync_start_pending: Record<string, boolean> = {};
+  private poll_sync_start_generation: Record<string, number> = {};
   private shutting_down = false;
   private replication_watchdog_id: any = null;
 
@@ -399,11 +401,14 @@ export class DataService implements OnDestroy {
 
   ngOnDestroy() {
     console.log("DataService.ngOnDestroy entry");
+    this.shutting_down = true;
+    this.user_sync_start_generation += 1;
+    this.poll_sync_start_generation = {};
     this.stop_replication_watchdog();
     const flushed = this.flush_change_queue();
     if (flushed) {
       this.save_state();
-    } else if (this.storage) {
+    } else {
       if (this.change_queue_timeout != null) {
         clearTimeout(this.change_queue_timeout);
         this.change_queue_timeout = null;
@@ -411,7 +416,9 @@ export class DataService implements OnDestroy {
       this.change_queue_scheduled = false;
       this.change_queue = [];
       this.change_retry_counts = {};
-      this.storage.remove('state');
+      if (this.storage) {
+        this.storage.remove('state');
+      }
     }
     console.log("DataService.ngOnDestroy exit");
   }
@@ -1819,12 +1826,24 @@ export class DataService implements OnDestroy {
         return true;
       }
       this.user_sync_start_pending = true;
+      const sync_start_generation = this.user_sync_start_generation;
 
       // ASYNC:
       // #292: only start syncing after the local cache bootstrap has completed,
       // so that no incoming change can be overwritten by stale bootstrap data:
       this.user_db_bootstrapped.then(() => {
+        if (sync_start_generation !== this.user_sync_start_generation) {
+          return;
+        }
         if (!this.user_sync_start_pending) {
+          this.user_sync_start_pending = false;
+          return;
+        }
+        if (this.shutting_down) {
+          this.user_sync_start_pending = false;
+          return;
+        }
+        if (!this.local_synced_user_db) {
           this.user_sync_start_pending = false;
           return;
         }
@@ -1910,6 +1929,10 @@ export class DataService implements OnDestroy {
               }, replication_watchdog_interval_ms);
             }
           });
+        } catch (err) {
+          this.set_replication_active('user', false);
+          this.user_db_sync_handler = null;
+          throw err;
         } finally {
           this.user_sync_start_pending = false;
         }
@@ -2001,13 +2024,28 @@ export class DataService implements OnDestroy {
         return true;
       }
       this.poll_sync_start_pending[pid] = true;
+      if (!(pid in this.poll_sync_start_generation)) {
+        this.poll_sync_start_generation[pid] = 0;
+      }
+      const sync_start_generation = this.poll_sync_start_generation[pid] || 0;
 
       // ASYNC:
       // #292: only start syncing after this poll's local cache bootstrap has
       // completed, so that no incoming change can be overwritten by stale
       // bootstrap data:
       this.wait_for_poll_db_bootstrap(pid).then(() => {
+        if (sync_start_generation !== this.poll_sync_start_generation[pid]) {
+          return;
+        }
         if (!this.poll_sync_start_pending[pid]) {
+          this.poll_sync_start_pending[pid] = false;
+          return;
+        }
+        if (this.shutting_down) {
+          this.poll_sync_start_pending[pid] = false;
+          return;
+        }
+        if (!(pid in this.local_poll_dbs)) {
           this.poll_sync_start_pending[pid] = false;
           return;
         }
@@ -2105,6 +2143,10 @@ export class DataService implements OnDestroy {
               }, replication_watchdog_interval_ms);
             }
           });
+        } catch (err) {
+          this.set_replication_active(pid, false);
+          delete this.poll_db_sync_handlers[pid];
+          throw err;
         } finally {
           this.poll_sync_start_pending[pid] = false;
         }
@@ -2128,6 +2170,7 @@ export class DataService implements OnDestroy {
   stop_poll_sync(pid: string) {
     delete this.replication_restart_pending[pid];
     delete this.poll_sync_start_pending[pid];
+    this.poll_sync_start_generation[pid] = (this.poll_sync_start_generation[pid] || 0) + 1;
     // Phase 14: Tear down Matrix event handlers
     if (environment.useMatrixBackend) {
       delete this._matrixPollListeners[pid];
@@ -2231,6 +2274,7 @@ export class DataService implements OnDestroy {
       return;
     }
     this.user_sync_start_pending = false;
+    this.user_sync_start_generation += 1;
     if (this.user_db_sync_handler) {
       try {
         this.user_db_sync_handler.cancel();
@@ -2247,6 +2291,7 @@ export class DataService implements OnDestroy {
       return;
     }
     this.poll_sync_start_pending[pid] = false;
+    this.poll_sync_start_generation[pid] = (this.poll_sync_start_generation[pid] || 0) + 1;
     if (this.poll_db_sync_handlers[pid]) {
       try {
         this.poll_db_sync_handlers[pid].cancel();
@@ -3722,7 +3767,9 @@ export class DataService implements OnDestroy {
       this.G.L.info("Stopping database synchronisation...");
       this.stop_replication_watchdog();
       this.user_sync_start_pending = false;
+      this.user_sync_start_generation += 1;
       this.poll_sync_start_pending = {};
+      this.poll_sync_start_generation = {};
       if (this.change_queue_timeout != null) {
         clearTimeout(this.change_queue_timeout);
         this.change_queue_timeout = null;

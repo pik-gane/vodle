@@ -268,6 +268,50 @@ describe('DataService consistency hardening (#292)', () => {
       expect(sync_spy).toHaveBeenCalledTimes(1);
     });
 
+    it('does not start deferred user sync after ngOnDestroy begins teardown', async () => {
+      const sync_spy = make_sync_spy();
+      svc.local_synced_user_db = { sync: sync_spy };
+      svc.remote_user_db = {};
+      svc.get_email_and_pw_hash = () => 'hash';
+      let resolve_bootstrap: () => void;
+      svc.user_db_bootstrapped = new Promise<void>(resolve => { resolve_bootstrap = resolve; });
+      svc.save_state = jasmine.createSpy('save_state');
+
+      expect(svc.start_user_sync()).toBe(true);
+      await Promise.resolve();
+      expect(sync_spy).not.toHaveBeenCalled();
+
+      svc.ngOnDestroy();
+      resolve_bootstrap();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(sync_spy).not.toHaveBeenCalled();
+    });
+
+    it('does not start deferred user sync after clear_all_local teardown begins', async () => {
+      const sync_spy = make_sync_spy();
+      svc.local_synced_user_db = { sync: sync_spy, destroy: () => Promise.resolve() };
+      svc.local_only_user_DB = { destroy: () => Promise.resolve() };
+      svc.local_poll_dbs = {};
+      svc.storage = { clear: () => Promise.resolve() };
+      svc.remote_user_db = {};
+      svc.get_email_and_pw_hash = () => 'hash';
+      let resolve_bootstrap: () => void;
+      svc.user_db_bootstrapped = new Promise<void>(resolve => { resolve_bootstrap = resolve; });
+
+      expect(svc.start_user_sync()).toBe(true);
+      await Promise.resolve();
+      expect(sync_spy).not.toHaveBeenCalled();
+
+      await svc.clear_all_local();
+      resolve_bootstrap();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(sync_spy).not.toHaveBeenCalled();
+    });
+
     it('does not start deferred user db sync if remote db was cleared before bootstrap resolves', async () => {
       const sync_spy = make_sync_spy();
       let resolve_bootstrap: () => void;
@@ -297,6 +341,20 @@ describe('DataService consistency hardening (#292)', () => {
       await Promise.resolve();
 
       expect(sync_spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears user replication state when sync setup throws synchronously', async () => {
+      svc.local_synced_user_db = { sync: () => { throw new Error('boom'); } };
+      svc.remote_user_db = {};
+      svc.get_email_and_pw_hash = () => 'hash';
+      svc.user_db_bootstrapped = Promise.resolve();
+
+      expect(svc.start_user_sync()).toBe(true);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(svc.replication_active['user']).toBe(false);
+      expect(svc.user_db_sync_handler).toBeNull();
     });
 
     it('defers poll db sync start until the poll cache bootstrap completed', async () => {
@@ -443,6 +501,24 @@ describe('DataService consistency hardening (#292)', () => {
         await Promise.resolve();
 
         expect(sync_spy).toHaveBeenCalledTimes(1);
+      } finally {
+        (environment as any).useMatrixBackend = prev;
+      }
+    });
+
+    it('clears poll replication state when sync setup throws synchronously', async () => {
+      const prev = environment.useMatrixBackend;
+      (environment as any).useMatrixBackend = false;
+      try {
+        svc.local_poll_dbs = { p12: { sync: () => { throw new Error('boom'); } } };
+        svc.remote_poll_dbs = { p12: {} };
+
+        expect(svc.start_poll_sync('p12')).toBe(true);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(svc.replication_active['p12']).toBe(false);
+        expect(svc.poll_db_sync_handlers['p12']).toBeUndefined();
       } finally {
         (environment as any).useMatrixBackend = prev;
       }
