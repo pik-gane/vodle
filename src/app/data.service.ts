@@ -525,6 +525,9 @@ export class DataService implements OnDestroy {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
+    // a deliberate new initialization begins, so clear any teardown state
+    // left over from a previous logout/destruction (#292):
+    this.shutting_down = false;
     // if necessary, show a loading animation:
     this.show_loading();
     // now start the complicated and partially asynchronous data initialization procedure (see overview in comment below):
@@ -963,53 +966,51 @@ export class DataService implements OnDestroy {
     const lpdb = this.get_local_poll_db(pid);
 
     if ("state" in this.poll_caches[pid]) {
-      this.G.L.trace("DataService.ensure_local_poll_data nothing to do", pid);
-      // poll cache was restored from storage.
+      this.G.L.trace("DataService.ensure_local_poll_data reconciling restored cache with local db", pid);
+      // poll cache was restored from storage. A replication may have updated
+      // local PouchDB after that cache was last persisted, so still reconcile
+      // the cache from local PouchDB below before resolving this poll's
+      // bootstrap gate (#292):
       this._pids.add(pid);
+    }
+    // Get this poll's data from local PouchDB.
+    // Register a bootstrap promise so that syncing/replication of this poll
+    // is deferred until the cache bootstrap has completed (#292):
+    this.register_poll_db_bootstrap(pid, true);
 
-      // cache is already complete, so poll db syncing may start right away (#292):
+    // ASYNC:
+    // record the local db's update_seq before taking the allDocs snapshot,
+    // then fetch all docs from local poll db:
+    lpdb.info()
+    .then(info => {
+
+      // store last_seq as reference point for the changes feed:
+      this.ensure_poll_cache(pid)['last_seq'] = info.update_seq;
+      this.G.L.trace("DataService recorded poll db update_seq at bootstrap", pid, info.update_seq);
+
+      return lpdb.allDocs({
+        include_docs: true
+      });
+
+    }).then(result => {
+
+      this.local_poll_docs2cache.bind(this)(pid, result)
       this.mark_poll_db_bootstrapped_now(pid);
 
-    } else {
-      // this poll's cache was not reconstructed properly from storage, so get it from local PouchDB.
-      // Register a bootstrap promise so that syncing/replication of this poll
-      // is deferred until the cache bootstrap has completed (#292):
-      this.register_poll_db_bootstrap(pid, true);
+    }).catch(err => {
 
-      // ASYNC:
-      // record the local db's update_seq before taking the allDocs snapshot,
-      // then fetch all docs from local poll db:
-      lpdb.info()
-      .then(info => {
+      this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
+      this.fail_poll_db_bootstrap(pid, err);
 
-        // store last_seq as reference point for the changes feed:
-        this.ensure_poll_cache(pid)['last_seq'] = info.update_seq;
-        this.G.L.trace("DataService recorded poll db update_seq at bootstrap", pid, info.update_seq);
+    }).finally(() => {
 
-        return lpdb.allDocs({
-          include_docs: true
-        });
+      this.uninitialized_pids.delete(pid);
+      this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
+      if (this.uninitialized_pids.size == 0) {
+        this.local_docs2cache_finished();
+      }
 
-      }).then(result => {
-
-        this.local_poll_docs2cache.bind(this)(pid, result)
-        this.mark_poll_db_bootstrapped_now(pid);
-
-      }).catch(err => {
-
-        this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
-        this.fail_poll_db_bootstrap(pid, err);
-
-      }).finally(() => {
-
-        this.uninitialized_pids.delete(pid);
-        this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
-        if (this.uninitialized_pids.size == 0) {
-          this.local_docs2cache_finished();
-        }
-
-      });
-    }
+    });
     this.G.L.exit("DataService.ensure_local_poll_data", pid);
   }
 
@@ -1345,10 +1346,16 @@ export class DataService implements OnDestroy {
   private local_docs2cache_finished() {
     // called whenever content of local docs has fully been copied to cache
     this.G.L.entry("DataService.local_user_docs2cache_finished");
+    if (this.shutting_down) {
+      // teardown (logout or destruction) began while a bootstrap was still in
+      // flight; do not mark the torn-down service ready or re-enable deferred
+      // restart/connect paths (#292):
+      this.G.L.exit("DataService.local_user_docs2cache_finished skipped since shutting down");
+      return;
+    }
     this.after_changes();
     // mark as ready, dismiss loading animation, and notify page:
     this.G.L.info("DataService READY");
-    this.shutting_down = false;
     this._ready = true;
     this.hide_loading();
     if (this.page && this.page.onDataReady) this.page.onDataReady();
@@ -2838,6 +2845,13 @@ export class DataService implements OnDestroy {
   private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean) {
     /** queue an incoming db change doc (pid == null means user db)
      *  for coalesced batch processing. */
+    if (this.shutting_down) {
+      // teardown has begun; ignore late change events, e.g. from one-shot
+      // replications that are not retained and cancelled, so that no timer is
+      // recreated and no cache/UI work happens during shutdown (#292):
+      this.G.L.trace("DataService.enqueue_db_change ignoring change during shutdown", pid, doc?._id);
+      return;
+    }
     this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally});
     if (!this.change_queue_scheduled) {
       this.change_queue_scheduled = true;
