@@ -104,6 +104,15 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.after_changes).toHaveBeenCalledWith(true);
     });
 
+    it('preserves tally=true when a duplicate doc keeps a newer tally=false entry', () => {
+      svc.enqueue_db_change('p1', {_id: 'd1', value: 'old'}, false, true);
+      svc.enqueue_db_change('p1', {_id: 'd1', value: 'new'}, false, false);
+      svc.flush_change_queue();
+
+      expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'd1', value: 'new'}));
+      expect(svc.after_changes).toHaveBeenCalledWith(true);
+    });
+
     it('handle_poll_db_change enqueues pulled docs and stores last_seq', () => {
       svc.poll_caches['p1'] = {};
       svc.handle_poll_db_change('p1', {direction: 'pull', change: {docs: [{_id: 'd1', value: 'v'}], last_seq: 42}}, false);
@@ -138,12 +147,31 @@ describe('DataService consistency hardening (#292)', () => {
     });
 
     it('always decrements pending_changes even if doc2poll_cache throws', () => {
+      spyOn(window, 'setTimeout').and.returnValue(123 as any);
       svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.throwError('boom');
       svc.enqueue_db_change('p1', {_id: 'd1', value: 'v'}, false, true);
 
-      expect(() => svc.flush_change_queue()).toThrow();
+      expect(() => svc.flush_change_queue()).not.toThrow();
       expect(svc.pending_changes).toBe(0);
       expect(svc.change_queue.length).toBe(1);
+    });
+
+    it('continues processing non-failing changes when one queued change fails', () => {
+      spyOn(window, 'setTimeout').and.returnValue(123 as any);
+      svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.callFake((_pid: string, doc: any) => {
+        if (doc._id == 'bad') {
+          throw new Error('boom');
+        }
+        return true;
+      });
+      svc.enqueue_db_change('p1', {_id: 'bad', value: 'bad'}, false, true);
+      svc.enqueue_db_change('p1', {_id: 'good', value: 'good'}, false, true);
+
+      svc.flush_change_queue();
+
+      expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'good'}));
+      expect(svc.change_queue.length).toBe(1);
+      expect(svc.change_queue[0].doc._id).toBe('bad');
     });
   });
 
@@ -341,6 +369,23 @@ describe('DataService consistency hardening (#292)', () => {
       }
     });
 
+    it('stop_poll_sync removes the cancelled handler so sync can restart', () => {
+      const prev = environment.useMatrixBackend;
+      (environment as any).useMatrixBackend = false;
+      try {
+        const handler: any = { cancel: jasmine.createSpy('cancel') };
+        svc.poll_db_sync_handlers = { p8: handler };
+        svc.G.D.poll_db_sync_handlers = svc.poll_db_sync_handlers;
+
+        svc.stop_poll_sync('p8');
+
+        expect(handler.cancel).toHaveBeenCalled();
+        expect(svc.poll_db_sync_handlers['p8']).toBeUndefined();
+      } finally {
+        (environment as any).useMatrixBackend = prev;
+      }
+    });
+
     it('restart_poll_sync clears pending deferred start and still starts sync', async () => {
       const prev = environment.useMatrixBackend;
       (environment as any).useMatrixBackend = false;
@@ -498,6 +543,53 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.replication_stalled['p_missing']).toBeUndefined();
       expect(svc.replication_restart_pending['p_missing']).toBeUndefined();
       expect(svc.get_replication_status('p_missing')).toBe('idle');
+    });
+
+    it('ignores stale user-sync complete callbacks from cancelled handlers', async () => {
+      const callbacks: any[] = [];
+      const make_handler = () => {
+        const cbs: any = {};
+        callbacks.push(cbs);
+        const handler: any = {
+          on: (event: string, cb: any) => { cbs[event] = cb; return handler; },
+          cancel: noop
+        };
+        return handler;
+      };
+      const handler1 = make_handler();
+      const handler2 = make_handler();
+      const sync_spy = jasmine.createSpy('sync').and.returnValues(handler1, handler2);
+      svc.local_synced_user_db = { sync: sync_spy };
+      svc.remote_user_db = {};
+      svc.get_email_and_pw_hash = () => 'hash';
+      svc.user_db_bootstrapped = Promise.resolve();
+
+      expect(svc.start_user_sync()).toBe(true);
+      await Promise.resolve();
+      svc.restart_user_sync();
+      await Promise.resolve();
+      expect(sync_spy).toHaveBeenCalledTimes(2);
+
+      svc.replication_active['user'] = true;
+      callbacks[0]['complete'] && callbacks[0]['complete']({});
+      expect(svc.replication_active['user']).toBe(true);
+    });
+
+    it('ngOnDestroy stops watchdog and queued change processing', () => {
+      const clear_interval_spy = spyOn(window, 'clearInterval');
+      const clear_timeout_spy = spyOn(window, 'clearTimeout');
+      svc.replication_watchdog_id = 123 as any;
+      svc.change_queue_timeout = 456 as any;
+      svc.change_queue_scheduled = true;
+      svc.save_state = jasmine.createSpy('save_state');
+
+      svc.ngOnDestroy();
+
+      expect(clear_interval_spy).toHaveBeenCalledWith(123 as any);
+      expect(clear_timeout_spy).toHaveBeenCalledWith(456 as any);
+      expect(svc.replication_watchdog_id).toBeNull();
+      expect(svc.change_queue_timeout).toBeNull();
+      expect(svc.change_queue_scheduled).toBe(false);
     });
 
     it('updates replication progress only when replication becomes active', () => {
