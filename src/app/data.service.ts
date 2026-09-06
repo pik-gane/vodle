@@ -960,12 +960,21 @@ export class DataService implements OnDestroy {
   private ensure_local_poll_data(pid:string) {
     // start fetching poll data from local poll db:
     this.G.L.entry("DataService.ensure_local_poll_data", pid);
+    if (this.uninitialized_pids.has(pid)) {
+      // a local bootstrap for this pid is already in flight and shares this
+      // poll's bootstrap gate. Don't launch a second info()/allDocs() load
+      // whose stale snapshot could overwrite newer cache values (#292):
+      this.G.L.trace("DataService.ensure_local_poll_data bootstrap already in progress", pid);
+      this.G.L.exit("DataService.ensure_local_poll_data", pid);
+      return;
+    }
     this._ready = false;
     this.uninitialized_pids.add(pid);
     this.ensure_poll_cache(pid);
     const lpdb = this.get_local_poll_db(pid);
 
-    if ("state" in this.poll_caches[pid]) {
+    const restored_cache = ("state" in this.poll_caches[pid]);
+    if (restored_cache) {
       this.G.L.trace("DataService.ensure_local_poll_data reconciling restored cache with local db", pid);
       // poll cache was restored from storage. A replication may have updated
       // local PouchDB after that cache was last persisted, so still reconcile
@@ -981,10 +990,12 @@ export class DataService implements OnDestroy {
     // ASYNC:
     // record the local db's update_seq before taking the allDocs snapshot,
     // then fetch all docs from local poll db:
+    let bootstrap_seq = null;
     lpdb.info()
     .then(info => {
 
       // store last_seq as reference point for the changes feed:
+      bootstrap_seq = info.update_seq;
       this.ensure_poll_cache(pid)['last_seq'] = info.update_seq;
       this.G.L.trace("DataService recorded poll db update_seq at bootstrap", pid, info.update_seq);
 
@@ -994,7 +1005,18 @@ export class DataService implements OnDestroy {
 
     }).then(result => {
 
-      this.local_poll_docs2cache.bind(this)(pid, result)
+      this.local_poll_docs2cache.bind(this)(pid, result, restored_cache);
+      // replay local writes committed after the allDocs() snapshot was taken,
+      // so that they cannot be lost when their later push-direction sync
+      // events are ignored (#292):
+      return lpdb.changes({
+        since: bootstrap_seq,
+        include_docs: true
+      });
+
+    }).then(changes => {
+
+      this.apply_poll_bootstrap_changes(pid, changes);
       this.mark_poll_db_bootstrapped_now(pid);
 
     }).catch(err => {
@@ -1056,18 +1078,65 @@ export class DataService implements OnDestroy {
     return this.poll_db_bootstrapped[pid] || Promise.resolve();
   }
 
-  private local_poll_docs2cache(pid: string, result) {
+  private local_poll_docs2cache(pid: string, result, restored_cache: boolean = false) {
     this.G.L.entry("DataService.local_poll_docs2cache", pid);
-    // decrypt and process all synced docs:
     let local_changes = false;
+    if (restored_cache) {
+      // the cache was restored from storage; documents deleted from the local
+      // db since the cache was last persisted are not returned by allDocs(),
+      // so explicitly apply such deletions and prune the derived option set
+      // before this poll's bootstrap gate is resolved (#292):
+      const snapshot_ids = new Set<string>();
+      for (const row of result.rows) {
+        snapshot_ids.add(row.id);
+      }
+      const cache = this.ensure_poll_cache(pid);
+      for (const key of Object.keys(cache)) {
+        if (key == 'last_seq') {
+          continue;
+        }
+        const _id = key.startsWith('voter.')
+          ? poll_doc_id_prefix + pid + '.' + key
+          : poll_doc_id_prefix + pid + '§' + key;
+        if (!snapshot_ids.has(_id)) {
+          this.G.L.trace("DataService.local_poll_docs2cache dropping cache entry without backing doc", pid, key);
+          local_changes = this.handle_deleted_poll_doc(pid, {_id: _id}) || local_changes;
+          if (key.startsWith('option.') && key.endsWith('.name') && (pid in this._pid_oids)) {
+            const keyend = key.slice('option.'.length),
+                  oid = keyend.slice(0, keyend.indexOf('.'));
+            this._pid_oids[pid].delete(oid);
+          }
+        }
+      }
+    }
+    // decrypt and process all synced docs:
     for (const row of result.rows) {
-      local_changes = local_changes || this.doc2poll_cache(pid, row.doc);
+      local_changes = this.doc2poll_cache(pid, row.doc) || local_changes;
     }
     this._pids.add(pid);
     if (local_changes) {
       this.save_state();
     }
     this.G.L.exit("DataService.local_poll_docs2cache", pid);
+  }
+
+  private apply_poll_bootstrap_changes(pid: string, changes) {
+    /** apply local db changes committed between the bootstrap's allDocs()
+     *  snapshot and the changes() replay, before the bootstrap gate opens (#292). */
+    let local_changes = false;
+    for (const change of changes.results || []) {
+      if (change.deleted) {
+        local_changes = this.handle_deleted_poll_doc(pid, {_id: change.id}) || local_changes;
+      } else if (change.doc) {
+        local_changes = this.doc2poll_cache(pid, change.doc) || local_changes;
+      }
+    }
+    if (changes.last_seq != null) {
+      this.ensure_poll_cache(pid)['last_seq'] = changes.last_seq;
+    }
+    if (local_changes) {
+      this.save_state();
+    }
   }
 
   get_user_doc_selector(email_and_pw_hash: string): any {
