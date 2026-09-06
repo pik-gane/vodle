@@ -754,37 +754,60 @@ export class DataService implements OnDestroy {
     }
 
     if (this.restored_user_cache) {
-      // user_cache was restored from storage. A replication may have committed
-      // documents to local PouchDB (and advanced its checkpoint) after that
-      // cache was last persisted, so still reconcile the cache (including
-      // deletions) from local PouchDB before resolving the user db bootstrap
-      // gate (#292):
 
-      // ASYNC:
-      this.local_synced_user_db.info()
-      .then(info => {
-
-        // store last_seq as reference point for the changes feed:
-        this.user_cache['user_last_seq'] = info.update_seq;
-        this.G.L.trace("DataService recorded user db update_seq at bootstrap", info.update_seq);
-
-        return this.local_synced_user_db.allDocs({
-          include_docs:true
-        });
-
-      }).then(result => {
-
-        this.reconcile_restored_user_cache.bind(this)(result);
+      if (environment.useMatrixBackend) {
+        // In Matrix mode, setu() deliberately skips local_synced_user_db, so
+        // reconciling the restored cache against that empty/stale PouchDB
+        // would remove Matrix-backed values (e.g. poll.<pid>.myvid and poll
+        // passwords) from user_cache. Continue with the restored cache as is:
         this.mark_user_db_bootstrapped();
-
         this.init_poll_data();
+      } else {
+        // user_cache was restored from storage. A replication may have committed
+        // documents to local PouchDB (and advanced its checkpoint) after that
+        // cache was last persisted, so still reconcile the cache (including
+        // deletions) from local PouchDB before resolving the user db bootstrap
+        // gate (#292):
 
-      }).catch(err => {
+        // ASYNC:
+        let bootstrap_seq = null;
+        this.local_synced_user_db.info()
+        .then(info => {
 
-        this.G.L.error("DataService could not reconcile restored user cache with local_synced_user_DB", err);
-        this.reject_user_db_bootstrapped(err);
+          // store last_seq as reference point for the changes feed:
+          bootstrap_seq = info.update_seq;
+          this.user_cache['user_last_seq'] = info.update_seq;
+          this.G.L.trace("DataService recorded user db update_seq at bootstrap", info.update_seq);
 
-      });
+          return this.local_synced_user_db.allDocs({
+            include_docs:true
+          });
+
+        }).then(result => {
+
+          this.reconcile_restored_user_cache.bind(this)(result);
+          // replay local writes committed after the allDocs() snapshot was
+          // taken, so that they cannot be lost when their later
+          // push-direction sync events are ignored (#292):
+          return this.local_synced_user_db.changes({
+            since: bootstrap_seq,
+            include_docs: true
+          });
+
+        }).then(changes => {
+
+          this.apply_user_bootstrap_changes(changes);
+          this.mark_user_db_bootstrapped();
+
+          this.init_poll_data();
+
+        }).catch(err => {
+
+          this.G.L.error("DataService could not reconcile restored user cache with local_synced_user_DB", err);
+          this.reject_user_db_bootstrapped(err);
+
+        });
+      }
 
     } else {
       // try restoring from local PouchDB:
@@ -796,10 +819,12 @@ export class DataService implements OnDestroy {
       // then bootstrap the cache. Syncing is gated on this bootstrap having
       // completed (see start_user_sync), so that no incoming change can be
       // overwritten by stale bootstrap data (#292):
+      let bootstrap_seq = null;
       this.local_synced_user_db.info()
       .then(info => {
 
         // store last_seq as reference point for the changes feed:
+        bootstrap_seq = info.update_seq;
         this.user_cache['user_last_seq'] = info.update_seq;
         this.G.L.trace("DataService recorded user db update_seq at bootstrap", info.update_seq);
 
@@ -810,6 +835,17 @@ export class DataService implements OnDestroy {
       }).then(result => {
 
         this.local_user_docs2cache.bind(this)(result);
+        // replay local writes committed after the allDocs() snapshot was
+        // taken, so that they cannot be lost when their later push-direction
+        // sync events are ignored (#292):
+        return this.local_synced_user_db.changes({
+          since: bootstrap_seq,
+          include_docs: true
+        });
+
+      }).then(changes => {
+
+        this.apply_user_bootstrap_changes(changes);
         this.mark_user_db_bootstrapped();
 
       }).catch(err => {
@@ -955,6 +991,21 @@ export class DataService implements OnDestroy {
       this.doc2user_cache(row.doc);
     }
     this.G.L.exit("DataService.reconcile_restored_user_cache");
+  }
+
+  private apply_user_bootstrap_changes(changes) {
+    /** apply local user db changes committed between the bootstrap's allDocs()
+     *  snapshot and the changes() replay, before the bootstrap gate opens (#292). */
+    for (const change of changes.results || []) {
+      if (change.deleted) {
+        this.handle_deleted_user_doc({_id: change.id});
+      } else if (change.doc) {
+        this.doc2user_cache(change.doc);
+      }
+    }
+    if (changes.last_seq != null) {
+      this.user_cache['user_last_seq'] = changes.last_seq;
+    }
   }
 
   private connect_to_remote_user_db() {
@@ -3119,6 +3170,27 @@ export class DataService implements OnDestroy {
       if (key in this.user_cache) {
         this.G.L.trace("DataService.handle_user_db_change deleting", key);
         delete this.user_cache[key];
+        // also remove derived state indexed under this key, so that e.g.
+        // absent del_incoming.* docs no longer appear as unanswered requests
+        // and deleted news/poll metadata are no longer indexed (#292):
+        if (key.startsWith("news.")) {
+          this.news_keys.delete(key);
+        } else if (key.startsWith("del_incoming.")) {
+          delete this.incoming_dids_caches[key.slice("del_incoming.".length)];
+        } else if (key.startsWith("poll.")) {
+          // deregister poll/option metadata analogously to delp():
+          const rest = key.slice("poll.".length),
+                pid = rest.slice(0, rest.indexOf('.')),
+                pkey = rest.slice(pid.length + 1);
+          if (pkey == "title") {
+            this._pids.delete(pid);
+            delete this._pid_oids[pid];
+          } else if (pkey.startsWith('option.') && pkey.endsWith('.name') && (pid in this._pid_oids)) {
+            const keyend = pkey.slice('option.'.length),
+                  oid = keyend.slice(0, keyend.indexOf('.'));
+            this._pid_oids[pid].delete(oid);
+          }
+        }
         return true;    
       }  
     }
@@ -3286,16 +3358,28 @@ export class DataService implements OnDestroy {
         // extract value and store in cache if changed:
         const value = user_keys_unencrypted.includes(key) ? cyphertext : decrypt(cyphertext, this.user_cache['password']);
         if (this.user_cache[key] != value) {
+          const had_key = key in this.user_cache, old_value = this.user_cache[key];
           this.user_cache[key] = value;
-          value_changed = true;
 
-          if (key.startsWith("news.")) {
-            this.G.L.trace("DataService.doc2user_cache news", key);
-            this.news_keys.add(key);
-          } else if (key.startsWith("del_incoming.")) {
-            this.G.L.trace("DataService.doc2user_cache incoming did", key);
-            this.incoming_dids_caches[key.slice("del_incoming.".length)] = JSON.parse(value); 
+          try {
+            if (key.startsWith("news.")) {
+              this.G.L.trace("DataService.doc2user_cache news", key);
+              this.news_keys.add(key);
+            } else if (key.startsWith("del_incoming.")) {
+              this.G.L.trace("DataService.doc2user_cache incoming did", key);
+              this.incoming_dids_caches[key.slice("del_incoming.".length)] = JSON.parse(value); 
+            }
+          } catch (err) {
+            // roll back the partial cache mutation so that a retry of this
+            // change reruns the failed side effect (#292):
+            if (had_key) {
+              this.user_cache[key] = old_value;
+            } else {
+              delete this.user_cache[key];
+            }
+            throw err;
           }
+          value_changed = true;
 
         }
         this.G.L.trace("DataService.doc2user_cache key, value", key, value);
@@ -3464,19 +3548,31 @@ export class DataService implements OnDestroy {
 
         // if changed, store in cache and postprocess:
         if (cache[key] != value) {
+          const had_key = key in cache, old_value = cache[key];
           cache[key] = value;
-          value_changed = true;
 
-          if (subkey.startsWith("rating.")) {
-            const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
-            this.G.P.update_own_rating(pid, vid, oid, r, false);
-          } else if (subkey.startsWith("del_request.")) {
-            const did = subkey.slice("del_request.".length);
-            this.G.Del.process_request_from_db(pid, did, vid);
-          } else if (subkey.startsWith("del_response.")) {
-            const did = subkey.slice("del_response.".length);
-            this.G.Del.process_signed_response_from_db(pid, did, vid);
+          try {
+            if (subkey.startsWith("rating.")) {
+              const oid = subkey.slice("rating.".length), r = Number.parseInt(value);
+              this.G.P.update_own_rating(pid, vid, oid, r, false);
+            } else if (subkey.startsWith("del_request.")) {
+              const did = subkey.slice("del_request.".length);
+              this.G.Del.process_request_from_db(pid, did, vid);
+            } else if (subkey.startsWith("del_response.")) {
+              const did = subkey.slice("del_response.".length);
+              this.G.Del.process_signed_response_from_db(pid, did, vid);
+            }
+          } catch (err) {
+            // roll back the partial cache mutation so that a retry of this
+            // change reruns the failed side effect (#292):
+            if (had_key) {
+              cache[key] = old_value;
+            } else {
+              delete cache[key];
+            }
+            throw err;
           }
+          value_changed = true;
         }  
 
       } else {
