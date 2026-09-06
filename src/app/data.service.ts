@@ -400,12 +400,12 @@ export class DataService implements OnDestroy {
   ngOnDestroy() {
     console.log("DataService.ngOnDestroy entry");
     this.stop_replication_watchdog();
-    if (this.change_queue_timeout != null) {
-      clearTimeout(this.change_queue_timeout);
-      this.change_queue_timeout = null;
-      this.change_queue_scheduled = false;
+    const flushed = this.flush_change_queue();
+    if (flushed) {
+      this.save_state();
+    } else if (this.storage) {
+      this.storage.remove('state');
     }
-    this.save_state();
     console.log("DataService.ngOnDestroy exit");
   }
 
@@ -946,16 +946,19 @@ export class DataService implements OnDestroy {
 
         this.local_poll_docs2cache.bind(this)(pid, result)
         this.mark_poll_db_bootstrapped_now(pid);
-        this.uninitialized_pids.delete(pid);
-        this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
-        if (this.uninitialized_pids.size == 0) {
-          this.local_docs2cache_finished();
-        }
 
       }).catch(err => {
 
         this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
         this.fail_poll_db_bootstrap(pid, err);
+
+      }).finally(() => {
+
+        this.uninitialized_pids.delete(pid);
+        this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
+        if (this.uninitialized_pids.size == 0) {
+          this.local_docs2cache_finished();
+        }
 
       });
     }
@@ -1196,7 +1199,10 @@ export class DataService implements OnDestroy {
 
               // #292: make sure all queued changes are applied to the cache
               // before callers may rely on it:
-              this.flush_change_queue();
+              if (!this.flush_change_queue()) {
+                reject(new Error("DataService.connect_to_remote_poll_db could not flush queued changes"));
+                return;
+              }
 
               this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
 
@@ -1502,7 +1508,10 @@ export class DataService implements OnDestroy {
 
         // #292: make sure all queued changes are applied to the cache
         // before callers may rely on it:
-        this.flush_change_queue();
+        if (!this.flush_change_queue()) {
+          reject(new Error("DataService.replicate_once could not flush queued changes"));
+          return;
+        }
 
         this.need_poll_db_replication[pid] = false;
 
@@ -1521,7 +1530,10 @@ export class DataService implements OnDestroy {
 
           // #292: make sure all queued changes are applied to the cache
           // before callers may rely on it:
-          this.flush_change_queue();
+          if (!this.flush_change_queue()) {
+            reject(new Error("DataService.replicate_once could not flush queued changes"));
+            return;
+          }
 
           this.G.L.trace("DataService.replicate_once completed", pid);
 
@@ -2711,7 +2723,7 @@ export class DataService implements OnDestroy {
     }
   }
 
-  flush_change_queue() {
+  flush_change_queue(): boolean {
     /** apply all queued changes immediately, e.g. before resolving one-shot
      *  replications whose callers expect an up-to-date cache. */
     if (this.change_queue_timeout != null) {
@@ -2719,12 +2731,17 @@ export class DataService implements OnDestroy {
       this.change_queue_timeout = null;
       this.change_queue_scheduled = false;
     }
-    if (this.change_queue.length > 0) {
-      this.process_change_queue();
+    let all_applied = true;
+    while (this.change_queue.length > 0) {
+      all_applied = this.process_change_queue(false) && all_applied;
+      if (!all_applied && this.change_queue.length == 0) {
+        break;
+      }
     }
+    return all_applied;
   }
 
-  private process_change_queue() {
+  private process_change_queue(schedule_retries: boolean = true): boolean {
     /** process queued db changes, keeping only the newest change per doc id,
      *  then perform the after-changes work (tallying, UI notification) only
      *  once per batch instead of once per change event. */
@@ -2750,6 +2767,7 @@ export class DataService implements OnDestroy {
     this.change_queue_scheduled = false;
     this.change_queue_timeout = null;
     const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+    let dropped_changes = false;
 
     let local_changes = false, tally = false;
     for (let i = 0; i < latest.length; i++) {
@@ -2787,6 +2805,7 @@ export class DataService implements OnDestroy {
           retry_queue.push(entry);
           this.G.L.warn("DataService.process_change_queue failed for one change, will retry", attempts, key, err);
         } else {
+          dropped_changes = true;
           delete this.change_retry_counts[key];
           this.G.L.error("DataService.process_change_queue dropped repeatedly failing change", key, err);
         }
@@ -2794,7 +2813,7 @@ export class DataService implements OnDestroy {
     }
     if (retry_queue.length > 0) {
       this.change_queue = this.change_queue.concat(retry_queue);
-      if (!this.change_queue_scheduled) {
+      if (schedule_retries && !this.change_queue_scheduled) {
         this.change_queue_scheduled = true;
         this.change_queue_timeout = setTimeout(() => {
           this.process_change_queue();
@@ -2808,6 +2827,7 @@ export class DataService implements OnDestroy {
       }
     }
     this.G.L.exit("DataService.process_change_queue");
+    return !dropped_changes;
   }
 
   private handle_deleted_user_doc(doc): boolean {
@@ -3654,6 +3674,13 @@ export class DataService implements OnDestroy {
       this.stop_replication_watchdog();
       this.user_sync_start_pending = false;
       this.poll_sync_start_pending = {};
+      if (this.change_queue_timeout != null) {
+        clearTimeout(this.change_queue_timeout);
+        this.change_queue_timeout = null;
+      }
+      this.change_queue_scheduled = false;
+      this.change_queue = [];
+      this.change_retry_counts = {};
       if (!!this.user_db_sync_handler) {
         this.user_db_sync_handler.cancel();
         this.user_db_sync_handler = null;

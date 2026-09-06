@@ -151,9 +151,9 @@ describe('DataService consistency hardening (#292)', () => {
       svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.throwError('boom');
       svc.enqueue_db_change('p1', {_id: 'd1', value: 'v'}, false, true);
 
-      expect(() => svc.flush_change_queue()).not.toThrow();
+      expect(svc.flush_change_queue()).toBe(false);
       expect(svc.pending_changes).toBe(0);
-      expect(svc.change_queue.length).toBe(1);
+      expect(svc.change_queue.length).toBe(0);
     });
 
     it('continues processing non-failing changes when one queued change fails', () => {
@@ -167,11 +167,10 @@ describe('DataService consistency hardening (#292)', () => {
       svc.enqueue_db_change('p1', {_id: 'bad', value: 'bad'}, false, true);
       svc.enqueue_db_change('p1', {_id: 'good', value: 'good'}, false, true);
 
-      svc.flush_change_queue();
+      expect(svc.flush_change_queue()).toBe(false);
 
       expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'good'}));
-      expect(svc.change_queue.length).toBe(1);
-      expect(svc.change_queue[0].doc._id).toBe('bad');
+      expect(svc.change_queue.length).toBe(0);
     });
   });
 
@@ -463,6 +462,24 @@ describe('DataService consistency hardening (#292)', () => {
         (environment as any).useMatrixBackend = prev;
       }
     });
+
+    it('removes failed poll bootstrap pids from the uninitialized set', async () => {
+      const err = new Error('bootstrap failed');
+      svc.uninitialized_pids = new Set();
+      svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
+      svc.fail_poll_db_bootstrap = jasmine.createSpy('fail_poll_db_bootstrap');
+      svc.get_local_poll_db = () => ({
+        info: () => Promise.reject(err)
+      });
+
+      svc.ensure_local_poll_data('p9');
+      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(svc.fail_poll_db_bootstrap).toHaveBeenCalledWith('p9', err);
+      expect(svc.uninitialized_pids.has('p9')).toBe(false);
+      expect(svc.local_docs2cache_finished).toHaveBeenCalled();
+    });
   });
 
   describe('replication watchdog', () => {
@@ -590,6 +607,26 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.replication_watchdog_id).toBeNull();
       expect(svc.change_queue_timeout).toBeNull();
       expect(svc.change_queue_scheduled).toBe(false);
+    });
+
+    it('clear_all_local cancels queued change processing and queue state', async () => {
+      const clear_timeout_spy = spyOn(window, 'clearTimeout');
+      svc.change_queue_timeout = 789 as any;
+      svc.change_queue_scheduled = true;
+      svc.change_queue = [{pid: 'p1', doc: {_id: 'd1'}, deleted: false, tally: true}];
+      svc.change_retry_counts = {'p1|d1': 2};
+      svc.local_synced_user_db = { destroy: () => Promise.resolve() };
+      svc.local_only_user_DB = { destroy: () => Promise.resolve() };
+      svc.local_poll_dbs = {};
+      svc.storage = { clear: () => Promise.resolve() };
+
+      await svc.clear_all_local();
+
+      expect(clear_timeout_spy).toHaveBeenCalledWith(789 as any);
+      expect(svc.change_queue_timeout).toBeNull();
+      expect(svc.change_queue_scheduled).toBe(false);
+      expect(svc.change_queue.length).toBe(0);
+      expect(Object.keys(svc.change_retry_counts).length).toBe(0);
     });
 
     it('updates replication progress only when replication becomes active', () => {
