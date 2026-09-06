@@ -365,12 +365,17 @@ export class DataService implements OnDestroy {
   // in batches, keeping only the newest change per doc id:
   private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
   private change_queue_scheduled = false;
+  private change_queue_timeout: ReturnType<typeof setTimeout> | null = null;
 
   // Replication watchdog: per-replication progress tracking; keys are
   // 'user' for the user db sync and the pid for poll db syncs:
   private replication_progress: Record<string, number> = {};
   private replication_active: Record<string, boolean> = {};
   replication_stalled: Record<string, boolean> = {}; // exposed for UI/diagnostics
+  private replication_restart_pending: Record<string, boolean> = {};
+  private user_sync_start_pending = false;
+  private poll_sync_start_pending: Record<string, boolean> = {};
+  private shutting_down = false;
   private replication_watchdog_id: any = null;
 
   constructor(
@@ -966,6 +971,8 @@ export class DataService implements OnDestroy {
   private mark_poll_db_bootstrapped_now(pid: string) {
     this.register_poll_db_bootstrap(pid);
     this.mark_poll_db_bootstrapped[pid]();
+    delete this.mark_poll_db_bootstrapped[pid];
+    delete this.poll_db_bootstrapped[pid];
   }
 
   private wait_for_poll_db_bootstrap(pid: string): Promise<void> {
@@ -1140,7 +1147,7 @@ export class DataService implements OnDestroy {
   
           // replicate once and wait for it to finish.
           // #292: deferred until this poll's local cache bootstrap has completed:
-          this.wait_for_poll_db_bootstrap(pid).then(() => {
+          return this.wait_for_poll_db_bootstrap(pid).then(() => {
 
           this.G.L.trace("DataService.connect_to_remote_poll_db about to start one-time replication", pid);
           // see here for possible performance improving options: https://pouchdb.com/api.html#replication
@@ -1264,6 +1271,7 @@ export class DataService implements OnDestroy {
     this.after_changes();
     // mark as ready, dismiss loading animation, and notify page:
     this.G.L.info("DataService READY");
+    this.shutting_down = false;
     this._ready = true;
     this.hide_loading();
     if (this.page && this.page.onDataReady) this.page.onDataReady();
@@ -1758,60 +1766,80 @@ export class DataService implements OnDestroy {
     if (this.remote_user_db) { 
       const email_and_pw_hash = this.get_email_and_pw_hash();
       this.G.L.info("DataService starting user data sync");
+      if (this.user_db_sync_handler) {
+        this.G.L.trace("DataService.start_user_sync already running");
+        this.G.L.exit("DataService.start_user_sync", true);
+        return true;
+      }
+      if (this.user_sync_start_pending) {
+        this.G.L.trace("DataService.start_user_sync already waiting for bootstrap");
+        this.G.L.exit("DataService.start_user_sync", true);
+        return true;
+      }
+      this.user_sync_start_pending = true;
 
       // ASYNC:
       // #292: only start syncing after the local cache bootstrap has completed,
       // so that no incoming change can be overwritten by stale bootstrap data:
       this.user_db_bootstrapped.then(() => {
-
-        if (this.user_db_sync_handler) {
-          // cancel a previous sync before starting a new one (e.g. after a
-          // watchdog restart or changed credentials), to avoid duplicate syncs:
-          try {
-            this.user_db_sync_handler.cancel();
-          } catch (err) {
-            this.G.L.warn("DataService could not cancel previous user data sync", err);
-          }
+        if (!this.user_sync_start_pending) {
+          this.user_sync_start_pending = false;
+          return;
         }
-        this.set_replication_active('user', true);
-
-        this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
-          // see options here: https://pouchdb.com/api.html#replication
-          live: true,
-          retry: true,
-          batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
-          // TODO: if the following works, also use it for poll dbs: 
-          style: "main_only", // apparently not used
-          seq_interval: 1000, // "  // apparently not used
-          revs: false,
-          // (until here)
-          include_docs: true,
-          selector: this.get_user_doc_selector(email_and_pw_hash)
-        }).on('change', change => {
-          this.note_replication_progress('user');
-          this.handle_user_db_change(change);
-        }).on('paused', () => {
-          // replication was paused
-          this.set_replication_active('user', false);
-          this.G.L.info("DataService pausing user data sync");
-        }).on('active', () => {
-          // replication was resumed
+        if (!this.remote_user_db) {
+          this.user_sync_start_pending = false;
+          return;
+        }
+        if (this.user_db_sync_handler) {
+          this.user_sync_start_pending = false;
+          return;
+        }
+        try {
           this.set_replication_active('user', true);
-          this.G.L.info("DataService resuming user data sync");
-        }).on('denied', err => {
-          // a document failed to replicate (e.g. due to permissions)
-          this.note_replication_progress('user');
-          this.G.L.error("DataService user data sync denied", err);
-        }).on('complete', info => {
-          // handle complete
-          this.set_replication_active('user', false);
-          this.G.L.info("DataService completed user data sync", info);
-        }).on('error', err => {
-          // totally unhandled error (shouldn't happen)
-          this.set_replication_active('user', false);
-          this.G.L.error("DataService error at user data sync", err);
-        });
 
+          this.user_db_sync_handler = this.local_synced_user_db.sync(this.remote_user_db, {
+            // see options here: https://pouchdb.com/api.html#replication
+            live: true,
+            retry: true,
+            batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
+            // TODO: if the following works, also use it for poll dbs: 
+            style: "main_only", // apparently not used
+            seq_interval: 1000, // "  // apparently not used
+            revs: false,
+            // (until here)
+            include_docs: true,
+            selector: this.get_user_doc_selector(email_and_pw_hash)
+          }).on('change', change => {
+            this.note_replication_progress('user');
+            this.handle_user_db_change(change);
+          }).on('paused', () => {
+            // replication was paused
+            this.set_replication_active('user', false);
+            this.G.L.info("DataService pausing user data sync");
+          }).on('active', () => {
+            // replication was resumed
+            this.set_replication_active('user', true);
+            this.G.L.info("DataService resuming user data sync");
+          }).on('denied', err => {
+            // a document failed to replicate (e.g. due to permissions)
+            this.note_replication_progress('user');
+            this.G.L.error("DataService user data sync denied", err);
+          }).on('complete', info => {
+            // handle complete
+            this.set_replication_active('user', false);
+            this.G.L.info("DataService completed user data sync", info);
+          }).on('error', err => {
+            // totally unhandled error (shouldn't happen)
+            this.set_replication_active('user', false);
+            this.G.L.error("DataService error at user data sync", err);
+          });
+        } finally {
+          this.user_sync_start_pending = false;
+        }
+
+      }).catch(err => {
+        this.user_sync_start_pending = false;
+        this.G.L.error("DataService.start_user_sync could not start because user db bootstrap failed", err);
       });
 
       result =  true;
@@ -1885,63 +1913,89 @@ export class DataService implements OnDestroy {
 
     if (this.remote_poll_dbs[pid]) { 
       this.G.L.info("DataService starting poll data sync", pid);
+      if (this.poll_db_sync_handlers[pid]) {
+        this.G.L.trace("DataService.start_poll_sync already running", pid);
+        this.G.L.exit("DataService.start_poll_sync", pid, true);
+        return true;
+      }
+      if (this.poll_sync_start_pending[pid]) {
+        this.G.L.trace("DataService.start_poll_sync already waiting for bootstrap", pid);
+        this.G.L.exit("DataService.start_poll_sync", pid, true);
+        return true;
+      }
+      this.poll_sync_start_pending[pid] = true;
 
       // ASYNC:
       // #292: only start syncing after this poll's local cache bootstrap has
       // completed, so that no incoming change can be overwritten by stale
       // bootstrap data:
       this.wait_for_poll_db_bootstrap(pid).then(() => {
-
-        if (this.poll_db_sync_handlers[pid]) {
-          // cancel a previous sync before starting a new one (e.g. after a
-          // watchdog restart), to avoid duplicate syncs:
-          try {
-            this.poll_db_sync_handlers[pid].cancel();
-          } catch (err) {
-            this.G.L.warn("DataService could not cancel previous poll data sync", pid, err);
-          }
+        if (!this.poll_sync_start_pending[pid]) {
+          this.poll_sync_start_pending[pid] = false;
+          return;
         }
-        this.set_replication_active(pid, true);
-
-        this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
-          live: true,
-          retry: true,
-          batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
-          include_docs: true,
-          selector: this.get_poll_doc_selector(pid)
-        }).on('change', change => {
-          this.note_replication_progress(pid);
-          this.handle_poll_db_change.bind(this)(pid, change);
-        }).on('paused', info => {
-          // replication was paused, usually because of a lost connection
-          this.set_replication_active(pid, false);
-          this.G.L.info("DataService pausing poll data sync", pid, this.G.P.polls[pid]._state);
-          const _ = window.navigator.onLine;
-          this.G.P.polls[pid].syncing = false;
-          this.G.remove_spinning_reason(pid);
-        }).on('active', info => {
-          // replication was resumed
+        if (!(pid in this.remote_poll_dbs)) {
+          this.poll_sync_start_pending[pid] = false;
+          return;
+        }
+        if (this.poll_db_sync_handlers[pid]) {
+          this.poll_sync_start_pending[pid] = false;
+          return;
+        }
+        try {
           this.set_replication_active(pid, true);
-          this.G.L.info("DataService resuming poll data syncing", pid, info);
-          const _ = window.navigator.onLine;
-          this.G.P.polls[pid].syncing = true;
-          this.G.add_spinning_reason(pid);
-        }).on('denied', err => {
-          // a document failed to replicate (e.g. due to permissions)
-          this.note_replication_progress(pid);
-          this.G.L.error("DataService poll data sync denied", pid, err);
-        }).on('complete', info => {
-          // handle complete
-          this.set_replication_active(pid, false);
-          this.G.L.info("DataService completed poll data sync", pid, info);
-          const _ = window.navigator.onLine;
-          this.G.P.polls[pid].syncing = false;
-        }).on('error', err => {
-          // totally unhandled error (shouldn't happen)
-          this.set_replication_active(pid, false);
-          this.G.L.error("DataService error at poll data sync", pid, err);
-        });
 
+          this.poll_db_sync_handlers[pid] = this.get_local_poll_db(pid).sync(this.remote_poll_dbs[pid], {
+            live: true,
+            retry: true,
+            batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
+            include_docs: true,
+            selector: this.get_poll_doc_selector(pid)
+          }).on('change', change => {
+            this.note_replication_progress(pid);
+            this.handle_poll_db_change.bind(this)(pid, change);
+          }).on('paused', info => {
+            // replication was paused, usually because of a lost connection
+            this.set_replication_active(pid, false);
+            this.G.L.info("DataService pausing poll data sync", pid, this.G.P.polls[pid] ? this.G.P.polls[pid]._state : null);
+            const _ = window.navigator.onLine;
+            if (pid in this.G.P.polls) {
+              this.G.P.polls[pid].syncing = false;
+            }
+            this.G.remove_spinning_reason(pid);
+          }).on('active', info => {
+            // replication was resumed
+            this.set_replication_active(pid, true);
+            this.G.L.info("DataService resuming poll data syncing", pid, info);
+            const _ = window.navigator.onLine;
+            if (pid in this.G.P.polls) {
+              this.G.P.polls[pid].syncing = true;
+            }
+            this.G.add_spinning_reason(pid);
+          }).on('denied', err => {
+            // a document failed to replicate (e.g. due to permissions)
+            this.note_replication_progress(pid);
+            this.G.L.error("DataService poll data sync denied", pid, err);
+          }).on('complete', info => {
+            // handle complete
+            this.set_replication_active(pid, false);
+            this.G.L.info("DataService completed poll data sync", pid, info);
+            const _ = window.navigator.onLine;
+            if (pid in this.G.P.polls) {
+              this.G.P.polls[pid].syncing = false;
+            }
+          }).on('error', err => {
+            // totally unhandled error (shouldn't happen)
+            this.set_replication_active(pid, false);
+            this.G.L.error("DataService error at poll data sync", pid, err);
+          });
+        } finally {
+          this.poll_sync_start_pending[pid] = false;
+        }
+
+      }).catch(err => {
+        this.poll_sync_start_pending[pid] = false;
+        this.G.L.error("DataService.start_poll_sync could not start because poll db bootstrap failed", pid, err);
       });
 
       result =  true;
@@ -1956,6 +2010,8 @@ export class DataService implements OnDestroy {
   }
 
   stop_poll_sync(pid: string) {
+    delete this.replication_restart_pending[pid];
+    delete this.poll_sync_start_pending[pid];
     // Phase 14: Tear down Matrix event handlers
     if (environment.useMatrixBackend) {
       delete this._matrixPollListeners[pid];
@@ -1976,6 +2032,7 @@ export class DataService implements OnDestroy {
   private note_replication_progress(key: string) {
     /** record that the replication identified by 'user' or a pid made progress. */
     this.replication_progress[key] = Date.now();
+    this.replication_restart_pending[key] = false;
     if (this.replication_stalled[key]) {
       this.replication_stalled[key] = false;
       this.G.L.info("DataService replication is no longer stalled", key);
@@ -1984,7 +2041,9 @@ export class DataService implements OnDestroy {
 
   private set_replication_active(key: string, active: boolean) {
     this.replication_active[key] = active;
-    this.note_replication_progress(key);
+    if (active) {
+      this.note_replication_progress(key);
+    }
   }
 
   get_replication_status(key: string = 'user'): string {
@@ -1992,7 +2051,7 @@ export class DataService implements OnDestroy {
     return this.replication_stalled[key] ? 'stalled' : this.replication_active[key] ? 'active' : 'idle';
   }
 
-  start_replication_watchdog() {
+  private start_replication_watchdog() {
     /** periodically check whether some replication stalled (no progress for a
      *  while despite being active), and if so, restart it so that stalled
      *  syncs self-recover (#159 "syncing never ends", #171 incomplete uploads). */
@@ -2004,7 +2063,7 @@ export class DataService implements OnDestroy {
     }, replication_watchdog_interval_ms);
   }
 
-  stop_replication_watchdog() {
+  private stop_replication_watchdog() {
     if (this.replication_watchdog_id != null) {
       clearInterval(this.replication_watchdog_id);
       this.replication_watchdog_id = null;
@@ -2014,10 +2073,26 @@ export class DataService implements OnDestroy {
   private check_for_stalled_replications() {
     const now = Date.now();
     for (const key of Object.keys(this.replication_active)) {
+      if (this.shutting_down) {
+        continue;
+      }
       if (!this.replication_active[key]) {
         continue;
       }
       if (now - (this.replication_progress[key] || 0) <= replication_stall_threshold_ms) {
+        continue;
+      }
+      if (this.replication_restart_pending[key]) {
+        continue;
+      }
+      const can_restart =
+        (key == 'user' && !!this.remote_user_db) ||
+        (key != 'user' && key in this.remote_poll_dbs);
+      if (!can_restart) {
+        delete this.replication_active[key];
+        delete this.replication_progress[key];
+        delete this.replication_stalled[key];
+        delete this.replication_restart_pending[key];
         continue;
       }
       // active but no progress for too long: consider it stalled and restart it.
@@ -2025,16 +2100,20 @@ export class DataService implements OnDestroy {
       this.replication_active[key] = false;
       this.G.L.warn("DataService replication appears stalled, attempting restart", key);
       if (key == 'user') {
-        if (this.remote_user_db) {
-          this.restart_user_sync();
-        }
-      } else if (key in this.remote_poll_dbs) {
+        this.replication_restart_pending[key] = true;
+        this.restart_user_sync();
+      } else {
+        this.replication_restart_pending[key] = true;
         this.restart_poll_sync(key);
       }
     }
   }
 
   private restart_user_sync() {
+    if (this.shutting_down) {
+      return;
+    }
+    this.user_sync_start_pending = false;
     if (this.user_db_sync_handler) {
       try {
         this.user_db_sync_handler.cancel();
@@ -2047,6 +2126,10 @@ export class DataService implements OnDestroy {
   }
 
   private restart_poll_sync(pid: string) {
+    if (this.shutting_down) {
+      return;
+    }
+    this.poll_sync_start_pending[pid] = false;
     if (this.poll_db_sync_handlers[pid]) {
       try {
         this.poll_db_sync_handlers[pid].cancel();
@@ -2545,8 +2628,10 @@ export class DataService implements OnDestroy {
       }
       if (change.last_seq) {
         // store last_seq in local storage as reference point for next session's "since" value:
-        this.ensure_poll_cache(pid)['last_seq'] = change.last_seq;
-        this.G.L.trace("DataService.handle_poll_db_change stored last_seq", change.last_seq);
+        if (this.poll_caches[pid] || (this.uninitialized_pids && this.uninitialized_pids.has(pid))) {
+          this.ensure_poll_cache(pid)['last_seq'] = change.last_seq;
+          this.G.L.trace("DataService.handle_poll_db_change stored last_seq", change.last_seq);
+        }
       }
     }
     this.G.L.exit("DataService.handle_poll_db_change", pid, this.pending_changes);
@@ -2565,7 +2650,7 @@ export class DataService implements OnDestroy {
       // latter is not patched by zone.js 0.11, so Angular change detection
       // would no longer be triggered for pages whose onDataChange does not
       // call detectChanges() itself:
-      setTimeout(() => {
+      this.change_queue_timeout = setTimeout(() => {
         this.process_change_queue();
       }, 0);
     }
@@ -2574,6 +2659,11 @@ export class DataService implements OnDestroy {
   flush_change_queue() {
     /** apply all queued changes immediately, e.g. before resolving one-shot
      *  replications whose callers expect an up-to-date cache. */
+    if (this.change_queue_timeout != null) {
+      clearTimeout(this.change_queue_timeout);
+      this.change_queue_timeout = null;
+      this.change_queue_scheduled = false;
+    }
     if (this.change_queue.length > 0) {
       this.process_change_queue();
     }
@@ -2585,34 +2675,52 @@ export class DataService implements OnDestroy {
      *  once per batch instead of once per change event. */
     this.G.L.entry("DataService.process_change_queue", this.change_queue.length);
     // keep only the latest change for each doc id:
-    const latest = new Map<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean}>();
-    for (const entry of this.change_queue) {
-      latest.set((entry.pid || '') + '|' + entry.doc._id, entry);
+    const latest: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+    const seen = new Set<string>();
+    for (let i = this.change_queue.length - 1; i >= 0; i--) {
+      const entry = this.change_queue[i];
+      const key = (entry.pid || '') + '|' + entry.doc._id;
+      if (!seen.has(key)) {
+        seen.add(key);
+        latest.push(entry);
+      }
     }
+    latest.reverse();
     this.change_queue = [];
     this.change_queue_scheduled = false;
+    this.change_queue_timeout = null;
 
     let local_changes = false, tally = false;
-    for (const entry of latest.values()) {
-      if (entry.pid == null) {
-        // user db change:
-        if (entry.deleted) {
-          local_changes = this.handle_deleted_user_doc(entry.doc) || local_changes;
+    for (let i = 0; i < latest.length; i++) {
+      const entry = latest[i];
+      try {
+        if (entry.pid == null) {
+          // user db change:
+          if (entry.deleted) {
+            local_changes = this.handle_deleted_user_doc(entry.doc) || local_changes;
+          } else {
+            const [value_changed, dummy] = this.doc2user_cache(entry.doc);
+            local_changes = value_changed || local_changes;
+          }
+          tally = true;
         } else {
-          const [value_changed, dummy] = this.doc2user_cache(entry.doc);
-          local_changes = value_changed || local_changes;
+          // poll db change:
+          if (entry.deleted) {
+            local_changes = this.handle_deleted_poll_doc(entry.pid, entry.doc) || local_changes;
+          } else {
+            this.pending_changes += 1;
+            try {
+              local_changes = this.doc2poll_cache(entry.pid, entry.doc) || local_changes;
+            } finally {
+              this.pending_changes -= 1;
+            }
+          }
+          tally = tally || entry.tally;
         }
-        tally = true;
-      } else {
-        // poll db change:
-        if (entry.deleted) {
-          local_changes = this.handle_deleted_poll_doc(entry.pid, entry.doc) || local_changes;
-        } else {
-          this.pending_changes += 1;
-          local_changes = this.doc2poll_cache(entry.pid, entry.doc) || local_changes;
-          this.pending_changes -= 1;
-        }
-        tally = tally || entry.tally;
+      } catch (err) {
+        this.change_queue = latest.slice(i).concat(this.change_queue);
+        this.G.L.error("DataService.process_change_queue failed, re-queued remaining changes", err);
+        throw err;
       }
     }
     if (local_changes) {
@@ -3453,6 +3561,7 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.clear_all_local");
     // TODO: disable user interaction
     this._ready = false;
+    this.shutting_down = true;
     return new Promise((resolve, reject) => {
       // Logout from Matrix if using Matrix backend
       if (environment.useMatrixBackend && this.matrixService?.isLoggedIn()) {
@@ -3465,12 +3574,16 @@ export class DataService implements OnDestroy {
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
       this.stop_replication_watchdog();
+      this.user_sync_start_pending = false;
+      this.poll_sync_start_pending = {};
       if (!!this.user_db_sync_handler) {
         this.user_db_sync_handler.cancel();
+        this.user_db_sync_handler = null;
       }
       this.replication_active = {};
       this.replication_progress = {};
       this.replication_stalled = {};
+      this.replication_restart_pending = {};
       for (const pid in this.poll_db_sync_handlers) {
         this.stop_poll_sync(pid);
       }
@@ -3507,6 +3620,7 @@ export class DataService implements OnDestroy {
 
   delete_all(): Promise<any> {
     return new Promise((resolve, reject) => {
+      this.shutting_down = true;
       // decline all not yet declined delegation requests:
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
@@ -3539,6 +3653,7 @@ export class DataService implements OnDestroy {
       // stop syncing:
       if (!!this.user_db_sync_handler) {
         this.user_db_sync_handler.cancel();
+        this.user_db_sync_handler = null;
       }
       // don't let the watchdog restart the cancelled sync (#292):
       this.replication_active['user'] = false;
