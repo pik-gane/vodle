@@ -25,7 +25,7 @@ import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
 import { LoggingServiceModule, LoggingService, LoggingServiceConfiguration } from 'ionic-logging-service';
 import { IonicStorageModule } from '@ionic/storage-angular';
@@ -37,7 +37,7 @@ import { GlobalService } from './global.service';
 import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 
 export function createTranslateLoader(http: HttpClient) {
-  return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+  return new VodleTranslateLoader(http, './assets/i18n/', '.json');
 }
 export function configureLogging(loggingService: LoggingService): () => void {
   return () => {
@@ -56,7 +56,7 @@ export function configureLogging(loggingService: LoggingService): () => void {
         AppRoutingModule,
         HttpClientModule,
         TranslateModule.forRoot({
-            defaultLanguage: 'en',
+            defaultLanguage: DEFAULT_LANG,
             loader: {
                 provide: TranslateLoader,
                 useFactory: (createTranslateLoader),
