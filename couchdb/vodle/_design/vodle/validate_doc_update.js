@@ -39,22 +39,16 @@ function (newDoc, savedDoc, userCtx) {
                     */
                 } else {
                     let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§"));
-                    // if doc already exists, let noone update or delete it,
-                    // except that voters of the poll may replicate pure deletion
-                    // tombstones (no other fields than _id/_rev/_deleted/_revisions),
-                    // which is required for deterministic cleanup of losing
-                    // conflict revisions (#292):
+                    // if doc already exists, let noone update or delete it.
+                    // (In particular, no voter tombstones are allowed here: a
+                    // validate function cannot verify that a deleted revision
+                    // is a losing conflict branch rather than the current
+                    // winner, so allowing tombstones would let any voter erase
+                    // immutable shared poll metadata. Client-side conflict
+                    // cleanup (#292) therefore only deletes losing revisions
+                    // of documents the client's credentials own.)
                     if (savedDoc) {
-                        let is_pure_tombstone = (newDoc._deleted === true);
-                        for (let key in newDoc) {
-                            if (key != "_id" && key != "_rev" && key != "_deleted" && key != "_revisions") {
-                                is_pure_tombstone = false;
-                            }
-                        }
-                        if (!(is_pure_tombstone && userCtx.name.startsWith("vodle.poll." + doc_pid + ".voter."))) {
-                            throw ({forbidden: 'Noone may update or delete existing poll documents.'})
-                        }
-                        return;
+                        throw ({forbidden: 'Noone may update or delete existing poll documents.'})
                     }
                     // let only the voters create it:
                     if (!userCtx.name.startsWith("vodle.poll." + doc_pid +".voter.")) {

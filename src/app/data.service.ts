@@ -367,7 +367,7 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing: incoming db change docs are queued and processed
   // in batches, keeping only the newest change per doc id:
-  private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+  private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
   private change_queue_scheduled = false;
   private change_queue_timeout: ReturnType<typeof setTimeout> | null = null;
   private change_retry_counts: Record<string, number> = {};
@@ -3062,7 +3062,7 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing (issue #292):
 
-  private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean) {
+  private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion = false) {
     /** queue an incoming db change doc (pid == null means user db)
      *  for coalesced batch processing. */
     if (this.shutting_down) {
@@ -3072,7 +3072,7 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.enqueue_db_change ignoring change during shutdown", pid, doc?._id);
       return;
     }
-    this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally});
+    this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally, confirmed_deletion: confirmed_deletion});
     if (!this.change_queue_scheduled) {
       this.change_queue_scheduled = true;
       // process on the next tick, so that changes arriving in a burst are
@@ -3132,15 +3132,15 @@ export class DataService implements OnDestroy {
      *  once per batch instead of once per change event. */
     this.G.L.entry("DataService.process_change_queue", this.change_queue.length);
     // keep only the latest change for each doc id:
-    const latest: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
-    const latest_by_key: Record<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean}> = {};
+    const latest: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
+    const latest_by_key: Record<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}> = {};
     const seen = new Set<string>();
     for (let i = this.change_queue.length - 1; i >= 0; i--) {
       const entry = this.change_queue[i];
       const key = (entry.pid || '') + '|' + entry.doc._id;
       if (!seen.has(key)) {
         seen.add(key);
-        const kept = {pid: entry.pid, doc: entry.doc, deleted: entry.deleted, tally: entry.tally};
+        const kept = {pid: entry.pid, doc: entry.doc, deleted: entry.deleted, tally: entry.tally, confirmed_deletion: entry.confirmed_deletion};
         latest.push(kept);
         latest_by_key[key] = kept;
       } else {
@@ -3151,7 +3151,7 @@ export class DataService implements OnDestroy {
     this.change_queue = [];
     this.change_queue_scheduled = false;
     this.change_queue_timeout = null;
-    const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+    const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
     let dropped_changes = false;
     // collect ids of applied replicated docs for a batched conflict check (#292):
     const conflict_check_ids: Record<string, Set<string>> = {};
@@ -3160,6 +3160,16 @@ export class DataService implements OnDestroy {
     for (let i = 0; i < latest.length; i++) {
       const entry = latest[i];
       const key = (entry.pid || '') + '|' + entry.doc._id;
+      if (entry.deleted && !entry.confirmed_deletion && !environment.useMatrixBackend) {
+        // A replicated tombstone may just be a deleted losing conflict
+        // revision of a doc whose winning revision still exists, so don't
+        // drop the cached value yet. Instead re-fetch the id from the local
+        // db: if a surviving winner is found it is applied, and only a 404
+        // confirms the deletion (#292):
+        this.recheck_deleted_doc(entry);
+        delete this.change_retry_counts[key];
+        continue;
+      }
       try {
         if (entry.pid == null) {
           // user db change:
@@ -3222,6 +3232,35 @@ export class DataService implements OnDestroy {
     this.schedule_conflict_checks(conflict_check_ids);
     this.G.L.exit("DataService.process_change_queue");
     return !dropped_changes;
+  }
+
+  private recheck_deleted_doc(entry: {pid: string | null, doc: any, deleted: boolean, tally: boolean}) {
+    /** A tombstone arrived via replication. It may only be the deletion of a
+     *  losing conflict revision performed by another replica's conflict
+     *  cleanup, in which case a winning revision of the same id still exists
+     *  and the cached value must not disappear. So re-fetch the id and apply
+     *  the surviving winner; treat it as a real deletion only when the get
+     *  returns 404 (#292): */
+    const db = entry.pid == null ? this.local_synced_user_db : this.local_poll_dbs[entry.pid];
+    if (!db || typeof db.get != 'function') {
+      // no local db to verify against, so apply the deletion as-is:
+      this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+      return;
+    }
+    db.get(entry.doc._id)
+    .then(doc => {
+      this.G.L.trace("DataService.recheck_deleted_doc winning revision survives tombstone, applying it", entry.pid, entry.doc._id);
+      this.enqueue_db_change(entry.pid, doc, !!doc._deleted, entry.tally, true);
+    })
+    .catch(err => {
+      if (err && err.status == 404) {
+        // the doc is really gone, apply the deletion:
+        this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+      } else {
+        this.G.L.warn("DataService.recheck_deleted_doc could not verify tombstone, applying deletion", entry.pid, entry.doc._id, err);
+        this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+      }
+    });
   }
 
   private handle_deleted_user_doc(doc): boolean {
@@ -3290,12 +3329,35 @@ export class DataService implements OnDestroy {
 
   // Conflict detection & deterministic resolution (issue #292):
 
-  private resolve_doc_conflicts(db, doc): Promise<boolean> {
+  private may_cleanup_conflicts(pid: string | null, _id: string): boolean {
+    /** Whether this client's replication credentials are authorized to delete
+     *  losing conflict revisions of the doc also in the *remote* db. The
+     *  server-side validator rejects any update or deletion of existing
+     *  shared poll docs (it cannot verify that a revision is a losing branch,
+     *  see validate_doc_update.js), so deleting such losers only locally
+     *  would diverge from the remote db and the conflict would reappear on
+     *  the next pull. Shared poll docs and other voters' docs are therefore
+     *  skipped; that is safe because CouchDB's winner selection is
+     *  deterministic, so all replicas read the same winning revision even
+     *  while the conflict lingers (#292). */
+    if (pid == null) {
+      // user db: all docs are owned by this user's credentials:
+      return true;
+    }
+    // poll db: only this client's own voter docs may be deleted remotely:
+    return _id.startsWith("~vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid') + "§");
+  }
+
+  private resolve_doc_conflicts(db, doc, pid: string | null = null): Promise<boolean> {
     /** Deterministically resolve a conflicted document by deleting all losing
      *  revisions. CouchDB/PouchDB pick the winning revision deterministically,
      *  so removing the losers makes every replica converge on the same
      *  winning revision (#292). */
     if (!doc || !doc._conflicts || doc._conflicts.length == 0) {
+      return Promise.resolve(false);
+    }
+    if (!this.may_cleanup_conflicts(pid, doc._id)) {
+      this.G.L.trace("DataService.resolve_doc_conflicts skipping doc not deletable with our credentials", doc._id);
       return Promise.resolve(false);
     }
     this.G.L.warn("DataService.resolve_doc_conflicts resolving conflicted doc", doc._id, doc._conflicts);
@@ -3313,7 +3375,7 @@ export class DataService implements OnDestroy {
     return Promise.all(removals).then(() => true);
   }
 
-  private check_docs_for_conflicts(db, label: string, ids?: string[]): Promise<number> {
+  private check_docs_for_conflicts(db, label: string, ids?: string[], pid: string | null = null): Promise<number> {
     /** Fetch docs (all of them, or only the given ids) with conflict metadata
      *  and resolve any conflicts found. Used as a background scan at startup
      *  and as a batched check for docs that arrived via replication (#292).
@@ -3336,7 +3398,7 @@ export class DataService implements OnDestroy {
         return 0;
       }
       this.G.L.info("DataService.check_docs_for_conflicts found conflicted docs", label, conflicted.length);
-      return Promise.all(conflicted.map(row => this.resolve_doc_conflicts(db, row.doc)))
+      return Promise.all(conflicted.map(row => this.resolve_doc_conflicts(db, row.doc, pid)))
       .then(() => conflicted.length);
     })
     .catch(err => {
@@ -3358,7 +3420,7 @@ export class DataService implements OnDestroy {
     if (environment.useMatrixBackend || this.shutting_down) {
       return;
     }
-    this.check_docs_for_conflicts(this.get_local_poll_db(pid), 'poll ' + pid);
+    this.check_docs_for_conflicts(this.get_local_poll_db(pid), 'poll ' + pid, undefined, pid);
   }
 
   private schedule_conflict_checks(ids_by_scope: Record<string, Set<string>>) {
@@ -3372,7 +3434,7 @@ export class DataService implements OnDestroy {
       if (scope == '') {
         this.check_docs_for_conflicts(this.local_synced_user_db, 'user', ids);
       } else if (scope in this.local_poll_dbs) {
-        this.check_docs_for_conflicts(this.local_poll_dbs[scope], 'poll ' + scope, ids);
+        this.check_docs_for_conflicts(this.local_poll_dbs[scope], 'poll ' + scope, ids, scope);
       }
     }
   }

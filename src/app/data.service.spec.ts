@@ -904,7 +904,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc.flush_change_queue();
 
         expect(svc.check_docs_for_conflicts).toHaveBeenCalledWith(user_db, 'user', ['u1']);
-        expect(svc.check_docs_for_conflicts).toHaveBeenCalledWith(poll_db, 'poll p1', ['d1']);
+        expect(svc.check_docs_for_conflicts).toHaveBeenCalledWith(poll_db, 'poll p1', ['d1'], 'p1');
         const checked_ids = svc.check_docs_for_conflicts.calls.allArgs().map(args => args[2]);
         expect(checked_ids).not.toContain(jasmine.arrayContaining(['gone']));
       });
@@ -915,6 +915,56 @@ describe('DataService consistency hardening (#292)', () => {
         svc.local_synced_user_db = {};
         svc.schedule_conflict_checks({'': new Set(['u1'])});
         expect(svc.check_docs_for_conflicts).not.toHaveBeenCalled();
+      });
+
+      it('resolve_doc_conflicts skips shared poll docs the credentials may not delete remotely', async () => {
+        svc.user_cache['poll.p1.myvid'] = 'v1';
+        const db = { remove: jasmine.createSpy('remove').and.returnValue(Promise.resolve()) };
+        // shared poll doc: server validator forbids deleting its revisions, so skip:
+        const resolved = await svc.resolve_doc_conflicts(db, {_id: '~vodle.poll.p1§title', _conflicts: ['2-x']}, 'p1');
+        expect(resolved).toBe(false);
+        expect(db.remove).not.toHaveBeenCalled();
+        // another voter's doc: also not deletable with our credentials:
+        expect(await svc.resolve_doc_conflicts(db, {_id: '~vodle.poll.p1.voter.other§rating.o1', _conflicts: ['2-x']}, 'p1')).toBe(false);
+        expect(db.remove).not.toHaveBeenCalled();
+        // our own voter doc: deletable, so losers are removed:
+        expect(await svc.resolve_doc_conflicts(db, {_id: '~vodle.poll.p1.voter.v1§rating.o1', _conflicts: ['2-x']}, 'p1')).toBe(true);
+        expect(db.remove).toHaveBeenCalledWith('~vodle.poll.p1.voter.v1§rating.o1', '2-x');
+      });
+
+      it('a replicated tombstone whose winning revision survives re-applies the winner instead of deleting the cache', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.returnValue(true);
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        const winner = {_id: 'd1', value: 'winning'};
+        svc.local_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.resolve(winner)) } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        svc.flush_change_queue();
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        await Promise.resolve();  // let the db.get callback enqueue the winner
+        svc.flush_change_queue();
+
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', winner);
+      });
+
+      it('a replicated tombstone is applied as deletion only once the doc is confirmed gone (404)', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache');
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc').and.returnValue(true);
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        svc.local_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.reject({status: 404})) } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        svc.flush_change_queue();
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        await Promise.resolve(); await Promise.resolve();  // let the db.get rejection enqueue the confirmed deletion
+        svc.flush_change_queue();
+
+        expect(svc.handle_deleted_poll_doc).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'd1'}));
+        expect(svc.doc2poll_cache).not.toHaveBeenCalled();
       });
     });
 
