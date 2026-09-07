@@ -3303,8 +3303,12 @@ export class DataService implements OnDestroy {
     const removals = doc._conflicts.map(rev =>
       db.remove(doc._id, rev)
       .catch(err => {
-        // another client may have resolved this revision concurrently:
-        this.G.L.trace("DataService.resolve_doc_conflicts couldn't remove losing revision", doc._id, rev, err);
+        if (err && (err.status == 404 || err.status == 409)) {
+          // another client may have resolved this revision concurrently:
+          this.G.L.trace("DataService.resolve_doc_conflicts couldn't remove losing revision", doc._id, rev, err);
+        } else {
+          this.G.L.warn("DataService.resolve_doc_conflicts unexpected error removing losing revision", doc._id, rev, err);
+        }
       })
     );
     return Promise.all(removals).then(() => true);
@@ -4062,8 +4066,9 @@ export class DataService implements OnDestroy {
         const enc_value = (key == 'due') ? value : encrypt(value, poll_pw);
         if (doc) {
           const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw);
-          if (stored == value) {
-            // already stored, write is confirmed:
+          if (stored == value
+              && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
+            // already stored (incl. any required due field), write is confirmed:
             return;
           }
           doc.value = enc_value;
