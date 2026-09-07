@@ -826,4 +826,252 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.replication_progress['p1']).toBe(999);
     });
   });
+
+  describe('conflict resolution & transactional moves (#292 part 2)', () => {
+    let previous_matrix_flag: boolean;
+
+    beforeEach(() => {
+      previous_matrix_flag = (environment as any).useMatrixBackend;
+      (environment as any).useMatrixBackend = false;
+    });
+
+    afterEach(() => {
+      (environment as any).useMatrixBackend = previous_matrix_flag;
+    });
+
+    describe('conflict detection & deterministic resolution', () => {
+      it('resolve_doc_conflicts removes all losing revisions', async () => {
+        const db = { remove: jasmine.createSpy('remove').and.returnValue(Promise.resolve()) };
+        const resolved = await svc.resolve_doc_conflicts(db, {_id: 'd1', _rev: '3-abc', _conflicts: ['2-x', '2-y']});
+        expect(resolved).toBe(true);
+        expect(db.remove).toHaveBeenCalledWith('d1', '2-x');
+        expect(db.remove).toHaveBeenCalledWith('d1', '2-y');
+      });
+
+      it('resolve_doc_conflicts is a no-op for unconflicted docs', async () => {
+        const db = { remove: jasmine.createSpy('remove') };
+        expect(await svc.resolve_doc_conflicts(db, {_id: 'd1', _rev: '3-abc'})).toBe(false);
+        expect(await svc.resolve_doc_conflicts(db, {_id: 'd1', _conflicts: []})).toBe(false);
+        expect(db.remove).not.toHaveBeenCalled();
+      });
+
+      it('resolve_doc_conflicts tolerates concurrent resolution by another client', async () => {
+        const db = { remove: jasmine.createSpy('remove').and.returnValue(Promise.reject({status: 409})) };
+        const resolved = await svc.resolve_doc_conflicts(db, {_id: 'd1', _conflicts: ['2-x']});
+        expect(resolved).toBe(true);
+      });
+
+      it('check_docs_for_conflicts resolves only conflicted rows and counts them', async () => {
+        const rows = [
+          {doc: {_id: 'a', _conflicts: ['1-x']}},
+          {doc: {_id: 'b'}},
+          {key: 'missing', error: 'not_found'},
+        ];
+        const db = {
+          allDocs: jasmine.createSpy('allDocs').and.returnValue(Promise.resolve({rows})),
+          remove: jasmine.createSpy('remove').and.returnValue(Promise.resolve()),
+        };
+        const n = await svc.check_docs_for_conflicts(db, 'test');
+        expect(n).toBe(1);
+        expect(db.allDocs).toHaveBeenCalledWith(jasmine.objectContaining({include_docs: true, conflicts: true}));
+        expect(db.remove).toHaveBeenCalledTimes(1);
+        expect(db.remove).toHaveBeenCalledWith('a', '1-x');
+      });
+
+      it('check_docs_for_conflicts restricts the check to given ids and never rejects', async () => {
+        const db = {
+          allDocs: jasmine.createSpy('allDocs').and.returnValue(Promise.reject(new Error('db closed'))),
+        };
+        expect(await svc.check_docs_for_conflicts(db, 'test', ['a'])).toBe(0);
+        expect(db.allDocs).toHaveBeenCalledWith(jasmine.objectContaining({keys: ['a']}));
+        expect(await svc.check_docs_for_conflicts(db, 'test', [])).toBe(0);
+        expect(await svc.check_docs_for_conflicts(null, 'test')).toBe(0);
+      });
+
+      it('process_change_queue schedules batched conflict checks for applied docs only', () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2user_cache = jasmine.createSpy('doc2user_cache').and.returnValue([true, false]);
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.returnValue(true);
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc').and.returnValue(true);
+        svc.check_docs_for_conflicts = jasmine.createSpy('check_docs_for_conflicts').and.returnValue(Promise.resolve(0));
+        const user_db = {}, poll_db = {};
+        svc.local_synced_user_db = user_db;
+        svc.local_poll_dbs = { p1: poll_db };
+
+        svc.enqueue_db_change(null, {_id: 'u1', value: 'v'}, false, true);
+        svc.enqueue_db_change('p1', {_id: 'd1', value: 'v'}, false, true);
+        svc.enqueue_db_change('p1', {_id: 'gone', _deleted: true}, true, true);
+        svc.flush_change_queue();
+
+        expect(svc.check_docs_for_conflicts).toHaveBeenCalledWith(user_db, 'user', ['u1']);
+        expect(svc.check_docs_for_conflicts).toHaveBeenCalledWith(poll_db, 'poll p1', ['d1']);
+        const checked_ids = svc.check_docs_for_conflicts.calls.allArgs().map(args => args[2]);
+        expect(checked_ids).not.toContain(jasmine.arrayContaining(['gone']));
+      });
+
+      it('schedule_conflict_checks does nothing in Matrix mode', () => {
+        (environment as any).useMatrixBackend = true;
+        svc.check_docs_for_conflicts = jasmine.createSpy('check_docs_for_conflicts');
+        svc.local_synced_user_db = {};
+        svc.schedule_conflict_checks({'': new Set(['u1'])});
+        expect(svc.check_docs_for_conflicts).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('transactional draft→running data moves', () => {
+      it('store_poll_data_confirmed resolves once the put of a new doc succeeded', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.reject({status: 404})),
+          put: jasmine.createSpy('put').and.returnValue(Promise.resolve({ok: true})),
+        };
+        svc.get_local_poll_db = () => db;
+
+        await svc.store_poll_data_confirmed('p1', 'title', 'T');
+
+        expect(db.put).toHaveBeenCalledTimes(1);
+        expect(db.put.calls.mostRecent().args[0]._id).toBe('~vodle.poll.p1§title');
+      });
+
+      it('store_poll_data_confirmed treats an existing identical doc as confirmed', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.resolve({_id: 'x', value: '2030-01-01T00:00:00.000Z'})),
+          put: jasmine.createSpy('put'),
+        };
+        svc.get_local_poll_db = () => db;
+
+        // 'due' is stored unencrypted, so the stored value can be compared directly:
+        await svc.store_poll_data_confirmed('p1', 'due', '2030-01-01T00:00:00.000Z');
+
+        expect(db.put).not.toHaveBeenCalled();
+      });
+
+      it('store_poll_data_confirmed retries failing puts and rejects after bounded attempts', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.reject({status: 404})),
+          put: jasmine.createSpy('put').and.returnValue(Promise.reject(new Error('io error'))),
+        };
+        svc.get_local_poll_db = () => db;
+        svc.G.L.error = jasmine.createSpy('error');
+
+        await expectAsync(svc.store_poll_data_confirmed('p1', 'title', 'T')).toBeRejected();
+        expect(db.put).toHaveBeenCalledTimes(5);
+        expect(svc.G.L.error).toHaveBeenCalled();
+      });
+
+      it('store_poll_data_confirmed rejects without a poll password', async () => {
+        await expectAsync(svc.store_poll_data_confirmed('p1', 'title', 'T')).toBeRejected();
+      });
+
+      it('change_poll_state deletes the user db copy only after the poll db write is confirmed', async () => {
+        const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.title': 'T',
+          'poll.p1.myvid': 'v1', // stays in user db
+        };
+        svc.wait_for_poll_db = () => Promise.resolve();
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.callFake((pid, key) => new Promise<void>((res, rej) => { resolvers[key] = {res, rej}; }));
+        svc.delu = jasmine.createSpy('delu');
+        svc.setu = jasmine.createSpy('setu');
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
+        svc.poll_has_db_credentials = () => false;
+        svc.G.L.error = jasmine.createSpy('error');
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // the optimistic cache update happens immediately:
+        expect(svc.poll_caches['p1']['title']).toBe('T');
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false);
+        // ... but the user db copy is only deleted after the write confirms:
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
+        resolvers['title'].res();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.title');
+        // user-db-authoritative keys are not moved:
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.myvid');
+      });
+
+      it('change_poll_state keeps the user db copy when the poll db write fails', async () => {
+        const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.title': 'T',
+        };
+        svc.wait_for_poll_db = () => Promise.resolve();
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.callFake((pid, key) => new Promise<void>((res, rej) => { resolvers[key] = {res, rej}; }));
+        svc.delu = jasmine.createSpy('delu');
+        svc.setu = jasmine.createSpy('setu');
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
+        svc.poll_has_db_credentials = () => false;
+        svc.G.L.error = jasmine.createSpy('error');
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        resolvers['title'].rej(new Error('io error'));
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
+        expect(svc.G.L.error).toHaveBeenCalled();
+      });
+    });
+
+    describe('centralized authoritative-DB routing', () => {
+      it('poll_data_authority routes draft polls and personal keys to the user db', () => {
+        svc.user_cache['poll.p1.state'] = 'draft';
+        expect(svc.poll_data_authority('p1', 'title')).toBe('user');
+
+        svc.user_cache['poll.p1.state'] = 'running';
+        expect(svc.poll_data_authority('p1', 'title')).toBe('poll');
+        expect(svc.poll_data_authority('p1', 'myvid')).toBe('user');
+        expect(svc.poll_data_authority('p1', 'have_seen')).toBe('user');
+        expect(svc.poll_data_authority('p1', 'option.o1.name')).toBe('poll');
+      });
+
+      it('getp falls back to a remaining user db copy for non-draft polls', () => {
+        svc.user_cache = {
+          'poll.p1.state': 'running',
+          'poll.p1.title': 'not yet moved',
+        };
+        expect(svc.getp('p1', 'title')).toBe('not yet moved');
+
+        svc.poll_caches['p1']['title'] = 'moved';
+        expect(svc.getp('p1', 'title')).toBe('moved');
+      });
+    });
+
+    describe('poll end robustness', () => {
+      it('get_remote_poll_state_doc falls back to the local state doc when remote is unreachable', async () => {
+        const local_doc = {_id: '~vodle.poll.p1§state', _rev: '5-x'};
+        svc.remote_poll_dbs = {};
+        svc.get_local_poll_db = () => ({ get: jasmine.createSpy('get').and.returnValue(Promise.resolve(local_doc)) });
+
+        expect(await svc.get_remote_poll_state_doc('p1')).toBe(local_doc);
+
+        svc.remote_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.reject(new Error('offline'))) } };
+        expect(await svc.get_remote_poll_state_doc('p1')).toBe(local_doc);
+      });
+
+      it('get_remote_poll_state_doc prefers the remote state doc when available', async () => {
+        const remote_doc = {_id: '~vodle.poll.p1§state', _rev: '7-y'};
+        svc.remote_poll_dbs = { p1: { get: () => Promise.resolve(remote_doc) } };
+        svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db');
+
+        expect(await svc.get_remote_poll_state_doc('p1')).toBe(remote_doc);
+        expect(svc.get_local_poll_db).not.toHaveBeenCalled();
+      });
+    });
+  });
 });
