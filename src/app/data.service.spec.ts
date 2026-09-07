@@ -1053,15 +1053,15 @@ describe('DataService consistency hardening (#292)', () => {
     });
 
     describe('poll end robustness', () => {
-      it('get_remote_poll_state_doc falls back to the local state doc when remote is unreachable', async () => {
-        const local_doc = {_id: '~vodle.poll.p1§state', _rev: '5-x'};
+      it('get_remote_poll_state_doc rejects when the remote is unreachable so the deterministic fallback seed is used', async () => {
         svc.remote_poll_dbs = {};
-        svc.get_local_poll_db = () => ({ get: jasmine.createSpy('get').and.returnValue(Promise.resolve(local_doc)) });
+        svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db');
 
-        expect(await svc.get_remote_poll_state_doc('p1')).toBe(local_doc);
+        await expectAsync(svc.get_remote_poll_state_doc('p1')).toBeRejected();
 
         svc.remote_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.reject(new Error('offline'))) } };
-        expect(await svc.get_remote_poll_state_doc('p1')).toBe(local_doc);
+        await expectAsync(svc.get_remote_poll_state_doc('p1')).toBeRejected();
+        expect(svc.get_local_poll_db).not.toHaveBeenCalled();
       });
 
       it('get_remote_poll_state_doc prefers the remote state doc when available', async () => {

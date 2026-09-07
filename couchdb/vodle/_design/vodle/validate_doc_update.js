@@ -38,12 +38,25 @@ function (newDoc, savedDoc, userCtx) {
                     }
                     */
                 } else {
-                    // if doc already exists, let noone update or delete it:
+                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§"));
+                    // if doc already exists, let noone update or delete it,
+                    // except that voters of the poll may replicate pure deletion
+                    // tombstones (no other fields than _id/_rev/_deleted/_revisions),
+                    // which is required for deterministic cleanup of losing
+                    // conflict revisions (#292):
                     if (savedDoc) {
-                        throw ({forbidden: 'Noone may update or delete existing poll documents.'})
+                        let is_pure_tombstone = (newDoc._deleted === true);
+                        for (let key in newDoc) {
+                            if (key != "_id" && key != "_rev" && key != "_deleted" && key != "_revisions") {
+                                is_pure_tombstone = false;
+                            }
+                        }
+                        if (!(is_pure_tombstone && userCtx.name.startsWith("vodle.poll." + doc_pid + ".voter."))) {
+                            throw ({forbidden: 'Noone may update or delete existing poll documents.'})
+                        }
+                        return;
                     }
                     // let only the voters create it:
-                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§")); 
                     if (!userCtx.name.startsWith("vodle.poll." + doc_pid +".voter.")) {
                         throw ({forbidden: 'Only voters in a poll may create poll documents, but user is ' + userCtx.name});
                     }

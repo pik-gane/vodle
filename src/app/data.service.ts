@@ -1823,20 +1823,19 @@ export class DataService implements OnDestroy {
   get_remote_poll_state_doc(pid: string): Promise<any> {
     // Matrix backend has no PouchDB remote_poll_dbs
     if (environment.useMatrixBackend) {
-      return Promise.resolve({ _id: pid, _rev: 'matrix-' + Date.now() });
+      return Promise.reject(new Error("no remote poll state doc in Matrix mode"));
     }
     const _id = poll_doc_id_prefix + pid + "§state";
-    const local_fallback = (err): Promise<any> => {
-      // remote unreachable: fall back to the local replica of the state doc.
-      // Its revision converges with the remote one once replicated (#292):
-      this.G.L.warn("DataService.get_remote_poll_state_doc falling back to local state doc", pid, err);
-      return this.get_local_poll_db(pid).get(_id);
-    };
     const remote = this.remote_poll_dbs[pid];
     if (!remote) {
-      return local_fallback(new Error("no remote poll db connection"));
+      // Do NOT fall back to the local replica of the state doc: its revision
+      // hash depends on randomized encryption, so two offline replicas can
+      // produce different revisions even from identical state data, which
+      // would make winner selection diverge across devices. Rejecting lets
+      // the caller use its deterministic non-revision fallback seed (#292):
+      return Promise.reject(new Error("no remote poll db connection"));
     }
-    return remote.get(_id).catch(local_fallback);
+    return remote.get(_id);
   }
 
   // HOOKS FOR PAGES:
