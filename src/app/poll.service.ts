@@ -1858,12 +1858,26 @@ export class Poll {
           this.G.L.trace("Poll.end replicating a last time", this._pid);
           this.G.D.replicate_once(this.pid)
           .catch((err => {
-            // even if the final replication failed, the poll must still close
-            // deterministically; tally from the local data we have (#292):
+            if (!!err && err['is_consistency_failure'] === true) {
+              // the change queue could not be fully applied, so the local
+              // cache may still hold known-stale data (e.g. a deleted rating);
+              // tallying it could reproduce the divergent final results from
+              // #161. Abort this finalization attempt; since has_results
+              // stays false, end() will be retried by end_if_past_due() and
+              // after a restart with a rebuilt cache (#292):
+              this.G.L.error("Poll.end final cache flush failed, aborting finalization for a later retry", this._pid, err);
+              return 'abort';
+            }
+            // even if the final replication failed (e.g. because the remote
+            // db is unreachable), the poll must still close deterministically;
+            // tally from the local data we have (#292):
             this.G.L.error("Poll.end final replication failed, tallying from local data", this._pid, err);
             return false;
           }).bind(this))
-          .then((() => {
+          .then(((result) => {
+            if (result === 'abort') {
+              return;
+            }
             // 8. perform a final tally:
             this.G.L.trace("Poll.end tally a last time", this._pid);
             this.tally_all();

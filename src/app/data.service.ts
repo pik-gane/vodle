@@ -151,6 +151,17 @@ function get_poll_key_prefix(pid:string) {
   return 'poll.' + pid + '.';
 }
 
+function make_consistency_failure_error(message: string): Error {
+  /** Error signalling that the local cache could not be verified as fully
+   *  consistent (e.g. a queued change or tombstone recheck could not be
+   *  applied), as opposed to a mere transport/replication failure. Marked
+   *  with is_consistency_failure so that callers such as Poll.end() can
+   *  distinguish it from an unreachable remote (#292): */
+  const err = new Error(message);
+  err['is_consistency_failure'] = true;
+  return err;
+}
+
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
@@ -955,6 +966,17 @@ export class DataService implements OnDestroy {
           initializing_polls = true;
         }
       }
+    } else {
+      // restored poll caches skip ensure_local_poll_data(), which is otherwise
+      // the only place starting a conflict scan, so pre-existing local
+      // conflicts would survive restored sessions until some later change
+      // happens to target the same document; run the background scan for each
+      // restored non-draft poll's local db here as well (#292):
+      for (const pid of this._pids) {
+        if (!this.pid_is_draft(pid)) {
+          this.scan_poll_db_for_conflicts(pid);
+        }
+      }
     }    
     this.local_docs2cache_finished();
   }
@@ -1701,6 +1723,16 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
+      // initialize the poll cache's due synchronously: the state write below
+      // runs immediately and _setp_in_polldb copies poll_caches[pid].due into
+      // the state document's required due field, so it must not race the
+      // deferred migration callback below, which would otherwise be the first
+      // to set the cached due (#292):
+      const due_iso = p.due ? p.due.toISOString() : this.user_cache[prefix + 'due'];
+      if (due_iso) {
+        this.ensure_poll_cache(pid)['due'] = due_iso;
+      }
+
       // now wait for poll db before continuing:
       this.wait_for_poll_db(pid).finally(() => {
         // move data (incl. the due date) from local user db to poll db
@@ -1709,7 +1741,7 @@ export class DataService implements OnDestroy {
         // make the migration retryable via after_changes(), so a terminal
         // write failure cannot leave the poll running without e.g. its due
         // document (#292):
-        this.move_draft_data_to_poll_db(pid, p.due.toISOString());
+        this.move_draft_data_to_poll_db(pid, due_iso);
         // finally, start synching with remote poll db:
         // check if db credentials are set:
         if (this.poll_has_db_credentials(pid)) {
@@ -1870,7 +1902,7 @@ export class DataService implements OnDestroy {
         this.flush_change_queue_fully().then(flushed => {
 
           if (!flushed) {
-            reject(new Error("DataService.replicate_once could not flush queued changes"));
+            reject(make_consistency_failure_error("DataService.replicate_once could not flush queued changes"));
             return;
           }
 
@@ -1896,7 +1928,7 @@ export class DataService implements OnDestroy {
           this.flush_change_queue_fully().then(flushed => {
 
             if (!flushed) {
-              reject(new Error("DataService.replicate_once could not flush queued changes"));
+              reject(make_consistency_failure_error("DataService.replicate_once could not flush queued changes"));
               return;
             }
 

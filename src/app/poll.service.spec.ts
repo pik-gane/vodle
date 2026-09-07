@@ -19,7 +19,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 
-import { PollService } from './poll.service';
+import { environment } from '../environments/environment';
+import { PollService, Poll } from './poll.service';
 
 describe('PollService', () => {
   let service: PollService;
@@ -31,5 +32,87 @@ describe('PollService', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+});
+
+describe('Poll.end final replication handling (#292)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let previous_matrix_flag: boolean;
+
+  beforeEach(() => {
+    previous_matrix_flag = (environment as any).useMatrixBackend;
+    (environment as any).useMatrixBackend = false;
+    jasmine.clock().install();
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_matrix_flag;
+    jasmine.clock().uninstall();
+  });
+
+  const make_poll = (D: any): any => {
+    const p: any = Object.create(Poll.prototype);
+    p.G = { L, D };
+    p._pid = 'p1';
+    Object.defineProperty(p, 'state', { get: () => 'closed', set: noop });
+    Object.defineProperty(p, 'type', { get: () => 'winner' });
+    p.tally_all = jasmine.createSpy('tally_all');
+    p.notify_of_end = jasmine.createSpy('notify_of_end');
+    p.make_final_rand = jasmine.createSpy('make_final_rand');
+    p.make_winner = jasmine.createSpy('make_winner');
+    return p;
+  };
+
+  const run_end_to_completion = async (p: any) => {
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    jasmine.clock().tick(environment.closing.grace_period_2_ms);
+    jasmine.clock().tick(environment.closing.grace_period_3_ms);
+    // let the replicate_once promise chain settle:
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+  };
+
+  it('aborts finalization when the final flush signals a possibly stale cache', async () => {
+    const err: any = new Error('could not flush queued changes');
+    err['is_consistency_failure'] = true;
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.reject(err)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc'),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+
+    // the cache is known to possibly hold stale data, so tallying it could
+    // produce divergent final results (#161); finalization must be retried
+    // later instead (has_results stays false):
+    expect(p.tally_all).not.toHaveBeenCalled();
+    expect(p.make_winner).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
+  });
+
+  it('tallies from local data when the final replication merely failed (e.g. offline)', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: () => Promise.reject(new Error('offline')),
+      get_remote_poll_state_doc: () => Promise.reject(new Error('offline')),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+
+    // an unreachable remote must not prevent the poll from closing
+    // deterministically from local data:
+    expect(p.tally_all).toHaveBeenCalled();
+    expect(p.make_final_rand).toHaveBeenCalledWith('p1');
+    expect(p.make_winner).toHaveBeenCalled();
+    expect(p.notify_of_end).toHaveBeenCalled();
   });
 });

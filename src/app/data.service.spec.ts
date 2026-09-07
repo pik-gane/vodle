@@ -1209,6 +1209,33 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§nickname_signature', 'sig', false, false);
       });
 
+      it('change_poll_state initializes the poll cache due synchronously before the state write', () => {
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
+        };
+        // never resolve, so only the synchronous part of change_poll_state runs:
+        svc.wait_for_poll_db = () => new Promise(() => {});
+        svc.delu = jasmine.createSpy('delu');
+        svc.setu = jasmine.createSpy('setu');
+        let due_at_state_write = null;
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.callFake((pid, key, value) => {
+          if (key == 'state') {
+            due_at_state_write = svc.poll_caches[pid]['due'];
+          }
+          return true;
+        });
+        svc.poll_has_db_credentials = () => false;
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+
+        // _setp_in_polldb copies poll_caches[pid].due into the state doc's
+        // required due field, so it must not race the deferred migration:
+        expect(svc._setp_in_polldb).toHaveBeenCalledWith('p1', 'state', 'running');
+        expect(due_at_state_write).toBe('2030-01-01T00:00:00.000Z');
+      });
+
       it('change_poll_state deletes the user db due copy only after the due write is confirmed', async () => {
         const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
         svc._pids = new Set();
@@ -1334,6 +1361,59 @@ describe('DataService consistency hardening (#292)', () => {
         // emit the terminal 'error' that lets Poll.end() tally locally:
         expect(from).toHaveBeenCalledWith(svc.remote_poll_dbs['p1'],
                                           jasmine.objectContaining({retry: false}));
+      });
+
+      it('replicate_once rejects with a consistency-failure error when the final flush cannot verify the cache', async () => {
+        const handlers: Record<string, (arg?) => void> = {};
+        const handler: any = {};
+        handler.on = (event, cb) => { handlers[event] = cb; return handler; };
+        svc.get_local_poll_db = () => ({ replicate: { from: () => handler } });
+        svc.remote_poll_dbs = { p1: {} };
+        svc.flush_change_queue_fully = () => Promise.resolve(false);
+
+        const promise = svc.replicate_once('p1');
+        handlers['complete']({});
+
+        const err = await promise.then(() => null, e => e);
+        // Poll.end() must be able to distinguish this from a mere transport
+        // failure, since tallying a known-stale cache could produce divergent
+        // final results (#161):
+        expect(err).not.toBeNull();
+        expect(err['is_consistency_failure']).toBeTrue();
+      });
+
+      it('replicate_once rejects without the consistency-failure mark on a transport error', async () => {
+        const handlers: Record<string, (arg?) => void> = {};
+        const handler: any = {};
+        handler.on = (event, cb) => { handlers[event] = cb; return handler; };
+        svc.get_local_poll_db = () => ({ replicate: { from: () => handler } });
+        svc.remote_poll_dbs = { p1: {} };
+
+        const promise = svc.replicate_once('p1');
+        handlers['error'](new Error('offline'));
+
+        const err = await promise.then(() => null, e => e);
+        expect(err).not.toBeNull();
+        expect(err['is_consistency_failure']).toBeUndefined();
+      });
+
+      it('init_poll_data scans restored non-draft polls for pre-existing conflicts', () => {
+        svc.restored_poll_caches = true;
+        svc._pids = new Set(['pdraft', 'prun']);
+        svc.user_cache = {
+          'poll.pdraft.state': 'draft',
+          'poll.prun.state': 'running',
+        };
+        svc.scan_poll_db_for_conflicts = jasmine.createSpy('scan_poll_db_for_conflicts');
+        svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
+
+        svc.init_poll_data();
+
+        // restored sessions skip ensure_local_poll_data(), so the startup
+        // conflict scan must run here instead (#292):
+        expect(svc.scan_poll_db_for_conflicts).toHaveBeenCalledWith('prun');
+        expect(svc.scan_poll_db_for_conflicts).not.toHaveBeenCalledWith('pdraft');
+        expect(svc.local_docs2cache_finished).toHaveBeenCalled();
       });
     });
   });
