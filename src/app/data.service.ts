@@ -375,6 +375,9 @@ export class DataService implements OnDestroy {
   // results still need to be enqueued and applied before a flush is complete:
   private pending_recheck_count = 0;
   private pending_recheck_waiters: (() => void)[] = [];
+  // counts tombstone rechecks whose verification failed terminally, so that
+  // flushes overlapping such a failure can report incompleteness (#292):
+  private recheck_failure_count = 0;
 
   // Replication watchdog: per-replication progress tracking; keys are
   // 'user' for the user db sync and the pid for poll db syncs:
@@ -1717,9 +1720,20 @@ export class DataService implements OnDestroy {
             if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
               // optimistic cache update so that getp() serves the value immediately:
               this.ensure_poll_cache(pid)[key] = value as string;
+              // draft voter entries are keyed like "voter.<vid>§rating.<oid>",
+              // so for them the due requirement is decided by the segment
+              // after "§" (as doc2poll_cache does), not by the poll-level
+              // subkey "voter" (#292):
+              let add_due: boolean;
+              if (subkey == 'voter' && key.includes('§')) {
+                const vsubkey = key.slice(key.indexOf('§') + 1),
+                      vsubkeystart = vsubkey.slice(0, (vsubkey+'.').indexOf('.'));
+                add_due = voter_subkeystarts_requiring_due.includes(vsubkeystart);
+              } else {
+                add_due = poll_keystarts_requiring_due.includes(subkey);
+              }
               move_promises.push(
-                this.store_poll_data_confirmed(pid, key, value as string,
-                                               poll_keystarts_requiring_due.includes(subkey))
+                this.store_poll_data_confirmed(pid, key, value as string, add_due)
                 .then(() => {
                   // only now is it safe to remove the user db copy:
                   this.delu(ukey);
@@ -3106,6 +3120,7 @@ export class DataService implements OnDestroy {
   flush_change_queue(): boolean {
     /** apply all queued changes immediately, e.g. before resolving one-shot
      *  replications whose callers expect an up-to-date cache. */
+    const recheck_failures_at_start = this.recheck_failure_count;
     if (this.change_queue_timeout != null) {
       clearTimeout(this.change_queue_timeout);
       this.change_queue_timeout = null;
@@ -3125,9 +3140,12 @@ export class DataService implements OnDestroy {
       applied_without_drop = this.process_change_queue(false) && applied_without_drop;
     }
     // pending tombstone rechecks mean their resulting changes have not been
-    // enqueued yet, so the cache cannot be guaranteed up to date (#292):
+    // enqueued yet, so the cache cannot be guaranteed up to date; a recheck
+    // whose verification failed terminally likewise leaves a possibly stale
+    // cached value behind (#292):
     return applied_without_drop && this.change_queue.length == 0
-           && this.pending_recheck_count == 0;
+           && this.pending_recheck_count == 0
+           && this.recheck_failure_count == recheck_failures_at_start;
   }
 
   flush_change_queue_fully(): Promise<boolean> {
@@ -3137,6 +3155,7 @@ export class DataService implements OnDestroy {
      *  every replicated change – including verified deletions or surviving
      *  winners – has reached the cache (#292): */
     let applied_without_drop = true;
+    const recheck_failures_at_start = this.recheck_failure_count;
     const step = (): Promise<boolean> => {
       if (this.change_queue_timeout != null) {
         clearTimeout(this.change_queue_timeout);
@@ -3153,7 +3172,8 @@ export class DataService implements OnDestroy {
           this.pending_recheck_waiters.push(resolve);
         }).then(step);
       }
-      return Promise.resolve(applied_without_drop && this.change_queue.length == 0);
+      return Promise.resolve(applied_without_drop && this.change_queue.length == 0
+                             && this.recheck_failure_count == recheck_failures_at_start);
     };
     return step();
   }
@@ -3311,23 +3331,37 @@ export class DataService implements OnDestroy {
     // track this recheck so flush_change_queue_fully() can wait for the
     // change it will enqueue before one-shot replications resolve (#292):
     this.pending_recheck_count += 1;
-    db.get(entry.doc._id)
-    .then(doc => {
-      this.G.L.trace("DataService.recheck_deleted_doc winning revision survives tombstone, applying it", entry.pid, entry.doc._id);
-      this.enqueue_db_change(entry.pid, doc, !!doc._deleted, entry.tally, true);
-    })
-    .catch(err => {
-      if (err && err.status == 404) {
-        // the doc is really gone, apply the deletion:
-        this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
-      } else {
-        this.G.L.warn("DataService.recheck_deleted_doc could not verify tombstone, applying deletion", entry.pid, entry.doc._id, err);
-        this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
-      }
-    })
-    .then(() => {
-      this.recheck_finished();
-    });
+    const attempt_get = (attempt: number) => {
+      db.get(entry.doc._id)
+      .then(doc => {
+        this.G.L.trace("DataService.recheck_deleted_doc winning revision survives tombstone, applying it", entry.pid, entry.doc._id);
+        this.enqueue_db_change(entry.pid, doc, !!doc._deleted, entry.tally, true);
+        this.recheck_finished();
+      })
+      .catch(err => {
+        if (err && err.status == 404) {
+          // the doc is really gone, apply the deletion:
+          this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+          this.recheck_finished();
+        } else if (attempt < change_retry_max_attempts) {
+          // a transient read failure is no proof of deletion – a winning
+          // revision may still exist – so retry the read instead of
+          // removing possibly valid cached data (#292):
+          this.G.L.warn("DataService.recheck_deleted_doc could not verify tombstone, will retry", entry.pid, entry.doc._id, attempt, err);
+          window.setTimeout(() => attempt_get(attempt + 1), environment.db_put_retry_delay_ms);
+        } else {
+          // verification is exhausted. Keep the cached value rather than
+          // applying an unverified deletion, mark the current flush as
+          // incomplete, and invalidate the persisted cache so the next
+          // startup rebuilds the caches from the local db (#292):
+          this.G.L.error("DataService.recheck_deleted_doc could not verify tombstone, keeping cached value", entry.pid, entry.doc._id, err);
+          this.recheck_failure_count += 1;
+          this.invalidate_persisted_cache();
+          this.recheck_finished();
+        }
+      });
+    };
+    attempt_get(1);
   }
 
   private handle_deleted_user_doc(doc): boolean {

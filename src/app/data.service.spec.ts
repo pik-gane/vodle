@@ -994,6 +994,46 @@ describe('DataService consistency hardening (#292)', () => {
         expect(flushed).toBe(true);
         expect(svc.handle_deleted_poll_doc).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'd1'}));
       });
+
+      it('a tombstone recheck retries transient read failures instead of applying the deletion', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.returnValue(true);
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        const winner = {_id: 'd1', value: 'winning'};
+        let calls = 0;
+        svc.local_poll_dbs = { p1: { get: () => {
+          calls += 1;
+          return calls == 1 ? Promise.reject({status: 500}) : Promise.resolve(winner);
+        } } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        const flushed = await svc.flush_change_queue_fully();
+
+        expect(flushed).toBe(true);
+        expect(calls).toBe(2);
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        expect(svc.doc2poll_cache).toHaveBeenCalledWith('p1', winner);
+      });
+
+      it('an exhausted tombstone recheck keeps the cached value and fails the flush', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache');
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        svc.invalidate_persisted_cache = jasmine.createSpy('invalidate_persisted_cache');
+        const get = jasmine.createSpy('get').and.returnValue(Promise.reject({status: 500}));
+        svc.local_poll_dbs = { p1: { get } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        const flushed = await svc.flush_change_queue_fully();
+
+        expect(flushed).toBe(false);
+        expect(get).toHaveBeenCalledTimes(3);
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        expect(svc.doc2poll_cache).not.toHaveBeenCalled();
+        expect(svc.invalidate_persisted_cache).toHaveBeenCalled();
+      });
     });
 
     describe('transactional draft→running data moves', () => {
@@ -1103,6 +1143,34 @@ describe('DataService consistency hardening (#292)', () => {
 
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
         expect(svc.G.L.error).toHaveBeenCalled();
+      });
+
+      it('change_poll_state adds the due date for voter rating docs and option docs', async () => {
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.title': 'T',
+          'poll.p1.option.o1.name': 'O',
+          'poll.p1.voter.v1§rating.o1': '50',
+          'poll.p1.voter.v1§nickname_signature': 'sig',
+        };
+        svc.wait_for_poll_db = () => Promise.resolve();
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.returnValue(Promise.resolve());
+        svc.delu = jasmine.createSpy('delu');
+        svc.setu = jasmine.createSpy('setu');
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
+        svc.poll_has_db_credentials = () => false;
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'option.o1.name', 'O', true);
+        // voter rating docs need a due date so that doc2poll_cache accepts them:
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§rating.o1', '50', true);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§nickname_signature', 'sig', false);
       });
     });
 
