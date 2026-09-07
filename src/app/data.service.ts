@@ -376,8 +376,12 @@ export class DataService implements OnDestroy {
   private pending_recheck_count = 0;
   private pending_recheck_waiters: (() => void)[] = [];
   // counts tombstone rechecks whose verification failed terminally, so that
-  // flushes overlapping such a failure can report incompleteness (#292):
+  // flushes can report incompleteness while the cache may be stale (#292):
   private recheck_failure_count = 0;
+
+  // draft→running data migrations currently being (re)tried, so that
+  // after_changes() retries cannot overlap a still-running migration:
+  private draft_migration_in_flight: Record<string, boolean> = {};
 
   // Replication watchdog: per-replication progress tracking; keys are
   // 'user' for the user db sync and the pid for poll db syncs:
@@ -1697,57 +1701,15 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
-      // first store due in polldb so that it can be used for the other items;
-      // update the cache optimistically but use a confirmed write (#292):
-      this.ensure_poll_cache(pid)['due'] = p.due.toISOString();
-      this.store_poll_data_confirmed(pid, 'due', p.due.toISOString())
-      .catch(err => {
-        this.G.L.error("DataService.change_poll_state couldn't store due date in poll db", pid, err);
-      });
       // now wait for poll db before continuing:
       this.wait_for_poll_db(pid).finally(() => {
-        // move data from local user db to poll db transactionally: the copy
-        // in the user db is only deleted after the corresponding poll db
-        // write has been confirmed, so that a failed or interrupted write
-        // cannot lose draft data (#292):
-        const move_promises: Promise<void>[] = [];
-        for (const [ukey, value] of Object.entries(this.user_cache)) {
-          if (ukey.startsWith(prefix)) {
-            // used db entry belongs to this poll.
-            const key = ukey.substring(prefix.length),
-                  pos = (key+'.').indexOf('.'),
-                  subkey = (key+'.').slice(0, pos);
-            if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
-              // optimistic cache update so that getp() serves the value immediately:
-              this.ensure_poll_cache(pid)[key] = value as string;
-              // draft voter entries are keyed like "voter.<vid>§rating.<oid>",
-              // so for them the due requirement is decided by the segment
-              // after "§" (as doc2poll_cache does), not by the poll-level
-              // subkey "voter" (#292):
-              let add_due: boolean;
-              if (subkey == 'voter' && key.includes('§')) {
-                const vsubkey = key.slice(key.indexOf('§') + 1),
-                      vsubkeystart = vsubkey.slice(0, (vsubkey+'.').indexOf('.'));
-                add_due = voter_subkeystarts_requiring_due.includes(vsubkeystart);
-              } else {
-                add_due = poll_keystarts_requiring_due.includes(subkey);
-              }
-              move_promises.push(
-                this.store_poll_data_confirmed(pid, key, value as string, add_due)
-                .then(() => {
-                  // only now is it safe to remove the user db copy:
-                  this.delu(ukey);
-                })
-                .catch(err => {
-                  this.G.L.error("DataService.change_poll_state couldn't move, keeping user db copy", pid, ukey, key, err);
-                })
-              );
-            }
-          }
-        }
-        Promise.all(move_promises).then(() => {
-          this.G.L.info("DataService.change_poll_state finished moving draft data to poll db", pid, move_promises.length);
-        });
+        // move data (incl. the due date) from local user db to poll db
+        // transactionally; user db copies are only deleted after the
+        // corresponding poll db write has been confirmed, and leftover copies
+        // make the migration retryable via after_changes(), so a terminal
+        // write failure cannot leave the poll running without e.g. its due
+        // document (#292):
+        this.move_draft_data_to_poll_db(pid, p.due.toISOString());
         // finally, start synching with remote poll db:
         // check if db credentials are set:
         if (this.poll_has_db_credentials(pid)) {
@@ -1772,6 +1734,110 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.change_poll_state");
   }
 
+  private move_draft_data_to_poll_db(pid: string, due_iso?: string): Promise<void> {
+    /** Transactionally move a poll's draft data (incl. its due date) from the
+     *  user db to the poll db. Each user db copy is only deleted after the
+     *  corresponding poll db write has been confirmed, so a failed or
+     *  interrupted write cannot lose draft data. Leftover user db copies mark
+     *  the migration as still pending (see draft_migration_pending()), and
+     *  after_changes() retries it on later change batches and after restarts,
+     *  so a terminal write failure cannot permanently leave the poll running
+     *  without e.g. its due document (#292): */
+    if (this.draft_migration_in_flight[pid]) {
+      return Promise.resolve();
+    }
+    const prefix = get_poll_key_prefix(pid);
+    if (!this.user_cache[prefix + 'password']) {
+      // store_poll_data_confirmed would reject every write anyway:
+      this.G.L.warn("DataService.move_draft_data_to_poll_db missing poll password, keeping user db copies", pid);
+      return Promise.resolve();
+    }
+    this.draft_migration_in_flight[pid] = true;
+    const move_promises: Promise<void>[] = [];
+    // first store due in the poll db so that it can be used for the other
+    // items; update the cache optimistically but use a confirmed write (#292):
+    const due = due_iso || this.user_cache[prefix + 'due'];
+    if (due) {
+      this.ensure_poll_cache(pid)['due'] = due;
+      move_promises.push(
+        this.store_poll_data_confirmed(pid, 'due', due, false, false)
+        .then(() => {
+          // only now is it safe to remove the user db copy; until then it
+          // marks the due migration as pending so that it gets retried:
+          this.delu(prefix + 'due');
+        })
+        .catch(err => {
+          this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store due date in poll db yet, will retry", pid, err);
+        })
+      );
+    }
+    for (const [ukey, value] of Object.entries(this.user_cache)) {
+      if (ukey.startsWith(prefix)) {
+        // used db entry belongs to this poll.
+        const key = ukey.substring(prefix.length),
+              pos = (key+'.').indexOf('.'),
+              subkey = (key+'.').slice(0, pos);
+        if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
+          // optimistic cache update so that getp() serves the value
+          // immediately, but never clobber a value a migration retry may
+          // already have received from the authoritative poll db:
+          if (!(key in this.ensure_poll_cache(pid))) {
+            this.poll_caches[pid][key] = value as string;
+          }
+          // draft voter entries are keyed like "voter.<vid>§rating.<oid>",
+          // so for them the due requirement is decided by the segment
+          // after "§" (as doc2poll_cache does), not by the poll-level
+          // subkey "voter" (#292):
+          let add_due: boolean;
+          if (subkey == 'voter' && key.includes('§')) {
+            const vsubkey = key.slice(key.indexOf('§') + 1),
+                  vsubkeystart = vsubkey.slice(0, (vsubkey+'.').indexOf('.'));
+            add_due = voter_subkeystarts_requiring_due.includes(vsubkeystart);
+          } else {
+            add_due = poll_keystarts_requiring_due.includes(subkey);
+          }
+          move_promises.push(
+            this.store_poll_data_confirmed(pid, key, value as string, add_due, false)
+            .then(() => {
+              // only now is it safe to remove the user db copy:
+              this.delu(ukey);
+            })
+            .catch(err => {
+              this.G.L.error("DataService.move_draft_data_to_poll_db couldn't move yet, keeping user db copy for retry", pid, ukey, key, err);
+            })
+          );
+        }
+      }
+    }
+    return Promise.all(move_promises).then(() => {
+      if (this.draft_migration_pending(pid)) {
+        this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
+      } else {
+        this.G.L.info("DataService.move_draft_data_to_poll_db finished moving draft data to poll db", pid, move_promises.length);
+      }
+    }).finally(() => {
+      delete this.draft_migration_in_flight[pid];
+    });
+  }
+
+  private draft_migration_pending(pid: string): boolean {
+    /** whether user db copies of poll-db-authoritative data (incl. 'due') are
+     *  left over from an incomplete draft→running data migration (#292): */
+    const prefix = get_poll_key_prefix(pid);
+    for (const ukey of Object.keys(this.user_cache)) {
+      if (ukey.startsWith(prefix)) {
+        const key = ukey.substring(prefix.length),
+              subkey = (key+'.').slice(0, (key+'.').indexOf('.'));
+        if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
+          // covers 'due' as well, whose user db copy is only deleted after
+          // its poll db write has been confirmed:
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   replicate_once(pid: string): Promise<boolean> {
     this.G.L.entry("DataService.replicate_once", pid);
     
@@ -1786,7 +1852,12 @@ export class DataService implements OnDestroy {
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
 //          since: this.poll_caches[pid]['last_seq'] || 0,
-          retry: true,
+          // deliberately no infinite retry: this one-shot replication is used
+          // as the final pull before Poll.end() tallies, and with retry an
+          // unreachable remote would be retried forever instead of emitting
+          // the terminal 'error' that lets the caller fall back to the local
+          // data (#292):
+          retry: false,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
           selector: this.get_poll_doc_selector(pid)
@@ -2725,8 +2796,12 @@ export class DataService implements OnDestroy {
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][key] || '';
-      if (value == '') {
+      if (key in this.poll_caches[pid]) {
+        // test key presence, not the value: an authoritative empty string
+        // (e.g. an empty description or url) must not be overridden by a
+        // possibly stale user db copy (#292):
+        value = this.poll_caches[pid][key] || '';
+      } else {
         // fall back to a possibly remaining user db copy, e.g. when a
         // draft→running move write has not been confirmed yet (#292):
         const ukey = get_poll_key_prefix(pid) + key;
@@ -3120,7 +3195,6 @@ export class DataService implements OnDestroy {
   flush_change_queue(): boolean {
     /** apply all queued changes immediately, e.g. before resolving one-shot
      *  replications whose callers expect an up-to-date cache. */
-    const recheck_failures_at_start = this.recheck_failure_count;
     if (this.change_queue_timeout != null) {
       clearTimeout(this.change_queue_timeout);
       this.change_queue_timeout = null;
@@ -3141,11 +3215,13 @@ export class DataService implements OnDestroy {
     }
     // pending tombstone rechecks mean their resulting changes have not been
     // enqueued yet, so the cache cannot be guaranteed up to date; a recheck
-    // whose verification failed terminally likewise leaves a possibly stale
-    // cached value behind (#292):
+    // whose verification failed terminally leaves a possibly stale cached
+    // value behind for the rest of the session (only a restart rebuilds the
+    // caches from the local db), so every later flush must keep reporting
+    // incompleteness, not only ones overlapping the failure (#292):
     return applied_without_drop && this.change_queue.length == 0
            && this.pending_recheck_count == 0
-           && this.recheck_failure_count == recheck_failures_at_start;
+           && this.recheck_failure_count == 0;
   }
 
   flush_change_queue_fully(): Promise<boolean> {
@@ -3155,7 +3231,6 @@ export class DataService implements OnDestroy {
      *  every replicated change – including verified deletions or surviving
      *  winners – has reached the cache (#292): */
     let applied_without_drop = true;
-    const recheck_failures_at_start = this.recheck_failure_count;
     const step = (): Promise<boolean> => {
       if (this.change_queue_timeout != null) {
         clearTimeout(this.change_queue_timeout);
@@ -3172,8 +3247,11 @@ export class DataService implements OnDestroy {
           this.pending_recheck_waiters.push(resolve);
         }).then(step);
       }
+      // a terminally failed recheck – whether during this flush or earlier –
+      // means a possibly stale value is still cached for the rest of the
+      // session, so a full flush must remain unsuccessful (#292):
       return Promise.resolve(applied_without_drop && this.change_queue.length == 0
-                             && this.recheck_failure_count == recheck_failures_at_start);
+                             && this.recheck_failure_count == 0);
     };
     return step();
   }
@@ -3580,6 +3658,14 @@ export class DataService implements OnDestroy {
           // poll object does not exist yet, so create it:
           this.G.L.debug("DataService.after_changes creating poll object", pid);
           const p = new Poll(this.G, pid);
+        }
+        if (!environment.useMatrixBackend && !this.pid_is_draft(pid)
+            && this.draft_migration_pending(pid)) {
+          // an earlier draft→running data migration was interrupted or some
+          // of its confirmed writes (e.g. the due document) terminally
+          // failed; retry moving the leftover user db copies now (#292):
+          this.G.L.debug("DataService.after_changes retrying incomplete draft→running data migration", pid);
+          this.move_draft_data_to_poll_db(pid);
         }
         if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs) && !(environment.useMatrixBackend && this._matrixPollListeners[pid])) {
           // try syncing with remote db:
@@ -4207,11 +4293,14 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private store_poll_data_confirmed(pid: string, key: string, value: string, add_due = false): Promise<void> {
+  private store_poll_data_confirmed(pid: string, key: string, value: string, add_due = false, overwrite = true): Promise<void> {
     /** Store a poll data item in the local poll db and resolve only once the
      *  write is confirmed, retrying a bounded number of times. Used for
      *  transactional draft→running data moves, where the user db copy may
-     *  only be deleted after the poll db write has been confirmed (#292). */
+     *  only be deleted after the poll db write has been confirmed (#292).
+     *  With overwrite disabled, an existing doc with a different value counts
+     *  as confirmed too, so that a retried migration cannot clobber a newer
+     *  write that happened after the poll started running. */
     value = value || '';
     const is_voter_key = key.indexOf("§") >= 0,
           _id = poll_doc_id_prefix + pid + (is_voter_key ? '.' : '§') + key,
@@ -4227,13 +4316,18 @@ export class DataService implements OnDestroy {
         // only the due value is stored unencrypted:
         const enc_value = (key == 'due') ? value : encrypt(value, poll_pw);
         if (doc) {
-          const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw);
-          if (stored == value
+          const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw),
+                value_confirmed = (stored == value) || !overwrite;
+          if (value_confirmed
               && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
-            // already stored (incl. any required due field), write is confirmed:
+            // already stored (or a newer value that a non-overwriting
+            // migration retry must not clobber), incl. any required due
+            // field, so the write is confirmed:
             return;
           }
-          doc.value = enc_value;
+          if (!value_confirmed) {
+            doc.value = enc_value;
+          }
           if (add_due) {
             doc.due = this.poll_caches[pid]['due'];
           }

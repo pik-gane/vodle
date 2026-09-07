@@ -1034,6 +1034,24 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.doc2poll_cache).not.toHaveBeenCalled();
         expect(svc.invalidate_persisted_cache).toHaveBeenCalled();
       });
+
+      it('flushes remain unsuccessful after an exhausted tombstone recheck left a stale value cached', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache');
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        svc.invalidate_persisted_cache = jasmine.createSpy('invalidate_persisted_cache');
+        svc.local_poll_dbs = { p1: { get: () => Promise.reject({status: 500}) } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        expect(await svc.flush_change_queue_fully()).toBe(false);
+
+        // the possibly stale value stays cached for the rest of the session,
+        // so later flushes with nothing queued must also report incompleteness
+        // instead of letting e.g. Poll.end() tally the stale value:
+        expect(await svc.flush_change_queue_fully()).toBe(false);
+        expect(svc.flush_change_queue()).toBe(false);
+      });
     });
 
     describe('transactional draft→running data moves', () => {
@@ -1065,6 +1083,21 @@ describe('DataService consistency hardening (#292)', () => {
         expect(db.put).not.toHaveBeenCalled();
       });
 
+      it('store_poll_data_confirmed does not clobber a newer stored value when overwrite is disabled', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.resolve({_id: 'x', value: '2031-01-01T00:00:00.000Z'})),
+          put: jasmine.createSpy('put'),
+        };
+        svc.get_local_poll_db = () => db;
+
+        // migration retries must treat an existing (possibly newer) doc as
+        // confirmed instead of overwriting it with the stale user db copy:
+        await svc.store_poll_data_confirmed('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
+
+        expect(db.put).not.toHaveBeenCalled();
+      });
+
       it('store_poll_data_confirmed retries failing puts and rejects after bounded attempts', async () => {
         svc.user_cache['poll.p1.password'] = 'pw123';
         const db = {
@@ -1088,6 +1121,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc._pids = new Set();
         svc.user_cache = {
           'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
           'poll.p1.title': 'T',
           'poll.p1.myvid': 'v1', // stays in user db
         };
@@ -1106,7 +1140,7 @@ describe('DataService consistency hardening (#292)', () => {
 
         // the optimistic cache update happens immediately:
         expect(svc.poll_caches['p1']['title']).toBe('T');
-        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false, false);
         // ... but the user db copy is only deleted after the write confirms:
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
         resolvers['title'].res();
@@ -1122,6 +1156,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc._pids = new Set();
         svc.user_cache = {
           'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
           'poll.p1.title': 'T',
         };
         svc.wait_for_poll_db = () => Promise.resolve();
@@ -1149,6 +1184,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc._pids = new Set();
         svc.user_cache = {
           'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
           'poll.p1.title': 'T',
           'poll.p1.option.o1.name': 'O',
           'poll.p1.voter.v1§rating.o1': '50',
@@ -1166,11 +1202,68 @@ describe('DataService consistency hardening (#292)', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false);
-        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'option.o1.name', 'O', true);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false, false);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'option.o1.name', 'O', true, false);
         // voter rating docs need a due date so that doc2poll_cache accepts them:
-        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§rating.o1', '50', true);
-        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§nickname_signature', 'sig', false);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§rating.o1', '50', true, false);
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§nickname_signature', 'sig', false, false);
+      });
+
+      it('change_poll_state deletes the user db due copy only after the due write is confirmed', async () => {
+        const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
+          'poll.p1.due': '2030-01-01T00:00:00.000Z',
+        };
+        svc.wait_for_poll_db = () => Promise.resolve();
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.callFake((pid, key) => new Promise<void>((res, rej) => { resolvers[key] = {res, rej}; }));
+        svc.delu = jasmine.createSpy('delu');
+        svc.setu = jasmine.createSpy('setu');
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
+        svc.poll_has_db_credentials = () => false;
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
+        resolvers['due'].res();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
+      });
+
+      it('a terminally failed move stays pending and is retried by move_draft_data_to_poll_db', async () => {
+        svc.user_cache = {
+          'poll.p1.state': 'running',
+          'poll.p1.password': 'pw123',
+          'poll.p1.due': '2030-01-01T00:00:00.000Z',
+          'poll.p1.title': 'T',
+        };
+        let fail = true;
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.callFake(() => fail ? Promise.reject(new Error('io error')) : Promise.resolve());
+        svc.delu = jasmine.createSpy('delu').and.callFake(key => { delete svc.user_cache[key]; });
+        svc.G.L.error = jasmine.createSpy('error');
+
+        await svc.move_draft_data_to_poll_db('p1');
+
+        // the failed writes keep the user db copies, marking the migration
+        // as pending so after_changes() can retry it later:
+        expect(svc.delu).not.toHaveBeenCalled();
+        expect(svc.draft_migration_pending('p1')).toBe(true);
+        expect(svc.G.L.error).toHaveBeenCalled();
+
+        fail = false;
+        await svc.move_draft_data_to_poll_db('p1');
+
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.title');
+        expect(svc.draft_migration_pending('p1')).toBe(false);
       });
     });
 
@@ -1196,6 +1289,15 @@ describe('DataService consistency hardening (#292)', () => {
         svc.poll_caches['p1']['title'] = 'moved';
         expect(svc.getp('p1', 'title')).toBe('moved');
       });
+
+      it('getp honors an authoritative empty poll db value over a stale user db copy', () => {
+        svc.user_cache = {
+          'poll.p1.state': 'running',
+          'poll.p1.desc': 'stale non-empty copy',
+        };
+        svc.poll_caches['p1'] = { 'desc': '' };
+        expect(svc.getp('p1', 'desc')).toBe('');
+      });
     });
 
     describe('poll end robustness', () => {
@@ -1217,6 +1319,21 @@ describe('DataService consistency hardening (#292)', () => {
 
         expect(await svc.get_remote_poll_state_doc('p1')).toBe(remote_doc);
         expect(svc.get_local_poll_db).not.toHaveBeenCalled();
+      });
+
+      it('replicate_once starts a genuinely one-shot replication without infinite retry', () => {
+        const handler: any = {};
+        handler.on = jasmine.createSpy('on').and.returnValue(handler);
+        const from = jasmine.createSpy('from').and.returnValue(handler);
+        svc.get_local_poll_db = () => ({ replicate: { from } });
+        svc.remote_poll_dbs = { p1: {} };
+
+        svc.replicate_once('p1');
+
+        // with retry an unreachable remote would be retried forever and never
+        // emit the terminal 'error' that lets Poll.end() tally locally:
+        expect(from).toHaveBeenCalledWith(svc.remote_poll_dbs['p1'],
+                                          jasmine.objectContaining({retry: false}));
       });
     });
   });
