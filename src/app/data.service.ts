@@ -371,6 +371,10 @@ export class DataService implements OnDestroy {
   private change_queue_scheduled = false;
   private change_queue_timeout: ReturnType<typeof setTimeout> | null = null;
   private change_retry_counts: Record<string, number> = {};
+  // pending asynchronous tombstone rechecks (recheck_deleted_doc) whose
+  // results still need to be enqueued and applied before a flush is complete:
+  private pending_recheck_count = 0;
+  private pending_recheck_waiters: (() => void)[] = [];
 
   // Replication watchdog: per-replication progress tracking; keys are
   // 'user' for the user db sync and the pid for poll db syncs:
@@ -1436,26 +1440,31 @@ export class DataService implements OnDestroy {
             if (change.pending == 0) {
               // replication completed
 
-              // #292: make sure all queued changes are applied to the cache
-              // before callers may rely on it:
-              if (!this.flush_change_queue()) {
-                reject(new Error("DataService.connect_to_remote_poll_db could not flush queued changes"));
-                return;
-              }
+              // #292: make sure all queued changes – including deferred
+              // tombstone rechecks – are applied to the cache before callers
+              // may rely on it:
+              this.flush_change_queue_fully().then(flushed => {
 
-              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
+                if (!flushed) {
+                  reject(new Error("DataService.connect_to_remote_poll_db could not flush queued changes"));
+                  return;
+                }
 
-              this.need_poll_db_replication[pid] = false;
+                this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
 
-              if (this.poll_caches[pid]['state'] == 'closed') {
-                this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
-              } else {
-                // now start synchronisation asynchronously:
-                this.start_poll_sync.bind(this)(pid);
-              }
-      
-              // RESOLVE:
-              resolve(true);  
+                this.need_poll_db_replication[pid] = false;
+
+                if (this.poll_caches[pid]['state'] == 'closed') {
+                  this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
+                } else {
+                  // now start synchronisation asynchronously:
+                  this.start_poll_sync.bind(this)(pid);
+                }
+
+                // RESOLVE:
+                resolve(true);
+
+              });
             }
 
           }).on('error', err => {
@@ -1771,17 +1780,21 @@ export class DataService implements OnDestroy {
 
         this.G.L.trace("DataService.replicate_once completed", pid, msg);
 
-        // #292: make sure all queued changes are applied to the cache
-        // before callers may rely on it:
-        if (!this.flush_change_queue()) {
-          reject(new Error("DataService.replicate_once could not flush queued changes"));
-          return;
-        }
+        // #292: make sure all queued changes – including deferred tombstone
+        // rechecks – are applied to the cache before callers may rely on it:
+        this.flush_change_queue_fully().then(flushed => {
 
-        this.need_poll_db_replication[pid] = false;
+          if (!flushed) {
+            reject(new Error("DataService.replicate_once could not flush queued changes"));
+            return;
+          }
 
-        // RESOLVE:
-        resolve(true);  
+          this.need_poll_db_replication[pid] = false;
+
+          // RESOLVE:
+          resolve(true);
+
+        });
 
       }).on('change', change => {
 
@@ -1793,19 +1806,23 @@ export class DataService implements OnDestroy {
         if (change.pending == 0) {
           // replication completed
 
-          // #292: make sure all queued changes are applied to the cache
-          // before callers may rely on it:
-          if (!this.flush_change_queue()) {
-            reject(new Error("DataService.replicate_once could not flush queued changes"));
-            return;
-          }
+          // #292: make sure all queued changes – including deferred tombstone
+          // rechecks – are applied to the cache before callers may rely on it:
+          this.flush_change_queue_fully().then(flushed => {
 
-          this.G.L.trace("DataService.replicate_once completed", pid);
+            if (!flushed) {
+              reject(new Error("DataService.replicate_once could not flush queued changes"));
+              return;
+            }
 
-          this.need_poll_db_replication[pid] = false;
+            this.G.L.trace("DataService.replicate_once completed", pid);
 
-          // RESOLVE:
-          resolve(true);  
+            this.need_poll_db_replication[pid] = false;
+
+            // RESOLVE:
+            resolve(true);
+
+          });
         }
 
       }).on('error', err => {
@@ -3107,7 +3124,51 @@ export class DataService implements OnDestroy {
          pass++) {
       applied_without_drop = this.process_change_queue(false) && applied_without_drop;
     }
-    return applied_without_drop && this.change_queue.length == 0;
+    // pending tombstone rechecks mean their resulting changes have not been
+    // enqueued yet, so the cache cannot be guaranteed up to date (#292):
+    return applied_without_drop && this.change_queue.length == 0
+           && this.pending_recheck_count == 0;
+  }
+
+  flush_change_queue_fully(): Promise<boolean> {
+    /** like flush_change_queue(), but additionally waits for pending
+     *  asynchronous tombstone rechecks (recheck_deleted_doc) and applies the
+     *  changes they enqueue, so that one-shot replications only resolve after
+     *  every replicated change – including verified deletions or surviving
+     *  winners – has reached the cache (#292): */
+    let applied_without_drop = true;
+    const step = (): Promise<boolean> => {
+      if (this.change_queue_timeout != null) {
+        clearTimeout(this.change_queue_timeout);
+        this.change_queue_timeout = null;
+        this.change_queue_scheduled = false;
+      }
+      for (let pass = 0;
+           this.change_queue.length > 0 && pass < change_retry_max_attempts;
+           pass++) {
+        applied_without_drop = this.process_change_queue(false) && applied_without_drop;
+      }
+      if (this.pending_recheck_count > 0) {
+        return new Promise<void>(resolve => {
+          this.pending_recheck_waiters.push(resolve);
+        }).then(step);
+      }
+      return Promise.resolve(applied_without_drop && this.change_queue.length == 0);
+    };
+    return step();
+  }
+
+  private recheck_finished() {
+    /** a pending tombstone recheck has enqueued its result (or was skipped);
+     *  wake up any flush_change_queue_fully() waiting for it: */
+    this.pending_recheck_count -= 1;
+    if (this.pending_recheck_count == 0) {
+      const waiters = this.pending_recheck_waiters;
+      this.pending_recheck_waiters = [];
+      for (const waiter of waiters) {
+        waiter();
+      }
+    }
   }
 
   private invalidate_persisted_cache() {
@@ -3247,6 +3308,9 @@ export class DataService implements OnDestroy {
       this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
       return;
     }
+    // track this recheck so flush_change_queue_fully() can wait for the
+    // change it will enqueue before one-shot replications resolve (#292):
+    this.pending_recheck_count += 1;
     db.get(entry.doc._id)
     .then(doc => {
       this.G.L.trace("DataService.recheck_deleted_doc winning revision survives tombstone, applying it", entry.pid, entry.doc._id);
@@ -3260,6 +3324,9 @@ export class DataService implements OnDestroy {
         this.G.L.warn("DataService.recheck_deleted_doc could not verify tombstone, applying deletion", entry.pid, entry.doc._id, err);
         this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
       }
+    })
+    .then(() => {
+      this.recheck_finished();
     });
   }
 

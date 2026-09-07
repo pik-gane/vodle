@@ -966,6 +966,34 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.handle_deleted_poll_doc).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'd1'}));
         expect(svc.doc2poll_cache).not.toHaveBeenCalled();
       });
+
+      it('flush_change_queue reports incompleteness while a tombstone recheck is still pending', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.returnValue(true);
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        svc.local_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.resolve({_id: 'd1', value: 'winning'})) } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        // the recheck's db.get has not resolved yet, so the flush is incomplete:
+        expect(svc.flush_change_queue()).toBe(false);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(svc.flush_change_queue()).toBe(true);
+      });
+
+      it('flush_change_queue_fully only resolves after pending tombstone rechecks were applied', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache');
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc').and.returnValue(true);
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        svc.local_poll_dbs = { p1: { get: jasmine.createSpy('get').and.returnValue(Promise.reject({status: 404})) } };
+
+        svc.enqueue_db_change('p1', {_id: 'd1', _deleted: true}, true, true);
+        const flushed = await svc.flush_change_queue_fully();
+
+        expect(flushed).toBe(true);
+        expect(svc.handle_deleted_poll_doc).toHaveBeenCalledWith('p1', jasmine.objectContaining({_id: 'd1'}));
+      });
     });
 
     describe('transactional draft→running data moves', () => {
