@@ -76,21 +76,87 @@ When coding, please try to stick to the style you see in the existing code. Ther
 
 ## 4. Working on translations
 
-Currently, the following workflow for translations has proved useful:
+vodle's user interface lives in one JSON file per language under
+[`src/assets/i18n/`](./src/assets/i18n/), with `en.json` as the source of truth.
+We manage translations through [Weblate](https://hosted.weblate.org/projects/vodle/),
+which is libre software and free of charge for you (you need a free account there).
 
-1. If the language you want to work on is not yet supported at all, open an issue in the issue tracker (https://github.com/pik-gane/vodle/issues) similar to this one: https://github.com/pik-gane/vodle/issues/61  In that issue, indicate whether you prefer to use [Crowdin](https://crowdin.com) or [Weblate](https://weblate.org/en/) for working on the translations. Even though we [have used Crowdin in the past](https://crowdin.com/project/vodle), **we encourage you to use Weblate** instead since it is libre software. Both tools will be free of charge for you (you have to register for free accounts there however). A third option would be to work on the JSON files directly, but we discourage this since it makes the review process harder; if you still choose this way, please contact us first before you work on a JSON file directly.
-2. Once there is an issue and prospective contributor for a language, we will set up that language in Crowdin or Weblate and put the link to it into the issue. The current weblate translations can be found [here](https://hosted.weblate.org/projects/vodle/).
-3. If working with Crowdin, you can start working on new or existing translations by clicking on the language and then on "en.json". The Crowdin GUI lets you filter text snippets by status, but we recommend to use the filter "Show all" since that keeps the text snippets in a logical ordering, grouped by context / app page (the same ordering they appear in the corresponding JSON file). 
-4. If working with Weblate, please look at this [video tutorial](https://www.youtube.com/watch?v=VFwTn32MrBw) for now. Once we have collected experiences with it, we will add some details here as well. 
-5. Some text snippets begin with "COMMENT" – they are meant to guide you and need not be translated. An additional orientation about where a snippet eventually goes can be seen under the "context" headline below the text snippet on the right-hand side of the Crowdin GUI.
-6. If you are unsure where a particular text snippet goes, you can browse [this gallery of screeenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip) for its key.
-7. Some terms (e.g., "wap", "approve", "option") require special care and are thus described in Crowdin's glossary/terminology, which you can switch on via the third button on the right-hand side of the Crowdin editor: ![image](https://user-images.githubusercontent.com/22815964/197727161-956ebd09-6682-4515-b660-8c846dadac3f.png) 
-8. While you're working on a translation, please report ever so often in the corresponding issue page, where we can also clarify questions.
-9. If you spot an error in the English base text, please *do not* correct it within the translation tool but rather report it in the issue page.
-10. Once you want to have a look at your changes in a test installation, simply tell us in the issue page and we will set up a test installation for you.
-11. Once you want your changes reviewed, we need to identify another person who speaks that language, and we would be grateful if you could suggest someone for this task :-)
+We have [used Crowdin in the past](https://crowdin.com/project/vodle) and
+`crowdin.yml` is still in the repository, but Weblate is the tool we actively
+maintain. Please start there unless you have a specific reason not to.
 
-If you are more experienced with Weblate than us and can recommend improvements to our workflow especially regarding the review process and synchronisation between the git repo and the translation tool, please let us know!
+Editing the JSON files directly is a third option, but we discourage it: it makes
+review harder and Weblate will overwrite the file on its next sync. If you still
+want to go that way, please talk to us first.
+
+### For translators
+
+1. **If your language is not supported yet**, open an issue in the
+   [issue tracker](https://github.com/pik-gane/vodle/issues), similar to
+   [#61](https://github.com/pik-gane/vodle/issues/61). We will set the language up
+   in Weblate and put the link into the issue.
+2. **Getting started with Weblate**: this
+   [video tutorial](https://www.youtube.com/watch?v=VFwTn32MrBw) is a good
+   introduction. Pick the vodle project, then your language, then the
+   *user interface* component.
+3. **Ordering.** The strings are grouped by app page, in the same order as in the
+   JSON file. Browsing in that order gives you far more context than jumping
+   between untranslated strings, so we recommend working through a page at a time
+   rather than filtering by state.
+4. **Comments.** Strings beginning with `[COMMENT]`, and keys starting with an
+   underscore (`_HEADER_`, `_OVERALL_CONVENTIONS_`, …), are guidance for you and
+   need not be translated. Leave them as they are.
+5. **Where does this string go?** The key name tells you the page
+   (`poll.winner-is` is on the poll page). If that is not enough, browse
+   [this gallery of screenshots](https://github.com/pik-gane/vodle/files/9815313/translate_key_screenshots.zip)
+   for the key.
+6. **Special terms.** Some words — "wap", "approve", "option", "share" — carry a
+   specific meaning in vodle and should be translated consistently. See the
+   `glossary` entries in `en.json`, and ask in your language's issue if a term is
+   unclear.
+7. **Sentence fragments.** Several keys are pieces of a sentence that surround an
+   inserted value, e.g. `explain.among-them-line-1-before-optionname` and
+   `…-after-optionname`. Your language may not need any text in one of these
+   positions. **Do not just leave it empty** — say so in your language's issue, so
+   we can register it (see *Empty strings* below). An empty string means "not
+   translated yet" and will be shown in English.
+8. **Errors in the English source text**: please do *not* fix them in Weblate.
+   Report them in the issue instead, so the change reaches every language.
+9. **Progress and questions**: report in your language's issue every so often —
+   that is also where we sort out anything unclear.
+10. **Trying it out**: say so in the issue and we will set up a test installation
+    for you.
+11. **Review**: we look for a second speaker of the language to review. If you can
+    suggest someone, we would be grateful.
+
+### How the synchronisation works
+
+Useful to know, because the behaviour is not obvious:
+
+- **Weblate does not push to `main`.** It pushes to its own fork and keeps a
+  single pull request open against this repository
+  ([#281](https://github.com/pik-gane/vodle/pull/281)), rebasing it as
+  translations come in. So "Push" succeeding in Weblate and nothing appearing in
+  `main` is the normal state, not a failure. The changes arrive when a maintainer
+  merges that PR.
+- **The PR needs a maintainer.** `main` is a protected branch, so the Weblate PR
+  will sit at "blocked" until someone reviews and merges it. If it has been quiet
+  for a while, that is the thing to check.
+- **Empty strings mean "untranslated".** Weblate writes out every key for every
+  language and fills the ones nobody has translated yet with `""`.
+  [ngx-translate](https://github.com/ngx-translate/core) only falls back to the
+  default language when a key is *missing*, not when it is present and empty, so
+  such strings would render blank. [`src/app/i18n-loader.ts`](./src/app/i18n-loader.ts)
+  strips empty values at load time, which turns them back into genuine misses and
+  restores the English fallback.
+- **Intentionally empty strings** — see translator step 7 — must therefore be
+  registered in the `INTENTIONALLY_EMPTY` map in `src/app/i18n-loader.ts`, keyed by
+  language and dot-separated path. Anything not listed there is treated as
+  untranslated. Nothing is ever pruned from `en.json`, since that is the fallback
+  target.
+
+If you are more experienced with Weblate than we are and can suggest improvements
+to this workflow — especially around review — please let us know.
 
 <!--
 
