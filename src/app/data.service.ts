@@ -162,6 +162,7 @@ const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db
 const replication_watchdog_interval_ms = 10 * 1000; // how often to check for stalled replications
 const replication_stall_threshold_ms = 30 * 1000; // consider a replication stalled after this long without progress
 const change_retry_max_attempts = 3; // failed change docs are retried this often before being dropped
+const confirmed_put_max_attempts = 5; // confirmed writes (e.g. draft→running data moves) are attempted this often before giving up
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
 const poll_keystarts_in_user_db = [
@@ -798,6 +799,8 @@ export class DataService implements OnDestroy {
 
           this.apply_user_bootstrap_changes(changes);
           this.mark_user_db_bootstrapped();
+          // background pass resolving any pre-existing conflicts (#292):
+          this.scan_user_db_for_conflicts();
 
           this.init_poll_data();
 
@@ -847,6 +850,8 @@ export class DataService implements OnDestroy {
 
         this.apply_user_bootstrap_changes(changes);
         this.mark_user_db_bootstrapped();
+        // background pass resolving any pre-existing conflicts (#292):
+        this.scan_user_db_for_conflicts();
 
       }).catch(err => {
 
@@ -1123,6 +1128,8 @@ export class DataService implements OnDestroy {
 
       this.apply_poll_bootstrap_changes(pid, changes);
       this.mark_poll_db_bootstrapped_now(pid);
+      // background pass resolving any pre-existing conflicts (#292):
+      this.scan_poll_db_for_conflicts(pid);
 
     }).catch(err => {
 
@@ -1678,11 +1685,20 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
-      // first store due in polldb so that it can be used for the other items:
-      this._setp_in_polldb(pid, 'due', p.due.toISOString());
+      // first store due in polldb so that it can be used for the other items;
+      // update the cache optimistically but use a confirmed write (#292):
+      this.ensure_poll_cache(pid)['due'] = p.due.toISOString();
+      this.store_poll_data_confirmed(pid, 'due', p.due.toISOString())
+      .catch(err => {
+        this.G.L.error("DataService.change_poll_state couldn't store due date in poll db", pid, err);
+      });
       // now wait for poll db before continuing:
       this.wait_for_poll_db(pid).finally(() => {
-        // move data from local user db to poll db.
+        // move data from local user db to poll db transactionally: the copy
+        // in the user db is only deleted after the corresponding poll db
+        // write has been confirmed, so that a failed or interrupted write
+        // cannot lose draft data (#292):
+        const move_promises: Promise<void>[] = [];
         for (const [ukey, value] of Object.entries(this.user_cache)) {
           if (ukey.startsWith(prefix)) {
             // used db entry belongs to this poll.
@@ -1690,14 +1706,25 @@ export class DataService implements OnDestroy {
                   pos = (key+'.').indexOf('.'),
                   subkey = (key+'.').slice(0, pos);
             if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
-              if (this._setp_in_polldb(pid, key, value as string)) {
-                this.delu(ukey);
-              } else {
-                this.G.L.warn("DataService.change_poll_state couldn't move", pid, ukey, key);
-              }
+              // optimistic cache update so that getp() serves the value immediately:
+              this.ensure_poll_cache(pid)[key] = value as string;
+              move_promises.push(
+                this.store_poll_data_confirmed(pid, key, value as string,
+                                               poll_keystarts_requiring_due.includes(subkey))
+                .then(() => {
+                  // only now is it safe to remove the user db copy:
+                  this.delu(ukey);
+                })
+                .catch(err => {
+                  this.G.L.error("DataService.change_poll_state couldn't move, keeping user db copy", pid, ukey, key, err);
+                })
+              );
             }
           }
         }
+        Promise.all(move_promises).then(() => {
+          this.G.L.info("DataService.change_poll_state finished moving draft data to poll db", pid, move_promises.length);
+        });
         // finally, start synching with remote poll db:
         // check if db credentials are set:
         if (this.poll_has_db_credentials(pid)) {
@@ -1799,7 +1826,17 @@ export class DataService implements OnDestroy {
       return Promise.resolve({ _id: pid, _rev: 'matrix-' + Date.now() });
     }
     const _id = poll_doc_id_prefix + pid + "§state";
-    return this.remote_poll_dbs[pid].get(_id);
+    const local_fallback = (err): Promise<any> => {
+      // remote unreachable: fall back to the local replica of the state doc.
+      // Its revision converges with the remote one once replicated (#292):
+      this.G.L.warn("DataService.get_remote_poll_state_doc falling back to local state doc", pid, err);
+      return this.get_local_poll_db(pid).get(_id);
+    };
+    const remote = this.remote_poll_dbs[pid];
+    if (!remote) {
+      return local_fallback(new Error("no remote poll db connection"));
+    }
+    return remote.get(_id).catch(local_fallback);
   }
 
   // HOOKS FOR PAGES:
@@ -2619,6 +2656,16 @@ export class DataService implements OnDestroy {
     return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
 
+  private poll_data_authority(pid: string, key: string): 'user' | 'poll' {
+    /** Central rule deciding which database is authoritative for a poll data
+     *  item (#292 item 6): draft polls' data and certain personal keys live in
+     *  the user db, everything else in the poll's own db. All getp/setp/delp
+     *  routing must go through this. */
+    const pos = (key+'.').indexOf('.'),
+          subkey = (key+'.').slice(0, pos);
+    return (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) ? 'user' : 'poll';
+  }
+
   getp(pid:string, key:string): string {
     // get poll data item
 
@@ -2626,9 +2673,7 @@ export class DataService implements OnDestroy {
     if (environment.useMatrixBackend) {
       // For Matrix backend, draft polls and user-db keys stay in user_cache.
       // Non-draft poll data comes from poll_caches (populated from Matrix).
-      const pos = (key+'.').indexOf('.'),
-            subkey = (key+'.').slice(0, pos);
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (this.poll_data_authority(pid, key) == 'user') {
         const ukey = get_poll_key_prefix(pid) + key;
         return this.user_cache[ukey] || '';
       }
@@ -2643,9 +2688,7 @@ export class DataService implements OnDestroy {
     }
 
     let value = null;
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (this.poll_data_authority(pid, key) == 'user') {
       // draft polls' data is stored in user's database:
       const ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
@@ -2653,6 +2696,12 @@ export class DataService implements OnDestroy {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
       value = this.poll_caches[pid][key] || '';
+      if (value == '') {
+        // fall back to a possibly remaining user db copy, e.g. when a
+        // draft→running move write has not been confirmed yet (#292):
+        const ukey = get_poll_key_prefix(pid) + key;
+        value = this.user_cache[ukey] || '';
+      }
     }
     return value;
   }
@@ -2674,12 +2723,11 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.setp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
     // decide where to store data:
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
+    const authority = this.poll_data_authority(pid, key);
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (authority == 'user') {
         return this._setp_in_userdb(pid, key, value);
       }
       // Non-draft, non-userdb key: store in local cache and sync to Matrix
@@ -2691,7 +2739,7 @@ export class DataService implements OnDestroy {
       return true;
     }
 
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (authority == 'user') {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
       if (!(key in this.poll_caches[pid])) {
@@ -2717,12 +2765,11 @@ export class DataService implements OnDestroy {
       this._pid_oids[pid].delete(oid);
       this.G.L.trace("DataService.delp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
+    const authority = this.poll_data_authority(pid, key);
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (authority == 'user') {
         const ukey = get_poll_key_prefix(pid) + key;
         this.delu(ukey);
       } else {
@@ -2735,7 +2782,7 @@ export class DataService implements OnDestroy {
       return;
     }
 
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (authority == 'user') {
       // construct key for user db:
       const ukey = get_poll_key_prefix(pid) + key;
       this.delu(ukey);
@@ -3107,6 +3154,8 @@ export class DataService implements OnDestroy {
     this.change_queue_timeout = null;
     const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
     let dropped_changes = false;
+    // collect ids of applied replicated docs for a batched conflict check (#292):
+    const conflict_check_ids: Record<string, Set<string>> = {};
 
     let local_changes = false, tally = false;
     for (let i = 0; i < latest.length; i++) {
@@ -3135,6 +3184,10 @@ export class DataService implements OnDestroy {
             }
           }
           tally = tally || entry.tally;
+        }
+        if (!entry.deleted) {
+          const scope = entry.pid || '';
+          (conflict_check_ids[scope] = conflict_check_ids[scope] || new Set()).add(entry.doc._id);
         }
         delete this.change_retry_counts[key];
       } catch (err) {
@@ -3166,6 +3219,8 @@ export class DataService implements OnDestroy {
         this.page.onDataChange();
       }
     }
+    // background: resolve any conflicts the applied replicated docs may carry (#292):
+    this.schedule_conflict_checks(conflict_check_ids);
     this.G.L.exit("DataService.process_change_queue");
     return !dropped_changes;
   }
@@ -3232,6 +3287,91 @@ export class DataService implements OnDestroy {
       }  
     }
     return false;
+  }
+
+  // Conflict detection & deterministic resolution (issue #292):
+
+  private resolve_doc_conflicts(db, doc): Promise<boolean> {
+    /** Deterministically resolve a conflicted document by deleting all losing
+     *  revisions. CouchDB/PouchDB pick the winning revision deterministically,
+     *  so removing the losers makes every replica converge on the same
+     *  winning revision (#292). */
+    if (!doc || !doc._conflicts || doc._conflicts.length == 0) {
+      return Promise.resolve(false);
+    }
+    this.G.L.warn("DataService.resolve_doc_conflicts resolving conflicted doc", doc._id, doc._conflicts);
+    const removals = doc._conflicts.map(rev =>
+      db.remove(doc._id, rev)
+      .catch(err => {
+        // another client may have resolved this revision concurrently:
+        this.G.L.trace("DataService.resolve_doc_conflicts couldn't remove losing revision", doc._id, rev, err);
+      })
+    );
+    return Promise.all(removals).then(() => true);
+  }
+
+  private check_docs_for_conflicts(db, label: string, ids?: string[]): Promise<number> {
+    /** Fetch docs (all of them, or only the given ids) with conflict metadata
+     *  and resolve any conflicts found. Used as a background scan at startup
+     *  and as a batched check for docs that arrived via replication (#292).
+     *  Never rejects. */
+    if (!db) {
+      return Promise.resolve(0);
+    }
+    const options: any = {include_docs: true, conflicts: true};
+    if (ids) {
+      if (ids.length == 0) {
+        return Promise.resolve(0);
+      }
+      options.keys = ids;
+    }
+    return db.allDocs(options)
+    .then(result => {
+      const conflicted = (result.rows || []).filter(row => 
+        row.doc && row.doc._conflicts && row.doc._conflicts.length > 0);
+      if (conflicted.length == 0) {
+        return 0;
+      }
+      this.G.L.info("DataService.check_docs_for_conflicts found conflicted docs", label, conflicted.length);
+      return Promise.all(conflicted.map(row => this.resolve_doc_conflicts(db, row.doc)))
+      .then(() => conflicted.length);
+    })
+    .catch(err => {
+      this.G.L.warn("DataService.check_docs_for_conflicts failed", label, err);
+      return 0;
+    });
+  }
+
+  private scan_user_db_for_conflicts() {
+    /** background startup pass over the whole local user db (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    this.check_docs_for_conflicts(this.local_synced_user_db, 'user');
+  }
+
+  private scan_poll_db_for_conflicts(pid: string) {
+    /** background startup pass over a whole local poll db (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    this.check_docs_for_conflicts(this.get_local_poll_db(pid), 'poll ' + pid);
+  }
+
+  private schedule_conflict_checks(ids_by_scope: Record<string, Set<string>>) {
+    /** batched follow-up conflict checks for docs that were just applied from
+     *  replication change events ('' scope means the user db) (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    for (const scope of Object.keys(ids_by_scope)) {
+      const ids = [...ids_by_scope[scope]];
+      if (scope == '') {
+        this.check_docs_for_conflicts(this.local_synced_user_db, 'user', ids);
+      } else if (scope in this.local_poll_dbs) {
+        this.check_docs_for_conflicts(this.local_poll_dbs[scope], 'poll ' + scope, ids);
+      }
+    }
   }
 
   private after_changes(tally=true) {
@@ -3899,6 +4039,58 @@ export class DataService implements OnDestroy {
       // RETURN:
       return true;
     }
+  }
+
+  private store_poll_data_confirmed(pid: string, key: string, value: string, add_due = false): Promise<void> {
+    /** Store a poll data item in the local poll db and resolve only once the
+     *  write is confirmed, retrying a bounded number of times. Used for
+     *  transactional draft→running data moves, where the user db copy may
+     *  only be deleted after the poll db write has been confirmed (#292). */
+    value = value || '';
+    const is_voter_key = key.indexOf("§") >= 0,
+          _id = poll_doc_id_prefix + pid + (is_voter_key ? '.' : '§') + key,
+          poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+    if ((poll_pw == '') || (!poll_pw)) {
+      return Promise.reject(new Error("DataService.store_poll_data_confirmed missing poll password for " + pid));
+    }
+    const db = this.get_local_poll_db(pid);
+    const attempt_put = (attempt: number): Promise<void> =>
+      db.get(_id)
+      .catch(() => null) // doc does not exist yet
+      .then(doc => {
+        // only the due value is stored unencrypted:
+        const enc_value = (key == 'due') ? value : encrypt(value, poll_pw);
+        if (doc) {
+          const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw);
+          if (stored == value) {
+            // already stored, write is confirmed:
+            return;
+          }
+          doc.value = enc_value;
+          if (add_due) {
+            doc.due = this.poll_caches[pid]['due'];
+          }
+          return db.put(doc).then(() => {});
+        }
+        const new_doc: any = {_id: _id, value: enc_value};
+        if (add_due) {
+          new_doc.due = this.poll_caches[pid]['due'];
+        }
+        return db.put(new_doc).then(() => {});
+      })
+      .catch(err => {
+        if (attempt >= confirmed_put_max_attempts) {
+          this.G.L.error("DataService.store_poll_data_confirmed giving up", pid, key, attempt, err);
+          throw err;
+        }
+        this.G.L.warn("DataService.store_poll_data_confirmed will retry", pid, key, attempt, err);
+        return new Promise<void>((resolve, reject) => {
+          window.setTimeout(
+            () => attempt_put(attempt + 1).then(resolve, reject),
+            environment.db_put_retry_delay_ms);
+        });
+      });
+    return attempt_put(1);
   }
 
   private delete_user_data(key:string): boolean {

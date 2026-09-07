@@ -1857,6 +1857,12 @@ export class Poll {
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
           this.G.L.trace("Poll.end replicating a last time", this._pid);
           this.G.D.replicate_once(this.pid)
+          .catch((err => {
+            // even if the final replication failed, the poll must still close
+            // deterministically; tally from the local data we have (#292):
+            this.G.L.error("Poll.end final replication failed, tallying from local data", this._pid, err);
+            return false;
+          }).bind(this))
           .then((() => {
             // 8. perform a final tally:
             this.G.L.trace("Poll.end tally a last time", this._pid);
@@ -1870,6 +1876,14 @@ export class Poll {
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
                 this.make_final_rand(this.pid + doc._rev);
+                this.make_winner();
+                this.notify_of_end();
+              }).bind(this))
+              .catch((err => {
+                // fall back to a deterministic base that does not depend on
+                // the unreachable db, so the poll still terminates (#292):
+                this.G.L.error("Poll.end couldn't fetch state doc, using fallback random base", this._pid, err);
+                this.make_final_rand(this.pid);
                 this.make_winner();
                 this.notify_of_end();
               }).bind(this)); 
