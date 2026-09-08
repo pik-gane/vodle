@@ -274,6 +274,7 @@ export class Poll {
 
   delete() {
     this.G.L.entry("Poll.delete", this._pid);
+    this.cancel_end_retry();
     delete this.G.P.polls[this._pid];
     this.G.D.delp(this._pid, 'type');
     this.G.D.delp(this._pid, 'title');
@@ -1820,8 +1821,15 @@ export class Poll {
     }
   }
 
+  private is_active_poll(): boolean {
+    /** whether this Poll object is still the registered instance for its pid.
+     *  Expired-poll cleanup and logout tear the poll (and its local db) down,
+     *  after which a deferred end() retry must no longer fire (#292): */
+    return this.G.P.polls[this._pid] === this;
+  }
+
   private schedule_end_retry() {
-    if (this.end_retry_timeout_id !== null || this.has_results) {
+    if (this.end_retry_timeout_id !== null || this.has_results || !this.is_active_poll()) {
       return;
     }
     const delay = Math.max(this.end_retry_delay_ms, environment.closing.grace_period_3_ms);
@@ -1829,6 +1837,13 @@ export class Poll {
     this.G.L.warn("Poll.schedule_end_retry scheduling end retry", this._pid, delay);
     this.end_retry_timeout_id = window.setTimeout((() => {
       this.end_retry_timeout_id = null;
+      if (!this.is_active_poll()) {
+        // the poll was deleted or cleaned up while the retry was pending, so
+        // its local db may no longer exist; do not end() against deleted
+        // storage (#292):
+        this.G.L.trace("Poll.schedule_end_retry poll no longer active, dropping retry", this._pid);
+        return;
+      }
       if ((this._state == 'running' || this._state == 'closed') && !this.has_results) {
         this.end();
       }
@@ -1843,6 +1858,13 @@ export class Poll {
     if (reset_delay) {
       this.end_retry_delay_ms = environment.closing.grace_period_3_ms;
     }
+  }
+
+  cancel_end_retry() {
+    /** public teardown hook: cancel any pending deferred-finalization retry
+     *  timer, e.g. before the poll's local db is destroyed at poll expiry,
+     *  deletion, or logout (#292): */
+    this.clear_end_retry(true);
   }
 
   end() {

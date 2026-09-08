@@ -429,6 +429,16 @@ export class DataService implements OnDestroy {
     this.user_sync_start_generation += 1;
     this.poll_sync_start_generation = {};
     this.stop_replication_watchdog();
+    // cancel any pending deferred poll-finalization retry timers (#292):
+    if (this.G?.P?.polls) {
+      for (const pid in this.G.P.polls) {
+        try {
+          this.G.P.polls[pid].cancel_end_retry();
+        } catch (err) {
+          console.warn("DataService.ngOnDestroy could not cancel end retry", pid, err);
+        }
+      }
+    }
     // cancel live replication handlers so no further change events can
     // re-enqueue work after destruction:
     if (this.user_db_sync_handler) {
@@ -3726,6 +3736,14 @@ export class DataService implements OnDestroy {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
         this.stop_poll_sync(pid);
+        const expired_poll = this.G.P.polls[pid];
+        if (!!expired_poll) {
+          // cancel any pending deferred-finalization retry timer and remove
+          // the Poll object, so no later end() retry can run against the
+          // destroyed local db (#292):
+          expired_poll.cancel_end_retry();
+          delete this.G.P.polls[pid];
+        }
         const lpdb = this.get_local_poll_db(pid);
         if (!!lpdb) {
           lpdb.destroy();
@@ -4601,6 +4619,11 @@ export class DataService implements OnDestroy {
       
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
+      // cancel any pending deferred poll-finalization retry timers, so no
+      // end() retry can fire against the local dbs destroyed below (#292):
+      for (const pid in this.G.P.polls) {
+        this.G.P.polls[pid].cancel_end_retry();
+      }
       this.stop_replication_watchdog();
       this.user_sync_start_pending = false;
       this.user_sync_start_generation += 1;

@@ -53,8 +53,14 @@ describe('Poll.end final replication handling (#292)', () => {
 
   const make_poll = (D: any): any => {
     const p: any = Object.create(Poll.prototype);
-    p.G = { L, D };
+    // Object.create bypasses instance field initializers, so the retry
+    // fields must be initialized explicitly for schedule_end_retry() to work:
+    p.end_retry_timeout_id = null;
+    p.end_retry_delay_ms = environment.closing.grace_period_3_ms;
+    p.G = { L, D, P: { polls: {} } };
     p._pid = 'p1';
+    // register as the active poll so deferred end() retries are not dropped:
+    p.G.P.polls[p._pid] = p;
     p._state = 'closed';
     let has_results = false;
     Object.defineProperty(p, 'state', { get: () => p._state, set: value => { p._state = value; } });
@@ -170,5 +176,33 @@ describe('Poll.end final replication handling (#292)', () => {
       await Promise.resolve();
     }
     expect(D.replicate_once).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry finalization after the poll was cancelled or torn down', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc').and.returnValue(Promise.reject(new Error('offline'))),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+
+    // teardown (poll expiry/deletion/logout) cancels the pending retry timer
+    // and deregisters the poll, so end() must not run against deleted storage:
+    p.cancel_end_retry();
+    delete p.G.P.polls[p._pid];
+
+    jasmine.clock().tick(
+      environment.closing.grace_period_1_ms
+      + environment.closing.grace_period_2_ms
+      + 10 * 60000
+    );
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
   });
 });
