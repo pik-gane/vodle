@@ -1922,21 +1922,11 @@ export class Poll {
           this.G.D.replicate_once(this.pid)
           .catch((err => {
             if (!is_current()) { return 'abort'; }
-            if (!!err && err['is_consistency_failure'] === true) {
-              // the change queue could not be fully applied, so the local
-              // cache may still hold known-stale data (e.g. a deleted rating);
-              // tallying it could reproduce the divergent final results from
-              // #161. Abort this finalization attempt; since has_results
-              // stays false, end() will be retried by end_if_past_due() and
-              // after a restart with a rebuilt cache (#292):
-              this.G.L.error("Poll.end final cache flush failed, aborting finalization for a later retry", this._pid, err);
-              return 'abort';
-            }
-            // even if the final replication failed (e.g. because the remote
-            // db is unreachable), the poll must still close deterministically;
-            // tally from the local data we have (#292):
-            this.G.L.error("Poll.end final replication failed, tallying from local data", this._pid, err);
-            return false;
+            // Neither stale local data nor a seed fetched after a failed pull
+            // is sufficient for finalization. Retry consistency failures too.
+            this.G.L.error("Poll.end final replication failed, deferring finalization", this._pid, err);
+            this.schedule_end_retry();
+            return 'abort';
           }).bind(this))
           .then(((result) => {
             if (!is_current() || result === 'abort') {

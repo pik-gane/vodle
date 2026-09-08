@@ -38,6 +38,9 @@ describe('PollService', () => {
 describe('Poll.end final replication handling (#292)', () => {
   const noop = () => {};
   const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  const state_doc = (rev: string) => ({
+    _rev: rev,
+  });
   let previous_matrix_flag: boolean;
 
   beforeEach(() => {
@@ -51,7 +54,7 @@ describe('Poll.end final replication handling (#292)', () => {
     jasmine.clock().uninstall();
   });
 
-  const make_poll = (D: any): any => {
+  const make_poll = (D: any, type = 'winner'): any => {
     const p: any = Object.create(Poll.prototype);
     // Object.create bypasses instance field initializers, so the retry
     // fields must be initialized explicitly for schedule_end_retry() to work:
@@ -66,7 +69,7 @@ describe('Poll.end final replication handling (#292)', () => {
     p._state = 'closed';
     let has_results = false;
     Object.defineProperty(p, 'state', { get: () => p._state, set: value => { p._state = value; } });
-    Object.defineProperty(p, 'type', { get: () => 'winner' });
+    Object.defineProperty(p, 'type', { get: () => type });
     Object.defineProperty(p, 'has_results', {
       get: () => has_results,
       set: value => { has_results = value; }
@@ -89,27 +92,57 @@ describe('Poll.end final replication handling (#292)', () => {
     }
   };
 
-  it('aborts finalization when the final flush signals a possibly stale cache', async () => {
-    const err: any = new Error('could not flush queued changes');
-    err['is_consistency_failure'] = true;
-    const D = {
-      stop_poll_sync: noop,
-      wait_for_poll_db: () => Promise.resolve(),
-      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.reject(err)),
-      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc'),
-    };
-    const p = make_poll(D);
+  for (const consistency_failure of [false, true]) {
+    for (const type of ['winner', 'share']) {
+      it(`defers ${type} finalization and retries failed replication with backoff (consistency=${consistency_failure})`, async () => {
+        const err: any = new Error('final replication failed');
+        err['is_consistency_failure'] = consistency_failure;
+        const D = {
+          stop_poll_sync: noop,
+          wait_for_poll_db: () => Promise.resolve(),
+          replicate_once: jasmine.createSpy('replicate_once').and.callFake(() => Promise.reject(err)),
+          get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+            .and.callFake(() => Promise.resolve(state_doc('2-b'))),
+        };
+        const p = make_poll(D, type);
 
-    await run_end_to_completion(p);
+        await run_end_to_completion(p);
 
-    // the cache is known to possibly hold stale data, so tallying it could
-    // produce divergent final results (#161); finalization must be retried
-    // later instead (has_results stays false):
-    expect(p.tally_all).not.toHaveBeenCalled();
-    expect(p.make_winner).not.toHaveBeenCalled();
-    expect(p.notify_of_end).not.toHaveBeenCalled();
-    expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
-  });
+        for (const delay of [environment.closing.grace_period_3_ms, 2 * environment.closing.grace_period_3_ms]) {
+          expect(p.has_results).toBeFalse();
+          expect(p.tally_all).not.toHaveBeenCalled();
+          expect(p.make_final_rand).not.toHaveBeenCalled();
+          expect(p.make_winner).not.toHaveBeenCalled();
+          expect(p.notify_of_end).not.toHaveBeenCalled();
+          expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
+          const generation = p.end_generation;
+          jasmine.clock().tick(delay - 1);
+          expect(p.end_generation).toBe(generation);
+          if (delay === 2 * environment.closing.grace_period_3_ms) {
+            D.replicate_once.and.returnValue(Promise.resolve(true));
+          }
+          jasmine.clock().tick(1);
+          expect(p.end_generation).toBe(generation + 1);
+          jasmine.clock().tick(
+            environment.closing.grace_period_1_ms
+            + environment.closing.grace_period_2_ms
+            + environment.closing.grace_period_3_ms
+          );
+          for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+        }
+
+        expect(D.replicate_once).toHaveBeenCalledTimes(3);
+        expect(p.tally_all).toHaveBeenCalledTimes(1);
+        expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(type === 'winner' ? 1 : 0);
+        if (type === 'winner') {
+          expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
+          expect(p.make_winner).toHaveBeenCalledTimes(1);
+        }
+        expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+        expect(p.end_retry_timeout_id).toBeNull();
+      });
+    }
+  }
 
   it('retries winner finalization with backoff when the shared seed is temporarily unavailable', async () => {
     const D = {
@@ -117,13 +150,13 @@ describe('Poll.end final replication handling (#292)', () => {
       wait_for_poll_db: () => Promise.resolve(),
       replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
       get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
-        .and.returnValues(Promise.reject(new Error('offline')), Promise.resolve({_rev: '1-a'})),
+        .and.returnValues(Promise.reject(new Error('offline')), Promise.resolve(state_doc('1-a'))),
     };
     const p = make_poll(D);
 
     await run_end_to_completion(p);
 
-    // an unreachable remote must not prevent tallying from local data, but
+    // After a successful final replication the tally is safe, but
     // the winner must not be selected from a locally derived seed. Instead,
     // Poll.end() should schedule a guarded retry for the shared seed:
     expect(p.tally_all).toHaveBeenCalledTimes(1);
@@ -180,33 +213,41 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(D.replicate_once).toHaveBeenCalledTimes(2);
   });
 
-  it('does not retry finalization after the poll was cancelled or torn down', async () => {
-    const D = {
-      stop_poll_sync: noop,
-      wait_for_poll_db: () => Promise.resolve(),
-      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
-      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc').and.returnValue(Promise.reject(new Error('offline'))),
-    };
-    const p = make_poll(D);
+  for (const failure of ['seed', 'replication', 'consistency']) {
+    it(`does not retry ${failure} failure after the poll was cancelled or torn down`, async () => {
+      const err: any = new Error('offline');
+      err['is_consistency_failure'] = failure === 'consistency';
+      const D = {
+        stop_poll_sync: noop,
+        wait_for_poll_db: () => Promise.resolve(),
+        replicate_once: jasmine.createSpy('replicate_once')
+          .and.callFake(() => failure === 'seed' ? Promise.resolve(true) : Promise.reject(err)),
+        get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+          .and.callFake(() => Promise.reject(err)),
+      };
+      const p = make_poll(D);
 
-    await run_end_to_completion(p);
-    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+      await run_end_to_completion(p);
+      expect(D.replicate_once).toHaveBeenCalledTimes(1);
+      expect(p.end_retry_timeout_id).not.toBeNull();
 
-    // teardown (poll expiry/deletion/logout) cancels the pending retry timer
-    // and deregisters the poll, so end() must not run against deleted storage:
-    p.cancel_end_retry();
-    delete p.G.P.polls[p._pid];
+      // teardown (poll expiry/deletion/logout) cancels the pending retry timer
+      // and deregisters the poll, so end() must not run against deleted storage:
+      p.cancel_end_retry();
+      delete p.G.P.polls[p._pid];
 
-    jasmine.clock().tick(
-      environment.closing.grace_period_1_ms
-      + environment.closing.grace_period_2_ms
-      + 10 * 60000
-    );
-    for (let i = 0; i < 10; i++) {
-      await Promise.resolve();
-    }
-    expect(D.replicate_once).toHaveBeenCalledTimes(1);
-  });
+      jasmine.clock().tick(
+        environment.closing.grace_period_1_ms
+        + environment.closing.grace_period_2_ms
+        + 10 * 60000
+      );
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
+      expect(D.replicate_once).toHaveBeenCalledTimes(1);
+      expect(p.end_retry_timeout_id).toBeNull();
+    });
+  }
 
   for (const matrix of [false, true]) {
     for (const phase of (matrix ? [0, 1] : [0, 1, 2])) {
@@ -264,7 +305,7 @@ describe('Poll.end final replication handling (#292)', () => {
         p.tally_all.calls.reset();
         p.cancel_end_retry();
         if (rejects) { reject_pending(new Error('offline')); }
-        else { resolve_pending({_rev: '1-a'}); }
+        else { resolve_pending(state_doc('1-a')); }
         for (let i = 0; i < 10; i++) { await Promise.resolve(); }
         jasmine.clock().tick(600000);
 
@@ -298,12 +339,12 @@ describe('Poll.end final replication handling (#292)', () => {
       wait_for_poll_db: () => Promise.resolve(),
       replicate_once: () => Promise.resolve(true),
       get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
-        .and.returnValues(new Promise(resolve => { resolve_seed = resolve; }), Promise.resolve({_rev: '2-b'})),
+        .and.returnValues(new Promise(resolve => { resolve_seed = resolve; }), Promise.resolve(state_doc('2-b'))),
     };
     const p = make_poll(D);
     await run_end_to_completion(p);
     await run_end_to_completion(p);
-    resolve_seed({_rev: '1-a'});
+    resolve_seed(state_doc('1-a'));
     for (let i = 0; i < 10; i++) { await Promise.resolve(); }
     expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);

@@ -976,19 +976,18 @@ export class DataService implements OnDestroy {
           initializing_polls = true;
         }
       }
-    } else {
-      // restored poll caches skip ensure_local_poll_data(), which is otherwise
-      // the only place starting a conflict scan, so pre-existing local
-      // conflicts would survive restored sessions until some later change
-      // happens to target the same document; run the background scan for each
-      // restored non-draft poll's local db here as well (#292):
+    } else if (!environment.useMatrixBackend) {
+      // Reconcile restored caches with local winners before conflict cleanup
+      // and readiness, just as for a cold bootstrap (#292).
       for (const pid of this._pids) {
         if (!this.pid_is_draft(pid)) {
-          this.scan_poll_db_for_conflicts(pid);
+          this.ensure_local_poll_data(pid);
         }
       }
     }    
-    this.local_docs2cache_finished();
+    if (this.uninitialized_pids.size == 0) {
+      this.local_docs2cache_finished();
+    }
   }
 
   private has_user_db_credentials() {
@@ -1783,7 +1782,34 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.change_poll_state");
   }
 
-  private move_draft_data_to_poll_db(pid: string, due_iso?: string, state_value?: string): Promise<void> {
+  private async confirm_draft_migration_marker(pid: string, state: string): Promise<void> {
+    const hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+    if (!hash || !password || !['running', 'closed', 'closing'].includes(state)) {
+      throw new Error("DataService.confirm_draft_migration_marker missing credentials or non-draft state");
+    }
+    const _id = user_doc_id_prefix + hash + '§' + get_poll_key_prefix(pid) + 'state';
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const doc = await this.local_synced_user_db.get(_id).catch(err => {
+          if (err.status == 404) { return {_id}; }
+          throw err;
+        });
+        // A newer non-draft marker is sufficient for restart to open the poll
+        // DB. Never regress it while retrying an interrupted migration.
+        if (doc.value && ['running', 'closed', 'closing'].includes(decrypt(doc.value, password))) {
+          return;
+        }
+        doc.value = encrypt(state, password);
+        await this.local_synced_user_db.put(doc);
+        return;
+      } catch (err) {
+        if (attempt >= confirmed_put_max_attempts) { throw err; }
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
+  }
+
+  private async move_draft_data_to_poll_db(pid: string, due_iso?: string, state_value?: string): Promise<void> {
     /** Transactionally move a poll's draft data (incl. its due date) from the
      *  user db to the poll db. Each user db copy is only deleted after the
      *  corresponding poll db write has been confirmed, so a failed or
@@ -1802,6 +1828,15 @@ export class DataService implements OnDestroy {
       return Promise.resolve();
     }
     this.draft_migration_in_flight[pid] = true;
+    try {
+      // setu() only updates the cache synchronously. No fallback may be
+      // deleted until restart can discover the poll DB from the user DB.
+      await this.confirm_draft_migration_marker(pid, state_value || this.user_cache[prefix + 'state']);
+    } catch (err) {
+      delete this.draft_migration_in_flight[pid];
+      this.G.L.error("DataService.move_draft_data_to_poll_db couldn't confirm migration marker, keeping user db copies", pid, err);
+      return;
+    }
     // first store due in the poll db and wait until that write has been
     // confirmed and poll_caches[pid].due updated before launching the other
     // writes: a migration retry may find a different, authoritative due in
@@ -2036,7 +2071,15 @@ export class DataService implements OnDestroy {
       // state doc revision is available again (#292):
       return Promise.reject(new Error("no remote poll db connection"));
     }
-    return remote.get(_id);
+    return remote.get(_id).then(doc => {
+      // A successful pull does not confirm that our earlier closed-state push
+      // reached CouchDB. A running revision is not a stable winner seed.
+      const password = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+      if (!password || !doc._rev || decrypt(doc.value, password) != 'closed') {
+        throw new Error("remote poll state is not confirmed closed");
+      }
+      return doc;
+    });
   }
 
   // HOOKS FOR PAGES:
@@ -4448,6 +4491,12 @@ export class DataService implements OnDestroy {
             // field, so the write is confirmed:
             publish_confirmed(doc);
             return;
+          }
+          if (!is_voter_key && key != 'state') {
+            // CouchDB rejects all updates to existing shared metadata. Keep
+            // the fallback until a valid authoritative document is available,
+            // rather than confirming a local repair that cannot replicate.
+            throw new Error("DataService.store_poll_data_confirmed cannot repair immutable shared document " + _id);
           }
           if (!value_confirmed) {
             doc.value = enc_value;

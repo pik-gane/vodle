@@ -1074,6 +1074,7 @@ describe('DataService consistency hardening (#292)', () => {
       beforeEach(() => {
         svc.after_changes = jasmine.createSpy('after_changes');
         svc.page = { onDataChange: jasmine.createSpy('onDataChange') };
+        spyOn(svc, 'confirm_draft_migration_marker').and.returnValue(Promise.resolve());
       });
 
       it('store_poll_data_confirmed resolves once the put of a new doc succeeded', async () => {
@@ -1156,10 +1157,114 @@ describe('DataService consistency hardening (#292)', () => {
       });
 
       const settle = async () => {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 20; i++) {
           await Promise.resolve();
         }
       };
+
+      it('retains every fallback until the non-draft user-db marker is durably written', async () => {
+        svc.confirm_draft_migration_marker.and.callThrough();
+        svc.get_email_and_pw_hash = () => 'test-hash';
+        svc.user_cache = {
+          password: 'test-password',
+          'poll.p1.password': 'pw123',
+          'poll.p1.state': 'running',
+          'poll.p1.due': '2030-01-01T00:00:00.000Z',
+          'poll.p1.title': 'T',
+        };
+        let stored_marker = {
+          _id: '~vodle.user.test-hash§poll.p1.state',
+          _rev: '1-draft',
+          value: CryptoES.AES.encrypt('draft', 'test-password').toString(),
+        };
+        let confirm_marker: () => void;
+        svc.local_synced_user_db = {
+          get: () => Promise.resolve({...stored_marker}),
+          put: jasmine.createSpy('put').and.callFake(doc => new Promise<void>(resolve => {
+            confirm_marker = () => { stored_marker = {...doc}; resolve(); };
+          })),
+        };
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed').and.returnValue(Promise.resolve());
+        svc.delu = jasmine.createSpy('delu').and.callFake(key => { delete svc.user_cache[key]; });
+
+        const migration = svc.move_draft_data_to_poll_db('p1');
+        await settle();
+        expect(CryptoES.AES.decrypt(stored_marker.value, 'test-password').toString(CryptoES.enc.Utf8)).toBe('draft');
+        expect(svc.store_poll_data_confirmed).not.toHaveBeenCalled();
+        expect(svc.delu).not.toHaveBeenCalled();
+        expect(svc.user_cache['poll.p1.title']).toBe('T');
+        expect(svc.user_cache['poll.p1.due']).toBeDefined();
+
+        confirm_marker();
+        await migration;
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.title');
+        // After an exit, the durable marker makes cold startup open the poll DB.
+        const restarted = make_service();
+        restarted._pids = new Set();
+        restarted.get_email_and_pw_hash = () => 'test-hash';
+        restarted.user_cache.password = 'test-password';
+        restarted.ensure_local_poll_data = jasmine.createSpy('ensure_local_poll_data');
+        restarted.doc2user_cache(stored_marker);
+        expect(restarted.user_cache['poll.p1.state']).toBe('running');
+        expect(restarted.ensure_local_poll_data).toHaveBeenCalledWith('p1');
+      });
+
+      for (const failure of ['get', 'put']) {
+        it(`keeps fallbacks after marker ${failure} failure and can retry the migration`, async () => {
+          svc.confirm_draft_migration_marker.and.callThrough();
+          svc.get_email_and_pw_hash = () => 'test-hash';
+          svc.user_cache = {
+            password: 'test-password',
+            'poll.p1.password': 'pw123',
+            'poll.p1.state': 'running',
+            'poll.p1.due': '2030-01-01T00:00:00.000Z',
+            'poll.p1.title': 'T',
+          };
+          let failing = true;
+          const db = {
+            get: jasmine.createSpy('get').and.callFake(() =>
+              Promise.reject({status: failing && failure === 'get' ? 500 : 404})),
+            put: jasmine.createSpy('put').and.callFake(() =>
+              failing ? Promise.reject({status: 500}) : Promise.resolve()),
+          };
+          svc.local_synced_user_db = db;
+          svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed').and.returnValue(Promise.resolve());
+          svc.delu = jasmine.createSpy('delu').and.callFake(key => { delete svc.user_cache[key]; });
+
+          await svc.move_draft_data_to_poll_db('p1');
+          expect(db.get).toHaveBeenCalledTimes(5);
+          if (failure === 'get') { expect(db.put).not.toHaveBeenCalled(); }
+          expect(svc.store_poll_data_confirmed).not.toHaveBeenCalled();
+          expect(svc.delu).not.toHaveBeenCalled();
+          expect(svc.draft_migration_pending('p1')).toBeTrue();
+          expect(svc.draft_migration_in_flight.p1).toBeUndefined();
+
+          failing = false;
+          await svc.move_draft_data_to_poll_db('p1');
+          expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
+          expect(svc.delu).toHaveBeenCalledWith('poll.p1.title');
+        });
+      }
+
+      it('rechecks a conflicted marker write without overwriting a newer closed marker', async () => {
+        svc.confirm_draft_migration_marker.and.callThrough();
+        svc.get_email_and_pw_hash = () => 'test-hash';
+        svc.user_cache.password = 'test-password';
+        const marker = state => ({
+          _id: '~vodle.user.test-hash§poll.p1.state',
+          value: CryptoES.AES.encrypt(state, 'test-password').toString(),
+        });
+        svc.local_synced_user_db = {
+          get: jasmine.createSpy('get').and.returnValues(Promise.resolve(marker('draft')), Promise.resolve(marker('closed'))),
+          put: jasmine.createSpy('put').and.callFake(() => Promise.reject({status: 409})),
+        };
+
+        await svc.confirm_draft_migration_marker('p1', 'running');
+
+        expect(svc.local_synced_user_db.get).toHaveBeenCalledTimes(2);
+        expect(svc.local_synced_user_db.put).toHaveBeenCalledTimes(1);
+      });
 
       for (const subkey of ['rating.o1', 'del_request.d1', 'del_response.d1']) {
         for (const existing of [false, true]) {
@@ -1241,7 +1346,7 @@ describe('DataService consistency hardening (#292)', () => {
 
           await svc.move_remaining_draft_data_to_poll_db('p1');
 
-          expect(db.put).toHaveBeenCalledTimes(5);
+          expect(db.put).toHaveBeenCalledTimes(key.startsWith('voter.') ? 5 : 0);
           expect(svc.poll_caches.p1[key]).toBeUndefined();
           expect(svc.getp('p1', key)).toBe('50');
           if (key.startsWith('voter.')) {
@@ -1252,6 +1357,41 @@ describe('DataService consistency hardening (#292)', () => {
           expect(svc.draft_migration_pending('p1')).toBe(true);
           expect(svc.after_changes).not.toHaveBeenCalled();
           expect(svc.page.onDataChange).not.toHaveBeenCalled();
+        });
+      }
+
+      for (const due of [undefined, '2029-01-01T00:00:00.000Z']) {
+        it(`keeps an immutable option fallback with ${due ? 'stale' : 'missing'} due even when local puts would succeed`, async () => {
+          svc.user_cache = {
+            'poll.p1.password': 'pw123',
+            'poll.p1.state': 'running',
+            'poll.p1.option.o1.name': 'Draft option',
+          };
+          svc.poll_caches.p1 = {due: '2030-01-01T00:00:00.000Z'};
+          const doc = {
+            _id: '~vodle.poll.p1§option.o1.name',
+            value: CryptoES.AES.encrypt('Stored option', 'pw123').toString(),
+            due,
+          };
+          const db = {
+            get: () => Promise.resolve({...doc}),
+            put: jasmine.createSpy('put').and.returnValue(Promise.resolve({ok: true})),
+          };
+          svc.get_local_poll_db = () => db;
+          svc.delu = jasmine.createSpy('delu').and.callFake(key => { delete svc.user_cache[key]; });
+
+          await svc.move_remaining_draft_data_to_poll_db('p1');
+          expect(db.put).not.toHaveBeenCalled();
+          expect(svc.delu).not.toHaveBeenCalled();
+          expect(svc.getp('p1', 'option.o1.name')).toBe('Draft option');
+          expect(svc.draft_migration_pending('p1')).toBeTrue();
+
+          // Only a valid authoritative document makes a later retry safe.
+          doc.due = svc.poll_caches.p1.due;
+          await svc.move_remaining_draft_data_to_poll_db('p1');
+          expect(db.put).not.toHaveBeenCalled();
+          expect(svc.getp('p1', 'option.o1.name')).toBe('Stored option');
+          expect(svc.delu).toHaveBeenCalledWith('poll.p1.option.o1.name');
         });
       }
 
@@ -1634,14 +1774,28 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.get_local_poll_db).not.toHaveBeenCalled();
       });
 
-      it('get_remote_poll_state_doc prefers the remote state doc when available', async () => {
-        const remote_doc = {_id: '~vodle.poll.p1§state', _rev: '7-y'};
+      it('get_remote_poll_state_doc returns the remote closed state revision', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const remote_doc = {
+          _id: '~vodle.poll.p1§state', _rev: '7-y',
+          value: CryptoES.AES.encrypt('closed', 'pw123').toString(),
+        };
         svc.remote_poll_dbs = { p1: { get: () => Promise.resolve(remote_doc) } };
         svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db');
 
         expect(await svc.get_remote_poll_state_doc('p1')).toBe(remote_doc);
         expect(svc.get_local_poll_db).not.toHaveBeenCalled();
       });
+
+      for (const state of ['running', 'closing', '']) {
+        it(`get_remote_poll_state_doc rejects a remote ${state || 'empty'} state even when GET succeeds`, async () => {
+          svc.user_cache['poll.p1.password'] = 'pw123';
+          svc.remote_poll_dbs.p1 = {get: () => Promise.resolve({
+            _rev: '7-y', value: CryptoES.AES.encrypt(state, 'pw123').toString(),
+          })};
+          await expectAsync(svc.get_remote_poll_state_doc('p1')).toBeRejected();
+        });
+      }
 
       it('replicate_once starts a genuinely one-shot replication without infinite retry', () => {
         const handler: any = {};
@@ -1653,7 +1807,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc.replicate_once('p1');
 
         // with retry an unreachable remote would be retried forever and never
-        // emit the terminal 'error' that lets Poll.end() tally locally:
+        // emit the terminal 'error' that lets Poll.end() schedule a retry:
         expect(from).toHaveBeenCalledWith(svc.remote_poll_dbs['p1'],
                                           jasmine.objectContaining({retry: false}));
       });
@@ -1692,23 +1846,69 @@ describe('DataService consistency hardening (#292)', () => {
         expect(err['is_consistency_failure']).toBeUndefined();
       });
 
-      it('init_poll_data scans restored non-draft polls for pre-existing conflicts', () => {
+      it('init_poll_data reconciles restored winners and replays writes before cleanup and readiness', async () => {
         svc.restored_poll_caches = true;
+        svc.uninitialized_pids = new Set();
         svc._pids = new Set(['pdraft', 'prun']);
         svc.user_cache = {
           'poll.pdraft.state': 'draft',
           'poll.prun.state': 'running',
+          'poll.prun.password': 'pw123',
         };
-        svc.scan_poll_db_for_conflicts = jasmine.createSpy('scan_poll_db_for_conflicts');
+        svc.poll_caches.prun = {state: 'running', title: 'Losing title', desc: 'Deleted description'};
+        const doc = {_id: '~vodle.poll.prun§title', value: CryptoES.AES.encrypt('Winning title', 'pw123').toString()};
+        let finish_replay;
+        const db = {
+          info: () => Promise.resolve({update_seq: 7}),
+          allDocs: () => Promise.resolve({rows: [{id: doc._id, doc}]}),
+          changes: jasmine.createSpy('changes').and.callFake(() => new Promise(resolve => { finish_replay = resolve; })),
+        };
+        svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db').and.returnValue(db);
+        svc.save_state = jasmine.createSpy('save_state');
+        svc.scan_poll_db_for_conflicts = jasmine.createSpy('scan_poll_db_for_conflicts').and.callFake(() => {
+          expect(svc.poll_caches.prun.title).toBe('Latest title');
+          expect(svc.poll_caches.prun.desc).toBeUndefined();
+        });
         svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
 
         svc.init_poll_data();
+        let bootstrapped = false;
+        svc.poll_db_bootstrapped.prun.then(() => { bootstrapped = true; });
+        for (let i = 0; i < 10; i++) { await Promise.resolve(); }
 
-        // restored sessions skip ensure_local_poll_data(), so the startup
-        // conflict scan must run here instead (#292):
+        expect(svc.get_local_poll_db).not.toHaveBeenCalledWith('pdraft');
+        expect(svc.poll_caches.prun.title).toBe('Winning title');
+        expect(svc.poll_caches.prun.desc).toBeUndefined();
+        expect(db.changes).toHaveBeenCalledWith({since: 7, include_docs: true});
+        expect(bootstrapped).toBeFalse();
+        expect(svc.scan_poll_db_for_conflicts).not.toHaveBeenCalled();
+        expect(svc.local_docs2cache_finished).not.toHaveBeenCalled();
+
+        finish_replay({results: [{doc: {...doc, value: CryptoES.AES.encrypt('Latest title', 'pw123').toString()}}], last_seq: 8});
+        for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+        expect(bootstrapped).toBeTrue();
         expect(svc.scan_poll_db_for_conflicts).toHaveBeenCalledWith('prun');
-        expect(svc.scan_poll_db_for_conflicts).not.toHaveBeenCalledWith('pdraft');
-        expect(svc.local_docs2cache_finished).toHaveBeenCalled();
+        expect(svc.local_docs2cache_finished).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not reconcile restored Matrix poll caches against PouchDB', () => {
+        const previous = environment.useMatrixBackend;
+        (environment as any).useMatrixBackend = true;
+        try {
+          svc.restored_poll_caches = true;
+          svc.uninitialized_pids = new Set();
+          svc._pids = new Set(['p1']);
+          svc.user_cache['poll.p1.state'] = 'running';
+          svc.ensure_local_poll_data = jasmine.createSpy('ensure_local_poll_data');
+          svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
+
+          svc.init_poll_data();
+
+          expect(svc.ensure_local_poll_data).not.toHaveBeenCalled();
+          expect(svc.local_docs2cache_finished).toHaveBeenCalled();
+        } finally {
+          (environment as any).useMatrixBackend = previous;
+        }
       });
     });
   });
