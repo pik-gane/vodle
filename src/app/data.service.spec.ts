@@ -1149,6 +1149,12 @@ describe('DataService consistency hardening (#292)', () => {
         await expectAsync(svc.store_poll_data_confirmed('p1', 'title', 'T')).toBeRejected();
       });
 
+      const settle = async () => {
+        for (let i = 0; i < 10; i++) {
+          await Promise.resolve();
+        }
+      };
+
       it('change_poll_state deletes the user db copy only after the poll db write is confirmed', async () => {
         const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
         svc._pids = new Set();
@@ -1168,8 +1174,14 @@ describe('DataService consistency hardening (#292)', () => {
         svc.G.L.error = jasmine.createSpy('error');
 
         svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
+
+        // the due write must be confirmed before the other writes start,
+        // because a migration retry may load a different authoritative due:
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
+        expect(svc.store_poll_data_confirmed).not.toHaveBeenCalledWith('p1', 'title', 'T', false, false);
+        resolvers['due'].res();
+        await settle();
 
         // the optimistic cache update happens immediately:
         expect(svc.poll_caches['p1']['title']).toBe('T');
@@ -1177,8 +1189,7 @@ describe('DataService consistency hardening (#292)', () => {
         // ... but the user db copy is only deleted after the write confirms:
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
         resolvers['title'].res();
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
         expect(svc.delu).toHaveBeenCalledWith('poll.p1.title');
         // user-db-authoritative keys are not moved:
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.myvid');
@@ -1202,12 +1213,13 @@ describe('DataService consistency hardening (#292)', () => {
         svc.G.L.error = jasmine.createSpy('error');
 
         svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
+
+        resolvers['due'].res();
+        await settle();
 
         resolvers['title'].rej(new Error('io error'));
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
 
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
         expect(svc.G.L.error).toHaveBeenCalled();
@@ -1232,8 +1244,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc.poll_has_db_credentials = () => false;
 
         svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
 
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false, false);
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'option.o1.name', 'O', true, false);
@@ -1286,14 +1297,12 @@ describe('DataService consistency hardening (#292)', () => {
         svc.poll_has_db_credentials = () => false;
 
         svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
 
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
         resolvers['due'].res();
-        await Promise.resolve();
-        await Promise.resolve();
+        await settle();
         expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
       });
 
@@ -1361,7 +1370,7 @@ describe('DataService consistency hardening (#292)', () => {
     });
 
     describe('poll end robustness', () => {
-      it('get_remote_poll_state_doc rejects when the remote is unreachable so the deterministic fallback seed is used', async () => {
+      it('get_remote_poll_state_doc rejects when the remote is unreachable so finalization is deferred', async () => {
         svc.remote_poll_dbs = {};
         svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db');
 

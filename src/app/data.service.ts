@@ -1785,24 +1785,52 @@ export class DataService implements OnDestroy {
       return Promise.resolve();
     }
     this.draft_migration_in_flight[pid] = true;
-    const move_promises: Promise<void>[] = [];
-    // first store due in the poll db so that it can be used for the other
-    // items; update the cache optimistically but use a confirmed write (#292):
+    // first store due in the poll db and wait until that write has been
+    // confirmed and poll_caches[pid].due updated before launching the other
+    // writes: a migration retry may find a different, authoritative due in
+    // the poll db (store_poll_data_confirmed then updates the cache to that
+    // value), and only writes started after that update stamp option/rating
+    // docs with the correct due; otherwise doc2poll_cache would reject those
+    // docs once the authoritative due is loaded (#292):
     const due = due_iso || this.user_cache[prefix + 'due'];
+    let due_confirmed: Promise<boolean>;
     if (due) {
       this.ensure_poll_cache(pid)['due'] = due;
-      move_promises.push(
-        this.store_poll_data_confirmed(pid, 'due', due, false, false)
+      due_confirmed = this.store_poll_data_confirmed(pid, 'due', due, false, false)
         .then(() => {
           // only now is it safe to remove the user db copy; until then it
           // marks the due migration as pending so that it gets retried:
           this.delu(prefix + 'due');
+          return true;
         })
         .catch(err => {
           this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store due date in poll db yet, will retry", pid, err);
-        })
-      );
+          return false;
+        });
+    } else {
+      due_confirmed = Promise.resolve(true);
     }
+    return due_confirmed.then(due_ok => {
+      if (!due_ok) {
+        // without a confirmed authoritative due, the remaining writes might
+        // stamp option/rating docs with a stale draft due that doc2poll_cache
+        // would later reject; keep all user db copies so the whole migration
+        // is retried on a later change batch or after restart:
+        this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
+        return;
+      }
+      return this.move_remaining_draft_data_to_poll_db(pid);
+    }).finally(() => {
+      delete this.draft_migration_in_flight[pid];
+    });
+  }
+
+  private move_remaining_draft_data_to_poll_db(pid: string): Promise<void> {
+    /** move the non-due draft data items from the user db to the poll db;
+     *  must only be called after the poll's authoritative due has been
+     *  confirmed and cached (see move_draft_data_to_poll_db, #292): */
+    const prefix = get_poll_key_prefix(pid);
+    const move_promises: Promise<void>[] = [];
     for (const [ukey, value] of Object.entries(this.user_cache)) {
       if (ukey.startsWith(prefix)) {
         // used db entry belongs to this poll.
@@ -1847,8 +1875,6 @@ export class DataService implements OnDestroy {
       } else {
         this.G.L.info("DataService.move_draft_data_to_poll_db finished moving draft data to poll db", pid, move_promises.length);
       }
-    }).finally(() => {
-      delete this.draft_migration_in_flight[pid];
     });
   }
 
@@ -1966,7 +1992,8 @@ export class DataService implements OnDestroy {
       // hash depends on randomized encryption, so two offline replicas can
       // produce different revisions even from identical state data, which
       // would make winner selection diverge across devices. Rejecting lets
-      // the caller use its deterministic non-revision fallback seed (#292):
+      // the caller defer finalization until the shared seed from the remote
+      // state doc revision is available again (#292):
       return Promise.reject(new Error("no remote poll db connection"));
     }
     return remote.get(_id);

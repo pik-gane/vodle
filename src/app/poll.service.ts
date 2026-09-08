@@ -1894,12 +1894,13 @@ export class Poll {
                 this.notify_of_end();
               }).bind(this))
               .catch((err => {
-                // fall back to a deterministic base that does not depend on
-                // the unreachable db, so the poll still terminates (#292):
-                this.G.L.error("Poll.end couldn't fetch state doc, using fallback random base", this._pid, err);
-                this.make_final_rand(this.pid);
-                this.make_winner();
-                this.notify_of_end();
+                // do NOT fall back to a locally derived seed: online clients
+                // seed with pid + doc._rev above, so a different offline seed
+                // could select a different winner from the same tally. Defer
+                // finalization instead; since has_results stays false, end()
+                // will be retried by end_if_past_due() once the shared seed
+                // is available again (#292):
+                this.G.L.error("Poll.end couldn't fetch state doc, deferring finalization until the shared random seed is available", this._pid, err);
               }).bind(this)); 
             } else {
               this.notify_of_end();

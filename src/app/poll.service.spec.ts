@@ -97,7 +97,7 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
   });
 
-  it('tallies from local data when the final replication merely failed (e.g. offline)', async () => {
+  it('defers winner finalization when the shared seed is unavailable (e.g. offline)', async () => {
     const D = {
       stop_poll_sync: noop,
       wait_for_poll_db: () => Promise.resolve(),
@@ -108,11 +108,14 @@ describe('Poll.end final replication handling (#292)', () => {
 
     await run_end_to_completion(p);
 
-    // an unreachable remote must not prevent the poll from closing
-    // deterministically from local data:
+    // an unreachable remote must not prevent tallying from local data, but
+    // the winner must not be selected from a locally derived seed, because
+    // online clients seed with pid + doc._rev and could select a different
+    // winner from the same tally; finalization is deferred instead
+    // (has_results stays false, so end() is retried later):
     expect(p.tally_all).toHaveBeenCalled();
-    expect(p.make_final_rand).toHaveBeenCalledWith('p1');
-    expect(p.make_winner).toHaveBeenCalled();
-    expect(p.notify_of_end).toHaveBeenCalled();
+    expect(p.make_final_rand).not.toHaveBeenCalled();
+    expect(p.make_winner).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
   });
 });
