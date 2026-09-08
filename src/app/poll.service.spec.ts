@@ -55,6 +55,10 @@ describe('Poll.end final replication handling (#292)', () => {
   });
 
   const make_poll = (D: any, type = 'winner'): any => {
+    if (!D.ensure_remote_poll_closed) {
+      D.ensure_remote_poll_closed = jasmine.createSpy('ensure_remote_poll_closed')
+        .and.returnValue(Promise.resolve());
+    }
     const p: any = Object.create(Poll.prototype);
     // Object.create bypasses instance field initializers, so the retry
     // fields must be initialized explicitly for schedule_end_retry() to work:
@@ -86,11 +90,146 @@ describe('Poll.end final replication handling (#292)', () => {
     jasmine.clock().tick(environment.closing.grace_period_1_ms);
     jasmine.clock().tick(environment.closing.grace_period_2_ms);
     jasmine.clock().tick(environment.closing.grace_period_3_ms);
-    // let the replicate_once promise chain settle:
+    // let the closing write and replicate_once promise chain settle:
     for (let i = 0; i < 10; i++) {
       await Promise.resolve();
     }
   };
+
+  for (const state of ['running', 'closed']) {
+    const restored_global = (): any => ({
+      L,
+      D: {
+        getp: (_pid: string, key: string) => key === 'state' ? state : '',
+        tally_caches: { p1: {} },
+      },
+      P: { polls: {} },
+    });
+
+    it(`defers restored ${state} poll lifecycle until explicitly started`, () => {
+      const end = spyOn(Poll.prototype, 'end');
+      const set_timeouts = spyOn(Poll.prototype, 'set_timeouts');
+      const G = restored_global();
+
+      const p = new Poll(G, 'p1', false);
+      jasmine.clock().tick(600000);
+
+      expect(G.P.polls.p1).toBe(p);
+      expect(p.allow_voting).toBeFalse();
+      expect(end).not.toHaveBeenCalled();
+      expect(set_timeouts).not.toHaveBeenCalled();
+
+      p.start_lifecycle();
+
+      expect(end).toHaveBeenCalledTimes(state === 'closed' ? 1 : 0);
+      expect(set_timeouts).toHaveBeenCalledTimes(state === 'running' ? 1 : 0);
+    });
+
+    it(`does not start restored ${state} poll lifecycle after cancellation`, () => {
+      const end = spyOn(Poll.prototype, 'end');
+      const set_timeouts = spyOn(Poll.prototype, 'set_timeouts');
+      const p = new Poll(restored_global(), 'p1', false);
+
+      p.cancel_end_retry();
+      p.start_lifecycle();
+      jasmine.clock().tick(600000);
+
+      expect(end).not.toHaveBeenCalled();
+      expect(set_timeouts).not.toHaveBeenCalled();
+    });
+
+    it(`starts ${state} poll lifecycle by default`, () => {
+      const end = spyOn(Poll.prototype, 'end');
+      const set_timeouts = spyOn(Poll.prototype, 'set_timeouts');
+
+      new Poll(restored_global(), 'p1');
+
+      expect(end).toHaveBeenCalledTimes(state === 'closed' ? 1 : 0);
+      expect(set_timeouts).toHaveBeenCalledTimes(state === 'running' ? 1 : 0);
+    });
+
+    for (const start_immediately of [false, true]) {
+      it(`starts ${state} poll lifecycle only once (immediate=${start_immediately})`, () => {
+        const end = spyOn(Poll.prototype, 'end');
+        const set_timeouts = spyOn(Poll.prototype, 'set_timeouts');
+        const p = new Poll(restored_global(), 'p1', start_immediately);
+
+        p.start_lifecycle();
+        p.start_lifecycle();
+
+        expect(end).toHaveBeenCalledTimes(state === 'closed' ? 1 : 0);
+        expect(set_timeouts).toHaveBeenCalledTimes(state === 'running' ? 1 : 0);
+      });
+    }
+  }
+
+  it('waits for the acknowledged remote closing write before pulling and finalizing', async () => {
+    let resolve_closed: () => void;
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      ensure_remote_poll_closed: jasmine.createSpy('ensure_remote_poll_closed')
+        .and.returnValue(new Promise<void>(resolve => { resolve_closed = resolve; })),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+        .and.returnValue(Promise.resolve(state_doc('2-b'))),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+
+    expect(D.ensure_remote_poll_closed).toHaveBeenCalledOnceWith('p1', jasmine.any(Function));
+    expect(D.replicate_once).not.toHaveBeenCalled();
+    expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
+    expect(p.tally_all).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+
+    resolve_closed();
+    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+
+    expect(D.replicate_once).toHaveBeenCalledOnceWith('p1');
+    expect(p.tally_all).toHaveBeenCalledTimes(1);
+    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a failed remote closing write even when the poll is locally closed', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      ensure_remote_poll_closed: jasmine.createSpy('ensure_remote_poll_closed')
+        .and.callFake(() => Promise.reject(new Error('offline'))),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+        .and.returnValue(Promise.resolve(state_doc('2-b'))),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+
+    expect(p.state).toBe('closed');
+    expect(p.has_results).toBeFalse();
+    expect(D.ensure_remote_poll_closed).toHaveBeenCalledTimes(1);
+    expect(D.replicate_once).not.toHaveBeenCalled();
+    expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
+    expect(p.tally_all).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(p.end_retry_timeout_id).not.toBeNull();
+
+    D.ensure_remote_poll_closed.and.returnValue(Promise.resolve());
+    jasmine.clock().tick(
+      environment.closing.grace_period_1_ms
+      + environment.closing.grace_period_2_ms
+      + 2 * environment.closing.grace_period_3_ms
+    );
+    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+
+    expect(D.ensure_remote_poll_closed).toHaveBeenCalledTimes(2);
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+    expect(p.end_retry_timeout_id).toBeNull();
+  });
 
   for (const consistency_failure of [false, true]) {
     for (const type of ['winner', 'share']) {
@@ -277,6 +416,7 @@ describe('Poll.end final replication handling (#292)', () => {
         expect(p._state).toBe(state_at_teardown);
         expect(D.stop_poll_sync).not.toHaveBeenCalled();
         expect(D.wait_for_poll_db).not.toHaveBeenCalled();
+        expect(p.G.D.ensure_remote_poll_closed).not.toHaveBeenCalled();
         expect(D.replicate_once).not.toHaveBeenCalled();
         expect(p.tally_all).not.toHaveBeenCalled();
         expect(p.notify_of_end).not.toHaveBeenCalled();
@@ -284,7 +424,7 @@ describe('Poll.end final replication handling (#292)', () => {
     }
   }
 
-  for (const pending of ['replication', 'seed']) {
+  for (const pending of ['publication', 'replication', 'seed']) {
     for (const rejects of [false, true]) {
       it(`ignores ${pending} ${rejects ? 'rejection' : 'success'} after teardown`, async () => {
         let resolve_pending: (value: any) => void;
@@ -296,20 +436,26 @@ describe('Poll.end final replication handling (#292)', () => {
         const D = {
           stop_poll_sync: noop,
           wait_for_poll_db: () => Promise.resolve(),
+          ensure_remote_poll_closed: jasmine.createSpy('ensure_remote_poll_closed')
+            .and.returnValue(pending === 'publication' ? promise : Promise.resolve()),
           replicate_once: jasmine.createSpy('replicate_once')
             .and.returnValue(pending === 'replication' ? promise : Promise.resolve(true)),
           get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc').and.returnValue(promise),
         };
         const p = make_poll(D);
         await run_end_to_completion(p);
+        const is_current = D.ensure_remote_poll_closed.calls.mostRecent().args[1];
+        expect(is_current()).toBeTrue();
         p.tally_all.calls.reset();
         p.cancel_end_retry();
+        expect(is_current()).toBeFalse();
         if (rejects) { reject_pending(new Error('offline')); }
         else { resolve_pending(state_doc('1-a')); }
         for (let i = 0; i < 10; i++) { await Promise.resolve(); }
         jasmine.clock().tick(600000);
 
-        expect(D.replicate_once).toHaveBeenCalledTimes(1);
+        expect(D.ensure_remote_poll_closed).toHaveBeenCalledTimes(1);
+        expect(D.replicate_once).toHaveBeenCalledTimes(pending === 'publication' ? 0 : 1);
         expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(pending === 'seed' ? 1 : 0);
         expect(p.tally_all).not.toHaveBeenCalled();
         expect(p.make_final_rand).not.toHaveBeenCalled();

@@ -21,7 +21,8 @@ import { TestBed } from '@angular/core/testing';
 import CryptoES from 'crypto-es';
 
 import { DataService } from './data.service';
-import { Poll, PollService } from './poll.service';
+import { DelegationService } from './delegation.service';
+import { Poll, PollService, Option } from './poll.service';
 import { environment } from '../environments/environment';
 
 describe('DataService', () => {
@@ -1763,6 +1764,89 @@ describe('DataService consistency hardening (#292)', () => {
     });
 
     describe('poll end robustness', () => {
+      it('waits for remote closed-state publication before confirming closure', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const doc = {
+          _id: '~vodle.poll.p1§state', _rev: '1-running',
+          due: '2030-01-01T00:00:00.000Z',
+          value: CryptoES.AES.encrypt('running', 'pw123').toString(),
+        };
+        let acknowledge;
+        const remote = {
+          get: () => Promise.resolve({...doc}),
+          put: jasmine.createSpy('put').and.callFake(() => new Promise(resolve => { acknowledge = resolve; })),
+        };
+        svc.remote_poll_dbs.p1 = remote;
+        let confirmed = false;
+        const closing = svc.ensure_remote_poll_closed('p1').then(() => { confirmed = true; });
+        for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+
+        expect(confirmed).toBeFalse();
+        const written = remote.put.calls.mostRecent().args[0];
+        expect(written._rev).toBe('1-running');
+        expect(written.due).toBe(doc.due);
+        expect(CryptoES.AES.decrypt(written.value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('closed');
+        acknowledge({ok: true});
+        await closing;
+        expect(confirmed).toBeTrue();
+      });
+
+      it('uses a concurrent closer rather than rewriting its closed revision after a conflict', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        const doc = state => ({
+          _id: '~vodle.poll.p1§state', _rev: '2-' + state,
+          due: '2030-01-01T00:00:00.000Z',
+          value: CryptoES.AES.encrypt(state, 'pw123').toString(),
+        });
+        const remote = {
+          get: jasmine.createSpy('get').and.returnValues(Promise.resolve(doc('running')), Promise.resolve(doc('closed'))),
+          put: jasmine.createSpy('put').and.callFake(() => Promise.reject({status: 409})),
+        };
+        svc.remote_poll_dbs.p1 = remote;
+
+        await svc.ensure_remote_poll_closed('p1');
+
+        expect(remote.get).toHaveBeenCalledTimes(2);
+        expect(remote.put).toHaveBeenCalledTimes(1);
+      });
+
+      it('creates a missing remote closed state with its due and propagates publication failure', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        svc.user_cache['poll.p1.state'] = 'closed';
+        svc.poll_caches.p1 = {due: '2030-01-01T00:00:00.000Z'};
+        const remote = {
+          get: () => Promise.reject({status: 404}),
+          put: jasmine.createSpy('put').and.callFake(() => Promise.reject({status: 503})),
+        };
+        svc.remote_poll_dbs.p1 = remote;
+
+        await expectAsync(svc.ensure_remote_poll_closed('p1')).toBeRejected();
+
+        expect(remote.put).toHaveBeenCalledOnceWith(jasmine.objectContaining({
+          _id: '~vodle.poll.p1§state', due: svc.poll_caches.p1.due,
+        }));
+      });
+
+      it('does not publish a remote close after cancellation during the state read', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        let finish_read;
+        const remote = {
+          get: () => new Promise(resolve => { finish_read = resolve; }),
+          put: jasmine.createSpy('put'),
+        };
+        svc.remote_poll_dbs.p1 = remote;
+        let current = true;
+        const closing = svc.ensure_remote_poll_closed('p1', () => current);
+        current = false;
+        finish_read({
+          due: '2030-01-01T00:00:00.000Z',
+          value: CryptoES.AES.encrypt('running', 'pw123').toString(),
+        });
+
+        await expectAsync(closing).toBeRejected();
+        expect(remote.put).not.toHaveBeenCalled();
+      });
+
       it('get_remote_poll_state_doc rejects when the remote is unreachable so finalization is deferred', async () => {
         svc.remote_poll_dbs = {};
         svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db');
@@ -1847,20 +1931,58 @@ describe('DataService consistency hardening (#292)', () => {
       });
 
       it('init_poll_data reconciles restored winners and replays writes before cleanup and readiness', async () => {
+        svc.G.D = svc;
+        svc.G.P = new PollService();
+        svc.G.P.init(svc.G);
+        for (const name of [
+          'tally_caches', 'own_ratings_map_caches', 'direct_delegation_map_caches',
+          'inv_direct_delegation_map_caches', 'indirect_delegation_map_caches',
+          'inv_indirect_delegation_map_caches', 'effective_delegation_map_caches',
+          'inv_effective_delegation_map_caches', 'proxy_ratings_map_caches',
+          'max_proxy_ratings_map_caches', 'argmax_proxy_ratings_map_caches',
+          'effective_ratings_map_caches',
+        ]) { svc[name] = {}; }
+        const start_lifecycle = spyOn(Poll.prototype, 'start_lifecycle');
         svc.restored_poll_caches = true;
         svc.uninitialized_pids = new Set();
         svc._pids = new Set(['pdraft', 'prun']);
+        svc._pid_oids = {prun: new Set(['o1', 'phantom'])};
         svc.user_cache = {
           'poll.pdraft.state': 'draft',
           'poll.prun.state': 'running',
           'poll.prun.password': 'pw123',
         };
-        svc.poll_caches.prun = {state: 'running', title: 'Losing title', desc: 'Deleted description'};
+        svc.poll_caches.prun = {
+          state: 'running', title: 'Losing title', desc: 'Deleted description',
+          due: '2030-01-01T00:00:00.000Z',
+          'option.phantom.name': 'Deleted option',
+          'voter.v1§rating.o1': '80', 'voter.v1§del_request.d1': 'Deleted request',
+        };
+        const previous_poll = new Poll(svc.G, 'prun', false);
+        new Option(svc.G, previous_poll, 'o1');
+        previous_poll.update_own_rating('v1', 'o1', 80);
+        expect(previous_poll.effective_ratings_map.get('o1').get('v1')).toBe(100);
+        delete svc.G.P.polls.prun;
+        spyOn(svc.G.P, 'update_own_rating').and.callThrough();
+        svc.setu = (key, value) => { svc.user_cache[key] = value; };
+        svc.delegation_agreements_caches = {prun: new Map([
+          ['d1', {client_vid: 'v1', active_oids: new Set()}],
+        ])};
+        const delegation: any = new DelegationService(null, null);
+        delegation.G = svc.G;
+        svc.G.Del = delegation;
+        spyOn(delegation, 'process_deleted_request_from_db').and.callThrough();
         const doc = {_id: '~vodle.poll.prun§title', value: CryptoES.AES.encrypt('Winning title', 'pw123').toString()};
+        const docs = [
+          {_id: '~vodle.poll.prun§due', value: svc.poll_caches.prun.due},
+          {_id: '~vodle.poll.prun§option.o1.name', due: svc.poll_caches.prun.due, value: CryptoES.AES.encrypt('Option', 'pw123').toString()},
+          {_id: '~vodle.poll.prun§state', due: svc.poll_caches.prun.due, value: CryptoES.AES.encrypt('running', 'pw123').toString()},
+          doc,
+        ];
         let finish_replay;
         const db = {
           info: () => Promise.resolve({update_seq: 7}),
-          allDocs: () => Promise.resolve({rows: [{id: doc._id, doc}]}),
+          allDocs: () => Promise.resolve({rows: docs.map(d => ({id: d._id, doc: d}))}),
           changes: jasmine.createSpy('changes').and.callFake(() => new Promise(resolve => { finish_replay = resolve; })),
         };
         svc.get_local_poll_db = jasmine.createSpy('get_local_poll_db').and.returnValue(db);
@@ -1879,14 +2001,30 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.get_local_poll_db).not.toHaveBeenCalledWith('pdraft');
         expect(svc.poll_caches.prun.title).toBe('Winning title');
         expect(svc.poll_caches.prun.desc).toBeUndefined();
+        expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('prun', 'v1', 'o1', 0, false);
+        expect(svc.G.Del.process_deleted_request_from_db).toHaveBeenCalledWith('prun', 'd1', 'v1');
+        expect(svc._pid_oids.prun.has('phantom')).toBeFalse();
+        expect(svc.G.P.polls.prun.oids).toEqual(['o1']);
         expect(db.changes).toHaveBeenCalledWith({since: 7, include_docs: true});
         expect(bootstrapped).toBeFalse();
+        expect(start_lifecycle).not.toHaveBeenCalled();
         expect(svc.scan_poll_db_for_conflicts).not.toHaveBeenCalled();
         expect(svc.local_docs2cache_finished).not.toHaveBeenCalled();
 
-        finish_replay({results: [{doc: {...doc, value: CryptoES.AES.encrypt('Latest title', 'pw123').toString()}}], last_seq: 8});
+        finish_replay({results: [
+          {doc: {...doc, value: CryptoES.AES.encrypt('Latest title', 'pw123').toString()}},
+          {deleted: true, id: '~vodle.poll.prun.voter.v1§del_request.d1'},
+          {deleted: true, id: '~vodle.poll.prun.voter.v1§del_request.unseen'},
+        ], last_seq: 8});
         for (let i = 0; i < 10; i++) { await Promise.resolve(); }
         expect(bootstrapped).toBeTrue();
+        expect(svc.G.P.polls.prun).not.toBe(previous_poll);
+        expect(svc.G.P.polls.prun.own_ratings_map.get('o1').get('v1')).toBe(0);
+        expect(svc.G.P.polls.prun.effective_ratings_map.get('o1').has('v1')).toBeFalse();
+        expect(svc.G.P.polls.prun.T.n_not_abstaining).toBe(0);
+        expect(svc.delegation_agreements_caches.prun.size).toBe(0);
+        expect(svc.G.P.polls.prun.T.oids_descending).toEqual(['o1']);
+        expect(start_lifecycle).toHaveBeenCalledTimes(1);
         expect(svc.scan_poll_db_for_conflicts).toHaveBeenCalledWith('prun');
         expect(svc.local_docs2cache_finished).toHaveBeenCalledTimes(1);
       });

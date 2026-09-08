@@ -1138,6 +1138,15 @@ export class DataService implements OnDestroy {
     // Register a bootstrap promise so that syncing/replication of this poll
     // is deferred until the cache bootstrap has completed (#292):
     this.register_poll_db_bootstrap(pid, true);
+    let restored_poll: Poll;
+    if (restored_cache) {
+      // Derived rating/delegation updates need a Poll, but its closing timers
+      // must not run against the stale restored snapshot.
+      restored_poll = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+      for (const oid of this._pid_oids[pid] || []) {
+        new Option(this.G, restored_poll, oid);
+      }
+    }
 
     // ASYNC:
     // record the local db's update_seq before taking the allDocs snapshot,
@@ -1169,6 +1178,10 @@ export class DataService implements OnDestroy {
     }).then(changes => {
 
       this.apply_poll_bootstrap_changes(pid, changes);
+      if (restored_poll && !this.shutting_down && this.G.P.polls[pid] === restored_poll) {
+        restored_poll.tally_all();
+        restored_poll.start_lifecycle();
+      }
       this.mark_poll_db_bootstrapped_now(pid);
       // background pass resolving any pre-existing conflicts (#292):
       this.scan_poll_db_for_conflicts(pid);
@@ -1255,11 +1268,14 @@ export class DataService implements OnDestroy {
         if (!snapshot_ids.has(_id)) {
           this.G.L.trace("DataService.local_poll_docs2cache dropping cache entry without backing doc", pid, key);
           local_changes = this.handle_deleted_poll_doc(pid, {_id: _id}) || local_changes;
-          if (key.startsWith('option.') && key.endsWith('.name') && (pid in this._pid_oids)) {
-            const keyend = key.slice('option.'.length),
-                  oid = keyend.slice(0, keyend.indexOf('.'));
-            this._pid_oids[pid].delete(oid);
-          }
+        }
+      }
+      for (const oid of this._pid_oids[pid] || []) {
+        if (!snapshot_ids.has(poll_doc_id_prefix + pid + '§option.' + oid + '.name')) {
+          this._pid_oids[pid].delete(oid);
+          const poll = this.G.P.polls[pid];
+          if (poll) { poll.remove_option(oid); }
+          local_changes = true;
         }
       }
     }
@@ -2053,6 +2069,39 @@ export class DataService implements OnDestroy {
       });
       this.G.L.trace("DataService.replicate_once started one-time replication", pid);
     });
+  }
+
+  async ensure_remote_poll_closed(pid: string, is_current = () => true): Promise<void> {
+    const remote = this.remote_poll_dbs[pid],
+          password = this.user_cache[get_poll_key_prefix(pid) + 'password'],
+          _id = poll_doc_id_prefix + pid + '§state';
+    if (!remote || !password) {
+      throw new Error("cannot confirm remote poll closure without connection and password");
+    }
+    for (let attempt = 1; ; attempt++) {
+      if (this.shutting_down || !is_current()) {
+        throw new Error("poll finalization cancelled");
+      }
+      try {
+        const doc = await remote.get(_id).catch(err => {
+          if (err.status == 404) { return {_id, due: this.getp(pid, 'due')}; }
+          throw err;
+        });
+        if (this.shutting_down || !is_current()) {
+          throw new Error("poll finalization cancelled");
+        }
+        if (decrypt(doc.value, password) == 'closed') { return; }
+        if (!doc.due) { throw new Error("cannot close remote poll without due date"); }
+        doc.value = encrypt('closed', password);
+        await remote.put(doc);
+        return;
+      } catch (err) {
+        // Another closer may have won the write; re-read instead of creating
+        // another closed revision. Transport failures use Poll's backoff.
+        if (err.status != 409 || attempt >= confirmed_put_max_attempts) { throw err; }
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
   }
 
   get_remote_poll_state_doc(pid: string): Promise<any> {
@@ -3631,13 +3680,13 @@ export class DataService implements OnDestroy {
     const _id = doc._id;
     if (_id.includes(pid)) {
       const key = _id.slice(_id.indexOf(pid) + pid.length + 1);
-      if (key.includes('.del_request.')) {
+      if (key.startsWith('voter.') && key.includes('§del_request.')) {
         const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
         const did = subkey.slice("del_request.".length);
         this.G.Del.process_deleted_request_from_db(pid, did, vid);
-      } else if (key.includes('.rating.')) {
+      } else if (key.startsWith('voter.') && key.includes('§rating.')) {
         const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);

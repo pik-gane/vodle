@@ -422,6 +422,7 @@ export class DelegationService {
 
   process_deleted_request_from_db(pid: string, did: string, client_vid: string) {
     const a = this.get_delegation_agreements_cache(pid).get(did);
+    if (!a) { return; }
     const p = this.G.P.polls[pid];
     if ((a.client_vid != client_vid)) {
       this.G.L.error("DelegationService.process_deleted_request_from_db with wrong client_vid", pid, did);

@@ -186,8 +186,9 @@ export class Poll {
   private end_retry_delay_ms: number = environment.closing.grace_period_3_ms;
   private end_generation = 0;
   private end_cancelled = false;
+  private lifecycle_started = false;
 
-  constructor (G:GlobalService, pid?:string) { 
+  constructor (G:GlobalService, pid?:string, start_lifecycle = true) {
     this.G = G;
     if (!pid) {
       // generate a new draft poll
@@ -207,13 +208,21 @@ export class Poll {
       this.tally_all();
     }
 
+    if (start_lifecycle) {
+      this.start_lifecycle();
+    }
+
+    G.L.exit("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
+  }
+
+  start_lifecycle() {
+    if (this.lifecycle_started || !this.is_active_poll()) { return; }
+    this.lifecycle_started = true;
     if (this._state == 'running') {
       this.set_timeouts();
     } else if (this._state == 'closed' && !this.has_results) {
       this.end();
     }
-
-    G.L.exit("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
   }
 
   set_timeouts(start_date?: Date) {
@@ -1916,15 +1925,19 @@ export class Poll {
         // 6. wait another grace period for this stopping to have happened:
         window.setTimeout((() => {
           if (!is_current()) { return; }
-          // 7. perform a one-time replication from the remote poll db
+          // 7. confirm the remote closing write before a one-time replication
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
-          this.G.L.trace("Poll.end replicating a last time", this._pid);
-          this.G.D.replicate_once(this.pid)
+          this.G.D.ensure_remote_poll_closed(this.pid, is_current)
+          .then((() => {
+            if (!is_current()) { return 'abort'; }
+            this.G.L.trace("Poll.end replicating a last time", this._pid);
+            return this.G.D.replicate_once(this.pid);
+          }).bind(this))
           .catch((err => {
             if (!is_current()) { return 'abort'; }
             // Neither stale local data nor a seed fetched after a failed pull
             // is sufficient for finalization. Retry consistency failures too.
-            this.G.L.error("Poll.end final replication failed, deferring finalization", this._pid, err);
+            this.G.L.error("Poll.end closing write or final replication failed, deferring finalization", this._pid, err);
             this.schedule_end_retry();
             return 'abort';
           }).bind(this))
