@@ -1875,12 +1875,6 @@ export class DataService implements OnDestroy {
               pos = (key+'.').indexOf('.'),
               subkey = (key+'.').slice(0, pos);
         if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
-          // optimistic cache update so that getp() serves the value
-          // immediately, but never clobber a value a migration retry may
-          // already have received from the authoritative poll db:
-          if (!(key in this.ensure_poll_cache(pid))) {
-            this.poll_caches[pid][key] = value as string;
-          }
           // draft voter entries are keyed like "voter.<vid>§rating.<oid>",
           // so for them the due requirement is decided by the segment
           // after "§" (as doc2poll_cache does), not by the poll-level
@@ -3023,7 +3017,9 @@ export class DataService implements OnDestroy {
       const pkey = this.get_voter_key_prefix(pid, vid) + key;
 //      this.G.L.trace("getv", pid, key, vid, pkey)
       this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][pkey] || '';
+      value = (pkey in this.poll_caches[pid])
+        ? this.poll_caches[pid][pkey] || ''
+        : this.user_cache[get_poll_key_prefix(pid) + pkey] || '';
     }
     return value;
   }
@@ -4416,6 +4412,17 @@ export class DataService implements OnDestroy {
       return Promise.reject(new Error("DataService.store_poll_data_confirmed missing poll password for " + pid));
     }
     const db = this.get_local_poll_db(pid);
+    const publish_confirmed = (doc) => {
+      if (!overwrite) {
+        if (is_voter_key) {
+          // Use the same rating/delegation processing as incoming documents;
+          // a local migration write will only produce ignored push events.
+          this.doc2poll_cache(pid, doc);
+        } else {
+          this.ensure_poll_cache(pid)[key] = key == 'due' ? doc.value : decrypt(doc.value, poll_pw);
+        }
+      }
+    };
     const attempt_put = (attempt: number): Promise<void> =>
       db.get(_id)
       .catch(() => null) // doc does not exist yet
@@ -4425,14 +4432,12 @@ export class DataService implements OnDestroy {
         if (doc) {
           const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw),
                 value_confirmed = (stored == value) || !overwrite;
-          if (!overwrite) {
-            this.ensure_poll_cache(pid)[key] = stored;
-          }
           if (value_confirmed
               && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
             // already stored (or a newer value that a non-overwriting
             // migration retry must not clobber), incl. any required due
             // field, so the write is confirmed:
+            publish_confirmed(doc);
             return;
           }
           if (!value_confirmed) {
@@ -4441,13 +4446,13 @@ export class DataService implements OnDestroy {
           if (add_due) {
             doc.due = this.poll_caches[pid]['due'];
           }
-          return db.put(doc).then(() => {});
+          return db.put(doc).then(() => { publish_confirmed(doc); });
         }
         const new_doc: any = {_id: _id, value: enc_value};
         if (add_due) {
           new_doc.due = this.poll_caches[pid]['due'];
         }
-        return db.put(new_doc).then(() => {});
+        return db.put(new_doc).then(() => { publish_confirmed(new_doc); });
       })
       .catch(err => {
         if (attempt >= confirmed_put_max_attempts) {

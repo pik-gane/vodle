@@ -184,6 +184,8 @@ export class Poll {
   allow_voting: boolean = false;
   private end_retry_timeout_id: number | null = null;
   private end_retry_delay_ms: number = environment.closing.grace_period_3_ms;
+  private end_generation = 0;
+  private end_cancelled = false;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
@@ -1825,7 +1827,7 @@ export class Poll {
     /** whether this Poll object is still the registered instance for its pid.
      *  Expired-poll cleanup and logout tear the poll (and its local db) down,
      *  after which a deferred end() retry must no longer fire (#292): */
-    return this.G.P.polls[this._pid] === this;
+    return !this.end_cancelled && this.G.P.polls[this._pid] === this;
   }
 
   private schedule_end_retry() {
@@ -1861,14 +1863,20 @@ export class Poll {
   }
 
   cancel_end_retry() {
-    /** public teardown hook: cancel any pending deferred-finalization retry
-     *  timer, e.g. before the poll's local db is destroyed at poll expiry,
-     *  deletion, or logout (#292): */
+    /** Invalidate grace timers and in-flight finalization callbacks as well
+     *  as the retry timer before storage is torn down (#292). */
+    this.end_cancelled = true;
+    this.end_generation += 1;
     this.clear_end_retry(true);
   }
 
   end() {
     this.G.L.entry("Poll.end", this._pid);
+    if (!this.is_active_poll() || this.has_results) {
+      return;
+    }
+    const generation = ++this.end_generation;
+    const is_current = () => generation === this.end_generation && this.is_active_poll();
     this.clear_end_retry();
     // 1. disable voting:
     this.allow_voting = false;
@@ -1877,9 +1885,11 @@ export class Poll {
     // Just close the poll, tally, and notify.
     if (environment.useMatrixBackend) {
       window.setTimeout((() => {
+        if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
         window.setTimeout((() => {
+          if (!is_current()) { return; }
           this.G.D.stop_poll_sync(this.pid);
           // Final tally
           this.tally_all();
@@ -1892,22 +1902,26 @@ export class Poll {
     // 2. wait some "grace" period for potentially ongoing sync to finish 
     // and potential clock discrepancies between local and CouchDB server.
     window.setTimeout((() => {
+      if (!is_current()) { return; }
       // 3. set state to final state "closed" if no other voter has done so:
       this.G.L.trace("Poll.end setting state to closed", this._pid);
       this.state = "closed";
       // 4. wait another grace period for this change to sync:
       window.setTimeout((() => {
+        if (!is_current()) { return; }
         // 5. tell poll db sync to stop:
         this.G.L.trace("Poll.end stopping sync", this._pid);
         this.G.D.stop_poll_sync(this.pid);
         this.G.D.wait_for_poll_db(this.pid);
         // 6. wait another grace period for this stopping to have happened:
         window.setTimeout((() => {
+          if (!is_current()) { return; }
           // 7. perform a one-time replication from the remote poll db
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
           this.G.L.trace("Poll.end replicating a last time", this._pid);
           this.G.D.replicate_once(this.pid)
           .catch((err => {
+            if (!is_current()) { return 'abort'; }
             if (!!err && err['is_consistency_failure'] === true) {
               // the change queue could not be fully applied, so the local
               // cache may still hold known-stale data (e.g. a deleted rating);
@@ -1925,7 +1939,7 @@ export class Poll {
             return false;
           }).bind(this))
           .then(((result) => {
-            if (result === 'abort') {
+            if (!is_current() || result === 'abort') {
               return;
             }
             // 8. perform a final tally:
@@ -1936,6 +1950,7 @@ export class Poll {
               this.G.L.trace("Poll.end getting state doc revision", this._pid);
               this.G.D.get_remote_poll_state_doc(this.pid)
               .then((doc => {
+                if (!is_current()) { return; }
                 // 10. concatenate it with the pid 
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
@@ -1944,6 +1959,7 @@ export class Poll {
                 this.notify_of_end();
               }).bind(this))
               .catch((err => {
+                if (!is_current()) { return; }
                 // do NOT fall back to a locally derived seed: online clients
                 // seed with pid + doc._rev above, so a different offline seed
                 // could select a different winner from the same tally. Defer
@@ -1981,6 +1997,8 @@ export class Poll {
   }
 
   notify_of_end() {
+    if (!this.is_active_poll()) { return; }
+    const generation = this.end_generation;
     this.G.L.trace("Poll.notify_of_end has_been_notified_of_end");
     this.clear_end_retry(true);
     this.has_results = true;
@@ -1994,6 +2012,7 @@ export class Poll {
         }]
       })
       .then(res => {
+        if (generation !== this.end_generation || !this.is_active_poll()) { return; }
         this.has_been_notified_of_end = true;
         this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
       }).catch(err => {

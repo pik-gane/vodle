@@ -1155,6 +1155,134 @@ describe('DataService consistency hardening (#292)', () => {
         }
       };
 
+      for (const subkey of ['rating.o1', 'del_request.d1', 'del_response.d1']) {
+        for (const existing of [false, true]) {
+          it(`processes recovered ${subkey} after ${existing ? 'repairing an existing' : 'creating a new'} voter doc`, async () => {
+            const key = 'voter.v1§' + subkey;
+            const due = '2030-01-01T00:00:00.000Z';
+            const stored_value = existing ? '80' : '50';
+            svc.user_cache = {
+              'poll.p1.password': 'pw123',
+              'poll.p1.state': 'running',
+              ['poll.p1.' + key]: '50',
+            };
+            svc.poll_caches.p1 = { due };
+            svc.G.P.update_own_rating = jasmine.createSpy('update_own_rating');
+            svc.G.Del = {
+              process_request_from_db: jasmine.createSpy('process_request_from_db'),
+              process_signed_response_from_db: jasmine.createSpy('process_signed_response_from_db'),
+            };
+            let confirm_put: (value: any) => void;
+            const db = {
+              get: () => existing ? Promise.resolve({
+                _id: '~vodle.poll.p1.' + key,
+                value: CryptoES.AES.encrypt(stored_value, 'pw123').toString(),
+                due: '2029-01-01T00:00:00.000Z',
+              }) : Promise.reject({status: 404}),
+              put: jasmine.createSpy('put').and.returnValue(new Promise(resolve => { confirm_put = resolve; })),
+            };
+            svc.get_local_poll_db = () => db;
+            svc.delu = jasmine.createSpy('delu').and.callFake(ukey => { delete svc.user_cache[ukey]; });
+
+            const migration = svc.move_remaining_draft_data_to_poll_db('p1');
+            await settle();
+            expect(svc.poll_caches.p1[key]).toBeUndefined();
+            expect(svc.getv('p1', subkey, 'v1')).toBe('50');
+            expect(svc.delu).not.toHaveBeenCalled();
+            expect(svc.G.P.update_own_rating).not.toHaveBeenCalled();
+            expect(svc.G.Del.process_request_from_db).not.toHaveBeenCalled();
+            expect(svc.G.Del.process_signed_response_from_db).not.toHaveBeenCalled();
+            expect(db.put.calls.mostRecent().args[0].due).toBe(due);
+
+            confirm_put({ok: true});
+            await migration;
+            expect(svc.getv('p1', subkey, 'v1')).toBe(stored_value);
+            expect(svc.delu).toHaveBeenCalledWith('poll.p1.' + key);
+            if (subkey === 'rating.o1') {
+              expect(svc.G.P.update_own_rating).toHaveBeenCalledOnceWith('p1', 'v1', 'o1', Number(stored_value), false);
+            } else if (subkey === 'del_request.d1') {
+              expect(svc.G.Del.process_request_from_db).toHaveBeenCalledOnceWith('p1', 'd1', 'v1');
+            } else {
+              expect(svc.G.Del.process_signed_response_from_db).toHaveBeenCalledOnceWith('p1', 'd1', 'v1');
+            }
+          });
+        }
+      }
+
+      for (const key of ['option.o1.name', 'voter.v1§rating.o1']) {
+        it(`does not publish ${key} when a due repair exhausts its retries`, async () => {
+          svc.user_cache = {
+            'poll.p1.password': 'pw123',
+            'poll.p1.state': 'running',
+            ['poll.p1.' + key]: '50',
+          };
+          svc.poll_caches.p1 = { due: '2030-01-01T00:00:00.000Z' };
+          svc.G.P.update_own_rating = jasmine.createSpy('update_own_rating');
+          const db = {
+            get: () => Promise.resolve({
+              _id: '~vodle.poll.p1' + (key.startsWith('voter.') ? '.' : '§') + key,
+              value: CryptoES.AES.encrypt('80', 'pw123').toString(),
+              due: '2029-01-01T00:00:00.000Z',
+            }),
+            put: jasmine.createSpy('put').and.callFake(() => Promise.reject(new Error('io error'))),
+          };
+          svc.get_local_poll_db = () => db;
+          svc.delu = jasmine.createSpy('delu');
+
+          await svc.move_remaining_draft_data_to_poll_db('p1');
+
+          expect(db.put).toHaveBeenCalledTimes(5);
+          expect(svc.poll_caches.p1[key]).toBeUndefined();
+          expect(svc.getp('p1', key)).toBe('50');
+          if (key.startsWith('voter.')) {
+            expect(svc.getv('p1', 'rating.o1', 'v1')).toBe('50');
+          }
+          expect(svc.G.P.update_own_rating).not.toHaveBeenCalled();
+          expect(svc.delu).not.toHaveBeenCalled();
+          expect(svc.draft_migration_pending('p1')).toBe(true);
+        });
+      }
+
+      it('retries derived-state processing of an already confirmed voter document before removing its fallback', async () => {
+        const key = 'voter.v1§rating.o1';
+        const due = '2030-01-01T00:00:00.000Z';
+        svc.user_cache = {
+          'poll.p1.password': 'pw123',
+          'poll.p1.state': 'running',
+          ['poll.p1.' + key]: '50',
+        };
+        svc.poll_caches.p1 = { due };
+        svc.G.P.update_own_rating = jasmine.createSpy('update_own_rating').and.throwError('not ready');
+        const db = {
+          get: () => Promise.resolve({
+            _id: '~vodle.poll.p1.' + key,
+            value: CryptoES.AES.encrypt('80', 'pw123').toString(),
+            due,
+          }),
+          put: jasmine.createSpy('put'),
+        };
+        svc.get_local_poll_db = () => db;
+        svc.delu = jasmine.createSpy('delu').and.callFake(ukey => { delete svc.user_cache[ukey]; });
+
+        await svc.move_remaining_draft_data_to_poll_db('p1');
+        expect(svc.G.P.update_own_rating).toHaveBeenCalledTimes(5);
+        expect(svc.poll_caches.p1[key]).toBeUndefined();
+        expect(svc.delu).not.toHaveBeenCalled();
+        expect(svc.getv('p1', 'rating.o1', 'v1')).toBe('50');
+
+        svc.G.P.update_own_rating.and.stub();
+        await svc.move_remaining_draft_data_to_poll_db('p1');
+        expect(svc.getv('p1', 'rating.o1', 'v1')).toBe('80');
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.' + key);
+        expect(db.put).not.toHaveBeenCalled();
+      });
+
+      it('keeps an authoritative empty voter value ahead of a retained fallback', () => {
+        svc.user_cache = { 'poll.p1.state': 'running', 'poll.p1.voter.v1§rating.o1': '50' };
+        svc.poll_caches.p1 = { 'voter.v1§rating.o1': '' };
+        expect(svc.getv('p1', 'rating.o1', 'v1')).toBe('');
+      });
+
       it('change_poll_state confirms the shared state before deleting remaining user db copies', async () => {
         const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
         svc._pids = new Set();
@@ -1192,8 +1320,9 @@ describe('DataService consistency hardening (#292)', () => {
         resolvers['state'].res();
         await settle();
 
-        // the optimistic cache update happens immediately:
-        expect(svc.poll_caches['p1']['title']).toBe('T');
+        // Until confirmation, reads use the retained user-db copy:
+        expect(svc.poll_caches['p1']['title']).toBeUndefined();
+        expect(svc.getp('p1', 'title')).toBe('T');
         expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false, false);
         // ... but the user db copy is only deleted after the write confirms:

@@ -57,6 +57,8 @@ describe('Poll.end final replication handling (#292)', () => {
     // fields must be initialized explicitly for schedule_end_retry() to work:
     p.end_retry_timeout_id = null;
     p.end_retry_delay_ms = environment.closing.grace_period_3_ms;
+    p.end_generation = 0;
+    p.end_cancelled = false;
     p.G = { L, D, P: { polls: {} } };
     p._pid = 'p1';
     // register as the active poll so deferred end() retries are not dropped:
@@ -204,5 +206,106 @@ describe('Poll.end final replication handling (#292)', () => {
       await Promise.resolve();
     }
     expect(D.replicate_once).toHaveBeenCalledTimes(1);
+  });
+
+  for (const matrix of [false, true]) {
+    for (const phase of (matrix ? [0, 1] : [0, 1, 2])) {
+      it(`stops finalization after teardown in grace period ${phase + 1} (Matrix=${matrix})`, async () => {
+        (environment as any).useMatrixBackend = matrix;
+        const D = {
+          stop_poll_sync: jasmine.createSpy('stop_poll_sync'),
+          wait_for_poll_db: jasmine.createSpy('wait_for_poll_db'),
+          replicate_once: jasmine.createSpy('replicate_once'),
+          get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc'),
+        };
+        const p = make_poll(D);
+        p._state = 'running';
+        p.end();
+        if (phase >= 1) { jasmine.clock().tick(environment.closing.grace_period_1_ms); }
+        if (phase >= 2) { jasmine.clock().tick(environment.closing.grace_period_2_ms); }
+        const state_at_teardown = p._state;
+        D.stop_poll_sync.calls.reset();
+        D.wait_for_poll_db.calls.reset();
+
+        // Logout/destruction may leave the instance registered temporarily.
+        p.cancel_end_retry();
+        p.end();
+        jasmine.clock().tick(600000);
+        await Promise.resolve();
+
+        expect(p._state).toBe(state_at_teardown);
+        expect(D.stop_poll_sync).not.toHaveBeenCalled();
+        expect(D.wait_for_poll_db).not.toHaveBeenCalled();
+        expect(D.replicate_once).not.toHaveBeenCalled();
+        expect(p.tally_all).not.toHaveBeenCalled();
+        expect(p.notify_of_end).not.toHaveBeenCalled();
+      });
+    }
+  }
+
+  for (const pending of ['replication', 'seed']) {
+    for (const rejects of [false, true]) {
+      it(`ignores ${pending} ${rejects ? 'rejection' : 'success'} after teardown`, async () => {
+        let resolve_pending: (value: any) => void;
+        let reject_pending: (error: any) => void;
+        const promise = new Promise((resolve, reject) => {
+          resolve_pending = resolve;
+          reject_pending = reject;
+        });
+        const D = {
+          stop_poll_sync: noop,
+          wait_for_poll_db: () => Promise.resolve(),
+          replicate_once: jasmine.createSpy('replicate_once')
+            .and.returnValue(pending === 'replication' ? promise : Promise.resolve(true)),
+          get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc').and.returnValue(promise),
+        };
+        const p = make_poll(D);
+        await run_end_to_completion(p);
+        p.tally_all.calls.reset();
+        p.cancel_end_retry();
+        if (rejects) { reject_pending(new Error('offline')); }
+        else { resolve_pending({_rev: '1-a'}); }
+        for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+        jasmine.clock().tick(600000);
+
+        expect(D.replicate_once).toHaveBeenCalledTimes(1);
+        expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(pending === 'seed' ? 1 : 0);
+        expect(p.tally_all).not.toHaveBeenCalled();
+        expect(p.make_final_rand).not.toHaveBeenCalled();
+        expect(p.make_winner).not.toHaveBeenCalled();
+        expect(p.notify_of_end).not.toHaveBeenCalled();
+        expect(p.end_retry_timeout_id).toBeNull();
+      });
+    }
+  }
+
+  it('ignores pending grace callbacks when another instance replaces the poll', async () => {
+    const p = make_poll({ replicate_once: jasmine.createSpy('replicate_once') });
+    p._state = 'running';
+    p.end();
+    p.G.P.polls[p._pid] = {};
+    jasmine.clock().tick(600000);
+    await Promise.resolve();
+    expect(p._state).toBe('running');
+    expect(p.G.D.replicate_once).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+  });
+
+  it('ignores an old seed response after a newer end attempt starts', async () => {
+    let resolve_seed: (value: any) => void;
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: () => Promise.resolve(true),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+        .and.returnValues(new Promise(resolve => { resolve_seed = resolve; }), Promise.resolve({_rev: '2-b'})),
+    };
+    const p = make_poll(D);
+    await run_end_to_completion(p);
+    await run_end_to_completion(p);
+    resolve_seed({_rev: '1-a'});
+    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
 });
