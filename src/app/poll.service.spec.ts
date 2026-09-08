@@ -65,6 +65,7 @@ describe('Poll.end final replication handling (#292)', () => {
     p.end_retry_timeout_id = null;
     p.end_retry_delay_ms = environment.closing.grace_period_3_ms;
     p.end_generation = 0;
+    p.end_in_progress = false;
     p.end_cancelled = false;
     p.G = { L, D, P: { polls: {} } };
     p._pid = 'p1';
@@ -478,21 +479,50 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(p.notify_of_end).not.toHaveBeenCalled();
   });
 
-  it('ignores an old seed response after a newer end attempt starts', async () => {
+  it('ignores repeated end() calls while an attempt is in progress', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+        .and.returnValue(Promise.resolve(state_doc('1-a'))),
+    };
+    const p = make_poll(D);
+    p.end();
+    // UI event handlers call end_if_past_due() (and thereby end()) on every
+    // interaction during the grace periods; this must not restart and thereby
+    // invalidate the in-flight attempt:
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_2_ms);
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_3_ms);
+    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p11-a');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a pending seed fetch valid when end() is called again meanwhile', async () => {
     let resolve_seed: (value: any) => void;
     const D = {
       stop_poll_sync: noop,
       wait_for_poll_db: () => Promise.resolve(),
       replicate_once: () => Promise.resolve(true),
       get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
-        .and.returnValues(new Promise(resolve => { resolve_seed = resolve; }), Promise.resolve(state_doc('2-b'))),
+        .and.returnValue(new Promise(resolve => { resolve_seed = resolve; })),
     };
     const p = make_poll(D);
     await run_end_to_completion(p);
+    // while the seed fetch is pending the attempt is still in progress, so a
+    // second end() call must be a no-op instead of superseding it:
     await run_end_to_completion(p);
+    expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(1);
     resolve_seed(state_doc('1-a'));
     for (let i = 0; i < 10; i++) { await Promise.resolve(); }
-    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
+    expect(p.make_final_rand).toHaveBeenCalledOnceWith('p11-a');
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
 });

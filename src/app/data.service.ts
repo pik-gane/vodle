@@ -175,6 +175,12 @@ const replication_stall_threshold_ms = 30 * 1000; // consider a replication stal
 const change_retry_max_attempts = 3; // failed change docs are retried this often before being dropped
 const confirmed_put_max_attempts = 5; // confirmed writes (e.g. draft→running data moves) are attempted this often before giving up
 
+// poll states advance monotonically through this sequence and must never move backwards:
+const poll_state_order = ['', 'draft', 'running', 'closing', 'closed'];
+function poll_state_is_at_least(stored: string, requested: string): boolean {
+  return poll_state_order.indexOf(stored) >= poll_state_order.indexOf(requested);
+}
+
 // some poll and voter data keys are stored in the user db rather than in the poll db:
 const poll_keystarts_in_user_db = [
   'creator', 
@@ -1190,6 +1196,16 @@ export class DataService implements OnDestroy {
 
       this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
       this.fail_poll_db_bootstrap(pid, err);
+      if (restored_poll && !this.shutting_down && this.G.P.polls[pid] === restored_poll) {
+        // reconciliation with the local db failed, but the restored cache is
+        // still a valid (if possibly stale) persisted snapshot. Start the
+        // poll's lifecycle from it rather than leaving an inert registered
+        // Poll that after_changes() would never replace: otherwise running
+        // polls would stay non-votable and closed polls would never
+        // finalize (#292):
+        restored_poll.tally_all();
+        restored_poll.start_lifecycle();
+      }
 
     }).finally(() => {
 
@@ -4532,7 +4548,15 @@ export class DataService implements OnDestroy {
         const enc_value = (key == 'due') ? value : encrypt(value, poll_pw);
         if (doc) {
           const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw),
-                value_confirmed = (stored == value) || !overwrite;
+                // a non-overwriting migration retry must not clobber a newer
+                // value written after the poll started running, so any
+                // existing value counts as confirmed — except for the poll
+                // state, which advances monotonically: an existing 'running'
+                // must still be updated when this retry requests 'closed',
+                // while an existing 'closed' is preserved (#292):
+                value_confirmed = (stored == value)
+                  || (!overwrite
+                      && (key != 'state' || poll_state_is_at_least(stored, value)));
           if (value_confirmed
               && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
             // already stored (or a newer value that a non-overwriting

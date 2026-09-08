@@ -568,6 +568,56 @@ describe('DataService consistency hardening (#292)', () => {
       expect(svc.local_docs2cache_finished).toHaveBeenCalled();
     });
 
+    it('starts a restored poll lifecycle from the snapshot when its bootstrap fails', async () => {
+      const err = new Error('bootstrap failed');
+      svc.uninitialized_pids = new Set();
+      svc._pids = new Set();
+      svc._pid_oids = {};
+      svc.poll_caches['p9'] = { state: 'running' };
+      svc.G.D = { getp: () => 'running', tally_caches: { p9: {} } };
+      svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
+      svc.fail_poll_db_bootstrap = jasmine.createSpy('fail_poll_db_bootstrap');
+      svc.get_local_poll_db = () => ({
+        info: () => Promise.reject(err)
+      });
+      const tally_all = spyOn(Poll.prototype, 'tally_all');
+      const start_lifecycle = spyOn(Poll.prototype, 'start_lifecycle');
+
+      svc.ensure_local_poll_data('p9');
+      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // the restored snapshot is still valid persisted data, so the poll must
+      // not be left registered but inert (non-votable / never finalizing):
+      expect(svc.fail_poll_db_bootstrap).toHaveBeenCalledWith('p9', err);
+      expect(svc.G.P.polls['p9']).toBeDefined();
+      expect(tally_all).toHaveBeenCalled();
+      expect(start_lifecycle).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not start a restored poll lifecycle on bootstrap failure during shutdown', async () => {
+      const err = new Error('bootstrap failed');
+      svc.uninitialized_pids = new Set();
+      svc._pids = new Set();
+      svc._pid_oids = {};
+      svc.poll_caches['p9'] = { state: 'running' };
+      svc.G.D = { getp: () => 'running', tally_caches: { p9: {} } };
+      svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
+      svc.fail_poll_db_bootstrap = jasmine.createSpy('fail_poll_db_bootstrap');
+      svc.get_local_poll_db = () => ({
+        info: () => Promise.reject(err)
+      });
+      spyOn(Poll.prototype, 'tally_all');
+      const start_lifecycle = spyOn(Poll.prototype, 'start_lifecycle');
+
+      svc.ensure_local_poll_data('p9');
+      svc.shutting_down = true;
+      await Promise.resolve();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(start_lifecycle).not.toHaveBeenCalled();
+    });
+
     it('recreates a stale poll bootstrap gate after a failed attempt', async () => {
       const err = new Error('bootstrap failed');
       svc.register_poll_db_bootstrap('p10');
@@ -1137,6 +1187,48 @@ describe('DataService consistency hardening (#292)', () => {
 
         expect(db.put).not.toHaveBeenCalled();
         expect(svc.poll_caches['p1']['title']).toBe('authoritative remote title');
+      });
+
+      it('store_poll_data_confirmed still advances a less advanced stored state when overwrite is disabled', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        svc.poll_caches['p1'] = {};
+        const stored_doc = {_id: '~vodle.poll.p1§state', value: CryptoES.AES.encrypt('running', 'pw123').toString()};
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.resolve(stored_doc)),
+          put: jasmine.createSpy('put').and.returnValue(Promise.resolve({ok: true})),
+        };
+        svc.get_local_poll_db = () => db;
+
+        // the poll state advances monotonically: a migration retry that is now
+        // closing the poll must not treat an existing 'running' as confirmed,
+        // or the fallback copies could be deleted without 'closed' ever being
+        // written:
+        await svc.store_poll_data_confirmed('p1', 'state', 'closed', false, false);
+
+        expect(db.put).toHaveBeenCalledTimes(1);
+        const put_doc = db.put.calls.mostRecent().args[0];
+        expect(CryptoES.AES.decrypt(put_doc.value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('closed');
+        expect(svc.poll_caches['p1']['state']).toBe('closed');
+      });
+
+      it('store_poll_data_confirmed preserves a more advanced stored state when overwrite is disabled', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        svc.poll_caches['p1'] = {};
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.resolve({
+            _id: '~vodle.poll.p1§state',
+            value: CryptoES.AES.encrypt('closed', 'pw123').toString()
+          })),
+          put: jasmine.createSpy('put'),
+        };
+        svc.get_local_poll_db = () => db;
+
+        // a stale migration retry requesting 'running' must never move an
+        // already closed poll backwards:
+        await svc.store_poll_data_confirmed('p1', 'state', 'running', false, false);
+
+        expect(db.put).not.toHaveBeenCalled();
+        expect(svc.poll_caches['p1']['state']).toBe('closed');
       });
 
       it('store_poll_data_confirmed retries failing puts and rejects after bounded attempts', async () => {

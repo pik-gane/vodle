@@ -185,6 +185,7 @@ export class Poll {
   private end_retry_timeout_id: number | null = null;
   private end_retry_delay_ms: number = environment.closing.grace_period_3_ms;
   private end_generation = 0;
+  private end_in_progress = false;
   private end_cancelled = false;
   private lifecycle_started = false;
 
@@ -1840,6 +1841,9 @@ export class Poll {
   }
 
   private schedule_end_retry() {
+    // the current end attempt has failed and is over; the scheduled retry (or
+    // a later explicit end() call) may start a fresh attempt (#292):
+    this.end_in_progress = false;
     if (this.end_retry_timeout_id !== null || this.has_results || !this.is_active_poll()) {
       return;
     }
@@ -1876,6 +1880,7 @@ export class Poll {
      *  as the retry timer before storage is torn down (#292). */
     this.end_cancelled = true;
     this.end_generation += 1;
+    this.end_in_progress = false;
     this.clear_end_retry(true);
   }
 
@@ -1884,6 +1889,17 @@ export class Poll {
     if (!this.is_active_poll() || this.has_results) {
       return;
     }
+    if (this.end_in_progress) {
+      // an end attempt is already running its grace periods or waiting for
+      // remote closure/seed. end_if_past_due() is called from many UI event
+      // handlers, so restarting (and thereby invalidating) the in-flight
+      // attempt on every interaction could postpone closure indefinitely.
+      // A failed attempt clears this flag via schedule_end_retry(), so the
+      // scheduled retry (or a later explicit call) starts a new attempt (#292):
+      this.G.L.trace("Poll.end attempt already in progress, ignoring", this._pid);
+      return;
+    }
+    this.end_in_progress = true;
     const generation = ++this.end_generation;
     const is_current = () => generation === this.end_generation && this.is_active_poll();
     this.clear_end_retry();
@@ -2003,6 +2019,7 @@ export class Poll {
     if (!this.is_active_poll()) { return; }
     const generation = this.end_generation;
     this.G.L.trace("Poll.notify_of_end has_been_notified_of_end");
+    this.end_in_progress = false;
     this.clear_end_retry(true);
     this.has_results = true;
     this.have_seen_results = false;
