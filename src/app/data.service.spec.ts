@@ -186,6 +186,31 @@ describe('DataService consistency hardening (#292)', () => {
   });
 
   describe('bootstrap gating', () => {
+    it('applies the shared due document before due-validated rows during bootstrap', () => {
+      svc._pids = new Set();
+      svc.save_state = jasmine.createSpy('save_state');
+      const order: string[] = [];
+      svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.callFake((_pid: string, doc: any) => {
+        order.push(doc._id);
+        return true;
+      });
+      // allDocs orders voter doc ids ('.' = 0x2e) before '§due' ('§' = 0xa7),
+      // but a stale restored cache due must not reject voter rows, so the due
+      // doc has to be applied first:
+      const rows = [
+        {id: '~vodle.poll.p1.voter.v1§rating.o1', doc: {_id: '~vodle.poll.p1.voter.v1§rating.o1'}},
+        {id: '~vodle.poll.p1§due', doc: {_id: '~vodle.poll.p1§due'}},
+        {id: '~vodle.poll.p1§state', doc: {_id: '~vodle.poll.p1§state'}},
+      ];
+      svc.local_poll_docs2cache('p1', {rows: rows});
+      expect(order).toEqual([
+        '~vodle.poll.p1§due',
+        '~vodle.poll.p1.voter.v1§rating.o1',
+        '~vodle.poll.p1§state',
+      ]);
+      expect(svc.save_state).toHaveBeenCalled();
+    });
+
     it('defers user db sync start until the user cache bootstrap completed', async () => {
       const sync_spy = make_sync_spy();
       svc.local_synced_user_db = { sync: sync_spy };

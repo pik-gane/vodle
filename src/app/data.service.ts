@@ -1295,8 +1295,23 @@ export class DataService implements OnDestroy {
         }
       }
     }
-    // decrypt and process all synced docs:
+    // decrypt and process all synced docs.
+    // Apply the shared '§due' document first: allDocs() orders voter doc ids
+    // ('.voter…', '.' = 0x2e) before '§due' ('§' = 0xa7), and doc2poll_cache
+    // validates due-carrying rows against the cached due, so a stale restored
+    // due would otherwise reject valid voter/state/option rows with no second
+    // pass before the poll is tallied (#292):
+    const due_id = poll_doc_id_prefix + pid + '§due';
     for (const row of result.rows) {
+      if (row.id == due_id && row.doc) {
+        local_changes = this.doc2poll_cache(pid, row.doc) || local_changes;
+        break;
+      }
+    }
+    for (const row of result.rows) {
+      if (row.id == due_id) {
+        continue;
+      }
       local_changes = this.doc2poll_cache(pid, row.doc) || local_changes;
     }
     this._pids.add(pid);
