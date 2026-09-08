@@ -182,6 +182,8 @@ export class Poll {
   _state: string;  // cache for state since it is asked very often
   syncing: boolean = false;
   allow_voting: boolean = false;
+  private end_retry_timeout_id: number | null = null;
+  private end_retry_delay_ms: number = environment.closing.grace_period_3_ms;
 
   constructor (G:GlobalService, pid?:string) { 
     this.G = G;
@@ -1818,8 +1820,34 @@ export class Poll {
     }
   }
 
+  private schedule_end_retry() {
+    if (this.end_retry_timeout_id !== null || this.has_results) {
+      return;
+    }
+    const delay = Math.max(this.end_retry_delay_ms, environment.closing.grace_period_3_ms);
+    this.end_retry_delay_ms = Math.min(delay * 2, 60000);
+    this.G.L.warn("Poll.schedule_end_retry scheduling end retry", this._pid, delay);
+    this.end_retry_timeout_id = window.setTimeout((() => {
+      this.end_retry_timeout_id = null;
+      if ((this._state == 'running' || this._state == 'closed') && !this.has_results) {
+        this.end();
+      }
+    }).bind(this), delay);
+  }
+
+  private clear_end_retry(reset_delay = false) {
+    if (this.end_retry_timeout_id !== null) {
+      window.clearTimeout(this.end_retry_timeout_id);
+      this.end_retry_timeout_id = null;
+    }
+    if (reset_delay) {
+      this.end_retry_delay_ms = environment.closing.grace_period_3_ms;
+    }
+  }
+
   end() {
     this.G.L.entry("Poll.end", this._pid);
+    this.clear_end_retry();
     // 1. disable voting:
     this.allow_voting = false;
     
@@ -1897,10 +1925,12 @@ export class Poll {
                 // do NOT fall back to a locally derived seed: online clients
                 // seed with pid + doc._rev above, so a different offline seed
                 // could select a different winner from the same tally. Defer
-                // finalization instead; since has_results stays false, end()
-                // will be retried by end_if_past_due() once the shared seed
-                // is available again (#292):
+                // finalization instead and schedule a guarded backoff retry, so
+                // a closed winner poll does not remain stuck without results if
+                // connectivity returns only after this end() call has finished
+                // (#292):
                 this.G.L.error("Poll.end couldn't fetch state doc, deferring finalization until the shared random seed is available", this._pid, err);
+                this.schedule_end_retry();
               }).bind(this)); 
             } else {
               this.notify_of_end();
@@ -1930,6 +1960,7 @@ export class Poll {
 
   notify_of_end() {
     this.G.L.trace("Poll.notify_of_end has_been_notified_of_end");
+    this.clear_end_retry(true);
     this.has_results = true;
     this.have_seen_results = false;
     if (this.G.S.get_notify_of("poll_closed") && !this.has_been_notified_of_end) {

@@ -55,8 +55,14 @@ describe('Poll.end final replication handling (#292)', () => {
     const p: any = Object.create(Poll.prototype);
     p.G = { L, D };
     p._pid = 'p1';
-    Object.defineProperty(p, 'state', { get: () => 'closed', set: noop });
+    p._state = 'closed';
+    let has_results = false;
+    Object.defineProperty(p, 'state', { get: () => p._state, set: value => { p._state = value; } });
     Object.defineProperty(p, 'type', { get: () => 'winner' });
+    Object.defineProperty(p, 'has_results', {
+      get: () => has_results,
+      set: value => { has_results = value; }
+    });
     p.tally_all = jasmine.createSpy('tally_all');
     p.notify_of_end = jasmine.createSpy('notify_of_end');
     p.make_final_rand = jasmine.createSpy('make_final_rand');
@@ -97,25 +103,72 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
   });
 
-  it('defers winner finalization when the shared seed is unavailable (e.g. offline)', async () => {
+  it('retries winner finalization with backoff when the shared seed is temporarily unavailable', async () => {
     const D = {
       stop_poll_sync: noop,
       wait_for_poll_db: () => Promise.resolve(),
-      replicate_once: () => Promise.reject(new Error('offline')),
-      get_remote_poll_state_doc: () => Promise.reject(new Error('offline')),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+        .and.returnValues(Promise.reject(new Error('offline')), Promise.resolve({_rev: '1-a'})),
     };
     const p = make_poll(D);
 
     await run_end_to_completion(p);
 
     // an unreachable remote must not prevent tallying from local data, but
-    // the winner must not be selected from a locally derived seed, because
-    // online clients seed with pid + doc._rev and could select a different
-    // winner from the same tally; finalization is deferred instead
-    // (has_results stays false, so end() is retried later):
+    // the winner must not be selected from a locally derived seed. Instead,
+    // Poll.end() should schedule a guarded retry for the shared seed:
+    expect(p.tally_all).toHaveBeenCalledTimes(1);
+    expect(p.make_final_rand).not.toHaveBeenCalled();
+    expect(p.make_winner).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+    expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(1);
+
+    jasmine.clock().tick(environment.closing.grace_period_3_ms);
+    await Promise.resolve();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    jasmine.clock().tick(environment.closing.grace_period_2_ms);
+    jasmine.clock().tick(environment.closing.grace_period_3_ms);
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+
+    expect(D.replicate_once).toHaveBeenCalledTimes(2);
+    expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(2);
+    expect(p.make_final_rand).toHaveBeenCalledWith('p11-a');
+    expect(p.make_winner).toHaveBeenCalled();
+    expect(p.notify_of_end).toHaveBeenCalled();
+  });
+
+  it('does not schedule overlapping winner-finalization retries while waiting for the shared seed', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      wait_for_poll_db: () => Promise.resolve(),
+      replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc').and.returnValue(Promise.reject(new Error('offline'))),
+    };
+    const p = make_poll(D);
+
+    await run_end_to_completion(p);
+
+    // while the retry timer is pending, another explicit end() call must not
+    // queue a second overlapping retry attempt:
     expect(p.tally_all).toHaveBeenCalled();
     expect(p.make_final_rand).not.toHaveBeenCalled();
     expect(p.make_winner).not.toHaveBeenCalled();
     expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(D.replicate_once).toHaveBeenCalledTimes(1);
+
+    p.end();
+    jasmine.clock().tick(
+      environment.closing.grace_period_1_ms
+      + environment.closing.grace_period_2_ms
+      + 2 * environment.closing.grace_period_3_ms
+    );
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+    expect(D.replicate_once).toHaveBeenCalledTimes(2);
   });
 });

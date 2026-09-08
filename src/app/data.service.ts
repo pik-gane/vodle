@@ -1723,11 +1723,10 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
-      // initialize the poll cache's due synchronously: the state write below
-      // runs immediately and _setp_in_polldb copies poll_caches[pid].due into
-      // the state document's required due field, so it must not race the
-      // deferred migration callback below, which would otherwise be the first
-      // to set the cached due (#292):
+      // initialize the poll cache's due synchronously: the draft→running
+      // migration confirms the shared state doc with that cached due, so the
+      // due must not race the deferred migration callback below, which would
+      // otherwise be the first to set it (#292):
       const due_iso = p.due ? p.due.toISOString() : this.user_cache[prefix + 'due'];
       if (due_iso) {
         this.ensure_poll_cache(pid)['due'] = due_iso;
@@ -1739,9 +1738,9 @@ export class DataService implements OnDestroy {
         // transactionally; user db copies are only deleted after the
         // corresponding poll db write has been confirmed, and leftover copies
         // make the migration retryable via after_changes(), so a terminal
-        // write failure cannot leave the poll running without e.g. its due
-        // document (#292):
-        this.move_draft_data_to_poll_db(pid, due_iso);
+        // write failure cannot leave the poll running without e.g. its due or
+        // shared state document (#292):
+        this.move_draft_data_to_poll_db(pid, due_iso, new_state);
         // finally, start synching with remote poll db:
         // check if db credentials are set:
         if (this.poll_has_db_credentials(pid)) {
@@ -1759,14 +1758,22 @@ export class DataService implements OnDestroy {
     }
 
     if (new_state != 'draft' && new_state != 'closing') {
-      // only "running" and "closed" are stored in poll db.
-      this._setp_in_polldb(pid, 'state', new_state); 
+      // only "running" and "closed" are stored in poll db. During a
+      // draft→running move, do not fire-and-forget that shared state write:
+      // move_draft_data_to_poll_db confirms it before the migration may finish
+      // deleting the remaining user-db copies (#292). Still update the
+      // poll-cache synchronously so local reads see the new state immediately.
+      if (old_state == 'draft') {
+        this.ensure_poll_cache(pid)['state'] = new_state;
+      } else {
+        this._setp_in_polldb(pid, 'state', new_state);
+      }
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
   }
 
-  private move_draft_data_to_poll_db(pid: string, due_iso?: string): Promise<void> {
+  private move_draft_data_to_poll_db(pid: string, due_iso?: string, state_value?: string): Promise<void> {
     /** Transactionally move a poll's draft data (incl. its due date) from the
      *  user db to the poll db. Each user db copy is only deleted after the
      *  corresponding poll db write has been confirmed, so a failed or
@@ -1774,7 +1781,7 @@ export class DataService implements OnDestroy {
      *  the migration as still pending (see draft_migration_pending()), and
      *  after_changes() retries it on later change batches and after restarts,
      *  so a terminal write failure cannot permanently leave the poll running
-     *  without e.g. its due document (#292): */
+     *  without e.g. its due or shared state document (#292): */
     if (this.draft_migration_in_flight[pid]) {
       return Promise.resolve();
     }
@@ -1792,30 +1799,50 @@ export class DataService implements OnDestroy {
     // value), and only writes started after that update stamp option/rating
     // docs with the correct due; otherwise doc2poll_cache would reject those
     // docs once the authoritative due is loaded (#292):
-    const due = due_iso || this.user_cache[prefix + 'due'];
-    let due_confirmed: Promise<boolean>;
+    const due = due_iso || this.user_cache[prefix + 'due'],
+          state = state_value || this.user_cache[prefix + 'state'];
+    const confirm_shared_state = (): Promise<boolean> => {
+      if (!state || state == 'draft' || state == 'closing') {
+        return Promise.resolve(true);
+      }
+      this.ensure_poll_cache(pid)['state'] = state;
+      return this.store_poll_data_confirmed(pid, 'state', state, true, false)
+        .then(() => true)
+        .catch(err => {
+          this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store shared poll state in poll db yet, will retry", pid, state, err);
+          return false;
+        });
+    };
+    let shared_docs_confirmed: Promise<boolean>;
     if (due) {
       this.ensure_poll_cache(pid)['due'] = due;
-      due_confirmed = this.store_poll_data_confirmed(pid, 'due', due, false, false)
+      shared_docs_confirmed = this.store_poll_data_confirmed(pid, 'due', due, false, false)
         .then(() => {
-          // only now is it safe to remove the user db copy; until then it
-          // marks the due migration as pending so that it gets retried:
-          this.delu(prefix + 'due');
-          return true;
+          return confirm_shared_state().then(state_ok => {
+            if (state_ok) {
+              // only once both shared docs are confirmed is it safe to remove
+              // the user-db due copy; until then it marks the migration as
+              // pending so that a missing state doc is also retried (#292):
+              this.delu(prefix + 'due');
+            }
+            return state_ok;
+          });
         })
         .catch(err => {
           this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store due date in poll db yet, will retry", pid, err);
           return false;
         });
     } else {
-      due_confirmed = Promise.resolve(true);
+      shared_docs_confirmed = confirm_shared_state();
     }
-    return due_confirmed.then(due_ok => {
-      if (!due_ok) {
+    return shared_docs_confirmed.then(shared_docs_ok => {
+      if (!shared_docs_ok) {
         // without a confirmed authoritative due, the remaining writes might
         // stamp option/rating docs with a stale draft due that doc2poll_cache
-        // would later reject; keep all user db copies so the whole migration
-        // is retried on a later change batch or after restart:
+        // would later reject, and without a confirmed shared state doc other
+        // replicas might never observe that the poll is running; keep user-db
+        // copies so the whole migration is retried on a later change batch or
+        // after restart:
         this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
         return;
       }

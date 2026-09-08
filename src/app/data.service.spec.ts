@@ -1155,7 +1155,7 @@ describe('DataService consistency hardening (#292)', () => {
         }
       };
 
-      it('change_poll_state deletes the user db copy only after the poll db write is confirmed', async () => {
+      it('change_poll_state confirms the shared state before deleting remaining user db copies', async () => {
         const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
         svc._pids = new Set();
         svc.user_cache = {
@@ -1179,12 +1179,22 @@ describe('DataService consistency hardening (#292)', () => {
         // the due write must be confirmed before the other writes start,
         // because a migration retry may load a different authoritative due:
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
+        expect(svc.store_poll_data_confirmed).not.toHaveBeenCalledWith('p1', 'state', 'running', true, false);
         expect(svc.store_poll_data_confirmed).not.toHaveBeenCalledWith('p1', 'title', 'T', false, false);
         resolvers['due'].res();
         await settle();
 
+        // the shared state doc must also be confirmed before the remaining
+        // poll-data copies may be deleted:
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'state', 'running', true, false);
+        expect(svc.store_poll_data_confirmed).not.toHaveBeenCalledWith('p1', 'title', 'T', false, false);
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
+        resolvers['state'].res();
+        await settle();
+
         // the optimistic cache update happens immediately:
         expect(svc.poll_caches['p1']['title']).toBe('T');
+        expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'title', 'T', false, false);
         // ... but the user db copy is only deleted after the write confirms:
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
@@ -1216,6 +1226,8 @@ describe('DataService consistency hardening (#292)', () => {
         await settle();
 
         resolvers['due'].res();
+        await settle();
+        resolvers['state'].res();
         await settle();
 
         resolvers['title'].rej(new Error('io error'));
@@ -1253,7 +1265,7 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§nickname_signature', 'sig', false, false);
       });
 
-      it('change_poll_state initializes the poll cache due synchronously before the state write', () => {
+      it('change_poll_state initializes the poll cache due and state synchronously before the deferred migration', () => {
         svc._pids = new Set();
         svc.user_cache = {
           'poll.p1.state': 'draft',
@@ -1263,24 +1275,21 @@ describe('DataService consistency hardening (#292)', () => {
         svc.wait_for_poll_db = () => new Promise(() => {});
         svc.delu = jasmine.createSpy('delu');
         svc.setu = jasmine.createSpy('setu');
-        let due_at_state_write = null;
-        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.callFake((pid, key, value) => {
-          if (key == 'state') {
-            due_at_state_write = svc.poll_caches[pid]['due'];
-          }
-          return true;
-        });
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
         svc.poll_has_db_credentials = () => false;
 
         svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
 
-        // _setp_in_polldb copies poll_caches[pid].due into the state doc's
-        // required due field, so it must not race the deferred migration:
-        expect(svc._setp_in_polldb).toHaveBeenCalledWith('p1', 'state', 'running');
-        expect(due_at_state_write).toBe('2030-01-01T00:00:00.000Z');
+        // The shared state write is now confirmed in the deferred migration
+        // instead of being fire-and-forget, but the cache still has to be
+        // initialized synchronously so that later confirmed writes stamp docs
+        // with the correct due/state:
+        expect(svc._setp_in_polldb).not.toHaveBeenCalled();
+        expect(svc.poll_caches['p1']['due']).toBe('2030-01-01T00:00:00.000Z');
+        expect(svc.poll_caches['p1']['state']).toBe('running');
       });
 
-      it('change_poll_state deletes the user db due copy only after the due write is confirmed', async () => {
+      it('change_poll_state deletes the user db due copy only after the due and shared state writes are confirmed', async () => {
         const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
         svc._pids = new Set();
         svc.user_cache = {
@@ -1303,7 +1312,42 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
         resolvers['due'].res();
         await settle();
+        expect(svc.store_poll_data_confirmed).toHaveBeenCalledWith('p1', 'state', 'running', true, false);
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
+        resolvers['state'].res();
+        await settle();
         expect(svc.delu).toHaveBeenCalledWith('poll.p1.due');
+      });
+
+      it('change_poll_state keeps the due marker and retries later when the shared state write fails', async () => {
+        const resolvers: Record<string, {res: () => void, rej: (err) => void}> = {};
+        svc._pids = new Set();
+        svc.user_cache = {
+          'poll.p1.state': 'draft',
+          'poll.p1.password': 'pw123',
+          'poll.p1.due': '2030-01-01T00:00:00.000Z',
+          'poll.p1.title': 'T',
+        };
+        svc.wait_for_poll_db = () => Promise.resolve();
+        svc.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed')
+          .and.callFake((pid, key) => new Promise<void>((res, rej) => { resolvers[key] = {res, rej}; }));
+        svc.delu = jasmine.createSpy('delu').and.callFake(key => { delete svc.user_cache[key]; });
+        svc.setu = jasmine.createSpy('setu').and.callFake((key, value) => { svc.user_cache[key] = value; return true; });
+        svc._setp_in_polldb = jasmine.createSpy('_setp_in_polldb').and.returnValue(true);
+        svc.poll_has_db_credentials = () => false;
+        svc.G.L.error = jasmine.createSpy('error');
+
+        svc.change_poll_state({pid: 'p1', due: new Date('2030-01-01T00:00:00.000Z')}, 'running');
+        await settle();
+        resolvers['due'].res();
+        await settle();
+        resolvers['state'].rej(new Error('io error'));
+        await settle();
+
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.due');
+        expect(svc.delu).not.toHaveBeenCalledWith('poll.p1.title');
+        expect(svc.draft_migration_pending('p1')).toBe(true);
+        expect(svc.G.L.error).toHaveBeenCalled();
       });
 
       it('a terminally failed move stays pending and is retried by move_draft_data_to_poll_db', async () => {
