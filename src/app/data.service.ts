@@ -3253,7 +3253,8 @@ export class DataService implements OnDestroy {
     // incompleteness, not only ones overlapping the failure (#292):
     return applied_without_drop && this.change_queue.length == 0
            && this.pending_recheck_count == 0
-           && this.recheck_failure_count == 0;
+           && this.recheck_failure_count == 0
+           && !this.persisted_cache_invalid;
   }
 
   flush_change_queue_fully(): Promise<boolean> {
@@ -3280,10 +3281,12 @@ export class DataService implements OnDestroy {
         }).then(step);
       }
       // a terminally failed recheck – whether during this flush or earlier –
-      // means a possibly stale value is still cached for the rest of the
-      // session, so a full flush must remain unsuccessful (#292):
+      // or any other dropped replicated change means a possibly stale value is
+      // still cached for the rest of the session, so a full flush must remain
+      // unsuccessful (#292):
       return Promise.resolve(applied_without_drop && this.change_queue.length == 0
-                             && this.recheck_failure_count == 0);
+                             && this.recheck_failure_count == 0
+                             && !this.persisted_cache_invalid);
     };
     return step();
   }
@@ -4350,6 +4353,9 @@ export class DataService implements OnDestroy {
         if (doc) {
           const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw),
                 value_confirmed = (stored == value) || !overwrite;
+          if (!overwrite) {
+            this.ensure_poll_cache(pid)[key] = stored;
+          }
           if (value_confirmed
               && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
             // already stored (or a newer value that a non-overwriting

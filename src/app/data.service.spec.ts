@@ -18,6 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { TestBed } from '@angular/core/testing';
+import CryptoES from 'crypto-es';
 
 import { DataService } from './data.service';
 import { environment } from '../environments/environment';
@@ -1052,6 +1053,20 @@ describe('DataService consistency hardening (#292)', () => {
         expect(await svc.flush_change_queue_fully()).toBe(false);
         expect(svc.flush_change_queue()).toBe(false);
       });
+
+      it('flushes remain unsuccessful after a non-tombstone change was terminally dropped', async () => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.doc2poll_cache = jasmine.createSpy('doc2poll_cache').and.throwError('boom');
+        svc.schedule_conflict_checks = jasmine.createSpy('schedule_conflict_checks');
+        spyOn(window, 'setTimeout').and.returnValue(123 as any);
+
+        svc.enqueue_db_change('p1', {_id: 'd1', value: 'v'}, false, true);
+        expect(await svc.flush_change_queue_fully()).toBe(false);
+
+        expect(svc.persisted_cache_invalid).toBe(true);
+        expect(await svc.flush_change_queue_fully()).toBe(false);
+        expect(svc.flush_change_queue()).toBe(false);
+      });
     });
 
     describe('transactional draft→running data moves', () => {
@@ -1096,6 +1111,24 @@ describe('DataService consistency hardening (#292)', () => {
         await svc.store_poll_data_confirmed('p1', 'due', '2030-01-01T00:00:00.000Z', false, false);
 
         expect(db.put).not.toHaveBeenCalled();
+      });
+
+      it('store_poll_data_confirmed updates the poll cache to the stored value when overwrite is disabled', async () => {
+        svc.user_cache['poll.p1.password'] = 'pw123';
+        svc.poll_caches['p1'] = { title: 'stale local title' };
+        const db = {
+          get: jasmine.createSpy('get').and.returnValue(Promise.resolve({
+            _id: 'x',
+            value: CryptoES.AES.encrypt('authoritative remote title', 'pw123').toString()
+          })),
+          put: jasmine.createSpy('put'),
+        };
+        svc.get_local_poll_db = () => db;
+
+        await svc.store_poll_data_confirmed('p1', 'title', 'stale local title', false, false);
+
+        expect(db.put).not.toHaveBeenCalled();
+        expect(svc.poll_caches['p1']['title']).toBe('authoritative remote title');
       });
 
       it('store_poll_data_confirmed retries failing puts and rejects after bounded attempts', async () => {
