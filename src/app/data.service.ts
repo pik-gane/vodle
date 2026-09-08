@@ -1868,6 +1868,7 @@ export class DataService implements OnDestroy {
      *  confirmed and cached (see move_draft_data_to_poll_db, #292): */
     const prefix = get_poll_key_prefix(pid);
     const move_promises: Promise<void>[] = [];
+    let moved_data = false;
     for (const [ukey, value] of Object.entries(this.user_cache)) {
       if (ukey.startsWith(prefix)) {
         // used db entry belongs to this poll.
@@ -1890,6 +1891,7 @@ export class DataService implements OnDestroy {
           move_promises.push(
             this.store_poll_data_confirmed(pid, key, value as string, add_due, false)
             .then(() => {
+              moved_data = true;
               // only now is it safe to remove the user db copy:
               this.delu(ukey);
             })
@@ -1901,6 +1903,13 @@ export class DataService implements OnDestroy {
       }
     }
     return Promise.all(move_promises).then(() => {
+      if (moved_data && !this.shutting_down) {
+        // doc2poll_cache defers tallying to the batch completion hook.
+        this.after_changes(true);
+        if (this.page && this.page.onDataChange) {
+          this.page.onDataChange();
+        }
+      }
       if (this.draft_migration_pending(pid)) {
         this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
       } else {

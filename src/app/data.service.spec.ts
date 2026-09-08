@@ -21,6 +21,7 @@ import { TestBed } from '@angular/core/testing';
 import CryptoES from 'crypto-es';
 
 import { DataService } from './data.service';
+import { Poll, PollService } from './poll.service';
 import { environment } from '../environments/environment';
 
 describe('DataService', () => {
@@ -1070,6 +1071,11 @@ describe('DataService consistency hardening (#292)', () => {
     });
 
     describe('transactional draft→running data moves', () => {
+      beforeEach(() => {
+        svc.after_changes = jasmine.createSpy('after_changes');
+        svc.page = { onDataChange: jasmine.createSpy('onDataChange') };
+      });
+
       it('store_poll_data_confirmed resolves once the put of a new doc succeeded', async () => {
         svc.user_cache['poll.p1.password'] = 'pw123';
         const db = {
@@ -1192,12 +1198,16 @@ describe('DataService consistency hardening (#292)', () => {
             expect(svc.G.P.update_own_rating).not.toHaveBeenCalled();
             expect(svc.G.Del.process_request_from_db).not.toHaveBeenCalled();
             expect(svc.G.Del.process_signed_response_from_db).not.toHaveBeenCalled();
+            expect(svc.after_changes).not.toHaveBeenCalled();
+            expect(svc.page.onDataChange).not.toHaveBeenCalled();
             expect(db.put.calls.mostRecent().args[0].due).toBe(due);
 
             confirm_put({ok: true});
             await migration;
             expect(svc.getv('p1', subkey, 'v1')).toBe(stored_value);
             expect(svc.delu).toHaveBeenCalledWith('poll.p1.' + key);
+            expect(svc.after_changes).toHaveBeenCalledOnceWith(true);
+            expect(svc.page.onDataChange).toHaveBeenCalledTimes(1);
             if (subkey === 'rating.o1') {
               expect(svc.G.P.update_own_rating).toHaveBeenCalledOnceWith('p1', 'v1', 'o1', Number(stored_value), false);
             } else if (subkey === 'del_request.d1') {
@@ -1240,6 +1250,8 @@ describe('DataService consistency hardening (#292)', () => {
           expect(svc.G.P.update_own_rating).not.toHaveBeenCalled();
           expect(svc.delu).not.toHaveBeenCalled();
           expect(svc.draft_migration_pending('p1')).toBe(true);
+          expect(svc.after_changes).not.toHaveBeenCalled();
+          expect(svc.page.onDataChange).not.toHaveBeenCalled();
         });
       }
 
@@ -1281,6 +1293,74 @@ describe('DataService consistency hardening (#292)', () => {
         svc.user_cache = { 'poll.p1.state': 'running', 'poll.p1.voter.v1§rating.o1': '50' };
         svc.poll_caches.p1 = { 'voter.v1§rating.o1': '' };
         expect(svc.getv('p1', 'rating.o1', 'v1')).toBe('');
+      });
+
+      it('tallies recovered ratings and refreshes the page once after the migration batch', async () => {
+        svc.G.D = svc;
+        svc.G.P = new PollService();
+        svc.G.P.init(svc.G);
+        svc.translate = { use: noop };
+        svc.document = { documentElement: {} };
+        svc.save_state = jasmine.createSpy('save_state');
+        svc.after_changes = jasmine.createSpy('after_changes')
+          .and.callFake((tally) => (DataService.prototype as any).after_changes.call(svc, tally));
+        svc._pids = new Set();
+        svc._pid_oids = {};
+        svc.tally_caches = {};
+        svc.own_ratings_map_caches = {};
+        svc.direct_delegation_map_caches = {};
+        svc.inv_direct_delegation_map_caches = {};
+        svc.indirect_delegation_map_caches = {};
+        svc.inv_indirect_delegation_map_caches = {};
+        svc.effective_delegation_map_caches = {};
+        svc.inv_effective_delegation_map_caches = {};
+        svc.proxy_ratings_map_caches = {};
+        svc.max_proxy_ratings_map_caches = {};
+        svc.argmax_proxy_ratings_map_caches = {};
+        svc.effective_ratings_map_caches = {};
+        svc.user_cache = {
+          'poll.p1.state': 'running',
+          'poll.p1.password': 'pw123',
+          'poll.p1.voter.v1§rating.o1': '20',
+          'poll.p1.voter.v1§rating.o2': '80',
+        };
+        svc.poll_caches.p1 = { due: '2030-01-01T00:00:00.000Z' };
+        const p: any = Object.create(Poll.prototype);
+        p.G = svc.G;
+        p._pid = 'p1';
+        p._state = 'running';
+        p._options = { o1: { name: 'First option' }, o2: { name: 'Second option' } };
+        svc.G.P.polls.p1 = p;
+        p.tally_all();
+        expect(p.T.n_not_abstaining).toBe(0);
+        expect(p.T.shares_map.get('o1')).toBe(0.5);
+        expect(p.T.shares_map.get('o2')).toBe(0.5);
+        const confirm_puts: Array<(value: any) => void> = [];
+        svc.get_local_poll_db = () => ({
+          get: () => Promise.reject({status: 404}),
+          put: () => new Promise(resolve => { confirm_puts.push(resolve); }),
+        });
+        svc.delu = ukey => { delete svc.user_cache[ukey]; };
+
+        const migration = svc.move_remaining_draft_data_to_poll_db('p1');
+        await settle();
+        confirm_puts[0]({ok: true});
+        await settle();
+        expect(svc.after_changes).not.toHaveBeenCalled();
+        expect(svc.page.onDataChange).not.toHaveBeenCalled();
+        confirm_puts[1]({ok: true});
+        await migration;
+
+        expect(p.own_ratings_map.get('o1').get('v1')).toBe(20);
+        expect(p.own_ratings_map.get('o2').get('v1')).toBe(80);
+        expect(p.T.n_not_abstaining).toBe(1);
+        expect(p.T.total_effective_ratings_map.get('o1')).toBe(20);
+        expect(p.T.total_effective_ratings_map.get('o2')).toBe(100);
+        expect(p.T.oids_descending).toEqual(['o2', 'o1']);
+        expect(p.T.shares_map.get('o1')).toBe(0);
+        expect(p.T.shares_map.get('o2')).toBe(1);
+        expect(svc.after_changes).toHaveBeenCalledOnceWith(true);
+        expect(svc.page.onDataChange).toHaveBeenCalledTimes(1);
       });
 
       it('change_poll_state confirms the shared state before deleting remaining user db copies', async () => {
