@@ -205,8 +205,11 @@ export class Poll {
     this.G.P.polls[pid] = this;
     if (this._pid in this.G.D.tally_caches) { 
       this.T = this.G.D.tally_caches[this._pid] as tally_cache_t;
-    } else if (start_lifecycle && !(this._state in [null, '', 'draft'])) {
-      this.tally_all();
+    } else if (!(this._state in [null, '', 'draft'])) {
+      // Reconciliation applies incremental ratings before starting timers.
+      // It needs initialized maps, but must not render a stale restored tally.
+      if (start_lifecycle) { this.tally_all(); }
+      else { this.reset_tally(); }
     }
 
     if (start_lifecycle) {
@@ -1200,21 +1203,7 @@ export class Poll {
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-    this.G.D.tally_caches[this._pid] = this.T = {
-      all_vids_set: new Set(),
-      n_not_abstaining: 0,
-      effective_ratings_ascending_map: new Map(),
-      thresholds_map: new Map(),
-      approvals_map: new Map(),
-      approval_scores_map: new Map(),
-      total_effective_ratings_map: new Map(),
-      scores_map: new Map(),
-      oids_descending: [],
-      votes_map: new Map(),
-      n_votes_map: new Map(),
-      shares_map: new Map(),
-      my_cycle_len: null
-    }
+    this.reset_tally();
     // extract voters and total_ratings:
     for (const [oid, effective_ratings_map] of this.effective_ratings_map) {
 //      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
@@ -1276,6 +1265,24 @@ export class Poll {
 //    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
 
     this.G.L.exit("Poll.tally_all", this._pid);
+  }
+
+  private reset_tally() {
+    this.G.D.tally_caches[this._pid] = this.T = {
+      all_vids_set: new Set(),
+      n_not_abstaining: 0,
+      effective_ratings_ascending_map: new Map(),
+      thresholds_map: new Map(),
+      approvals_map: new Map(),
+      approval_scores_map: new Map(),
+      total_effective_ratings_map: new Map(),
+      scores_map: new Map(),
+      oids_descending: [],
+      votes_map: new Map(),
+      n_votes_map: new Map(),
+      shares_map: new Map(),
+      my_cycle_len: null
+    };
   }
 
   // Methods dealing with individual rating updates:
@@ -1937,62 +1944,62 @@ export class Poll {
         // 5. tell poll db sync to stop:
         this.G.L.trace("Poll.end stopping sync", this._pid);
         this.G.D.stop_poll_sync(this.pid);
-        this.G.D.wait_for_poll_db(this.pid);
         // 6. wait another grace period for this stopping to have happened:
         window.setTimeout((() => {
           if (!is_current()) { return; }
           // 7. confirm the remote closing write before a one-time replication
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
-          this.G.D.ensure_remote_poll_closed(this.pid, is_current)
+          let mutation_generation: number;
+          this.G.D.prepare_poll_finalization(this.pid)
+          .then(() => {
+            if (!is_current()) { return; }
+            return this.G.D.ensure_remote_poll_closed(this.pid, is_current);
+          })
           .then((() => {
             if (!is_current()) { return 'abort'; }
+            this.G.D.assert_poll_consistent(this.pid);
+            mutation_generation = this.G.D.poll_mutation_generation(this.pid);
             this.G.L.trace("Poll.end replicating a last time", this._pid);
             return this.G.D.replicate_once(this.pid);
-          }).bind(this))
-          .catch((err => {
-            if (!is_current()) { return 'abort'; }
-            // Neither stale local data nor a seed fetched after a failed pull
-            // is sufficient for finalization. Retry consistency failures too.
-            this.G.L.error("Poll.end closing write or final replication failed, deferring finalization", this._pid, err);
-            this.schedule_end_retry();
-            return 'abort';
           }).bind(this))
           .then(((result) => {
             if (!is_current() || result === 'abort') {
               return;
             }
-            // 8. perform a final tally:
-            this.G.L.trace("Poll.end tally a last time", this._pid);
-            this.tally_all();
+            this.G.D.assert_poll_consistent(this.pid);
+            if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+              throw new Error("Poll changed during the final replication");
+            }
             if (this.type == 'winner') {
               // 9. get the revision number of the remote poll state doc:
               this.G.L.trace("Poll.end getting state doc revision", this._pid);
-              this.G.D.get_remote_poll_state_doc(this.pid)
+              return this.G.D.get_remote_poll_state_doc(this.pid)
               .then((doc => {
                 if (!is_current()) { return; }
+                this.G.D.assert_poll_consistent(this.pid);
+                if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+                  throw new Error("Poll changed while fetching the final seed");
+                }
+                this.tally_all();
                 // 10. concatenate it with the pid 
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
                 this.make_final_rand(this.pid + doc._rev);
                 this.make_winner();
                 this.notify_of_end();
-              }).bind(this))
-              .catch((err => {
-                if (!is_current()) { return; }
-                // do NOT fall back to a locally derived seed: online clients
-                // seed with pid + doc._rev above, so a different offline seed
-                // could select a different winner from the same tally. Defer
-                // finalization instead and schedule a guarded backoff retry, so
-                // a closed winner poll does not remain stuck without results if
-                // connectivity returns only after this end() call has finished
-                // (#292):
-                this.G.L.error("Poll.end couldn't fetch state doc, deferring finalization until the shared random seed is available", this._pid, err);
-                this.schedule_end_retry();
-              }).bind(this)); 
+              }).bind(this));
             } else {
+              this.tally_all();
               this.notify_of_end();
             }
-          }).bind(this));
+          }).bind(this))
+          .catch(err => {
+            if (!is_current()) { return; }
+            // All asynchronous boundaries share the same failure path: no
+            // final results from unreconciled data or a locally derived seed.
+            this.G.L.error("Poll.end publication, final replication or seed failed, deferring finalization", this._pid, err);
+            this.schedule_end_retry();
+          });
         }).bind(this), environment.closing.grace_period_3_ms);
       }).bind(this), environment.closing.grace_period_2_ms);
     }).bind(this), environment.closing.grace_period_1_ms);

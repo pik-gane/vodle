@@ -196,14 +196,15 @@ export class DelegationService {
     }
   }
 
-  revoke_delegation(pid: string, did: string, oid: string) {
+  async revoke_delegation(pid: string, did: string, oid: string): Promise<void> {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
     const a = this.get_delegation_agreements_cache(pid).get(did);
     const p = this.G.P.polls[pid];
     if ((a.client_vid != p.myvid)) {
       this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
     } else {
-      this.G.D.delv(pid, "del_request." + did);
+      await this.G.D.delv(pid, "del_request." + did);
+      if (this.G.D.getv(pid, "del_request." + did)) { return; }
       const acache = this.get_delegation_agreements_cache(pid);
       if (acache) {
         const oids = acache.get(did).active_oids;

@@ -55,6 +55,11 @@ describe('Poll.end final replication handling (#292)', () => {
   });
 
   const make_poll = (D: any, type = 'winner'): any => {
+    if (!D.prepare_poll_finalization) {
+      D.prepare_poll_finalization = () => Promise.resolve();
+    }
+    if (!D.assert_poll_consistent) { D.assert_poll_consistent = noop; }
+    if (!D.poll_mutation_generation) { D.poll_mutation_generation = () => 0; }
     if (!D.ensure_remote_poll_closed) {
       D.ensure_remote_poll_closed = jasmine.createSpy('ensure_remote_poll_closed')
         .and.returnValue(Promise.resolve());
@@ -92,7 +97,7 @@ describe('Poll.end final replication handling (#292)', () => {
     jasmine.clock().tick(environment.closing.grace_period_2_ms);
     jasmine.clock().tick(environment.closing.grace_period_3_ms);
     // let the closing write and replicate_once promise chain settle:
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       await Promise.resolve();
     }
   };
@@ -124,6 +129,18 @@ describe('Poll.end final replication handling (#292)', () => {
 
       expect(end).toHaveBeenCalledTimes(state === 'closed' ? 1 : 0);
       expect(set_timeouts).toHaveBeenCalledTimes(state === 'running' ? 1 : 0);
+    });
+
+    it(`initializes missing tally maps without rendering or starting a restored ${state} poll`, () => {
+      const G = restored_global();
+      G.D.tally_caches = {};
+      const tally = spyOn(Poll.prototype, 'tally_all');
+      const lifecycle = spyOn(Poll.prototype, 'start_lifecycle');
+      const p = new Poll(G, 'p1', false);
+      expect(p.T.all_vids_set).toEqual(new Set());
+      expect(p.T.shares_map).toEqual(new Map());
+      expect(tally).not.toHaveBeenCalled();
+      expect(lifecycle).not.toHaveBeenCalled();
     });
 
     it(`does not start restored ${state} poll lifecycle after cancellation`, () => {
@@ -186,13 +203,92 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(p.notify_of_end).not.toHaveBeenCalled();
 
     resolve_closed();
-    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+    for (let i = 0; i < 30; i++) { await Promise.resolve(); }
 
     expect(D.replicate_once).toHaveBeenCalledOnceWith('p1');
     expect(p.tally_all).toHaveBeenCalledTimes(1);
     expect(p.make_final_rand).toHaveBeenCalledOnceWith('p12-b');
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
+
+  it('awaits bootstrap and local publication before closing remotely or pulling', async () => {
+    let ready;
+    const D = {
+      stop_poll_sync: noop,
+      prepare_poll_finalization: () => new Promise(resolve => { ready = resolve; }),
+      ensure_remote_poll_closed: jasmine.createSpy('close').and.returnValue(Promise.resolve()),
+      replicate_once: jasmine.createSpy('pull').and.returnValue(Promise.resolve(true)),
+      get_remote_poll_state_doc: () => Promise.resolve(state_doc('2-b')),
+    };
+    const p = make_poll(D);
+    await run_end_to_completion(p);
+    expect(D.ensure_remote_poll_closed).not.toHaveBeenCalled();
+    expect(D.replicate_once).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    ready();
+    for (let i = 0; i < 30; i++) { await Promise.resolve(); }
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries instead of finalizing when a failed local publication retains a source', async () => {
+    const D = {
+      stop_poll_sync: noop,
+      prepare_poll_finalization: () => Promise.reject(new Error('unpublished source')),
+      replicate_once: jasmine.createSpy('pull'),
+    };
+    const p = make_poll(D);
+    await run_end_to_completion(p);
+    expect(D.replicate_once).not.toHaveBeenCalled();
+    expect(p.tally_all).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(p.end_retry_timeout_id).not.toBeNull();
+  });
+
+  for (const pending of [true, false]) {
+    it(`rejects a mutation during the seed fetch even if it has ${pending ? 'not ' : ''}completed`, async () => {
+      let generation = 0, changed = false, seed;
+      const D = {
+        stop_poll_sync: noop,
+        replicate_once: () => Promise.resolve(true),
+        assert_poll_consistent: () => {
+          if (changed && pending) { throw new Error('pending mutation'); }
+        },
+        poll_mutation_generation: () => generation,
+        get_remote_poll_state_doc: () => new Promise(resolve => { seed = resolve; }),
+      };
+      const p = make_poll(D);
+      await run_end_to_completion(p);
+      changed = true;
+      generation += 1;
+      seed(state_doc('2-b'));
+      for (let i = 0; i < 30; i++) { await Promise.resolve(); }
+      expect(p.tally_all).not.toHaveBeenCalled();
+      expect(p.make_final_rand).not.toHaveBeenCalled();
+      expect(p.notify_of_end).not.toHaveBeenCalled();
+      expect(p.end_retry_timeout_id).not.toBeNull();
+    });
+  }
+
+  for (const type of ['winner', 'share']) {
+    it(`rejects ${type} finalization after a mutation completes during the final pull`, async () => {
+      let generation = 0, finish_pull;
+      const D = {
+        stop_poll_sync: noop,
+        replicate_once: () => new Promise(resolve => { finish_pull = resolve; }),
+        poll_mutation_generation: () => generation,
+        get_remote_poll_state_doc: jasmine.createSpy('seed'),
+      };
+      const p = make_poll(D, type);
+      await run_end_to_completion(p);
+      generation += 1;
+      finish_pull(true);
+      for (let i = 0; i < 30; i++) { await Promise.resolve(); }
+      expect(p.tally_all).not.toHaveBeenCalled();
+      expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
+      expect(p.notify_of_end).not.toHaveBeenCalled();
+      expect(p.end_retry_timeout_id).not.toBeNull();
+    });
+  }
 
   it('retries a failed remote closing write even when the poll is locally closed', async () => {
     const D = {
@@ -223,7 +319,7 @@ describe('Poll.end final replication handling (#292)', () => {
       + environment.closing.grace_period_2_ms
       + 2 * environment.closing.grace_period_3_ms
     );
-    for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+    for (let i = 0; i < 30; i++) { await Promise.resolve(); }
 
     expect(D.ensure_remote_poll_closed).toHaveBeenCalledTimes(2);
     expect(D.replicate_once).toHaveBeenCalledTimes(1);
@@ -268,7 +364,7 @@ describe('Poll.end final replication handling (#292)', () => {
             + environment.closing.grace_period_2_ms
             + environment.closing.grace_period_3_ms
           );
-          for (let i = 0; i < 10; i++) { await Promise.resolve(); }
+          for (let i = 0; i < 30; i++) { await Promise.resolve(); }
         }
 
         expect(D.replicate_once).toHaveBeenCalledTimes(3);
@@ -296,10 +392,9 @@ describe('Poll.end final replication handling (#292)', () => {
 
     await run_end_to_completion(p);
 
-    // After a successful final replication the tally is safe, but
-    // the winner must not be selected from a locally derived seed. Instead,
-    // Poll.end() should schedule a guarded retry for the shared seed:
-    expect(p.tally_all).toHaveBeenCalledTimes(1);
+    // Final tally and winner publication wait for the shared seed and a
+    // second consistency check, so mutations during that fetch cannot leak in.
+    expect(p.tally_all).not.toHaveBeenCalled();
     expect(p.make_final_rand).not.toHaveBeenCalled();
     expect(p.make_winner).not.toHaveBeenCalled();
     expect(p.notify_of_end).not.toHaveBeenCalled();
@@ -311,7 +406,7 @@ describe('Poll.end final replication handling (#292)', () => {
     jasmine.clock().tick(environment.closing.grace_period_1_ms);
     jasmine.clock().tick(environment.closing.grace_period_2_ms);
     jasmine.clock().tick(environment.closing.grace_period_3_ms);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       await Promise.resolve();
     }
 
@@ -335,7 +430,7 @@ describe('Poll.end final replication handling (#292)', () => {
 
     // while the retry timer is pending, another explicit end() call must not
     // queue a second overlapping retry attempt:
-    expect(p.tally_all).toHaveBeenCalled();
+    expect(p.tally_all).not.toHaveBeenCalled();
     expect(p.make_final_rand).not.toHaveBeenCalled();
     expect(p.make_winner).not.toHaveBeenCalled();
     expect(p.notify_of_end).not.toHaveBeenCalled();

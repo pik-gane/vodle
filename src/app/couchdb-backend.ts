@@ -123,7 +123,7 @@ export class CouchDBBackend implements IDataBackend {
     // intentionally ignored here. Attempts to delete data for other voters are
     // effectively a no-op, because CouchDB enforces that users can only modify
     // their own voter data in the poll database.
-    this.dataService.delv(pollId, key);
+    await this.dataService.delv(pollId, key);
   }
   
   // ========================================================================
