@@ -154,6 +154,21 @@ describe('DataService ordered voter mutations', () => {
     expect(service.user_cache[ukey]).toBe('50');
   });
 
+  it('changes the poll generation on admission, completion, and session cancellation', async () => {
+    const before = service.poll_mutation_generation(pid);
+    const deletion = service.delv(pid, key);
+    const admitted = service.poll_mutation_generation(pid);
+    expect(admitted).toBeGreaterThan(before);
+    expect(service.has_pending_poll_mutations(pid)).toBeTrue();
+    await deletion;
+    await service.await_poll_mutations(pid);
+    const completed = service.poll_mutation_generation(pid);
+    expect(completed).toBeGreaterThan(admitted);
+    expect(service.has_pending_poll_mutations(pid)).toBeFalse();
+    await service.cancel_voter_mutations();
+    expect(service.poll_mutation_generation(pid)).toBeGreaterThan(completed);
+  });
+
   it('does not launch a second detached source deletion after confirmation', async () => {
     service.delete_user_data = jasmine.createSpy('delete_user_data');
     await service.delu_confirmed(ukey);
@@ -269,6 +284,24 @@ describe('DataService ordered voter mutations', () => {
     await expectAsync(db.get(uid)).toBeRejectedWith({status: 404});
   });
 
+  it('cancels an old destination retry before deletion and a later set', async () => {
+    const db = service.local_poll_dbs[pid];
+    let attempts = 0;
+    db.put.and.callFake(async doc => {
+      if (++attempts === 1) { throw {status: 500}; }
+      db.docs.set(doc._id, {...doc, _rev: '2-new'});
+      return {ok: true, rev: '2-new'};
+    });
+    service.setv(pid, key, '70');
+    await settle();
+    const deletion = service.delv(pid, key);
+    service.setv_in_polldb(pid, key, '90');
+    await deletion;
+    await service.await_poll_mutations(pid);
+    expect(db.put).toHaveBeenCalledTimes(2);
+    expect(decrypt(await db.get(destination), 'poll-password')).toBe('90');
+  });
+
   it('invalidates old callbacks across destruction and a new session', async () => {
     const gate = deferred<any>();
     const old_db = service.local_synced_user_db;
@@ -286,6 +319,30 @@ describe('DataService ordered voter mutations', () => {
     expect(old_db.put).not.toHaveBeenCalled();
     expect(next_db.put).not.toHaveBeenCalled();
     expect(service.user_cache[ukey]).toBe('90');
+  });
+
+  it('drains submitted writes before a new initialization restores caches', async () => {
+    const gate = deferred();
+    service.user_cache['poll.p1.state'] = 'draft';
+    service.local_synced_user_db.put.and.callFake(() => gate.promise);
+    service.setv(pid, key, '60');
+    await settle();
+    service.storage = {
+      create: noop,
+      get: jasmine.createSpy('get').and.returnValue(Promise.resolve(null)),
+    };
+    service.show_loading = noop;
+    service.init_notifications = noop;
+    service.test_sodium = noop;
+    service.init_databases = jasmine.createSpy('init_databases');
+    service.init(service.G);
+    await settle();
+    expect(service.storage.get).not.toHaveBeenCalled();
+    expect(service.init_databases).not.toHaveBeenCalled();
+    gate.resolve();
+    await settle();
+    expect(service.storage.get).toHaveBeenCalledWith('state');
+    expect(service.init_databases).toHaveBeenCalledTimes(1);
   });
 
   it('does not republish a deleted source after closing and reopening actual PouchDB databases', async () => {
@@ -312,6 +369,37 @@ describe('DataService ordered voter mutations', () => {
     await service.move_remaining_draft_data_to_poll_db(pid);
     expect(service.store_poll_data_confirmed).not.toHaveBeenCalled();
     expect(service.user_cache[ukey]).toBeUndefined();
+    await expectAsync(source_db.get(uid)).toBeRejected();
+    await expectAsync(target_db.get(destination)).toBeRejected();
+    await source_db.close();
+    await target_db.close();
+  });
+
+  it('preserves the destination across a real PouchDB restart when source deletion failed', async () => {
+    const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const source_name = 'vodle-mutation-failed-source-' + suffix;
+    const target_name = 'vodle-mutation-kept-target-' + suffix;
+    database_names.push(source_name, target_name);
+    let source_db = new PouchDB(source_name), target_db = new PouchDB(target_name);
+    await source_db.put({_id: uid, value: encrypt('50')});
+    await target_db.put({_id: destination, value: encrypt('50', 'poll-password')});
+    service.local_synced_user_db = {
+      get: id => source_db.get(id),
+      remove: async () => { throw {status: 500}; },
+    };
+    service.local_poll_dbs[pid] = target_db;
+    await expectAsync(service.delv(pid, key)).toBeRejected();
+    await source_db.close();
+    await target_db.close();
+
+    source_db = new PouchDB(source_name);
+    target_db = new PouchDB(target_name);
+    expect(decrypt(await source_db.get(uid))).toBe('50');
+    expect(decrypt(await target_db.get(destination), 'poll-password')).toBe('50');
+    service = make_service();
+    service.local_synced_user_db = source_db;
+    service.local_poll_dbs[pid] = target_db;
+    await service.delv(pid, key);
     await expectAsync(source_db.get(uid)).toBeRejected();
     await expectAsync(target_db.get(destination)).toBeRejected();
     await source_db.close();
@@ -346,5 +434,20 @@ describe('DataService ordered voter mutations', () => {
     expect(agreements.has('d1')).toBeTrue();
     expect(outgoing.get('*')).toBe('d1');
     expect(poll.del_delegation).not.toHaveBeenCalled();
+  });
+
+  it('finishes revocation when the deletion callback already removed its agreement', async () => {
+    const delegation: any = new (DelegationService as any)(null, null);
+    const agreements = new Map([['d1', {client_vid: 'v1', active_oids: new Set(['o1'])}]]);
+    const outgoing = new Map([['*', 'd1']]);
+    delegation.G = {
+      L: service.G.L,
+      D: {delv: async () => { agreements.delete('d1'); }, getv: () => ''},
+      P: {polls: {[pid]: {myvid: 'v1'}}},
+    };
+    delegation.get_delegation_agreements_cache = () => agreements;
+    delegation.get_my_outgoing_dids_cache = () => outgoing;
+    await delegation.revoke_delegation(pid, 'd1', '*');
+    expect(outgoing.has('*')).toBeFalse();
   });
 });

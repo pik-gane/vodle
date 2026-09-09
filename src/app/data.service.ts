@@ -570,7 +570,7 @@ export class DataService implements OnDestroy {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
-    this.cancel_voter_mutations();
+    const mutations_finished = this.cancel_voter_mutations();
     // a deliberate new initialization begins, so clear any teardown state
     // left over from a previous logout/destruction (#292):
     this.shutting_down = false;
@@ -601,7 +601,7 @@ export class DataService implements OnDestroy {
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
-    this.storage.get('state')
+    mutations_finished.then(() => this.storage.get('state'))
     .then((state) => {
       if (!!state) {
         G.L.debug('DataService got state from storage');
@@ -2050,20 +2050,121 @@ export class DataService implements OnDestroy {
     return false;
   }
 
-  async prepare_poll_finalization(pid: string): Promise<void> {
+  async prepare_poll_finalization(pid: string): Promise<number> {
     await this.wait_for_poll_db_bootstrap(pid);
-    await this.await_poll_mutations(pid).catch(err => {
-      // A retained migration source is a durable retry record. Let the
-      // migration below repair it before checking the failure barrier again.
-      if (!this.draft_migration_pending(pid)) { throw err; }
-    });
+    // Failed optimistic writes are reconciled with the server below, not
+    // silently accepted merely because their local promise has settled.
+    await this.await_poll_mutations(pid).catch(() => {});
     if (this.shutting_down || this.uninitialized_pids.has(pid) || this.persisted_cache_invalid) {
       throw make_consistency_failure_error("Poll bootstrap is incomplete for " + pid);
     }
     if (this.draft_migration_pending(pid)) {
       await this.move_draft_data_to_poll_db(pid);
     }
+    const generation = this.poll_mutation_generation(pid);
+    await this.confirm_voter_publications(pid, generation);
     this.assert_poll_consistent(pid);
+    return generation;
+  }
+
+  private async confirm_voter_publications(pid: string, generation: number): Promise<void> {
+    const assert_current = () => {
+      if (this.shutting_down || generation !== this.poll_mutation_generation(pid)) {
+        throw make_consistency_failure_error("Poll changed during publication confirmation: " + pid);
+      }
+    };
+    assert_current();
+    const db = this.get_local_poll_db(pid), remote = this.remote_poll_dbs[pid];
+    const vid = this.getp(pid, 'myvid');
+    if (!remote || !vid || this.poll_db_sync_handlers?.[pid]) {
+      throw make_consistency_failure_error("Cannot verify voter publication without a remote connection and voter ID");
+    }
+    const simulated = this.getp(pid, 'is_test') === 'true';
+    const prefix = poll_doc_id_prefix + pid + '.voter.' + (simulated ? '' : vid + '§');
+    const [changes, remote_rows] = await Promise.all([
+      db.changes({since: 0, include_docs: true}),
+      remote.allDocs({startkey: prefix, endkey: prefix.slice(0, -1) + (simulated ? '/' : '¨'), inclusive_end: false}),
+    ]);
+    assert_current();
+    const ids = new Set<string>([
+      ...changes.results.map(change => change.id),
+      ...remote_rows.rows.map(row => row.id),
+      ...Object.keys(this.ensure_poll_cache(pid)).map(key => poll_doc_id_prefix + pid + '.' + key),
+      ...Object.keys(this.voter_mutation_failures).filter(key => key.startsWith(get_poll_key_prefix(pid)))
+        .map(key => poll_doc_id_prefix + pid + '.' + key.slice(get_poll_key_prefix(pid).length)),
+    ].filter(id => id.startsWith(prefix)
+      && voter_subkeystarts_requiring_due.includes(id.slice(id.indexOf('§') + 1).split('.')[0])));
+    if (!ids.size) { return; }
+    // Include tombstones: a pull alone need not redeliver a remote revision
+    // which was already known before an unreplicated local deletion.
+    try { await db.replicate.to(remote, {doc_ids: [...ids], retry: false}); }
+    catch (err) { this.G.L.trace("DataService final publication push needs reconciliation", pid, err); }
+    for (const id of ids) {
+      assert_current();
+      const key = id.slice((poll_doc_id_prefix + pid + '.').length);
+      const local = await this.get_existing_doc(db, id);
+      assert_current();
+      if (local) {
+        try {
+          await this.store_poll_data_confirmed(pid, key, decrypt(local.value, this.getp(pid, 'password')),
+            true, false, () => !this.shutting_down && generation === this.poll_mutation_generation(pid));
+        } catch (err) {
+          if (!err?.vodle_publication_expired) { throw err; }
+        }
+      } else {
+        const authoritative = await this.get_existing_doc(remote, id);
+        assert_current();
+        if (authoritative) {
+          await this.restore_expired_poll_payload(pid, key, authoritative, assert_current);
+          this.cache_confirmed_voter_doc(pid, key, authoritative);
+        } else {
+          this.handle_deleted_poll_doc(pid, {_id: id});
+        }
+      }
+      assert_current();
+      delete this.voter_mutation_failures[get_poll_key_prefix(pid) + key];
+    }
+  }
+
+  private async restore_expired_poll_payload(pid: string, key: string, authoritative, assert_current: () => void) {
+    // Repair only permanently rejected deadline-stamped local revisions.
+    // Their canonical payload persists across restart but cannot overwrite
+    // newer server content: outbound sync is stopped and the due is preserved.
+    assert_current();
+    const due = authoritative.due, id = poll_doc_id_prefix + pid + '.' + key;
+    if (!key.startsWith('voter.') || authoritative._id !== id || !authoritative._rev
+        || !due || due !== this.ensure_poll_cache(pid)['due']
+        || !Number.isFinite(new Date(due).getTime()) || Date.now() <= new Date(due).getTime() + 1000
+        || this.poll_db_sync_handlers?.[pid]
+        || decrypt(authoritative.value, this.getp(pid, 'password')) === null) {
+      throw make_consistency_failure_error("Cannot safely reconcile rejected local publication: " + id);
+    }
+    const db = this.get_local_poll_db(pid);
+    let local = await this.get_existing_doc(db, id);
+    assert_current();
+    if (local?.value === authoritative.value && local?.due === due) { return; }
+    let revision = local?._rev;
+    if (!local) {
+      const rows = await db.allDocs({keys: [id]});
+      assert_current();
+      revision = rows.rows[0]?.value?.rev;
+    }
+    await db.put({_id: id, ...(revision ? {_rev: revision} : {}), value: authoritative.value, due});
+    assert_current();
+    local = await db.get(id);
+    if (local.value !== authoritative.value || local.due !== due) {
+      throw make_consistency_failure_error("Local publication repair did not persist: " + id);
+    }
+  }
+
+  private cache_confirmed_voter_doc(pid: string, key: string, doc) {
+    const cache = this.ensure_poll_cache(pid), had_key = key in cache, previous = cache[key];
+    delete cache[key];
+    try { this.doc2poll_cache(pid, doc); }
+    catch (err) {
+      if (had_key) { cache[key] = previous; }
+      throw err;
+    }
   }
 
   assert_poll_consistent(pid: string) {
@@ -3251,6 +3352,9 @@ export class DataService implements OnDestroy {
         this.voter_mutation_failures[ukey] = err;
       }
     }).then(() => {
+      if (is_active()) {
+        this.poll_mutation_versions[pid] = (this.poll_mutation_versions[pid] || 0) + 1;
+      }
       if (this.voter_mutation_tails[ukey] === pending) {
         delete this.voter_mutation_tails[ukey];
       }
@@ -4720,7 +4824,7 @@ export class DataService implements OnDestroy {
         if (is_voter_key) {
           // Use the same rating/delegation processing as incoming documents;
           // a local migration write will only produce ignored push events.
-          this.doc2poll_cache(pid, doc);
+          this.cache_confirmed_voter_doc(pid, key, doc);
         } else {
           this.ensure_poll_cache(pid)[key] = key == 'due' ? doc.value : decrypt(doc.value, poll_pw);
         }
@@ -4799,7 +4903,7 @@ export class DataService implements OnDestroy {
       const local = await db.get(_id);
       assert_wanted();
       if (local._rev != authoritative._rev) {
-        throw make_consistency_failure_error("Local and remote publication winners disagree for " + _id);
+        await this.restore_expired_poll_payload(pid, key, authoritative, assert_wanted);
       }
       return authoritative;
     };

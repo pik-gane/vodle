@@ -1951,14 +1951,17 @@ export class Poll {
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
           let mutation_generation: number;
           this.G.D.prepare_poll_finalization(this.pid)
-          .then(() => {
+          .then(generation => {
             if (!is_current()) { return; }
+            mutation_generation = generation;
             return this.G.D.ensure_remote_poll_closed(this.pid, is_current);
           })
           .then((() => {
             if (!is_current()) { return 'abort'; }
             this.G.D.assert_poll_consistent(this.pid);
-            mutation_generation = this.G.D.poll_mutation_generation(this.pid);
+            if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+              throw new Error("Poll changed after publication confirmation");
+            }
             this.G.L.trace("Poll.end replicating a last time", this._pid);
             return this.G.D.replicate_once(this.pid);
           }).bind(this))

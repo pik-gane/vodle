@@ -1239,6 +1239,17 @@ describe('DataService consistency hardening (#292)', () => {
         svc.after_changes = jasmine.createSpy('after_changes');
         svc.page = { onDataChange: jasmine.createSpy('onDataChange') };
         spyOn(svc, 'confirm_draft_migration_marker').and.returnValue(Promise.resolve());
+        svc.get_email_and_pw_hash = () => 'test-hash';
+        svc.local_synced_user_db = {
+          get: jasmine.createSpy('get').and.callFake(() => Promise.reject({status: 404})),
+          remove: jasmine.createSpy('remove').and.returnValue(Promise.resolve()),
+        };
+        // These migration tests model source data through user_cache and a
+        // per-test disposal stub. Durable revision/deletion behavior is tested
+        // against real storage in data-service-mutation-ordering.spec.ts.
+        spyOn(svc, 'read_voter_migration_source').and.callFake(async ukey =>
+          ukey in svc.user_cache ? {rev: '1-source', value: svc.user_cache[ukey]} : null);
+        spyOn(svc, 'delu_confirmed').and.callFake(async key => { svc.delu(key); });
       });
 
       it('store_poll_data_confirmed resolves once the put of a new doc succeeded', async () => {
@@ -2227,7 +2238,8 @@ describe('DataService consistency hardening (#292)', () => {
         svc.delu = jasmine.createSpy('delu');
 
         const migration = svc.move_remaining_draft_data_to_poll_db('p1');
-        // a concurrent delv() clears the source copy from the cache:
+        // A confirmed source deletion invalidates a suspended move:
+        await settle();
         delete svc.user_cache['poll.p1.' + key];
         finish_get();
         await migration;
@@ -2236,35 +2248,41 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.delu).not.toHaveBeenCalled();
       });
 
-      it('delv durably clears a retained migration source copy for non-draft polls', () => {
+      it('delv durably clears a retained migration source copy before deleting the destination', async () => {
         svc.user_cache = {
           'poll.p1.state': 'running',
           'poll.p1.myvid': 'v1',
           'poll.p1.voter.v1§rating.o1': '50',
         };
         svc.poll_caches.p1 = { 'voter.v1§rating.o1': '50' };
-        svc.delete_poll_data = jasmine.createSpy('delete_poll_data').and.returnValue(true);
+        svc.delete_voter_data_confirmed = jasmine.createSpy('delete_voter_data_confirmed').and.returnValue(Promise.resolve());
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
         svc.delete_user_data_confirmed = jasmine.createSpy('delete_user_data_confirmed').and.returnValue(Promise.resolve());
 
-        svc.delv('p1', 'rating.o1');
+        const deletion = svc.delv('p1', 'rating.o1');
+        expect(svc.user_cache['poll.p1.voter.v1§rating.o1']).toBe('50');
+        expect(svc.delete_voter_data_confirmed).not.toHaveBeenCalled();
+        await deletion;
 
         expect(svc.user_cache['poll.p1.voter.v1§rating.o1']).toBeUndefined();
-        expect(svc.delete_user_data_confirmed).toHaveBeenCalledWith('poll.p1.voter.v1§rating.o1');
-        expect(svc.delete_poll_data).toHaveBeenCalledWith('p1', 'voter.v1§rating.o1');
+        expect(svc.delete_user_data_confirmed).toHaveBeenCalledWith('poll.p1.voter.v1§rating.o1', undefined, jasmine.any(Function));
+        expect(svc.delete_voter_data_confirmed).toHaveBeenCalledWith('p1', 'voter.v1§rating.o1', jasmine.any(Function));
       });
 
       it('delete_user_data_confirmed retries transient failures and treats only 404 as deleted', async () => {
         svc.get_email_and_pw_hash = () => 'test-hash';
         let calls = 0;
+        let deleted = false;
         const doc = {_id: '~vodle.user.test-hash§k', _rev: '1-a'};
         svc.local_synced_user_db = {
-          get: jasmine.createSpy('get').and.callFake(() => ++calls < 3 ? Promise.reject({status: 500}) : Promise.resolve(doc)),
-          remove: jasmine.createSpy('remove').and.returnValue(Promise.resolve()),
+          get: jasmine.createSpy('get').and.callFake(() => ++calls < 3
+            ? Promise.reject({status: 500}) : deleted ? Promise.reject({status: 404}) : Promise.resolve(doc)),
+          remove: jasmine.createSpy('remove').and.callFake(() => { deleted = true; return Promise.resolve(); }),
         };
 
         await svc.delete_user_data_confirmed('k');
 
-        expect(svc.local_synced_user_db.get).toHaveBeenCalledTimes(3);
+        expect(svc.local_synced_user_db.get).toHaveBeenCalledTimes(4);
         expect(svc.local_synced_user_db.remove).toHaveBeenCalledWith(doc);
 
         svc.local_synced_user_db = {
@@ -2320,11 +2338,14 @@ describe('DataService consistency hardening (#292)', () => {
       });
 
       it('retries retained publication but refuses finalization until its source is safely released', async () => {
+        svc.confirm_voter_publications = jasmine.createSpy('confirm_voter_publications').and.returnValue(Promise.resolve());
         svc.user_cache = {
           'poll.p1.state': 'closed',
           'poll.p1.voter.v1§rating.o1': '50',
         };
         svc.move_draft_data_to_poll_db = jasmine.createSpy('move_draft_data_to_poll_db')
+          .and.returnValue(Promise.resolve());
+        svc.confirm_voter_publications = jasmine.createSpy('confirm_voter_publications')
           .and.returnValue(Promise.resolve());
         await expectAsync(svc.prepare_poll_finalization('p1')).toBeRejected();
         expect(svc.move_draft_data_to_poll_db).toHaveBeenCalledOnceWith('p1');
@@ -2339,6 +2360,91 @@ describe('DataService consistency hardening (#292)', () => {
         delete svc.draft_migration_in_flight.p1;
         svc.persisted_cache_invalid = true;
         expect(() => svc.assert_poll_consistent('p1')).toThrow();
+      });
+
+      for (const mutation of ['rejected update', 'rejected deletion', 'accepted deletion']) {
+        it(`reconciles a ${mutation} before finalization and persists the canonical payload`, async () => {
+          const name = 'vodle-finalization-spec-' + Date.now() + '-' + Math.random();
+          const local = new PouchDB(name + '-local'), remote = new PouchDB(name + '-remote');
+          try {
+            const key = 'voter.v1§rating.o1', id = '~vodle.poll.p1.' + key;
+            const due = '2020-01-01T00:00:00.000Z';
+            svc.user_cache = {'poll.p1.password': 'pw123', 'poll.p1.state': 'closed', 'poll.p1.myvid': 'v1'};
+            svc.poll_caches.p1 = {due, [key]: mutation === 'rejected update' ? '80' : ''};
+            svc.G.P.update_own_rating = jasmine.createSpy('rating');
+            svc.get_local_poll_db = () => local;
+            svc.remote_poll_dbs.p1 = remote;
+            await remote.put({_id: id, due, value: CryptoES.AES.encrypt('50', 'pw123').toString()});
+            await local.replicate.from(remote);
+            const previous = await local.get(id);
+            if (mutation === 'rejected update') {
+              await local.put({...previous, value: CryptoES.AES.encrypt('80', 'pw123').toString()});
+            } else {
+              await local.remove(previous);
+            }
+            if (mutation.startsWith('rejected')) {
+              spyOn(local.replicate, 'to').and.callFake(() => Promise.reject({status: 403}) as any);
+            }
+
+            const generation = await svc.prepare_poll_finalization('p1');
+
+            expect(generation).toBe(svc.poll_mutation_generation('p1'));
+            if (mutation === 'accepted deletion') {
+              await expectAsync(local.get(id)).toBeRejected();
+              await expectAsync(remote.get(id)).toBeRejected();
+              expect(svc.poll_caches.p1[key]).toBeUndefined();
+              expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 0, false);
+            } else {
+              expect(svc.poll_caches.p1[key]).toBe('50');
+              expect(CryptoES.AES.decrypt((await local.get(id)).value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('50');
+              expect((await local.get(id)).due).toBe(due);
+              expect((await remote.get(id))._rev).toBe(previous._rev);
+              expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 50, false);
+            }
+          } finally {
+            await local.destroy();
+            await remote.destroy();
+          }
+        });
+      }
+
+      it('clears phantom optimistic ratings only after confirming absence remotely', async () => {
+        const key = 'voter.v1§rating.o1';
+        svc.user_cache = {'poll.p1.state': 'closed', 'poll.p1.myvid': 'v1'};
+        svc.poll_caches.p1 = {[key]: '80'};
+        svc.voter_mutation_failures['poll.p1.' + key] = new Error('local put failed');
+        svc.G.P.update_own_rating = jasmine.createSpy('rating');
+        svc.get_local_poll_db = () => ({
+          changes: () => Promise.resolve({results: []}),
+          get: () => Promise.reject({status: 404}),
+          replicate: {to: () => Promise.resolve()},
+        });
+        svc.remote_poll_dbs.p1 = {
+          allDocs: () => Promise.resolve({rows: []}),
+          get: () => Promise.reject({status: 404}),
+        };
+        await svc.prepare_poll_finalization('p1');
+        expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 0, false);
+        expect(svc.has_pending_poll_mutations('p1')).toBeFalse();
+      });
+
+      it('retains failed mutation state when remote absence cannot be verified', async () => {
+        const key = 'voter.v1§rating.o1';
+        svc.user_cache = {'poll.p1.state': 'closed', 'poll.p1.myvid': 'v1'};
+        svc.poll_caches.p1 = {[key]: '80'};
+        svc.voter_mutation_failures['poll.p1.' + key] = new Error('local put failed');
+        svc.get_local_poll_db = () => ({
+          changes: () => Promise.resolve({results: []}),
+          get: () => Promise.reject({status: 404}),
+          replicate: {to: () => Promise.resolve()},
+        });
+        svc.remote_poll_dbs.p1 = {
+          allDocs: () => Promise.resolve({rows: []}),
+          get: () => Promise.reject({status: 500}),
+        };
+        await expectAsync(svc.prepare_poll_finalization('p1')).toBeRejected();
+        expect(svc.has_pending_poll_mutations('p1')).toBeTrue();
+        expect(svc.poll_caches.p1[key]).toBe('80');
       });
 
       it('waits for remote closed-state publication before confirming closure', async () => {
@@ -2576,12 +2682,12 @@ describe('DataService consistency hardening (#292)', () => {
         for (let i = 0; i < 10; i++) { await Promise.resolve(); }
 
         expect(svc.get_local_poll_db).not.toHaveBeenCalledWith('pdraft');
-        expect(svc.poll_caches.prun.title).toBe('Winning title');
-        expect(svc.poll_caches.prun.desc).toBeUndefined();
-        expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('prun', 'v1', 'o1', 0, false);
-        expect(svc.G.Del.process_deleted_request_from_db).toHaveBeenCalledWith('prun', 'd1', 'v1');
-        expect(svc._pid_oids.prun.has('phantom')).toBeFalse();
-        expect(svc.G.P.polls.prun.oids).toEqual(['o1']);
+        // The snapshot must remain private until the replay read also succeeds.
+        expect(svc.poll_caches.prun.title).toBe('Losing title');
+        expect(svc.poll_caches.prun.desc).toBe('Deleted description');
+        expect(svc.G.P.update_own_rating).not.toHaveBeenCalled();
+        expect(svc.G.Del.process_deleted_request_from_db).not.toHaveBeenCalled();
+        expect(svc._pid_oids.prun.has('phantom')).toBeTrue();
         expect(db.changes).toHaveBeenCalledWith({since: 7, include_docs: true});
         expect(bootstrapped).toBeFalse();
         expect(start_lifecycle).not.toHaveBeenCalled();
@@ -2595,6 +2701,10 @@ describe('DataService consistency hardening (#292)', () => {
         ], last_seq: 8});
         for (let i = 0; i < 10; i++) { await Promise.resolve(); }
         expect(bootstrapped).toBeTrue();
+        expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('prun', 'v1', 'o1', 0, false);
+        expect(svc.G.Del.process_deleted_request_from_db).toHaveBeenCalledWith('prun', 'd1', 'v1');
+        expect(svc._pid_oids.prun.has('phantom')).toBeFalse();
+        expect(svc.G.P.polls.prun.oids).toEqual(['o1']);
         expect(svc.G.P.polls.prun).not.toBe(previous_poll);
         expect(svc.G.P.polls.prun.own_ratings_map.get('o1').get('v1')).toBe(0);
         expect(svc.G.P.polls.prun.effective_ratings_map.get('o1').has('v1')).toBeFalse();

@@ -206,7 +206,7 @@ export class DelegationService {
       await this.G.D.delv(pid, "del_request." + did);
       if (this.G.D.getv(pid, "del_request." + did)) { return; }
       const acache = this.get_delegation_agreements_cache(pid);
-      if (acache) {
+      if (acache?.has(did)) {
         const oids = acache.get(did).active_oids;
         if (oids) {
           for (const oid of oids) {

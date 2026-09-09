@@ -56,7 +56,7 @@ describe('Poll.end final replication handling (#292)', () => {
 
   const make_poll = (D: any, type = 'winner'): any => {
     if (!D.prepare_poll_finalization) {
-      D.prepare_poll_finalization = () => Promise.resolve();
+      D.prepare_poll_finalization = () => Promise.resolve(D.poll_mutation_generation());
     }
     if (!D.assert_poll_consistent) { D.assert_poll_consistent = noop; }
     if (!D.poll_mutation_generation) { D.poll_mutation_generation = () => 0; }
@@ -225,7 +225,7 @@ describe('Poll.end final replication handling (#292)', () => {
     expect(D.ensure_remote_poll_closed).not.toHaveBeenCalled();
     expect(D.replicate_once).not.toHaveBeenCalled();
     expect(p.notify_of_end).not.toHaveBeenCalled();
-    ready();
+    ready(0);
     for (let i = 0; i < 30; i++) { await Promise.resolve(); }
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
@@ -238,6 +238,26 @@ describe('Poll.end final replication handling (#292)', () => {
     };
     const p = make_poll(D);
     await run_end_to_completion(p);
+    expect(D.replicate_once).not.toHaveBeenCalled();
+    expect(p.tally_all).not.toHaveBeenCalled();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(p.end_retry_timeout_id).not.toBeNull();
+  });
+
+  it('does not accept a mutation during remote closure after publication was confirmed', async () => {
+    let generation = 0, close;
+    const D = {
+      stop_poll_sync: noop,
+      prepare_poll_finalization: () => Promise.resolve(0),
+      ensure_remote_poll_closed: () => new Promise(resolve => { close = resolve; }),
+      poll_mutation_generation: () => generation,
+      replicate_once: jasmine.createSpy('pull'),
+    };
+    const p = make_poll(D);
+    await run_end_to_completion(p);
+    generation += 1;
+    close();
+    for (let i = 0; i < 30; i++) { await Promise.resolve(); }
     expect(D.replicate_once).not.toHaveBeenCalled();
     expect(p.tally_all).not.toHaveBeenCalled();
     expect(p.notify_of_end).not.toHaveBeenCalled();
