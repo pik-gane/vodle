@@ -151,6 +151,17 @@ function get_poll_key_prefix(pid:string) {
   return 'poll.' + pid + '.';
 }
 
+function make_consistency_failure_error(message: string): Error {
+  /** Error signalling that the local cache could not be verified as fully
+   *  consistent (e.g. a queued change or tombstone recheck could not be
+   *  applied), as opposed to a mere transport/replication failure. Marked
+   *  with is_consistency_failure so that callers such as Poll.end() can
+   *  distinguish it from an unreachable remote (#292): */
+  const err = new Error(message);
+  err['is_consistency_failure'] = true;
+  return err;
+}
+
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
@@ -162,6 +173,13 @@ const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db
 const replication_watchdog_interval_ms = 10 * 1000; // how often to check for stalled replications
 const replication_stall_threshold_ms = 30 * 1000; // consider a replication stalled after this long without progress
 const change_retry_max_attempts = 3; // failed change docs are retried this often before being dropped
+const confirmed_put_max_attempts = 5; // confirmed writes (e.g. draft→running data moves) are attempted this often before giving up
+
+// poll states advance monotonically through this sequence and must never move backwards:
+const poll_state_order = ['', 'draft', 'running', 'closing', 'closed'];
+function poll_state_is_at_least(stored: string, requested: string): boolean {
+  return poll_state_order.indexOf(stored) >= poll_state_order.indexOf(requested);
+}
 
 // some poll and voter data keys are stored in the user db rather than in the poll db:
 const poll_keystarts_in_user_db = [
@@ -341,7 +359,7 @@ export class DataService implements OnDestroy {
 
   // LYFECYCLE:
 
-  private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
+  private uninitialized_pids: Set<string> = new Set(); // temporary set of pids currently initializing
 
   private _ready: boolean = false;
   get ready() { return this._ready; }
@@ -366,10 +384,30 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing: incoming db change docs are queued and processed
   // in batches, keeping only the newest change per doc id:
-  private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+  private change_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
   private change_queue_scheduled = false;
   private change_queue_timeout: ReturnType<typeof setTimeout> | null = null;
   private change_retry_counts: Record<string, number> = {};
+  // pending asynchronous tombstone rechecks (recheck_deleted_doc) whose
+  // results still need to be enqueued and applied before a flush is complete:
+  private pending_recheck_count = 0;
+  private pending_recheck_waiters: (() => void)[] = [];
+  // counts tombstone rechecks whose verification failed terminally, so that
+  // flushes can report incompleteness while the cache may be stale (#292):
+  private recheck_failure_count = 0;
+
+  // draft→running data migrations currently being (re)tried, so that
+  // after_changes() retries cannot overlap a still-running migration:
+  private draft_migration_in_flight: Record<string, boolean> = {};
+  private voter_mutation_generations: Record<string, number> = {};
+  private voter_mutation_tails: Record<string, Promise<void>> = {};
+  private voter_mutation_failures: Record<string, any> = {};
+  private voter_mutation_session = 0;
+  // barrier that newly admitted voter mutations must wait for, so that a
+  // retired session's already issued writes can no longer interleave with the
+  // new session's (#292):
+  private voter_mutation_admission: Promise<void> = Promise.resolve();
+  private poll_mutation_versions: Record<string, number> = {};
 
   // Replication watchdog: per-replication progress tracking; keys are
   // 'user' for the user db sync and the pid for poll db syncs:
@@ -403,9 +441,20 @@ export class DataService implements OnDestroy {
   ngOnDestroy() {
     console.log("DataService.ngOnDestroy entry");
     this.shutting_down = true;
+    this.cancel_voter_mutations();
     this.user_sync_start_generation += 1;
     this.poll_sync_start_generation = {};
     this.stop_replication_watchdog();
+    // cancel any pending deferred poll-finalization retry timers (#292):
+    if (this.G?.P?.polls) {
+      for (const pid in this.G.P.polls) {
+        try {
+          this.G.P.polls[pid].cancel_end_retry();
+        } catch (err) {
+          console.warn("DataService.ngOnDestroy could not cancel end retry", pid, err);
+        }
+      }
+    }
     // cancel live replication handlers so no further change events can
     // re-enqueue work after destruction:
     if (this.user_db_sync_handler) {
@@ -525,6 +574,7 @@ export class DataService implements OnDestroy {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
+    const mutations_finished = this.cancel_voter_mutations();
     // a deliberate new initialization begins, so clear any teardown state
     // left over from a previous logout/destruction (#292):
     this.shutting_down = false;
@@ -555,7 +605,7 @@ export class DataService implements OnDestroy {
     // make sure storage exists:
     this.storage.create();
     // restore state from storage:
-    this.storage.get('state')
+    mutations_finished.then(() => this.storage.get('state'))
     .then((state) => {
       if (!!state) {
         G.L.debug('DataService got state from storage');
@@ -798,6 +848,8 @@ export class DataService implements OnDestroy {
 
           this.apply_user_bootstrap_changes(changes);
           this.mark_user_db_bootstrapped();
+          // background pass resolving any pre-existing conflicts (#292):
+          this.scan_user_db_for_conflicts();
 
           this.init_poll_data();
 
@@ -847,6 +899,8 @@ export class DataService implements OnDestroy {
 
         this.apply_user_bootstrap_changes(changes);
         this.mark_user_db_bootstrapped();
+        // background pass resolving any pre-existing conflicts (#292):
+        this.scan_user_db_for_conflicts();
 
       }).catch(err => {
 
@@ -939,8 +993,18 @@ export class DataService implements OnDestroy {
           initializing_polls = true;
         }
       }
+    } else if (!environment.useMatrixBackend) {
+      // Reconcile restored caches with local winners before conflict cleanup
+      // and readiness, just as for a cold bootstrap (#292).
+      for (const pid of this._pids) {
+        if (!this.pid_is_draft(pid)) {
+          this.ensure_local_poll_data(pid);
+        }
+      }
     }    
-    this.local_docs2cache_finished();
+    if (this.uninitialized_pids.size == 0) {
+      this.local_docs2cache_finished();
+    }
   }
 
   private has_user_db_credentials() {
@@ -1065,7 +1129,7 @@ export class DataService implements OnDestroy {
   private ensure_local_poll_data(pid:string) {
     // start fetching poll data from local poll db:
     this.G.L.entry("DataService.ensure_local_poll_data", pid);
-    if (this.uninitialized_pids.has(pid)) {
+    if (this.shutting_down || this.uninitialized_pids.has(pid)) {
       // a local bootstrap for this pid is already in flight and shares this
       // poll's bootstrap gate. Don't launch a second info()/allDocs() load
       // whose stale snapshot could overwrite newer cache values (#292):
@@ -1091,53 +1155,52 @@ export class DataService implements OnDestroy {
     // Register a bootstrap promise so that syncing/replication of this poll
     // is deferred until the cache bootstrap has completed (#292):
     this.register_poll_db_bootstrap(pid, true);
-
-    // ASYNC:
-    // record the local db's update_seq before taking the allDocs snapshot,
-    // then fetch all docs from local poll db:
-    let bootstrap_seq = null;
-    lpdb.info()
-    .then(info => {
-
-      // store last_seq as reference point for the changes feed:
-      bootstrap_seq = info.update_seq;
-      this.ensure_poll_cache(pid)['last_seq'] = info.update_seq;
-      this.G.L.trace("DataService recorded poll db update_seq at bootstrap", pid, info.update_seq);
-
-      return lpdb.allDocs({
-        include_docs: true
-      });
-
-    }).then(result => {
-
-      this.local_poll_docs2cache.bind(this)(pid, result, restored_cache);
-      // replay local writes committed after the allDocs() snapshot was taken,
-      // so that they cannot be lost when their later push-direction sync
-      // events are ignored (#292):
-      return lpdb.changes({
-        since: bootstrap_seq,
-        include_docs: true
-      });
-
-    }).then(changes => {
-
-      this.apply_poll_bootstrap_changes(pid, changes);
-      this.mark_poll_db_bootstrapped_now(pid);
-
-    }).catch(err => {
-
-      this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
-      this.fail_poll_db_bootstrap(pid, err);
-
-    }).finally(() => {
-
-      this.uninitialized_pids.delete(pid);
-      this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
-      if (this.uninitialized_pids.size == 0) {
-        this.local_docs2cache_finished();
+    let restored_poll: Poll;
+    if (restored_cache) {
+      // Derived rating/delegation updates need a Poll, but its closing timers
+      // must not run against the stale restored snapshot.
+      restored_poll = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+      for (const oid of this._pid_oids[pid] || []) {
+        new Option(this.G, restored_poll, oid);
       }
+    }
 
-    });
+    const bootstrap = async (): Promise<void> => {
+      for (let attempt = 1; !this.shutting_down; attempt++) {
+        try {
+          const info = await lpdb.info();
+          const result = await lpdb.allDocs({include_docs: true});
+          // Read the replay before mutating the cache. A failed read must not
+          // expose a partially reconciled snapshot.
+          const changes = await lpdb.changes({since: info.update_seq, include_docs: true});
+          if (this.shutting_down) { return; }
+          this.local_poll_docs2cache(pid, result, restored_cache || attempt > 1);
+          this.apply_poll_bootstrap_changes(pid, changes);
+          if (restored_poll && this.G.P.polls[pid] === restored_poll) {
+            restored_poll.tally_all();
+            restored_poll.start_lifecycle();
+          }
+          this.mark_poll_db_bootstrapped_now(pid);
+          this.scan_poll_db_for_conflicts(pid);
+          this.uninitialized_pids.delete(pid);
+          if (this.uninitialized_pids.size == 0) {
+            this.local_docs2cache_finished();
+          }
+          return;
+        } catch (err) {
+          this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
+          // All attempts share ONE pending gate. Exhaustion fails closed:
+          // leave the poll uninitialized until a fresh startup can reconcile it.
+          if (this.shutting_down || attempt >= change_retry_max_attempts) {
+            this.invalidate_persisted_cache();
+            this.fail_poll_db_bootstrap(pid, err);
+            return;
+          }
+          await new Promise<void>(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+        }
+      }
+    };
+    bootstrap();
     this.G.L.exit("DataService.ensure_local_poll_data", pid);
   }
 
@@ -1156,6 +1219,8 @@ export class DataService implements OnDestroy {
         this.mark_poll_db_bootstrapped[pid] = resolve;
         this.reject_poll_db_bootstrapped[pid] = reject;
       });
+      // A terminal bootstrap may fail before any sync caller awaits its gate.
+      this.poll_db_bootstrapped[pid].catch(() => {});
     }
   }
 
@@ -1206,16 +1271,34 @@ export class DataService implements OnDestroy {
         if (!snapshot_ids.has(_id)) {
           this.G.L.trace("DataService.local_poll_docs2cache dropping cache entry without backing doc", pid, key);
           local_changes = this.handle_deleted_poll_doc(pid, {_id: _id}) || local_changes;
-          if (key.startsWith('option.') && key.endsWith('.name') && (pid in this._pid_oids)) {
-            const keyend = key.slice('option.'.length),
-                  oid = keyend.slice(0, keyend.indexOf('.'));
-            this._pid_oids[pid].delete(oid);
-          }
+        }
+      }
+      for (const oid of this._pid_oids[pid] || []) {
+        if (!snapshot_ids.has(poll_doc_id_prefix + pid + '§option.' + oid + '.name')) {
+          this._pid_oids[pid].delete(oid);
+          const poll = this.G.P.polls[pid];
+          if (poll) { poll.remove_option(oid); }
+          local_changes = true;
         }
       }
     }
-    // decrypt and process all synced docs:
+    // decrypt and process all synced docs.
+    // Apply the shared '§due' document first: allDocs() orders voter doc ids
+    // ('.voter…', '.' = 0x2e) before '§due' ('§' = 0xa7), and doc2poll_cache
+    // validates due-carrying rows against the cached due, so a stale restored
+    // due would otherwise reject valid voter/state/option rows with no second
+    // pass before the poll is tallied (#292):
+    const due_id = poll_doc_id_prefix + pid + '§due';
     for (const row of result.rows) {
+      if (row.id == due_id && row.doc) {
+        local_changes = this.doc2poll_cache(pid, row.doc) || local_changes;
+        break;
+      }
+    }
+    for (const row of result.rows) {
+      if (row.id == due_id) {
+        continue;
+      }
       local_changes = this.doc2poll_cache(pid, row.doc) || local_changes;
     }
     this._pids.add(pid);
@@ -1429,26 +1512,31 @@ export class DataService implements OnDestroy {
             if (change.pending == 0) {
               // replication completed
 
-              // #292: make sure all queued changes are applied to the cache
-              // before callers may rely on it:
-              if (!this.flush_change_queue()) {
-                reject(new Error("DataService.connect_to_remote_poll_db could not flush queued changes"));
-                return;
-              }
+              // #292: make sure all queued changes – including deferred
+              // tombstone rechecks – are applied to the cache before callers
+              // may rely on it:
+              this.flush_change_queue_fully().then(flushed => {
 
-              this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
+                if (!flushed) {
+                  reject(new Error("DataService.connect_to_remote_poll_db could not flush queued changes"));
+                  return;
+                }
 
-              this.need_poll_db_replication[pid] = false;
+                this.G.L.trace("DataService.connect_to_remote_poll_db completed one-time replication", pid, this.poll_caches[pid]['state']);
 
-              if (this.poll_caches[pid]['state'] == 'closed') {
-                this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
-              } else {
-                // now start synchronisation asynchronously:
-                this.start_poll_sync.bind(this)(pid);
-              }
-      
-              // RESOLVE:
-              resolve(true);  
+                this.need_poll_db_replication[pid] = false;
+
+                if (this.poll_caches[pid]['state'] == 'closed') {
+                  this.G.L.trace("DataService.connect_to_remote_poll_db no further syncing of closed poll", pid);
+                } else {
+                  // now start synchronisation asynchronously:
+                  this.start_poll_sync.bind(this)(pid);
+                }
+
+                // RESOLVE:
+                resolve(true);
+
+              });
             }
 
           }).on('error', err => {
@@ -1520,7 +1608,7 @@ export class DataService implements OnDestroy {
   private local_docs2cache_finished() {
     // called whenever content of local docs has fully been copied to cache
     this.G.L.entry("DataService.local_user_docs2cache_finished");
-    if (this.shutting_down) {
+    if (this.shutting_down || this.uninitialized_pids.size > 0) {
       // teardown (logout or destruction) began while a bootstrap was still in
       // flight; do not mark the torn-down service ready or re-enable deferred
       // restart/connect paths (#292):
@@ -1678,26 +1766,24 @@ export class DataService implements OnDestroy {
 
       this.G.L.debug("DataService.change_poll_state old state was draft, so moving data from user db to poll db and then starting sync", pid, new_state);
 
-      // first store due in polldb so that it can be used for the other items:
-      this._setp_in_polldb(pid, 'due', p.due.toISOString());
+      // initialize the poll cache's due synchronously: the draft→running
+      // migration confirms the shared state doc with that cached due, so the
+      // due must not race the deferred migration callback below, which would
+      // otherwise be the first to set it (#292):
+      const due_iso = p.due ? p.due.toISOString() : this.user_cache[prefix + 'due'];
+      if (due_iso) {
+        this.ensure_poll_cache(pid)['due'] = due_iso;
+      }
+
       // now wait for poll db before continuing:
       this.wait_for_poll_db(pid).finally(() => {
-        // move data from local user db to poll db.
-        for (const [ukey, value] of Object.entries(this.user_cache)) {
-          if (ukey.startsWith(prefix)) {
-            // used db entry belongs to this poll.
-            const key = ukey.substring(prefix.length),
-                  pos = (key+'.').indexOf('.'),
-                  subkey = (key+'.').slice(0, pos);
-            if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
-              if (this._setp_in_polldb(pid, key, value as string)) {
-                this.delu(ukey);
-              } else {
-                this.G.L.warn("DataService.change_poll_state couldn't move", pid, ukey, key);
-              }
-            }
-          }
-        }
+        // move data (incl. the due date) from local user db to poll db
+        // transactionally; user db copies are only deleted after the
+        // corresponding poll db write has been confirmed, and leftover copies
+        // make the migration retryable via after_changes(), so a terminal
+        // write failure cannot leave the poll running without e.g. its due or
+        // shared state document (#292):
+        this.move_draft_data_to_poll_db(pid, due_iso, new_state);
         // finally, start synching with remote poll db:
         // check if db credentials are set:
         if (this.poll_has_db_credentials(pid)) {
@@ -1715,11 +1801,417 @@ export class DataService implements OnDestroy {
     }
 
     if (new_state != 'draft' && new_state != 'closing') {
-      // only "running" and "closed" are stored in poll db.
-      this._setp_in_polldb(pid, 'state', new_state); 
+      // only "running" and "closed" are stored in poll db. During a
+      // draft→running move, do not fire-and-forget that shared state write:
+      // move_draft_data_to_poll_db confirms it before the migration may finish
+      // deleting the remaining user-db copies (#292). Still update the
+      // poll-cache synchronously so local reads see the new state immediately.
+      if (old_state == 'draft') {
+        this.ensure_poll_cache(pid)['state'] = new_state;
+      } else {
+        this._setp_in_polldb(pid, 'state', new_state);
+      }
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
+  }
+
+  private async confirm_draft_migration_marker(pid: string, state: string): Promise<void> {
+    const hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+    if (!hash || !password || !['running', 'closed', 'closing'].includes(state)) {
+      throw new Error("DataService.confirm_draft_migration_marker missing credentials or non-draft state");
+    }
+    const _id = user_doc_id_prefix + hash + '§' + get_poll_key_prefix(pid) + 'state';
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const doc = await this.local_synced_user_db.get(_id).catch(err => {
+          if (err.status == 404) { return {_id}; }
+          throw err;
+        });
+        // A newer non-draft marker is sufficient for restart to open the poll
+        // DB. Never regress it while retrying an interrupted migration.
+        if (doc.value && ['running', 'closed', 'closing'].includes(decrypt(doc.value, password))) {
+          return;
+        }
+        doc.value = encrypt(state, password);
+        await this.local_synced_user_db.put(doc);
+        return;
+      } catch (err) {
+        if (attempt >= confirmed_put_max_attempts) { throw err; }
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
+  }
+
+  private async move_draft_data_to_poll_db(pid: string, due_iso?: string, state_value?: string): Promise<void> {
+    /** Transactionally move a poll's draft data (incl. its due date) from the
+     *  user db to the poll db. Each user db copy is only deleted after the
+     *  corresponding poll db write has been confirmed, so a failed or
+     *  interrupted write cannot lose draft data. Leftover user db copies mark
+     *  the migration as still pending (see draft_migration_pending()), and
+     *  after_changes() retries it on later change batches and after restarts,
+     *  so a terminal write failure cannot permanently leave the poll running
+     *  without e.g. its due or shared state document (#292): */
+    if (this.draft_migration_in_flight[pid]) {
+      return Promise.resolve();
+    }
+    const prefix = get_poll_key_prefix(pid);
+    if (!this.user_cache[prefix + 'password']) {
+      // store_poll_data_confirmed would reject every write anyway:
+      this.G.L.warn("DataService.move_draft_data_to_poll_db missing poll password, keeping user db copies", pid);
+      return Promise.resolve();
+    }
+    this.draft_migration_in_flight[pid] = true;
+    try {
+      // setu() only updates the cache synchronously. No fallback may be
+      // deleted until restart can discover the poll DB from the user DB.
+      await this.confirm_draft_migration_marker(pid, state_value || this.user_cache[prefix + 'state']);
+    } catch (err) {
+      delete this.draft_migration_in_flight[pid];
+      this.G.L.error("DataService.move_draft_data_to_poll_db couldn't confirm migration marker, keeping user db copies", pid, err);
+      return;
+    }
+    // first store due in the poll db and wait until that write has been
+    // confirmed and poll_caches[pid].due updated before launching the other
+    // writes: a migration retry may find a different, authoritative due in
+    // the poll db (store_poll_data_confirmed then updates the cache to that
+    // value), and only writes started after that update stamp option/rating
+    // docs with the correct due; otherwise doc2poll_cache would reject those
+    // docs once the authoritative due is loaded (#292):
+    const due = due_iso || this.user_cache[prefix + 'due'],
+          state = state_value || this.user_cache[prefix + 'state'];
+    const confirm_shared_state = (): Promise<boolean> => {
+      if (!state || state == 'draft' || state == 'closing') {
+        return Promise.resolve(true);
+      }
+      this.ensure_poll_cache(pid)['state'] = state;
+      return this.store_poll_data_confirmed(pid, 'state', state, true, false)
+        .then(() => true)
+        .catch(err => {
+          this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store shared poll state in poll db yet, will retry", pid, state, err);
+          return false;
+        });
+    };
+    let shared_docs_confirmed: Promise<boolean>;
+    if (due) {
+      this.ensure_poll_cache(pid)['due'] = due;
+      shared_docs_confirmed = this.store_poll_data_confirmed(pid, 'due', due, false, false)
+        .then(() => {
+          return confirm_shared_state().then(state_ok => {
+            if (!state_ok) {
+              return false;
+            }
+            // only once both shared docs are confirmed is it safe to remove
+            // the user-db due copy; until then it marks the migration as
+            // pending so that a missing state doc is also retried (#292).
+            // The deletion itself is awaited and durable (only a 404 counts
+            // as nonexistent), so a transient failure keeps the migration
+            // pending instead of leaving a stale source doc behind:
+            return this.delu_confirmed(prefix + 'due')
+              .catch(err => {
+                this.G.L.warn("DataService.move_draft_data_to_poll_db couldn't confirm deletion of migrated due copy yet, will retry", pid, err);
+              })
+              .then(() => true);
+          });
+        })
+        .catch(err => {
+          this.G.L.error("DataService.move_draft_data_to_poll_db couldn't store due date in poll db yet, will retry", pid, err);
+          return false;
+        });
+    } else {
+      shared_docs_confirmed = confirm_shared_state();
+    }
+    return shared_docs_confirmed.then(shared_docs_ok => {
+      if (!shared_docs_ok) {
+        // without a confirmed authoritative due, the remaining writes might
+        // stamp option/rating docs with a stale draft due that doc2poll_cache
+        // would later reject, and without a confirmed shared state doc other
+        // replicas might never observe that the poll is running; keep user-db
+        // copies so the whole migration is retried on a later change batch or
+        // after restart:
+        this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
+        return;
+      }
+      return this.move_remaining_draft_data_to_poll_db(pid);
+    }).finally(() => {
+      delete this.draft_migration_in_flight[pid];
+    });
+  }
+
+  private move_remaining_draft_data_to_poll_db(pid: string): Promise<void> {
+    /** move the non-due draft data items from the user db to the poll db;
+     *  must only be called after the poll's authoritative due has been
+     *  confirmed and cached (see move_draft_data_to_poll_db, #292): */
+    const prefix = get_poll_key_prefix(pid);
+    const session = this.voter_mutation_session;
+    const session_is_current = () => !this.shutting_down && session === this.voter_mutation_session;
+    const move_promises: Promise<void>[] = [];
+    let moved_data = false;
+    for (const [ukey, value] of Object.entries(this.user_cache)) {
+      if (ukey.startsWith(prefix)) {
+        // used db entry belongs to this poll.
+        const key = ukey.substring(prefix.length),
+              pos = (key+'.').indexOf('.'),
+              subkey = (key+'.').slice(0, pos);
+        if ((key != 'state') && (key != 'due') && !poll_keystarts_in_user_db.includes(subkey)) {
+          // draft voter entries are keyed like "voter.<vid>§rating.<oid>",
+          // so for them the due requirement is decided by the segment
+          // after "§" (as doc2poll_cache does), not by the poll-level
+          // subkey "voter" (#292):
+          let add_due: boolean;
+          if (subkey == 'voter' && key.includes('§')) {
+            const vsubkey = key.slice(key.indexOf('§') + 1),
+                  vsubkeystart = vsubkey.slice(0, (vsubkey+'.').indexOf('.'));
+            add_due = voter_subkeystarts_requiring_due.includes(vsubkeystart);
+          } else {
+            add_due = poll_keystarts_requiring_due.includes(subkey);
+          }
+          let source_rev: string;
+          let still_wanted = () => session_is_current() && (ukey in this.user_cache);
+          const move = async (is_current = session_is_current) => {
+            still_wanted = () => is_current() && (ukey in this.user_cache);
+            this.assert_voter_mutation_current(still_wanted);
+            let source_value = value as string;
+            if (subkey === 'voter') {
+              const source = await this.read_voter_migration_source(ukey);
+              this.assert_voter_mutation_current(still_wanted);
+              if (!source) {
+                // A failed draft write may have left an optimistic rating in
+                // derived maps even though neither DB contains that rating.
+                // Reconcile before clearing the source/failure barrier.
+                const destination = await this.get_existing_doc(
+                  this.get_local_poll_db(pid), poll_doc_id_prefix + pid + '.' + key);
+                this.assert_voter_mutation_current(still_wanted);
+                if (destination) {
+                  this.cache_confirmed_voter_doc(pid, key, destination);
+                } else {
+                  this.handle_deleted_poll_doc(pid, {_id: poll_doc_id_prefix + pid + '.' + key});
+                }
+                this.assert_voter_mutation_current(still_wanted);
+                delete this.user_cache[ukey];
+                moved_data = true;
+                return;
+              }
+              source_rev = source.rev;
+              source_value = source.value;
+            }
+            try {
+              await this.store_poll_data_confirmed(pid, key, source_value, add_due, false, still_wanted);
+            } catch (err) {
+              if (!err?.vodle_publication_expired) { throw err; }
+              this.assert_voter_mutation_current(still_wanted);
+              await this.delu_confirmed(ukey, source_rev, still_wanted);
+              moved_data = true;
+              return;
+            }
+            this.assert_voter_mutation_current(still_wanted);
+            moved_data = true;
+            await this.delu_confirmed(ukey, source_rev, still_wanted);
+          };
+          const moving = subkey === 'voter'
+            ? this.queue_voter_mutation(ukey, move, false)
+            : move();
+          move_promises.push(
+            moving.catch(err => {
+              if (err && err.vodle_move_aborted) {
+                this.G.L.trace("DataService.move_draft_data_to_poll_db move superseded; the current mutation owns cleanup", pid, ukey);
+                return;
+              }
+              this.G.L.error("DataService.move_draft_data_to_poll_db couldn't move yet, keeping user db copy for retry", pid, ukey, key, err);
+            })
+          );
+        }
+      }
+    }
+    return Promise.all(move_promises).then(() => {
+      if (moved_data && session_is_current()) {
+        // doc2poll_cache defers tallying to the batch completion hook.
+        this.after_changes(true);
+        if (this.page && this.page.onDataChange) {
+          this.page.onDataChange();
+        }
+      }
+      if (this.draft_migration_pending(pid)) {
+        this.G.L.warn("DataService.move_draft_data_to_poll_db could not move all draft data yet, will retry on a later change batch or after restart", pid);
+      } else {
+        this.G.L.info("DataService.move_draft_data_to_poll_db finished moving draft data to poll db", pid, move_promises.length);
+      }
+    });
+  }
+
+  private async read_voter_migration_source(ukey: string): Promise<{rev: string, value: string} | null> {
+    const hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+    if (!hash || !password) { throw new Error("Cannot read migration source without user credentials"); }
+    const doc = await this.get_existing_doc(this.local_synced_user_db, user_doc_id_prefix + hash + '§' + ukey);
+    if (!doc) { return null; }
+    const value = decrypt(doc.value, password);
+    if (!doc._rev || value === null) { throw new Error("Invalid voter migration source " + ukey); }
+    return {rev: doc._rev, value};
+  }
+
+  private draft_migration_pending(pid: string): boolean {
+    /** whether user db copies of poll-db-authoritative data (incl. 'due') are
+     *  left over from an incomplete draft→running data migration (#292): */
+    const prefix = get_poll_key_prefix(pid);
+    for (const ukey of Object.keys(this.user_cache)) {
+      if (ukey.startsWith(prefix)) {
+        const key = ukey.substring(prefix.length),
+              subkey = (key+'.').slice(0, (key+'.').indexOf('.'));
+        if ((key != 'state') && !poll_keystarts_in_user_db.includes(subkey)) {
+          // covers 'due' as well, whose user db copy is only deleted after
+          // its poll db write has been confirmed:
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  async prepare_poll_finalization(pid: string): Promise<number> {
+    await this.wait_for_poll_db_bootstrap(pid);
+    // Failed optimistic writes are reconciled with the server below, not
+    // silently accepted merely because their local promise has settled.
+    await this.await_poll_mutations(pid).catch(() => {});
+    if (this.shutting_down || this.uninitialized_pids.has(pid) || this.persisted_cache_invalid) {
+      throw make_consistency_failure_error("Poll bootstrap is incomplete for " + pid);
+    }
+    if (this.draft_migration_pending(pid)) {
+      await this.move_draft_data_to_poll_db(pid);
+    }
+    const generation = this.poll_mutation_generation(pid);
+    await this.confirm_voter_publications(pid, generation);
+    this.assert_poll_consistent(pid);
+    return generation;
+  }
+
+  private async confirm_voter_publications(pid: string, generation: number): Promise<void> {
+    const assert_current = () => {
+      if (this.shutting_down || generation !== this.poll_mutation_generation(pid)) {
+        throw make_consistency_failure_error("Poll changed during publication confirmation: " + pid);
+      }
+    };
+    assert_current();
+    const db = this.get_local_poll_db(pid), remote = this.remote_poll_dbs[pid];
+    const vid = this.getp(pid, 'myvid');
+    if (!remote || !vid || this.poll_db_sync_handlers?.[pid]) {
+      throw make_consistency_failure_error("Cannot verify voter publication without a remote connection and voter ID");
+    }
+    const simulated = this.getp(pid, 'is_test') === 'true';
+    const prefix = poll_doc_id_prefix + pid + '.voter.' + (simulated ? '' : vid + '§');
+    const [changes, remote_rows] = await Promise.all([
+      db.changes({since: 0, include_docs: true}),
+      remote.allDocs({startkey: prefix, endkey: prefix.slice(0, -1) + (simulated ? '/' : '¨'), inclusive_end: false}),
+    ]);
+    assert_current();
+    const ids = new Set<string>([
+      ...changes.results.map(change => change.id),
+      ...remote_rows.rows.map(row => row.id),
+      ...Object.keys(this.ensure_poll_cache(pid)).map(key => poll_doc_id_prefix + pid + '.' + key),
+      ...Object.keys(this.voter_mutation_failures).filter(key => key.startsWith(get_poll_key_prefix(pid)))
+        .map(key => poll_doc_id_prefix + pid + '.' + key.slice(get_poll_key_prefix(pid).length)),
+    ].filter(id => id.startsWith(prefix)
+      && voter_subkeystarts_requiring_due.includes(id.slice(id.indexOf('§') + 1).split('.')[0])));
+    if (!ids.size) { return; }
+    // Include tombstones: a pull alone need not redeliver a remote revision
+    // which was already known before an unreplicated local deletion.
+    try { await db.replicate.to(remote, {doc_ids: [...ids], retry: false}); }
+    catch (err) { this.G.L.trace("DataService final publication push needs reconciliation", pid, err); }
+    for (const id of ids) {
+      assert_current();
+      const key = id.slice((poll_doc_id_prefix + pid + '.').length);
+      const local = await this.get_existing_doc(db, id);
+      assert_current();
+      // Reconcile with the remote winner. Without a remote document, absence
+      // is only acceptable when there is no local document either; an
+      // unreadable local revision must never be silently dropped.
+      const reconcile_from_remote = async (absence_is_acceptable: boolean) => {
+        const authoritative = await this.get_existing_doc(remote, id);
+        assert_current();
+        if (authoritative) {
+          await this.restore_expired_poll_payload(pid, key, authoritative, assert_current);
+          this.cache_confirmed_voter_doc(pid, key, authoritative);
+        } else if (absence_is_acceptable) {
+          this.handle_deleted_poll_doc(pid, {_id: id});
+        } else {
+          throw make_consistency_failure_error("Cannot verify unreadable local publication: " + id);
+        }
+      };
+      // store_poll_data_confirmed normalizes a falsy value to '', so feeding it
+      // an undecryptable revision would encrypt an empty payload and push it
+      // over a possibly valid remote value. A corrupt local revision is
+      // therefore reconciled from the remote winner instead, and finalization
+      // is deferred when no authoritative remote value exists (#292).
+      const decrypted = local?.value ? decrypt(local.value, this.getp(pid, 'password')) : null;
+      if (local && decrypted !== null) {
+        try {
+          await this.store_poll_data_confirmed(pid, key, decrypted,
+            true, false, () => !this.shutting_down && generation === this.poll_mutation_generation(pid));
+        } catch (err) {
+          if (!err?.vodle_publication_expired) { throw err; }
+        }
+      } else {
+        await reconcile_from_remote(!local);
+      }
+      assert_current();
+      delete this.voter_mutation_failures[get_poll_key_prefix(pid) + key];
+    }
+  }
+
+  private async restore_expired_poll_payload(pid: string, key: string, authoritative, assert_current: () => void) {
+    // Repair only permanently rejected deadline-stamped local revisions.
+    // Their canonical payload persists across restart but cannot overwrite
+    // newer server content: outbound sync is stopped and the due is preserved.
+    assert_current();
+    const due = authoritative.due, id = poll_doc_id_prefix + pid + '.' + key;
+    if (!key.startsWith('voter.') || authoritative._id !== id || !authoritative._rev
+        || !due || due !== this.ensure_poll_cache(pid)['due']
+        || !Number.isFinite(new Date(due).getTime()) || Date.now() <= new Date(due).getTime() + 1000
+        || this.poll_db_sync_handlers?.[pid]
+        || decrypt(authoritative.value, this.getp(pid, 'password')) === null) {
+      throw make_consistency_failure_error("Cannot safely reconcile rejected local publication: " + id);
+    }
+    const db = this.get_local_poll_db(pid);
+    let local = await this.get_existing_doc(db, id);
+    assert_current();
+    if (local?.value === authoritative.value && local?.due === due) { return; }
+    let revision = local?._rev;
+    if (!local) {
+      const rows = await db.allDocs({keys: [id]});
+      assert_current();
+      revision = rows.rows[0]?.value?.rev;
+    }
+    await db.put({_id: id, ...(revision ? {_rev: revision} : {}), value: authoritative.value, due});
+    assert_current();
+    local = await db.get(id);
+    if (local.value !== authoritative.value || local.due !== due) {
+      throw make_consistency_failure_error("Local publication repair did not persist: " + id);
+    }
+  }
+
+  private cache_confirmed_voter_doc(pid: string, key: string, doc) {
+    const cache = this.ensure_poll_cache(pid), had_key = key in cache, previous = cache[key];
+    const requires_due = voter_subkeystarts_requiring_due.includes(key.slice(key.indexOf('§') + 1).split('.')[0]);
+    if (doc._id !== poll_doc_id_prefix + pid + '.' + key || !doc.value
+        || decrypt(doc.value, this.getp(pid, 'password')) === null
+        || (requires_due && (!doc.due || doc.due !== cache['due']))) {
+      throw make_consistency_failure_error("Cannot apply unverified voter data: " + key);
+    }
+    delete cache[key];
+    try { this.doc2poll_cache(pid, doc); }
+    catch (err) {
+      if (had_key) { cache[key] = previous; }
+      throw err;
+    }
+  }
+
+  assert_poll_consistent(pid: string) {
+    // Draining replication alone does not drain local publication. A retained
+    // source can still represent an unaccepted local rating after a restart.
+    if (this.shutting_down || this.uninitialized_pids.has(pid) || this.persisted_cache_invalid
+        || this.draft_migration_in_flight[pid] || this.draft_migration_pending(pid)
+        || this.has_pending_poll_mutations(pid)) {
+      throw make_consistency_failure_error("Poll publication is incomplete for " + pid);
+    }
   }
 
   replicate_once(pid: string): Promise<boolean> {
@@ -1736,7 +2228,15 @@ export class DataService implements OnDestroy {
       // see here for possible performance improving options: https://pouchdb.com/api.html#replication
       this.get_local_poll_db(pid).replicate.from(this.remote_poll_dbs[pid], {
 //          since: this.poll_caches[pid]['last_seq'] || 0,
-          retry: true,
+          // deliberately no infinite retry: this one-shot replication is used
+          // as the final pull before Poll.end() tallies, and with retry an
+          // unreachable remote would be retried forever instead of emitting
+          // the terminal 'error' the caller needs in order to react at all.
+          // That error must NOT be answered with a fallback to the local data:
+          // Poll.end() catches it, defers finalization and schedules a guarded
+          // retry, so results stay unavailable until the final pull and the
+          // subsequent consistency checks actually succeed (#292):
+          retry: false,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
           selector: this.get_poll_doc_selector(pid)
@@ -1744,17 +2244,21 @@ export class DataService implements OnDestroy {
 
         this.G.L.trace("DataService.replicate_once completed", pid, msg);
 
-        // #292: make sure all queued changes are applied to the cache
-        // before callers may rely on it:
-        if (!this.flush_change_queue()) {
-          reject(new Error("DataService.replicate_once could not flush queued changes"));
-          return;
-        }
+        // #292: make sure all queued changes – including deferred tombstone
+        // rechecks – are applied to the cache before callers may rely on it:
+        this.flush_change_queue_fully().then(flushed => {
 
-        this.need_poll_db_replication[pid] = false;
+          if (!flushed) {
+            reject(make_consistency_failure_error("DataService.replicate_once could not flush queued changes"));
+            return;
+          }
 
-        // RESOLVE:
-        resolve(true);  
+          this.need_poll_db_replication[pid] = false;
+
+          // RESOLVE:
+          resolve(true);
+
+        });
 
       }).on('change', change => {
 
@@ -1766,19 +2270,23 @@ export class DataService implements OnDestroy {
         if (change.pending == 0) {
           // replication completed
 
-          // #292: make sure all queued changes are applied to the cache
-          // before callers may rely on it:
-          if (!this.flush_change_queue()) {
-            reject(new Error("DataService.replicate_once could not flush queued changes"));
-            return;
-          }
+          // #292: make sure all queued changes – including deferred tombstone
+          // rechecks – are applied to the cache before callers may rely on it:
+          this.flush_change_queue_fully().then(flushed => {
 
-          this.G.L.trace("DataService.replicate_once completed", pid);
+            if (!flushed) {
+              reject(make_consistency_failure_error("DataService.replicate_once could not flush queued changes"));
+              return;
+            }
 
-          this.need_poll_db_replication[pid] = false;
+            this.G.L.trace("DataService.replicate_once completed", pid);
 
-          // RESOLVE:
-          resolve(true);  
+            this.need_poll_db_replication[pid] = false;
+
+            // RESOLVE:
+            resolve(true);
+
+          });
         }
 
       }).on('error', err => {
@@ -1793,13 +2301,64 @@ export class DataService implements OnDestroy {
     });
   }
 
+  async ensure_remote_poll_closed(pid: string, is_current = () => true): Promise<void> {
+    const remote = this.remote_poll_dbs[pid],
+          password = this.user_cache[get_poll_key_prefix(pid) + 'password'],
+          _id = poll_doc_id_prefix + pid + '§state';
+    if (!remote || !password) {
+      throw new Error("cannot confirm remote poll closure without connection and password");
+    }
+    for (let attempt = 1; ; attempt++) {
+      if (this.shutting_down || !is_current()) {
+        throw new Error("poll finalization cancelled");
+      }
+      try {
+        const doc = await remote.get(_id).catch(err => {
+          if (err.status == 404) { return {_id, due: this.getp(pid, 'due')}; }
+          throw err;
+        });
+        if (this.shutting_down || !is_current()) {
+          throw new Error("poll finalization cancelled");
+        }
+        if (decrypt(doc.value, password) == 'closed') { return; }
+        if (!doc.due) { throw new Error("cannot close remote poll without due date"); }
+        doc.value = encrypt('closed', password);
+        await remote.put(doc);
+        return;
+      } catch (err) {
+        // Another closer may have won the write; re-read instead of creating
+        // another closed revision. Transport failures use Poll's backoff.
+        if (err.status != 409 || attempt >= confirmed_put_max_attempts) { throw err; }
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
+  }
+
   get_remote_poll_state_doc(pid: string): Promise<any> {
     // Matrix backend has no PouchDB remote_poll_dbs
     if (environment.useMatrixBackend) {
-      return Promise.resolve({ _id: pid, _rev: 'matrix-' + Date.now() });
+      return Promise.reject(new Error("no remote poll state doc in Matrix mode"));
     }
     const _id = poll_doc_id_prefix + pid + "§state";
-    return this.remote_poll_dbs[pid].get(_id);
+    const remote = this.remote_poll_dbs[pid];
+    if (!remote) {
+      // Do NOT fall back to the local replica of the state doc: its revision
+      // hash depends on randomized encryption, so two offline replicas can
+      // produce different revisions even from identical state data, which
+      // would make winner selection diverge across devices. Rejecting lets
+      // the caller defer finalization until the shared seed from the remote
+      // state doc revision is available again (#292):
+      return Promise.reject(new Error("no remote poll db connection"));
+    }
+    return remote.get(_id).then(doc => {
+      // A successful pull does not confirm that our earlier closed-state push
+      // reached CouchDB. A running revision is not a stable winner seed.
+      const password = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+      if (!password || !doc._rev || decrypt(doc.value, password) != 'closed') {
+        throw new Error("remote poll state is not confirmed closed");
+      }
+      return doc;
+    });
   }
 
   // HOOKS FOR PAGES:
@@ -2619,6 +3178,16 @@ export class DataService implements OnDestroy {
     return this.user_cache[get_poll_key_prefix(pid) + 'state'] == 'draft';
   } 
 
+  private poll_data_authority(pid: string, key: string): 'user' | 'poll' {
+    /** Central rule deciding which database is authoritative for a poll data
+     *  item (#292 item 6): draft polls' data and certain personal keys live in
+     *  the user db, everything else in the poll's own db. All getp/setp/delp
+     *  routing must go through this. */
+    const pos = (key+'.').indexOf('.'),
+          subkey = (key+'.').slice(0, pos);
+    return (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) ? 'user' : 'poll';
+  }
+
   getp(pid:string, key:string): string {
     // get poll data item
 
@@ -2626,9 +3195,7 @@ export class DataService implements OnDestroy {
     if (environment.useMatrixBackend) {
       // For Matrix backend, draft polls and user-db keys stay in user_cache.
       // Non-draft poll data comes from poll_caches (populated from Matrix).
-      const pos = (key+'.').indexOf('.'),
-            subkey = (key+'.').slice(0, pos);
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (this.poll_data_authority(pid, key) == 'user') {
         const ukey = get_poll_key_prefix(pid) + key;
         return this.user_cache[ukey] || '';
       }
@@ -2643,16 +3210,24 @@ export class DataService implements OnDestroy {
     }
 
     let value = null;
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (this.poll_data_authority(pid, key) == 'user') {
       // draft polls' data is stored in user's database:
       const ukey = get_poll_key_prefix(pid) + key;
       value = this.user_cache[ukey] || '';
     } else {
       // other polls' data is stored in poll's own database:
       this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][key] || '';
+      if (key in this.poll_caches[pid]) {
+        // test key presence, not the value: an authoritative empty string
+        // (e.g. an empty description or url) must not be overridden by a
+        // possibly stale user db copy (#292):
+        value = this.poll_caches[pid][key] || '';
+      } else {
+        // fall back to a possibly remaining user db copy, e.g. when a
+        // draft→running move write has not been confirmed yet (#292):
+        const ukey = get_poll_key_prefix(pid) + key;
+        value = this.user_cache[ukey] || '';
+      }
     }
     return value;
   }
@@ -2674,12 +3249,11 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.setp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
     // decide where to store data:
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
+    const authority = this.poll_data_authority(pid, key);
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (authority == 'user') {
         return this._setp_in_userdb(pid, key, value);
       }
       // Non-draft, non-userdb key: store in local cache and sync to Matrix
@@ -2691,7 +3265,7 @@ export class DataService implements OnDestroy {
       return true;
     }
 
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (authority == 'user') {
       return this._setp_in_userdb(pid, key, value);
     } else if (key.startsWith('option.')) {
       if (!(key in this.poll_caches[pid])) {
@@ -2717,12 +3291,11 @@ export class DataService implements OnDestroy {
       this._pid_oids[pid].delete(oid);
       this.G.L.trace("DataService.delp option pid oid", pid, oid, this._pid_oids[pid].size, [...this._pid_oids[pid]]);
     }
-    const pos = (key+'.').indexOf('.'),
-          subkey = (key+'.').slice(0, pos);
+    const authority = this.poll_data_authority(pid, key);
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+      if (authority == 'user') {
         const ukey = get_poll_key_prefix(pid) + key;
         this.delu(ukey);
       } else {
@@ -2735,7 +3308,7 @@ export class DataService implements OnDestroy {
       return;
     }
 
-    if (this.pid_is_draft(pid) || poll_keystarts_in_user_db.includes(subkey)) {
+    if (authority == 'user') {
       // construct key for user db:
       const ukey = get_poll_key_prefix(pid) + key;
       this.delu(ukey);
@@ -2775,9 +3348,120 @@ export class DataService implements OnDestroy {
       const pkey = this.get_voter_key_prefix(pid, vid) + key;
 //      this.G.L.trace("getv", pid, key, vid, pkey)
       this.ensure_poll_cache(pid);
-      value = this.poll_caches[pid][pkey] || '';
+      value = (pkey in this.poll_caches[pid])
+        ? this.poll_caches[pid][pkey] || ''
+        : this.user_cache[get_poll_key_prefix(pid) + pkey] || '';
     }
     return value;
+  }
+
+  private voter_source_parts(key: string): {pid: string, pkey: string} | null {
+    const match = /^poll\.([^.]+)\.(voter\.[^§]+§.+)$/.exec(key);
+    return match ? {pid: match[1], pkey: match[2]} : null;
+  }
+
+  private assert_voter_mutation_current(is_current: () => boolean) {
+    if (!is_current()) {
+      const err: any = new Error("Voter mutation was superseded or cancelled");
+      err.vodle_move_aborted = true;
+      throw err;
+    }
+  }
+
+  private queue_voter_mutation(
+      ukey: string,
+      work: (is_current: () => boolean, is_active: () => boolean) => Promise<void>,
+      supersedes = true): Promise<void> {
+    const pid = this.voter_source_parts(ukey).pid;
+    this.poll_mutation_versions[pid] = (this.poll_mutation_versions[pid] || 0) + 1;
+    const generation = this.voter_mutation_generations[ukey] =
+      (this.voter_mutation_generations[ukey] || 0) + (supersedes ? 1 : 0);
+    const session = this.voter_mutation_session;
+    const is_active = () => !this.shutting_down && session === this.voter_mutation_session;
+    const is_current = () => is_active() && generation === this.voter_mutation_generations[ukey];
+    const previous = this.voter_mutation_tails[ukey] || this.voter_mutation_admission;
+    const pending = previous.catch(() => {}).then(() => {
+      this.assert_voter_mutation_current(is_active);
+      return work(is_current, is_active);
+    });
+    this.voter_mutation_tails[ukey] = pending;
+    pending.then(() => {
+      if (is_active()) { delete this.voter_mutation_failures[ukey]; }
+    }, err => {
+      if (is_active() && !err?.vodle_move_aborted) {
+        this.voter_mutation_failures[ukey] = err;
+      }
+    }).then(() => {
+      if (is_active()) {
+        this.poll_mutation_versions[pid] = (this.poll_mutation_versions[pid] || 0) + 1;
+      }
+      if (this.voter_mutation_tails[ukey] === pending) {
+        delete this.voter_mutation_tails[ukey];
+      }
+    });
+    return pending;
+  }
+
+  has_pending_poll_mutations(pid: string): boolean {
+    const prefix = get_poll_key_prefix(pid);
+    return Object.keys(this.voter_mutation_tails).some(key => key.startsWith(prefix))
+      || Object.keys(this.voter_mutation_failures).some(key => key.startsWith(prefix));
+  }
+
+  poll_mutation_generation(pid: string): number {
+    return this.poll_mutation_versions[pid] || 0;
+  }
+
+  async await_poll_mutations(pid: string): Promise<void> {
+    const prefix = get_poll_key_prefix(pid);
+    while (true) {
+      const pending = Object.entries(this.voter_mutation_tails)
+        .filter(([key]) => key.startsWith(prefix)).map(([, promise]) => promise);
+      if (!pending.length) { break; }
+      await Promise.all(pending.map(promise => promise.catch(() => {})));
+    }
+    if (Object.keys(this.voter_mutation_failures).some(key => key.startsWith(prefix))) {
+      throw make_consistency_failure_error("Voter mutations are incomplete for " + pid);
+    }
+  }
+
+  private cancel_voter_mutations(): Promise<void> {
+    for (const pid of Object.keys(this.poll_mutation_versions)) {
+      this.poll_mutation_versions[pid] += 1;
+    }
+    // callers that need the retired writes to be drained (or reconciled)
+    // before new ones are admitted install their own barrier below:
+    this.voter_mutation_admission = Promise.resolve();
+    const pending = Object.values(this.voter_mutation_tails);
+    this.voter_mutation_session += 1;
+    this.voter_mutation_generations = {};
+    this.voter_mutation_tails = {};
+    this.voter_mutation_failures = {};
+    return Promise.all(pending.map(promise => promise.catch(() => {}))).then(() => {});
+  }
+
+  private async retry_voter_mutation(work: () => Promise<void>, is_current: () => boolean): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      this.assert_voter_mutation_current(is_current);
+      try {
+        await work();
+        this.assert_voter_mutation_current(is_current);
+        return;
+      } catch (err) {
+        this.assert_voter_mutation_current(is_current);
+        if (attempt >= confirmed_put_max_attempts) { throw err; }
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
+  }
+
+  private async get_existing_doc(db, id: string): Promise<any> {
+    try {
+      return await db.get(id);
+    } catch (err) {
+      if (err?.status === 404) { return null; }
+      throw err;
+    }
   }
 
   setv(pid: string, key: string, value: string): boolean {
@@ -2785,7 +3469,9 @@ export class DataService implements OnDestroy {
      * If necessary, mark the database entry with poll's due date
      * to allow couchdb validating that due date is not passed.
      */
-    if (this.getv(pid, key) == value) {
+    const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
+    if (!this.voter_mutation_tails[ukey] && !this.voter_mutation_failures[ukey]
+        && this.getv(pid, key) == value) {
       return true;
     }
     // set voter data item
@@ -2796,41 +3482,42 @@ export class DataService implements OnDestroy {
     }
   }
 
-  delv(pid: string, key: string) {
+  async delv(pid: string, key: string): Promise<void> {
     // delete a voter data item
 
     // Phase 11: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
       if (this.pid_is_draft(pid)) {
         const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
-        delete this.user_cache[ukey];
         if (this.matrixService.isLoggedIn()) {
-          this.matrixService.deleteUserData(ukey).catch(err => {
-            this.G.L.warn("DataService.delv Matrix delete failed", pid, key, err);
-          });
+          await this.matrixService.deleteUserData(ukey);
         }
+        delete this.user_cache[ukey];
       } else {
         const pkey = this.get_voter_key_prefix(pid) + key;
         this.ensure_poll_cache(pid);
-        delete this.poll_caches[pid][pkey];
         const vid = this.getp(pid, 'myvid');
-        this.matrixService.deleteVoterData(pid, vid, key).catch(err => {
-          this.G.L.warn("DataService.delv Matrix delete failed", pid, key, err);
-        });
+        await this.matrixService.deleteVoterData(pid, vid, key);
+        delete this.poll_caches[pid][pkey];
       }
       return;
     }
 
-    if (this.pid_is_draft(pid)) {
-      const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
-      delete this.user_cache[ukey];
-      this.delete_user_data(ukey);  
-    } else {
-      const pkey = this.get_voter_key_prefix(pid) + key;
-      this.ensure_poll_cache(pid);
-      delete this.poll_caches[pid][pkey];
-      this.delete_poll_data(pid, pkey); 
-    }
+    const pkey = this.get_voter_key_prefix(pid) + key;
+    const ukey = get_poll_key_prefix(pid) + pkey;
+    return this.queue_voter_mutation(ukey, async (is_current, is_active) => {
+      // A newer set waits behind this entire deletion. Only its cache updates
+      // supersede ours; submitted writes cannot be cancelled retroactively.
+      await this.delete_user_data_confirmed(ukey, undefined, is_active);
+      this.assert_voter_mutation_current(is_active);
+      if (is_current()) { delete this.user_cache[ukey]; }
+      if (!this.pid_is_draft(pid)) {
+        await this.delete_voter_data_confirmed(pid, pkey, is_active);
+        if (is_current()) {
+          this.handle_deleted_poll_doc(pid, {_id: poll_doc_id_prefix + pid + '.' + pkey});
+        }
+      }
+    });
   }
 
   // TODO: delv!
@@ -3016,7 +3703,7 @@ export class DataService implements OnDestroy {
 
   // Change-event coalescing (issue #292):
 
-  private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean) {
+  private enqueue_db_change(pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion = false) {
     /** queue an incoming db change doc (pid == null means user db)
      *  for coalesced batch processing. */
     if (this.shutting_down) {
@@ -3026,7 +3713,7 @@ export class DataService implements OnDestroy {
       this.G.L.trace("DataService.enqueue_db_change ignoring change during shutdown", pid, doc?._id);
       return;
     }
-    this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally});
+    this.change_queue.push({pid: pid, doc: doc, deleted: deleted, tally: tally, confirmed_deletion: confirmed_deletion});
     if (!this.change_queue_scheduled) {
       this.change_queue_scheduled = true;
       // process on the next tick, so that changes arriving in a burst are
@@ -3061,7 +3748,63 @@ export class DataService implements OnDestroy {
          pass++) {
       applied_without_drop = this.process_change_queue(false) && applied_without_drop;
     }
-    return applied_without_drop && this.change_queue.length == 0;
+    // pending tombstone rechecks mean their resulting changes have not been
+    // enqueued yet, so the cache cannot be guaranteed up to date; a recheck
+    // whose verification failed terminally leaves a possibly stale cached
+    // value behind for the rest of the session (only a restart rebuilds the
+    // caches from the local db), so every later flush must keep reporting
+    // incompleteness, not only ones overlapping the failure (#292):
+    return applied_without_drop && this.change_queue.length == 0
+           && this.pending_recheck_count == 0
+           && this.recheck_failure_count == 0
+           && !this.persisted_cache_invalid;
+  }
+
+  flush_change_queue_fully(): Promise<boolean> {
+    /** like flush_change_queue(), but additionally waits for pending
+     *  asynchronous tombstone rechecks (recheck_deleted_doc) and applies the
+     *  changes they enqueue, so that one-shot replications only resolve after
+     *  every replicated change – including verified deletions or surviving
+     *  winners – has reached the cache (#292): */
+    let applied_without_drop = true;
+    const step = (): Promise<boolean> => {
+      if (this.change_queue_timeout != null) {
+        clearTimeout(this.change_queue_timeout);
+        this.change_queue_timeout = null;
+        this.change_queue_scheduled = false;
+      }
+      for (let pass = 0;
+           this.change_queue.length > 0 && pass < change_retry_max_attempts;
+           pass++) {
+        applied_without_drop = this.process_change_queue(false) && applied_without_drop;
+      }
+      if (this.pending_recheck_count > 0) {
+        return new Promise<void>(resolve => {
+          this.pending_recheck_waiters.push(resolve);
+        }).then(step);
+      }
+      // a terminally failed recheck – whether during this flush or earlier –
+      // or any other dropped replicated change means a possibly stale value is
+      // still cached for the rest of the session, so a full flush must remain
+      // unsuccessful (#292):
+      return Promise.resolve(applied_without_drop && this.change_queue.length == 0
+                             && this.recheck_failure_count == 0
+                             && !this.persisted_cache_invalid);
+    };
+    return step();
+  }
+
+  private recheck_finished() {
+    /** a pending tombstone recheck has enqueued its result (or was skipped);
+     *  wake up any flush_change_queue_fully() waiting for it: */
+    this.pending_recheck_count -= 1;
+    if (this.pending_recheck_count == 0) {
+      const waiters = this.pending_recheck_waiters;
+      this.pending_recheck_waiters = [];
+      for (const waiter of waiters) {
+        waiter();
+      }
+    }
   }
 
   private invalidate_persisted_cache() {
@@ -3086,15 +3829,15 @@ export class DataService implements OnDestroy {
      *  once per batch instead of once per change event. */
     this.G.L.entry("DataService.process_change_queue", this.change_queue.length);
     // keep only the latest change for each doc id:
-    const latest: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
-    const latest_by_key: Record<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean}> = {};
+    const latest: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
+    const latest_by_key: Record<string, {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}> = {};
     const seen = new Set<string>();
     for (let i = this.change_queue.length - 1; i >= 0; i--) {
       const entry = this.change_queue[i];
       const key = (entry.pid || '') + '|' + entry.doc._id;
       if (!seen.has(key)) {
         seen.add(key);
-        const kept = {pid: entry.pid, doc: entry.doc, deleted: entry.deleted, tally: entry.tally};
+        const kept = {pid: entry.pid, doc: entry.doc, deleted: entry.deleted, tally: entry.tally, confirmed_deletion: entry.confirmed_deletion};
         latest.push(kept);
         latest_by_key[key] = kept;
       } else {
@@ -3105,13 +3848,25 @@ export class DataService implements OnDestroy {
     this.change_queue = [];
     this.change_queue_scheduled = false;
     this.change_queue_timeout = null;
-    const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean}[] = [];
+    const retry_queue: {pid: string | null, doc: any, deleted: boolean, tally: boolean, confirmed_deletion?: boolean}[] = [];
     let dropped_changes = false;
+    // collect ids of applied replicated docs for a batched conflict check (#292):
+    const conflict_check_ids: Record<string, Set<string>> = {};
 
     let local_changes = false, tally = false;
     for (let i = 0; i < latest.length; i++) {
       const entry = latest[i];
       const key = (entry.pid || '') + '|' + entry.doc._id;
+      if (entry.deleted && !entry.confirmed_deletion && !environment.useMatrixBackend) {
+        // A replicated tombstone may just be a deleted losing conflict
+        // revision of a doc whose winning revision still exists, so don't
+        // drop the cached value yet. Instead re-fetch the id from the local
+        // db: if a surviving winner is found it is applied, and only a 404
+        // confirms the deletion (#292):
+        this.recheck_deleted_doc(entry);
+        delete this.change_retry_counts[key];
+        continue;
+      }
       try {
         if (entry.pid == null) {
           // user db change:
@@ -3135,6 +3890,10 @@ export class DataService implements OnDestroy {
             }
           }
           tally = tally || entry.tally;
+        }
+        if (!entry.deleted) {
+          const scope = entry.pid || '';
+          (conflict_check_ids[scope] = conflict_check_ids[scope] || new Set()).add(entry.doc._id);
         }
         delete this.change_retry_counts[key];
       } catch (err) {
@@ -3166,8 +3925,59 @@ export class DataService implements OnDestroy {
         this.page.onDataChange();
       }
     }
+    // background: resolve any conflicts the applied replicated docs may carry (#292):
+    this.schedule_conflict_checks(conflict_check_ids);
     this.G.L.exit("DataService.process_change_queue");
     return !dropped_changes;
+  }
+
+  private recheck_deleted_doc(entry: {pid: string | null, doc: any, deleted: boolean, tally: boolean}) {
+    /** A tombstone arrived via replication. It may only be the deletion of a
+     *  losing conflict revision performed by another replica's conflict
+     *  cleanup, in which case a winning revision of the same id still exists
+     *  and the cached value must not disappear. So re-fetch the id and apply
+     *  the surviving winner; treat it as a real deletion only when the get
+     *  returns 404 (#292): */
+    const db = entry.pid == null ? this.local_synced_user_db : this.local_poll_dbs[entry.pid];
+    if (!db || typeof db.get != 'function') {
+      // no local db to verify against, so apply the deletion as-is:
+      this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+      return;
+    }
+    // track this recheck so flush_change_queue_fully() can wait for the
+    // change it will enqueue before one-shot replications resolve (#292):
+    this.pending_recheck_count += 1;
+    const attempt_get = (attempt: number) => {
+      db.get(entry.doc._id)
+      .then(doc => {
+        this.G.L.trace("DataService.recheck_deleted_doc winning revision survives tombstone, applying it", entry.pid, entry.doc._id);
+        this.enqueue_db_change(entry.pid, doc, !!doc._deleted, entry.tally, true);
+        this.recheck_finished();
+      })
+      .catch(err => {
+        if (err && err.status == 404) {
+          // the doc is really gone, apply the deletion:
+          this.enqueue_db_change(entry.pid, entry.doc, true, entry.tally, true);
+          this.recheck_finished();
+        } else if (attempt < change_retry_max_attempts) {
+          // a transient read failure is no proof of deletion – a winning
+          // revision may still exist – so retry the read instead of
+          // removing possibly valid cached data (#292):
+          this.G.L.warn("DataService.recheck_deleted_doc could not verify tombstone, will retry", entry.pid, entry.doc._id, attempt, err);
+          window.setTimeout(() => attempt_get(attempt + 1), environment.db_put_retry_delay_ms);
+        } else {
+          // verification is exhausted. Keep the cached value rather than
+          // applying an unverified deletion, mark the current flush as
+          // incomplete, and invalidate the persisted cache so the next
+          // startup rebuilds the caches from the local db (#292):
+          this.G.L.error("DataService.recheck_deleted_doc could not verify tombstone, keeping cached value", entry.pid, entry.doc._id, err);
+          this.recheck_failure_count += 1;
+          this.invalidate_persisted_cache();
+          this.recheck_finished();
+        }
+      });
+    };
+    attempt_get(1);
   }
 
   private handle_deleted_user_doc(doc): boolean {
@@ -3212,13 +4022,13 @@ export class DataService implements OnDestroy {
     const _id = doc._id;
     if (_id.includes(pid)) {
       const key = _id.slice(_id.indexOf(pid) + pid.length + 1);
-      if (key.includes('.del_request.')) {
+      if (key.startsWith('voter.') && key.includes('§del_request.')) {
         const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
         const did = subkey.slice("del_request.".length);
         this.G.Del.process_deleted_request_from_db(pid, did, vid);
-      } else if (key.includes('.rating.')) {
+      } else if (key.startsWith('voter.') && key.includes('§rating.')) {
         const keyfromvid = key.slice('voter.'.length),
               vid = keyfromvid.slice(0, keyfromvid.indexOf("§")),
               subkey = keyfromvid.slice(vid.length + 1);
@@ -3234,6 +4044,118 @@ export class DataService implements OnDestroy {
     return false;
   }
 
+  // Conflict detection & deterministic resolution (issue #292):
+
+  private may_cleanup_conflicts(pid: string | null, _id: string): boolean {
+    /** Whether this client's replication credentials are authorized to delete
+     *  losing conflict revisions of the doc also in the *remote* db. The
+     *  server-side validator rejects any update or deletion of existing
+     *  shared poll docs (it cannot verify that a revision is a losing branch,
+     *  see validate_doc_update.js), so deleting such losers only locally
+     *  would diverge from the remote db and the conflict would reappear on
+     *  the next pull. Shared poll docs and other voters' docs are therefore
+     *  skipped; that is safe because CouchDB's winner selection is
+     *  deterministic, so all replicas read the same winning revision even
+     *  while the conflict lingers (#292). */
+    if (pid == null) {
+      // user db: all docs are owned by this user's credentials:
+      return true;
+    }
+    // poll db: only this client's own voter docs may be deleted remotely:
+    return _id.startsWith("~vodle.poll." + pid + ".voter." + this.getp(pid, 'myvid') + "§");
+  }
+
+  private resolve_doc_conflicts(db, doc, pid: string | null = null): Promise<boolean> {
+    /** Deterministically resolve a conflicted document by deleting all losing
+     *  revisions. CouchDB/PouchDB pick the winning revision deterministically,
+     *  so removing the losers makes every replica converge on the same
+     *  winning revision (#292). */
+    if (!doc || !doc._conflicts || doc._conflicts.length == 0) {
+      return Promise.resolve(false);
+    }
+    if (!this.may_cleanup_conflicts(pid, doc._id)) {
+      this.G.L.trace("DataService.resolve_doc_conflicts skipping doc not deletable with our credentials", doc._id);
+      return Promise.resolve(false);
+    }
+    this.G.L.warn("DataService.resolve_doc_conflicts resolving conflicted doc", doc._id, doc._conflicts);
+    const removals = doc._conflicts.map(rev =>
+      db.remove(doc._id, rev)
+      .catch(err => {
+        if (err && (err.status == 404 || err.status == 409)) {
+          // another client may have resolved this revision concurrently:
+          this.G.L.trace("DataService.resolve_doc_conflicts couldn't remove losing revision", doc._id, rev, err);
+        } else {
+          this.G.L.warn("DataService.resolve_doc_conflicts unexpected error removing losing revision", doc._id, rev, err);
+        }
+      })
+    );
+    return Promise.all(removals).then(() => true);
+  }
+
+  private check_docs_for_conflicts(db, label: string, ids?: string[], pid: string | null = null): Promise<number> {
+    /** Fetch docs (all of them, or only the given ids) with conflict metadata
+     *  and resolve any conflicts found. Used as a background scan at startup
+     *  and as a batched check for docs that arrived via replication (#292).
+     *  Never rejects. */
+    if (!db) {
+      return Promise.resolve(0);
+    }
+    const options: any = {include_docs: true, conflicts: true};
+    if (ids) {
+      if (ids.length == 0) {
+        return Promise.resolve(0);
+      }
+      options.keys = ids;
+    }
+    return db.allDocs(options)
+    .then(result => {
+      const conflicted = (result.rows || []).filter(row => 
+        row.doc && row.doc._conflicts && row.doc._conflicts.length > 0);
+      if (conflicted.length == 0) {
+        return 0;
+      }
+      this.G.L.info("DataService.check_docs_for_conflicts found conflicted docs", label, conflicted.length);
+      return Promise.all(conflicted.map(row => this.resolve_doc_conflicts(db, row.doc, pid)))
+      .then(() => conflicted.length);
+    })
+    .catch(err => {
+      this.G.L.warn("DataService.check_docs_for_conflicts failed", label, err);
+      return 0;
+    });
+  }
+
+  private scan_user_db_for_conflicts() {
+    /** background startup pass over the whole local user db (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    this.check_docs_for_conflicts(this.local_synced_user_db, 'user');
+  }
+
+  private scan_poll_db_for_conflicts(pid: string) {
+    /** background startup pass over a whole local poll db (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    this.check_docs_for_conflicts(this.get_local_poll_db(pid), 'poll ' + pid, undefined, pid);
+  }
+
+  private schedule_conflict_checks(ids_by_scope: Record<string, Set<string>>) {
+    /** batched follow-up conflict checks for docs that were just applied from
+     *  replication change events ('' scope means the user db) (#292): */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return;
+    }
+    for (const scope of Object.keys(ids_by_scope)) {
+      const ids = [...ids_by_scope[scope]];
+      if (scope == '') {
+        this.check_docs_for_conflicts(this.local_synced_user_db, 'user', ids);
+      } else if (scope in this.local_poll_dbs) {
+        this.check_docs_for_conflicts(this.local_poll_dbs[scope], 'poll ' + scope, ids, scope);
+      }
+    }
+  }
+
   private after_changes(tally=true) {
     this.G.L.entry("DataService.after_changes");
     const lang = this.getu('language'),
@@ -3244,6 +4166,7 @@ export class DataService implements OnDestroy {
     // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs,
     // or if due is long over, delete:
     for (const pid of new Set(this._pids)) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       this.G.L.info("DataService.after_changes processing poll", pid);
       // get due:
       const due_str = this.G.D.getp(pid, 'due'),
@@ -3253,6 +4176,14 @@ export class DataService implements OnDestroy {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
         this.stop_poll_sync(pid);
+        const expired_poll = this.G.P.polls[pid];
+        if (!!expired_poll) {
+          // cancel any pending deferred-finalization retry timer and remove
+          // the Poll object, so no later end() retry can run against the
+          // destroyed local db (#292):
+          expired_poll.cancel_end_retry();
+          delete this.G.P.polls[pid];
+        }
         const lpdb = this.get_local_poll_db(pid);
         if (!!lpdb) {
           lpdb.destroy();
@@ -3274,6 +4205,14 @@ export class DataService implements OnDestroy {
           // poll object does not exist yet, so create it:
           this.G.L.debug("DataService.after_changes creating poll object", pid);
           const p = new Poll(this.G, pid);
+        }
+        if (!environment.useMatrixBackend && !this.pid_is_draft(pid)
+            && this.draft_migration_pending(pid)) {
+          // an earlier draft→running data migration was interrupted or some
+          // of its confirmed writes (e.g. the due document) terminally
+          // failed; retry moving the leftover user db copies now (#292):
+          this.G.L.debug("DataService.after_changes retrying incomplete draft→running data migration", pid);
+          this.move_draft_data_to_poll_db(pid);
         }
         if (!this.pid_is_draft(pid) && !(pid in this.remote_poll_dbs) && !(environment.useMatrixBackend && this._matrixPollListeners[pid])) {
           // try syncing with remote db:
@@ -3303,6 +4242,7 @@ export class DataService implements OnDestroy {
 
     // process all known oids and, if necessary, generate Option objects:
     for (const pid in this._pid_oids) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       const oids = this._pid_oids[pid];
       for (const oid of oids) {
         if (pid in this.G.P.polls) {
@@ -3320,6 +4260,7 @@ export class DataService implements OnDestroy {
 
     // notifty all running polls that they might need to tally:
     for (const [pid, p] of Object.entries(this.G.P.polls)) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       this.G.L.trace("DataService.after_changes telling poll to tally", pid);
       p.ratings_have_changed = true;
       p.after_incoming_changes(tally);
@@ -3629,6 +4570,30 @@ export class DataService implements OnDestroy {
     var doc;
 
     if (!this.G.S.consent) return false;
+    const voter_source = this.voter_source_parts(key);
+    if (!environment.useMatrixBackend && voter_source) {
+      // Only newly admitted draft writes may create a source. Replayed stale
+      // cache rows and bulk saves must not recreate a retired running-poll copy.
+      if (!this.pid_is_draft(voter_source.pid)) { return false; }
+      const hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+      if (!hash || !password || !(dict_key in dict) || this.shutting_down) { return false; }
+      const db = this.local_synced_user_db;
+      const id = user_doc_id_prefix + hash + '§' + key;
+      const value = dict[dict_key] || '';
+      this.queue_voter_mutation(key, async is_current => {
+        await this.retry_voter_mutation(async () => {
+          const doc = await this.get_existing_doc(db, id);
+          this.assert_voter_mutation_current(is_current);
+          if (doc && decrypt(doc.value, password) === value) { return; }
+          await db.put({...doc, _id: id, value: encrypt(value, password)});
+        }, is_current);
+      }).catch(err => {
+        if (!err?.vodle_move_aborted) {
+          this.G.L.error("DataService.store_user_data voter write failed", key, err);
+        }
+      });
+      return true;
+    }
 
     if (local_only_user_keys.includes(key)) {
 
@@ -3842,63 +4807,322 @@ export class DataService implements OnDestroy {
         return false;
       }
 
-      // ASYNC:
-      // try storing encrypted and with proper prefix:
       const value = dict[dict_key];
-      const enc_value = encrypt(value, poll_pw);
       const db = this.get_local_poll_db(pid);
-      db.get(_id)
-      .then(doc => {
-
-        // key existed in db, so update:
-        if (enforce || decrypt(doc.value, poll_pw) != value) {
-          doc['value'] = enc_value;
-          if (add_due) {
-            doc['due'] = this.poll_caches[pid]['due'];
-          }
-          db.put(doc)
-          .then(response => {
-            this.G.L.trace("DataService.store_poll_data update", pid, key, value);
-          })
-          .catch(err => {
-            this.G.L.warn("DataService.store_poll_data couldn't update voter doc, will try again soon", pid, key, value, doc, err);
-            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key, add_due, true);
-          });
-        } else {
-          this.G.L.trace("DataService.store_poll_data no need to update", pid, key, value);
-        }
-
+      if (!(dict_key in dict) || this.shutting_down) { return false; }
+      const due = this.poll_caches[pid]['due'];
+      this.queue_voter_mutation(get_poll_key_prefix(pid) + key, async is_current => {
+        await this.retry_voter_mutation(async () => {
+          const existing = await this.get_existing_doc(db, _id);
+          this.assert_voter_mutation_current(is_current);
+          if (!enforce && existing && decrypt(existing.value, poll_pw) === value
+              && (!add_due || existing.due === due)) { return; }
+          const updated = {...existing, _id, value: encrypt(value, poll_pw)};
+          if (add_due) { updated.due = due; }
+          await db.put(updated);
+        }, is_current);
       }).catch(err => {
-
-        // key did not exist in db, so add:
-        const value = dict[dict_key];
-        const enc_value = encrypt(value, poll_pw);
-          doc = {
-          '_id': _id,
-          'value': enc_value,
-        };
-        if (add_due) {
-          doc['due'] = this.poll_caches[pid]['due'];
+        if (!err?.vodle_move_aborted) {
+          this.G.L.error("DataService.store_poll_data voter write failed", pid, key, err);
         }
-        db.put(doc)
-        .then(response => {
-          this.G.L.trace("DataService.store_poll_data new", pid, key, value);
-        })
-        .catch(err => {
-          this.G.L.warn("DataService.store_poll_data couldn't new", pid, key, value, doc, err);
-          // if doc exists, try again:
-          db.get(_id)
-          .then(doc => {
-            this.G.L.info("DataService.store_poll_data will try again soon", pid, key, value, doc, err);
-            window.setTimeout(this.store_poll_data.bind(this), environment.db_put_retry_delay_ms, pid, key, dict, dict_key, add_due, true);
-          });
-        });  
-
       });
-
-      // RETURN:
       return true;
     }
+  }
+
+  private store_poll_data_confirmed(pid: string, key: string, value: string, add_due = false,
+                                    overwrite = true, still_wanted: () => boolean = () => true): Promise<void> {
+    /** Store a poll data item in the local poll db and resolve only once the
+     *  write is confirmed, retrying a bounded number of times. Used for
+     *  transactional draft→running data moves, where the user db copy may
+     *  only be deleted after the poll db write has been confirmed (#292).
+     *  With overwrite disabled, an existing doc with a different value counts
+     *  as confirmed too, so that a retried migration cannot clobber a newer
+     *  write that happened after the poll started running.
+     *  For deadline-stamped docs (add_due, i.e. options and voter data),
+     *  confirmation additionally requires the destination doc to be
+     *  acknowledged by the remote poll db, because the server validator
+     *  permanently rejects such docs once the poll's due date has passed
+     *  (validate_doc_update.js): a merely local write could otherwise let the
+     *  fallback be deleted although the doc can never replicate. If the due
+     *  date has passed and the doc verifiably never reached the server, the
+     *  unpublishable local copy is withdrawn and the promise rejects with a
+     *  vodle_publication_expired flag so the caller can drop the fallback.
+     *  still_wanted is consulted before each write, so a move can be aborted
+     *  (vodle_move_aborted) when the item was deleted while in flight. */
+    value = value || '';
+    const is_voter_key = key.indexOf("§") >= 0,
+          _id = poll_doc_id_prefix + pid + (is_voter_key ? '.' : '§') + key,
+          poll_pw = this.user_cache[get_poll_key_prefix(pid) + 'password'];
+    if ((poll_pw == '') || (!poll_pw)) {
+      return Promise.reject(new Error("DataService.store_poll_data_confirmed missing poll password for " + pid));
+    }
+    const db = this.get_local_poll_db(pid);
+    const assert_wanted = () => {
+      if (this.shutting_down || !still_wanted()) {
+        const aborted: any = new Error("DataService.store_poll_data_confirmed aborting move of " + _id);
+        aborted.vodle_move_aborted = true;
+        throw aborted;
+      }
+    };
+    const publish_confirmed = (doc) => {
+      assert_wanted();
+      if (!overwrite) {
+        if (is_voter_key) {
+          // Use the same rating/delegation processing as incoming documents;
+          // a local migration write will only produce ignored push events.
+          this.cache_confirmed_voter_doc(pid, key, doc);
+        } else {
+          this.ensure_poll_cache(pid)[key] = key == 'due' ? doc.value : decrypt(doc.value, poll_pw);
+        }
+      }
+    };
+    // the state doc also carries a due field but is exempt from the server's
+    // deadline validation, so only option/voter docs need a remote ack:
+    const deadline_constrained = add_due && key != 'state' && !environment.useMatrixBackend;
+    const remote_ack = async (doc): Promise<any> => {
+      assert_wanted();
+      if (!deadline_constrained) {
+        return doc;
+      }
+      const remote = this.remote_poll_dbs[pid];
+      if (!remote) {
+        throw new Error("DataService.store_poll_data_confirmed cannot acknowledge " + _id + " without a remote poll db connection");
+      }
+      const adopt_authoritative = async (authoritative, local_rev?: string): Promise<any> => {
+        assert_wanted();
+        if (authoritative._id != _id || !authoritative._rev || !authoritative.value
+            || authoritative.due != this.poll_caches[pid]['due']
+            || decrypt(authoritative.value, poll_pw) === null) {
+          throw make_consistency_failure_error("Invalid remote publication acknowledgment for " + _id);
+        }
+        // A successful push (or a remotely existing ID) is not proof that our
+        // revision won. Pull the actual winner and verify durable local agreement
+        // before publishing it or allowing the migration source to be removed.
+        if (local_rev != authoritative._rev) {
+          await db.replicate.from(remote, {doc_ids: [_id], retry: false});
+          assert_wanted();
+        }
+        const local = await this.get_existing_doc(db, _id);
+        assert_wanted();
+        if (local?._rev != authoritative._rev) {
+          await this.restore_expired_poll_payload(pid, key, authoritative, assert_wanted);
+        }
+        return authoritative;
+      };
+      // push just this doc; the push may fail (or be redundant) although the
+      // doc already reached the remote db earlier, e.g. via live sync, so its
+      // remote presence is verified either way:
+      try {
+        await db.replicate.to(remote, {doc_ids: [_id], retry: false});
+      } catch (err) {
+        this.G.L.trace("DataService.store_poll_data_confirmed push failed, still checking remote presence", pid, key, err);
+      }
+      assert_wanted();
+      let authoritative;
+      try {
+        authoritative = await remote.get(_id);
+      } catch (err) {
+        assert_wanted();
+        if (err && err.status == 404) {
+          const due = this.poll_caches[pid]['due'];
+          // use the same one second grace period as validate_doc_update.js:
+          if (due && (new Date()).getTime() > (new Date(due)).getTime() + 1000) {
+            // Only a durable withdrawal permits dropping an expired source.
+            await db.get(_id)
+              .then(stale => {
+                assert_wanted();
+                return db.remove(stale);
+              })
+              .catch(remove_err => {
+                if (!remove_err || remove_err.status != 404) { throw remove_err; }
+              });
+            // Removing a winning revision can reveal another conflict leaf.
+            // Do not discard the source while any local value can reappear.
+            const remaining = await db.get(_id).catch(read_err => {
+              if (read_err && read_err.status == 404) { return null; }
+              throw read_err;
+            });
+            if (remaining) {
+              throw make_consistency_failure_error("Unpublished local revisions remain for " + _id);
+            }
+            assert_wanted();
+            // The first remote read is not proof of permanent absence: another
+            // session may have published this document between that read and
+            // the local withdrawal above (clock skew around the deadline makes
+            // this reachable). Only a second 404 shows the value was never
+            // accepted; otherwise adopt the authoritative remote revision
+            // instead of dropping a remotely accepted vote (#292).
+            const republished = await this.get_existing_doc(remote, _id);
+            assert_wanted();
+            if (republished) {
+              return await adopt_authoritative(republished);
+            }
+            this.handle_deleted_poll_doc(pid, {_id: _id});
+            const expired: any = new Error("DataService.store_poll_data_confirmed cannot publish " + _id + " anymore since the poll's due date has passed");
+            expired.vodle_publication_expired = true;
+            throw expired;
+          }
+        }
+        throw err;
+      }
+      return await adopt_authoritative(authoritative, doc._rev);
+    };
+    const attempt_put = (attempt: number): Promise<void> =>
+      db.get(_id)
+      .catch(err => {
+        if (err && err.status == 404) { return null; }
+        throw err;
+      })
+      .then(doc => {
+        assert_wanted();
+        // only the due value is stored unencrypted:
+        const enc_value = (key == 'due') ? value : encrypt(value, poll_pw);
+        if (doc) {
+          const stored = (key == 'due') ? doc.value : decrypt(doc.value, poll_pw),
+                // a non-overwriting migration retry must not clobber a newer
+                // value written after the poll started running, so any
+                // existing value counts as confirmed — except for the poll
+                // state, which advances monotonically: an existing 'running'
+                // must still be updated when this retry requests 'closed',
+                // while an existing 'closed' is preserved (#292):
+                value_confirmed = (stored == value)
+                  || (!overwrite
+                      && (key != 'state' || poll_state_is_at_least(stored, value)));
+          if (value_confirmed
+              && (!add_due || doc.due == this.poll_caches[pid]['due'])) {
+            // already stored locally (or a newer value that a non-overwriting
+            // migration retry must not clobber), incl. any required due
+            // field; the write is confirmed once remotely acknowledged:
+            return remote_ack(doc).then(publish_confirmed);
+          }
+          if (!is_voter_key && key != 'state') {
+            // CouchDB rejects all updates to existing shared metadata. Keep
+            // the fallback until a valid authoritative document is available,
+            // rather than confirming a local repair that cannot replicate.
+            throw new Error("DataService.store_poll_data_confirmed cannot repair immutable shared document " + _id);
+          }
+          if (!value_confirmed) {
+            doc.value = enc_value;
+          }
+          if (add_due) {
+            doc.due = this.poll_caches[pid]['due'];
+          }
+          return db.put(doc).then(result => remote_ack({...doc, _rev: result.rev})).then(publish_confirmed);
+        }
+        const new_doc: any = {_id: _id, value: enc_value};
+        if (add_due) {
+          new_doc.due = this.poll_caches[pid]['due'];
+        }
+        return db.put(new_doc).then(result => remote_ack({...new_doc, _rev: result.rev})).then(publish_confirmed);
+      })
+      .catch(err => {
+        if (err && (err.vodle_publication_expired || err.vodle_move_aborted)) {
+          // terminal by design, retrying cannot change the outcome:
+          throw err;
+        }
+        if (attempt >= confirmed_put_max_attempts) {
+          this.G.L.error("DataService.store_poll_data_confirmed giving up", pid, key, attempt, err);
+          throw err;
+        }
+        this.G.L.warn("DataService.store_poll_data_confirmed will retry", pid, key, attempt, err);
+        return new Promise<void>((resolve, reject) => {
+          window.setTimeout(
+            () => attempt_put(attempt + 1).then(resolve, reject),
+            environment.db_put_retry_delay_ms);
+        });
+      });
+    return attempt_put(1);
+  }
+
+  private async delete_user_data_confirmed(
+      key: string, expected_rev?: string, is_current = () => !this.shutting_down): Promise<void> {
+    /** Delete a user db doc and resolve only once the deletion is confirmed,
+     *  retrying a bounded number of times. Unlike delete_user_data(), only a
+     *  404 counts as "already deleted"; transient read/remove failures are
+     *  retried and finally rejected, so callers can keep depending state
+     *  consistent instead of silently losing the deletion (#292). */
+    const local_only = local_only_user_keys.includes(key);
+    const db = local_only ? this.local_only_user_DB : this.local_synced_user_db;
+    let _id = key;
+    if (!local_only) {
+      const email_and_pw_hash = this.get_email_and_pw_hash();
+      if (!email_and_pw_hash) {
+        throw new Error("Cannot confirm user data deletion without user credentials");
+      }
+      _id = user_doc_id_prefix + email_and_pw_hash + "§" + key;
+    }
+    for (let attempt = 1; ; attempt++) {
+      this.assert_voter_mutation_current(is_current);
+      try {
+        let doc = null;
+        try {
+          doc = await db.get(_id);
+          this.assert_voter_mutation_current(is_current);
+        } catch (err) {
+          if (err && err.status == 404) {
+            // really nonexistent (not just a transient read failure):
+            this.assert_voter_mutation_current(is_current);
+            return;
+          }
+          throw err;
+        }
+        if (expected_rev && doc._rev !== expected_rev) {
+          const changed: any = new Error("Migration source changed before deletion: " + key);
+          changed.vodle_source_changed = true;
+          throw changed;
+        }
+        await db.remove(doc);
+        this.assert_voter_mutation_current(is_current);
+        const remaining = await this.get_existing_doc(db, _id);
+        this.assert_voter_mutation_current(is_current);
+        if (!remaining) { return; }
+        const changed: any = new Error("User source still has a live revision: " + key);
+        changed.vodle_source_changed = !!expected_rev;
+        throw changed;
+      } catch (err) {
+        this.assert_voter_mutation_current(is_current);
+        if (err?.vodle_source_changed) { throw err; }
+        if (attempt >= confirmed_put_max_attempts) {
+          this.G.L.error("DataService.delete_user_data_confirmed giving up", key, attempt, err);
+          throw err;
+        }
+        this.G.L.warn("DataService.delete_user_data_confirmed will retry", key, attempt, err);
+        await new Promise(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+      }
+    }
+  }
+
+  private delu_confirmed(key: string, expected_rev?: string, is_current = () => !this.shutting_down): Promise<void> {
+    /** Durable, awaited variant of delu() for draft→running migration source
+     *  copies (#292): the cache entry is only removed once the user db
+     *  deletion has been confirmed (treating only a 404 as nonexistent), so a
+     *  transient failure cannot leave a stale source doc behind that would be
+     *  mistaken for an unfinished move after a restart. */
+    return this.delete_user_data_confirmed(key, expected_rev, is_current).then(() => {
+      this.assert_voter_mutation_current(is_current);
+      delete this.user_cache[key];
+    });
+  }
+
+  private async delete_voter_data_confirmed(pid: string, key: string, is_current: () => boolean): Promise<void> {
+    const vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
+    if (!vid || !key.startsWith('voter.' + vid + '§')
+        || !this.user_cache[get_poll_key_prefix(pid) + 'password']) {
+      throw new Error("Cannot delete voter data without its owner's credentials");
+    }
+    const db = this.get_local_poll_db(pid);
+    const id = poll_doc_id_prefix + pid + '.' + key;
+    await this.retry_voter_mutation(async () => {
+      const doc = await this.get_existing_doc(db, id);
+      this.assert_voter_mutation_current(is_current);
+      if (!doc) { return; }
+      await db.remove(doc);
+      this.assert_voter_mutation_current(is_current);
+      if (await this.get_existing_doc(db, id)) {
+        throw new Error("Voter destination still has a live revision: " + key);
+      }
+    }, is_current);
   }
 
   private delete_user_data(key:string): boolean {
@@ -4021,8 +5245,10 @@ export class DataService implements OnDestroy {
 
   }
 
-  private get_email_and_pw_hash(): string {
-    const email = this.user_cache['email'], pw = this.user_cache['password'];
+  private get_email_and_pw_hash(email = this.user_cache['email'],
+                                pw = this.user_cache['password']): string {
+    // the parameters allow computing the hash of *retired* credentials, whose
+    // documents must still be reachable right after a credential change (#292)
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
     const hash = myhash(email + "§" + pw);
 //    this.G.L.trace("email_and_pw_hash:", email, pw, hash);
@@ -4034,7 +5260,75 @@ export class DataService implements OnDestroy {
 
   private move_user_data(old_values) {
     this.G.L.entry("DataService.move_user_data");
-    // TODO!
+    // Cancelling the mutation session only stops work that has not started
+    // yet. A voter-source db.put() already issued under the old credentials
+    // can still complete afterwards, and its post-write generation check only
+    // reports the cancellation — it cannot undo the durable document, which
+    // carries the old email/password hash in its _id and is therefore
+    // invisible to the new session. So keep the admission of new voter
+    // mutations behind the drain returned by cancel_voter_mutations(), and
+    // reconcile whatever the retired session completed before allowing any new
+    // write for the same keys (#292):
+    const retired_keys = Object.keys(this.voter_mutation_tails)
+      .filter(key => !!this.voter_source_parts(key));
+    const old_hash = old_values
+      ? this.get_email_and_pw_hash(old_values['email'], old_values['password']) : null;
+    const drained = this.cancel_voter_mutations();
+    const admission = drained
+      .then(() => this.migrate_retired_voter_sources(retired_keys, old_hash))
+      .catch(err => {
+        this.G.L.error("DataService.move_user_data could not reconcile retired voter sources", err);
+      });
+    this.voter_mutation_admission = admission;
+    // TODO: move the remaining user data to the new database as well!
+  }
+
+  private async migrate_retired_voter_sources(keys: string[], old_hash: string | null): Promise<void> {
+    /** Reconcile the voter-source documents that writes from a retired
+     *  mutation session may have completed under the old credentials. Their
+     *  doc ids embed the old email/password hash, so the new session can
+     *  neither read nor supersede them, and the filtered user sync no longer
+     *  replicates them. Each such document is therefore re-written under the
+     *  new identity from the still cached value and only then removed, so a
+     *  completed old-session write is neither lost nor left behind as an
+     *  unaccounted durable copy of voter data (#292). A document that cannot
+     *  be migrated is kept, since it becomes valid again once the previous
+     *  credentials are restored. */
+    const new_hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+    if (!keys.length || !old_hash || this.shutting_down || old_hash === new_hash) {
+      // nothing was in flight, or the credentials themselves did not change
+      // (e.g. only a server url did), so the existing ids stay valid:
+      return;
+    }
+    const db = this.local_synced_user_db;
+    if (!db) { return; }
+    for (const key of keys) {
+      const old_id = user_doc_id_prefix + old_hash + "§" + key;
+      try {
+        const retired = await this.get_existing_doc(db, old_id);
+        if (!retired) { continue; }
+        if (key in this.user_cache) {
+          if (!new_hash || !password) {
+            // without a usable new identity the retired document is the only
+            // durable copy, so keep it rather than losing the value:
+            this.G.L.warn("DataService.migrate_retired_voter_sources keeping unmigratable source", old_id);
+            continue;
+          }
+          const new_id = user_doc_id_prefix + new_hash + "§" + key;
+          const existing = await this.get_existing_doc(db, new_id);
+          await db.put({...existing, _id: new_id,
+                        value: encrypt(this.user_cache[key] || '', password)});
+        }
+        // only now that the value is either migrated or gone from the cache
+        // may the old-credential document be withdrawn:
+        await db.remove(retired);
+      } catch (err) {
+        // keep the retired document and make the unreconciled state visible to
+        // the consistency checks instead of finalizing over it:
+        this.voter_mutation_failures[key] = err;
+        this.G.L.error("DataService.migrate_retired_voter_sources failed", old_id, err);
+      }
+    }
   }
 
   // OTHER:
@@ -4045,6 +5339,7 @@ export class DataService implements OnDestroy {
     // TODO: disable user interaction
     this._ready = false;
     this.shutting_down = true;
+    const mutations_finished = this.cancel_voter_mutations();
     return new Promise((resolve, reject) => {
       // Logout from Matrix if using Matrix backend
       if (environment.useMatrixBackend && this.matrixService?.isLoggedIn()) {
@@ -4056,6 +5351,11 @@ export class DataService implements OnDestroy {
       
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
+      // cancel any pending deferred poll-finalization retry timers, so no
+      // end() retry can fire against the local dbs destroyed below (#292):
+      for (const pid in this.G.P.polls) {
+        this.G.P.polls[pid].cancel_end_retry();
+      }
       this.stop_replication_watchdog();
       this.user_sync_start_pending = false;
       this.user_sync_start_generation += 1;
@@ -4082,7 +5382,7 @@ export class DataService implements OnDestroy {
       // TODO: wait for all syncs to finish
       // delete all local dbs:
       this.G.L.info("Deleting local databases...");
-      this.local_synced_user_db.destroy()
+      mutations_finished.then(() => this.local_synced_user_db.destroy())
       .then(() => {
         this.local_only_user_DB.destroy()
         .then(() => {
@@ -4110,9 +5410,7 @@ export class DataService implements OnDestroy {
     });
   }
 
-  delete_all(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.shutting_down = true;
+  async delete_all(): Promise<any> {
       // decline all not yet declined delegation requests:
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
@@ -4130,7 +5428,7 @@ export class DataService implements OnDestroy {
           for (const [oid, did] of cache) {
             if (did) {
               this.G.L.trace("DataService.delete_all revoking request", did);
-              this.G.Del.revoke_delegation(pid, did, oid);
+              await this.G.Del.revoke_delegation(pid, did, oid);
             }
           }
         }
@@ -4142,6 +5440,8 @@ export class DataService implements OnDestroy {
           p.set_my_own_rating(oid, 0, true);
         }
       }
+      await Promise.all(Object.keys(this.G.P.polls).map(pid => this.await_poll_mutations(pid)));
+      this.shutting_down = true;
       // stop syncing:
       if (!!this.user_db_sync_handler) {
         this.user_db_sync_handler.cancel();
@@ -4150,14 +5450,8 @@ export class DataService implements OnDestroy {
       // don't let the watchdog restart the cancelled sync (#292):
       this.replication_active['user'] = false;
       // delete all in remote_user_db:
-      this.delete_remote()
-      .then(() => {
-        // do same as when logging out:
-        this.clear_all_local()
-        .catch(reject);
-      })
-      .catch(reject);
-    });
+      await this.delete_remote();
+      return this.clear_all_local();
   }
 
   delete_remote(): Promise<any> {

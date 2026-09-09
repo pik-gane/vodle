@@ -816,12 +816,19 @@ export class PollPage implements OnInit {
           { 
             text: this.translate.instant('OK'),
             role: 'Ok', 
-            handler: () => {
-              this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
-              this.delegate = null;
-              this.delegation_status = 'none';
-              this.update_delegation_info();
-              this.G.D.save_state();
+            handler: async () => {
+              try {
+                await this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
+                if (!this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*")) {
+                  this.delegate = null;
+                  this.delegation_status = 'none';
+                }
+                this.update_delegation_info();
+                await this.G.D.save_state();
+              } catch (err) {
+                this.G.L.error("PollPage could not revoke delegation", this.pid, err);
+                return false;
+              }
             } 
           } 
         ] 

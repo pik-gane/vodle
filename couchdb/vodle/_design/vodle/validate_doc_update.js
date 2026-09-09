@@ -38,12 +38,19 @@ function (newDoc, savedDoc, userCtx) {
                     }
                     */
                 } else {
-                    // if doc already exists, let noone update or delete it:
+                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§"));
+                    // if doc already exists, let noone update or delete it.
+                    // (In particular, no voter tombstones are allowed here: a
+                    // validate function cannot verify that a deleted revision
+                    // is a losing conflict branch rather than the current
+                    // winner, so allowing tombstones would let any voter erase
+                    // immutable shared poll metadata. Client-side conflict
+                    // cleanup (#292) therefore only deletes losing revisions
+                    // of documents the client's credentials own.)
                     if (savedDoc) {
                         throw ({forbidden: 'Noone may update or delete existing poll documents.'})
                     }
                     // let only the voters create it:
-                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§")); 
                     if (!userCtx.name.startsWith("vodle.poll." + doc_pid +".voter.")) {
                         throw ({forbidden: 'Only voters in a poll may create poll documents, but user is ' + userCtx.name});
                     }

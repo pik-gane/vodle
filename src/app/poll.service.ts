@@ -182,8 +182,14 @@ export class Poll {
   _state: string;  // cache for state since it is asked very often
   syncing: boolean = false;
   allow_voting: boolean = false;
+  private end_retry_timeout_id: number | null = null;
+  private end_retry_delay_ms: number = environment.closing.grace_period_3_ms;
+  private end_generation = 0;
+  private end_in_progress = false;
+  private end_cancelled = false;
+  private lifecycle_started = false;
 
-  constructor (G:GlobalService, pid?:string) { 
+  constructor (G:GlobalService, pid?:string, start_lifecycle = true) {
     this.G = G;
     if (!pid) {
       // generate a new draft poll
@@ -200,16 +206,27 @@ export class Poll {
     if (this._pid in this.G.D.tally_caches) { 
       this.T = this.G.D.tally_caches[this._pid] as tally_cache_t;
     } else if (!(this._state in [null, '', 'draft'])) {
-      this.tally_all();
+      // Reconciliation applies incremental ratings before starting timers.
+      // It needs initialized maps, but must not render a stale restored tally.
+      if (start_lifecycle) { this.tally_all(); }
+      else { this.reset_tally(); }
     }
 
+    if (start_lifecycle) {
+      this.start_lifecycle();
+    }
+
+    G.L.exit("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
+  }
+
+  start_lifecycle() {
+    if (this.lifecycle_started || !this.is_active_poll()) { return; }
+    this.lifecycle_started = true;
     if (this._state == 'running') {
       this.set_timeouts();
     } else if (this._state == 'closed' && !this.has_results) {
       this.end();
     }
-
-    G.L.exit("Poll.constructor", pid, this._state, this.G.D.getp(pid, 'state'));
   }
 
   set_timeouts(start_date?: Date) {
@@ -272,6 +289,7 @@ export class Poll {
 
   delete() {
     this.G.L.entry("Poll.delete", this._pid);
+    this.cancel_end_retry();
     delete this.G.P.polls[this._pid];
     this.G.D.delp(this._pid, 'type');
     this.G.D.delp(this._pid, 'title');
@@ -1185,21 +1203,7 @@ export class Poll {
     // Tallies all. 
     this.G.L.entry("Poll.tally_all", this._pid);
 
-    this.G.D.tally_caches[this._pid] = this.T = {
-      all_vids_set: new Set(),
-      n_not_abstaining: 0,
-      effective_ratings_ascending_map: new Map(),
-      thresholds_map: new Map(),
-      approvals_map: new Map(),
-      approval_scores_map: new Map(),
-      total_effective_ratings_map: new Map(),
-      scores_map: new Map(),
-      oids_descending: [],
-      votes_map: new Map(),
-      n_votes_map: new Map(),
-      shares_map: new Map(),
-      my_cycle_len: null
-    }
+    this.reset_tally();
     // extract voters and total_ratings:
     for (const [oid, effective_ratings_map] of this.effective_ratings_map) {
 //      this.G.L.trace("Poll.tally_all rating", this._pid, oid, [...rs_map]);
@@ -1261,6 +1265,24 @@ export class Poll {
 //    this.G.L.trace("Poll.tally_all n_votes, shares", this._pid, [...this.T.n_votes_map], [...this.T.shares_map]);
 
     this.G.L.exit("Poll.tally_all", this._pid);
+  }
+
+  private reset_tally() {
+    this.G.D.tally_caches[this._pid] = this.T = {
+      all_vids_set: new Set(),
+      n_not_abstaining: 0,
+      effective_ratings_ascending_map: new Map(),
+      thresholds_map: new Map(),
+      approvals_map: new Map(),
+      approval_scores_map: new Map(),
+      total_effective_ratings_map: new Map(),
+      scores_map: new Map(),
+      oids_descending: [],
+      votes_map: new Map(),
+      n_votes_map: new Map(),
+      shares_map: new Map(),
+      my_cycle_len: null
+    };
   }
 
   // Methods dealing with individual rating updates:
@@ -1818,8 +1840,76 @@ export class Poll {
     }
   }
 
+  private is_active_poll(): boolean {
+    /** whether this Poll object is still the registered instance for its pid.
+     *  Expired-poll cleanup and logout tear the poll (and its local db) down,
+     *  after which a deferred end() retry must no longer fire (#292): */
+    return !this.end_cancelled && this.G.P.polls[this._pid] === this;
+  }
+
+  private schedule_end_retry() {
+    // the current end attempt has failed and is over; the scheduled retry (or
+    // a later explicit end() call) may start a fresh attempt (#292):
+    this.end_in_progress = false;
+    if (this.end_retry_timeout_id !== null || this.has_results || !this.is_active_poll()) {
+      return;
+    }
+    const delay = Math.max(this.end_retry_delay_ms, environment.closing.grace_period_3_ms);
+    this.end_retry_delay_ms = Math.min(delay * 2, 60000);
+    this.G.L.warn("Poll.schedule_end_retry scheduling end retry", this._pid, delay);
+    this.end_retry_timeout_id = window.setTimeout((() => {
+      this.end_retry_timeout_id = null;
+      if (!this.is_active_poll()) {
+        // the poll was deleted or cleaned up while the retry was pending, so
+        // its local db may no longer exist; do not end() against deleted
+        // storage (#292):
+        this.G.L.trace("Poll.schedule_end_retry poll no longer active, dropping retry", this._pid);
+        return;
+      }
+      if ((this._state == 'running' || this._state == 'closed') && !this.has_results) {
+        this.end();
+      }
+    }).bind(this), delay);
+  }
+
+  private clear_end_retry(reset_delay = false) {
+    if (this.end_retry_timeout_id !== null) {
+      window.clearTimeout(this.end_retry_timeout_id);
+      this.end_retry_timeout_id = null;
+    }
+    if (reset_delay) {
+      this.end_retry_delay_ms = environment.closing.grace_period_3_ms;
+    }
+  }
+
+  cancel_end_retry() {
+    /** Invalidate grace timers and in-flight finalization callbacks as well
+     *  as the retry timer before storage is torn down (#292). */
+    this.end_cancelled = true;
+    this.end_generation += 1;
+    this.end_in_progress = false;
+    this.clear_end_retry(true);
+  }
+
   end() {
     this.G.L.entry("Poll.end", this._pid);
+    if (!this.is_active_poll() || this.has_results) {
+      return;
+    }
+    if (this.end_in_progress) {
+      // an end attempt is already running its grace periods or waiting for
+      // remote closure/seed. end_if_past_due() is called from many UI event
+      // handlers, so restarting (and thereby invalidating) the in-flight
+      // attempt on every interaction could postpone closure indefinitely.
+      // A failed attempt clears this flag via schedule_end_retry(), so the
+      // scheduled retry (or a later explicit call) starts a new attempt (#292):
+      this.G.L.trace("Poll.end attempt already in progress, ignoring", this._pid);
+      return;
+    }
+    this.end_in_progress = true;
+    const generation = ++this.end_generation;
+    const is_current = () => generation === this.end_generation && this.is_active_poll();
+    this.clear_end_retry();
     // 1. disable voting:
     this.allow_voting = false;
     
@@ -1827,9 +1917,11 @@ export class Poll {
     // Just close the poll, tally, and notify.
     if (environment.useMatrixBackend) {
       window.setTimeout((() => {
+        if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
         window.setTimeout((() => {
+          if (!is_current()) { return; }
           this.G.D.stop_poll_sync(this.pid);
           // Final tally
           this.tally_all();
@@ -1842,41 +1934,75 @@ export class Poll {
     // 2. wait some "grace" period for potentially ongoing sync to finish 
     // and potential clock discrepancies between local and CouchDB server.
     window.setTimeout((() => {
+      if (!is_current()) { return; }
       // 3. set state to final state "closed" if no other voter has done so:
       this.G.L.trace("Poll.end setting state to closed", this._pid);
       this.state = "closed";
       // 4. wait another grace period for this change to sync:
       window.setTimeout((() => {
+        if (!is_current()) { return; }
         // 5. tell poll db sync to stop:
         this.G.L.trace("Poll.end stopping sync", this._pid);
         this.G.D.stop_poll_sync(this.pid);
-        this.G.D.wait_for_poll_db(this.pid);
         // 6. wait another grace period for this stopping to have happened:
         window.setTimeout((() => {
-          // 7. perform a one-time replication from the remote poll db
+          if (!is_current()) { return; }
+          // 7. confirm the remote closing write before a one-time replication
           // to be absolutely sure that all voters have the exact same ratings and delegation data:
-          this.G.L.trace("Poll.end replicating a last time", this._pid);
-          this.G.D.replicate_once(this.pid)
+          let mutation_generation: number;
+          this.G.D.prepare_poll_finalization(this.pid)
+          .then(generation => {
+            if (!is_current()) { return; }
+            mutation_generation = generation;
+            return this.G.D.ensure_remote_poll_closed(this.pid, is_current);
+          })
           .then((() => {
-            // 8. perform a final tally:
-            this.G.L.trace("Poll.end tally a last time", this._pid);
-            this.tally_all();
+            if (!is_current()) { return 'abort'; }
+            this.G.D.assert_poll_consistent(this.pid);
+            if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+              throw new Error("Poll changed after publication confirmation");
+            }
+            this.G.L.trace("Poll.end replicating a last time", this._pid);
+            return this.G.D.replicate_once(this.pid);
+          }).bind(this))
+          .then(((result) => {
+            if (!is_current() || result === 'abort') {
+              return;
+            }
+            this.G.D.assert_poll_consistent(this.pid);
+            if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+              throw new Error("Poll changed during the final replication");
+            }
             if (this.type == 'winner') {
               // 9. get the revision number of the remote poll state doc:
               this.G.L.trace("Poll.end getting state doc revision", this._pid);
-              this.G.D.get_remote_poll_state_doc(this.pid)
+              return this.G.D.get_remote_poll_state_doc(this.pid)
               .then((doc => {
+                if (!is_current()) { return; }
+                this.G.D.assert_poll_consistent(this.pid);
+                if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
+                  throw new Error("Poll changed while fetching the final seed");
+                }
+                this.tally_all();
                 // 10. concatenate it with the pid 
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
                 this.make_final_rand(this.pid + doc._rev);
                 this.make_winner();
                 this.notify_of_end();
-              }).bind(this)); 
+              }).bind(this));
             } else {
+              this.tally_all();
               this.notify_of_end();
             }
-          }).bind(this));
+          }).bind(this))
+          .catch(err => {
+            if (!is_current()) { return; }
+            // All asynchronous boundaries share the same failure path: no
+            // final results from unreconciled data or a locally derived seed.
+            this.G.L.error("Poll.end publication, final replication or seed failed, deferring finalization", this._pid, err);
+            this.schedule_end_retry();
+          });
         }).bind(this), environment.closing.grace_period_3_ms);
       }).bind(this), environment.closing.grace_period_2_ms);
     }).bind(this), environment.closing.grace_period_1_ms);
@@ -1900,7 +2026,11 @@ export class Poll {
   }
 
   notify_of_end() {
+    if (!this.is_active_poll()) { return; }
+    const generation = this.end_generation;
     this.G.L.trace("Poll.notify_of_end has_been_notified_of_end");
+    this.end_in_progress = false;
+    this.clear_end_retry(true);
     this.has_results = true;
     this.have_seen_results = false;
     if (this.G.S.get_notify_of("poll_closed") && !this.has_been_notified_of_end) {
@@ -1912,6 +2042,7 @@ export class Poll {
         }]
       })
       .then(res => {
+        if (generation !== this.end_generation || !this.is_active_poll()) { return; }
         this.has_been_notified_of_end = true;
         this.G.L.trace("Poll.notify_of_end localNotifications.schedule succeeded:", res);
       }).catch(err => {
