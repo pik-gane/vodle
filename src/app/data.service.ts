@@ -359,7 +359,7 @@ export class DataService implements OnDestroy {
 
   // LYFECYCLE:
 
-  private uninitialized_pids: Set<string>; // temporary set of pids currently initializing 
+  private uninitialized_pids: Set<string> = new Set(); // temporary set of pids currently initializing
 
   private _ready: boolean = false;
   get ready() { return this._ready; }
@@ -381,9 +381,6 @@ export class DataService implements OnDestroy {
   private poll_db_bootstrapped: Record<string, Promise<void>> = {};
   private mark_poll_db_bootstrapped: Record<string, () => void> = {};
   private reject_poll_db_bootstrapped: Record<string, (reason?: any) => void> = {};
-  // failed local-db poll bootstraps are retried this often before the
-  // unverified restored cache is invalidated instead of finalized (#292):
-  private poll_db_bootstrap_attempts: Record<string, number> = {};
 
   // Change-event coalescing: incoming db change docs are queued and processed
   // in batches, keeping only the newest change per doc id:
@@ -1121,7 +1118,7 @@ export class DataService implements OnDestroy {
   private ensure_local_poll_data(pid:string) {
     // start fetching poll data from local poll db:
     this.G.L.entry("DataService.ensure_local_poll_data", pid);
-    if (this.uninitialized_pids.has(pid)) {
+    if (this.shutting_down || this.uninitialized_pids.has(pid)) {
       // a local bootstrap for this pid is already in flight and shares this
       // poll's bootstrap gate. Don't launch a second info()/allDocs() load
       // whose stale snapshot could overwrite newer cache values (#292):
@@ -1157,83 +1154,42 @@ export class DataService implements OnDestroy {
       }
     }
 
-    // ASYNC:
-    // record the local db's update_seq before taking the allDocs snapshot,
-    // then fetch all docs from local poll db:
-    let bootstrap_seq = null;
-    lpdb.info()
-    .then(info => {
-
-      // store last_seq as reference point for the changes feed:
-      bootstrap_seq = info.update_seq;
-      this.ensure_poll_cache(pid)['last_seq'] = info.update_seq;
-      this.G.L.trace("DataService recorded poll db update_seq at bootstrap", pid, info.update_seq);
-
-      return lpdb.allDocs({
-        include_docs: true
-      });
-
-    }).then(result => {
-
-      this.local_poll_docs2cache.bind(this)(pid, result, restored_cache);
-      // replay local writes committed after the allDocs() snapshot was taken,
-      // so that they cannot be lost when their later push-direction sync
-      // events are ignored (#292):
-      return lpdb.changes({
-        since: bootstrap_seq,
-        include_docs: true
-      });
-
-    }).then(changes => {
-
-      this.apply_poll_bootstrap_changes(pid, changes);
-      delete this.poll_db_bootstrap_attempts[pid];
-      if (restored_poll && !this.shutting_down && this.G.P.polls[pid] === restored_poll) {
-        restored_poll.tally_all();
-        restored_poll.start_lifecycle();
-      }
-      this.mark_poll_db_bootstrapped_now(pid);
-      // background pass resolving any pre-existing conflicts (#292):
-      this.scan_poll_db_for_conflicts(pid);
-
-    }).catch(err => {
-
-      this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
-      this.fail_poll_db_bootstrap(pid, err);
-      // Do NOT start the restored poll's lifecycle from the unreconciled
-      // cache: it may miss local writes (e.g. when the changes() replay
-      // failed after the allDocs() snapshot was applied), and the later
-      // one-shot pull in replicate_once() would not replay those local-only
-      // revisions, so a closed poll could finalize on stale data. Keep
-      // finalization deferred and retry the bootstrap instead; only a
-      // successful reconciliation starts the lifecycle (#292):
-      const attempts = (this.poll_db_bootstrap_attempts[pid] || 0) + 1;
-      this.poll_db_bootstrap_attempts[pid] = attempts;
-      if (this.shutting_down) {
-        // teardown in progress; nothing to retry or invalidate now
-      } else if (attempts < change_retry_max_attempts) {
-        this.G.L.warn("DataService.ensure_local_poll_data scheduling bootstrap retry", pid, attempts);
-        window.setTimeout(() => {
-          if (!this.shutting_down) {
-            this.ensure_local_poll_data(pid);
+    const bootstrap = async (): Promise<void> => {
+      for (let attempt = 1; !this.shutting_down; attempt++) {
+        try {
+          const info = await lpdb.info();
+          const result = await lpdb.allDocs({include_docs: true});
+          // Read the replay before mutating the cache. A failed read must not
+          // expose a partially reconciled snapshot.
+          const changes = await lpdb.changes({since: info.update_seq, include_docs: true});
+          if (this.shutting_down) { return; }
+          this.local_poll_docs2cache(pid, result, restored_cache || attempt > 1);
+          this.apply_poll_bootstrap_changes(pid, changes);
+          if (restored_poll && this.G.P.polls[pid] === restored_poll) {
+            restored_poll.tally_all();
+            restored_poll.start_lifecycle();
           }
-        }, environment.db_put_retry_delay_ms);
-      } else {
-        // the restored cache could not be verified against the local db, so
-        // it must not be persisted again nor finalized; the next start
-        // bootstraps from local PouchDB instead (#292):
-        this.invalidate_persisted_cache();
+          this.mark_poll_db_bootstrapped_now(pid);
+          this.scan_poll_db_for_conflicts(pid);
+          this.uninitialized_pids.delete(pid);
+          if (this.uninitialized_pids.size == 0) {
+            this.local_docs2cache_finished();
+          }
+          return;
+        } catch (err) {
+          this.G.L.error("DataService.ensure_local_poll_data could not fetch all docs", pid, err);
+          // All attempts share ONE pending gate. Exhaustion fails closed:
+          // leave the poll uninitialized until a fresh startup can reconcile it.
+          if (this.shutting_down || attempt >= change_retry_max_attempts) {
+            this.invalidate_persisted_cache();
+            this.fail_poll_db_bootstrap(pid, err);
+            return;
+          }
+          await new Promise<void>(resolve => window.setTimeout(resolve, environment.db_put_retry_delay_ms));
+        }
       }
-
-    }).finally(() => {
-
-      this.uninitialized_pids.delete(pid);
-      this.G.L.trace("DataService.ensure_local_poll_data no. of still uninitialized pids:", this.uninitialized_pids.size);
-      if (this.uninitialized_pids.size == 0) {
-        this.local_docs2cache_finished();
-      }
-
-    });
+    };
+    bootstrap();
     this.G.L.exit("DataService.ensure_local_poll_data", pid);
   }
 
@@ -1252,6 +1208,8 @@ export class DataService implements OnDestroy {
         this.mark_poll_db_bootstrapped[pid] = resolve;
         this.reject_poll_db_bootstrapped[pid] = reject;
       });
+      // A terminal bootstrap may fail before any sync caller awaits its gate.
+      this.poll_db_bootstrapped[pid].catch(() => {});
     }
   }
 
@@ -1639,7 +1597,7 @@ export class DataService implements OnDestroy {
   private local_docs2cache_finished() {
     // called whenever content of local docs has fully been copied to cache
     this.G.L.entry("DataService.local_user_docs2cache_finished");
-    if (this.shutting_down) {
+    if (this.shutting_down || this.uninitialized_pids.size > 0) {
       // teardown (logout or destruction) began while a bootstrap was still in
       // flight; do not mark the torn-down service ready or re-enable deferred
       // restart/connect paths (#292):
@@ -3913,6 +3871,7 @@ export class DataService implements OnDestroy {
     // process all known pids and, if necessary, generate Poll objects and connect to remote poll dbs,
     // or if due is long over, delete:
     for (const pid of new Set(this._pids)) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       this.G.L.info("DataService.after_changes processing poll", pid);
       // get due:
       const due_str = this.G.D.getp(pid, 'due'),
@@ -3988,6 +3947,7 @@ export class DataService implements OnDestroy {
 
     // process all known oids and, if necessary, generate Option objects:
     for (const pid in this._pid_oids) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       const oids = this._pid_oids[pid];
       for (const oid of oids) {
         if (pid in this.G.P.polls) {
@@ -4005,6 +3965,7 @@ export class DataService implements OnDestroy {
 
     // notifty all running polls that they might need to tally:
     for (const [pid, p] of Object.entries(this.G.P.polls)) {
+      if (this.uninitialized_pids.has(pid)) { continue; }
       this.G.L.trace("DataService.after_changes telling poll to tally", pid);
       p.ratings_have_changed = true;
       p.after_incoming_changes(tally);

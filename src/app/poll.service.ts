@@ -205,7 +205,7 @@ export class Poll {
     this.G.P.polls[pid] = this;
     if (this._pid in this.G.D.tally_caches) { 
       this.T = this.G.D.tally_caches[this._pid] as tally_cache_t;
-    } else if (!(this._state in [null, '', 'draft'])) {
+    } else if (start_lifecycle && !(this._state in [null, '', 'draft'])) {
       this.tally_all();
     }
 

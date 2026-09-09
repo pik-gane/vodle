@@ -575,23 +575,58 @@ describe('DataService consistency hardening (#292)', () => {
       }
     });
 
-    it('removes failed poll bootstrap pids from the uninitialized set', async () => {
-      const err = new Error('bootstrap failed');
-      svc.uninitialized_pids = new Set();
-      svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
-      svc.fail_poll_db_bootstrap = jasmine.createSpy('fail_poll_db_bootstrap');
-      svc.get_local_poll_db = () => ({
-        info: () => Promise.reject(err)
+    for (const failure of ['info', 'allDocs', 'changes']) {
+      it(`keeps readiness and sync behind the same gate across a failed ${failure}`, async () => {
+        const settle = async () => { for (let i = 0; i < 30; i++) { await Promise.resolve(); } };
+        const previous = environment.useMatrixBackend;
+        (environment as any).useMatrixBackend = false;
+        try {
+          const retries: Array<() => void> = [];
+          spyOn(window, 'setTimeout').and.callFake(((fn: any) => { retries.push(fn); return 0; }) as any);
+          let failing = true;
+          const read = (name, result) => failing && name === failure
+            ? Promise.reject(new Error(name)) : Promise.resolve(result);
+          const sync = make_sync_spy();
+          svc.local_poll_dbs.p9 = {
+            info: () => read('info', {update_seq: 1}),
+            allDocs: () => read('allDocs', {rows: []}),
+            changes: () => read('changes', {results: [], last_seq: 2}),
+            sync,
+          };
+          svc.remote_poll_dbs.p9 = {};
+          svc._pids = new Set();
+          svc.after_changes = jasmine.createSpy('after_changes');
+          svc.hide_loading = jasmine.createSpy('hide_loading');
+          svc.save_state = jasmine.createSpy('save_state');
+          svc.local_poll_docs2cache = jasmine.createSpy('local_poll_docs2cache');
+          svc.scan_poll_db_for_conflicts = jasmine.createSpy('scan_poll_db_for_conflicts');
+          svc.ensure_local_poll_data('p9');
+          const gate = svc.poll_db_bootstrapped.p9;
+          svc.start_poll_sync('p9');
+          await settle();
+          svc.local_docs2cache_finished();
+          svc.ensure_local_poll_data('p9');
+          expect(svc.ready).toBeFalse();
+          expect(svc.uninitialized_pids.has('p9')).toBeTrue();
+          expect(svc.after_changes).not.toHaveBeenCalled();
+          expect(svc.local_poll_docs2cache).not.toHaveBeenCalled();
+          expect(sync).not.toHaveBeenCalled();
+          expect(retries.length).toBe(1);
+
+          failing = false;
+          retries.shift()();
+          await gate;
+          await settle();
+          expect(svc.poll_db_bootstrapped.p9).toBe(gate);
+          expect(svc.ready).toBeTrue();
+          expect(svc.uninitialized_pids.has('p9')).toBeFalse();
+          expect(svc.after_changes).toHaveBeenCalledTimes(1);
+          expect(sync).toHaveBeenCalledTimes(1);
+        } finally {
+          (environment as any).useMatrixBackend = previous;
+        }
       });
-
-      svc.ensure_local_poll_data('p9');
-      await Promise.resolve();
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(svc.fail_poll_db_bootstrap).toHaveBeenCalledWith('p9', err);
-      expect(svc.uninitialized_pids.has('p9')).toBe(false);
-      expect(svc.local_docs2cache_finished).toHaveBeenCalled();
-    });
+    }
 
     it('defers a restored poll lifecycle and retries the bootstrap when it fails', async () => {
       const settle = async () => { for (let i = 0; i < 20; i++) { await Promise.resolve(); } };
@@ -666,6 +701,10 @@ describe('DataService consistency hardening (#292)', () => {
 
       expect(start_lifecycle).not.toHaveBeenCalled();
       expect(svc.persisted_cache_invalid).toBeTrue();
+      expect(svc.uninitialized_pids.has('p9')).toBeTrue();
+      expect(svc.ready).toBeFalse();
+      expect(svc.local_docs2cache_finished).not.toHaveBeenCalled();
+      await expectAsync(svc.poll_db_bootstrapped.p9).toBeRejectedWith(err);
     });
 
     it('does not start a restored poll lifecycle on bootstrap failure during shutdown', async () => {
