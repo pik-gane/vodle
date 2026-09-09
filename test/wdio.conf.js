@@ -28,16 +28,23 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * type checking buys little here.
  *
  * The 'devtools' automation protocol drives the browser over the Chrome
- * DevTools Protocol via the already-installed puppeteer-core, so no
- * chromedriver is needed (the pinned chromedriver 119 no longer matches any
- * current Chrome, and wdio 8.3's automatic driver management arrived only in
- * 8.14).
+ * DevTools Protocol via puppeteer-core, which comes in through the 'devtools'
+ * package that webdriverio itself depends on, so no chromedriver is needed
+ * (the pinned chromedriver 119 no longer matches any current Chrome, and wdio
+ * 8.3's automatic driver management arrived only in 8.14).
+ *
+ * NOTE: this pins the suite to wdio 8 — 'devtools' as an automation protocol
+ * was dropped in wdio 9. Upgrading means moving to WebDriver Bidi and letting
+ * wdio manage the driver, at which point most of this file can go away.
  */
 
 const { fork } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const PORT = parseInt(process.env.VODLE_E2E_PORT || '8100', 10);
+const SCREENSHOT_DIR = path.join(__dirname, '..', 'e2e-screenshots');
+const SERVER_READY_TIMEOUT = 30000;
 let server = null;
 
 // candidate browser binaries; CHROME_BIN wins (same convention as karma):
@@ -87,10 +94,27 @@ exports.config = {
     server = fork(path.join(__dirname, '..', 'scripts', 'serve-app.js'), [String(PORT)],
                   {stdio: 'inherit'});
     return new Promise((resolve, reject) => {
-      server.on('spawn', () => setTimeout(resolve, 500));
-      server.on('error', reject);
-      server.on('exit', code => reject(new Error('static server exited with ' + code)));
+      // the server messages us over the fork() IPC channel once the port is
+      // actually open; waiting a fixed number of milliseconds instead would be
+      // a bet on how fast node boots on whatever runner this lands on:
+      const timer = setTimeout(
+        () => reject(new Error('static server not ready within ' + SERVER_READY_TIMEOUT + 'ms')),
+        SERVER_READY_TIMEOUT);
+      const settle = (fn, arg) => { clearTimeout(timer); fn(arg); };
+      server.on('message', message => { if (message === 'ready') { settle(resolve); } });
+      server.on('error', error => settle(reject, error));
+      server.on('exit', code => settle(reject, new Error('static server exited with ' + code)));
     });
+  },
+
+  afterTest: async function (test, _context, {passed}) {
+    // a failure in CI is otherwise just a timeout message; the screenshot is
+    // uploaded by the "e2e smoke" job (see .github/workflows/tests.yml):
+    if (passed) { return; }
+    fs.mkdirSync(SCREENSHOT_DIR, {recursive: true});
+    const name = (test.fullName || test.description || 'failed-spec')
+      .replace(/[^\w]+/g, '-').slice(0, 100);
+    await browser.saveScreenshot(path.join(SCREENSHOT_DIR, name + '.png'));
   },
 
   onComplete: function () {

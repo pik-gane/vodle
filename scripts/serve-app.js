@@ -12,8 +12,13 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..', 'docs');
+const root = path.resolve(__dirname, '..', 'docs');
 const port = parseInt(process.argv[2] || process.env.PORT || '8100', 10);
+
+if (!fs.existsSync(path.join(root, 'index.html'))) {
+  console.error('docs/index.html not found - run "npm run build" first');
+  process.exit(1);
+}
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
@@ -25,9 +30,14 @@ const MIME = {
 
 const server = http.createServer((req, res) => {
   const url_path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  let file = path.normalize(path.join(root, url_path));
-  if (!file.startsWith(root)) { res.writeHead(403); res.end(); return; }
-  if (url_path === '/' || url_path === '') { file = path.join(root, 'index.html'); }
+  const file = path.normalize(path.join(root,
+    (url_path === '/' || url_path === '') ? '/index.html' : url_path));
+  // a plain file.startsWith(root) would also admit a sibling directory whose
+  // name merely begins with "docs":
+  const relative = path.relative(root, file);
+  if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
+    res.writeHead(403); res.end(); return;
+  }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); res.end('not found'); return; }
     res.writeHead(200, {'Content-Type': MIME[path.extname(file)] || 'application/octet-stream'});
@@ -36,9 +46,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  if (!fs.existsSync(path.join(root, 'index.html'))) {
-    console.error('docs/index.html not found - run "npm run build" first');
-    process.exit(1);
-  }
   console.log('serving docs/ at http://127.0.0.1:' + port + '/');
+  // tell the parent (test/wdio.conf.js) that the port is actually open, so it
+  // need not guess how long node takes to boot on a loaded CI runner:
+  if (process.send) { process.send('ready'); }
 });

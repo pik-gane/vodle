@@ -260,6 +260,60 @@ describe('Poll tally pipeline (MaxParC)', () => {
       expect(poll.effective_ratings_map.get('o1').get('v2')).toBe(100);
       expect(poll.T.n_not_abstaining).toBe(2);
     });
+
+    /** Order matters here: a voter is entered into the inverse EFFECTIVE
+     *  delegation map only once somebody's effective delegate is them, and a
+     *  voter who has already delegated onward never is — their own clients get
+     *  pointed at the far end of the chain instead. So when the middle of a
+     *  chain revokes, the entry it needs for its rewired clients may not exist
+     *  yet, and it has to be created rather than assumed. */
+    it('rewires dependent voters when the middle of a chain revokes (chain built downstream first)', () => {
+      environment.delegation.enabled = true;
+      const poll = make_poll({o1: 'Apple', o2: 'Banana'});
+      poll.update_own_rating('v3', 'o1', 60, true);
+      // v2 delegates onward BEFORE v1 delegates to v2:
+      expect(poll.add_delegation('v2', 'o1', 'v3')).toBeTrue();
+      expect(poll.add_delegation('v1', 'o1', 'v2')).toBeTrue();
+      expect(poll.effective_delegation_map.get('o1').get('v1')).toBe('v3');
+      poll.del_delegation('v2', 'o1');
+      // v1 still delegates to v2, who now votes for themselves:
+      expect(poll.effective_delegation_map.get('o1').get('v2')).toBeUndefined();
+      expect(poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      expect(poll.inv_effective_delegation_map.get('o1').get('v2')).toEqual(new Set(['v1']));
+      // v2 has no own rating, so v1 inherits an abstention from them
+      // (a zero rating is stored as the absence of an entry):
+      expect(poll.proxy_ratings_map.get('o1').has('v1')).toBeFalse();
+      expect(poll.proxy_ratings_map.get('o1').has('v2')).toBeFalse();
+      expect(poll.T.n_not_abstaining).toBe(1);
+    });
+
+    it('revokes a delegation whose delegate never delegated onward', () => {
+      environment.delegation.enabled = true;
+      const poll = make_poll({o1: 'Apple', o2: 'Banana'});
+      poll.update_own_rating('v1', 'o1', 60, true);
+      expect(poll.add_delegation('v2', 'o1', 'v1')).toBeTrue();
+      // v1 has no indirect-delegation entry at all, so there is no cycle:
+      poll.del_delegation('v2', 'o1');
+      expect(poll.direct_delegation_map.get('o1').has('v2')).toBeFalse();
+      // back to their own (absent, hence zero) rating:
+      expect(poll.proxy_ratings_map.get('o1').has('v2')).toBeFalse();
+      expect(poll.T.n_not_abstaining).toBe(1);
+    });
+
+    it('revokes a delegation that had closed a cycle', () => {
+      environment.delegation.enabled = true;
+      const poll = make_poll({o1: 'Apple', o2: 'Banana'});
+      poll.update_own_rating('v1', 'o1', 60, true);
+      expect(poll.add_delegation('v1', 'o1', 'v2')).toBeTrue();
+      // closes the cycle v1 -> v2 -> v1; the cycle path sets no effective
+      // delegate for v2, so there is nothing to deregister on revocation:
+      expect(poll.add_delegation('v2', 'o1', 'v1')).toBeTrue();
+      poll.del_delegation('v2', 'o1');
+      expect(poll.direct_delegation_map.get('o1').has('v2')).toBeFalse();
+      // v1 still delegates to v2, who now has only their own (absent) rating:
+      expect(poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      expect(poll.proxy_ratings_map.get('o1').has('v1')).toBeFalse();
+    });
   });
 
   describe('incremental updates agree with a full recount', () => {

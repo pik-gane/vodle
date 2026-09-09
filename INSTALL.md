@@ -297,6 +297,9 @@ the app's `data-vodle` attributes — add such an attribute rather than relying
 on structure or text when covering more flows. CI runs this as the `e2e smoke`
 job on every pull request.
 
+A failing spec saves a screenshot of the browser to `e2e-screenshots/`
+(gitignored); CI uploads that directory as a build artifact.
+
 ### Other useful commands
 
 - See the CouchDB logs:

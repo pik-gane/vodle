@@ -128,3 +128,12 @@ jobs:
       # DevTools protocol; see test/wdio.conf.js:
       - name: E2E smoke
         run: npm run e2e
+
+      # a failed e2e run is otherwise just a timeout message in the log:
+      - name: Upload e2e screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: e2e-screenshots/
+          if-no-files-found: ignore
