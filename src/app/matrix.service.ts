@@ -213,10 +213,33 @@ export class MatrixService {
   // Phase 5: User data cache for fast synchronous reads
   private userDataCache: Map<string, any> = new Map();
   
+  /** Use a non-persistent crypto store for end-to-end encryption. The SDK's
+   *  persistent IndexedDB crypto store is shared per browser profile and can
+   *  hold only ONE account, so tests running several concurrent clients in
+   *  one page must opt out of persistence. The app keeps the default. */
+  e2ee_store_in_memory = false;
+  
   constructor(
     private storage: Storage
   ) {
     this.homeserverUrl = environment.matrix.homeserver_url;
+  }
+
+  /**
+   * Whether an error from the SDK/fetch layer means "the server was not
+   * reached" (retryable once the connection is back), as opposed to the
+   * server having answered with a rejection. Only such errors may divert a
+   * write into the offline queue — a 403 must fail loudly, not be retried
+   * forever (#293).
+   */
+  private is_connection_error(error: any): boolean {
+    return !!error && (
+      error.name === 'ConnectionError' ||
+      // a failed fetch surfaces as TypeError in browsers:
+      error instanceof TypeError ||
+      // matrix-js-sdk sometimes wraps the fetch failure:
+      (error.errcode === undefined && error.httpStatus === undefined
+        && /fetch|network|Failed to fetch|NetworkError/i.test(String(error.message || ''))));
   }
 
   /**
@@ -290,6 +313,46 @@ export class MatrixService {
       this.userId = userId;
       this.deviceId = deviceId;
       
+      // Initialize end-to-end encryption (Rust crypto, WASM) so this device
+      // publishes device keys and can participate in encrypted rooms — e.g.
+      // future private invitation/delegation messages. NOTE the boundary:
+      // Matrix E2EE encrypts *timeline* events only; vodle stores votes and
+      // poll data as *state* events, which E2EE never covers. Vote
+      // confidentiality comes from the application-layer poll-password
+      // encryption (encryptWithPassword/submitEncryptedRating), not from
+      // this. A crypto-init failure (e.g. missing WASM support) therefore
+      // degrades gracefully to an unencrypted-capable session:
+      if (environment.matrix.enable_e2ee) {
+        try {
+          // The crypto WASM's default loading URL is built from
+          // import.meta.url, which Angular's webpack leaves as an unfetchable
+          // file:/// source path — so load the module explicitly from the
+          // copy shipped as an app asset (see angular.json); the loader
+          // memoizes, and initRustCrypto below reuses the loaded module:
+          const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
+          await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+          const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
+          try {
+            await this.client.initRustCrypto(crypto_options);
+          } catch (crypto_error) {
+            // the SDK's persistent crypto store is shared per browser profile
+            // and holds only one account — after logging out and in as a
+            // DIFFERENT user, initialization fails until the old store is
+            // cleared. The client is not started yet, so clearing is safe:
+            this.logger?.warn("MatrixService crypto store rejected, clearing and retrying", crypto_error);
+            await this.client.clearStores();
+            await this.client.initRustCrypto(crypto_options);
+          }
+          this.logger?.info("MatrixService end-to-end encryption initialized", userId);
+        } catch (error) {
+          this.logger?.warn("MatrixService could not initialize end-to-end encryption, continuing without", error);
+        }
+      }
+      
+      // Restore any offline-queued writes from a previous session before
+      // syncing, so they are replayed once the connection is confirmed:
+      await this.loadOfflineQueue();
+      
       // Start syncing.  Lazy-load room members to reduce initial
       // sync payload and avoid fetching full membership lists for
       // rooms with many participants.
@@ -302,6 +365,12 @@ export class MatrixService {
       (this.client as any).on('sync', (state: string, prevState: string | null) => {
         if (state !== prevState) {
           console.log('[MatrixSync]', prevState, '->', state);
+        }
+        // A (re)established sync means the server is reachable again, so any
+        // writes queued while offline can be replayed now (#293):
+        if ((state === 'PREPARED' || state === 'SYNCING') && this.offlineQueue.length > 0) {
+          this.processOfflineQueue().catch(error =>
+            this.logger?.warn("Offline queue replay failed, will retry on next sync", error));
         }
       });
       
@@ -491,13 +560,35 @@ export class MatrixService {
       // Use hashed email as Matrix username to protect privacy
       const username = emailHash;
       
-      const response = await tempClient.register(
-        username,
-        password,
-        undefined, // sessionId
-        {}, // auth
-        {} // options
-      );
+      // Registration is user-interactive auth: even with
+      // enable_registration_without_verification, Synapse requires the
+      // m.login.dummy stage, and the SDK's register() does no UIA handling
+      // of its own — an empty auth dict is rejected with a 401. Send the
+      // dummy stage directly, and if the server insists on a session, retry
+      // once with the session it issued:
+      let response;
+      try {
+        response = await tempClient.register(
+          username,
+          password,
+          undefined, // sessionId
+          {type: 'm.login.dummy'} // auth
+        );
+      } catch (error: any) {
+        const session = error?.data?.session,
+              flows = error?.data?.flows || [];
+        if (error?.httpStatus === 401 && session
+            && flows.some((flow: any) => (flow.stages || []).includes('m.login.dummy'))) {
+          response = await tempClient.register(
+            username,
+            password,
+            session,
+            {type: 'm.login.dummy'}
+          );
+        } else {
+          throw error;
+        }
+      }
       
       await this.saveCredentials({
         accessToken: response.access_token,
@@ -781,10 +872,17 @@ export class MatrixService {
   async setUserData(key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setUserData", key);
     
-    const roomId = await this.getUserRoom();
-    const eventType = `m.room.vodle.user.${key}`;
-    
-    await this.sendStateEvent(roomId, eventType, { value }, '');
+    try {
+      const roomId = await this.getUserRoom();
+      const eventType = `m.room.vodle.user.${key}`;
+      await this.sendStateEvent(roomId, eventType, { value }, '');
+    } catch (error) {
+      // an unreachable server must not lose the write — queue it for replay
+      // when the sync loop reconnects (#293); server rejections still throw:
+      if (!this.is_connection_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setUserData offline, queueing", key);
+      await this.enqueueOfflineEvent({type: 'user_data', key, value});
+    }
     
     this.logger?.exit("MatrixService.setUserData");
   }
@@ -1710,13 +1808,19 @@ export class MatrixService {
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setPollData", pollId, key);
     
-    const roomId = await this.getPollRoom(pollId);
-    if (!roomId) {
-      throw new Error(`Poll room not found for poll ${pollId}`);
+    try {
+      const roomId = await this.getPollRoom(pollId);
+      if (!roomId) {
+        throw new Error(`Poll room not found for poll ${pollId}`);
+      }
+      const eventType = `m.room.vodle.poll.data.${key}`;
+      await this.sendStateEvent(roomId, eventType, { value }, '');
+    } catch (error) {
+      // see setUserData — queue writes the server never received (#293):
+      if (!this.is_connection_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setPollData offline, queueing", pollId, key);
+      await this.enqueueOfflineEvent({type: 'poll_data', pollId, key, value});
     }
-    
-    const eventType = `m.room.vodle.poll.data.${key}`;
-    await this.sendStateEvent(roomId, eventType, { value }, '');
     
     this.logger?.exit("MatrixService.setPollData");
   }
@@ -2317,21 +2421,30 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
-    // Voter data is stored as state events in the voter's own room.
-    // Every voter (real or simulated) has a separate room.
-    // The room owner (power 50) can write; everyone else is read-only (power 0).
-    // State events keep only the latest value per (event_type, state_key),
-    // so frequent rating changes do NOT cause timeline clutter.
-    const roomId = await this.getOrCreateVoterRoom(pollId, voterId);
-    if (!roomId) {
-      throw new Error(`Voter room not found for poll ${pollId}`);
+    try {
+      // Voter data is stored as state events in the voter's own room.
+      // Every voter (real or simulated) has a separate room.
+      // The room owner (power 50) can write; everyone else is read-only (power 0).
+      // State events keep only the latest value per (event_type, state_key),
+      // so frequent rating changes do NOT cause timeline clutter.
+      const roomId = await this.getOrCreateVoterRoom(pollId, voterId);
+      if (!roomId) {
+        throw new Error(`Voter room not found for poll ${pollId}`);
+      }
+      
+      // Use a dedicated state event type per rating key so that
+      // each rating is independently overwritable.
+      // state_key is always '' — each voter has their own room.
+      const eventType = `m.room.vodle.voter.rating.${key}` as any;
+      await this.client.sendStateEvent(roomId, eventType, { value, voter_vid: voterId }, '');
+    } catch (error) {
+      // see setUserData — queue writes the server never received (#293). The
+      // local rating cache below is still updated, so the own vote stays
+      // visible while offline (replay makes it durable):
+      if (!this.is_connection_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setVoterData offline, queueing", pollId, key);
+      await this.enqueueOfflineEvent({type: 'voter_data', pollId, voterId, key, value});
     }
-    
-    // Use a dedicated state event type per rating key so that
-    // each rating is independently overwritable.
-    // state_key is always '' — each voter has their own room.
-    const eventType = `m.room.vodle.voter.rating.${key}` as any;
-    await this.client.sendStateEvent(roomId, eventType, { value, voter_vid: voterId }, '');
     
     // Update rating cache if this is a rating event
     if (key.startsWith('rating.')) {
