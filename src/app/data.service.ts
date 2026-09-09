@@ -496,6 +496,11 @@ export class DataService implements OnDestroy {
   }
 
   save_state(): Promise<any> {
+    if (!this.G) {
+      // the service was destroyed before init(G) ever ran (e.g. dependency
+      // injection teardown), so there is no state worth saving:
+      return Promise.resolve();
+    }
     this.G.L.entry("DataService.save_state");
     if (this.persisted_cache_invalid) {
       // a replicated change was terminally dropped, so the in-memory caches

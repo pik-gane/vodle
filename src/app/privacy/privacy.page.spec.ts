@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
 
-import { PrivacyPage } from './privacy.page';
+import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
+
+import { PrivacyPage, SafePipe } from './privacy.page';
 
 describe('PrivacyPage', () => {
   let component: PrivacyPage;
@@ -9,8 +11,9 @@ describe('PrivacyPage', () => {
 
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      declarations: [ PrivacyPage ],
-      imports: [IonicModule.forRoot()]
+      declarations: [ PrivacyPage, SafePipe ],
+      imports: VODLE_PAGE_TEST_IMPORTS,
+      providers: vodle_page_test_providers()
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrivacyPage);

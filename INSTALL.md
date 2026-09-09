@@ -265,12 +265,11 @@ $ npm run test:couchdb:stop
 
 `npm run test:couchdb` does the same for just that spec file.
 
-The suite is not green: a number of `should create` specs fail on TestBed
-dependency injection and have done so independently of the current work. They
-are listed in [test/known-failing-specs.txt](test/known-failing-specs.txt).
-CI (`.github/workflows/tests.yml`) fails on any failure that is *not* in that
-list, so a regression is loud while the pre-existing breakage stays visible;
-the list is meant to shrink to nothing. To make the same check locally:
+CI (`.github/workflows/tests.yml`) fails on any failure that is *not* listed
+in [test/known-failing-specs.txt](test/known-failing-specs.txt). That baseline
+is currently empty — the suite is expected to be green — and only a
+deliberately accepted failure may be recorded there, with a comment saying
+why. To make the same check locally:
 
 ```
 $ KARMA_RESULT_FILE=karma-results.json npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false

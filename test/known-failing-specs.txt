@@ -1,41 +1,12 @@
-# Specs that already fail without any current change, one exact spec name per line
-# (as reported by the json-result reporter in karma.conf.js: suites and the
-# spec description joined with " > ").
+# Specs that already fail without any current change, one exact spec name per
+# line (as reported by the json-result reporter in karma.conf.js: suites and
+# the spec description joined with " > ").
 #
-# scripts/check-test-results.js fails CI on any failure that is NOT listed here,
-# so this file is what separates a regression from the breakage that was already
-# there. It is meant to shrink to nothing.
+# scripts/check-test-results.js fails CI on any failure that is NOT listed
+# here, so this file is what separates a regression from breakage that was
+# already there.
 #
-# All entries below are TestBed dependency-injection failures of the shape
-#   NullInjectorError: R3InjectorError(DynamicTestModule)[... -> Router -> UrlSerializer]
-# i.e. the testing modules do not provide what the injected services need. They
-# fail on main as well. Because they are all "should create" smoke specs, no
-# component is currently covered by any executed test at all, which is why
-# fixing them is worth much more than the line count suggests.
-AboutPage > should create
-AddoptionDialogPage > should create
-AnalysisPage > should create
-AppComponent > should create the app
-AssistPage > should create
-DataService > should be created
-DelegationDialogPage > should create
-DelegationService > should be created
-DeleteAllPage > should create
-DelrespondPage > should create
-DraftpollKebapPage > should create
-DraftpollPage > should create
-ExplainApprovalPage > should create
-GlobalService > should be created
-HelpPage > should create
-ImprintPage > should create
-InvitetoPage > should create
-JoinpollPage > should create
-LoginPage > should create
-LogoutPage > should create
-MypollsPage > should create
-PollPage > should create
-PreviewpollPage > should create
-PrivacyPage > should create
-SelectServerComponent > should create
-SettingsPage > should create
-Unique form validator, async > should return observable with saying it is not unique, if the name does exist
+# The file is currently EMPTY: the 27 TestBed dependency-injection failures
+# that used to live here were fixed on 2026-09-09 (shared TestBed plumbing in
+# src/app/testing/vodle-testing.ts). Keep it empty — an entry may only be
+# added for a failure that is genuinely expected, with a comment saying why.

@@ -20,6 +20,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
 
+import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
+
 import { AssistPage } from './assist.page';
 
 describe('AssistPage', () => {
@@ -29,11 +31,19 @@ describe('AssistPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [ AssistPage ],
-      imports: [IonicModule.forRoot()]
+      imports: VODLE_PAGE_TEST_IMPORTS,
+      providers: vodle_page_test_providers()
     }).compileComponents();
 
     fixture = TestBed.createComponent(AssistPage);
     component = fixture.componentInstance;
+    // AssistPage is opened as a modal with the poll page passed in; the
+    // template dereferences it, so the smoke test passes a minimal stand-in:
+    component.P = {
+      ready: false,
+      oidsorted: [],
+      p: {have_acted: false, syncing: false, options: {}},
+    } as any;
     fixture.detectChanges();
   }));
 

@@ -18,6 +18,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { IonicModule } from '@ionic/angular';
+import { IonicStorageModule } from '@ionic/storage-angular';
+import { TranslateModule } from '@ngx-translate/core';
 import CryptoES from 'crypto-es';
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
@@ -30,7 +35,17 @@ describe('DataService', () => {
   let service: DataService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    // the real dependency graph; DataService's constructor is side-effect
+    // free (its init() runs only when GlobalService calls it):
+    TestBed.configureTestingModule({
+      imports: [
+        RouterTestingModule,
+        HttpClientTestingModule,
+        IonicModule.forRoot(),
+        IonicStorageModule.forRoot(),
+        TranslateModule.forRoot(),
+      ],
+    });
     service = TestBed.inject(DataService);
   });
 
