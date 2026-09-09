@@ -1,0 +1,96 @@
+# Builds the app and runs the test suite on every pull request and every push
+# to main. Until this workflow existed, nothing ran the tests in CI, so every
+# "the suite passes" claim rested on someone's local run.
+#
+# The suite is not green: a number of "should create" specs fail on TestBed
+# dependency injection, and have done so independently of any current work.
+# Requiring a green suite would therefore make this job permanently red and so
+# permanently ignored. Instead the job fails on failures that are NOT in
+# test/known-failing-specs.txt, so a regression is loud while the pre-existing
+# breakage stays visible and countable in one file that is meant to shrink.
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+# a new push to a pull request makes the previous run pointless:
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # the two-client integration specs need a real CouchDB running the real
+      # validator; scripts/test-couchdb.sh provisions this container below.
+      # Without it those specs skip themselves and the rest still runs.
+      couchdb:
+        image: couchdb:3.3
+        env:
+          COUCHDB_USER: admin
+          COUCHDB_PASSWORD: admin
+        ports:
+          - 5984:5984
+
+    env:
+      KARMA_RESULT_FILE: karma-results.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # --ignore-scripts because @ionic/app-scripts still pulls in node-sass
+      # 4.x, whose native build fails on any current Node; nothing in the
+      # Angular build uses it (see NODE_SASS_FIX.md). --legacy-peer-deps
+      # matches the documented local install in INSTALL.md.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Resolve a headless browser
+        run: |
+          for candidate in "$CHROME_BIN" google-chrome chromium-browser chromium; do
+            if [ -n "$candidate" ] && command -v "$candidate" > /dev/null 2>&1; then
+              echo "CHROME_BIN=$(command -v "$candidate")" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "no Chrome or Chromium found on the runner" >&2
+          exit 1
+
+      - name: Provision the test CouchDB
+        run: scripts/test-couchdb.sh provision
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        # the runner's browser needs --no-sandbox; see karma.conf.js.
+        # A non-zero exit here only means "some spec failed"; whether that is
+        # acceptable is decided by the baseline check below, so do not let it
+        # end the job before that check has run.
+        continue-on-error: true
+        run: npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
+
+      - name: Compare against the known-failure baseline
+        # --no-skips because CouchDB was provisioned above: if the integration
+        # specs skip themselves here, they have silently stopped running.
+        run: node scripts/check-test-results.js --no-skips
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karma-results
+          path: karma-results.json
+          if-no-files-found: warn

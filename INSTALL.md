@@ -263,7 +263,20 @@ $ CHROME_BIN=/usr/bin/chromium npx ng test --browsers=ChromeHeadlessNoSandbox --
 $ npm run test:couchdb:stop
 ```
 
-`npm run test:couchdb` does the same for just that spec file. The container
+`npm run test:couchdb` does the same for just that spec file.
+
+The suite is not green: a number of `should create` specs fail on TestBed
+dependency injection and have done so independently of the current work. They
+are listed in [test/known-failing-specs.txt](test/known-failing-specs.txt).
+CI (`.github/workflows/tests.yml`) fails on any failure that is *not* in that
+list, so a regression is loud while the pre-existing breakage stays visible;
+the list is meant to shrink to nothing. To make the same check locally:
+
+```
+$ KARMA_RESULT_FILE=karma-results.json npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
+$ node scripts/check-test-results.js
+```
+ The container
 (`vodle-test-couchdb`, port 5984 by default) has no volume, so stopping it
 removes all its data; it is provisioned from the files in `couchdb/` and never
 touches a CouchDB you set up for development. Override `VODLE_TEST_COUCHDB_PORT`

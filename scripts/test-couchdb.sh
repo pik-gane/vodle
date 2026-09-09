@@ -10,9 +10,13 @@
 # to it through the ordinary DataService connection path, so the tests exercise
 # the actual server-side authorization rules rather than a stub.
 #
-#   scripts/test-couchdb.sh start     # start and provision (idempotent)
+#   scripts/test-couchdb.sh start     # start a container and provision it
+#   scripts/test-couchdb.sh provision # provision an already running CouchDB
 #   scripts/test-couchdb.sh stop      # remove the container and all its data
 #   scripts/test-couchdb.sh status    # print whether it is reachable
+#
+# "provision" is what CI uses, where the server already runs as a workflow
+# service container; "start" is "run a container, then provision".
 #
 # Everything lives in a container without a volume, so "stop" leaves no state
 # behind and never touches a real CouchDB.
@@ -61,6 +65,10 @@ start() {
       -e "COUCHDB_PASSWORD=${ADMIN_PW}" \
       "${IMAGE}" >/dev/null
   fi
+  provision
+}
+
+provision() {
   wait_for_couchdb
 
   # system databases:
@@ -126,7 +134,8 @@ status() {
 
 case "${1:-start}" in
   start) start ;;
+  provision) provision ;;
   stop) stop ;;
   status) status ;;
-  *) echo "usage: $0 {start|stop|status}" >&2; exit 2 ;;
+  *) echo "usage: $0 {start|provision|stop|status}" >&2; exit 2 ;;
 esac

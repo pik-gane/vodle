@@ -48,3 +48,6 @@ guard-bot/node_modules/
 # Build output directory (Angular build artifacts)
 docs/
 node_modules/
+
+# machine-readable karma summary (see karma.conf.js / scripts/check-test-results.js)
+karma-results.json
