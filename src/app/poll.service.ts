@@ -1071,6 +1071,12 @@ export class Poll {
           }  
         }  
       }
+      // The update_proxy_rating calls above adjust the underlying rating maps
+      // but not the derived tally cache, and nothing else retallies after a
+      // delegation change — so thresholds, approvals, votes and shares would
+      // stay stale until some unrelated rating change. Delegation changes are
+      // rare, so a full recount is affordable and consistent by construction:
+      this.tally_all();
       this.G.L.debug("add_delegation exit", this.pid, oid, client_vid, delegate_vid);
       return true;
     }
@@ -1094,7 +1100,9 @@ export class Poll {
             inv_eff_d_map = this.inv_effective_delegation_map.get(oid),
             inv_eff_ds_of_client = inv_eff_d_map.get(client_vid),
             inv_eff_ds_of_old_eff_d_of_client = inv_eff_d_map.get(old_eff_d_of_client),
-            is_on_cycle = ind_d_map.get(old_d_vid).has(client_vid);
+            // the delegate need not have delegated onward themselves, in which
+            // case they have no indirect-delegation entry and no cycle exists:
+            is_on_cycle = !!ind_d_map.get(old_d_vid)?.has(client_vid);
 
       this.G.L.debug("del_delegation entry", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
 
@@ -1163,21 +1171,25 @@ export class Poll {
       }
 
       // deregister EFFECTIVE delegation and inverse of vid and reset proxy rating to own rating:
+      // (on a former cycle the client may have no effective-delegate entry at
+      // all, in which case there is nothing to deregister):
       const new_proxy_rating = this.own_ratings_map.get(oid).get(client_vid) || 0;
       eff_d_map.delete(client_vid);
-      inv_eff_ds_of_old_eff_d_of_client.delete(client_vid);
+      inv_eff_ds_of_old_eff_d_of_client?.delete(client_vid);
       this.update_proxy_rating(client_vid, oid, new_proxy_rating);
 
       // rewire EFFECTIVE delegation and inverse of voters who indirectly delegated to vid,
       // and update proxy ratings:
       if (inv_ind_ds_of_client) {
         for (const vid of inv_ind_ds_of_client) {
-          inv_eff_ds_of_old_eff_d_of_client.delete(vid);
+          inv_eff_ds_of_old_eff_d_of_client?.delete(vid);
           eff_d_map.set(vid, client_vid);
           inv_eff_ds_of_client.add(vid);
           this.update_proxy_rating(vid, oid, new_proxy_rating);
         }            
       }
+      // full recount for the same reason as at the end of add_delegation:
+      this.tally_all();
       this.G.L.debug("del_delegation exit", this.pid, oid, client_vid, old_d_vid, is_on_cycle);
     }
   }
