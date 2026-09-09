@@ -282,6 +282,24 @@ touches a CouchDB you set up for development. Override `VODLE_TEST_COUCHDB_PORT`
 and the other `VODLE_TEST_COUCHDB_*` variables in `scripts/test-couchdb.sh` if
 port 5984 is already taken by your development server.
 
+The e2e smoke suite drives the **real built app** through the first-run flow
+(boot, non-empty language list, language → used-before → email steps) in a
+headless Chrome over the DevTools protocol — no chromedriver needed:
+
+```
+npm run build
+npm run e2e
+```
+
+It serves the build output (`docs/`) via `scripts/serve-app.js` and runs
+`test/specs/*.e2e.js` through WebdriverIO (`test/wdio.conf.js`). Selectors use
+the app's `data-vodle` attributes — add such an attribute rather than relying
+on structure or text when covering more flows. CI runs this as the `e2e smoke`
+job on every pull request.
+
+A failing spec saves a screenshot of the browser to `e2e-screenshots/`
+(gitignored); CI uploads that directory as a build artifact.
+
 ### Other useful commands
 
 - See the CouchDB logs:

@@ -51,3 +51,6 @@ node_modules/
 
 # machine-readable karma summary (see karma.conf.js / scripts/check-test-results.js)
 karma-results.json
+
+# screenshots saved by the e2e smoke suite on failure (see test/wdio.conf.js)
+e2e-screenshots/
