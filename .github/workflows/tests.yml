@@ -93,3 +93,38 @@ jobs:
           name: karma-results
           path: karma-results.json
           if-no-files-found: warn
+
+  e2e-smoke:
+    name: e2e smoke (built app)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Resolve a headless browser
+        run: |
+          for candidate in "$CHROME_BIN" google-chrome chromium-browser chromium; do
+            if [ -n "$candidate" ] && command -v "$candidate" > /dev/null 2>&1; then
+              echo "CHROME_BIN=$(command -v "$candidate")" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "no Chrome or Chromium found on the runner" >&2
+          exit 1
+
+      - name: Build
+        run: npm run build
+
+      # drives the REAL built app (docs/) through the first-run flow over the
+      # DevTools protocol; see test/wdio.conf.js:
+      - name: E2E smoke
+        run: npm run e2e
