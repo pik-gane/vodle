@@ -100,6 +100,9 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
   async function make_client(label: string): Promise<any> {
     const svc: any = new (MatrixService as any)(storage_stub());
     svc.init(silent);
+    // several concurrent clients share this page, and the persistent crypto
+    // store holds only one account (see e2ee_store_in_memory):
+    svc.e2ee_store_in_memory = true;
     const email = label + '-' + pid + '@example.invalid';
     await svc.register(email, 'test-password-' + label);
     services.push(svc);
@@ -192,6 +195,25 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
           && rating_values(ratings, 'o2').includes(10);
     }, 'bob to converge on the ratings published while offline');
 
+    // --- offline-queued write: with the server unreachable, a rating is
+    // queued instead of lost, and replayed once the connection is back ---
+    const real_base_url = bob.client.http.opts.baseUrl;
+    bob.client.http.opts.baseUrl = 'http://127.0.0.1:1';   // nothing listens here
+    (bob.client as any).baseUrl = 'http://127.0.0.1:1';
+    await bob.submitRating(pid, 'o2', 55);                 // must not throw
+    expect(bob.getOfflineQueueSize()).toBe(1);
+    // the own vote stays visible locally while offline:
+    expect(rating_values(await bob.getRatings(pid), 'o2')).toContain(55);
+    bob.client.http.opts.baseUrl = real_base_url;
+    (bob.client as any).baseUrl = real_base_url;
+    // the recovering sync loop triggers the replay; alice then sees the
+    // vote. The window must outlast a full idle long-poll cycle (~30s),
+    // since the replay piggybacks on the next successful sync tick:
+    await until(async () =>
+      rating_values(await fresh_ratings(alice), 'o2').includes(55),
+      "alice to see bob's offline-queued rating after replay", 75000);
+    expect(bob.getOfflineQueueSize()).toBe(0);
+
     // --- a brand-new session (fresh in-memory storage, as after clearing
     // the browser) of a third user sees the full authoritative state ---
     const carol = await make_client('carol');
@@ -199,5 +221,49 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       const values = rating_values(await fresh_ratings(carol), 'o1');
       return values.includes(90) && values.includes(33);
     }, 'a fresh client to see the authoritative ratings');
+  });
+
+  it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {
+    if (!requires_synapse()) { return; }
+    // self-contained (fresh users), since jasmine randomizes spec order:
+    const dave = await make_client('dave');
+    const erin = await make_client('erin');
+
+    // enable_e2ee made each client bring up the Rust crypto backend and
+    // publish device keys:
+    expect(dave.client.getCrypto()).withContext('dave crypto').toBeTruthy();
+    expect(erin.client.getCrypto()).withContext('erin crypto').toBeTruthy();
+
+    // NOTE the boundary this spec deliberately marks: Matrix E2EE covers
+    // timeline events only. vodle's votes and poll data are STATE events and
+    // are never protected by room encryption — their confidentiality comes
+    // from the application-layer poll-password encryption. What E2EE enables
+    // is private timeline messaging, e.g. future invitation/delegation DMs:
+    const dm = await dave.client.createRoom({
+      invite: [erin.userId],
+      is_direct: true,
+      preset: 'trusted_private_chat',
+      initial_state: [{
+        type: 'm.room.encryption', state_key: '',
+        content: {algorithm: 'm.megolm.v1.aes-sha2'},
+      }],
+    });
+    await erin.client.joinRoom(dm.room_id);
+    const secret = 'secret ballot ' + pid;
+    await dave.client.sendTextMessage(dm.room_id, secret);
+
+    // erin must receive it encrypted on the wire and decrypt it locally:
+    await until(async () => {
+      const room = erin.client.getRoom(dm.room_id);
+      if (!room) { return false; }
+      for (const event of room.getLiveTimeline().getEvents()) {
+        await erin.client.decryptEventIfNeeded(event);
+        if (event.getType() === 'm.room.message' && event.getContent().body === secret) {
+          expect(event.isEncrypted()).withContext('arrived encrypted on the wire').toBeTrue();
+          return true;
+        }
+      }
+      return false;
+    }, 'erin to decrypt the direct message', 60000);
   });
 });

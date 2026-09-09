@@ -28,9 +28,17 @@
                 "glob": "**/*.svg",
                 "input": "node_modules/ionicons/dist/ionicons/svg",
                 "output": "./svg"
+              },
+              {
+                "glob": "matrix_sdk_crypto_wasm_bg.wasm",
+                "input": "node_modules/@matrix-org/matrix-sdk-crypto-wasm/pkg",
+                "output": "assets"
               }
             ],
-            "styles": ["src/theme/variables.scss", "src/global.scss"],
+            "styles": [
+              "src/theme/variables.scss",
+              "src/global.scss"
+            ],
             "scripts": [],
             "aot": false,
             "vendorChunk": true,
@@ -117,6 +125,11 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "/assets"
+              },
+              {
+                "glob": "matrix_sdk_crypto_wasm_bg.wasm",
+                "input": "node_modules/@matrix-org/matrix-sdk-crypto-wasm/pkg",
+                "output": "assets"
               }
             ]
           },
