@@ -70,6 +70,11 @@ jobs:
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 
+      # the Matrix two-client integration specs need a real Synapse; without
+      # it they skip themselves, which --no-skips below would flag:
+      - name: Provision the test Matrix homeserver
+        run: scripts/test-matrix.sh start
+
       - name: Build
         run: npm run build
 

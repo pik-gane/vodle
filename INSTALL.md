@@ -265,6 +265,20 @@ $ npm run test:couchdb:stop
 
 `npm run test:couchdb` does the same for just that spec file.
 
+Similarly, `src/app/matrix-two-client.spec.ts` exercises two independent
+`MatrixService` clients against a **real** Synapse homeserver — poll discovery
+via the room alias, cross-client rating visibility through voter-room
+discovery, reconvergence after one client was offline, and a fresh session
+reading the authoritative state. Start its throw-away server (port 8009, so a
+development homeserver on 8008 is untouched) with:
+
+```
+$ scripts/test-matrix.sh start
+```
+
+and remove it including all its data with `scripts/test-matrix.sh stop`.
+These specs also skip themselves when no Synapse is reachable.
+
 CI (`.github/workflows/tests.yml`) fails on any failure that is *not* listed
 in [test/known-failing-specs.txt](test/known-failing-specs.txt). That baseline
 is currently empty — the suite is expected to be green — and only a

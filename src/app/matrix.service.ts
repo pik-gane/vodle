@@ -491,13 +491,35 @@ export class MatrixService {
       // Use hashed email as Matrix username to protect privacy
       const username = emailHash;
       
-      const response = await tempClient.register(
-        username,
-        password,
-        undefined, // sessionId
-        {}, // auth
-        {} // options
-      );
+      // Registration is user-interactive auth: even with
+      // enable_registration_without_verification, Synapse requires the
+      // m.login.dummy stage, and the SDK's register() does no UIA handling
+      // of its own — an empty auth dict is rejected with a 401. Send the
+      // dummy stage directly, and if the server insists on a session, retry
+      // once with the session it issued:
+      let response;
+      try {
+        response = await tempClient.register(
+          username,
+          password,
+          undefined, // sessionId
+          {type: 'm.login.dummy'} // auth
+        );
+      } catch (error: any) {
+        const session = error?.data?.session,
+              flows = error?.data?.flows || [];
+        if (error?.httpStatus === 401 && session
+            && flows.some((flow: any) => (flow.stages || []).includes('m.login.dummy'))) {
+          response = await tempClient.register(
+            username,
+            password,
+            session,
+            {type: 'm.login.dummy'}
+          );
+        } else {
+          throw error;
+        }
+      }
       
       await this.saveCredentials({
         accessToken: response.access_token,
