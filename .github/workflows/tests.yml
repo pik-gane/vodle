@@ -2,12 +2,11 @@
 # to main. Until this workflow existed, nothing ran the tests in CI, so every
 # "the suite passes" claim rested on someone's local run.
 #
-# The suite is not green: a number of "should create" specs fail on TestBed
-# dependency injection, and have done so independently of any current work.
-# Requiring a green suite would therefore make this job permanently red and so
-# permanently ignored. Instead the job fails on failures that are NOT in
-# test/known-failing-specs.txt, so a regression is loud while the pre-existing
-# breakage stays visible and countable in one file that is meant to shrink.
+# The job fails on failures that are NOT in test/known-failing-specs.txt.
+# That file is currently empty (the 27 TestBed dependency-injection failures
+# it was introduced for were fixed on 2026-09-09), so in effect a green suite
+# is required; the baseline mechanism stays in place so that a deliberately
+# accepted failure can be recorded explicitly instead of being normalized.
 name: tests
 
 on:

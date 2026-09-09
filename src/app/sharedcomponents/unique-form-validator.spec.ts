@@ -5,7 +5,10 @@ import { Observable, of } from 'rxjs';
 describe('Unique form validator, async', () => {
 
   it('should return observable with null if the name does not exist', (done) => {
-    const ctrl = { value: 'California' };
+    // a pristine control (or one without valueChanges) short-circuits the
+    // validator, so the mock must look like a dirty, live control — otherwise
+    // both tests would only ever exercise the early return:
+    const ctrl = { value: 'California', valueChanges: of('California'), pristine: false };
     const av_fn: AsyncValidatorFn = unique_name_validator$(of(['Alaska']));
     const res = av_fn(ctrl as AbstractControl);
     (res as Observable<ValidationErrors | null>).subscribe(r => {
@@ -15,7 +18,7 @@ describe('Unique form validator, async', () => {
   });
 
   it('should return observable with saying it is not unique, if the name does exist', (done) => {
-    const ctrl = { value: 'California' };
+    const ctrl = { value: 'California', valueChanges: of('California'), pristine: false };
     const av_fn: AsyncValidatorFn = unique_name_validator$(of(['Alaska', 'California']));
     const res = av_fn(ctrl as AbstractControl);
     (res as Observable<ValidationErrors | null>).subscribe(r => {

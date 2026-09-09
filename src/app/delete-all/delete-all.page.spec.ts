@@ -20,6 +20,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
 
+import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
+
 import { DeleteAllPage } from './delete-all.page';
 
 describe('DeleteAllPage', () => {
@@ -29,7 +31,8 @@ describe('DeleteAllPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [ DeleteAllPage ],
-      imports: [IonicModule.forRoot()]
+      imports: VODLE_PAGE_TEST_IMPORTS,
+      providers: vodle_page_test_providers()
     }).compileComponents();
 
     fixture = TestBed.createComponent(DeleteAllPage);

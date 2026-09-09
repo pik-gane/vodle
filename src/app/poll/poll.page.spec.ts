@@ -18,7 +18,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, IonRouterOutlet } from '@ionic/angular';
+
+import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
 
 import { PollPage } from './poll.page';
 
@@ -29,7 +31,13 @@ describe('PollPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [ PollPage ],
-      imports: [IonicModule.forRoot()]
+      imports: VODLE_PAGE_TEST_IMPORTS,
+      providers: [
+        ...vodle_page_test_providers(),
+        // PollPage injects the router outlet for swipe-back control;
+        // in a smoke test a minimal stand-in suffices:
+        {provide: IonRouterOutlet, useValue: {swipeGesture: false}},
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PollPage);
