@@ -3,6 +3,7 @@ import CryptoES from 'crypto-es';
 import { DataService } from './data.service';
 import { CouchDBBackend } from './couchdb-backend';
 import { DelegationService } from './delegation.service';
+import { Poll, PollService } from './poll.service';
 import { environment } from '../environments/environment';
 
 describe('DataService ordered voter mutations', () => {
@@ -74,6 +75,7 @@ describe('DataService ordered voter mutations', () => {
       D: s,
     };
     s.get_email_and_pw_hash = () => 'test-hash';
+    s.local_only_user_DB = database();
     s.local_synced_user_db = database([{_id: uid, _rev: '1-source', value: encrypt('50')}]);
     s.local_poll_dbs[pid] = database([{_id: destination, _rev: '1-poll', value: encrypt('50', 'poll-password')}]);
     s.get_local_poll_db = id => s.local_poll_dbs[id];
@@ -82,6 +84,67 @@ describe('DataService ordered voter mutations', () => {
     s.stop_replication_watchdog = noop;
     s.flush_change_queue = () => true;
     return s;
+  }
+
+  function wire_delegation() {
+    const request_key = 'voter.v1§del_request.d1';
+    const request_source_key = 'poll.p1.' + request_key;
+    const source_id = '~vodle.user.test-hash§' + request_source_key;
+    const target_id = '~vodle.poll.p1.' + request_key;
+    const request = JSON.stringify({option_spec: {type: '+', oids: ['o1']}});
+    const agreement = {client_vid: 'v1', active_oids: new Set(['o1'])};
+    const agreements = new Map([['d1', agreement]]);
+    const outgoing = new Map([['*', 'd1']]);
+    const poll = {myvid: 'v1', del_delegation: jasmine.createSpy('del_delegation')};
+    service.user_cache[request_source_key] = request;
+    service.poll_caches[pid][request_key] = request;
+    service.local_synced_user_db.docs.set(source_id, {
+      _id: source_id, _rev: '1-request', value: encrypt(request),
+    });
+    service.local_poll_dbs[pid].docs.set(target_id, {
+      _id: target_id, _rev: '1-request', value: encrypt(request, 'poll-password'),
+    });
+    service.delegation_agreements_caches = {[pid]: agreements};
+    service.outgoing_dids_caches = {[pid]: outgoing};
+    service.G.P.polls[pid] = poll;
+    const delegation: any = new (DelegationService as any)(null, null);
+    delegation.G = service.G;
+    service.G.Del = delegation;
+    spyOn(delegation, 'process_deleted_request_from_db').and.callThrough();
+    return {delegation, agreements, outgoing, poll, source_id, target_id, request_source_key};
+  }
+
+  async function failed_draft_rating() {
+    service.G.P = new PollService();
+    service.G.P.init(service.G);
+    for (const name of [
+      'tally_caches', 'own_ratings_map_caches', 'direct_delegation_map_caches',
+      'inv_direct_delegation_map_caches', 'indirect_delegation_map_caches',
+      'inv_indirect_delegation_map_caches', 'effective_delegation_map_caches',
+      'inv_effective_delegation_map_caches', 'proxy_ratings_map_caches',
+      'max_proxy_ratings_map_caches', 'argmax_proxy_ratings_map_caches',
+      'effective_ratings_map_caches',
+    ]) { service[name] = {}; }
+    const poll: any = Object.create(Poll.prototype);
+    poll.G = service.G;
+    poll._pid = pid;
+    poll._state = 'draft';
+    poll._options = {o1: {name: 'First'}, o2: {name: 'Second'}};
+    service.G.P.polls[pid] = poll;
+    service.user_cache['poll.p1.state'] = 'draft';
+    delete service.poll_caches[pid][pkey];
+    service.local_synced_user_db.docs.delete(uid);
+    service.local_poll_dbs[pid].docs.delete(destination);
+    service.local_synced_user_db.put.and.callFake(async () => { throw {status: 500}; });
+    service.after_changes.and.callFake(() => poll.tally_all());
+    poll.tally_all();
+    poll.set_my_own_rating('o1', 75);
+    await expectAsync(service.await_poll_mutations(pid)).toBeRejected();
+    expect(poll.own_ratings_map.get('o1').get('v1')).toBe(75);
+    expect(poll.effective_ratings_map.get('o1').get('v1')).toBe(100);
+    service.user_cache['poll.p1.state'] = 'running';
+    poll._state = 'running';
+    return poll;
   }
 
   beforeEach(() => {
@@ -186,6 +249,62 @@ describe('DataService ordered voter mutations', () => {
     expect(service.local_synced_user_db.remove).not.toHaveBeenCalled();
     expect(decrypt(await service.local_synced_user_db.get(uid))).toBe('90');
     expect(service.draft_migration_pending(pid)).toBeTrue();
+  });
+
+  it('does not recreate a retired source through replayed cache rows and a bulk save', async () => {
+    await service.delv(pid, key);
+    service.doc2user_cache({_id: uid, _rev: '1-source', value: encrypt('50')});
+    expect(service.user_cache[ukey]).toBe('50');
+    service.store_all_userdata();
+    await settle();
+    expect(service.local_synced_user_db.put.calls.allArgs().some(args => args[0]._id === uid)).toBeFalse();
+    await expectAsync(service.local_synced_user_db.get(uid)).toBeRejectedWith({status: 404});
+    service.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed');
+    await service.move_remaining_draft_data_to_poll_db(pid);
+    expect(service.store_poll_data_confirmed).not.toHaveBeenCalled();
+    expect(service.user_cache[ukey]).toBeUndefined();
+  });
+
+  it('removes unpublished optimistic Poll ratings when both durable copies are absent', async () => {
+    const poll = await failed_draft_rating();
+    service.store_poll_data_confirmed = jasmine.createSpy('store_poll_data_confirmed');
+    expect(service.poll_caches[pid][pkey]).toBeUndefined();
+    await service.move_remaining_draft_data_to_poll_db(pid);
+    await service.await_poll_mutations(pid);
+    expect(service.store_poll_data_confirmed).not.toHaveBeenCalled();
+    expect(service.user_cache[ukey]).toBeUndefined();
+    expect(poll.own_ratings_map.get('o1').get('v1')).toBe(0);
+    expect(poll.effective_ratings_map.get('o1').get('v1') || 0).toBe(0);
+    expect(poll.T.total_effective_ratings_map.get('o1')).toBe(0);
+    expect(poll.T.n_not_abstaining).toBe(0);
+    expect(service.has_pending_poll_mutations(pid)).toBeFalse();
+  });
+
+  it('reconciles real Poll maps with an existing destination before releasing a missing source', async () => {
+    const poll = await failed_draft_rating();
+    service.local_poll_dbs[pid].docs.set(destination, {
+      _id: destination, _rev: '2-existing', value: encrypt('30', 'poll-password'),
+      due: service.poll_caches[pid].due,
+    });
+    // Equal cached payloads must not suppress repair of optimistic derived maps.
+    service.poll_caches[pid][pkey] = '30';
+    await service.move_remaining_draft_data_to_poll_db(pid);
+    await service.await_poll_mutations(pid);
+    expect(service.user_cache[ukey]).toBeUndefined();
+    expect(service.getv(pid, key)).toBe('30');
+    expect(poll.own_ratings_map.get('o1').get('v1')).toBe(30);
+    expect(service.has_pending_poll_mutations(pid)).toBeFalse();
+  });
+
+  it('retains a missing-source failure barrier when the destination cannot be verified', async () => {
+    const poll = await failed_draft_rating();
+    service.local_poll_dbs[pid].get.and.callFake(async () => { throw {status: 500}; });
+    await service.move_remaining_draft_data_to_poll_db(pid);
+    expect(service.user_cache[ukey]).toBe('75');
+    expect(poll.own_ratings_map.get('o1').get('v1')).toBe(75);
+    expect(service.has_pending_poll_mutations(pid)).toBeTrue();
+    expect(service.after_changes).not.toHaveBeenCalled();
+    await expectAsync(service.await_poll_mutations(pid)).toBeRejected();
   });
 
   it('drains an already submitted migration write before deleting its destination', async () => {
@@ -321,6 +440,22 @@ describe('DataService ordered voter mutations', () => {
     expect(service.user_cache[ukey]).toBe('90');
   });
 
+  it('invalidates a suspended source writer when account credentials change without reinitialization', async () => {
+    const gate = deferred<any>();
+    const db = service.local_synced_user_db;
+    db.get.and.returnValue(gate.promise);
+    service.user_cache['poll.p1.state'] = 'draft';
+    service.setv(pid, key, '60');
+    await settle();
+    const previous_generation = service.poll_mutation_generation(pid);
+    service.setu('password', 'replacement-test-password');
+    expect(service.poll_mutation_generation(pid)).toBeGreaterThan(previous_generation);
+    gate.resolve({_id: uid, _rev: '1-source', value: encrypt('50')});
+    await settle();
+    expect(db.put).not.toHaveBeenCalled();
+    expect(service.user_cache.password).toBe('replacement-test-password');
+  });
+
   it('drains submitted writes before a new initialization restores caches', async () => {
     const gate = deferred();
     service.user_cache['poll.p1.state'] = 'draft';
@@ -412,42 +547,45 @@ describe('DataService ordered voter mutations', () => {
     await expectAsync(new CouchDBBackend(service).deleteVoterData(pid, 'v1', key)).toBeRejectedWith(error);
   });
 
-  it('preserves delegation state until durable deletion succeeds', async () => {
-    const gate = deferred();
-    const delegation: any = new (DelegationService as any)(null, null);
-    const agreement = {client_vid: 'v1', active_oids: new Set(['o1'])};
-    const agreements = new Map([['d1', agreement]]);
-    const outgoing = new Map([['*', 'd1']]);
-    const poll = {myvid: 'v1', del_delegation: jasmine.createSpy('del_delegation')};
-    delegation.G = {
-      L: service.G.L,
-      D: {delv: () => gate.promise, getv: () => ''},
-      P: {polls: {[pid]: poll}},
-    };
-    delegation.get_delegation_agreements_cache = () => agreements;
-    delegation.get_my_outgoing_dids_cache = () => outgoing;
-    const revocation = delegation.revoke_delegation(pid, 'd1', '*');
-    expect(agreements.has('d1')).toBeTrue();
-    expect(outgoing.get('*')).toBe('d1');
-    gate.reject(new Error('source failed'));
-    await expectAsync(revocation).toBeRejected();
+  it('preserves real delegation state when the durable source deletion fails', async () => {
+    const {delegation, agreements, outgoing, poll, source_id, target_id} = wire_delegation();
+    service.local_synced_user_db.remove.and.callFake(async () => { throw {status: 500}; });
+    await expectAsync(delegation.revoke_delegation(pid, 'd1', '*')).toBeRejected();
     expect(agreements.has('d1')).toBeTrue();
     expect(outgoing.get('*')).toBe('d1');
     expect(poll.del_delegation).not.toHaveBeenCalled();
+    expect(delegation.process_deleted_request_from_db).not.toHaveBeenCalled();
+    expect(await service.local_synced_user_db.get(source_id)).toBeDefined();
+    expect(await service.local_poll_dbs[pid].get(target_id)).toBeDefined();
   });
 
-  it('finishes revocation when the deletion callback already removed its agreement', async () => {
-    const delegation: any = new (DelegationService as any)(null, null);
-    const agreements = new Map([['d1', {client_vid: 'v1', active_oids: new Set(['o1'])}]]);
-    const outgoing = new Map([['*', 'd1']]);
-    delegation.G = {
-      L: service.G.L,
-      D: {delv: async () => { agreements.delete('d1'); }, getv: () => ''},
-      P: {polls: {[pid]: {myvid: 'v1'}}},
-    };
-    delegation.get_delegation_agreements_cache = () => agreements;
-    delegation.get_my_outgoing_dids_cache = () => outgoing;
+  it('finishes and retries revocation after the real deletion handler removed its agreement', async () => {
+    const {delegation, agreements, outgoing, poll, source_id, target_id} = wire_delegation();
+    await delegation.revoke_delegation(pid, 'd1', '*');
+    expect(delegation.process_deleted_request_from_db).toHaveBeenCalledWith(pid, 'd1', 'v1');
+    expect(poll.del_delegation).toHaveBeenCalledOnceWith('v1', 'o1');
+    expect(agreements.has('d1')).toBeFalse();
+    expect(outgoing.has('*')).toBeFalse();
+    await expectAsync(service.local_synced_user_db.get(source_id)).toBeRejectedWith({status: 404});
+    await expectAsync(service.local_poll_dbs[pid].get(target_id)).toBeRejectedWith({status: 404});
+    await delegation.revoke_delegation(pid, 'd1', '*');
+    expect(poll.del_delegation).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires durable deletion even when retrying without an initial agreement', async () => {
+    const {delegation, agreements, outgoing, poll, source_id, target_id} = wire_delegation();
+    agreements.delete('d1');
+    service.local_synced_user_db.remove.and.callFake(async () => { throw {status: 500}; });
+    await expectAsync(delegation.revoke_delegation(pid, 'd1', '*')).toBeRejected();
+    expect(outgoing.get('*')).toBe('d1');
+    expect(poll.del_delegation).not.toHaveBeenCalled();
+    expect(await service.local_poll_dbs[pid].get(target_id)).toBeDefined();
+    service.local_synced_user_db.remove.and.callFake(async doc => {
+      service.local_synced_user_db.docs.delete(doc._id);
+    });
     await delegation.revoke_delegation(pid, 'd1', '*');
     expect(outgoing.has('*')).toBeFalse();
+    await expectAsync(service.local_synced_user_db.get(source_id)).toBeRejectedWith({status: 404});
+    await expectAsync(service.local_poll_dbs[pid].get(target_id)).toBeRejectedWith({status: 404});
   });
 });

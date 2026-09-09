@@ -200,24 +200,15 @@ export class DelegationService {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
     const a = this.get_delegation_agreements_cache(pid).get(did);
     const p = this.G.P.polls[pid];
-    if ((a.client_vid != p.myvid)) {
-      this.G.L.error("DelegationService.revoke_delegation without request from me", pid, did);
-    } else {
-      await this.G.D.delv(pid, "del_request." + did);
-      if (this.G.D.getv(pid, "del_request." + did)) { return; }
-      const acache = this.get_delegation_agreements_cache(pid);
-      if (acache?.has(did)) {
-        const oids = acache.get(did).active_oids;
-        if (oids) {
-          for (const oid of oids) {
-            p.del_delegation(p.myvid, oid);
-          }
-        }
-        acache.delete(did);
-      }
+    if (!p?.myvid || (a && a.client_vid !== p.myvid)) {
+      throw new Error("Cannot revoke a delegation without its owner's poll");
     }
+    await this.G.D.delv(pid, "del_request." + did);
+    if (this.G.D.getv(pid, "del_request." + did)) { return; }
+    // CouchDB deletion already invokes this handler; Matrix and retries may not.
+    this.process_deleted_request_from_db(pid, did, p.myvid);
     const dcache = this.get_my_outgoing_dids_cache(pid);
-    if (dcache) {
+    if (dcache?.get(oid) === did) {
       dcache.delete(oid);
     }
   }

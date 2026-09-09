@@ -2116,6 +2116,43 @@ describe('DataService consistency hardening (#292)', () => {
         expect(db.put).not.toHaveBeenCalled();
       });
 
+      for (const destination of ['absent', 'present', 'unreadable']) {
+        it(`reconciles derived ratings before retiring a missing source (${destination} destination)`, async () => {
+          const key = 'voter.v1§rating.o1', due = '2030-01-01T00:00:00.000Z';
+          svc.user_cache = {
+            password: 'pw123', 'poll.p1.password': 'pw123', 'poll.p1.state': 'running',
+            ['poll.p1.' + key]: '80',
+          };
+          svc.poll_caches.p1 = {due};
+          svc.read_voter_migration_source.and.callThrough();
+          let derived_rating = 80;
+          svc.G.P.update_own_rating = jasmine.createSpy('rating').and.callFake((_pid, _vid, _oid, rating) => {
+            derived_rating = rating;
+          });
+          svc.get_local_poll_db = () => ({
+            get: () => destination === 'present' ? Promise.resolve({
+              _id: '~vodle.poll.p1.' + key, due,
+              value: CryptoES.AES.encrypt('25', 'pw123').toString(),
+            }) : Promise.reject({status: destination === 'absent' ? 404 : 500}),
+          });
+          svc.store_poll_data_confirmed = jasmine.createSpy('publish');
+
+          await svc.move_remaining_draft_data_to_poll_db('p1');
+
+          expect(svc.store_poll_data_confirmed).not.toHaveBeenCalled();
+          if (destination === 'unreadable') {
+            expect(derived_rating).toBe(80);
+            expect(svc.user_cache['poll.p1.' + key]).toBe('80');
+            expect(svc.has_pending_poll_mutations('p1')).toBeTrue();
+          } else {
+            expect(derived_rating).toBe(destination === 'present' ? 25 : 0);
+            expect(svc.user_cache['poll.p1.' + key]).toBeUndefined();
+            expect(svc.has_pending_poll_mutations('p1')).toBeFalse();
+            expect(svc.after_changes).toHaveBeenCalledOnceWith(true);
+          }
+        });
+      }
+
       for (const cancellation of ['delete', 'shutdown']) {
         it(`does not publish or release a source when ${cancellation} occurs during remote acknowledgment`, async () => {
           const key = 'voter.v1§rating.o1', _id = '~vodle.poll.p1.' + key;

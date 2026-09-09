@@ -1972,7 +1972,20 @@ export class DataService implements OnDestroy {
               const source = await this.read_voter_migration_source(ukey);
               this.assert_voter_mutation_current(still_wanted);
               if (!source) {
+                // A failed draft write may have left an optimistic rating in
+                // derived maps even though neither DB contains that rating.
+                // Reconcile before clearing the source/failure barrier.
+                const destination = await this.get_existing_doc(
+                  this.get_local_poll_db(pid), poll_doc_id_prefix + pid + '.' + key);
+                this.assert_voter_mutation_current(still_wanted);
+                if (destination) {
+                  this.cache_confirmed_voter_doc(pid, key, destination);
+                } else {
+                  this.handle_deleted_poll_doc(pid, {_id: poll_doc_id_prefix + pid + '.' + key});
+                }
+                this.assert_voter_mutation_current(still_wanted);
                 delete this.user_cache[ukey];
+                moved_data = true;
                 return;
               }
               source_rev = source.rev;
@@ -2159,6 +2172,12 @@ export class DataService implements OnDestroy {
 
   private cache_confirmed_voter_doc(pid: string, key: string, doc) {
     const cache = this.ensure_poll_cache(pid), had_key = key in cache, previous = cache[key];
+    const requires_due = voter_subkeystarts_requiring_due.includes(key.slice(key.indexOf('§') + 1).split('.')[0]);
+    if (doc._id !== poll_doc_id_prefix + pid + '.' + key || !doc.value
+        || decrypt(doc.value, this.getp(pid, 'password')) === null
+        || (requires_due && (!doc.due || doc.due !== cache['due']))) {
+      throw make_consistency_failure_error("Cannot apply unverified voter data: " + key);
+    }
     delete cache[key];
     try { this.doc2poll_cache(pid, doc); }
     catch (err) {
@@ -4527,7 +4546,11 @@ export class DataService implements OnDestroy {
     var doc;
 
     if (!this.G.S.consent) return false;
-    if (!environment.useMatrixBackend && this.voter_source_parts(key)) {
+    const voter_source = this.voter_source_parts(key);
+    if (!environment.useMatrixBackend && voter_source) {
+      // Only newly admitted draft writes may create a source. Replayed stale
+      // cache rows and bulk saves must not recreate a retired running-poll copy.
+      if (!this.pid_is_draft(voter_source.pid)) { return false; }
       const hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
       if (!hash || !password || !(dict_key in dict) || this.shutting_down) { return false; }
       const db = this.local_synced_user_db;
@@ -5197,6 +5220,7 @@ export class DataService implements OnDestroy {
 
   private move_user_data(old_values) {
     this.G.L.entry("DataService.move_user_data");
+    this.cancel_voter_mutations();
     // TODO!
   }
 
