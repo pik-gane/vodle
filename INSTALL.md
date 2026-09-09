@@ -238,6 +238,38 @@ $ adb start-server
 #### iOS
 For iOS, we have not tested it yet, but [it should work like this](https://ionicframework.com/docs/developing/ios).
 
+### Running the tests
+
+The ordinary unit tests need nothing but a browser:
+
+```
+$ CHROME_BIN=/usr/bin/chromium npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
+```
+
+`src/app/data-service-couchdb-two-client.spec.ts` additionally exercises two
+independent clients against a **real** CouchDB running the real
+`couchdb/vodle/_design/vodle/validate_doc_update.js`, which is where the
+consistency guarantees of #292 actually live: which writes the validator
+accepts after a poll's due date, whether the deletion of a losing conflict
+revision replicates, and whether two clients converge on the same winning
+revision. These specs skip themselves when no provisioned CouchDB is reachable,
+so the command above stays runnable without docker.
+
+To run them, start the throw-away test server first:
+
+```
+$ npm run test:couchdb:start
+$ CHROME_BIN=/usr/bin/chromium npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
+$ npm run test:couchdb:stop
+```
+
+`npm run test:couchdb` does the same for just that spec file. The container
+(`vodle-test-couchdb`, port 5984 by default) has no volume, so stopping it
+removes all its data; it is provisioned from the files in `couchdb/` and never
+touches a CouchDB you set up for development. Override `VODLE_TEST_COUCHDB_PORT`
+and the other `VODLE_TEST_COUCHDB_*` variables in `scripts/test-couchdb.sh` if
+port 5984 is already taken by your development server.
+
 ### Other useful commands
 
 - See the CouchDB logs:

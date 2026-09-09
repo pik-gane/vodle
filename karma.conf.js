@@ -45,6 +45,9 @@ module.exports = function (config) {
       }
     },
     singleRun: false,
-    restartOnFileChange: true
+    restartOnFileChange: true,
+    // the CouchDB two-client integration specs do real HTTP, real replication
+    // and wait for a real poll deadline, which can exceed the 30s default:
+    browserNoActivityTimeout: 120000
   });
 };

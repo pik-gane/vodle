@@ -13,6 +13,9 @@
     "start": "ng serve",
     "build": "ng build",
     "test": "ng test",
+    "test:couchdb:start": "scripts/test-couchdb.sh start",
+    "test:couchdb:stop": "scripts/test-couchdb.sh stop",
+    "test:couchdb": "scripts/test-couchdb.sh start && ng test --browsers=ChromeHeadlessNoSandbox --watch=false --include=**/data-service-couchdb-two-client.spec.ts",
     "lint": "ng lint",
     "e2e": "ng e2e"
   },
