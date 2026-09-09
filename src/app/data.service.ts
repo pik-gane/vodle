@@ -403,6 +403,10 @@ export class DataService implements OnDestroy {
   private voter_mutation_tails: Record<string, Promise<void>> = {};
   private voter_mutation_failures: Record<string, any> = {};
   private voter_mutation_session = 0;
+  // barrier that newly admitted voter mutations must wait for, so that a
+  // retired session's already issued writes can no longer interleave with the
+  // new session's (#292):
+  private voter_mutation_admission: Promise<void> = Promise.resolve();
   private poll_mutation_versions: Record<string, number> = {};
 
   // Replication watchdog: per-replication progress tracking; keys are
@@ -2117,22 +2121,36 @@ export class DataService implements OnDestroy {
       const key = id.slice((poll_doc_id_prefix + pid + '.').length);
       const local = await this.get_existing_doc(db, id);
       assert_current();
-      if (local) {
-        try {
-          await this.store_poll_data_confirmed(pid, key, decrypt(local.value, this.getp(pid, 'password')),
-            true, false, () => !this.shutting_down && generation === this.poll_mutation_generation(pid));
-        } catch (err) {
-          if (!err?.vodle_publication_expired) { throw err; }
-        }
-      } else {
+      // Reconcile with the remote winner. Without a remote document, absence
+      // is only acceptable when there is no local document either; an
+      // unreadable local revision must never be silently dropped.
+      const reconcile_from_remote = async (absence_is_acceptable: boolean) => {
         const authoritative = await this.get_existing_doc(remote, id);
         assert_current();
         if (authoritative) {
           await this.restore_expired_poll_payload(pid, key, authoritative, assert_current);
           this.cache_confirmed_voter_doc(pid, key, authoritative);
-        } else {
+        } else if (absence_is_acceptable) {
           this.handle_deleted_poll_doc(pid, {_id: id});
+        } else {
+          throw make_consistency_failure_error("Cannot verify unreadable local publication: " + id);
         }
+      };
+      // store_poll_data_confirmed normalizes a falsy value to '', so feeding it
+      // an undecryptable revision would encrypt an empty payload and push it
+      // over a possibly valid remote value. A corrupt local revision is
+      // therefore reconciled from the remote winner instead, and finalization
+      // is deferred when no authoritative remote value exists (#292).
+      const decrypted = local?.value ? decrypt(local.value, this.getp(pid, 'password')) : null;
+      if (local && decrypted !== null) {
+        try {
+          await this.store_poll_data_confirmed(pid, key, decrypted,
+            true, false, () => !this.shutting_down && generation === this.poll_mutation_generation(pid));
+        } catch (err) {
+          if (!err?.vodle_publication_expired) { throw err; }
+        }
+      } else {
+        await reconcile_from_remote(!local);
       }
       assert_current();
       delete this.voter_mutation_failures[get_poll_key_prefix(pid) + key];
@@ -2213,8 +2231,11 @@ export class DataService implements OnDestroy {
           // deliberately no infinite retry: this one-shot replication is used
           // as the final pull before Poll.end() tallies, and with retry an
           // unreachable remote would be retried forever instead of emitting
-          // the terminal 'error' that lets the caller fall back to the local
-          // data (#292):
+          // the terminal 'error' the caller needs in order to react at all.
+          // That error must NOT be answered with a fallback to the local data:
+          // Poll.end() catches it, defers finalization and schedules a guarded
+          // retry, so results stay unavailable until the final pull and the
+          // subsequent consistency checks actually succeed (#292):
           retry: false,
           batch_size: 1000, // see https://docs.couchdb.org/en/stable/api/database/changes.html?highlight=_changes
           include_docs: true,
@@ -3358,7 +3379,7 @@ export class DataService implements OnDestroy {
     const session = this.voter_mutation_session;
     const is_active = () => !this.shutting_down && session === this.voter_mutation_session;
     const is_current = () => is_active() && generation === this.voter_mutation_generations[ukey];
-    const previous = this.voter_mutation_tails[ukey] || Promise.resolve();
+    const previous = this.voter_mutation_tails[ukey] || this.voter_mutation_admission;
     const pending = previous.catch(() => {}).then(() => {
       this.assert_voter_mutation_current(is_active);
       return work(is_current, is_active);
@@ -3408,6 +3429,9 @@ export class DataService implements OnDestroy {
     for (const pid of Object.keys(this.poll_mutation_versions)) {
       this.poll_mutation_versions[pid] += 1;
     }
+    // callers that need the retired writes to be drained (or reconciled)
+    // before new ones are admitted install their own barrier below:
+    this.voter_mutation_admission = Promise.resolve();
     const pending = Object.values(this.voter_mutation_tails);
     this.voter_mutation_session += 1;
     this.voter_mutation_generations = {};
@@ -4865,6 +4889,27 @@ export class DataService implements OnDestroy {
       if (!remote) {
         throw new Error("DataService.store_poll_data_confirmed cannot acknowledge " + _id + " without a remote poll db connection");
       }
+      const adopt_authoritative = async (authoritative, local_rev?: string): Promise<any> => {
+        assert_wanted();
+        if (authoritative._id != _id || !authoritative._rev || !authoritative.value
+            || authoritative.due != this.poll_caches[pid]['due']
+            || decrypt(authoritative.value, poll_pw) === null) {
+          throw make_consistency_failure_error("Invalid remote publication acknowledgment for " + _id);
+        }
+        // A successful push (or a remotely existing ID) is not proof that our
+        // revision won. Pull the actual winner and verify durable local agreement
+        // before publishing it or allowing the migration source to be removed.
+        if (local_rev != authoritative._rev) {
+          await db.replicate.from(remote, {doc_ids: [_id], retry: false});
+          assert_wanted();
+        }
+        const local = await this.get_existing_doc(db, _id);
+        assert_wanted();
+        if (local?._rev != authoritative._rev) {
+          await this.restore_expired_poll_payload(pid, key, authoritative, assert_wanted);
+        }
+        return authoritative;
+      };
       // push just this doc; the push may fail (or be redundant) although the
       // doc already reached the remote db earlier, e.g. via live sync, so its
       // remote presence is verified either way:
@@ -4902,6 +4947,17 @@ export class DataService implements OnDestroy {
               throw make_consistency_failure_error("Unpublished local revisions remain for " + _id);
             }
             assert_wanted();
+            // The first remote read is not proof of permanent absence: another
+            // session may have published this document between that read and
+            // the local withdrawal above (clock skew around the deadline makes
+            // this reachable). Only a second 404 shows the value was never
+            // accepted; otherwise adopt the authoritative remote revision
+            // instead of dropping a remotely accepted vote (#292).
+            const republished = await this.get_existing_doc(remote, _id);
+            assert_wanted();
+            if (republished) {
+              return await adopt_authoritative(republished);
+            }
             this.handle_deleted_poll_doc(pid, {_id: _id});
             const expired: any = new Error("DataService.store_poll_data_confirmed cannot publish " + _id + " anymore since the poll's due date has passed");
             expired.vodle_publication_expired = true;
@@ -4910,25 +4966,7 @@ export class DataService implements OnDestroy {
         }
         throw err;
       }
-      assert_wanted();
-      if (authoritative._id != _id || !authoritative._rev || !authoritative.value
-          || authoritative.due != this.poll_caches[pid]['due']
-          || decrypt(authoritative.value, poll_pw) === null) {
-        throw make_consistency_failure_error("Invalid remote publication acknowledgment for " + _id);
-      }
-      // A successful push (or a remotely existing ID) is not proof that our
-      // revision won. Pull the actual winner and verify durable local agreement
-      // before publishing it or allowing the migration source to be removed.
-      if (doc._rev != authoritative._rev) {
-        await db.replicate.from(remote, {doc_ids: [_id], retry: false});
-        assert_wanted();
-      }
-      const local = await db.get(_id);
-      assert_wanted();
-      if (local._rev != authoritative._rev) {
-        await this.restore_expired_poll_payload(pid, key, authoritative, assert_wanted);
-      }
-      return authoritative;
+      return await adopt_authoritative(authoritative, doc._rev);
     };
     const attempt_put = (attempt: number): Promise<void> =>
       db.get(_id)
@@ -5207,8 +5245,10 @@ export class DataService implements OnDestroy {
 
   }
 
-  private get_email_and_pw_hash(): string {
-    const email = this.user_cache['email'], pw = this.user_cache['password'];
+  private get_email_and_pw_hash(email = this.user_cache['email'],
+                                pw = this.user_cache['password']): string {
+    // the parameters allow computing the hash of *retired* credentials, whose
+    // documents must still be reachable right after a credential change (#292)
     if ((email=='')||(!email) || (pw=='')||(!pw)) { return null; }
     const hash = myhash(email + "§" + pw);
 //    this.G.L.trace("email_and_pw_hash:", email, pw, hash);
@@ -5220,8 +5260,75 @@ export class DataService implements OnDestroy {
 
   private move_user_data(old_values) {
     this.G.L.entry("DataService.move_user_data");
-    this.cancel_voter_mutations();
-    // TODO!
+    // Cancelling the mutation session only stops work that has not started
+    // yet. A voter-source db.put() already issued under the old credentials
+    // can still complete afterwards, and its post-write generation check only
+    // reports the cancellation — it cannot undo the durable document, which
+    // carries the old email/password hash in its _id and is therefore
+    // invisible to the new session. So keep the admission of new voter
+    // mutations behind the drain returned by cancel_voter_mutations(), and
+    // reconcile whatever the retired session completed before allowing any new
+    // write for the same keys (#292):
+    const retired_keys = Object.keys(this.voter_mutation_tails)
+      .filter(key => !!this.voter_source_parts(key));
+    const old_hash = old_values
+      ? this.get_email_and_pw_hash(old_values['email'], old_values['password']) : null;
+    const drained = this.cancel_voter_mutations();
+    const admission = drained
+      .then(() => this.migrate_retired_voter_sources(retired_keys, old_hash))
+      .catch(err => {
+        this.G.L.error("DataService.move_user_data could not reconcile retired voter sources", err);
+      });
+    this.voter_mutation_admission = admission;
+    // TODO: move the remaining user data to the new database as well!
+  }
+
+  private async migrate_retired_voter_sources(keys: string[], old_hash: string | null): Promise<void> {
+    /** Reconcile the voter-source documents that writes from a retired
+     *  mutation session may have completed under the old credentials. Their
+     *  doc ids embed the old email/password hash, so the new session can
+     *  neither read nor supersede them, and the filtered user sync no longer
+     *  replicates them. Each such document is therefore re-written under the
+     *  new identity from the still cached value and only then removed, so a
+     *  completed old-session write is neither lost nor left behind as an
+     *  unaccounted durable copy of voter data (#292). A document that cannot
+     *  be migrated is kept, since it becomes valid again once the previous
+     *  credentials are restored. */
+    const new_hash = this.get_email_and_pw_hash(), password = this.user_cache['password'];
+    if (!keys.length || !old_hash || this.shutting_down || old_hash === new_hash) {
+      // nothing was in flight, or the credentials themselves did not change
+      // (e.g. only a server url did), so the existing ids stay valid:
+      return;
+    }
+    const db = this.local_synced_user_db;
+    if (!db) { return; }
+    for (const key of keys) {
+      const old_id = user_doc_id_prefix + old_hash + "§" + key;
+      try {
+        const retired = await this.get_existing_doc(db, old_id);
+        if (!retired) { continue; }
+        if (key in this.user_cache) {
+          if (!new_hash || !password) {
+            // without a usable new identity the retired document is the only
+            // durable copy, so keep it rather than losing the value:
+            this.G.L.warn("DataService.migrate_retired_voter_sources keeping unmigratable source", old_id);
+            continue;
+          }
+          const new_id = user_doc_id_prefix + new_hash + "§" + key;
+          const existing = await this.get_existing_doc(db, new_id);
+          await db.put({...existing, _id: new_id,
+                        value: encrypt(this.user_cache[key] || '', password)});
+        }
+        // only now that the value is either migrated or gone from the cache
+        // may the old-credential document be withdrawn:
+        await db.remove(retired);
+      } catch (err) {
+        // keep the retired document and make the unreconciled state visible to
+        // the consistency checks instead of finalizing over it:
+        this.voter_mutation_failures[key] = err;
+        this.G.L.error("DataService.migrate_retired_voter_sources failed", old_id, err);
+      }
+    }
   }
 
   // OTHER:

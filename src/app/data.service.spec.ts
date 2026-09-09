@@ -2257,6 +2257,53 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.draft_migration_pending('p1')).toBeFalse();
       });
 
+      it('adopts a concurrently published doc instead of withdrawing an expired publication', async () => {
+        const key = 'voter.v1§rating.o1', id = '~vodle.poll.p1.' + key;
+        const due = '2020-01-01T00:00:00.000Z';
+        svc.user_cache = {
+          'poll.p1.password': 'pw123',
+          'poll.p1.state': 'running',
+          'poll.p1.myvid': 'v1',
+          ['poll.p1.' + key]: '50',
+        };
+        svc.poll_caches.p1 = { due };
+        const local_docs: Record<string, any> = {
+          [id]: {_id: id, _rev: '1-local', due, value: CryptoES.AES.encrypt('50', 'pw123').toString()},
+        };
+        const remote_doc = {_id: id, _rev: '1-remote', due,
+                            value: CryptoES.AES.encrypt('50', 'pw123').toString()};
+        // the remote only reveals the concurrently published document after
+        // the local copy was withdrawn:
+        let withdrawn = false;
+        const db = {
+          get: id2 => id2 in local_docs ? Promise.resolve(local_docs[id2]) : Promise.reject({status: 404}),
+          put: jasmine.createSpy('put').and.callFake(doc => {
+            local_docs[doc._id] = {...doc, _rev: '3-adopted'};
+            return Promise.resolve({ok: true});
+          }),
+          remove: jasmine.createSpy('remove').and.callFake(doc => {
+            delete local_docs[doc._id];
+            withdrawn = true;
+            return Promise.resolve({ok: true});
+          }),
+          replicate: {to: () => Promise.resolve(), from: () => Promise.resolve()},
+        };
+        svc.get_local_poll_db = () => db;
+        svc.handle_deleted_poll_doc = jasmine.createSpy('handle_deleted_poll_doc');
+        svc.remote_poll_dbs.p1 = {
+          get: () => withdrawn ? Promise.resolve({...remote_doc}) : Promise.reject({status: 404}),
+        };
+        svc.delu = jasmine.createSpy('delu').and.callFake(ukey => { delete svc.user_cache[ukey]; });
+
+        await svc.move_remaining_draft_data_to_poll_db('p1');
+
+        // the remotely accepted vote is adopted locally rather than dropped:
+        expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
+        expect(local_docs[id]).toBeDefined();
+        expect(CryptoES.AES.decrypt(local_docs[id].value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('50');
+        expect(local_docs[id].due).toBe(due);
+      });
+
       it('aborts an in-flight move when the item is deleted meanwhile', async () => {
         const key = 'voter.v1§rating.o1';
         svc.user_cache = {
@@ -2463,6 +2510,63 @@ describe('DataService consistency hardening (#292)', () => {
         await svc.prepare_poll_finalization('p1');
         expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 0, false);
         expect(svc.has_pending_poll_mutations('p1')).toBeFalse();
+      });
+
+      it('reconciles an undecryptable local revision from the remote winner instead of publishing an empty payload', async () => {
+        const key = 'voter.v1§rating.o1', id = '~vodle.poll.p1.' + key;
+        const due = '2020-01-01T00:00:00.000Z';
+        svc.user_cache = {'poll.p1.password': 'pw123', 'poll.p1.state': 'closed', 'poll.p1.myvid': 'v1'};
+        svc.poll_caches.p1 = {due};
+        svc.G.P.update_own_rating = jasmine.createSpy('rating');
+        const remote_value = CryptoES.AES.encrypt('50', 'pw123').toString();
+        const local_docs: Record<string, any> = {
+          [id]: {_id: id, _rev: '1-corrupt', due, value: 'not-a-valid-ciphertext'},
+        };
+        const put = jasmine.createSpy('put').and.callFake(doc => {
+          local_docs[doc._id] = {...doc, _rev: '2-repaired'};
+          return Promise.resolve({ok: true});
+        });
+        svc.get_local_poll_db = () => ({
+          changes: () => Promise.resolve({results: [{id}]}),
+          get: id2 => id2 in local_docs ? Promise.resolve(local_docs[id2]) : Promise.reject({status: 404}),
+          allDocs: () => Promise.resolve({rows: [{value: {rev: local_docs[id]?._rev}}]}),
+          put,
+          replicate: {to: () => Promise.resolve(), from: () => Promise.resolve()},
+        });
+        svc.remote_poll_dbs.p1 = {
+          allDocs: () => Promise.resolve({rows: []}),
+          get: () => Promise.resolve({_id: id, _rev: '1-remote', due, value: remote_value}),
+        };
+
+        await svc.prepare_poll_finalization('p1');
+
+        // the corrupt revision is replaced by the authoritative remote payload
+        // rather than re-encrypted as an empty value and pushed:
+        expect(put).toHaveBeenCalledTimes(1);
+        expect(put.calls.mostRecent().args[0].value).toBe(remote_value);
+        expect(svc.poll_caches.p1[key]).toBe('50');
+        expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 50, false);
+      });
+
+      it('defers finalization when an undecryptable local revision has no remote winner', async () => {
+        const key = 'voter.v1§rating.o1', id = '~vodle.poll.p1.' + key;
+        const due = '2020-01-01T00:00:00.000Z';
+        svc.user_cache = {'poll.p1.password': 'pw123', 'poll.p1.state': 'closed', 'poll.p1.myvid': 'v1'};
+        svc.poll_caches.p1 = {due};
+        const put = jasmine.createSpy('put');
+        svc.get_local_poll_db = () => ({
+          changes: () => Promise.resolve({results: [{id}]}),
+          get: () => Promise.resolve({_id: id, _rev: '1-corrupt', due, value: 'not-a-valid-ciphertext'}),
+          put,
+          replicate: {to: () => Promise.resolve(), from: () => Promise.resolve()},
+        });
+        svc.remote_poll_dbs.p1 = {
+          allDocs: () => Promise.resolve({rows: []}),
+          get: () => Promise.reject({status: 404}),
+        };
+
+        await expectAsync(svc.prepare_poll_finalization('p1')).toBeRejected();
+        expect(put).not.toHaveBeenCalled();
       });
 
       it('retains failed mutation state when remote absence cannot be verified', async () => {

@@ -119,10 +119,16 @@ export class CouchDBBackend implements IDataBackend {
   
   async deleteVoterData(pollId: string, voterId: string, key: string): Promise<void> {
     // NOTE: In the CouchDB backend, delv only supports deleting the *current*
-    // user's voter data. The voterId parameter from IDataBackend is therefore
-    // intentionally ignored here. Attempts to delete data for other voters are
-    // effectively a no-op, because CouchDB enforces that users can only modify
-    // their own voter data in the poll database.
+    // user's voter data, because CouchDB enforces that users can only modify
+    // their own voter data in the poll database. Deleting another voter's data
+    // is therefore a no-op — but it must be an explicit one: simply passing the
+    // call through would ignore voterId and delete the *current* user's data
+    // instead, contradicting both IDataBackend.deleteVoterData and this note.
+    // An unknown own voter id also counts as a mismatch, so nothing is deleted
+    // unless ownership is positively confirmed.
+    if (voterId && voterId !== this.dataService.getp(pollId, 'myvid')) {
+      return;
+    }
     await this.dataService.delv(pollId, key);
   }
   

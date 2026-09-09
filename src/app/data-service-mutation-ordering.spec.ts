@@ -456,6 +456,62 @@ describe('DataService ordered voter mutations', () => {
     expect(service.user_cache.password).toBe('replacement-test-password');
   });
 
+  it('migrates an old-credential write that completes after a credential change', async () => {
+    const gate = deferred<any>();
+    const db = service.local_synced_user_db;
+    service.get_email_and_pw_hash = (
+        email = service.user_cache.email, pw = service.user_cache.password) =>
+      pw === 'user-password' ? 'test-hash' : 'rotated-hash';
+    service.user_cache['poll.p1.state'] = 'draft';
+    // the write is *issued* before the credentials change and only completes
+    // afterwards, so cancelling the session cannot undo it:
+    db.put.and.callFake(async doc => {
+      await gate.promise;
+      db.docs.set(doc._id, {...doc, _rev: '2-late'});
+      return {ok: true, id: doc._id, rev: '2-late'};
+    });
+    service.setv(pid, key, '60');
+    await settle();
+    service.setu('password', 'replacement-test-password');
+    // no new mutation may start before the retired one is reconciled:
+    service.user_cache['poll.p1.state'] = 'draft';
+    service.setv(pid, key, '70');
+    await settle();
+    expect(db.docs.has('~vodle.user.rotated-hash§' + ukey)).toBeFalse();
+    gate.resolve(null);
+    await settle();
+    // the completed old-credential document is migrated into the new identity
+    // and then withdrawn, instead of surviving as an untracked copy:
+    expect(db.docs.has(uid)).toBeFalse();
+    const migrated = db.docs.get('~vodle.user.rotated-hash§' + ukey);
+    expect(migrated).toBeDefined();
+    expect(decrypt(migrated, 'replacement-test-password')).toBe('70');
+    expect(service.has_pending_poll_mutations(pid)).toBeFalse();
+  });
+
+  it('keeps a retired source and reports a failure when it cannot be reconciled', async () => {
+    const gate = deferred<any>();
+    const db = service.local_synced_user_db;
+    service.get_email_and_pw_hash = (
+        email = service.user_cache.email, pw = service.user_cache.password) =>
+      pw === 'user-password' ? 'test-hash' : 'rotated-hash';
+    service.user_cache['poll.p1.state'] = 'draft';
+    db.put.and.callFake(async doc => {
+      await gate.promise;
+      if (doc._id !== uid) { throw {status: 500}; }
+      db.docs.set(doc._id, {...doc, _rev: '2-late'});
+      return {ok: true, id: doc._id, rev: '2-late'};
+    });
+    service.setv(pid, key, '60');
+    await settle();
+    service.setu('password', 'replacement-test-password');
+    gate.resolve(null);
+    await settle();
+    // the migration write failed, so the only durable copy is preserved:
+    expect(db.docs.has(uid)).toBeTrue();
+    expect(service.has_pending_poll_mutations(pid)).toBeTrue();
+  });
+
   it('drains submitted writes before a new initialization restores caches', async () => {
     const gate = deferred();
     service.user_cache['poll.p1.state'] = 'draft';
@@ -545,6 +601,20 @@ describe('DataService ordered voter mutations', () => {
     const error = new Error('source failed');
     service.delv = () => Promise.reject(error);
     await expectAsync(new CouchDBBackend(service).deleteVoterData(pid, 'v1', key)).toBeRejectedWith(error);
+  });
+
+  it('does not delete our own voter data when another voter is addressed through the adapter', async () => {
+    service.delv = jasmine.createSpy('delv').and.returnValue(Promise.resolve());
+    const backend = new CouchDBBackend(service);
+    await backend.deleteVoterData(pid, 'v2', key);
+    expect(service.delv).not.toHaveBeenCalled();
+    // an unknown own voter id is a mismatch too, so nothing is deleted:
+    delete service.user_cache['poll.p1.myvid'];
+    await backend.deleteVoterData(pid, 'v1', key);
+    expect(service.delv).not.toHaveBeenCalled();
+    service.user_cache['poll.p1.myvid'] = 'v1';
+    await backend.deleteVoterData(pid, 'v1', key);
+    expect(service.delv).toHaveBeenCalledOnceWith(pid, key);
   });
 
   it('preserves real delegation state when the durable source deletion fails', async () => {
