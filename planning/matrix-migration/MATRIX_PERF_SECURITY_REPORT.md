@@ -404,9 +404,32 @@ and the sync long-poll, not by vodle.
 | metric | CI |
 | --- | --- |
 | same_server_rating_propagation_ms (median) | 38 |
-| federation_poll_join_ms (a remote join; since #328 a knock, the bot's invitation across federation and the join, see the note below) | 1065 |
+| federation_poll_join_ms (a remote join; since #328 a knock, the bot's invitation across federation and the join, see the table below) | 1065 |
 | federation_first_vote_visible_ms | 857 |
 | federation_rating_propagation_hs1_to_hs2_ms (median) | 110 |
 | federation_rating_propagation_hs2_to_hs1_ms (median) | 102 |
 | offline_queue_replay_visible_ms | 1066 |
 | federation_partition_heal_ms | 19907 |
+
+After the closed rooms of #328 (plan session 14) the joins changed: a poll
+room is entered by a knock, the guard bot's invitation and the join, and a
+voter room by a restricted join that the room's homeserver authorises. The
+green CI run 34523878817 (2026-09-10, commit dae20b8; 724 specs) measured:
+
+| metric | CI |
+| --- | --- |
+| closed_room_join_ms (same homeserver: alias lookup, knock, the bot's invitation, join, power-level check) | 595 |
+| federation_poll_join_ms (the knock and the invitation cross the federation link once each) | 828 |
+| federation_first_vote_visible_ms (hs1 joins the voter room on hs2 through a restricted join now) | 1373 |
+| same_server_rating_propagation_ms (median) | 52 |
+| federation_rating_propagation_hs1_to_hs2_ms (median) | 123 |
+| federation_rating_propagation_hs2_to_hs1_ms (median) | 118 |
+| offline_queue_replay_visible_ms | 1083 |
+| federation_partition_heal_ms | 20136 |
+| federation_send_recovery_after_partition_ms (a fresh cross-server vote after the partition of the #334 scenario) | 2188 |
+
+The rating propagation, replay and heal figures are unchanged within the
+run-to-run noise; the cross-server join got faster than in the earlier run
+despite the extra round trips, and the first remote vote slower — both
+figures move by hundreds of milliseconds between runs on the shared CI
+runner, so neither is a measured cost of #328.
