@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
+- On the Matrix backend, a rating that forked with the guard bot's closing power-level event (a client with a skewed clock, a federation partition) took the previous value of its key down with it in state resolution (#334); the bot now snapshots a voter room's state before closing it, writes a remote voter room's state again right after the close (a fork on the voter's own server is invisible on the bot's) and writes back what any closed voter room lost. The federation spec reproduces the fork with the partition proxy.
 - On the Matrix backend a poll's end is now confirmed by the server (#325): the guard bot closes the voter rooms, then marks the poll room closed; clients wait for that, read the final ratings from the server and only then tally. Winner polls on Matrix draw their winner from the closing event (before, they never drew one).
 - Matrix backend: a second device of the same account votes in the account's own voter room instead of creating another; delegation events are encrypted under the poll password (#333).
 - Production readiness of the Matrix backend (#327, #331): the app registers through a Synapse registration token when configured; the guard bot removes a poll's rooms after a retention period and reports its health; a deployment guide (`documentation/deployment/MATRIX.md`) with the recommended rate limits, which the test suite runs under.

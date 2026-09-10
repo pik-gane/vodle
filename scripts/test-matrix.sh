@@ -232,6 +232,7 @@ start_guard_bot() {
     CLOSE_GRACE_MS=5000 \
     QUIET_PERIOD_MS=3000 \
     RETENTION_MS=60000 \
+    RECHECK_DELAYS_MS=3000,10000,30000 \
     ADMIN_PURGE=true \
     HEALTH_PORT="${BOT_HEALTH_PORT}" \
     nohup node guard-bot/index.js > "${BOT_LOG}" 2>&1 &

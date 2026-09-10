@@ -11,22 +11,22 @@
  *      every voter room; the scaffold's original it.vodle.deadline is
  *      still understood).
  *   3. When a deadline arrives, close the room by dropping all
- *      participants' power levels to 0 (the bot's own power stays at 100).
+ *      participants' power levels to 0 (the bot's own power stays at 100):
+ *      a poll's voter rooms first, then the poll room, whose "closed" state
+ *      event is what every client tallies from (#325).
+ *   4. Keep what a voter room held before its close: a rating that forked
+ *      with the closing power-level event is dropped by state resolution
+ *      together with its previous value (#334) — see recheck.js.
+ *   5. Remove a poll's rooms after the retention period (#331) and report
+ *      its health on HEALTH_PORT (#327).
  *
  * This keeps polls immutable after their deadline — no participant can
  * send new events, but the room remains readable.
- *
- * -----------------------------------------------------------------
- * STATUS: Scaffold / stub implementation.
- *
- * The bot logs in, accepts invites, and periodically scans rooms for
- * expired deadlines. The actual power-level-drop logic mirrors
- * MatrixService.closePollRoom() in the main app.
- * -----------------------------------------------------------------
  */
 
 import * as sdk from "matrix-js-sdk";
 import http from "node:http";
+import { vodleState, droppedState, parseDelays, recheckTimes, isRemoteAlias } from "./recheck.js";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";
@@ -60,6 +60,14 @@ const ADMIN_PURGE = (process.env.ADMIN_PURGE || "false") === "true";
 // GET /healthz on HEALTH_PORT (0 = off) reports the bot's state to a
 // monitoring system or a docker healthcheck (#327).
 const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || "0", 10);
+// A closed voter room is re-read at these delays after its close, and
+// whatever vodle state the room held right before the close and lost since
+// is written back (see guard-bot/recheck.js, #334): a rating that forked with
+// the closing power-level event takes the previous value of its state key
+// down with it in state resolution. A voter room on ANOTHER homeserver is
+// written again unconditionally right after its close (reaffirmState), since
+// a fork there never shows on this server.
+const RECHECK_DELAYS_MS = parseDelays(process.env.RECHECK_DELAYS_MS, [5000, 60000, 600000]);
 
 /** what /healthz reports */
 const stats = {
@@ -69,7 +77,13 @@ const stats = {
   roomsJoined: 0,
   closedTotal: 0,
   purgedTotal: 0,
+  restoredTotal: 0,
+  recheckPending: 0,
 };
+
+/** voter rooms closed by this process whose state is still to be re-read:
+ *  roomId -> {snapshot: {type: content}, due: [ms since epoch]} (#334) */
+const pendingRechecks = new Map();
 
 // The deadline state event the vodle app writes (MatrixService.setPollDeadline):
 // content.due is an ISO 8601 date. It is written into the poll room and
@@ -115,6 +129,19 @@ async function main() {
     console.error(err.message || err);
     process.exit(1);
   }
+
+  // --- 1b. A late event in a closed voter room (a client's write that forked
+  // with the close and arrives over federation after it) brings that room's
+  // next re-check forward (#334); the timed re-checks stay as the fallback
+  client.on("Room.timeline", (event, room) => {
+    const entry = room && pendingRechecks.get(room.roomId);
+    if (!entry || event.getSender() === client.getUserId()) return;
+    const soon = Date.now() + QUIET_PERIOD_MS;
+    if (!entry.due.some((due) => due <= soon)) {
+      entry.due.unshift(soon);
+      console.log(`[guard-bot] Event from ${event.getSender()} in closed room ${room.roomId} — re-checking it soon`);
+    }
+  });
 
   // --- 2. Auto-accept invitations ----------------------------------------
   client.on("RoomMember.membership", (event, member) => {
@@ -228,6 +255,8 @@ async function scanForExpiredDeadlines(client) {
     const openVoterRooms = pid ? voterRooms.filter((v) => pollIdOf(v) === pid && !isClosed(v, client.getUserId())) : [];
     await considerRoom(client, room, now, openVoterRooms);
   }
+  // rooms closed a while ago are re-read and repaired (#334):
+  await recheckClosedRooms(client, now);
   // rooms closed long enough ago are removed (#331):
   for (const room of rooms) {
     const deadline = roomDeadline(room);
@@ -235,6 +264,86 @@ async function scanForExpiredDeadlines(client) {
     if (new Date(deadline).getTime() + RETENTION_MS > now.getTime()) continue;
     await removeRoom(client, room, deadline);
   }
+}
+
+/** the room's vodle state as the SERVER holds it now: {type: content} */
+async function serverVodleState(client, roomId) {
+  return vodleState(await client.roomState(roomId));
+}
+
+/** whether the room lives on another homeserver than this bot (see recheck.js) */
+function isRemoteRoom(room, botUserId) {
+  return isRemoteAlias(room.getCanonicalAlias() || "", botUserId);
+}
+
+/** a state event send that waits out the homeserver's rate limit */
+async function sendStateWithRetry(client, roomId, type, content, attempts = 5) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await client.sendStateEvent(roomId, type, content, "");
+    } catch (err) {
+      if (err?.httpStatus !== 429 || attempt >= attempts) throw err;
+      const waitMs = err?.data?.retry_after_ms || 2000 * attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+}
+
+/**
+ * Write a remote voter room's vodle state again, as this bot, right after
+ * closing it (#334). A voter's write that forked with the close on the
+ * voter's own homeserver is SOFT-FAILED on this bot's server when it
+ * arrives later (it fails the auth check against the current state), so
+ * this server never shows the fork and a re-check finds nothing — while
+ * the voter's server resolves the fork and drops the rating together with
+ * its previous value. The two servers then disagree until something merges
+ * the branches, and then both drop it. An event of this bot written after
+ * the close wins that resolution on every server (power 100 is what the
+ * closed room requires), so the value from before the deadline stays the
+ * room's state everywhere. Rooms on this bot's own server need no such
+ * insurance: their owner's writes arrive here first, and a fork of the
+ * same-server kind shows up in the re-checks.
+ */
+async function reaffirmState(client, roomId, snapshot) {
+  let count = 0;
+  for (const [type, content] of Object.entries(snapshot)) {
+    await sendStateWithRetry(client, roomId, type, content);
+    count++;
+  }
+  console.log(`[guard-bot] Re-affirmed ${count} state event(s) in remote voter room ${roomId} after its close (#334)`);
+}
+
+/**
+ * Re-read the voter rooms closed by this process at their due times and
+ * write back what they lost since the snapshot taken before the close
+ * (#334). After the close only this bot may write state, so a difference
+ * can only be state resolution's doing. A room that is gone (purged, or the
+ * bot kicked) is forgotten.
+ */
+async function recheckClosedRooms(client, now) {
+  for (const [roomId, entry] of pendingRechecks) {
+    if (entry.due.length === 0 || entry.due[0] > now.getTime()) continue;
+    entry.due.shift();
+    try {
+      const current = await serverVodleState(client, roomId);
+      const dropped = droppedState(entry.snapshot, current);
+      console.log(`[guard-bot] Re-checked closed room ${roomId}: ${Object.keys(entry.snapshot).length} state events snapshotted, ${dropped.length} to restore, ${entry.due.length} re-check(s) left`);
+      for (const { type, content } of dropped) {
+        await sendStateWithRetry(client, roomId, type, content);
+        stats.restoredTotal++;
+        console.log(`[guard-bot] Restored ${type} in closed room ${roomId}: state resolution had dropped it (#334)`);
+      }
+    } catch (err) {
+      const status = err?.httpStatus;
+      if (status === 404 || status === 403) {
+        pendingRechecks.delete(roomId);
+      } else {
+        console.error(`[guard-bot] Re-check of ${roomId} failed:`, err.message);
+      }
+    }
+    if (entry.due.length === 0) pendingRechecks.delete(roomId);
+  }
+  stats.recheckPending = pendingRechecks.size;
 }
 
 /** rooms this process already asked the server to remove (the SDK lists them until the kick arrives) */
@@ -291,7 +400,7 @@ function startHealthServer(client) {
     res.end(JSON.stringify({
       ok, syncState, ...stats,
       uptimeSeconds: Math.round(process.uptime()),
-      settings: { scanIntervalMs: SCAN_INTERVAL, closeGraceMs: CLOSE_GRACE_MS, quietPeriodMs: QUIET_PERIOD_MS, retentionMs: RETENTION_MS, adminPurge: ADMIN_PURGE },
+      settings: { scanIntervalMs: SCAN_INTERVAL, closeGraceMs: CLOSE_GRACE_MS, quietPeriodMs: QUIET_PERIOD_MS, retentionMs: RETENTION_MS, adminPurge: ADMIN_PURGE, recheckDelaysMs: RECHECK_DELAYS_MS },
     }));
   });
   server.listen(HEALTH_PORT, () => console.log(`[guard-bot] Health endpoint on port ${HEALTH_PORT} (/healthz)`));
@@ -324,7 +433,18 @@ async function considerRoom(client, room, now, openVoterRooms = []) {
     if (roomKind(room) === "poll") {
       await writeClosedState(client, room, now);
     }
+    // what the room holds right before the close is what must survive it
+    // (#334); a poll room's vodle state has been locked since the poll
+    // started, so only voter rooms are snapshotted and re-checked
+    const snapshot = roomKind(room) === "voter" ? await serverVodleState(client, room.roomId) : null;
     await closeRoom(client, room.roomId, plEvent.getContent());
+    if (snapshot && closedByUs.has(room.roomId)) {
+      if (isRemoteRoom(room, client.getUserId())) {
+        await reaffirmState(client, room.roomId, snapshot);
+      }
+      pendingRechecks.set(room.roomId, { snapshot, due: recheckTimes(Date.now(), RECHECK_DELAYS_MS) });
+      stats.recheckPending = pendingRechecks.size;
+    }
   } catch (err) {
     // Non-fatal — log and continue scanning
     stats.lastScanError = `${room.roomId}: ${err.message}`;

@@ -151,7 +151,8 @@ ciphertext.
   deadline into each voter room (the bot looks for it per room), and the
   two-client spec proves the server rejects a rating and an option after the
   deadline (`M_FORBIDDEN`), with the data staying readable.
-- Closing by a power-level change has a hazard of its own (#334): a rating
+- Closing by a power-level change has a hazard of its own (#334, repaired
+  in plan session 13 — see below): a rating
   created in the same instant forks with the power-level event, and state
   resolution then re-checks it against the new power levels and drops it,
   together with the previous value of that key. Seen once in CI and once in
@@ -161,6 +162,22 @@ ciphertext.
   the deadline and once the room has been quiet for `QUIET_PERIOD_MS` (5 s);
   clients stop writing at the deadline, so only a client whose clock is off
   by more than the grace period can still lose its last write on an option.
+  Since 2026-09-10 the bot repairs this. It snapshots a voter room's vodle
+  state right before the close. A voter room on another homeserver it
+  writes again as itself right after the close: the federation spec, which
+  makes the fork deterministic (the voter writes on hs2 while the bot
+  closes the room on hs1 during a partition), showed that the bot's server
+  never sees such a fork — the late write is *soft-failed* there, failing
+  the auth check against the current state — while the voter's server
+  resolves it and drops the rating with its previous value; the two servers
+  disagree until something merges the branches, and then both drop it. An
+  event of the bot written after the close wins the resolution on every
+  server, so both end with the pre-close value (hs2 in the spec: 41, then
+  nothing, then the bot's 40). Every closed voter room is also re-read at
+  `RECHECK_DELAYS_MS` (5 s, 1 min, 10 min by default) and when a late event
+  arrives, and what it lost is written back — the same-server fork of the
+  original evidence. A forked post-deadline write is still lost, by
+  design; the previous value no longer is.
 - The shared "closed" fact is the guard bot's (#325, 2026-09-10): it closes
   a poll's voter rooms first, then writes the poll room's
   `m.room.vodle.poll.state` = closed (only power 100 may, once the poll

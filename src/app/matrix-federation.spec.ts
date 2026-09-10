@@ -269,6 +269,97 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     }
   }
 
+  /** raw content of a room's state event as the given server stores it */
+  async function raw_state(hs: {url: string}, svc: any, roomId: string, eventType: string): Promise<any> {
+    const response = await fetch(hs.url + '/_matrix/client/v3/rooms/' + encodeURIComponent(roomId)
+      + '/state/' + encodeURIComponent(eventType) + '/', {
+      headers: {Authorization: 'Bearer ' + svc.client.getAccessToken()},
+      cache: 'no-store',
+    });
+    return response.ok ? response.json() : null;
+  }
+
+  it("restores a rating that state resolution dropped when a client's write forked with the closing power-level event (#334)", async () => {
+    if (!requires_synapses()) { return; }
+    const status = await proxy('status');
+    if (!status || status.partitioned) {
+      pending('needs the federation proxy of scripts/test-matrix.sh (control endpoint ' + PROXY_CONTROL + ')');
+      return;
+    }
+    // The fork of #334, made deterministic with the partition: the voter's
+    // room lives on hs2, the guard bot on hs1. While the link is cut the
+    // voter writes on hs2 and the bot closes the room on hs1. After the heal
+    // hs2 resolves the fork: the power-level event first, then the
+    // conflicted ratings re-checked against it — the forked one AND the
+    // value from before the deadline — under which the voter has no power:
+    // both are dropped, hs2 shows no rating. hs1 never sees the fork: the
+    // late write is soft-failed there. The bot, on hs1, therefore writes a
+    // remote voter room's state again right after closing it; its events
+    // win the resolution on hs2 too, so both sides end with the pre-close
+    // value, written by the bot.
+    const fpid = pid + 'fk';
+    const gina = await make_client('gina', HS1);
+    const roomId = await gina.createPollRoom(fpid, 'Fork poll');
+    // the bot is invited at room creation and joins by itself when running:
+    try {
+      await until(async () => gina.client.getRoom(roomId)?.getMember(GUARD_BOT)?.membership === 'join',
+        'the guard bot to join the poll room', 15000);
+    } catch (err) {
+      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      return;
+    }
+    await gina.setPollMetadata(fpid, {type: 'winner', language: 'en'});
+    await gina.addOption(fpid, 'o1', {name: 'Option one'});
+    // the deadline lies beyond the setup below (a cross-server join and vote)
+    const due = new Date(Date.now() + 30000).toISOString();
+    await gina.setPollDeadline(fpid, due);
+    await gina.changePollState(fpid, 'running');
+    const hugo = await make_client('hugo', HS2);
+    await hugo.setPollOrigin(fpid, HS1.name);
+    expect(await hugo.getPollRoom(fpid)).toBe(roomId);
+    await hugo.submitRating(fpid, 'o1', 40);   // hugo's voter room is created on hs2, the bot invited across federation
+    const voter_room = hugo.voterRooms.get(fpid + ':' + hugo.userId);
+    expect(voter_room).toBeTruthy();
+    await until(async () => hugo.client.getRoom(voter_room)?.getMember(GUARD_BOT)?.membership === 'join',
+      'the guard bot to join the voter room across federation', 30000);
+    await until(async () => rating_values(await fresh_ratings(gina, fpid), 'o1').includes(40),
+      "hs1 to see hugo's vote");
+    expect(Date.now()).withContext('setup finished before the deadline').toBeLessThan(new Date(due).getTime());
+
+    expect((await proxy('partition')).partitioned).toBeTrue();
+    try {
+      // the write on the far side, unseen by hs1 ...
+      await hugo.submitRating(fpid, 'o1', 41);
+      // ... while the bot closes the room on hs1 after deadline, grace and
+      // quiet period:
+      await until(async () => {
+        const pl = await raw_state(HS1, gina, voter_room, 'm.room.power_levels');
+        return pl?.events_default === 100 && pl?.users?.[hugo.userId] === 0;
+      }, 'the guard bot to close the voter room on hs1 during the partition', 60000);
+    } finally {
+      expect((await proxy('heal')).partitioned).toBeFalse();
+    }
+    // after the heal, hs2 drops the rating for a moment and then takes the
+    // bot's re-affirmed pre-close value (logged for the CI record):
+    const rating_on = async (hs: {url: string}, svc: any) => {
+      const event = await raw_state(hs, svc, voter_room, 'm.room.vodle.voter.rating.rating.o1');
+      return event ? (await svc.readPollValue(fpid, event)) : null;
+    };
+    let last_seen = '';
+    await until(async () => {
+      const hs1_values = rating_values(await fresh_ratings(gina, fpid), 'o1'), hs2_values = rating_values(await fresh_ratings(hugo, fpid), 'o1');
+      const seen = JSON.stringify({hs1: hs1_values, hs2: hs2_values, hs1_raw: await rating_on(HS1, gina), hs2_raw: await rating_on(HS2, hugo)});
+      if (seen !== last_seen) { console.info('VODLE_FORK after the heal:', seen); last_seen = seen; }
+      return hs1_values.join() === '40' && hs2_values.join() === '40';
+    }, 'both sides to show the restored pre-close rating (40), not the forked 41 and not none', 90000);
+    // the restored state is the bot's, and the room stays closed:
+    const restored = await fetch(HS1.url + '/_matrix/client/v3/rooms/' + encodeURIComponent(voter_room)
+      + '/state', {headers: {Authorization: 'Bearer ' + gina.client.getAccessToken()}, cache: 'no-store'});
+    const rating_event = (await restored.json()).find((e: any) => e.type === 'm.room.vodle.voter.rating.rating.o1');
+    expect(rating_event?.sender).withContext(JSON.stringify(rating_event)).toBe(GUARD_BOT);
+    await expectAsync(hugo.setVoterData(fpid, hugo.userId, 'rating.o1', 42)).toBeRejected();
+  });
+
   it('keeps both sides voting during a partition of the federation link and converges after it heals (#329)', async () => {
     if (!requires_synapses()) { return; }
     const status = await proxy('status');

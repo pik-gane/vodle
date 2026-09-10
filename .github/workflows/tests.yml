@@ -67,6 +67,11 @@ jobs:
           echo "no Chrome or Chromium found on the runner" >&2
           exit 1
 
+      # the guard bot's pure logic (the repair of state that resolution
+      # dropped at a close, #334) has node:test unit tests of its own:
+      - name: Guard bot unit tests
+        run: node --test guard-bot/recheck.test.js
+
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 

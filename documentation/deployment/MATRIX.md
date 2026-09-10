@@ -101,6 +101,7 @@ Put the token into the app's configuration (step 1) and rebuild the app. Rotatin
 The bot logs in as `BOT_USER`, accepts the invitations the app sends when it creates rooms, and every `SCAN_INTERVAL_MS`:
 
 - closes the rooms of a poll whose deadline is `CLOSE_GRACE_MS` in the past and that has been quiet for `QUIET_PERIOD_MS` — voter rooms first, then the poll room with a `m.room.vodle.poll.state = closed` event followed by the power-level drop (the server itself then rejects late ratings; the closing event is what every client tallies from, [#325](https://github.com/pik-gane/vodle/issues/325), [#334](https://github.com/pik-gane/vodle/issues/334));
+- writes a voter room of another homeserver again right after closing it, and re-reads every closed voter room at `RECHECK_DELAYS_MS` and writes back what state resolution dropped — a rating that forked with the closing power-level event takes the previous value of its key down with it, and a fork on the voter's own server never shows on the bot's ([#334](https://github.com/pik-gane/vodle/issues/334));
 - removes the rooms of a poll `RETENTION_DAYS` after its deadline: with `ADMIN_PURGE=true` through the Synapse admin API (the data leaves the server), otherwise by leaving them ([#331](https://github.com/pik-gane/vodle/issues/331));
 - answers `GET /healthz` on `HEALTH_PORT` with its state (below).
 
@@ -111,6 +112,7 @@ The bot logs in as `BOT_USER`, accepts the invitations the app sends when it cre
 | `SCAN_INTERVAL_MS` | 30000 | how often rooms are checked |
 | `CLOSE_GRACE_MS` | 10000 | closing waits this long after a deadline (clients stop writing at the deadline; a client whose clock is off by more loses its last write) |
 | `QUIET_PERIOD_MS` | 5000 | and until the room has been quiet this long |
+| `RECHECK_DELAYS_MS` | 5000,60000,600000 | when a closed voter room is re-read and repaired after its close (the later ones catch forks arriving late over federation) |
 | `RETENTION_DAYS` | 365 | rooms are removed this long after the deadline (`RETENTION_MS` overrides, for tests) |
 | `ADMIN_PURGE` | false | remove rooms through the admin API (needs an admin account) instead of only leaving them |
 | `HEALTH_PORT` | 0 (off) | port of `GET /healthz` |
@@ -119,7 +121,7 @@ Without a running bot no deadline is enforced on the server: clients then close 
 
 ## 4. Monitoring, backups, retention
 
-- **Bot**: `GET http://guard-bot:8012/healthz` returns 200 with `{ok, syncState, lastScanAt, lastScanError, roomsJoined, closedTotal, purgedTotal, settings}` while the bot syncs, 503 otherwise; the compose file uses it as the container's healthcheck. Alert on 503, on `lastScanAt` older than a few scan intervals, and on `lastScanError`.
+- **Bot**: `GET http://guard-bot:8012/healthz` returns 200 with `{ok, syncState, lastScanAt, lastScanError, roomsJoined, closedTotal, purgedTotal, restoredTotal, recheckPending, settings}` while the bot syncs, 503 otherwise (`restoredTotal` counts the state events written back after a close, #334 — a few per year are the expected noise, many point at clients with wrong clocks); the compose file uses it as the container's healthcheck. Alert on 503, on `lastScanAt` older than a few scan intervals, and on `lastScanError`.
 - **Synapse**: `GET /health` on the client port; Prometheus metrics with `enable_metrics: true` and a `metrics` listener.
 - **Backups**: the Synapse database and `matrix-data/` (signing key, config). Every poll's data — encrypted under its poll password — lives in the database; without the signing key the server's identity is lost.
 - **Guest accounts**: a magic link opened on a device without an account registers a guest account with random credentials (#193) — a normal account, indistinguishable on the server. When the guest later logs in with an address of their own, the app hands the guest's rooms over to the new account and deactivates the guest account (its rating events stay the voter rooms' state). Guests who never do so leave an account behind that logs in from one browser only; nothing in vodle depends on them staying, so an operator may deactivate accounts that have not been seen for longer than `RETENTION_DAYS` (Synapse admin API `GET /_synapse/admin/v2/users`, `last_seen_ts`).
