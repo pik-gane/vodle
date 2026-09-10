@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - CouchDB path hardened against the sync-consistency bugs (#292): bootstrap-gated sync, coalesced change batching, replication watchdog, conflict cleanup, transactional draft → running moves, ordered voter mutations, guarded finalization (PRs #316, #319).
 - On the Matrix backend poll, voter and user data are encrypted in the app (poll password / user password) and the homeserver login uses a password derived from the vodle password.
 - The settings page commits a changed e-mail address or password when editing ends (OK, enter), not on every keystroke.
+- On the Matrix backend, poll rooms are closed (#328): knowing a poll's id no longer shows who takes part. The app knocks with a proof of the poll password from the magic link, the guard bot verifies it and invites; voter rooms admit the poll room's members only. Polls created before stay public; the guard bot is now needed for joining as well as for closing.
 - Guest accounts get random credentials of about 115 bits (before, a guest was "Guest" plus a number below a million, used as password and address alike).
 
 ### Fixed

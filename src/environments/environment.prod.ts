@@ -56,6 +56,11 @@ export const environment = {
     // Guard bot Matrix user ID — this bot is invited to all poll and voter
     // rooms with admin power (100) for server-side deadline enforcement.
     guard_bot_user_id: "@vodle-guard:vodle.example.com",
+    // How long a joiner waits for the guard bot to answer their knock on a
+    // closed poll room (#328) before the join fails: the bot answers within
+    // a second when it runs; the wait only ends by this timeout when it
+    // does not.
+    join_timeout_ms: 60000,
   },
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",

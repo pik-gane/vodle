@@ -54,6 +54,11 @@ export const environment = {
     // by dropping all power levels to 0 when the deadline arrives.
     // Server-side enforcement: the bot runs on the server, not in the client.
     guard_bot_user_id: "@vodle-guard:localhost",
+    // How long a joiner waits for the guard bot to answer their knock on a
+    // closed poll room (#328) before the join fails: the bot answers within
+    // a second when it runs; the wait only ends by this timeout when it
+    // does not.
+    join_timeout_ms: 60000,
   },
   data_service: {
     central_db_server_url: "http://localhost:5984/", // use this if you want to use your local couchdb on localhost:5984 without proxy 

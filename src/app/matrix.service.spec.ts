@@ -19,7 +19,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
-import { MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
+import { environment } from '../environments/environment';
+import { JOIN_KEY_EVENT_TYPE, KNOCK_REASON_PREFIX, joinKey, joinProof, MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -1078,6 +1079,7 @@ describe('MatrixService account switches and password changes (#330, #193)', () 
       joinRoom: async (id: string) => { joined.push(id); return {}; },
     };
     service.userId = '@new:example.org';
+    const poll_rooms = spyOn(service, 'getPollRoom').and.returnValue(Promise.resolve('!poll:example.org'));
     spyOn<any>(service, 'getVoterRoom').and.callFake(async (pollId: string) =>
       pollId == 'p1' ? '!open:example.org' : pollId == 'p2' ? '!closed:example.org' : null);
     spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
@@ -1094,6 +1096,8 @@ describe('MatrixService account switches and password changes (#330, #193)', () 
       {pollId: 'p1', vid: 'v1'}, {pollId: 'p2', vid: 'v2'}, {pollId: 'p3', vid: 'v3'}]);
     expect(taken).toEqual({p1: '!open:example.org'});
     expect(joined).toEqual(['!open:example.org', '!closed:example.org']);
+    // a voter room admits the poll room's members only (#328):
+    expect(poll_rooms.calls.allArgs().map(a => a[0])).toEqual(['p1', 'p2', 'p3']);
     const granted = old_session.sendStateEvent.calls.allArgs().find((a: any[]) => a[0] == '!open:example.org');
     expect(granted[1]).toBe('m.room.power_levels');
     expect(granted[2].users).toEqual({'@old:example.org': 50, '@bot:example.org': 100, '@new:example.org': 50});
@@ -1140,5 +1144,196 @@ describe('MatrixService account switches and password changes (#330, #193)', () 
     const session = await service.sessionFor('old@example.org', 'pw');
     expect(session.getUserId()).toBe(service.userId);
     expect(session.getAccessToken()).toBe('tok');
+  });
+});
+
+describe('MatrixService closed poll rooms (#328)', () => {
+  // the vectors guard-bot/knock.test.js asserts for the bot's node:crypto
+  // implementation; both sides must agree on them:
+  const KEY = '1917c4c7c724b2f6307dd2cbaf7538a2618a925d2a902c0a4d38e46f1d9c3a3c';
+  const PROOF_ALICE = 'c5064909af02e76c78ffacb447945cac75e30979fe9cc429c93b74d40ab54885';
+  const PROOF_BOB = 'd1d801f71059f6faa198ebf14e8f3c8c65fd9dcb78b58bf792e8c510948eb686';
+  const forbidden = () => Object.assign(new Error('closed'), {errcode: 'M_FORBIDDEN', httpStatus: 403});
+  let service: any;
+  let previous_join_timeout: number;
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    spy.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+    service.userId = '@alice:example.org';
+    previous_join_timeout = environment.matrix.join_timeout_ms;
+  });
+
+  afterEach(() => {
+    (environment.matrix as any).join_timeout_ms = previous_join_timeout;
+  });
+
+  /** a closed poll room on a stub client whose guard bot answers a knock as
+   *  told; `initial` is the membership the store shows before anything happens */
+  function closed_room_client(roomId: string, bot_answers: 'invite' | 'none', initial?: string) {
+    let membership: string | undefined = initial;
+    const knocks: any[] = [];
+    const joins: number[] = [];
+    const client: any = {
+      getRoomIdForAlias: async () => ({room_id: roomId, servers: ['example.org']}),
+      getRoom: () => membership === undefined ? null : {getMyMembership: () => membership},
+      joinRoom: async () => {
+        joins.push(Date.now());
+        if (membership == 'invite') { membership = 'join'; return {}; }
+        throw forbidden();
+      },
+      knockRoom: async (id: string, opts: any) => {
+        knocks.push(opts);
+        membership = 'knock';
+        window.setTimeout(() => { if (bot_answers == 'invite') { membership = 'invite'; } }, 50);
+        return {room_id: id};
+      },
+      leave: async () => { fail('a knock is never retracted (#328)'); return {}; },
+      /** the bot answers a knock made earlier (the store already showed it) */
+      bot_invites: () => { membership = 'invite'; },
+    };
+    return {client, knocks, joins};
+  }
+
+  it('computes the join key and the proofs of the shared test vectors with WebCrypto', async () => {
+    expect(JOIN_KEY_EVENT_TYPE).toBe('m.room.vodle.poll.join_key');
+    expect(await joinKey('P1', 'secret')).toBe(KEY);
+    expect(await joinProof(KEY, '@alice:example.org')).toBe(PROOF_ALICE);
+    expect(await joinProof(KEY, '@bob:example.org')).toBe(PROOF_BOB);
+    expect(await joinKey('P1', 'secret2')).not.toBe(KEY);
+  });
+
+  it('creates a poll room with the knock join rule and the join key when the poll password is known, public otherwise', async () => {
+    const created: any[] = [];
+    const sent: any[] = [];
+    service.client = {
+      createRoom: async (opts: any) => { created.push(opts); return {room_id: '!poll' + created.length + ':example.org'}; },
+      // the store does not show the join rule yet: the service sets it once more
+      getRoom: () => ({currentState: {getStateEvents: () => null}}),
+      sendStateEvent: async (roomId: string, type: string, content: any) => { sent.push({roomId, type, content}); return {}; },
+      invite: async () => ({}),
+    };
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    service.pollPasswordProvider = () => 'secret';
+    expect(await service.createPollRoom('P1', 'Title')).toBe('!poll1:example.org');
+    const state = created[0].initial_state;
+    expect(state.find((s: any) => s.type == 'm.room.join_rules').content).toEqual({join_rule: 'knock'});
+    expect(state.find((s: any) => s.type == JOIN_KEY_EVENT_TYPE).content).toEqual({version: 1, key: KEY});
+    expect(created[0].power_level_content_override.events['m.room.join_rules']).toBe(50);
+    expect(sent).toEqual([{roomId: '!poll1:example.org', type: 'm.room.join_rules', content: {join_rule: 'knock'}}]);
+    // no password known (test code only): the room is public, as before
+    service.pollPasswordProvider = () => null;
+    await service.createPollRoom('P2', 'Title');
+    expect(created[1].initial_state.find((s: any) => s.type == 'm.room.join_rules').content).toEqual({join_rule: 'public'});
+    expect(created[1].initial_state.some((s: any) => s.type == JOIN_KEY_EVENT_TYPE)).toBe(false);
+  });
+
+  it('knocks on a closed poll room with the proof for its own user id and joins once the guard bot has invited it', async () => {
+    const {client, knocks} = closed_room_client('!poll:example.org', 'invite');
+    service.client = client;
+    service.pollPasswordProvider = () => 'secret';
+    spyOn<any>(service, 'validatePollRoomPowerLevels').and.returnValue(Promise.resolve());
+    expect(await service.getPollRoom('P1')).toBe('!poll:example.org');
+    expect(knocks.length).toBe(1);
+    expect(knocks[0].reason).toBe(KNOCK_REASON_PREFIX + PROOF_ALICE);
+    expect(knocks[0].viaServers).toEqual(['example.org']);
+    expect(client.getRoom().getMyMembership()).toBe('join');
+    // the room is cached: no second knock
+    expect(await service.getPollRoom('P1')).toBe('!poll:example.org');
+    expect(knocks.length).toBe(1);
+  });
+
+  it('does not knock without the poll password: the join stays forbidden', async () => {
+    const {client, knocks} = closed_room_client('!poll:example.org', 'invite');
+    service.client = client;
+    service.pollPasswordProvider = () => null;
+    await expectAsync(service.getPollRoom('P1')).toBeRejectedWith(jasmine.objectContaining({errcode: 'M_FORBIDDEN'}));
+    expect(knocks.length).toBe(0);
+  });
+
+  it('gives up on a knock nobody answers after join_timeout_ms, naming both possible causes', async () => {
+    (environment.matrix as any).join_timeout_ms = 400;
+    const unanswered = closed_room_client('!poll2:example.org', 'none');
+    service.client = unanswered.client;
+    service.pollPasswordProvider = () => 'wrong';
+    await expectAsync(service.getPollRoom('P2')).toBeRejectedWithError(/right poll password.*guard bot is not running/);
+    expect(unanswered.knocks.length).toBe(1);
+    expect(unanswered.knocks[0].reason).not.toBe(KNOCK_REASON_PREFIX + PROOF_ALICE);
+  });
+
+  it('waits for the answer to a knock left over from an earlier attempt instead of joining or knocking again', async () => {
+    const {client, knocks, joins} = closed_room_client('!poll:example.org', 'none', 'knock');
+    service.client = client;
+    service.pollPasswordProvider = () => 'secret';
+    spyOn<any>(service, 'validatePollRoomPowerLevels').and.returnValue(Promise.resolve());
+    window.setTimeout(() => client.bot_invites(), 300);   // the bot's next scan answers it
+    expect(await service.getPollRoom('P1')).toBe('!poll:example.org');
+    expect(knocks.length).toBe(0);
+    expect(joins.length).withContext('one join, after the invitation').toBe(1);
+    // an invitation that is already there is simply accepted:
+    const invited = closed_room_client('!poll3:example.org', 'none', 'invite');
+    service.client = invited.client;
+    expect(await service.getPollRoom('P3')).toBe('!poll3:example.org');
+    expect(invited.knocks.length).toBe(0);
+  });
+
+  it('retries a join that the own homeserver refuses right after the invitation (the invite still an outlier there)', async () => {
+    const {client, joins} = closed_room_client('!poll:example.org', 'invite');
+    const original_join = client.joinRoom;
+    let refused = 0;
+    client.joinRoom = async (...args: any[]) => {
+      // the first two joins after the invitation: 403 "duplicate auth_events", as seen on hs2
+      if (client.getRoom()?.getMyMembership() == 'invite' && refused < 2) {
+        refused++;
+        joins.push(Date.now());
+        throw Object.assign(new Error('duplicate auth_events'), {errcode: 'M_FORBIDDEN', httpStatus: 403});
+      }
+      return original_join(...args);
+    };
+    service.client = client;
+    service.pollPasswordProvider = () => 'secret';
+    spyOn<any>(service, 'validatePollRoomPowerLevels').and.returnValue(Promise.resolve());
+    expect(await service.getPollRoom('P1')).toBe('!poll:example.org');
+    expect(refused).toBe(2);
+    expect(joins.length).withContext('the closed-room probe, two refusals, the join').toBe(4);
+  });
+
+  it("creates a voter room that only the poll room's members may join", async () => {
+    const created: any[] = [];
+    service.client = {
+      createRoom: async (opts: any) => { created.push(opts); return {room_id: '!voter:example.org'}; },
+      getStateEvent: async () => ({users: {'@alice:example.org': 100}}),
+      sendStateEvent: async () => ({}),
+      invite: async () => ({}),
+    };
+    service.pollRooms.set('P1', '!poll:example.org');
+    spyOn<any>(service, 'copyPollDeadlineInto').and.returnValue(Promise.resolve());
+    expect(await service.createVoterRoom('P1', 'v1')).toBe('!voter:example.org');
+    expect(created[0].initial_state).toEqual([{type: 'm.room.join_rules', state_key: '',
+      content: {join_rule: 'restricted', allow: [{type: 'm.room_membership', room_id: '!poll:example.org'}]}}]);
+    expect(created[0].power_level_content_override.events['m.room.power_levels']).toBe(50);
+  });
+
+  it('locks the join rule with the rest of the poll metadata when the poll starts', async () => {
+    const levels = {users: {'@alice:example.org': 100, '@vodle-guard:localhost': 100}, events: {'m.room.join_rules': 50, 'm.room.power_levels': 50}, state_default: 50};
+    spyOn(window, 'fetch').and.callFake(async (url: any) => ({
+      ok: true, status: 200,
+      json: async () => String(url).includes('m.room.member') ? {membership: 'join'} : JSON.parse(JSON.stringify(levels)),
+    } as any));
+    const sent: any[] = [];
+    service.client = {
+      getAccessToken: () => 'token',
+      sendStateEvent: async (roomId: string, type: string, content: any) => { sent.push({type, content}); return {}; },
+    };
+    service.pollRooms.set('P1', '!poll:example.org');
+    await service.lockPollMetadata('P1');
+    expect(sent[0].type).toBe('m.room.power_levels');
+    expect(sent[0].content.events['m.room.join_rules']).toBe(100);
+    expect(sent[0].content.events['m.room.power_levels']).toBe(100);
+    expect(sent[0].content.state_default).toBe(100);
   });
 });

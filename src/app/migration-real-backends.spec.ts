@@ -275,9 +275,18 @@ describe('CouchDB to Matrix migration against real backends (#293)', () => {
     expect(verification.status).toBe('verified');
 
     // --- a fresh Matrix client, as an invitee with the magic link, reads
-    // the whole migrated poll from the homeserver ---
+    // the whole migrated poll from the homeserver — the room is closed
+    // (#328), so the guard bot must be there to answer the reader's knock ---
+    const poll_room = matrix.pollRooms.get(pid);
+    try {
+      await until(async () => matrix.client.getRoom(poll_room)?.getMember(GUARD_BOT)?.membership === 'join',
+        'the guard bot to join the migrated poll room', 15000);
+    } catch (err) {
+      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      return;
+    }
     const reader = await make_matrix_client('reader');
-    expect(await reader.getPollRoom(pid)).withContext('poll room found by alias').toBeTruthy();
+    expect(await reader.getPollRoom(pid)).withContext('poll room found by alias and joined by knocking').toBeTruthy();
     const data = await reader.getAllPollData(pid);
     expect(data.title).toBe('Migrated poll');
     expect(data.desc).toBe('A **formatted** description');

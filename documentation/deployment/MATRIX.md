@@ -96,13 +96,16 @@ curl -X POST https://vodle.example.org/_synapse/admin/v1/registration_tokens/new
 
 Put the token into the app's configuration (step 1) and rebuild the app. Rotating it is a new token here plus a rebuild; old accounts keep working (the token is only needed to register).
 
+Leave `default_room_version` at Synapse's default (10 or later): poll rooms use the `knock` join rule (room version 7 or later) and voter rooms the `restricted` join rule (8 or later) — see the bot's doorman role below ([#328](https://github.com/pik-gane/vodle/issues/328)).
+
 ## 3. The guard bot
 
-The bot logs in as `BOT_USER`, accepts the invitations the app sends when it creates rooms, and every `SCAN_INTERVAL_MS`:
+The bot logs in as `BOT_USER`, accepts the invitations the app sends when it creates rooms, lets participants into closed poll rooms, and every `SCAN_INTERVAL_MS`:
 
 - closes the rooms of a poll whose deadline is `CLOSE_GRACE_MS` in the past and that has been quiet for `QUIET_PERIOD_MS` — voter rooms first, then the poll room with a `m.room.vodle.poll.state = closed` event followed by the power-level drop (the server itself then rejects late ratings; the closing event is what every client tallies from, [#325](https://github.com/pik-gane/vodle/issues/325), [#334](https://github.com/pik-gane/vodle/issues/334));
 - writes a voter room of another homeserver again right after closing it, and re-reads every closed voter room at `RECHECK_DELAYS_MS` and writes back what state resolution dropped — a rating that forked with the closing power-level event takes the previous value of its key down with it, and a fork on the voter's own server never shows on the bot's ([#334](https://github.com/pik-gane/vodle/issues/334));
 - removes the rooms of a poll `RETENTION_DAYS` after its deadline: with `ADMIN_PURGE=true` through the Synapse admin API (the data leaves the server), otherwise by leaving them ([#331](https://github.com/pik-gane/vodle/issues/331));
+- answers knocks on closed poll rooms ([#328](https://github.com/pik-gane/vodle/issues/328)): poll rooms are not joinable by knowing the poll id; a participant who opens the magic link knocks with a proof of the poll password, the bot verifies it against the room's join key (a hash of the password the app wrote at creation) and invites — within a second while the bot runs, at its next scan for knocks made while it was down. Any other knock is left unanswered, never kicked (a kicked knocker could read the room's state as of their leave, members and all). A poll whose bot is down cannot be joined, and a link with a wrong password is not answered either; the app gives up after `join_timeout_ms` (60 s) naming both possibilities;
 - answers `GET /healthz` on `HEALTH_PORT` with its state (below).
 
 | variable | default | meaning |
@@ -121,7 +124,7 @@ Without a running bot no deadline is enforced on the server: clients then close 
 
 ## 4. Monitoring, backups, retention
 
-- **Bot**: `GET http://guard-bot:8012/healthz` returns 200 with `{ok, syncState, lastScanAt, lastScanError, roomsJoined, closedTotal, purgedTotal, restoredTotal, recheckPending, settings}` while the bot syncs, 503 otherwise (`restoredTotal` counts the state events written back after a close, #334 — a few per year are the expected noise, many point at clients with wrong clocks); the compose file uses it as the container's healthcheck. Alert on 503, on `lastScanAt` older than a few scan intervals, and on `lastScanError`.
+- **Bot**: `GET http://guard-bot:8012/healthz` returns 200 with `{ok, syncState, lastScanAt, lastScanError, roomsJoined, closedTotal, purgedTotal, restoredTotal, recheckPending, invitedTotal, declinedTotal, settings}` while the bot syncs, 503 otherwise (`restoredTotal` counts the state events written back after a close, #334 — a few per year are the expected noise, many point at clients with wrong clocks; `invitedTotal` and `declinedTotal` count the knocks let in and left unanswered, #328 — unanswered knocks are links with a wrong password, or someone guessing); the compose file uses it as the container's healthcheck. Alert on 503, on `lastScanAt` older than a few scan intervals, and on `lastScanError`.
 - **Synapse**: `GET /health` on the client port; Prometheus metrics with `enable_metrics: true` and a `metrics` listener.
 - **Backups**: the Synapse database and `matrix-data/` (signing key, config). Every poll's data — encrypted under its poll password — lives in the database; without the signing key the server's identity is lost.
 - **Guest accounts**: a magic link opened on a device without an account registers a guest account with random credentials (#193) — a normal account, indistinguishable on the server. When the guest later logs in with an address of their own, the app hands the guest's rooms over to the new account and deactivates the guest account (its rating events stay the voter rooms' state). Guests who never do so leave an account behind that logs in from one browser only; nothing in vodle depends on them staying, so an operator may deactivate accounts that have not been seen for longer than `RETENTION_DAYS` (Synapse admin API `GET /_synapse/admin/v2/users`, `last_seen_ts`).
@@ -137,3 +140,4 @@ Without a running bot no deadline is enforced on the server: clients then close 
 - [ ] database backups scheduled and restored once
 - [ ] privacy statement names the retention period and the homeserver operator
 - [ ] a magic link opened in a private browser window takes part as a guest (after the consent checkbox when `privacy_statement_url` is set), and logging in from the poll page's banner afterwards keeps the vote (#193)
+- [ ] a magic link with the poll password altered is not let in (the bot log shows the ignored knock; the app gives up after a minute), the right one joins within a second (#328)

@@ -19,6 +19,9 @@
  *      together with its previous value (#334) — see recheck.js.
  *   5. Remove a poll's rooms after the retention period (#331) and report
  *      its health on HEALTH_PORT (#327).
+ *   6. Let the holders of a poll's magic link into its closed poll room
+ *      (#328): a knock whose reason proves the poll password is answered
+ *      with an invitation; any other knock stays unanswered — see knock.js.
  *
  * This keeps polls immutable after their deadline — no participant can
  * send new events, but the room remains readable.
@@ -27,6 +30,7 @@
 import * as sdk from "matrix-js-sdk";
 import http from "node:http";
 import { vodleState, droppedState, parseDelays, recheckTimes, isRemoteAlias } from "./recheck.js";
+import { JOIN_KEY_TYPE, verifyKnock } from "./knock.js";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";
@@ -79,6 +83,8 @@ const stats = {
   purgedTotal: 0,
   restoredTotal: 0,
   recheckPending: 0,
+  invitedTotal: 0,
+  declinedTotal: 0,
 };
 
 /** voter rooms closed by this process whose state is still to be re-read:
@@ -143,13 +149,20 @@ async function main() {
     }
   });
 
-  // --- 2. Auto-accept invitations ----------------------------------------
+  // --- 2. Auto-accept invitations; answer knocks on closed poll rooms (#328)
   client.on("RoomMember.membership", (event, member) => {
     if (member.membership === "invite" && member.userId === client.getUserId()) {
       console.log(`[guard-bot] Invited to room ${member.roomId} — joining`);
       client.joinRoom(member.roomId).catch((e) =>
         console.error(`[guard-bot] Failed to join ${member.roomId}:`, e.message)
       );
+    } else if (member.membership === "knock" && member.userId !== client.getUserId()) {
+      const room = client.getRoom(member.roomId);
+      if (room && room.getMyMembership() === "join") {
+        answerKnock(client, room, member).catch((e) =>
+          console.error(`[guard-bot] Failed to answer the knock of ${member.userId} on ${member.roomId}:`, e.message)
+        );
+      }
     }
   });
 
@@ -245,6 +258,14 @@ async function scanForExpiredDeadlines(client) {
   stats.lastScanAt = now.toISOString();
   stats.roomsJoined = rooms.length;
   stats.lastScanError = null;
+  // knocks this process has not answered live (made while it was down or
+  // before it had joined the room) are answered now (#328):
+  for (const room of rooms) {
+    if (roomKind(room) !== "poll") continue;
+    for (const member of room.getMembersWithMembership("knock")) {
+      await answerKnock(client, room, member);
+    }
+  }
   const voterRooms = rooms.filter((room) => roomKind(room) === "voter");
   for (const room of voterRooms) {
     await considerRoom(client, room, now);
@@ -276,16 +297,73 @@ function isRemoteRoom(room, botUserId) {
   return isRemoteAlias(room.getCanonicalAlias() || "", botUserId);
 }
 
-/** a state event send that waits out the homeserver's rate limit */
-async function sendStateWithRetry(client, roomId, type, content, attempts = 5) {
+/** a request that waits out the homeserver's rate limit */
+async function withRateLimitRetry(request, attempts = 5) {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await client.sendStateEvent(roomId, type, content, "");
+      return await request();
     } catch (err) {
       if (err?.httpStatus !== 429 || attempt >= attempts) throw err;
       const waitMs = err?.data?.retry_after_ms || 2000 * attempt;
       await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
+  }
+}
+
+/** a state event send that waits out the homeserver's rate limit */
+function sendStateWithRetry(client, roomId, type, content, attempts = 5) {
+  return withRateLimitRetry(() => client.sendStateEvent(roomId, type, content, ""), attempts);
+}
+
+/** knocks answered lately: "roomId|userId|knock event id" -> ms since epoch.
+ *  The live handler and the scan can both see a knock before the answer's
+ *  sync arrives; answering twice would fail on an invitation already made.
+ *  A new knock of the same user is a new event and is answered afresh. */
+const answeredKnocks = new Map();
+const ANSWERED_KNOCK_TTL_MS = 30000;
+/** the same keys for knocks that proved nothing: logged and counted once,
+ *  then left alone (see answerKnock) */
+const refusedKnocks = new Set();
+const REFUSED_KNOCKS_MAX = 10000;
+
+/**
+ * Answer a knock on a closed poll room (#328): invite the knocker when the
+ * knock's reason proves the poll password against the room's join key
+ * (see knock.js). Any other knock — no proof, a proof for another user or
+ * another password, a room without a join key — is left UNANSWERED, not
+ * declined: a kick (like a leave) would make the knocker a "departed"
+ * user, and Synapse lets a departed user read the room's state as of
+ * their leave event, members and all — exactly what closed rooms are
+ * for. A knocker whose knock stands sees only the room's stripped state
+ * (join rule, name, alias). The app gives up on its knock after
+ * matrix.join_timeout_ms.
+ */
+async function answerKnock(client, room, member) {
+  const tag = `${room.roomId}|${member.userId}|${member.events?.member?.getId?.() || ""}`;
+  if (refusedKnocks.has(tag)) return;
+  const now = Date.now();
+  for (const [key, at] of answeredKnocks) {
+    if (now - at > ANSWERED_KNOCK_TTL_MS) answeredKnocks.delete(key);
+  }
+  if (answeredKnocks.has(tag)) return;
+  const keyContent = room.currentState.getStateEvents(JOIN_KEY_TYPE, "")?.getContent();
+  const reason = member.events?.member?.getContent()?.reason;
+  if (!verifyKnock(keyContent, member.userId, reason)) {
+    if (refusedKnocks.size >= REFUSED_KNOCKS_MAX) refusedKnocks.clear();
+    refusedKnocks.add(tag);
+    stats.declinedTotal++;
+    console.log(`[guard-bot] Ignoring the knock of ${member.userId} on poll room ${room.roomId}: `
+      + `${keyContent ? "it does not prove the poll password" : "the room has no join key"} (#328)`);
+    return;
+  }
+  answeredKnocks.set(tag, now);
+  try {
+    await withRateLimitRetry(() => client.invite(room.roomId, member.userId));
+    stats.invitedTotal++;
+    console.log(`[guard-bot] Invited ${member.userId} to poll room ${room.roomId}: the knock proves the poll password (#328)`);
+  } catch (err) {
+    answeredKnocks.delete(tag);   // the next scan tries again while the knock stands
+    console.error(`[guard-bot] Could not invite the knocker ${member.userId} to ${room.roomId}:`, err.message);
   }
 }
 

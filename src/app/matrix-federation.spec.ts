@@ -114,6 +114,21 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     throw new Error('timed out waiting for ' + what);
   }
 
+  /** whether the guard bot (on hs1) has joined the poll room `roomId`; poll
+   *  rooms are closed (#328), so every join across federation needs the
+   *  bot to answer the knock, and a spec that joins reports itself pending
+   *  without it */
+  async function guard_bot_in(svc: any, roomId: string): Promise<boolean> {
+    try {
+      await until(async () => svc.client.getRoom(roomId)?.getMember(GUARD_BOT)?.membership === 'join',
+        'the guard bot to join the poll room', 15000);
+      return true;
+    } catch (err) {
+      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      return false;
+    }
+  }
+
   async function fresh_ratings(svc: any, poll_id: string = pid): Promise<Map<string, Map<string, number>>> {
     svc.ratingCaches.delete(poll_id);
     return svc.getRatings(poll_id);
@@ -194,14 +209,19 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     await alice.addOption(pid, 'o2', {name: 'Option two'});
     await alice.submitRating(pid, 'o1', 70);
 
-    // --- a user of hs2 joins it knowing only the poll id and its origin
-    // server, as a magic link names them ---
+    // --- a user of hs2 joins it knowing only the poll id, its password and
+    // its origin server, as a magic link names them: the room is closed
+    // (#328), so bob's knock travels to hs1, where the guard bot verifies
+    // it and invites him across federation ---
+    if (!await guard_bot_in(alice, roomId)) { return; }
     const bob = await make_client('bob', HS2);
     expect(MatrixService.serverNameOf(bob.userId)).withContext('bob lives on hs2').toBe(HS2.name);
     await bob.setPollOrigin(pid, HS1.name);
     const join_started = performance.now();
-    expect(await bob.getPollRoom(pid)).withContext('remote alias resolved and room joined').toBe(roomId);
+    expect(await bob.getPollRoom(pid)).withContext('remote alias resolved, knocked, invited and joined').toBe(roomId);
     console.info('VODLE_PERF federation_poll_join_ms', Math.round(performance.now() - join_started));
+    expect(bob.client.getRoom(roomId).getMember(bob.userId).events.member.getPrevContent()?.membership)
+      .withContext('bob was invited by the bot after knocking').toBe('invite');
     // the poll's metadata (state) and options (timeline events written
     // BEFORE hs2 joined, so hs2 must backfill them) arrive intact:
     expect((await bob.getPollMetadata(pid)).type).toBe('winner');
@@ -373,9 +393,20 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     await gina.createPollRoom(rpid, 'Recovery poll');
     await gina.addOption(rpid, 'o1', {name: 'Option one'});
     await hugo.setPollOrigin(rpid, HS1.name);
-    expect(await hugo.getPollRoom(rpid)).toBeTruthy();
-    await hugo.submitRating(rpid, 'o1', 5);
     const recovery_started = performance.now();
+    // the knock and the join are requests from hs2 to hs1, which hs2 refuses
+    // to make while it still backs off hs1 after the partition (the bot's
+    // invitation, the other way, ignores the backoff): so the join is
+    // retried until the link is usable again
+    await until(async () => {
+      try {
+        return !!(await hugo.getPollRoom(rpid));
+      } catch (err) {
+        console.warn('recovery join not yet possible:', err?.message || err);
+        return false;
+      }
+    }, "hs2 to knock on and join a fresh poll room on hs1 after the partition", 120000);
+    await hugo.submitRating(rpid, 'o1', 5);
     await until(async () => rating_values(await fresh_ratings(gina, rpid), 'o1').includes(5),
       "hs2's federation sender to deliver to hs1 again after the partition", 120000);
     console.info('VODLE_PERF federation_send_recovery_after_partition_ms', Math.round(performance.now() - recovery_started));
@@ -394,6 +425,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const roomId = await dora.createPollRoom(ppid, 'Partition poll');
     await dora.setPollMetadata(ppid, {type: 'winner', language: 'en'});
     await dora.addOption(ppid, 'o1', {name: 'Option one'});
+    if (!await guard_bot_in(dora, roomId)) { return; }
     const emil = await make_client('emil', HS2);
     await emil.setPollOrigin(ppid, HS1.name);
     expect(await emil.getPollRoom(ppid)).toBe(roomId);

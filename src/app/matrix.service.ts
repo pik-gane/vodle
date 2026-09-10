@@ -76,6 +76,40 @@ export function hashEmail(email: string): string {
 }
 
 /**
+ * Closed poll rooms (#328). A poll room's join rule is `knock`, so knowing
+ * the poll id lets nobody in; the room's state carries the poll's join key
+ * K = SHA-256("vodle-join:" + poll id + ":" + poll password), and a joiner
+ * who holds the magic link knocks with HMAC-SHA-256(K, own user id) as the
+ * knock's reason. The guard bot verifies the proof against K and invites
+ * the knocker (guard-bot/knock.js computes the same values; the test
+ * vectors are shared). Non-members cannot read K, members cannot turn it
+ * back into the password, and a proof seen in transit is bound to one
+ * user id.
+ */
+export const JOIN_KEY_EVENT_TYPE = 'm.room.vodle.poll.join_key';
+export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  return new Uint8Array((hex.match(/../g) || []).map(pair => parseInt(pair, 16)));
+}
+
+/** the join key of a poll (hex), see JOIN_KEY_EVENT_TYPE */
+export async function joinKey(pollId: string, pollPassword: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode('vodle-join:' + pollId + ':' + pollPassword));
+  return bytesToHex(new Uint8Array(digest));
+}
+
+/** the proof (hex) that `userId` knows the poll behind the join key `keyHex` */
+export async function joinProof(keyHex: string, userId: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', hexToBytes(keyHex), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+  return bytesToHex(new Uint8Array(await crypto.subtle.sign('HMAC', key, textEncoder.encode(userId))));
+}
+
+/**
  * Delegation agreement status as tracked by the Matrix backend.
  * Mirrors the lifecycle used in DelegationService.
  */
@@ -643,6 +677,8 @@ export class MatrixService {
     for (const {pollId, vid} of entries) {
       let roomId: string | null = null;
       try {
+        // a voter room admits the poll room's members only (#328):
+        await this.getPollRoom(pollId);
         roomId = await this.getVoterRoom(pollId, vid);
         if (!roomId) {
           this.logger?.info("MatrixService.takeOverVoterRooms: no voter room", pollId, vid);
@@ -1285,18 +1321,119 @@ export class MatrixService {
    * intervals and give up after a timeout.
    */
   private waitForRoom(roomId: string, timeoutMs = 30000, intervalMs = 250): Promise<void> {
+    return this.waitFor(() => !!this.client?.getRoom(roomId), `room ${roomId} to appear in local store`, timeoutMs, intervalMs);
+  }
+  
+  /**
+   * Poll `check` every intervalMs until it returns true (resolve), an Error
+   * (reject with it), or timeoutMs have passed (reject, naming `what`).
+   */
+  private waitFor(check: () => boolean | Error, what: string, timeoutMs = 30000, intervalMs = 250): Promise<void> {
     return new Promise((resolve, reject) => {
       const start = Date.now();
-      const check = () => {
-        if (this.client?.getRoom(roomId)) {
+      const tick = () => {
+        const result = check();
+        if (result === true) {
           resolve();
+        } else if (result instanceof Error) {
+          reject(result);
         } else if (Date.now() - start > timeoutMs) {
-          reject(new Error(`Timed out waiting for room ${roomId} to appear in local store`));
+          reject(new Error(`Timed out waiting for ${what}`));
         } else {
-          setTimeout(check, intervalMs);
+          setTimeout(tick, intervalMs);
         }
       };
-      check();
+      tick();
+    });
+  }
+  
+  /**
+   * Join a poll room (#328). Poll rooms are closed: their join rule is
+   * `knock`, so the plain join of a public room fails with 403, and the
+   * joiner knocks with a proof of the poll password (see joinKey/joinProof)
+   * as the knock's reason. The guard bot verifies the proof and invites
+   * the knocker, who then joins. A knock that proves nothing (a wrong
+   * password) is left unanswered by the bot — never declined by a kick,
+   * and never retracted here: a knocker who becomes a "departed" user can
+   * read the room's state as of their leave, members and all (Synapse's
+   * departed-user rule), which is what closed rooms prevent. So without
+   * an invitation the wait simply ends after
+   * environment.matrix.join_timeout_ms, whether the password was wrong or
+   * no bot is running. Rooms from before this (public) are joined
+   * directly, as is a room one is already invited to; a knock left over
+   * from an earlier attempt stands, and its answer is waited for (the bot
+   * looks at pending knocks at every scan).
+   */
+  private async joinPollRoom(pollId: string, roomId: string, viaServers: string[]): Promise<void> {
+    const membership = () => this.client!.getRoom(roomId)?.getMyMembership();
+    if (membership() !== 'invite' && membership() !== 'knock') {
+      try {
+        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
+        return;
+      } catch (error) {
+        if (!MatrixService.isForbidden(error)) {
+          throw error;
+        }
+        const password = this.pollPasswordProvider?.(pollId) || null;
+        if (!password) {
+          this.logger?.warn("MatrixService.joinPollRoom: the room is closed and the poll password is unknown", pollId, roomId);
+          throw error;
+        }
+        console.log("[joinPollRoom] Room is closed: knocking with the poll password's proof", roomId);
+        const proof = await joinProof(await joinKey(pollId, password), this.userId!);
+        await this.retryOnRateLimit(() => this.client!.knockRoom(roomId, {reason: KNOCK_REASON_PREFIX + proof, viaServers}));
+      }
+    }
+    if (membership() !== 'invite') {
+      await this.waitForInvitation(roomId);
+    }
+    await this.joinOnInvitation(roomId, viaServers);
+  }
+  
+  /**
+   * Join a room one is invited to. The invitation of the guard bot reaches
+   * a joiner on ANOTHER homeserver twice: out of band (the bot's server
+   * sends it to the joiner's server directly, and the client sees it at
+   * once) and, a moment later, as an ordinary event inside a federation
+   * transaction. Until the latter lands, the joiner's server holds the
+   * invitation only as an outlier while the room's state still shows the
+   * knock, and a server that already has a member in the room (it builds
+   * the join event itself then) refuses the join with 403 "duplicate
+   * auth_events" (Synapse 1.160). So a refused join after an invitation is
+   * retried for a while; other errors are thrown at once.
+   */
+  private async joinOnInvitation(roomId: string, viaServers: string[]): Promise<void> {
+    const deadline = Date.now() + Math.min(environment.matrix.join_timeout_ms || 60000, 30000);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
+        return;
+      } catch (error) {
+        if (!MatrixService.isForbidden(error) || Date.now() > deadline) {
+          throw error;
+        }
+        this.logger?.info("MatrixService.joinOnInvitation: the join was refused although invited, retrying", roomId, attempt, error);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+  
+  /**
+   * After a knock: resolves once this user is invited to (or in) the room;
+   * rejects when that has not happened within
+   * environment.matrix.join_timeout_ms — the guard bot leaves a knock
+   * that proves nothing unanswered (see joinPollRoom), and without a
+   * running bot nobody answers at all.
+   */
+  private waitForInvitation(roomId: string): Promise<void> {
+    const timeoutMs = environment.matrix.join_timeout_ms || 60000;
+    return new Promise((resolve, reject) => {
+      this.waitFor(() => {
+        const membership = this.client?.getRoom(roomId)?.getMyMembership();
+        return membership === 'invite' || membership === 'join';
+      }, `an invitation to poll room ${roomId}`, timeoutMs).then(resolve, () => reject(new Error(
+        `No invitation to poll room ${roomId} within ${Math.round(timeoutMs / 1000)} s: `
+        + `either the link does not carry the right poll password, or the poll's guard bot is not running`)));
     });
   }
   
@@ -1401,26 +1538,41 @@ export class MatrixService {
       users[guardBotId] = 100;
     }
     
+    // Closed rooms (#328): the room is joined by knocking with a proof of
+    // the poll password (see joinPollRoom), and the guard bot lets the
+    // knocker in. The room's join key is a hash of the password: the bot
+    // verifies proofs against it, nobody learns the password from it, and
+    // non-members cannot read it. A poll whose password is unknown here
+    // (test code only) gets a public room, as every poll had before.
+    const pollPassword = this.pollPasswordProvider?.(pollId) || null;
+    const key = pollPassword ? await joinKey(pollId, pollPassword) : null;
+    const joinRules = { join_rule: key ? 'knock' : 'public' };
+    const initialState: Array<{type: string; state_key: string; content: any}> = [
+      // No room encryption for poll rooms: they contain only metadata and
+      // options that all members must read (encrypted at the application
+      // level, see pollDataContent), and the guard bot needs plain-text
+      // access to the deadline. Sensitive voter data lives in per-voter
+      // rooms instead.
+      { type: 'm.room.join_rules', state_key: '', content: joinRules },
+    ];
+    if (key) {
+      initialState.push({ type: JOIN_KEY_EVENT_TYPE, state_key: '', content: { version: 1, key } });
+    }
+    
     const options: ICreateRoomOpts = {
       // the title is confidential poll data (stored encrypted, see
       // pollDataContent); the room's own name and topic are visible to the
       // homeserver, so they carry only the poll id, which the alias shows anyway
       name: `vodle poll ${pollId}`,
       topic: `vodle poll ${pollId}`,
-      // Use public_chat preset so that anyone with the room alias
-      // (distributed via the magic link) can join without an invitation.
-      // The room is NOT listed in the public directory (visibility
-      // defaults to 'private'); security relies on the magic link's
-      // poll password + E2EE.
+      // The public_chat preset's join rule is replaced by initial_state
+      // (knock); the preset still gives shared history, which a joiner
+      // needs to read the options. The room is NOT listed in the public
+      // directory (visibility 'private').
       preset: 'public_chat',
       visibility: 'private',
       room_alias_name: roomAlias,
-      initial_state: [
-        // No encryption for poll rooms: they are public, contain only
-        // metadata and options that all members must read, and the
-        // guard bot needs plain-text access for deadline enforcement.
-        // Sensitive voter data lives in per-voter rooms instead.
-      ],
+      initial_state: initialState,
       power_level_content_override: {
         users,
         events: {
@@ -1434,8 +1586,8 @@ export class MatrixService {
           // (demoted to 50 right after room creation) can still be
           // further adjusted.  lockPollMetadata() raises this to 100.
           'm.room.power_levels': 50,
-          // Allow the creator to set join_rules to public after room
-          // creation if the preset alone didn't suffice.
+          // The creator may still correct the join rule right after the
+          // creation; lockPollMetadata() raises this to 100.
           'm.room.join_rules': 50
         },
         // state_default is 50 so the creator (at power 50 after
@@ -1462,12 +1614,13 @@ export class MatrixService {
     // need the room in the SDK store, especially for encryption setup.
     await this.waitForRoom(roomId);
     
-    // Explicitly set join_rules to public so anyone with the magic link
-    // can join.  We do this after creation rather than relying solely on
-    // the preset, because some Synapse versions may reset join_rules
-    // when other initial_state or power_level_content_override options
-    // are also provided.
-    await this.sendStateEvent(roomId, 'm.room.join_rules', { join_rule: 'public' }, '');
+    // initial_state takes precedence over the preset's join rule; a public
+    // room where a closed one was meant would be #328 again, so make sure:
+    const joinRuleNow = this.client.getRoom(roomId)?.currentState?.getStateEvents('m.room.join_rules', '')?.getContent()?.join_rule;
+    if (joinRuleNow !== joinRules.join_rule) {
+      this.logger?.warn("MatrixService.createPollRoom: join rule after creation is", joinRuleNow, "— setting", joinRules.join_rule);
+      await this.sendStateEvent(roomId, 'm.room.join_rules', joinRules, '');
+    }
     
     // NOTE: Creator stays at power 100 here. Demotion to 50 happens
     // inside lockPollMetadata() AFTER all power-level requirements have
@@ -1553,8 +1706,10 @@ export class MatrixService {
     // Check persistent storage
     const stored = await this.storage.get(`poll_room_${pollId}`);
     if (stored) {
+      // the store also holds rooms one is invited to, knocking on or has
+      // left (#328): only a joined one counts, the alias path handles the rest
       const room = this.client.getRoom(stored);
-      if (room) {
+      if (room && room.getMyMembership() === 'join') {
         console.log("[getPollRoom] Storage hit for poll", pollId, "→", stored);
         await this.validatePollRoomPowerLevels(stored);
         this.pollRooms.set(pollId, stored);
@@ -1573,19 +1728,21 @@ export class MatrixService {
       console.log("[getPollRoom] Alias resolved for poll", pollId, "→", roomId);
       
       // If we resolved the alias but are not yet a member (e.g. joining
-      // via magic link), join the room now.  The poll room is created with
-      // join_rules: public so this will succeed for anyone with the alias.
-      // A room on another homeserver is joined THROUGH a server that is in
-      // it: the alias lookup names candidates, and the origin always is one.
+      // via magic link), join the room now — by knocking with a proof of
+      // the poll password, since poll rooms are closed (#328, see
+      // joinPollRoom). A room on another homeserver is joined THROUGH a
+      // server that is in it: the alias lookup names candidates, and the
+      // origin always is one.
       const room = this.client.getRoom(roomId);
-      if (!room) {
+      if (!room || room.getMyMembership() !== 'join') {
         this.logger?.info("Poll room found by alias but not joined yet, joining", pollId, roomId);
         console.log("[getPollRoom] Joining room", roomId, "...");
         const viaServers = Array.from(new Set([...(aliasResponse.servers || []), origin]));
-        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
-        // Wait for the SDK to sync the room into the local store
+        await this.joinPollRoom(pollId, roomId, viaServers);
+        // Wait for the SDK to sync the membership into the local store
         // so that subsequent calls to client.getRoom() succeed.
-        await this.waitForRoom(roomId);
+        await this.waitFor(() => this.client?.getRoom(roomId)?.getMyMembership() === 'join',
+          `room ${roomId} to appear joined in the local store`);
         console.log("[getPollRoom] Joined and synced room", roomId);
       }
       
@@ -2087,6 +2244,8 @@ export class MatrixService {
     events['m.room.power_levels'] = lockLevel;
     // Poll state transitions are now handled by the guard bot only
     events['m.room.vodle.poll.state'] = lockLevel;
+    // The room stays closed (#328): only the guard bot may change the join rule
+    events['m.room.join_rules'] = lockLevel;
     content.events = events;
     // Raise state_default to 100 so that dynamic state event types
     // (m.room.vodle.poll.data.*) can no longer be written by humans.
@@ -2292,19 +2451,31 @@ export class MatrixService {
       users[guardBotId] = 100;
     }
     
-    // Voter rooms are PUBLIC (joinable by anyone knowing the room) so that
-    // other voters can discover and join them to read ratings without an
-    // invite. The data they contain is encrypted with the poll password at
-    // the application level (see pollDataContent), so only participants
-    // who know the password — i.e. hold the magic link — can make sense of
-    // the values; the homeserver cannot.
+    // Voter rooms are joinable without an invitation (by the poll room's
+    // members, see below) so that other voters can discover and join them
+    // to read ratings. The data they contain is encrypted with the poll
+    // password at the application level (see pollDataContent), so only
+    // participants who know the password — i.e. hold the magic link — can
+    // make sense of the values; the homeserver cannot.
     // No Matrix-level E2EE: voter data are STATE events, which room
     // encryption never covers (it protects timeline events only).
+    // Closed rooms (#328): a voter room is joinable — without an invitation,
+    // as discovery needs — by the members of the poll room only, who found
+    // it there; nobody else learns who votes. (Room version 8 or later;
+    // Synapse's default has been 10 or later since 2023.) The guard bot is
+    // invited. A voter room without a known poll room (test code only)
+    // stays public.
+    const pollRoomId = this.pollRooms.get(pollId) || await this.getPollRoom(pollId);
+    const initialState = pollRoomId ? [{
+      type: 'm.room.join_rules', state_key: '',
+      content: { join_rule: 'restricted', allow: [{ type: 'm.room_membership', room_id: pollRoomId }] },
+    }] : [];
     const options: ICreateRoomOpts = {
       name: `Vodle Voter: ${pollId}`,
       topic: `Voter data for poll ${pollId}, voter ${voterId}`,
       preset: 'public_chat',
       room_alias_name: roomAlias,
+      initial_state: initialState,
       power_level_content_override: {
         users,
         // The owner (power 50 after creation) must be able to grant its

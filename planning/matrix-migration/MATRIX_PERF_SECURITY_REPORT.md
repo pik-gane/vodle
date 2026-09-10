@@ -46,7 +46,8 @@ any more (it remains as a safety net for announcements missed while offline).
 
 | metric | sandbox | CI |
 | --- | --- | --- |
-| join a poll room on another homeserver (alias lookup over federation, remote join, power-level check) | 524 ms | see §6 |
+| join a closed poll room on the same homeserver (alias lookup, knock, the guard bot's invitation, join, power-level check; #328) | 618 ms | see §6 |
+| join a poll room on another homeserver (alias lookup over federation, remote join, power-level check; since 2026-09-10 the join is a knock, the guard bot's invitation across federation and the join, #328) | 524 ms before #328, 871 ms with the knock | see §6 |
 | first vote from the other homeserver visible to the creator (voter room creation on hs2, announcement federating into the poll room, hs1 joining the voter room through hs2, state fetch) | 975 ms | see §6 |
 | offline-queued rating visible to the other client after the connection is back | 24.6 to 29.1 s before #326; 1.2 s after | see §6 |
 
@@ -137,13 +138,33 @@ ciphertext.
   event itself needs 50 in a voter room (Synapse's default is 100), so that
   the voter can hand the room over to another account of theirs — a guest
   logging in with an account, a changed e-mail address (#330, #193): the new
-  account joins (voter rooms are public) and is granted 50. The auth rules
+  account joins (it is in the poll room, which a voter room requires since
+  #328) and is granted 50. The auth rules
   cap what a voter can do with that: nobody can be raised above 50, the
   bot cannot be touched, and history visibility, tombstone, server ACL and
   encryption keep their default of 100. Rooms created before this change
   cannot be handed over (only test data exists from before).
 - Options are timeline events and thus immutable; redaction needs power 100.
-- Poll metadata is locked when the poll starts (`lockPollMetadata`).
+- Poll metadata is locked when the poll starts (`lockPollMetadata`), the
+  join rule with it.
+- Closed rooms (#328, 2026-09-10): a poll room's join rule is `knock`, and
+  its state carries K = SHA-256("vodle-join:" + poll id + ":" + poll
+  password). A joiner knocks with HMAC-SHA-256(K, own user id) as the
+  knock's reason; the guard bot verifies the proof against K and invites,
+  and leaves any other knock unanswered — never kicks: Synapse lets a
+  "departed" user (membership `leave`, however it came about, a kicked
+  knocker included) read the room's state as of their leave event, members
+  and all, which the two-client spec found out the hard way. A knocker
+  whose knock stands sees only the stripped state (join rule, name,
+  alias), as the spec checks. Non-members cannot read K, members
+  cannot turn it back into the password, a proof seen in transit (the
+  knocker's own homeserver; a remote server holds the knock event before
+  the room's state) admits one user id only, and the homeserver that
+  holds K holds the poll anyway. Voter rooms are `restricted` to the poll
+  room's members. Room versions: knock needs 7, restricted 8 (Synapse's
+  default is 10 or later since 2023). The bot is thereby required for
+  joining as well as for closing: without it a join fails after
+  `matrix.join_timeout_ms` (60 s).
 - Deadline: the guard bot closes every room whose deadline has passed by
   dropping all power levels to 0. The bot scaffold watched an event type the
   app never wrote (`it.vodle.deadline` vs `m.room.vodle.poll.deadline`), so
@@ -205,12 +226,18 @@ same across federation: the second homeserver holds the same ciphertext.
 
 ### 3.5 Remaining gaps and recommendations
 
-1. **Membership is visible.** Anyone who learns a poll id can join the poll
-   room (it is joinable by alias so that magic links work without invites)
-   and see who is a member, and the homeserver sees all membership. Voter
-   identities are pseudonymous hashes, but participation itself is not
-   hidden. Invite-only rooms with a bot handing out invites on presentation
-   of the poll password would close this at the cost of a server component.
+1. **Membership was visible** — closed 2026-09-10 (#328, §3.3): until
+   then anyone who learned a poll id could join the poll room (joinable by
+   alias so that magic links worked without invites) and see who is a
+   member. Now the guard bot hands out the invitations on proof of the
+   poll password, and voter rooms admit the poll room's members only. What
+   remains: the homeserver sees all membership (voter identities are
+   pseudonymous hashes), and every member sees the other members' hashed
+   ids, as on the CouchDB backend. A wrong password (or no guard bot) means
+   a knock nobody answers and a join that gives up after
+   `matrix.join_timeout_ms` (60 s); the two cases are indistinguishable to
+   the knocker by design, since any answer would have to be a membership
+   change.
 2. **Delegation events** carried delegate ids and option ids in plain text
    until 2026-09-10 (#333); now only the delegation id is plain, the rest
    is encrypted under the poll password like the other poll data, and the
@@ -377,7 +404,7 @@ and the sync long-poll, not by vodle.
 | metric | CI |
 | --- | --- |
 | same_server_rating_propagation_ms (median) | 38 |
-| federation_poll_join_ms | 1065 |
+| federation_poll_join_ms (a remote join; since #328 a knock, the bot's invitation across federation and the join, see the note below) | 1065 |
 | federation_first_vote_visible_ms | 857 |
 | federation_rating_propagation_hs1_to_hs2_ms (median) | 110 |
 | federation_rating_propagation_hs2_to_hs1_ms (median) | 102 |

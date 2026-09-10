@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { MatrixService } from './matrix.service';
+import { JOIN_KEY_EVENT_TYPE, MatrixService } from './matrix.service';
 import { environment } from '../environments/environment';
 
 /**
@@ -187,6 +187,21 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     throw new Error('timed out waiting for ' + what);
   }
 
+  /** whether the guard bot has joined the poll room `roomId` (it is invited
+   *  at creation and joins by itself when running). Poll rooms are closed
+   *  (#328): every join needs the bot to answer the knock, so a spec that
+   *  joins reports itself pending without it. */
+  async function guard_bot_in(svc: any, roomId: string): Promise<boolean> {
+    try {
+      await until(async () => svc.client.getRoom(roomId)?.getMember(GUARD_BOT)?.membership === 'join',
+        'the guard bot to join the poll room', 15000);
+      return true;
+    } catch (err) {
+      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      return false;
+    }
+  }
+
   /** the ratings of a poll as one flat map option -> voter -> value,
    *  bypassing the client-side cache: */
   async function fresh_ratings(svc: any, poll_id = pid): Promise<Map<string, Map<string, number>>> {
@@ -259,8 +274,16 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     await alice.addOption(pid, 'o1', {name: 'Option one'});
     await alice.addOption(pid, 'o2', {name: 'Option two'});
 
-    // bob knows only the poll id (as from an invitation link):
+    // bob knows the poll id and the poll password (as from an invitation
+    // link): the room is closed (#328), so his client knocks with a proof
+    // of the password and the guard bot lets him in
+    if (!await guard_bot_in(alice, roomId)) { return; }
+    const join_started = performance.now();
     expect(await bob.getPollRoom(pid)).toBe(roomId);
+    console.info('VODLE_PERF closed_room_join_ms', Math.round(performance.now() - join_started));
+    expect(bob.client.getRoom(roomId).getMyMembership()).toBe('join');
+    expect(bob.client.getRoom(roomId).getMember(bob.userId).events.member.getPrevContent()?.membership)
+      .withContext('bob was invited by the bot after knocking, not let in by a public join rule').toBe('invite');
     const options = await bob.getOptions(pid);
     expect(options.get('o1').name).toBe('Option one');
     expect((await bob.getPollMetadata(pid)).type).toBe('winner');
@@ -284,17 +307,41 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect(typeof stored?.enc).withContext('rating stored encrypted: ' + JSON.stringify(stored)).toBe('string');
     expect(stored.value).withContext('no plain value on the server').toBeUndefined();
     expect(stored.voter_vid).toBe(alice.userId);
-    const mallory = await make_client('mallory', null);   // knows the poll id but not the password
-    expect(await mallory.getPollRoom(pid)).toBe(roomId);
-    expect(rating_values(await fresh_ratings(mallory), 'o1')).toEqual([]);
-    // the poll's metadata and options are ciphertext to such a client too:
-    const stored_meta = await raw_state(mallory, roomId, 'm.room.vodle.poll.meta');
+    // the poll's metadata and options are ciphertext on the server too:
+    const stored_meta = await raw_state(bob, roomId, 'm.room.vodle.poll.meta');
     expect(typeof stored_meta?.enc).withContext('poll metadata stored encrypted').toBe('string');
     expect(stored_meta.type).toBeUndefined();
-    expect(await mallory.getPollMetadata(pid)).toBeNull();
-    expect((await mallory.getOptions(pid)).size).toBe(0);
     expect((await bob.getOptions(pid)).get('o2').name).toBe('Option two');
+
+    // --- closed rooms (#328): a client that knows the poll id but not the
+    // password does not get into the poll room, so it sees neither who
+    // takes part nor the ciphertext; one with a wrong password knocks and
+    // is left standing at the door by the guard bot (not kicked: a kicked
+    // or departed knocker could read the room's state as of their leave —
+    // Synapse's departed-user rule — members and all); and a voter room
+    // admits the poll room's members only ---
+    const mallory = await make_client('mallory', null);
+    await expectAsync(mallory.getPollRoom(pid)).toBeRejectedWith(jasmine.objectContaining({errcode: 'M_FORBIDDEN'}));
+    expect(mallory.client.getRoom(roomId)).withContext('mallory is not in the poll room').toBeNull();
+    expect(await raw_state(mallory, roomId, 'm.room.vodle.poll.meta')).withContext('the server shows a non-member nothing').toBeNull();
+    await expectAsync(mallory.client.joinRoom(alice_room)).withContext('a voter room admits members of the poll room only')
+      .toBeRejectedWith(jasmine.objectContaining({httpStatus: 403}));
     mallory.client.stopClient();   // done with mallory: free the connection (see afterEach)
+    const mallory_guessing = await make_client('mallory-guessing', 'not-' + POLL_PASSWORD);
+    const previous_join_timeout = environment.matrix.join_timeout_ms;
+    (environment.matrix as any).join_timeout_ms = 8000;   // the bot answers valid knocks within a second
+    try {
+      await expectAsync(mallory_guessing.getPollRoom(pid)).toBeRejectedWithError(/right poll password.*guard bot/);
+    } finally {
+      (environment.matrix as any).join_timeout_ms = previous_join_timeout;
+    }
+    expect(mallory_guessing.client.getRoom(roomId)?.getMyMembership()).withContext('the knock stands unanswered').toBe('knock');
+    expect(await raw_state(mallory_guessing, roomId, 'm.room.vodle.poll.meta')).withContext('a knocker sees no state').toBeNull();
+    const knock_state = mallory_guessing.client.getRoom(roomId).currentState;
+    expect(knock_state.getStateEvents('m.room.join_rules', '')?.getContent()?.join_rule).toBe('knock');
+    expect(knock_state.getStateEvents('m.room.member', alice.userId)).withContext('a knocker sees no members').toBeNull();
+    expect(knock_state.getStateEvents(JOIN_KEY_EVENT_TYPE, '')).withContext('a knocker sees no join key').toBeNull();
+    mallory_guessing.client.stopClient();
 
     // --- user data: encrypted on the server under the user password, and
     // restored by a second session of the same user (as on another device) ---
@@ -482,6 +529,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     const hal = await make_client('hal');
     const roomId = await hal.createPollRoom(dpid, 'Delegation poll');
     await hal.addOption(dpid, 'o1', {name: 'Option'});
+    if (!await guard_bot_in(hal, roomId)) { return; }
     const ida = await make_client('ida');
     expect(await ida.getPollRoom(dpid)).toBe(roomId);
     await hal.setupPollEventHandlers(dpid);
@@ -516,8 +564,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect((await jo.getDelegations(dpid)).get(did)?.status).toBe('accepted');
     expect((await jo.getDelegationResponses(dpid)).get(did)?.accepted_options).toEqual(['o1']);
     const kim = await make_client('kim', null);
-    expect(await kim.getPollRoom(dpid)).toBe(roomId);
-    expect((await kim.getDelegations(dpid)).size).toBe(0);
+    await expectAsync(kim.getPollRoom(dpid)).withContext('no password, no room (#328)').toBeRejected();
   });
 
   it("moves a guest's vote to the account the guest logs in with, and changes an account's password (#193, #330)", async () => {
@@ -525,9 +572,10 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     // self-contained (jasmine randomizes spec order): own poll and users
     const gpid = pid + 'gs';
     const host = await make_client('host');
-    await host.createPollRoom(gpid, 'Guest poll');
+    const roomId = await host.createPollRoom(gpid, 'Guest poll');
     await host.addOption(gpid, 'o1', {name: 'Option'});
     await host.setupPollEventHandlers(gpid);
+    if (!await guard_bot_in(host, roomId)) { return; }
 
     // a guest — an account like any other, whose credentials only its device
     // knows — joins and votes; the host sees one voter
