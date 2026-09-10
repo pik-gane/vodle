@@ -18,6 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Injectable, HostListener, OnDestroy } from '@angular/core';
+import { format_details } from './simple-format';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -162,6 +163,12 @@ export class GlobalService implements OnDestroy {
     .then(res => {
     }).catch(err => {
     });
+  }
+
+  format_details(text: string): string {
+    /** details texts with their simple formatting rendered, safe for
+     *  [innerHtml] (see simple-format.ts, issue #214) */
+    return format_details(text);
   }
 
   map2str(map: Map<any, any>): string {

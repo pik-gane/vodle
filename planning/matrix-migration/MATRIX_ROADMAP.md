@@ -1,3 +1,10 @@
+> **Status (2026-09-10):** this roadmap was written before phases 10–16.
+> Everything it lists as "not wired" has since been wired, enabled in both
+> environments and is exercised in CI against real homeservers. It is kept
+> for the design rationale of the wiring approach. The current state is in
+> [MIGRATION_STATUS.md](MIGRATION_STATUS.md); what is still missing, and in
+> which order, in [../WORK_PLAN.md](../WORK_PLAN.md) ("Plan 2").
+
 # Matrix Migration Roadmap — Path to a Fully Functional, Matrix-Only App
 
 ## Executive Summary

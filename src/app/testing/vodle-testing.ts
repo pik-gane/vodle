@@ -33,6 +33,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { GlobalService } from '../global.service';
+import { format_details } from '../simple-format';
 
 export function silent_logger(): any {
   const noop = () => {};
@@ -47,8 +48,10 @@ export function global_service_stub(): any {
     L: silent_logger(),
     show_spinner: false,
     open_url_in_new_tab: () => {},
+    format_details: format_details,
     map2str: (map: any) => '' + map,
     go_home: () => {},
+    go_fullscreen_on_mobile: () => {},
     S: {
       language: 'en',
       email: '',
@@ -75,6 +78,8 @@ export function global_service_stub(): any {
     },
     D: {
       ready: false,
+      replication_is_stalled: false,
+      save_state: () => {},
       fix_url: (url: string) => url,
       format_date: () => '',
       getu: () => '',

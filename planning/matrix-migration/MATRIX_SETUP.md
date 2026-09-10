@@ -1,3 +1,9 @@
+> **Status (2026-09-10):** the homeserver setup below still applies, but the
+> statements about what is integrated date from phase 1. The Matrix backend
+> has been the default since phase 16 and works end to end; see
+> [MIGRATION_STATUS.md](MIGRATION_STATUS.md) and, for the throw-away test
+> servers, `scripts/test-matrix.sh`.
+
 # Matrix Migration - Setup Guide
 
 This document provides instructions for setting up a local Matrix homeserver for testing Matrix integration.
@@ -183,10 +189,8 @@ npm run build
 
 ### 3. Test Matrix Functionality
 
-The application should now use Matrix for authentication. However, note that in Phase 1:
-- ⚠️ **The Matrix backend is NOT yet integrated with the UI**
-- ⚠️ **User data and polls still use CouchDB**
-- ✅ **MatrixService can be tested programmatically**
+The application now uses Matrix for authentication, user data, polls and
+voting (since phase 16; the phase-1 text of this section said otherwise).
 
 ### 4. Manual Testing with Browser Console
 
@@ -327,28 +331,12 @@ listeners:
               Access-Control-Allow-Origin: "*"
 ```
 
-## Phase 1 Limitations
+## Status
 
-In Phase 1, the Matrix integration is foundational only:
-
-- ✅ MatrixService is implemented and testable
-- ✅ Can authenticate with Matrix homeserver
-- ✅ Can create rooms and send state events
-- ⚠️ UI still uses DataService (CouchDB) for all operations
-- ⚠️ No user data migration yet
-- ⚠️ No poll data migration yet
-- ⚠️ Feature flag exists but toggling it doesn't change UI behavior yet
-
-**Phase 2 will integrate user data with Matrix, and subsequent phases will add poll and voting functionality.**
-
-## Next Steps
-
-After Phase 1:
-- Phase 2: Migrate user data (settings, language, etc.) to Matrix rooms
-- Phase 3: Implement poll rooms
-- Phase 4: Implement voting and ratings
-- Phase 5: Add offline support and encryption
-- Phase 6: Migration tools and gradual rollout
+The limitations this section listed for phase 1 (UI on CouchDB, no data
+migration, flag without effect) no longer apply; see
+[MIGRATION_STATUS.md](MIGRATION_STATUS.md) for what works and what is still
+missing.
 
 ## Questions or Issues?
 

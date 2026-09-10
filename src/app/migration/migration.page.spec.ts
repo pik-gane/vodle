@@ -217,7 +217,7 @@ describe('MigrationPage', () => {
 
     it('should migrate poll data and update status', async () => {
       await source.createPoll('poll1', 'Lunch venue');
-      await source.setPollData('poll1', 'description', 'Where to eat?');
+      await source.setPollData('poll1', 'desc', 'Where to eat?');
 
       await component.migratePollData('poll1');
 
@@ -271,7 +271,7 @@ describe('MigrationPage', () => {
 
     it('should verify poll data after migration', async () => {
       await source.createPoll('poll1', 'Lunch');
-      await source.setPollData('poll1', 'description', 'Where?');
+      await source.setPollData('poll1', 'desc', 'Where?');
 
       await component.migratePollData('poll1');
       await component.verifyPollData('poll1');
@@ -427,12 +427,12 @@ describe('MigrationPage', () => {
 
     it('should rollback poll data', async () => {
       await target.createPoll('poll1', 'Target Title');
-      await target.setPollData('poll1', 'description', 'Target Desc');
+      await target.setPollData('poll1', 'desc', 'Target Desc');
 
       await component.rollbackPollData('poll1');
 
       expect(await source.getPollData('poll1', 'title')).toBe('Target Title');
-      expect(await source.getPollData('poll1', 'description')).toBe('Target Desc');
+      expect(await source.getPollData('poll1', 'desc')).toBe('Target Desc');
       expect(component.migrationStatus!.overallStatus).toBe('rolled_back');
     });
 

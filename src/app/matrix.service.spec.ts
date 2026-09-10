@@ -629,6 +629,57 @@ describe('MatrixService', () => {
         expect(service.getOfflineQueueSize()).toBeGreaterThanOrEqual(0);
       });
       
+      it('retries a queued write by itself while the server is unreachable, without using up its attempts (#326)', async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        jasmine.clock().install();
+        const settle = async () => { for (let i = 0; i < 20; i++) { await Promise.resolve(); } };
+        try {
+          (service as any).client = {};   // "initialized", but every write fails to reach the server:
+          const setUserData = spyOn(service, 'setUserData').and.returnValue(Promise.reject(new TypeError('Failed to fetch')));
+          await service.enqueueOfflineEvent({type: 'user_data', key: 'language', value: 'en'});
+          expect(setUserData).not.toHaveBeenCalled();
+          jasmine.clock().tick(1000);          // first attempt after 1 s
+          await settle();
+          expect(setUserData).toHaveBeenCalledTimes(1);
+          expect(service.getOfflineQueueSize()).toBe(1);
+          expect((service as any).offlineQueue[0].retryCount).withContext('a connection error is not an attempt').toBe(0);
+          jasmine.clock().tick(1999);          // the next one 2 s later, not earlier
+          await settle();
+          expect(setUserData).toHaveBeenCalledTimes(1);
+          jasmine.clock().tick(1);
+          await settle();
+          expect(setUserData).toHaveBeenCalledTimes(2);
+          setUserData.and.returnValue(Promise.resolve());   // the server is back
+          jasmine.clock().tick(4000);
+          await settle();
+          expect(setUserData).toHaveBeenCalledTimes(3);
+          expect(service.getOfflineQueueSize()).toBe(0);
+          jasmine.clock().tick(120000);        // nothing left to retry
+          await settle();
+          expect(setUserData).toHaveBeenCalledTimes(3);
+        } finally {
+          jasmine.clock().uninstall();
+        }
+      });
+
+      it("replays the queue as soon as the browser reports being online again (#326)", async () => {
+        storageSpy.set.and.returnValue(Promise.resolve());
+        const logger: any = {entry: () => {}, exit: () => {}, info: () => {}, warn: () => {}, error: () => {}, debug: () => {}};
+        service.init(logger);
+        (service as any).client = {retryImmediately: jasmine.createSpy('retryImmediately')};
+        const setUserData = spyOn(service, 'setUserData').and.returnValue(Promise.resolve());
+        await service.enqueueOfflineEvent({type: 'user_data', key: 'language', value: 'en'});
+        window.dispatchEvent(new Event('online'));
+        for (let i = 0; i < 20; i++) { await Promise.resolve(); }
+        expect((service as any).client.retryImmediately).toHaveBeenCalled();
+        expect(setUserData).toHaveBeenCalledTimes(1);
+        expect(service.getOfflineQueueSize()).toBe(0);
+        // tidy up: no timer and no window listener of this instance may outlive the spec
+        (service as any).cancelOfflineQueueRetry();
+        window.removeEventListener('online', (service as any).onlineListener);
+        (service as any).client = null;
+      });
+
       it('should discard oldest event when queue is full', async () => {
         storageSpy.set.and.returnValue(Promise.resolve());
         
@@ -687,7 +738,9 @@ describe('MatrixService', () => {
         
         expect(encrypted).toBeTruthy();
         expect(typeof encrypted).toBe('string');
-        expect(encrypted).not.toContain('75');
+        // the plaintext must not be visible; NOT `.not.toContain('75')`, which
+        // the random base64 ciphertext contains in about 2 % of all runs:
+        expect(encrypted).not.toContain('rating');
         
         const decrypted = await service.decryptWithPassword(encrypted, password, pollId);
         

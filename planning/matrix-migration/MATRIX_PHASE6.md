@@ -1,3 +1,5 @@
+> **Historical phase record** (2025; the phase is complete and not updated any more). For the current state of the Matrix backend see [MIGRATION_STATUS.md](MIGRATION_STATUS.md).
+
 # Matrix Migration Phase 6 - Data Migration Tools
 
 ## Overview

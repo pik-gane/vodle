@@ -129,6 +129,21 @@ export interface IDataBackend {
    * @param rating - Number between 0 and 100
    */
   submitRating(pollId: string, optionId: string, rating: number): Promise<void>;
+
+  /**
+   * Optional: add an (immutable) option to a poll as one unit. Backends
+   * without this take the option's fields as the poll data keys
+   * option.<oid>.name, option.<oid>.desc and option.<oid>.url instead.
+   * The migration tooling uses it so that options reach a backend that
+   * stores options differently from other poll data (Matrix: as timeline
+   * events) in the shape its readers expect.
+   */
+  addOption?(pollId: string, optionId: string, option: {name: string; description?: string; url?: string}): Promise<void>;
+
+  /**
+   * Optional: all options of a poll, optionId -> fields.
+   */
+  getOptions?(pollId: string): Promise<Map<string, {name: string; description: string; url: string}>>;
   
   /**
    * Get aggregated ratings for all voters in a poll

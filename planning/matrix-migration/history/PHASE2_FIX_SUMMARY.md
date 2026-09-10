@@ -1,3 +1,5 @@
+> **Historical record** (moved from the repository root on 2026-09-10; not updated any more). For the current state of the Matrix backend see [../MIGRATION_STATUS.md](../MIGRATION_STATUS.md).
+
 # Phase 2 Fix Summary
 
 ## Issue Reported

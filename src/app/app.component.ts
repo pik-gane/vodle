@@ -81,7 +81,9 @@ export class AppComponent {
       ) {
     console.log("APP CONSTRUCTOR");
     // all languages having a (nearly) complete translation in src/assets/i18n (see issue #273):
-    translate.addLangs(['de','en','es','fi','hi','it','ko','pl','zh']);
+    // (Tamil arrived complete from Weblate in PR #317, issue #277; Arabic and
+    // French are still mostly untranslated in src/assets/i18n and stay out)
+    translate.addLangs(['de','en','es','fi','hi','it','ko','pl','ta','zh']);
 
     // this language will be used as a fallback when a translation isn't found in the current language
     translate.setDefaultLang('en');

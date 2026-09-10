@@ -19,9 +19,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 /*
  * First-run smoke test against the REAL built app (docs/): the app must boot,
- * route a fresh visitor into the login flow, offer a non-empty language list
- * (regression guard for #273, where an empty list blocked login entirely),
- * and walk to the next steps of the flow. Selectors use the app's own
+ * route a fresh visitor into the login flow — straight past the language
+ * question, since the browser's language is one vodle offers (#193) — and
+ * walk to the next steps of the flow. The language question itself must
+ * still offer a non-empty list and never block (regression guard for #273,
+ * where an empty list blocked login entirely). Selectors use the app's own
  * data-vodle attributes.
  */
 
@@ -39,13 +41,21 @@ describe('vodle first run', () => {
       return null;
     };
 
-    // a fresh session is routed to the login flow's start step:
+    // a fresh session is routed into the login flow; the browser's language
+    // (en-US here) is one vodle offers, so the language question is skipped
+    // and the flow starts with the used-before question (#193):
     await (await $('ion-content[data-vodle-step]')).waitForExist();
-    await browser.waitUntil(async () =>
-      ['start', 'language'].includes(await current_step()),
-      {timeoutMsg: 'app did not reach the login start step'});
+    await browser.waitUntil(async () => (await current_step()) === 'used_before',
+      {timeoutMsg: 'app did not skip to the used-before step'});
 
-    // the language list must never be empty (#273):
+    // the language question still exists (the settings page and this URL
+    // lead to it), and its list must never be empty (#273):
+    await browser.url('/#/login/language/%2F');   // hash routing, see serve-app.js
+    // a hash change alone is an in-app navigation that stacks pages; a
+    // reload brings the app up on the language step alone:
+    await browser.refresh();
+    await browser.waitUntil(async () => (await current_step()) === 'language',
+      {timeoutMsg: 'app did not show the language step'});
     const select = await $('[data-vodle="language-select"]');
     await select.waitForExist();
     const options = await $$('[data-vodle="language-select"] ion-select-option');

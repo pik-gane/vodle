@@ -87,6 +87,8 @@
 
 - **For now, we will use the MVP as a demonstrator to win contributors and testers, and to identify missing features for the *First Stable Release (V1.0).***
 
+- **Backend (2026):** the data layer is being moved from CouchDB to the [Matrix](https://matrix.org) protocol ([#293](https://github.com/pik-gane/vodle/issues/293)). In the code the Matrix backend is now the default and is tested in CI against real homeservers; the CouchDB backend is kept as the legacy path until the Matrix backend has proven itself in production. Deploying it needs a production homeserver first ([#327](https://github.com/pik-gane/vodle/issues/327)). Status: [MIGRATION_STATUS.md](planning/matrix-migration/MIGRATION_STATUS.md); what is still missing and in which order: [planning/WORK_PLAN.md](planning/WORK_PLAN.md).
+
 ### [See here for possible use cases!](USE_CASES.md) And [here's some gallery of screenshots](https://github.com/pik-gane/vodle/discussions/88#discussion-3973721).
 
 A few of them also here:
@@ -120,7 +122,8 @@ Finally, *vodle* is also used for [*scientific research* on collective decision 
 * [Ionic](https://ionicframework.com/)
 * [Angular](https://angular.io/)
 * [Typescript](https://www.typescriptlang.org/)
-* [CouchDB](https://couchdb.apache.org/)
+* [Matrix](https://matrix.org/) via [matrix-js-sdk](https://github.com/matrix-org/matrix-js-sdk) — the default backend since 2026 ([Synapse](https://github.com/element-hq/synapse) homeservers for development and tests)
+* [CouchDB](https://couchdb.apache.org/) — the legacy backend
 * [Weblate](https://weblate.org/)
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/d/d1/Ionic_Logo.svg" alt="ionic" height="40"/>&nbsp;<img src="https://angular.io/assets/images/logos/angular/angular.svg" alt="angular" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" height="40"/>&nbsp;<img src="https://raw.githubusercontent.com/devicons/devicon/0d6c64dbbf311879f7d563bfc3ccf559f9ed111c/icons/couchdb/couchdb-original.svg" alt="couchdb" height="40"/> 

@@ -70,9 +70,10 @@ jobs:
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 
-      # the Matrix two-client integration specs need a real Synapse; without
-      # it they skip themselves, which --no-skips below would flag:
-      - name: Provision the test Matrix homeserver
+      # the Matrix two-client and federation integration specs need real
+      # Synapse homeservers (two, federating with each other); without them
+      # they skip themselves, which --no-skips below would flag:
+      - name: Provision the two federating test Matrix homeservers
         run: scripts/test-matrix.sh start
 
       - name: Build
@@ -96,7 +97,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: karma-results
-          path: karma-results.json
+          path: |
+            karma-results.json
+            /tmp/vodle-test-guard-bot.log
           if-no-files-found: warn
 
   e2e-smoke:

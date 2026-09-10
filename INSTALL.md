@@ -268,16 +268,23 @@ $ npm run test:couchdb:stop
 Similarly, `src/app/matrix-two-client.spec.ts` exercises two independent
 `MatrixService` clients against a **real** Synapse homeserver — poll discovery
 via the room alias, cross-client rating visibility through voter-room
-discovery, reconvergence after one client was offline, and a fresh session
-reading the authoritative state. Start its throw-away server (port 8009, so a
-development homeserver on 8008 is untouched) with:
+discovery, reconvergence after one client was offline, encryption of what the
+server stores, and the guard bot closing rooms after the deadline;
+`src/app/matrix-federation.spec.ts` does the same across **two** homeservers
+that federate with each other, and `src/app/migration-real-backends.spec.ts`
+migrates a poll from the real CouchDB into the real Synapse. Start the two
+throw-away servers (client ports 8009 and 8010, federation ports 8449 and
+8450, so a development homeserver on 8008 is untouched) together with the
+guard bot with:
 
 ```
 $ scripts/test-matrix.sh start
 ```
 
-and remove it including all its data with `scripts/test-matrix.sh stop`.
-These specs also skip themselves when no Synapse is reachable.
+and remove them including all their data with `scripts/test-matrix.sh stop`.
+These specs also skip themselves when no Synapse is reachable. The guard bot
+runs as a node process from `guard-bot/index.js`; without it the deadline
+enforcement spec reports itself pending.
 
 CI (`.github/workflows/tests.yml`) fails on any failure that is *not* listed
 in [test/known-failing-specs.txt](test/known-failing-specs.txt). That baseline

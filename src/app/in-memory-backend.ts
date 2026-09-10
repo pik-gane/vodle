@@ -134,6 +134,34 @@ export class InMemoryBackend implements IDataBackend {
     return poll ? poll.get(key) : undefined;
   }
   
+  async addOption(pollId: string, optionId: string, option: {name: string; description?: string; url?: string}): Promise<void> {
+    // stored as the poll data keys the CouchDB backend uses
+    await this.setPollData(pollId, 'option.' + optionId + '.oid', optionId);
+    await this.setPollData(pollId, 'option.' + optionId + '.name', option.name);
+    await this.setPollData(pollId, 'option.' + optionId + '.desc', option.description || '');
+    await this.setPollData(pollId, 'option.' + optionId + '.url', option.url || '');
+  }
+  
+  async getOptions(pollId: string): Promise<Map<string, {name: string; description: string; url: string}>> {
+    const options = new Map<string, {name: string; description: string; url: string}>();
+    const poll = this.pollData.get(pollId);
+    if (!poll) {
+      return options;
+    }
+    for (const key of poll.keys()) {
+      const match = /^option\.([^.]+)\.name$/.exec(key);
+      if (match) {
+        const oid = match[1];
+        options.set(oid, {
+          name: poll.get(key) || '',
+          description: poll.get('option.' + oid + '.desc') || '',
+          url: poll.get('option.' + oid + '.url') || '',
+        });
+      }
+    }
+    return options;
+  }
+  
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
     let poll = this.pollData.get(pollId);
     if (!poll) {

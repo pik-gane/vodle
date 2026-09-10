@@ -98,13 +98,21 @@ export class InvitetoPage implements OnInit {
       this.router.navigate(["/mypolls"]);
     }
     if (environment.useMatrixBackend) {
-      // Phase 13: Matrix doesn't use CouchDB credentials — use placeholder values
-      this.invite_link = (
-        environment.magic_link_base_url + "joinpoll/"
-        + encodeURIComponent('_') + "/"
-        + encodeURIComponent('_') + "/"
-        + this.pid + "/"
-        + this.p.password);
+      // Phase 13: Matrix doesn't use CouchDB credentials. The first link
+      // segment instead names the homeserver the poll room lives on, so that
+      // invitees registered on OTHER homeservers can join through federation
+      // (#293); the db_password segment stays a placeholder.
+      this.G.D.get_poll_origin_server(this.pid).then(origin_server => {
+        this.invite_link = (
+          environment.magic_link_base_url + "joinpoll/"
+          + encodeURIComponent(origin_server) + "/"
+          + encodeURIComponent('_') + "/"
+          + this.pid + "/"
+          + this.p.password);
+        this.compose_message();
+      }).catch(err => {
+        this.G.L.error("InvitetoPage could not determine the poll's homeserver", this.pid, err);
+      });
     } else {
       this.invite_link = (
         environment.magic_link_base_url + "joinpoll/" 
@@ -112,7 +120,11 @@ export class InvitetoPage implements OnInit {
         + encodeURIComponent(this.p.db_password) + "/" 
         + this.pid + "/" 
         + this.p.password);
+      this.compose_message();
     }
+  }
+
+  private compose_message() {
     this.G.L.info("InvitetoPage invite link:", this.invite_link);
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('invite-email.subject', {due: this.G.D.format_date(this.p.due)});

@@ -102,8 +102,12 @@ export class JoinpollPage implements OnInit {
       this.p.init_myvid();
 
       if (environment.useMatrixBackend) {
-        // Phase 13: Join via Matrix — ignore CouchDB params (db_server_url, db_password)
-        this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
+        // Phase 13: Join via Matrix. The link's first segment names the
+        // homeserver the poll room lives on ('_' in links from before
+        // federation support, meaning: this user's own homeserver); the
+        // CouchDB db_password segment is meaningless here.
+        const origin_server = (this.db_server_url && this.db_server_url != '_') ? this.db_server_url : undefined;
+        this.G.D.connect_to_remote_poll_db(this.pid, true, origin_server).then(() => {
           // Re-read state from poll_caches now that it has been populated
           this.p._state = (this.G.D.getp(this.pid, 'state') as any) || 'running';
           this.ready = true;

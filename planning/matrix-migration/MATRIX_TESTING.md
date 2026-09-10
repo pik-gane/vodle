@@ -203,10 +203,11 @@ The application will start on http://localhost:8100
 - `InMemoryBackend` for testing without external services
 - `DataAdapter` routes to selected backend
 
-### What's NOT Yet Implemented
+### Since then (2026-09)
 
-❌ **UI Integration** — The UI still uses DataService (CouchDB) directly  
-❌ **Guard Bot** — Server-side deadline enforcement service  
+The UI integration (phases 10–16) is done and `useMatrixBackend` is `true` in
+both environments; the guard bot exists (`guard-bot/`) and enforces deadlines
+in the CI harness. The current state is in [MIGRATION_STATUS.md](MIGRATION_STATUS.md).
 
 ## Testing the MatrixService
 
@@ -220,7 +221,7 @@ npm test
 
 ### Manual Testing with Browser Console
 
-Since the UI isn't integrated yet, you can test MatrixService from the browser console:
+MatrixService can also be exercised directly from the browser console:
 
 1. Start the application: `npm start`
 2. Open http://localhost:8100 in your browser
@@ -229,7 +230,10 @@ Since the UI isn't integrated yet, you can test MatrixService from the browser c
 
 ### Integration Testing
 
-For full integration testing, you'll need to wait for Phase 2+ when the UI is connected to MatrixService.
+The automated integration suites run against real servers: `scripts/test-matrix.sh start`
+(two federating Synapse homeservers plus the guard bot) and `scripts/test-couchdb.sh start`,
+then `npm test`; see `matrix-two-client.spec.ts`, `matrix-federation.spec.ts` and
+`migration-real-backends.spec.ts`. CI runs them on every pull request.
 
 ## Verifying Matrix Homeserver
 
@@ -375,8 +379,9 @@ docker-compose -f docker-compose.matrix.yml logs -f synapse
 
 ## Next Steps
 
-Phases 1–6 are complete. Remaining work:
-- **Phase 7**: UI integration (connect components to DataAdapter)
+All phases up to 16 are complete; what is still missing for production use is
+listed in [MIGRATION_STATUS.md](MIGRATION_STATUS.md) and planned in
+[../WORK_PLAN.md](../WORK_PLAN.md).
 
 ## Questions?
 

@@ -1,5 +1,16 @@
 # Matrix Migration Planning Summary
 
+## Status (2026-09-10)
+
+The documents 01–08 below are the original design (2025). The migration they
+plan has been implemented: the Matrix backend is the default and is tested in
+CI against real homeservers. Where to look now:
+
+- [MIGRATION_STATUS.md](MIGRATION_STATUS.md) — what works, what proves it, what is missing
+- [MATRIX_PERF_SECURITY_REPORT.md](MATRIX_PERF_SECURITY_REPORT.md) — measured latencies, security model, migration fidelity
+- [../WORK_PLAN.md](../WORK_PLAN.md) — the session plan and its ledger, including "Plan 2" for what comes next
+- `MATRIX_PHASE*.md`, [MATRIX_ROADMAP.md](MATRIX_ROADMAP.md), [history/](history/) — historical records, no longer updated
+
 ## Overview
 
 This directory contains comprehensive planning documentation for migrating Vodle's data synchronization layer from CouchDB/PouchDB to the Matrix protocol.

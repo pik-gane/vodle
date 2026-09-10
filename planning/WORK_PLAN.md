@@ -11,7 +11,7 @@ Most valuable issues in pik-gane/vodle and a multi-session work plan
 
 Context found in the repo
 
-vodle is mid-way through a major backend migration from CouchDB/PouchDB to Matrix (issue #293, PRs #294–#312, phases 1–16 complete, useMatrixBackend: true in both environments). Per SYNC_DEBUG_STATE.md and SESSION_SUMMARY_2025-02-17.md, real-time rating sync currently works only via a 15-second periodic-discovery fallback because matrix-js-sdk stops emitting state events after initial sync — root cause unknown. Meanwhile, the long-standing CouchDB sync-consistency bug family (#159, #161, #162, #163, #171, #251) remains open, and issue #292 contains the owner's concrete hardening plan for it.
+vodle is mid-way through a major backend migration from CouchDB/PouchDB to Matrix (issue #293, PRs #294–#312, phases 1–16 complete, useMatrixBackend: true in both environments). Per SYNC_DEBUG_STATE.md and SESSION_SUMMARY_2025-02-17.md (now in matrix-migration/history/), real-time rating sync currently works only via a 15-second periodic-discovery fallback because matrix-js-sdk stops emitting state events after initial sync — root cause unknown. Meanwhile, the long-standing CouchDB sync-consistency bug family (#159, #161, #162, #163, #171, #251) remains open, and issue #292 contains the owner's concrete hardening plan for it.
 
 Value ranking of open issues
 
@@ -47,7 +47,7 @@ Session 1 — Urgent production fixes + housekeeping (Tier 2/4)
 
 Session 2 — Matrix real-time sync root cause (#293)
 
-    Reproduce the two-client sync failure documented in SYNC_DEBUG_STATE.md; instrument the SDK sync loop to determine why incremental syncs emit no RoomState.events (suspects: in-memory-only store, SDK v37.5.0 bug, runtime-joined room re-emission path).
+    Reproduce the two-client sync failure documented in SYNC_DEBUG_STATE.md (now matrix-migration/history/); instrument the SDK sync loop to determine why incremental syncs emit no RoomState.events (suspects: in-memory-only store, SDK v37.5.0 bug, runtime-joined room re-emission path).
     Fix the root cause (e.g., persistent IndexedDB store or SDK upgrade), keep the periodic-discovery fallback as a safety net, and fix the known "options not resorted after reload" issue.
 
 Session 3 — CouchDB consistency hardening, part 1 (#292)
@@ -91,16 +91,65 @@ at the PRs/commits that carry the detail.
 
 | Session | Status | Where |
 | --- | --- | --- |
-| 1 — urgent fixes | **done** (2026-09-05) | PR #314 (merged): #273 language fallback, #186 waps fix, keyboard-rating resort; #273/#98/#57 closed. #186 still open on GitHub — verify the merged fix satisfies it, then close. |
-| 2 — Matrix sync root cause | **done** (2026-09-05) | PR #315 (merged): incremental-sync root cause + option resorting after reload. Periodic-discovery fallback kept. |
-| 3 — CouchDB hardening part 1 | **done** (2026-09-06) | PR #316 (merged): bootstrap-gated sync, coalesced change batching, replication watchdog. |
-| 4 — CouchDB hardening part 2 | **in review** | PR #319 (open): conflict cleanup, transactional draft moves, centralized routing, ordered voter mutations, publication confirmation, guarded finalization. All review threads resolved as of 2026-09-09. |
-| 5 — testing infrastructure | **in progress** | On the PR #319 branch (2026-09-09): CI workflow `.github/workflows/tests.yml` (build + full suite on every PR, known-failure baseline in `test/known-failing-specs.txt`), real-CouchDB two-client integration suite (`src/app/data-service-couchdb-two-client.spec.ts` + `scripts/test-couchdb.sh`). The 27 baseline "should create" TestBed DI failures were fixed 2026-09-09 (shared plumbing in `src/app/testing/vodle-testing.ts`; baseline now empty, suite green; PR #320). Tally-pipeline coverage added 2026-09-09 (`src/app/poll-tally.spec.ts`: hand-computed MaxParC threshold/vote/share cases, favourite adjustment, delegation propagation, and seeded incremental-vs-recount property tests — which found and fixed two `del_delegation` crashes plus missing retallying after delegation changes). The wdio e2e smoke suite stands (2026-09-09): `npm run e2e` drives the real built app through the first-run flow over the DevTools protocol (`test/wdio.conf.js`, `test/specs/first-run.e2e.js`, `scripts/serve-app.js`), wired into CI as the `e2e smoke` job. **Session 5 complete**; extend e2e flows (guest login against a test backend, poll creation) as follow-ups. |
-| 6 — Matrix hardening & completion | **in progress** | Started 2026-09-09: `scripts/test-matrix.sh` (throw-away Synapse harness, port 8009) and `src/app/matrix-two-client.spec.ts` (real two-client convergence: alias discovery, cross-client ratings, offline reconvergence, fresh-session authority), wired into CI. Found & fixed: `MatrixService.register()` never worked against a standard Synapse (no user-interactive-auth handling — every registration got a 401). Second slice (2026-09-09): the offline queue is now wired into the write paths (`setUserData`/`setPollData`/`setVoterData` queue on connection errors only, replay on the next successful sync tick, queue restored at init) and E2EE is initialized for real (Rust crypto; WASM shipped as an app asset because Angular's webpack leaves the SDK's `import.meta.url` default unfetchable; persistent store cleared+retried on account mismatch after user switching; `e2ee_store_in_memory` for multi-client tests). Both proven against real Synapse: offline-queued rating replays to the other client; encrypted DM round-trips between two clients. NOTE the boundary: Matrix E2EE covers timeline events only — votes/poll data are STATE events, protected by the poll-password layer instead. Remaining: alias-domain vs server_name wart, two-homeserver federation test, migration tooling validation, perf/security report. |
-| 7 — UX features | not started | PRs #254 (archive polls, #83) and #298 (#98) exist from the community and still need review. |
+| 1 — urgent fixes | **done** (2026-09-05) | PR #314 (merged): #273 language fallback, #186 waps fix, keyboard-rating resort; #273/#98/#57/#186 and the OLD-labeled #11–#16 closed. Regression tests added 2026-09-10 (`login.page.spec.ts`, `explain-approval.page.spec.ts`, `poll/poll.page.spec.ts`). |
+| 2 — Matrix sync root cause | **done** (2026-09-05) | PR #315 (merged): the SDK was never at fault — the client was not joined to the voter rooms; option resorting after reload fixed (`onInitialScanComplete`, unit-tested 2026-09-10). Periodic-discovery fallback kept. |
+| 3 — CouchDB hardening part 1 | **done** (2026-09-06) | PR #316 (merged): bootstrap-gated sync, coalesced change batching, replication watchdog. Stall status now also shown in the page headers (`replication_is_stalled`, 2026-09-10). |
+| 4 — CouchDB hardening part 2 | **done** (2026-09-09) | PR #319 (merged 2026-09-09): conflict cleanup, transactional draft moves, centralized routing, ordered voter mutations, publication confirmation, guarded finalization. The targeted issues #159/#161/#162/#163/#171/#251 are still open on GitHub: closing them needs a production observation, which nobody has made yet. |
+| 5 — testing infrastructure | **done** (2026-09-09) | PRs #319/#320/#321: CI workflow `.github/workflows/tests.yml` (build + full suite with real CouchDB and real Synapse services on every PR; empty known-failure baseline), real-CouchDB two-client suite, MaxParC tally-pipeline suite (which found and fixed three delegation bugs), wdio e2e smoke suite (`npm run e2e`). |
+| 6 — Matrix hardening & completion | **done** (2026-09-10) except Phase 17 | PR #322 (merged): Synapse harness, two-client convergence spec, registration fix, offline queue wired, E2EE initialized. Completed 2026-09-10 on this branch: (a) two-homeserver **federation** harness (`scripts/test-matrix.sh` now starts two Synapse servers federating over TLS plus the guard bot) and `matrix-federation.spec.ts` — a poll created on one server is joined and voted on from the other, magic links carry the poll's origin server; (b) the alias-domain wart fixed (server_name from the user ID); (c) **encryption**: poll data, options, voter data under the poll password and user data under the user password (the CouchDB backend's protection restored; Matrix E2EE covers timeline events only), Matrix login with a derived password so the homeserver never sees the real one, the poll title kept out of the room name; (d) the **guard bot** actually enforces deadlines now (it watched an event type the app never wrote; the deadline is copied into voter rooms; spec proves server-side rejection after the deadline); (e) user data restored from the user room on login (second-device restore); (f) **migration tooling validated** against real CouchDB + Synapse (`migration-real-backends.spec.ts`) — six fidelity bugs found and fixed; (g) the **performance/security/migration report**: `planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md`. Not done: Phase 17 (CouchDB code removal) — the plan gates it on production confidence, which is the owner's call; a federation *partition* test (needs the harness to cut the link mid-run). |
+| 7 — UX features | **done** (2026-09-10) except the guest-voting redesign of #193 | #214 simple formatting (`**bold**`, `*italics*`, paragraphs; Ctrl-B/Ctrl-I in the draft editor; everything else escaped — `simple-format.ts`); #83 archive polls (Archived section in My polls, archived polls exempt from local deletion; community PR #254 ported with fixes, can be closed); #193 first-time start: the language question is skipped when the browser's language is offered (e2e-tested). The rest of #193 — voting without being logged in, privacy overlay, login as overlay — was decided by the owner on 2026-09-10 (silent guest login with later migration to a proper account); see Plan 2, D1. PR #298 was ported in Session 1 and can be closed. |
 
-Known debt that cuts across sessions (2026-09-09):
+## Plan 2 (2026-09-10): from "implemented" to "usable in production"
 
-- PR #319 is huge (~5000 added lines). Future consistency work should land in reviewable slices; the description's six numbered sections would have been six PRs.
-- `DataService.move_user_data` remains a TODO: on a credential change only in-flight voter-source writes are reconciled; the general user-data move between databases is still unimplemented.
-- No live multi-homeserver Matrix test exists yet (Session 6 will need the analogue of `scripts/test-couchdb.sh`).
+Everything in the plan above has landed except Phase 17 and the guest-voting
+part of #193 (see the ledger). What the Matrix backend still lacks for a
+production deployment without syncing issues was written up as issues
+#324–#333 on 2026-09-10; this plan orders them. The tracks are independent
+of each other, the sessions within a track are not.
+
+### Track A — correctness of the Matrix data path (blocks "no syncing issues")
+
+| # | Issue | What | Done when |
+| --- | --- | --- | --- |
+| A1 | #324 | Options added to a *running* poll never reach the other participants: the add-option path writes state that the locked room rejects (403), and nothing dispatches option timeline events live. Send options as `m.room.vodle.poll.option` timeline events from the app's add-option path and dispatch them in the live handler. Fixes #163 for the Matrix backend as well. | `matrix-two-client.spec.ts`: B adds an option after the poll is running, A sees it without a reload. |
+| A2 | #326 | **Done 2026-09-10** (PR #323): the queue retries by itself with intervals from 1 s to 30 s and on the browser's `online` event; a connection failure during a retry no longer uses up the write's attempts. | The two-client spec's replay time went from 25–30 s to about a second (CI figure in the report, §6). |
+| A3 | #325 | The final tally is computed from the local cache when the deadline passes. Re-read the voter rooms' state from the server at the deadline (the guard bot has closed the rooms by then) and show the result as final only after that read. | Two-client spec: a rating sent by a client that was offline at the deadline is either in both clients' final tally or in neither. |
+| A5 | #334 | A rating created in the same instant as the guard bot's closing power-level event forks with it and is dropped by state resolution, together with the previous value of that key (found 2026-09-10 by the two-client spec; issue has the evidence). Mitigated: the bot now closes only after a grace period and once the room has been quiet (`CLOSE_GRACE_MS`, `QUIET_PERIOD_MS`), and the app no longer sends a `voter.vid` event with every rating. Remaining: a two-phase close (a `closed` marker first, the power-level change once the room is quiet) and the server-side read-back of A3. | Spec: a rating written 1 s before the close survives; a client with a skewed clock loses at most its post-deadline write. |
+| A4 | #329 | Federation partition test: the harness needs a way to cut hs1↔hs2 mid-run (a TCP proxy in front of the federation ports that the spec can pause), then a spec votes on both sides during the cut and checks convergence after. | `matrix-federation.spec.ts` has a partition/merge case that passes in CI. |
+
+Session 8: A1 (A2 is done). Session 9: A3 + A5 (the same code: what the final tally reads, and how the close is sequenced). Session 9b: A4.
+
+### Track B — production readiness
+
+| # | Issue | What |
+| --- | --- | --- |
+| B1 | #327 | Production homeserver: choose the domain, fill `environment.prod.ts` (`homeserver_url`, `guard_bot_user_id`), registration policy (the app registers hashed-email accounts, so registration must be open or token-based), `rc_*` rate limits that allow the room bursts of poll creation, deploy the guard bot (`guard-bot/`) as a service with its own account, monitoring. Fill the CI column of `matrix-migration/MATRIX_PERF_SECURITY_REPORT.md` §6 from a green run. |
+| B2 | #331 | Rooms of expired polls are never cleaned up: a retention policy or a guard-bot task that forgets/purges rooms N days after the deadline. |
+| B3 | #328 | Invite-only poll rooms so that participation is not visible to anyone who learns the poll id. Conflicts with joining by magic link; needs a design decision (invitation by user id, or a knock/approve flow) before coding. |
+| B4 | #330 | `move_user_data`: re-encrypt and move user data when the password or the database changes (both backends). |
+| B5 | #333 | Delegation and multi-device use are untested against a real homeserver (delegation is disabled on the Matrix path). Specs first, then fixes. |
+| B6 | #159 #161 #162 #171 #251 | The CouchDB consistency fixes of sessions 3–4 need a production observation before these can be closed; whoever runs a production poll on the CouchDB backend should record whether the symptoms recur. |
+
+Session 10: B1 + B2. Session 11: B3 (after the owner's decision) + B5. Session 12: B4 together with D1 (guest login with later account migration, decided on #193).
+
+### Track C — after production confidence
+
+| # | Issue | What |
+| --- | --- | --- |
+| C1 | #332 | Phase 17: remove the CouchDB backend, the `useMatrixBackend` flag, the PouchDB dependency, the CouchDB docker files and docs. Only after a real group has used the Matrix backend in production for a while (Track B first). |
+
+### Track D — user-facing work that does not depend on the backend
+
+| # | Issue | What |
+| --- | --- | --- |
+| D1 | #193 | The rest of "simplify first-time start": voting without an explicit login, privacy overlay, login as an overlay. **Decided by the owner on 2026-09-10 (comment on #193): a silent guest login**, done so that the guest's data can be migrated to a proper, user-specified account when the user logs in later. Design sketch: on the first visit of a magic link the app registers a throw-away Matrix account (random localpart and password, kept in local storage) and votes with it; a later real login re-creates the voter data under the new account from the local cache (the voter id `myvid` stays, so the tally does not change) and leaves the guest's voter rooms; user settings move the same way. This is the `move_user_data` machinery of #330 plus room ownership, so B4 and D1 should be one session. |
+| D2 | #61 #60 #56 #54 | Translations via Weblate; a language is offered in the app once it is mostly translated (Tamil #277 was added this way; Arabic and French are still mostly untranslated). |
+| D3 | PRs #285 #253 #202 #268–#270 | Open pull requests need a decision by the owner: #285 (weighted delegation and UI changes, 1767 files against the `hemped` branch — far too large to review as is; ask for a rebased slice or close), #253 (CSS theme option from 2023, probably superseded by the dark theme of PR #291), #202 (Finnish translation from 2022; Finnish is in the app, so probably superseded), the dependabot bumps #268–#270 (2024; the lock file still carries the old versions of `express`, `follow-redirects` and `ip`, so they are still applicable — merge them or bump the three with a fresh `npm audit`). Community PRs #254 and #298 were ported and closed only in 2026-09; a week from opening to a decision should be the rule. |
+| D4 | backlog | The older "ready to implement" features (#84, #62, #86, #156, #173, #182, #184, #201, #169) stay unscheduled until Tracks A–B are done. |
+
+### Process notes
+
+- Land work in reviewable slices (PR #319 with ~5000 added lines was too large to review).
+- Every fix comes with a spec; every claim of "works against a real server" with a spec that runs in CI (the real-server suites skip themselves without servers, and CI runs with `--no-skips`).
+- Keep this ledger and `matrix-migration/MIGRATION_STATUS.md` current when a session lands; keep the historical documents in `matrix-migration/history/` untouched.
+

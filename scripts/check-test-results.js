@@ -82,6 +82,11 @@ if (results.errored) {
 if (results.succeeded === 0 && failed.length === 0) {
   fail('No spec was executed.');
 }
+if ((results.perf || []).length) {
+  // the measurements of the real-server specs, for the report's CI column:
+  console.log('\nperformance lines:');
+  for (const line of results.perf) { console.log('  ' + line); }
+}
 if (fixed.length) {
   console.log('\nno longer failing — remove these from ' + baseline_path + ':');
   for (const name of fixed) { console.log('  - ' + name); }
@@ -92,8 +97,12 @@ if (no_skips && skipped.length) {
      + 'integration specs silently stopped running.');
 }
 if (regressions.length) {
+  // with the messages the json-result reporter recorded, so that a failure
+  // is diagnosable from the end of the CI log alone:
+  const messages = results.messages || {};
   fail('NEW test failures (' + regressions.length + '):\n'
-     + regressions.map(name => '  - ' + name).join('\n')
+     + regressions.map(name => '  - ' + name
+         + (messages[name] || []).map(line => '\n      ' + line).join('')).join('\n')
      + '\n\nFix them, or — if the failure is genuinely expected — add the exact '
      + 'spec name to ' + baseline_path + ' with a comment saying why.');
 }

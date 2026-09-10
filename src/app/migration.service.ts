@@ -136,11 +136,14 @@ export class MigrationService {
     step.status = 'in_progress';
     step.startedAt = Date.now();
     
-    // Migrate poll title first (creates the poll on the target)
+    // Migrate poll title first (creates the poll on the target). The title
+    // is stored as poll data as well, since that is where the app reads it
+    // from (the Matrix backend's room name is only a label):
     try {
       const title = await this.source.getPollData(pollId, 'title');
       if (title != null) {
         await this.target.createPoll(pollId, title);
+        await this.target.setPollData(pollId, 'title', title);
         step.itemsMigrated++;
       } else {
         // Source poll has no title — poll may not exist on the source
@@ -158,9 +161,13 @@ export class MigrationService {
       return step;
     }
     
-    // Migrate poll metadata
+    // Migrate poll metadata. The lifecycle state is NOT migrated here: on the
+    // Matrix backend, setting it locks the poll room, after which no further
+    // poll data or options could be written — see migratePollState, which the
+    // caller runs last.
     for (const key of metadataKeys) {
       if (key === 'title') continue; // Already migrated via createPoll
+      if (key === 'state') continue; // see migratePollState
       try {
         const value = await this.source.getPollData(pollId, key);
         if (value != null) {
@@ -212,12 +219,89 @@ export class MigrationService {
   }
   
   /**
-   * Migrate ratings for a poll. Reads all ratings from the source and
-   * submits them to the target backend.
+   * Migrate a poll's lifecycle state ('running', 'closed') — to be run LAST,
+   * after all poll data, options and ratings, because on the Matrix backend
+   * the state change locks the poll room against further writes.
    * 
-   * Note: submitRating() on the target backend submits ratings under the
-   * currently logged-in user. For multi-user migration, each user must be
-   * logged in to the target backend separately.
+   * @param pollId - The poll ID
+   * @returns The migration step with results
+   */
+  async migratePollState(pollId: string): Promise<MigrationStep> {
+    const stepId = `state:${pollId}`;
+    const step = this.createStep(stepId, `Migrate lifecycle state of poll ${pollId}`);
+    this.startMigration();
+    step.status = 'in_progress';
+    step.startedAt = Date.now();
+    try {
+      const state = await this.source.getPollData(pollId, 'state');
+      if (state != null && state !== '') {
+        await this.target.setPollData(pollId, 'state', state);
+        step.itemsMigrated++;
+      }
+    } catch (error) {
+      step.itemsFailed++;
+      step.errors.push(`Failed to migrate the state of poll '${pollId}': ${error}`);
+    }
+    step.status = step.itemsFailed > 0 ? 'failed' : 'completed';
+    step.completedAt = Date.now();
+    return step;
+  }
+  
+  /**
+   * Migrate a poll's options from source to target backend, as one unit
+   * each where the target supports it (see IDataBackend.addOption) — on the
+   * Matrix backend options are immutable timeline events, not poll data
+   * state, and its readers only find them there.
+   * 
+   * @param pollId - The poll ID
+   * @returns The migration step with results
+   */
+  async migratePollOptions(pollId: string): Promise<MigrationStep> {
+    const stepId = `options:${pollId}`;
+    const step = this.createStep(stepId, `Migrate options of poll ${pollId}`);
+    this.startMigration();
+    step.status = 'in_progress';
+    step.startedAt = Date.now();
+    
+    try {
+      const options = this.source.getOptions ? await this.source.getOptions(pollId) : new Map();
+      for (const [optionId, option] of options) {
+        try {
+          if (this.target.addOption) {
+            await this.target.addOption(pollId, optionId, option);
+          } else {
+            await this.target.setPollData(pollId, `option.${optionId}.oid`, optionId);
+            await this.target.setPollData(pollId, `option.${optionId}.name`, option.name);
+            await this.target.setPollData(pollId, `option.${optionId}.desc`, option.description || '');
+            await this.target.setPollData(pollId, `option.${optionId}.url`, option.url || '');
+          }
+          step.itemsMigrated++;
+        } catch (error) {
+          step.itemsFailed++;
+          step.errors.push(`Failed to migrate option '${optionId}' of poll '${pollId}': ${error}`);
+        }
+      }
+    } catch (error) {
+      step.itemsFailed++;
+      step.errors.push(`Failed to read options of poll '${pollId}': ${error}`);
+    }
+    
+    step.status = step.itemsFailed > 0 ? 'failed' : 'completed';
+    step.completedAt = Date.now();
+    return step;
+  }
+  
+  /**
+   * Migrate ratings for a poll. Reads all ratings from the source and
+   * writes each under its ORIGINAL voter id on the target (as voter data
+   * 'rating.<optionId>' of that voter), so that the tally of the migrated
+   * poll has the same voters as the original.
+   * 
+   * Note: the migrating account becomes the owner of the migrated voter
+   * data on the target (on Matrix: of one voter room per original voter,
+   * like a simulated voter). The original voters cannot continue voting
+   * on the migrated copy from their own accounts, so this is for polls
+   * that are closed or whose voters accept the migrator's stewardship.
    * 
    * @param pollId - The poll ID
    * @returns The migration step with results
@@ -235,7 +319,7 @@ export class MigrationService {
       for (const [voterId, voterRatings] of ratings) {
         for (const [optionId, rating] of voterRatings) {
           try {
-            await this.target.submitRating(pollId, optionId, rating);
+            await this.target.setVoterData(pollId, voterId, `rating.${optionId}`, rating);
             step.itemsMigrated++;
           } catch (error) {
             step.itemsFailed++;

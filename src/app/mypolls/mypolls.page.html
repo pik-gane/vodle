@@ -41,6 +41,10 @@ TODO:
 
       <!-- SYNCING SIGN -->
       <ion-icon *ngIf="G.show_spinner || !window.navigator.onLine" name="swap-vertical-outline" color="grey" style="margin-right: 10px;"></ion-icon>
+
+      <!-- SYNC STALLED SIGN: the replication watchdog found a sync without progress and is restarting it (#292) -->
+      <ion-icon *ngIf="G.D.replication_is_stalled" name="warning-outline" color="warning" style="margin-right: 10px;"
+        [title]="'sync-stalled'|translate" data-vodle="sync-stalled-sign"></ion-icon>
       <!--
       <ion-spinner *ngIf="G.show_spinner || !window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
       -->
@@ -165,8 +169,8 @@ TODO:
     </ion-item>
     <ng-container *ngIf="closed_expanded">
       <ng-container *ngFor="let p of closed_polls">
-        <ion-item [routerLink]="'/poll/'+p.pid" style="cursor: pointer;" data-vodle="closed-poll-item" [attr.data-vodle-poll-title]="p.title">
-          <ion-label>
+        <ion-item data-vodle="closed-poll-item" [attr.data-vodle-poll-title]="p.title">
+          <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
             <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
             <i [lang]="p.language" [innerHtml]="p.title"></i>
           </ion-label>
@@ -179,6 +183,13 @@ TODO:
                 <ion-badge class="ion-no-margin" style="margin-left:5px; margin-bottom:1px; margin-top:1px; font-size: x-small;" color="warning" [innerHtml]="'badges.new'|translate"></ion-badge>
               </div>
             </div>
+
+            <!-- Archive button (issue #83): -->
+
+            <ion-button fill="clear" class="ion-no-padding ion-no-margin"
+                (click)="archive(p, $event)" [title]="'mypolls.archive'|translate" data-vodle="archive-poll-button">
+              <ion-icon name="archive-outline" slot="icon-only" color="medium"></ion-icon>
+            </ion-button>
   
           </ion-buttons>
         </ion-item>
@@ -192,6 +203,36 @@ TODO:
         </ion-item>
       </ng-container>
     </ng-container>
+    <!-- ARCHIVED (issue #83): -->
+
+    <ion-item color="light" (click)="archived_expanded=!archived_expanded" style="cursor: pointer;" data-vodle="archived-polls-section">
+      <ion-icon size="small" [name]="archived_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
+      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.archived'|translate"></ion-label>
+    </ion-item>
+    <ng-container *ngIf="archived_expanded">
+      <ng-container *ngFor="let p of archived_polls">
+        <ion-item data-vodle="archived-poll-item" [attr.data-vodle-poll-title]="p.title">
+          <ion-label [routerLink]="'/poll/'+p.pid" style="cursor: pointer;">
+            <ion-icon class="poll-type-list" size="small" [name]="(p.type=='share')?'cut':'trophy'"></ion-icon>&nbsp;
+            <i [lang]="p.language" [innerHtml]="p.title"></i>
+          </ion-label>
+          <ion-buttons slot="end" class="ion-no-padding ion-no-margin" style="position: relative; right: -10px;">
+            <ion-button fill="clear" class="ion-no-padding ion-no-margin"
+                (click)="unarchive(p, $event)" [title]="'mypolls.unarchive'|translate" data-vodle="unarchive-poll-button">
+              <ion-icon name="arrow-undo-outline" slot="icon-only" color="medium"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+      </ng-container>
+      <ng-container *ngIf="archived_polls.length==0 && !G.show_spinner">
+        <ion-item>
+          <ion-col class="ion-no-padding ion-no-margin">
+            <p [innerHtml] ="'mypolls.no-archived-polls'|translate"></p>
+          </ion-col>
+        </ion-item>
+      </ng-container>
+    </ng-container>
+
     <!--OLDER-->
     <!--
     <ion-item color="light" (click)="older_expanded=!older_expanded">

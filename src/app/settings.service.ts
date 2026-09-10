@@ -157,6 +157,7 @@ export class SettingsService {
     ko: '한국어',
     pl: 'Polski',
     fi: 'Suomi',
+    ta: 'தமிழ்',
     zh: '中文',
     nn: '[JSON file keys]'
   };
