@@ -98,7 +98,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
         </span><ion-button class="ion-no-margin ion-no-padding"
-            [disabled]="!E.delegation.enabled"
+            [disabled]="!E.delegation.enabled || consent_pending"
             style="position: relative; right: -4px;"
             shape="round" fill="solid" color="primary">
           <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
@@ -219,7 +219,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <!-- ASSIST BUTTON: -->
 
-            <ion-button *ngIf="p.allow_voting"
+            <ion-button *ngIf="p.allow_voting" [disabled]="consent_pending"
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px; margin-bottom:5px!important;">
@@ -735,7 +735,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                     <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
                     <ion-range 
-                        [disabled]="!p.allow_voting"
+                        [disabled]="!p.allow_voting || consent_pending"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                         [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
                         [value]="p.get_my_proxy_rating(oidsorted[i])" 
@@ -954,14 +954,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
           <ion-fab-button 
             size="small" (click)="add_option($event)" fill="clear" color="primary"
-            [disabled]="!p.can_add_option()" data-vodle="add-option-button">
+            [disabled]="!p.can_add_option() || consent_pending" data-vodle="add-option-button">
             <ion-icon name="add"></ion-icon>
 
           </ion-fab-button>
           <ion-button
             class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
             [innerHtml]="'poll.add-option' | translate"
-            [disabled]="!p.can_add_option()">
+            [disabled]="!p.can_add_option() || consent_pending">
           </ion-button>
         </ion-item>
         <ion-item lines="none" style="padding-bottom: 10px!important;" [disabled]="!p.can_add_option()">
@@ -991,6 +991,19 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
   </ion-list>
 </ion-content>
+
+<!-- CONSENT TO THE PRIVACY STATEMENT (#193): a guest votes before registering
+     anything, but nothing is stored before this is checked -->
+
+<ion-footer *ngIf="consent_pending" data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
+  <ion-item color="warning" lines="none" class="item-text-wrap">
+    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($event.detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
+    <small><p>
+      <b [innerHtml]="'poll.consent-lead'|translate"></b>
+      <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+    </p></small>
+  </ion-item>
+</ion-footer>
 
 <!-- OPTIONAL GLOSSARY: -->
 

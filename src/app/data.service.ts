@@ -795,17 +795,14 @@ export class DataService implements OnDestroy {
       this.hide_loading();
       if (this.router.url.includes('/joinpoll/')) {
         // the first visit of a magic link on this device (#193): take part
-        // as a guest instead of asking for a login first — silently when
-        // the deployment has no privacy statement to consent to, otherwise
-        // after the consent question the joinpoll page shows. A later login
-        // moves the guest's data to the account (#330).
+        // as a guest right away instead of asking for a login first — the
+        // visitor votes before registering anything. When the deployment
+        // has a privacy statement, the consent question waits on the poll
+        // page (consent_pending); a later login moves the guest's data to
+        // the account (#330).
         this.G.L.info("DataService found no credentials on a magic link, taking part as a guest");
         this.guest_login_pending = true;
-        if (!environment.privacy_statement_url) {
-          this.login_as_guest();
-        } else if (this.page && this.page.onGuestLoginPending) {
-          this.page.onGuestLoginPending();
-        }
+        this.login_as_guest();
       } else {
         this.G.L.info("DataService found empty email or password, redirecting to login page.");
         if (!this.router.url.includes('/login')) {
@@ -2607,7 +2604,13 @@ export class DataService implements OnDestroy {
     const {email, password} = DataService.guest_credentials();
     this.G.S.password = password;
     this.G.S.email = email;
-    this.record_consent();
+    if (environment.privacy_statement_url) {
+      // nobody has consented to anything yet: the poll page asks before
+      // the first rating is stored (consent_pending)
+      this.setu('consent', '0');
+    } else {
+      this.record_consent();
+    }
     this.G.S.default_wap = 10;
     this.guest_login_in_progress = true;
     this.login_submitted(true);
@@ -2645,6 +2648,16 @@ export class DataService implements OnDestroy {
   record_consent() {
     // store privacy consent in database:
     this.setu('consent', consent_statement);
+  }
+
+  /** Whether the consent to the privacy statement is still to be given
+   *  (#193): a guest is created silently when a magic link is opened, and
+   *  the poll page then shows the consent question and stores no rating
+   *  until it is answered. Nothing is pending when the deployment has no
+   *  privacy statement; a user who withdrew the consent in the settings is
+   *  asked the same way. */
+  get consent_pending(): boolean {
+    return !!environment.privacy_statement_url && this.getu('consent') == '0';
   }
 
   change_credentials(changes: {email?: string, password?: string}): Promise<void> {

@@ -156,7 +156,7 @@ export class PollPage implements OnInit {
       this.router.navigate(["/mypolls"]);
       return;
     }
-    if (this.p.allow_voting) {
+    if (this.p.allow_voting && !this.consent_pending) {
       this.G.L.info("PollPage checking if default waps are needed", this.pid);
       for (let oid of this.p.oids) {
         const orm = this.p.own_ratings_map.get(oid);
@@ -226,10 +226,13 @@ export class PollPage implements OnInit {
       // register that results have been seen:
       this.p.have_seen_results = true;
     }
-    // make sure current slider values are really stored in database:
-    for (let oid of this.oidsorted) {
-      if (!this.delegate || this.rate_yourself_toggle[oid]) {
-        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+    // make sure current slider values are really stored in database
+    // (unless the consent is still pending, #193: nothing is stored then):
+    if (!this.consent_pending) {
+      for (let oid of this.oidsorted) {
+        if (!this.delegate || this.rate_yourself_toggle[oid]) {
+          this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+        }
       }
     }
     // dismiss auto-dismissing news:
@@ -254,6 +257,30 @@ export class PollPage implements OnInit {
     // returns here, and the guest's votes and polls move to the account
     this.G.L.entry("PollPage.login_clicked");
     this.router.navigate(['/login/used_before/' + encodeURIComponent('/poll/' + this.pid)]);
+  }
+
+  /** whether the consent to the privacy statement is still to be given
+   *  (#193): the page then shows the question at its bottom, keeps the
+   *  sliders, "add option" and "delegate" disabled, and stores no rating */
+  get consent_pending(): boolean {
+    return this.G.D.consent_pending;
+  }
+
+  consent_given(checked: boolean) {
+    // the consent checkbox at the bottom of the page (#193): recorded like
+    // the login page does, then the ratings the page holds are stored
+    this.G.L.entry("PollPage.consent_given", checked);
+    if (!checked || !this.consent_pending) {
+      return;
+    }
+    this.G.D.record_consent();
+    if (this.p && this.p.allow_voting) {
+      for (let oid of this.p.oids) {
+        const orm = this.p.own_ratings_map.get(oid);
+        const rating = orm && orm.has(this.p.myvid) ? orm.get(this.p.myvid) : this.G.S.default_wap;
+        this.p.set_my_own_rating(oid, rating, true);
+      }
+    }
   }
 
   ionViewDidLeave() {
@@ -845,7 +872,7 @@ export class PollPage implements OnInit {
   } 
 
   add_option(event: Event) {
-    if(!this.p.can_add_option()){
+    if(!this.p.can_add_option() || this.consent_pending){
       return;
     }
     /** open the add option dialog popover */

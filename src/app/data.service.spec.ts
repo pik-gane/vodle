@@ -3136,8 +3136,10 @@ describe('credential changes and guest accounts (#330, #193)', () => {
 
   it('takes part as a guest: fresh credentials, the consent recorded, the guest flag set, no move', () => {
     fresh({});
+    (environment as any).privacy_statement_url = '';
     svc.guest_login_pending = true;
     svc.login_as_guest();
+    expect(svc.consent_pending).toBeFalse();
     expect(svc.getu('email')).toMatch(/^guest-/);
     expect(svc.getu('password').length).toBe(20);
     expect(svc.getu('guest')).toBe('1');
@@ -3283,27 +3285,35 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     expect(matrix.setUserData.calls.allArgs().filter((a: any[]) => a[0] == 'poll.p1.title').length).toBe(1);
   });
 
-  it('offers a guest login on a magic link instead of the login page: silently without a privacy statement', () => {
-    fresh({});
-    svc.router.url = '/joinpoll/_/x/P1/pw';
-    (environment as any).privacy_statement_url = '';
-    const guest = spyOn(svc, 'login_as_guest');
-    svc.after_local_only_user_cache_is_filled();
-    expect(guest).toHaveBeenCalled();
-    expect(svc.router.navigate).not.toHaveBeenCalled();
+  it('takes part as a guest on a magic link right away instead of showing the login page, with or without a privacy statement', () => {
+    for (const privacy of ['', './assets/privacy.html']) {
+      fresh({});
+      svc.router.url = '/joinpoll/_/x/P1/pw';
+      (environment as any).privacy_statement_url = privacy;
+      const guest = spyOn(svc, 'login_as_guest');
+      svc.after_local_only_user_cache_is_filled();
+      expect(guest).withContext('privacy statement: ' + privacy).toHaveBeenCalled();
+      expect(svc.guest_login_pending).toBeTrue();
+      expect(svc.router.navigate).not.toHaveBeenCalled();
+    }
   });
 
-  it('asks for the consent first when the deployment has a privacy statement', () => {
+  it('leaves the consent pending for a guest when the deployment has a privacy statement, until the poll page records it', () => {
     fresh({});
-    svc.router.url = '/joinpoll/_/x/P1/pw';
     (environment as any).privacy_statement_url = './assets/privacy.html';
-    svc.page = {onGuestLoginPending: jasmine.createSpy('onGuestLoginPending')};
-    const guest = spyOn(svc, 'login_as_guest');
-    svc.after_local_only_user_cache_is_filled();
-    expect(guest).not.toHaveBeenCalled();
-    expect(svc.guest_login_pending).toBeTrue();
-    expect(svc.page.onGuestLoginPending).toHaveBeenCalled();
-    expect(svc.router.navigate).not.toHaveBeenCalled();
+    svc.login_as_guest();
+    expect(svc.getu('consent')).toBe('0');
+    expect(svc.consent_pending).toBeTrue();
+    expect(svc.G.S.consent).withContext('the CouchDB stores refuse writes meanwhile').toBeFalse();
+    svc.record_consent();
+    expect(svc.consent_pending).toBeFalse();
+    expect(svc.getu('consent')).toContain('I consent');
+    // a user who withdrew the consent in the settings is asked again the same way:
+    svc.setu('consent', '0');
+    expect(svc.consent_pending).toBeTrue();
+    // without a privacy statement nothing is ever pending:
+    (environment as any).privacy_statement_url = '';
+    expect(svc.consent_pending).toBeFalse();
   });
 
   it('still sends a visitor of any other page to the login flow', () => {

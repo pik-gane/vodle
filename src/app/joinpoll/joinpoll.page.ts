@@ -38,11 +38,6 @@ export class JoinpollPage implements OnInit {
   help_link_start = '<a href="/help">';
   help_link_end = '</a>';
 
-  // the first visit of a magic link on a device without credentials (#193):
-  // the consent question (only when the deployment has a privacy statement)
-  // before vodle takes part as a guest, and the way to a login instead
-  accept_privacy = !environment.privacy_statement_url;
-
   db_server_url: string;
   db_password: string;
   pid: string;
@@ -91,33 +86,11 @@ export class JoinpollPage implements OnInit {
     // TODO: either go to voting page directly or show some kind of welcome page?
   }
 
-  get guest_login_pending(): boolean {
-    return this.G.D.guest_login_pending;
-  }
-
-  onGuestLoginPending() {
-    // called by DataService when it found no credentials for this magic
-    // link; the template shows the consent question via guest_login_pending
-    this.G.L.entry("JoinpollPage.onGuestLoginPending");
-  }
-
   onLoginFailed(message: string) {
-    // the guest account could not be created or logged in (#193)
+    // the guest account that a first visit of a magic link creates silently
+    // (#193) could not be created or logged in
     this.G.L.warn("JoinpollPage.onLoginFailed", message);
     this.join_error = message;
-  }
-
-  take_part_as_guest() {
-    if (!this.accept_privacy) {
-      return;
-    }
-    this.G.L.entry("JoinpollPage.take_part_as_guest");
-    this.G.D.login_as_guest();
-  }
-
-  go_to_login() {
-    // an existing account: the login page returns here afterwards
-    this.router.navigate(['/login/used_before/' + encodeURIComponent(this.router.url)]);
   }
 
   onDataReady() {

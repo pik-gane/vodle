@@ -139,5 +139,5 @@ Without a running bot no deadline is enforced on the server: clients then close 
 - [ ] the guard bot runs as an admin, its healthcheck is green, a rehearsal poll closes at its deadline and its rooms disappear after `RETENTION_DAYS` (set it to a few minutes for the rehearsal)
 - [ ] database backups scheduled and restored once
 - [ ] privacy statement names the retention period and the homeserver operator
-- [ ] a magic link opened in a private browser window takes part as a guest (after the consent checkbox when `privacy_statement_url` is set), and logging in from the poll page's banner afterwards keeps the vote (#193)
+- [ ] a magic link opened in a private browser window shows the poll at once as a guest; with `privacy_statement_url` set, the sliders work only after the consent checkbox at the bottom of the poll page is ticked; logging in from the poll page's banner afterwards keeps the vote (#193)
 - [ ] a magic link with the poll password altered is not let in (the bot log shows the ignored knock; the app gives up after a minute), the right one joins within a second (#328)

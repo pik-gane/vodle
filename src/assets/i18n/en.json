@@ -448,12 +448,7 @@
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
         "p5": "You can use the “assist me” button to set your initial waps. After setting your initial waps, it makes sense to switch on “live results” to monitor the pollʼs development over time. Then you can adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. ",
         "lets-go-button": "OK, letʼs go",
-        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}.",
-        "guest-welcome": "Welcome to vodle!",
-        "guest-intro": "You have been invited to take part in a poll. vodle creates a guest account for you on this device, so that you can vote right away. You can log in with an e-mail address of your own at any time later to keep your votes and polls when you change devices; vodle then moves them to your account.",
-        "take-part-as-guest-button": "Take part as a guest",
-        "have-account": "Have you used vodle before? Then log in first, so that this poll is added to your account:",
-        "login-button": "Log in"
+        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -543,6 +538,7 @@
         "-page-title": "Poll",
         "guest-banner": "You are taking part as a guest. Your votes and polls stay on this device only until you log in with an e-mail address of your own; vodle then moves them to your account.",
         "guest-login-button": "Log in",
+        "consent-lead": "Before your waps are stored, please confirm: ",
         "-page-title-running": "Running poll",
         "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
         "delegate-button": "Delegate",

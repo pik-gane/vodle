@@ -545,6 +545,12 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
+    if (store && this.G.D.consent_pending) {
+      // no rating is stored before the consent (#193); the poll page stores
+      // the current ones once it is given
+      this.G.L.info("Poll.set_my_own_rating: consent pending, rating kept locally", this._pid, oid);
+      store = false;
+    }
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }

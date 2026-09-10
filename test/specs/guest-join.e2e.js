@@ -19,11 +19,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 /*
  * A magic link opened on a device without an account (#193): the built app
- * must keep the visitor on the join page — taking part as a guest, after the
- * consent question when the deployment has a privacy statement — instead of
- * sending them through the login flow. This static server has no homeserver
- * behind it, so the guest registration fails and the join page shows its
- * error; what matters here is that the login flow never appears.
+ * must keep the visitor on the join page — taking part as a guest right
+ * away, without a question (the consent question, if the deployment has a
+ * privacy statement, waits on the poll page) — instead of sending them
+ * through the login flow. This static server has no homeserver behind it, so
+ * the guest registration fails and the join page shows its error; what
+ * matters here is that neither the login flow nor a question appears.
  */
 
 describe('vodle magic link without an account', () => {
@@ -39,11 +40,13 @@ describe('vodle magic link without an account', () => {
       return false;
     };
     const join_page_shown = async () =>
-      (await displayed('[data-vodle="join-poll-guest-page"]'))
-      || (await displayed('[data-vodle="join-poll-page"]'))
+      (await displayed('[data-vodle="join-poll-page"]'))
       || (await displayed('[data-vodle="join-poll-error"]'));
 
     await browser.waitUntil(join_page_shown, {timeout: 30000, timeoutMsg: 'the join page did not take over'});
     expect(await displayed('ion-content[data-vodle-step]')).toBe(false);
+    // no question on the join page:
+    expect(await displayed('[data-vodle="take-part-as-guest-button"]')).toBe(false);
+    expect(await displayed('[data-vodle="accept-privacy-checkbox"]')).toBe(false);
   });
 });
