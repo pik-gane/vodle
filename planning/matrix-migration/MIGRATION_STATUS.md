@@ -42,7 +42,7 @@ Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 - [#326](https://github.com/pik-gane/vodle/issues/326) offline-queued writes were replayed only on the next sync tick (≈ 25–30 s) — fixed on the PR #323 branch on 2026-09-10 (retry with backoff plus the browser's `online` event)
 - [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver: domain, registration policy, rate limits, guard bot deployment (`environment.prod.ts` still holds placeholders)
 - [#328](https://github.com/pik-gane/vodle/issues/328) participation in a poll is visible to anyone who learns the poll id (rooms are joinable by alias)
-- [#329](https://github.com/pik-gane/vodle/issues/329) no federation partition/merge test yet
+- [#329](https://github.com/pik-gane/vodle/issues/329) federation partition/merge test — done 2026-09-10 (plan session 9b): a TCP proxy in the harness cuts and heals the link, the spec checks that both sides keep voting and converge after the heal
 - [#330](https://github.com/pik-gane/vodle/issues/330) user data is not re-encrypted when the password changes
 - [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are never cleaned up
 - [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the closing power-level event is dropped by state resolution — mitigated by the bot's grace and quiet periods and, since session 9, the two-phase close (closed state first, power drop after); a client with a clock skewed by more than the grace period can still lose its last write
@@ -84,7 +84,7 @@ tooling's fidelity.
 ## Test harness
 
 - `scripts/test-couchdb.sh start|provision|stop|status` — a throw-away CouchDB with the real validator.
-- `scripts/test-matrix.sh start|stop|status` — two federating Synapse homeservers (`localhost:8449` on client port 8009, `localhost:8450` on 8010) and the guard bot.
+- `scripts/test-matrix.sh start|stop|status` — two federating Synapse homeservers (`localhost:8449` on client port 8009, `localhost:8450` on 8010), the federation proxy that lets the partition spec cut the link between them (`scripts/federation-proxy.js`, control endpoint on port 8011), and the guard bot.
 - Without the servers the real-server specs report themselves pending; CI runs with `--no-skips`, so there they must run.
 - `npm run e2e` drives the built app through the first-run flow (`test/`).
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Matrix backend ([#293](https://github.com/pik-gane/vodle/issues/293)): polls, voter data and user data live in rooms on a Matrix homeserver; polls can be joined across federating homeservers and magic links carry the poll's origin server; a guard bot closes a poll's rooms at the deadline so the server itself rejects late ratings; CouchDB → Matrix migration tooling with a `/migration` page (PRs #294–#312, #315, #322, #323). The Matrix backend is the default in both environments; the CouchDB backend remains as the legacy path.
-- Tests and CI: the build and the full suite run on every pull request against a real CouchDB and two federating Synapse homeservers, plus an end-to-end smoke test of the built app (PRs #319–#321, #323).
+- Tests and CI: the build and the full suite run on every pull request against a real CouchDB and two federating Synapse homeservers, plus an end-to-end smoke test of the built app (PRs #319–#321, #323); a proxy in the harness lets a spec cut and heal the federation link (#329).
 - Simple formatting (`**bold**`, `*italics*`, paragraphs) in details texts (#214); archiving of ended polls (#83); on first start the language question is skipped when the browser's language is offered (#193, partially); a sign in the page header while the data sync is stalled.
 - Dark theme (PR #291); Tamil translation (#277).
 

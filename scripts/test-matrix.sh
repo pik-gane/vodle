@@ -22,8 +22,13 @@
 # it. Everything lives in docker named volumes, so "stop" removes all state
 # and never touches a development homeserver (which runs on port 8008).
 #
-#   scripts/test-matrix.sh start      # start and provision both + the guard bot (idempotent)
-#   scripts/test-matrix.sh stop       # remove containers and all their data, stop the bot
+# The servers' federation ports are fronted by scripts/federation-proxy.js
+# (Synapse itself listens on port + 10), whose control endpoint on port 8011
+# lets src/app/matrix-federation.spec.ts cut and heal the link between the
+# two servers for the partition test (#329).
+#
+#   scripts/test-matrix.sh start      # start and provision both + the proxy + the guard bot (idempotent)
+#   scripts/test-matrix.sh stop       # remove containers and all their data, stop the proxy and the bot
 #   scripts/test-matrix.sh status     # print whether they are reachable
 #
 set -euo pipefail
@@ -45,6 +50,9 @@ SERVERS="hs1:8009:8449 hs2:8010:8450"
 # specs need not wait long.
 BOT_PID_FILE="${VODLE_TEST_MATRIX_BOT_PID_FILE:-/tmp/vodle-test-guard-bot.pid}"
 BOT_LOG="${VODLE_TEST_MATRIX_BOT_LOG:-/tmp/vodle-test-guard-bot.log}"
+PROXY_PID_FILE="${VODLE_TEST_MATRIX_PROXY_PID_FILE:-/tmp/vodle-test-federation-proxy.pid}"
+PROXY_LOG="${VODLE_TEST_MATRIX_PROXY_LOG:-/tmp/vodle-test-federation-proxy.log}"
+PROXY_CONTROL_PORT=8011
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 wait_for_synapse() {  # wait_for_synapse CLIENT_PORT CONTAINER
@@ -120,7 +128,9 @@ listeners:
     resources:
       - names: [client]
         compress: false
-  - port: ${fport}
+  # the federation port named in the server_name belongs to
+  # scripts/federation-proxy.js, which forwards to this one:
+  - port: $((fport + 10))
     tls: true
     type: http
     bind_addresses: ['0.0.0.0']
@@ -134,6 +144,12 @@ federation_verify_certificates: false
 trusted_key_servers: []
 # federation partners live on loopback, which Synapse blocks by default:
 ip_range_blacklist: []
+# after a partition (#329) a server must retry the other one within seconds,
+# not after the default ten minutes:
+federation:
+  destination_min_retry_interval: 1s
+  destination_retry_multiplier: 1
+  destination_max_retry_interval: 5s
 enable_registration: true
 enable_registration_without_verification: true
 suppress_key_server_warning: true
@@ -185,6 +201,31 @@ start_guard_bot() {
   echo "guard bot started (pid $(cat "${BOT_PID_FILE}"), log ${BOT_LOG})"
 }
 
+start_proxy() {
+  if [ -f "${PROXY_PID_FILE}" ] && kill -0 "$(cat "${PROXY_PID_FILE}")" 2>/dev/null; then
+    echo "federation proxy already running (pid $(cat "${PROXY_PID_FILE}"))"
+    return 0
+  fi
+  if ! command -v node >/dev/null 2>&1; then
+    echo "node missing: federation proxy NOT started; the servers cannot federate" >&2
+    return 1
+  fi
+  (
+    cd "${REPO_DIR}"
+    PROXY_MAP="8449:8459,8450:8460" CONTROL_PORT="${PROXY_CONTROL_PORT}" \
+    nohup node scripts/federation-proxy.js > "${PROXY_LOG}" 2>&1 &
+    echo $! > "${PROXY_PID_FILE}"
+  )
+  echo "federation proxy started (pid $(cat "${PROXY_PID_FILE}"), control http://localhost:${PROXY_CONTROL_PORT}, log ${PROXY_LOG})"
+}
+
+stop_proxy() {
+  if [ -f "${PROXY_PID_FILE}" ]; then
+    kill "$(cat "${PROXY_PID_FILE}")" 2>/dev/null || true
+    rm -f "${PROXY_PID_FILE}"
+  fi
+}
+
 stop_guard_bot() {
   if [ -f "${BOT_PID_FILE}" ]; then
     kill "$(cat "${BOT_PID_FILE}")" 2>/dev/null || true
@@ -194,6 +235,8 @@ stop_guard_bot() {
 
 start() {
   local spec name cport fport
+  # the proxy first: the servers reach each other only through it
+  start_proxy
   for spec in ${SERVERS}; do
     IFS=: read -r name cport fport <<< "${spec}"
     start_server "${name}" "${cport}" "${fport}"
@@ -208,6 +251,7 @@ start() {
 stop() {
   local spec name
   stop_guard_bot
+  stop_proxy
   for spec in ${SERVERS}; do
     IFS=: read -r name _ _ <<< "${spec}"
     docker rm -f "${PREFIX}-${name}" >/dev/null 2>&1 || true
@@ -230,6 +274,12 @@ status() {
       ok=1
     fi
   done
+  if curl -sSf "http://127.0.0.1:${PROXY_CONTROL_PORT}/status" >/dev/null 2>&1; then
+    echo "federation proxy reachable at http://localhost:${PROXY_CONTROL_PORT}"
+  else
+    echo "no federation proxy at http://localhost:${PROXY_CONTROL_PORT}"
+    ok=1
+  fi
   exit ${ok}
 }
 

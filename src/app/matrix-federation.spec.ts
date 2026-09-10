@@ -41,6 +41,9 @@ import { environment } from '../environments/environment';
 const HS1 = {url: 'http://localhost:8009', name: 'localhost:8449'};
 const HS2 = {url: 'http://localhost:8010', name: 'localhost:8450'};
 const GUARD_BOT = '@vodle-guard:' + HS1.name;   // registered on hs1 by the harness
+// scripts/federation-proxy.js fronts the federation ports; its control
+// endpoint cuts and heals the link between the two servers (#329):
+const PROXY_CONTROL = 'http://localhost:8011';
 const POLL_PASSWORD = 'federation-poll-password';
 
 describe('MatrixService across two federating Synapse homeservers (#293)', () => {
@@ -110,9 +113,9 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     throw new Error('timed out waiting for ' + what);
   }
 
-  async function fresh_ratings(svc: any): Promise<Map<string, Map<string, number>>> {
-    svc.ratingCaches.delete(pid);
-    return svc.getRatings(pid);
+  async function fresh_ratings(svc: any, poll_id: string = pid): Promise<Map<string, Map<string, number>>> {
+    svc.ratingCaches.delete(poll_id);
+    return svc.getRatings(poll_id);
   }
 
   function rating_values(ratings: Map<string, Map<string, number>>, optionId: string): number[] {
@@ -249,5 +252,57 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const stored = await response.json();
     expect(typeof stored.enc).withContext(JSON.stringify(stored)).toBe('string');
     expect(stored.value).toBeUndefined();
+  });
+
+  /** the federation proxy's control endpoint, or null when the harness runs without it */
+  async function proxy(action: 'status' | 'partition' | 'heal'): Promise<any> {
+    try {
+      const response = await fetch(PROXY_CONTROL + '/' + action, {method: action === 'status' ? 'GET' : 'POST', cache: 'no-store'});
+      return response.ok ? response.json() : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  it('keeps both sides voting during a partition of the federation link and converges after it heals (#329)', async () => {
+    if (!requires_synapses()) { return; }
+    const status = await proxy('status');
+    if (!status || status.partitioned) {
+      pending('needs the federation proxy of scripts/test-matrix.sh (control endpoint ' + PROXY_CONTROL + ')');
+      return;
+    }
+    // self-contained (own poll and users), since jasmine randomizes spec order
+    const ppid = pid + 'pt';
+    const dora = await make_client('dora', HS1);
+    const roomId = await dora.createPollRoom(ppid, 'Partition poll');
+    await dora.setPollMetadata(ppid, {type: 'winner', language: 'en'});
+    await dora.addOption(ppid, 'o1', {name: 'Option one'});
+    const emil = await make_client('emil', HS2);
+    await emil.setPollOrigin(ppid, HS1.name);
+    expect(await emil.getPollRoom(ppid)).toBe(roomId);
+    await dora.submitRating(ppid, 'o1', 10);
+    await emil.submitRating(ppid, 'o1', 20);
+    await until(async () => JSON.stringify(rating_values(await fresh_ratings(dora, ppid), 'o1')) === '[10,20]'
+                         && JSON.stringify(rating_values(await fresh_ratings(emil, ppid), 'o1')) === '[10,20]',
+      'both sides to converge before the partition');
+    try {
+      // --- the link is cut: each side keeps voting and sees its own vote,
+      // but not the other side's ---
+      expect((await proxy('partition')).partitioned).toBeTrue();
+      await dora.submitRating(ppid, 'o1', 11);
+      await emil.submitRating(ppid, 'o1', 21);
+      await new Promise(resolve => window.setTimeout(resolve, 6000));
+      expect(rating_values(await fresh_ratings(dora, ppid), 'o1')).withContext('hs1 during the partition').toEqual([11, 20]);
+      expect(rating_values(await fresh_ratings(emil, ppid), 'o1')).withContext('hs2 during the partition').toEqual([10, 21]);
+    } finally {
+      // --- the link heals: the servers retry each other within seconds (see
+      // the federation section of the harness config) and both sides converge ---
+      expect((await proxy('heal')).partitioned).toBeFalse();
+    }
+    const heal_started = performance.now();
+    await until(async () => JSON.stringify(rating_values(await fresh_ratings(dora, ppid), 'o1')) === '[11,21]'
+                         && JSON.stringify(rating_values(await fresh_ratings(emil, ppid), 'o1')) === '[11,21]',
+      'both sides to converge after the partition healed', 90000);
+    console.info('VODLE_PERF federation_partition_heal_ms', Math.round(performance.now() - heal_started));
   });
 });

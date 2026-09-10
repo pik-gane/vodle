@@ -200,10 +200,17 @@ same across federation: the second homeserver holds the same ciphertext.
 6. **Hashed usernames are deterministic.** The homeserver can confirm a
    guessed email address by hashing it. A salted, per-deployment hash would
    need the salt to be known to every client.
-7. **Federation partition** (both servers keep accepting votes while
-   disconnected, then merge) is not exercised; per-voter rooms with a single
-   writer each make the merge trivially conflict-free in principle, but a
-   test would need the harness to cut the link mid-run.
+7. **Federation partition** — tested since 2026-09-10 (#329):
+   `scripts/federation-proxy.js` fronts the test servers' federation ports,
+   and `matrix-federation.spec.ts` cuts the link, lets both sides vote, and
+   checks that neither sees the other's vote until the link heals and that
+   both converge afterwards (`federation_partition_heal_ms`: 20 s in the
+   sandbox, CI figure in §6). Per-voter
+   rooms with a single writer each make the merge conflict-free; the
+   recovery time is Synapse's destination retry interval, which the harness
+   sets to 1–5 s (the default is 10 minutes — a production deployment
+   should set `federation.destination_min_retry_interval` to a few seconds
+   as well, #327).
 
 ## 4. Migration (CouchDB → Matrix)
 
@@ -283,7 +290,7 @@ a migrated user can open the migrated poll.
 | --- | --- |
 | full poll lifecycle with 3 clients on the Matrix backend | create, join, vote, converge: 3 users in the two-client spec (alice, bob, carol) and across two homeservers; delegation is disabled in both environments; closing is enforced by the guard bot (spec) |
 | user data sync/restore across 2 devices | a second session of the same user restores its data from the user room (`getAllUserData`, spec); the app does this on every Matrix login (`restoreUserDataFromMatrix`) |
-| resilience to offline mode, partitions, federation splits | offline reconvergence and offline-queued writes: spec; federation with two homeservers: spec; partition of the federation link: not tested (§3.5) |
+| resilience to offline mode, partitions, federation splits | offline reconvergence and offline-queued writes: spec; federation with two homeservers: spec; partition of the federation link: spec (§3.5) |
 | performance report | §2 |
 | security | §3 |
 | migration report | §4 |
@@ -309,3 +316,4 @@ measured 28087 ms for it.
 | federation_rating_propagation_hs1_to_hs2_ms (median) | 108 |
 | federation_rating_propagation_hs2_to_hs1_ms (median) | 131 |
 | offline_queue_replay_visible_ms | 1110 |
+| federation_partition_heal_ms | pending (added 2026-09-10) |
