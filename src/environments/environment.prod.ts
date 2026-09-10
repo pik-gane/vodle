@@ -81,7 +81,12 @@ export const environment = {
   closing: {
     grace_period_1_ms: 3000,
     grace_period_2_ms: 3000,
-    grace_period_3_ms: 3000
+    grace_period_3_ms: 3000,
+    // Matrix backend (#325): how long a client waits for the guard bot to
+    // close the poll on the server before closing it by convention, and
+    // how often it looks:
+    matrix_closure_timeout_ms: 120000,
+    matrix_closure_poll_ms: 2000
   },
   max_len: {
     title: 200,

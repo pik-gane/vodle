@@ -468,6 +468,50 @@ describe('MatrixService', () => {
         service.teardownPollEventHandlers('test-poll');
       });
       
+      describe('the closing of a poll on the server (#325)', () => {
+        const state_events = (extra: any[]) => [
+          {type: 'm.room.create', state_key: '', event_id: '$create', content: {}},
+          ...extra,
+        ];
+        beforeEach(() => {
+          (service as any).client = {getAccessToken: () => 'token'};
+          (service as any).pollRooms.set('test-poll', '!poll:test');
+        });
+        afterEach(() => {
+          (service as any).client = null;
+        });
+        const fetch_returning = (events: any[]) =>
+          spyOn(window, 'fetch').and.returnValue(Promise.resolve({ok: true, status: 200, json: async () => events} as any));
+
+        it("reports the guard bot's closing event with its id", async () => {
+          fetch_returning(state_events([{type: 'm.room.vodle.poll.state', state_key: '', event_id: '$closed',
+            content: {state: 'closed', closed_at: '2026-09-10T12:00:05.000Z', closed_by: '@vodle-guard:example.org'}}]));
+          expect(await service.getPollClosure('test-poll')).toEqual({closed: true, event_id: '$closed', closed_at: '2026-09-10T12:00:05.000Z'});
+        });
+
+        it('takes a power-level drop by an older guard bot as closed too', async () => {
+          fetch_returning(state_events([{type: 'm.room.power_levels', state_key: '', event_id: '$pl',
+            content: {events_default: 100, state_default: 100, users_default: 0}}]));
+          expect(await service.getPollClosure('test-poll')).toEqual({closed: true, event_id: '$pl', closed_at: null});
+        });
+
+        it('reports a running poll as not closed', async () => {
+          fetch_returning(state_events([{type: 'm.room.vodle.poll.state', state_key: '', event_id: '$running', content: {state: 'running'}},
+            {type: 'm.room.power_levels', state_key: '', event_id: '$pl', content: {events_default: 50, state_default: 100, users_default: 50}}]));
+          expect(await service.getPollClosure('test-poll')).toEqual({closed: false, event_id: null, closed_at: null});
+        });
+
+        it('refreshRatings reads past the cache', async () => {
+          (service as any).ratingCaches.set('test-poll', new Map([['stale', new Map()]]));
+          const fresh = new Map([['@v:test', new Map([['o1', 42]])]]);
+          spyOn(service, 'getRatings').and.callFake(async () => {
+            expect((service as any).ratingCaches.has('test-poll')).toBeFalse();
+            return fresh;
+          });
+          expect(await service.refreshRatings('test-poll')).toBe(fresh);
+        });
+      });
+
       it("puts an option from the poll room's timeline into the cache and tells the listeners (#324)", async () => {
         const added: any[] = [];
         const listener: PollEventListener = {

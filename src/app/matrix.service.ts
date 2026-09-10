@@ -2521,6 +2521,12 @@ export class MatrixService {
     let announceCount = 0;
     let totalEvents = 0;
     
+    // a closed poll (#325): voter rooms announced after the guard bot's
+    // closing event are not part of the poll, so that every client counts
+    // the same voter rooms
+    const closing: any = this.client.getRoom(pollRoomId)?.currentState?.getStateEvents('m.room.vodle.poll.state' as any, '');
+    const closed_ts: number | null = closing?.getContent?.()?.state === 'closed' ? (closing.getTs?.() || null) : null;
+    
     try {
       let from: string | undefined = undefined;
       let keepGoing = true;
@@ -2556,6 +2562,10 @@ export class MatrixService {
             const vodleVid = content.vodle_vid;
             console.log("[discoverVoterRooms] Found announce event: voterId=", voterId, "voterRoomId=", voterRoomId, "vodleVid=", vodleVid);
             if (!voterId || !voterRoomId) continue;
+            if (closed_ts !== null && event.origin_server_ts > closed_ts) {
+              console.log("[discoverVoterRooms] Ignoring voter room announced after the poll was closed:", voterRoomId);
+              continue;
+            }
             
             // Use vodleVid as the primary cache key when available,
             // matching getOrCreateVoterRoom which caches by vodleVid.
@@ -2963,6 +2973,54 @@ export class MatrixService {
     
     this.logger?.exit("MatrixService.getRatings");
     return result;
+  }
+  
+  /**
+   * The ratings as the server has them NOW, discovery included, replacing
+   * the cache (the final read before a poll is tallied, #325).
+   */
+  async refreshRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    this.ratingCaches.delete(pollId);
+    return this.getRatings(pollId);
+  }
+  
+  /**
+   * Whether the guard bot has closed the poll on the server (#325): it
+   * closes every voter room first and then writes the poll room's
+   * m.room.vodle.poll.state "closed" event, which only it can write once
+   * the poll runs. From that event on no rating can change, so every client
+   * that reads the ratings afterwards reads the same ones; and the event's
+   * id is the same for every client, which makes it the seed of a winner
+   * poll's final lottery (the CouchDB backend uses the closing document's
+   * revision). A poll room whose power levels were dropped by a guard bot
+   * from before that event existed counts as closed too.
+   */
+  async getPollClosure(pollId: string): Promise<{closed: boolean; event_id: string | null; closed_at: string | null}> {
+    const none = {closed: false, event_id: null, closed_at: null};
+    if (!this.client) {
+      return none;
+    }
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return none;
+    }
+    const resp = await fetch(`${this.homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`, {
+      headers: { 'Authorization': `Bearer ${this.client.getAccessToken()}` },
+      cache: 'no-store',
+    });
+    if (!resp.ok) {
+      throw new Error(`could not read the poll room's state: ${resp.status}`);
+    }
+    const events: any[] = await resp.json();
+    const state = events.find(e => e.type === 'm.room.vodle.poll.state' && e.state_key === '');
+    if (state?.content?.state === 'closed') {
+      return {closed: true, event_id: state.event_id || null, closed_at: state.content.closed_at || null};
+    }
+    const powerLevels = events.find(e => e.type === 'm.room.power_levels' && e.state_key === '');
+    if ((powerLevels?.content?.events_default ?? 0) >= 100) {
+      return {closed: true, event_id: powerLevels.event_id || null, closed_at: null};
+    }
+    return none;
   }
   
   /**

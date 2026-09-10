@@ -1941,20 +1941,43 @@ export class Poll {
     // 1. disable voting:
     this.allow_voting = false;
     
-    // For Matrix backend, skip PouchDB-specific replication & doc fetch.
-    // Just close the poll, tally, and notify.
+    // Matrix backend (#325): after the first grace period, wait for the guard
+    // bot's closing on the server (every voter room closed, then the poll
+    // room's closed state event), read the final ratings from the server,
+    // and only then tally. The closing event's id seeds a winner poll's
+    // lottery, as the closing document's revision does on CouchDB. Without a
+    // guard bot the wait ends after closing.matrix_closure_timeout_ms and
+    // the poll is closed by convention, with a seed anyone can predict.
     if (environment.useMatrixBackend) {
       window.setTimeout((() => {
         if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
-        window.setTimeout((() => {
-          if (!is_current()) { return; }
+        this.G.D.wait_for_matrix_poll_closure(this.pid, is_current)
+        .then((closure => {
+          if (!is_current()) { return 'abort'; }
+          return this.G.D.reconcile_matrix_ratings(this.pid).then(() => closure);
+        }).bind(this))
+        .then(((closure) => {
+          if (!is_current() || closure === 'abort') { return; }
+          this.G.L.trace("Poll.end (Matrix) final tally", this._pid, closure);
           this.G.D.stop_poll_sync(this.pid);
-          // Final tally
           this.tally_all();
+          if (this.type == 'winner') {
+            const seed = closure.event_id || ('due:' + this.G.D.getp(this._pid, 'due'));
+            if (!closure.event_id) {
+              this.G.L.warn("Poll.end (Matrix) no closing event to seed the lottery with, using the due date", this._pid);
+            }
+            this.make_final_rand(this.pid + seed);
+            this.make_winner();
+          }
           this.notify_of_end();
-        }).bind(this), environment.closing.grace_period_2_ms);
+        }).bind(this))
+        .catch(err => {
+          if (!is_current()) { return; }
+          this.G.L.error("Poll.end (Matrix) closing or final read failed, deferring finalization", this._pid, err);
+          this.schedule_end_retry();
+        });
       }).bind(this), environment.closing.grace_period_1_ms);
       return;
     }

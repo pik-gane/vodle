@@ -1846,12 +1846,68 @@ export class DataService implements OnDestroy {
       // poll-cache synchronously so local reads see the new state immediately.
       if (old_state == 'draft') {
         this.ensure_poll_cache(pid)['state'] = new_state;
+      } else if (environment.useMatrixBackend && new_state == 'closed') {
+        // the shared "closed" fact is the guard bot's to write on the Matrix
+        // backend (#325): the room's state is locked for participants once
+        // the poll runs, so this is only recorded locally
+        this.ensure_poll_cache(pid)['state'] = new_state;
       } else {
         this._setp_in_polldb(pid, 'state', new_state);
       }
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
+  }
+
+  /**
+   * Wait for the guard bot to close the poll on the server (#325). It closes
+   * every voter room first and then writes the poll room's closed state, so
+   * from that event on the ratings cannot change and every client reads
+   * the same ones. Resolves with the closing event's id — or, without a
+   * guard bot, with closed=false after closing.matrix_closure_timeout_ms:
+   * the poll is then closed by convention, as it was before.
+   */
+  async wait_for_matrix_poll_closure(pid: string, is_current: () => boolean = () => true):
+      Promise<{closed: boolean; event_id: string | null}> {
+    const started = Date.now();
+    for (;;) {
+      if (this.shutting_down || !is_current()) {
+        throw new Error("poll finalization cancelled");
+      }
+      try {
+        const closure = await this.matrixService.getPollClosure(pid);
+        if (closure.closed) {
+          this.G.L.info("DataService.wait_for_matrix_poll_closure: the poll is closed on the server", pid, closure.event_id);
+          return closure;
+        }
+      } catch (err) {
+        this.G.L.warn("DataService.wait_for_matrix_poll_closure could not read the poll room's state", pid, err);
+      }
+      if (Date.now() - started >= environment.closing.matrix_closure_timeout_ms) {
+        this.G.L.warn("DataService.wait_for_matrix_poll_closure: no guard bot closed the poll within the timeout, closing by convention", pid);
+        return {closed: false, event_id: null};
+      }
+      await new Promise(resolve => window.setTimeout(resolve, environment.closing.matrix_closure_poll_ms));
+    }
+  }
+
+  /**
+   * The final ratings as the server has them, bridged into the caches the
+   * tally works from (#325): what the live handlers did while the poll ran,
+   * once more and completely, before the final tally.
+   */
+  async reconcile_matrix_ratings(pid: string): Promise<void> {
+    const ratings = await this.matrixService.refreshRatings(pid);
+    const cache = this.ensure_poll_cache(pid);
+    let count = 0;
+    for (const [vid, per_option] of ratings) {
+      for (const [oid, rating] of per_option) {
+        cache[this.get_voter_key_prefix(pid, vid) + 'rating.' + oid] = String(rating);
+        this.G.P.update_own_rating(pid, vid, oid, rating, false);
+        count++;
+      }
+    }
+    this.G.L.info("DataService.reconcile_matrix_ratings", pid, ratings.size, "voters,", count, "ratings");
   }
 
   private async confirm_draft_migration_marker(pid: string, state: string): Promise<void> {

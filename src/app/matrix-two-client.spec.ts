@@ -410,6 +410,25 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     // from before the deadline, not lost to the close:
     frank.ratingCaches.delete(gpid);
     expect(rating_values(await frank.getRatings(gpid), 'o1')).toEqual([last_accepted]);
+
+    // --- the shared "closed" fact (#325): after its voter rooms the bot
+    // writes the poll room's closed state, then drops its power levels; every
+    // client sees the same closing event and reads the same final ratings ---
+    await until(async () => (await frank.getPollClosure(gpid)).closed, 'the guard bot to close the poll room', 60000);
+    const closure = await frank.getPollClosure(gpid);
+    expect(closure.event_id).toMatch(/^\$/);
+    expect(closure.closed_at).toBeTruthy();
+    expect((await raw_state(frank, voter_room, 'm.room.power_levels')).events_default)
+      .withContext('the voter room was closed before the poll room').toBe(100);
+    expect((await raw_state(frank, roomId, 'm.room.vodle.poll.state')).closed_by).toBe(GUARD_BOT);
+    await until(async () => (await raw_state(frank, roomId, 'm.room.power_levels'))?.events_default === 100,
+      "the poll room's power levels to drop after the closed state", 30000);
+    const grace = await make_client('grace');   // a late reader, as a client finalizing after a restart
+    const seen_by_grace = await grace.getPollClosure(gpid);
+    expect(seen_by_grace.event_id).toBe(closure.event_id);
+    expect(rating_values(await grace.refreshRatings(gpid), 'o1')).toEqual([last_accepted]);
+    expect(rating_values(await frank.refreshRatings(gpid), 'o1')).toEqual([last_accepted]);
+    expect((await frank.getAllPollData(gpid)).state).toBe('closed');
   });
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {

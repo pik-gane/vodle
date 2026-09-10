@@ -153,11 +153,18 @@ ciphertext.
   the deadline and once the room has been quiet for `QUIET_PERIOD_MS` (5 s);
   clients stop writing at the deadline, so only a client whose clock is off
   by more than the grace period can still lose its last write on an option.
-- The app never writes the lifecycle state `closed` on the Matrix backend
-  (`change_poll_state` only stores it locally after the draft phase); ending
-  a poll is decided by clients' clocks and enforced by the guard bot. This is
-  consistent, but it means a poll without a reachable guard bot is closed by
-  convention only.
+- The shared "closed" fact is the guard bot's (#325, 2026-09-10): it closes
+  a poll's voter rooms first, then writes the poll room's
+  `m.room.vodle.poll.state` = closed (only power 100 may, once the poll
+  runs) and drops the room's power levels last. A client ending a poll
+  waits for that event (`closing.matrix_closure_timeout_ms`, 2 min by
+  default), reads the final ratings from the server, tallies, and — for a
+  winner poll — seeds the lottery with the closing event's id, which every
+  client sees alike (the CouchDB backend uses the closing document's
+  revision). Voter rooms announced after the closing event are ignored.
+  Without a guard bot the wait times out and the poll is closed by
+  convention, with a seed that is predictable; a production deployment
+  needs the bot (#327).
 
 ### 3.4 Federation
 

@@ -513,6 +513,9 @@ describe('Poll.end final replication handling (#292)', () => {
           wait_for_poll_db: jasmine.createSpy('wait_for_poll_db'),
           replicate_once: jasmine.createSpy('replicate_once'),
           get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc'),
+          // the Matrix branch waits for the guard bot's closing (#325); here it never comes:
+          wait_for_matrix_poll_closure: jasmine.createSpy('wait_for_matrix_poll_closure').and.returnValue(new Promise(() => {})),
+          reconcile_matrix_ratings: jasmine.createSpy('reconcile_matrix_ratings').and.returnValue(Promise.resolve()),
         };
         const p = make_poll(D);
         p._state = 'running';
@@ -638,6 +641,119 @@ describe('Poll.end final replication handling (#292)', () => {
     resolve_seed(state_doc('1-a'));
     for (let i = 0; i < 10; i++) { await Promise.resolve(); }
     expect(p.make_final_rand).toHaveBeenCalledOnceWith('p11-a');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Poll.end on the Matrix backend (#325)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let previous_matrix_flag: boolean;
+
+  beforeEach(() => {
+    previous_matrix_flag = (environment as any).useMatrixBackend;
+    (environment as any).useMatrixBackend = true;
+    jasmine.clock().install();
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_matrix_flag;
+    jasmine.clock().uninstall();
+  });
+
+  const make_poll = (D: any, type = 'winner'): any => {
+    const p: any = Object.create(Poll.prototype);
+    p.end_retry_timeout_id = null;
+    p.end_retry_delay_ms = environment.closing.grace_period_3_ms;
+    p.end_generation = 0;
+    p.end_in_progress = false;
+    p.end_cancelled = false;
+    p.G = { L, D, P: { polls: {} } };
+    p._pid = 'p1';
+    p.G.P.polls[p._pid] = p;
+    p._state = 'running';
+    let has_results = false;
+    Object.defineProperty(p, 'state', { get: () => p._state, set: value => { p._state = value; } });
+    Object.defineProperty(p, 'type', { get: () => type });
+    Object.defineProperty(p, 'has_results', { get: () => has_results, set: value => { has_results = value; } });
+    p.tally_all = jasmine.createSpy('tally_all');
+    p.notify_of_end = jasmine.createSpy('notify_of_end').and.callFake(() => { has_results = true; p.end_in_progress = false; });
+    p.make_final_rand = jasmine.createSpy('make_final_rand');
+    p.make_winner = jasmine.createSpy('make_winner');
+    return p;
+  };
+
+  const settle = async () => { for (let i = 0; i < 30; i++) { await Promise.resolve(); } };
+
+  const make_D = (closure: any): any => {
+    const calls: string[] = [];
+    return {
+      calls,
+      getp: (_pid: string, key: string) => key === 'due' ? '2026-09-10T12:00:00.000Z' : '',
+      wait_for_matrix_poll_closure: jasmine.createSpy('wait').and.callFake(() => {
+        calls.push('wait');
+        return closure instanceof Error ? Promise.reject(closure) : Promise.resolve(closure);
+      }),
+      reconcile_matrix_ratings: jasmine.createSpy('reconcile').and.callFake(() => { calls.push('reconcile'); return Promise.resolve(); }),
+      stop_poll_sync: jasmine.createSpy('stop_poll_sync').and.callFake(() => { calls.push('stop'); }),
+    };
+  };
+
+  it("waits for the guard bot's closing, reads the final ratings from the server, then tallies and seeds the lottery with the closing event", async () => {
+    const D = make_D({closed: true, event_id: '$closing-event'});
+    const p = make_poll(D);
+    p.tally_all.and.callFake(() => D.calls.push('tally'));
+    p.end();
+    expect(p.allow_voting).toBeFalse();
+    expect(D.wait_for_matrix_poll_closure).not.toHaveBeenCalled();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    expect(p.state).toBe('closed');
+    await settle();
+    expect(D.calls).toEqual(['wait', 'reconcile', 'stop', 'tally']);
+    expect(p.make_final_rand).toHaveBeenCalledWith('p1$closing-event');
+    expect(p.make_winner).toHaveBeenCalledTimes(1);
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+    expect(p.has_results).toBeTrue();
+  });
+
+  it('closes by convention, with the due date as the seed, when no guard bot closes the poll', async () => {
+    const D = make_D({closed: false, event_id: null});
+    const p = make_poll(D);
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(D.reconcile_matrix_ratings).toHaveBeenCalledTimes(1);
+    expect(p.make_final_rand).toHaveBeenCalledWith('p1due:2026-09-10T12:00:00.000Z');
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not seed a lottery for a share poll', async () => {
+    const D = make_D({closed: true, event_id: '$closing-event'});
+    const p = make_poll(D, 'share');
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(p.make_final_rand).not.toHaveBeenCalled();
+    expect(p.make_winner).not.toHaveBeenCalled();
+    expect(p.tally_all).toHaveBeenCalledTimes(1);
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers the finalization and retries when the final read fails', async () => {
+    const D = make_D({closed: true, event_id: '$closing-event'});
+    D.reconcile_matrix_ratings.and.returnValues(Promise.reject(new Error('server unreachable')), Promise.resolve());
+    const p = make_poll(D);
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(p.notify_of_end).not.toHaveBeenCalled();
+    expect(p.has_results).toBeFalse();
+    expect(p.end_retry_timeout_id).not.toBeNull();
+    // the retry: another attempt after the retry delay and the grace period
+    jasmine.clock().tick(environment.closing.grace_period_3_ms);
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(D.reconcile_matrix_ratings).toHaveBeenCalledTimes(2);
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
 });

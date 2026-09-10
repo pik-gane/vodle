@@ -51,6 +51,11 @@ const QUIET_PERIOD_MS = parseInt(process.env.QUIET_PERIOD_MS || "5000", 10);
 // content.due is an ISO 8601 date. It is written into the poll room and
 // copied into each voter room, so this bot closes both kinds of room.
 const APP_DEADLINE_TYPE = "m.room.vodle.poll.deadline";
+// The lifecycle state the app reads (MatrixService.getAllPollData /
+// getPollClosure). Once a poll runs only power 100 may write it, i.e. this
+// bot: its "closed" event is the shared, server-side fact that the poll is
+// over, and its event id seeds a winner poll's final lottery (#325).
+const POLL_STATE_TYPE = "m.room.vodle.poll.state";
 // The event type this scaffold originally watched (content.deadline); kept
 // so that rooms written by hand for testing still work.
 const LEGACY_DEADLINE_TYPE = "it.vodle.deadline";
@@ -115,52 +120,111 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
+/** rooms this bot closed in this process (the SDK's room state lags behind its own writes) */
+const closedByUs = new Set();
+/** rooms whose closing failed (e.g. a creator still at power 100 in a poll that never
+ *  started properly): retried only after RETRY_FAILED_MS, so the log is not flooded */
+const retryFailedAfter = new Map();
+const RETRY_FAILED_MS = 10 * 60 * 1000;
+
+/** "voter" for a vodle voter room, "poll" for a poll room, "other" otherwise (by canonical alias) */
+function roomKind(room) {
+  const alias = room.getCanonicalAlias() || "";
+  if (alias.startsWith("#vodle_voter_")) return "voter";
+  if (alias.startsWith("#vodle_poll_")) return "poll";
+  return "other";
+}
+
+/** the vodle poll id a room belongs to (from the app's deadline event or the room alias), or null */
+function pollIdOf(room) {
+  const fromDeadline = room.currentState.getStateEvents(APP_DEADLINE_TYPE, "")?.getContent()?.poll_id;
+  if (fromDeadline) return fromDeadline;
+  const local = (room.getCanonicalAlias() || "").slice(1).split(":")[0];
+  if (local.startsWith("vodle_poll_")) return local.slice("vodle_poll_".length);
+  if (local.startsWith("vodle_voter_")) {
+    // #vodle_voter_<pid>_<encoded voter id>: poll ids carry no underscore, the encoded id may
+    const rest = local.slice("vodle_voter_".length);
+    return rest.slice(0, rest.indexOf("_")) || null;
+  }
+  return null;
+}
+
+/** whether the room's power levels are already dropped (by this bot, now or earlier) */
+function isClosed(room, botUserId) {
+  if (closedByUs.has(room.roomId)) return true;
+  const pl = room.currentState.getStateEvents("m.room.power_levels", "")?.getContent();
+  if (!pl) return false;
+  if ((pl.users_default || 0) !== 0) return false;
+  return !Object.entries(pl.users || {}).some(([uid, level]) => uid !== botUserId && level > 0);
+}
+
 /**
  * Iterate over joined rooms, look for a deadline state event (see
  * roomDeadline), and close rooms whose deadline is in the past.
+ *
+ * Voter rooms first: a poll room is closed only once no voter room of its
+ * poll accepts ratings any more, and its "closed" state event is written
+ * before its power levels drop. Every client that then reads the final
+ * ratings reads the same ones (#325).
  */
 async function scanForExpiredDeadlines(client) {
-  const rooms = client.getRooms();
+  const rooms = client.getRooms().filter((room) => room.getMyMembership() === "join");
   const now = new Date();
-
-  for (const room of rooms) {
-    try {
-      if (room.getMyMembership() !== "join") continue;
-      const deadline = roomDeadline(room);
-      if (!deadline) continue;
-
-      const deadlineDate = new Date(deadline);
-      if (deadlineDate.getTime() + CLOSE_GRACE_MS > now.getTime()) continue;
-
-      // Check if we already closed this room (power levels already dropped)
-      const plEvent = room.currentState.getStateEvents("m.room.power_levels", "");
-      if (!plEvent) continue;
-      const pl = plEvent.getContent();
-
-      // If the default user power is already 0, the room is closed
-      if ((pl.users_default || 0) === 0) {
-        // Check if any non-bot user still has power > 0
-        const hasNonBotUsersWithPower = Object.entries(pl.users || {}).some(
-          ([uid, level]) => uid !== client.getUserId() && level > 0
-        );
-        if (!hasNonBotUsersWithPower) continue; // already closed
-      }
-
-      // see CLOSE_GRACE_MS / QUIET_PERIOD_MS above: never change the power
-      // levels while events are still arriving
-      const lastEventTs = latestEventTs(room);
-      if (lastEventTs !== null && now.getTime() - lastEventTs < QUIET_PERIOD_MS) {
-        console.log(`[guard-bot] Deadline expired for room ${room.roomId} but events still arriving — closing later`);
-        continue;
-      }
-
-      console.log(`[guard-bot] Deadline expired for room ${room.roomId} (${deadline}) — closing`);
-      await closeRoom(client, room.roomId, pl);
-    } catch (err) {
-      // Non-fatal — log and continue scanning
-      console.error(`[guard-bot] Error scanning room ${room.roomId}:`, err.message);
-    }
+  const voterRooms = rooms.filter((room) => roomKind(room) === "voter");
+  for (const room of voterRooms) {
+    await considerRoom(client, room, now);
   }
+  for (const room of rooms) {
+    if (roomKind(room) === "voter") continue;
+    const pid = pollIdOf(room);
+    const openVoterRooms = pid ? voterRooms.filter((v) => pollIdOf(v) === pid && !isClosed(v, client.getUserId())) : [];
+    await considerRoom(client, room, now, openVoterRooms);
+  }
+}
+
+async function considerRoom(client, room, now, openVoterRooms = []) {
+  try {
+    const deadline = roomDeadline(room);
+    if (!deadline) return;
+    if (new Date(deadline).getTime() + CLOSE_GRACE_MS > now.getTime()) return;
+    if (isClosed(room, client.getUserId())) return;
+    if ((retryFailedAfter.get(room.roomId) || 0) > now.getTime()) return;
+
+    // see CLOSE_GRACE_MS / QUIET_PERIOD_MS above: never change the power
+    // levels while events are still arriving
+    const lastEventTs = latestEventTs(room);
+    if (lastEventTs !== null && now.getTime() - lastEventTs < QUIET_PERIOD_MS) {
+      console.log(`[guard-bot] Deadline expired for room ${room.roomId} but events still arriving — closing later`);
+      return;
+    }
+    if (openVoterRooms.length > 0) {
+      console.log(`[guard-bot] Deadline expired for poll room ${room.roomId}, waiting for ${openVoterRooms.length} voter room(s) to close first`);
+      return;
+    }
+    const plEvent = room.currentState.getStateEvents("m.room.power_levels", "");
+    if (!plEvent) return;
+
+    console.log(`[guard-bot] Deadline expired for room ${room.roomId} (${deadline}) — closing`);
+    if (roomKind(room) === "poll") {
+      await writeClosedState(client, room, now);
+    }
+    await closeRoom(client, room.roomId, plEvent.getContent());
+  } catch (err) {
+    // Non-fatal — log and continue scanning
+    console.error(`[guard-bot] Error scanning room ${room.roomId}:`, err.message);
+  }
+}
+
+/** the shared "closed" fact for the app (see POLL_STATE_TYPE); idempotent */
+async function writeClosedState(client, room, now) {
+  const current = room.currentState.getStateEvents(POLL_STATE_TYPE, "")?.getContent();
+  if (current?.state === "closed") return;
+  await client.sendStateEvent(room.roomId, POLL_STATE_TYPE, {
+    state: "closed",
+    closed_at: now.toISOString(),
+    closed_by: client.getUserId(),
+  }, "");
+  console.log(`[guard-bot] Poll room ${room.roomId} marked closed`);
 }
 
 /** origin_server_ts of the newest event in the room's live timeline, or null */
@@ -199,9 +263,11 @@ async function closeRoom(client, roomId, currentPowerLevels) {
 
   try {
     await client.sendStateEvent(roomId, "m.room.power_levels", newPl);
+    closedByUs.add(roomId);
     console.log(`[guard-bot] Room ${roomId} closed successfully`);
   } catch (err) {
     console.error(`[guard-bot] Failed to close room ${roomId}:`, err.message);
+    retryFailedAfter.set(roomId, Date.now() + RETRY_FAILED_MS);
   }
 }
 

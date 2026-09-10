@@ -2977,3 +2977,83 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
     expect(matrix.setPollData).not.toHaveBeenCalled();
   });
 });
+
+describe('the final read of a Matrix poll (#325)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, previous_flag: boolean, previous_timeout: number, previous_poll: number;
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    previous_timeout = environment.closing.matrix_closure_timeout_ms;
+    previous_poll = environment.closing.matrix_closure_poll_ms;
+    (environment as any).useMatrixBackend = true;
+    environment.closing.matrix_closure_poll_ms = 1;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = { 'poll.p1.state': 'running', 'poll.p1.myvid': 'me' };
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    matrix = {
+      getPollClosure: jasmine.createSpy('getPollClosure'),
+      refreshRatings: jasmine.createSpy('refreshRatings'),
+    };
+    svc.matrixService = matrix;
+    svc.G = { L: L, P: { polls: {}, update_own_rating: jasmine.createSpy('update_own_rating') }, D: svc,
+              add_spinning_reason: noop, remove_spinning_reason: noop };
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+    environment.closing.matrix_closure_timeout_ms = previous_timeout;
+    environment.closing.matrix_closure_poll_ms = previous_poll;
+  });
+
+  it("keeps asking until the guard bot has closed the poll, then hands over the closing event", async () => {
+    environment.closing.matrix_closure_timeout_ms = 10000;
+    // the answers are made when asked for (a rejected promise made in advance
+    // counts as an unhandled rejection before the loop gets to it):
+    let asked = 0;
+    matrix.getPollClosure.and.callFake(() => {
+      asked++;
+      if (asked === 1) { return Promise.resolve({closed: false, event_id: null, closed_at: null}); }
+      if (asked === 2) { return Promise.reject(new Error('server hiccup')); }
+      return Promise.resolve({closed: true, event_id: '$closed', closed_at: '2026-09-10T12:00:05.000Z'});
+    });
+    const closure = await svc.wait_for_matrix_poll_closure('p1');
+    expect(closure.closed).toBeTrue();
+    expect(closure.event_id).toBe('$closed');
+    expect(matrix.getPollClosure).toHaveBeenCalledTimes(3);
+  });
+
+  it('gives up after the timeout when no guard bot closes the poll', async () => {
+    environment.closing.matrix_closure_timeout_ms = 5;
+    matrix.getPollClosure.and.returnValue(Promise.resolve({closed: false, event_id: null, closed_at: null}));
+    const closure = await svc.wait_for_matrix_poll_closure('p1');
+    expect(closure).toEqual({closed: false, event_id: null});
+    expect(matrix.getPollClosure.calls.count()).toBeGreaterThan(1);
+  });
+
+  it('stops waiting when the attempt is no longer current', async () => {
+    environment.closing.matrix_closure_timeout_ms = 10000;
+    matrix.getPollClosure.and.returnValue(Promise.resolve({closed: false, event_id: null, closed_at: null}));
+    let current = true;
+    const waiting = svc.wait_for_matrix_poll_closure('p1', () => current);
+    current = false;
+    await expectAsync(waiting).toBeRejectedWithError('poll finalization cancelled');
+  });
+
+  it("bridges the server's final ratings into the caches the tally reads", async () => {
+    matrix.refreshRatings.and.returnValue(Promise.resolve(new Map([
+      ['me', new Map([['o1', 80], ['o2', 20]])],
+      ['other', new Map([['o1', 35]])],
+    ])));
+    await svc.reconcile_matrix_ratings('p1');
+    expect(matrix.refreshRatings).toHaveBeenCalledWith('p1');
+    expect(svc.getv('p1', 'rating.o1', 'other')).toBe('35');
+    expect(svc.getv('p1', 'rating.o2', 'me')).toBe('20');
+    expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'other', 'o1', 35, false);
+    expect(svc.G.P.update_own_rating).toHaveBeenCalledTimes(3);
+  });
+});
