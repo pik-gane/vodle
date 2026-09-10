@@ -764,6 +764,15 @@ describe('DataService consistency hardening (#292)', () => {
   });
 
   describe('replication watchdog', () => {
+    it('exposes whether any replication is currently stalled, for the page headers', () => {
+      svc.replication_stalled = {};
+      expect(svc.replication_is_stalled).toBeFalse();
+      svc.replication_stalled = {p1: false, p2: true};
+      expect(svc.replication_is_stalled).toBeTrue();
+      svc.replication_stalled = {p1: false};
+      expect(svc.replication_is_stalled).toBeFalse();
+    });
+
     it('starts only one watchdog interval and clears it on stop', () => {
       const set_interval_spy = spyOn(window, 'setInterval').and.returnValue(123 as any);
       const clear_interval_spy = spyOn(window, 'clearInterval');

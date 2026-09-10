@@ -281,19 +281,84 @@ describe('MigrationService', () => {
       expect(step.errors[0]).toContain('getRatings failed');
     });
 
-    it('should capture errors when submitRating fails', async () => {
+    it('should capture errors when the target rejects a rating', async () => {
       await source.createPoll('poll1', 'Test');
       await target.createPoll('poll1', 'Test');
       await source.submitRating('poll1', 'opt1', 80);
       await source.submitRating('poll1', 'opt2', 60);
-      spyOn(target, 'submitRating').and.returnValue(Promise.reject(new Error('submitRating failed')));
+      spyOn(target, 'setVoterData').and.returnValue(Promise.reject(new Error('setVoterData failed')));
 
       const step = await migration.migrateRatings('poll1');
 
       expect(step.status).toBe('failed');
       expect(step.itemsFailed).toBe(2);
       expect(step.errors.length).toBe(2);
-      expect(step.errors[0]).toContain('submitRating failed');
+      expect(step.errors[0]).toContain('setVoterData failed');
+    });
+
+    it('keeps each rating under its original voter on the target', async () => {
+      await source.createPoll('poll1', 'Test');
+      await target.createPoll('poll1', 'Test');
+      await source.login('voter-a@example.com', 'pw');
+      await source.submitRating('poll1', 'opt1', 80);
+      await source.login('voter-b@example.com', 'pw');
+      await source.submitRating('poll1', 'opt1', 30);
+      const written = spyOn(target, 'setVoterData').and.callThrough();
+
+      const step = await migration.migrateRatings('poll1');
+
+      expect(step.status).toBe('completed');
+      expect(step.itemsMigrated).toBe(2);
+      expect(written).toHaveBeenCalledWith('poll1', 'voter-a@example.com', 'rating.opt1', 80);
+      expect(written).toHaveBeenCalledWith('poll1', 'voter-b@example.com', 'rating.opt1', 30);
+    });
+  });
+
+  describe('Options Migration', () => {
+    it('migrates each option as one unit where the target supports it', async () => {
+      await source.createPoll('poll1', 'Test');
+      await target.createPoll('poll1', 'Test');
+      source.getOptions = async () => new Map([
+        ['o1', {name: 'One', description: 'first', url: ''}],
+        ['o2', {name: 'Two', description: '', url: 'https://example.org'}],
+      ]);
+      const added: any[] = [];
+      target.addOption = async (pollId: string, optionId: string, option: any) => { added.push([pollId, optionId, option]); };
+
+      const step = await migration.migratePollOptions('poll1');
+
+      expect(step.status).toBe('completed');
+      expect(step.itemsMigrated).toBe(2);
+      expect(added).toEqual([
+        ['poll1', 'o1', {name: 'One', description: 'first', url: ''}],
+        ['poll1', 'o2', {name: 'Two', description: '', url: 'https://example.org'}],
+      ]);
+    });
+
+    it('falls back to poll data keys on a target without an option API', async () => {
+      await source.createPoll('poll1', 'Test');
+      await target.createPoll('poll1', 'Test');
+      source.getOptions = async () => new Map([['o1', {name: 'One', description: 'first', url: ''}]]);
+      (target as any).addOption = undefined;
+
+      const step = await migration.migratePollOptions('poll1');
+
+      expect(step.status).toBe('completed');
+      expect(await target.getPollData('poll1', 'option.o1.name')).toBe('One');
+      expect(await target.getPollData('poll1', 'option.o1.desc')).toBe('first');
+    });
+
+    it('records a failure per option the target rejects', async () => {
+      await source.createPoll('poll1', 'Test');
+      await target.createPoll('poll1', 'Test');
+      source.getOptions = async () => new Map([['o1', {name: 'One', description: '', url: ''}]]);
+      target.addOption = async () => { throw new Error('addOption failed'); };
+
+      const step = await migration.migratePollOptions('poll1');
+
+      expect(step.status).toBe('failed');
+      expect(step.itemsFailed).toBe(1);
+      expect(step.errors[0]).toContain('addOption failed');
     });
   });
 

@@ -144,10 +144,45 @@ export class CouchDBBackend implements IDataBackend {
   }
   
   async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
-    // CouchDB backend does not aggregate ratings across voters;
-    // the existing PollService/TallyService handles this via doc scanning.
-    // Return an empty map — the app uses PollService for tallying.
-    return new Map();
+    // The replicated poll documents land in DataService's poll cache, where
+    // every voter's ratings are the entries 'voter.<vid>§rating.<oid>' (see
+    // DataService.getv). That is the source the migration tooling reads
+    // ratings from, so it is aggregated here, per vodle voter id.
+    const ratings = new Map<string, Map<string, number>>();
+    const cache = (this.dataService as any).poll_caches?.[pollId] || {};
+    for (const [key, raw] of Object.entries(cache)) {
+      const match = /^voter\.([^§]+)§rating\.(.+)$/.exec(key);
+      if (!match) { continue; }
+      const value = Number(raw);
+      if (!Number.isFinite(value)) { continue; }
+      if (!ratings.has(match[1])) { ratings.set(match[1], new Map()); }
+      ratings.get(match[1]).set(match[2], value);
+    }
+    return ratings;
+  }
+
+  async addOption(pollId: string, optionId: string, option: {name: string; description?: string; url?: string}): Promise<void> {
+    this.dataService.setp(pollId, 'option.' + optionId + '.oid', optionId);
+    this.dataService.setp(pollId, 'option.' + optionId + '.name', option.name);
+    this.dataService.setp(pollId, 'option.' + optionId + '.desc', option.description || '');
+    this.dataService.setp(pollId, 'option.' + optionId + '.url', option.url || '');
+  }
+
+  async getOptions(pollId: string): Promise<Map<string, {name: string; description: string; url: string}>> {
+    // options are the poll cache entries option.<oid>.name / .desc / .url
+    const options = new Map<string, {name: string; description: string; url: string}>();
+    const cache = (this.dataService as any).poll_caches?.[pollId] || {};
+    for (const key of Object.keys(cache)) {
+      const match = /^option\.([^.]+)\.name$/.exec(key);
+      if (!match) { continue; }
+      const oid = match[1];
+      options.set(oid, {
+        name: cache[key] || '',
+        description: cache['option.' + oid + '.desc'] || '',
+        url: cache['option.' + oid + '.url'] || '',
+      });
+    }
+    return options;
   }
   
   async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {

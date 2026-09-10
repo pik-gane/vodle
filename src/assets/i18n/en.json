@@ -67,6 +67,7 @@
     "show": "Show",
     "skip": "Skip",
     "start": "Start",
+    "sync-stalled": "Synchronization with the server is stuck; vodle keeps retrying it.",
     "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",
     "_COMMENT_wap": "[COMMENT] Please do NOT translate the invented word 'wap' unless that word sounds much too strange in your language. If it does, please try to find a similarly short invented word that works in your language. The most important thing is that the meaning is preserved: Willingness to approve. (but not simply: approval! The willingness part is important!). Only if you cannot find such a word, please translate 'willingness to approve' as short as possible.",
@@ -497,6 +498,10 @@
         "no-recently-closed-polls-2": "If you have an old invitation to a poll that has already ended, you can click the link in the invitation and see the poll results.",
 
         "older": "Older",
+        "archived": "Archived",
+        "no-archived-polls": "You have not archived any ended polls. Archived polls are kept, while other ended polls are removed from this device some time after their end.",
+        "archive": "Move this poll into the archive",
+        "unarchive": "Take this poll out of the archive",
         "drafts": "Drafts",
         "no-draft-polls-1": "Currently, you have no polls drafted.",
         "no-draft-polls-2": "To start or draft a new poll, click the ‘+‘ button below!"

@@ -329,6 +329,12 @@ export class Poll {
   get have_seen_results(): boolean { return this.G.D.getp(this._pid, 'have_seen_results') == 'true'; }
   set have_seen_results(value: boolean) { this.G.D.setp(this._pid, 'have_seen_results', value.toString()); }
 
+  /** whether the user moved this (ended) poll into the archive section of
+   *  "my polls" (issue #83); archived polls are kept instead of being
+   *  deleted locally some time after their end */
+  get is_archived(): boolean { return this.G.D.getp(this._pid, 'is_archived') == 'true'; }
+  set is_archived(value: boolean) { this.G.D.setp(this._pid, 'is_archived', value.toString()); }
+
   get have_acted(): boolean { return this.G.D.getp(this._pid, 'have_acted') == 'true'; }
   set have_acted(value: boolean) { this.G.D.setp(this._pid, 'have_acted', value.toString()); }
 

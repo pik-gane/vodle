@@ -87,15 +87,33 @@ export class MatrixBackend implements IDataBackend {
   // ========================================================================
   
   async createPoll(pollId: string, title: string): Promise<string> {
-    await this.matrixService.createPollRoom(pollId, title);
+    // idempotent: a poll room that exists already (e.g. from an earlier,
+    // partial migration run) is reused
+    await this.matrixService.getOrCreatePollRoom(pollId, title);
     return pollId;
   }
   
   async getPollData(pollId: string, key: string): Promise<any> {
+    // 'due' and 'state' live in their own state events (see setPollData):
+    if (key === 'due' || key === 'state') {
+      const value = (await this.matrixService.getAllPollData(pollId))[key];
+      return value ?? null;
+    }
     return await this.matrixService.getPollData(pollId, key);
   }
   
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
+    // The app keeps the deadline and the lifecycle state in dedicated,
+    // unencrypted state events that the guard bot and other clients read
+    // (see DataService.change_poll_state), so they are routed there:
+    if (key === 'due') {
+      await this.matrixService.setPollDeadline(pollId, value);
+      return;
+    }
+    if (key === 'state') {
+      await this.matrixService.changePollState(pollId, value);
+      return;
+    }
     await this.matrixService.setPollData(pollId, key, value);
   }
   
@@ -125,6 +143,16 @@ export class MatrixBackend implements IDataBackend {
   
   async getRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
     return await this.matrixService.getRatings(pollId);
+  }
+  
+  async addOption(pollId: string, optionId: string, option: {name: string; description?: string; url?: string}): Promise<void> {
+    // options are timeline events in the poll room, not poll data state
+    // events, so that they are immutable server-side (see MatrixService)
+    await this.matrixService.addOption(pollId, optionId, option);
+  }
+  
+  async getOptions(pollId: string): Promise<Map<string, {name: string; description: string; url: string}>> {
+    return await this.matrixService.getOptions(pollId);
   }
   
   async requestDelegation(pollId: string, delegateId: string, optionIds: string[]): Promise<string> {

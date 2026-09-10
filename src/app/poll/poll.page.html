@@ -82,6 +82,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
+      <!-- SYNC STALLED SIGN: the replication watchdog found a sync without progress and is restarting it (#292) -->
+      <ion-icon *ngIf="G.D.replication_is_stalled" name="warning-outline" color="warning"
+        [title]="'sync-stalled'|translate" data-vodle="sync-stalled-sign"></ion-icon>
+
       <!-- TRANSMITTED SIGN -->
       <ion-button *ngIf="!!p && p.have_acted && !p.syncing && window.navigator.onLine" class="ion-no-margin ion-no-padding" fill="clear" (click)="checkmark_clicked()">
         <ion-icon size="large" name="checkmark" color="grey" slot="icon-only"></ion-icon>
@@ -176,7 +180,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 ? 'white-space: normal; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
                 : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%!important;'
                 ">
-              <i *ngIf="(p.desc||'')!=''" [lang]="p.language" [innerHtml]="p.desc"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
+              <i *ngIf="(p.desc||'')!=''" [lang]="p.language" [innerHtml]="G.format_details(p.desc)"></i><span *ngIf="(p.desc||'')!='' && (p.url||'') != ''">&nbsp;</span>
               <small *ngIf="(p.url||'') != ''">
                 (<span (click)="G.open_url_in_new_tab(G.D.fix_url(p.url));details_expanded=!details_expanded"><ion-text 
                   class="externallink"  
@@ -892,7 +896,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <br/>
                       </span>
                       <span [style.display]="p.options[oidsorted[i]].desc != '' ? 'inline' : 'none'">
-                        <i><span [lang]="p.language" [innerHtml]="p.options[oidsorted[i]].desc"></span>&nbsp;&nbsp;</i>
+                        <i><span [lang]="p.language" [innerHtml]="G.format_details(p.options[oidsorted[i]].desc)"></span>&nbsp;&nbsp;</i>
                       </span>
                       <span [style.display]="p.options[oidsorted[i]].url != '' ? 'inline' : 'none'">
                         <small>

@@ -45,6 +45,8 @@ import { map, startWith } from 'rxjs/operators'
 
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
+import { apply_format_shortcut } from '../simple-format';
+
 function is_forward_key(ev: KeyboardEvent) {
   return (ev.key == "Tab" || ev.key == "Enter") && !ev.ctrlKey && !ev.shiftKey && !ev.metaKey && !ev.altKey;
 }
@@ -475,6 +477,10 @@ export class DraftpollPage implements OnInit {
   }
 
   poll_desc_onKeydown(ev: KeyboardEvent) {
+    // Ctrl-B / Ctrl-I mark the selection bold / italic (issue #214):
+    if (apply_format_shortcut(ev, this.formGroup.get('poll_desc'))) {
+      return;
+    }
     if (is_forward_key(ev)) {
       if (this.stage < 3) {
         this.stage = 3;
@@ -552,6 +558,10 @@ export class DraftpollPage implements OnInit {
   }
 
   option_desc_onKeydown(ev: KeyboardEvent, i: number) {
+    // Ctrl-B / Ctrl-I mark the selection bold / italic (issue #214):
+    if (apply_format_shortcut(ev, this.formGroup.get('option_desc'+i))) {
+      return;
+    }
     if (is_forward_key(ev)) {
       if (this.formGroup.get('option_desc'+i).valid) {
         this.option_stage = Math.max(this.option_stage, 2);

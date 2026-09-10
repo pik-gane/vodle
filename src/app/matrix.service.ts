@@ -50,6 +50,20 @@ export interface MatrixCredentials {
  * 
  * Exported for testing purposes
  */
+/**
+ * The password presented to the homeserver for a vodle account: a one-way
+ * derivation of the real password, salted with the normalized email. Password
+ * login sends the password to the homeserver in the clear, so without this the
+ * server operator could learn the very secret that encrypts the user's data
+ * (see MatrixService.userDataContent). Accounts registered before this
+ * existed still log in with the plain password (see MatrixService.login).
+ */
+export function deriveMatrixPassword(email: string, password: string): string {
+  const blake2s = new BLAKE2s(32);
+  blake2s.update(textEncoder.encode('vodle-matrix-login:' + email.trim().toLowerCase() + ':' + password));
+  return blake2s.hexDigest();
+}
+
 export function hashEmail(email: string): string {
   // Normalize email: trim whitespace and convert to lowercase for consistency
   const normalizedEmail = email.trim().toLowerCase();
@@ -200,6 +214,27 @@ export class MatrixService {
   
   // Periodic voter discovery timers: pollId -> intervalId
   private voterDiscoveryTimers: Map<string, any> = new Map();
+  
+  // Origin homeservers of polls joined across federation: pollId -> the
+  // server_name in the poll room's alias (persisted as poll_origin_<pollId>).
+  // Absent for polls whose room lives on this user's own homeserver.
+  private pollOrigins: Map<string, string> = new Map();
+  
+  /** Supplies the poll password of a poll, or null if unknown. DataService,
+   *  which holds the passwords, sets this. With a password known, the voter
+   *  data written to the poll's voter rooms is encrypted with it, giving
+   *  votes the same protection every poll document has on the CouchDB
+   *  backend (see pollDataContent / readPollValue). */
+  pollPasswordProvider: ((pollId: string) => string | null) | null = null;
+  /** Supplies the vodle user password, or null if unknown; set by
+   *  DataService. With it known, the user's data in the private user room
+   *  is encrypted (as every user document is on the CouchDB backend), and
+   *  the homeserver — which never sees this password, see
+   *  deriveMatrixPassword — cannot read settings, poll passwords or keys. */
+  userPasswordProvider: (() => string | null) | null = null;
+  // AES keys per salt+password, so that reading many values does not repeat
+  // the deliberately slow key derivation:
+  private dataKeys: Map<string, Promise<CryptoKey>> = new Map();
   
   // Phase 5: Offline queue for pending events when disconnected
   private offlineQueue: QueuedEvent[] = [];
@@ -436,10 +471,23 @@ export class MatrixService {
     try {
       // Use hashed email as Matrix username to protect privacy
       const username = emailHash;
+      // and a derived password, so the server never sees the real one:
+      const matrixPassword = deriveMatrixPassword(email, password);
       
-      // Try to login first with new hash-based username
+      // Try to login first with new hash-based username and derived password
       try {
-        const response = await tempClient.loginWithPassword(username, password);
+        let response;
+        try {
+          response = await tempClient.loginWithPassword(username, matrixPassword);
+        } catch (derivedError: any) {
+          // an account registered before password derivation existed still
+          // has the plain password:
+          if (derivedError?.errcode !== 'M_FORBIDDEN' && derivedError?.httpStatus !== 403) {
+            throw derivedError;
+          }
+          response = await tempClient.loginWithPassword(username, password);
+          this.logger?.warn("MatrixService.login: account still uses the plain password", response.user_id);
+        }
         
         // Store credentials
         await this.saveCredentials({
@@ -489,7 +537,7 @@ export class MatrixService {
               
               try {
                 // First call to get the registration flows
-                await tempClient.register(username, password);
+                await tempClient.register(username, matrixPassword);
               } catch (firstRegError: any) {
                 // Expected: 401 with flows and session
                 if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
@@ -498,7 +546,7 @@ export class MatrixService {
                   // Complete the m.login.dummy authentication
                   const regResponse = await tempClient.register(
                     username,
-                    password,
+                    matrixPassword,
                     firstRegError.data.session,
                     {
                       type: 'm.login.dummy'
@@ -557,8 +605,10 @@ export class MatrixService {
     });
     
     try {
-      // Use hashed email as Matrix username to protect privacy
+      // Use hashed email as Matrix username to protect privacy, and a
+      // derived password so the server never sees the real one:
       const username = emailHash;
+      const matrixPassword = deriveMatrixPassword(email, password);
       
       // Registration is user-interactive auth: even with
       // enable_registration_without_verification, Synapse requires the
@@ -570,7 +620,7 @@ export class MatrixService {
       try {
         response = await tempClient.register(
           username,
-          password,
+          matrixPassword,
           undefined, // sessionId
           {type: 'm.login.dummy'} // auth
         );
@@ -581,7 +631,7 @@ export class MatrixService {
             && flows.some((flow: any) => (flow.stages || []).includes('m.login.dummy'))) {
           response = await tempClient.register(
             username,
-            password,
+            matrixPassword,
             session,
             {type: 'm.login.dummy'}
           );
@@ -875,7 +925,8 @@ export class MatrixService {
     try {
       const roomId = await this.getUserRoom();
       const eventType = `m.room.vodle.user.${key}`;
-      await this.sendStateEvent(roomId, eventType, { value }, '');
+      // encrypted with the user password (see userDataContent):
+      await this.sendStateEvent(roomId, eventType, await this.userDataContent(key, value), '');
     } catch (error) {
       // an unreachable server must not lose the write — queue it for replay
       // when the sync loop reconnects (#293); server rejections still throw:
@@ -898,7 +949,7 @@ export class MatrixService {
     
     try {
       const content = this.getStateEvent(roomId, eventType, '');
-      const value = content?.value;
+      const value = await this.readUserValue(key, content);
       this.logger?.info("Retrieved user data", key, value);
       return value;
     } catch (error) {
@@ -907,6 +958,42 @@ export class MatrixService {
     }
     
     this.logger?.exit("MatrixService.getUserData");
+  }
+  
+  /**
+   * All of this user's data in the user room, key -> value, as the
+   * homeserver currently holds it — what a second device restores from
+   * after logging in (#293). Values that cannot be decrypted are left out.
+   */
+  async getAllUserData(): Promise<Record<string, any>> {
+    this.logger?.entry("MatrixService.getAllUserData");
+    const result: Record<string, any> = {};
+    if (!this.client) {
+      return result;
+    }
+    const roomId = await this.getUserRoom();
+    // from the server rather than the sync store, which may not hold the
+    // full state of a room that was just found by alias:
+    const response = await fetch(
+      `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`, {
+      headers: { 'Authorization': `Bearer ${this.client.getAccessToken()}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error("MatrixService.getAllUserData: could not read the user room state: " + response.status);
+    }
+    const prefix = 'm.room.vodle.user.';
+    for (const event of await response.json()) {
+      if (typeof event.type === 'string' && event.type.startsWith(prefix) && (event.state_key || '') === '') {
+        const key = event.type.slice(prefix.length);
+        const value = await this.readUserValue(key, event.content);
+        if (value !== undefined && value !== null) {
+          result[key] = value;
+        }
+      }
+    }
+    this.logger?.exit("MatrixService.getAllUserData", Object.keys(result).length);
+    return result;
   }
   
   /**
@@ -936,15 +1023,83 @@ export class MatrixService {
   }
   
   /**
-   * Get homeserver domain from homeserver URL
+   * The server_name of this user's homeserver: the domain part that room
+   * aliases created here and this user's own ID carry.
+   *
+   * This is NOT necessarily the hostname of the URL the client talks to. A
+   * homeserver reached at https://matrix.example.org commonly has the
+   * server_name example.org, and the test harness reaches a server named
+   * localhost:8449 at http://localhost:8009. The user ID is authoritative
+   * (its domain part is the server_name by definition), so it is used
+   * whenever a user is logged in; before login, the URL's hostname is the
+   * best available guess.
    */
   private getHomeserverDomain(): string {
+    const from_user_id = MatrixService.serverNameOf(this.userId);
+    if (from_user_id) {
+      return from_user_id;
+    }
     try {
       const url = new URL(this.homeserverUrl);
       return url.hostname;
     } catch (error) {
       return 'localhost';
     }
+  }
+  
+  /**
+   * The server_name part of a Matrix identifier ("@user:server",
+   * "#alias:server", or a room ID of a room version that still carries
+   * one), or null. A server_name may itself contain a port
+   * ("localhost:8449"), so everything after the FIRST colon is the server.
+   */
+  static serverNameOf(id: string | null | undefined): string | null {
+    if (!id) {
+      return null;
+    }
+    const colon = id.indexOf(':');
+    return (colon > 0 && colon < id.length - 1) ? id.slice(colon + 1) : null;
+  }
+  
+  /** Servers to join a room through that was announced by `sender`: the
+   *  sender's homeserver is in that room. (A room ID no longer names any
+   *  server in current room versions, so a join across federation needs
+   *  this hint.) */
+  static viaServersFor(sender: string | null | undefined): string[] {
+    const server = MatrixService.serverNameOf(sender);
+    return server ? [server] : [];
+  }
+  
+  /**
+   * Record on which homeserver a poll's room lives, i.e. the server_name in
+   * the poll room's alias. A poll created on ANOTHER homeserver can only be
+   * found through it: aliases are resolved on the server they name, so the
+   * magic link carries this name (see InvitetoPage / JoinpollPage).
+   */
+  async setPollOrigin(pollId: string, serverName: string): Promise<void> {
+    if (!serverName || serverName === this.getHomeserverDomain()) {
+      return;
+    }
+    this.pollOrigins.set(pollId, serverName);
+    await this.storage.set(`poll_origin_${pollId}`, serverName);
+  }
+  
+  /**
+   * The server_name of the homeserver a poll's room alias lives on: the
+   * recorded origin of a poll joined across federation, otherwise this
+   * user's own server. This is what a magic link for the poll must carry.
+   */
+  async getPollOrigin(pollId: string): Promise<string> {
+    const cached = this.pollOrigins.get(pollId);
+    if (cached) {
+      return cached;
+    }
+    const stored = await this.storage.get(`poll_origin_${pollId}`);
+    if (stored) {
+      this.pollOrigins.set(pollId, stored);
+      return stored;
+    }
+    return this.getHomeserverDomain();
   }
   
   /**
@@ -1071,8 +1226,11 @@ export class MatrixService {
     }
     
     const options: ICreateRoomOpts = {
-      name: title,
-      topic: `Vodle Poll: ${pollId}`,
+      // the title is confidential poll data (stored encrypted, see
+      // pollDataContent); the room's own name and topic are visible to the
+      // homeserver, so they carry only the poll id, which the alias shows anyway
+      name: `vodle poll ${pollId}`,
+      topic: `vodle poll ${pollId}`,
       // Use public_chat preset so that anyone with the room alias
       // (distributed via the magic link) can join without an invitation.
       // The room is NOT listed in the public directory (visibility
@@ -1228,10 +1386,12 @@ export class MatrixService {
       }
     }
     
-    // Try to find by alias
+    // Try to find by alias — on the poll's origin homeserver, which is this
+    // user's own server unless the poll was joined across federation:
     try {
+      const origin = await this.getPollOrigin(pollId);
       const aliasResponse = await this.client.getRoomIdForAlias(
-        `#vodle_poll_${pollId}:${this.getHomeserverDomain()}`
+        `#vodle_poll_${pollId}:${origin}`
       );
       const roomId = aliasResponse.room_id;
       console.log("[getPollRoom] Alias resolved for poll", pollId, "→", roomId);
@@ -1239,11 +1399,14 @@ export class MatrixService {
       // If we resolved the alias but are not yet a member (e.g. joining
       // via magic link), join the room now.  The poll room is created with
       // join_rules: public so this will succeed for anyone with the alias.
+      // A room on another homeserver is joined THROUGH a server that is in
+      // it: the alias lookup names candidates, and the origin always is one.
       const room = this.client.getRoom(roomId);
       if (!room) {
         this.logger?.info("Poll room found by alias but not joined yet, joining", pollId, roomId);
         console.log("[getPollRoom] Joining room", roomId, "...");
-        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId));
+        const viaServers = Array.from(new Set([...(aliasResponse.servers || []), origin]));
+        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
         // Wait for the SDK to sync the room into the local store
         // so that subsequent calls to client.getRoom() succeed.
         await this.waitForRoom(roomId);
@@ -1291,7 +1454,8 @@ export class MatrixService {
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
-    await this.sendStateEvent(roomId, 'm.room.vodle.poll.meta', meta, '');
+    // encrypted with the poll password (see pollDataContent):
+    await this.sendStateEvent(roomId, 'm.room.vodle.poll.meta', await this.pollDataContent(pollId, meta), '');
     
     this.logger?.exit("MatrixService.setPollMetadata");
   }
@@ -1309,7 +1473,7 @@ export class MatrixService {
     
     try {
       const content = this.getStateEvent(roomId, 'm.room.vodle.poll.meta', '');
-      return content || null;
+      return (await this.readPollMetaContent(pollId, content)) || null;
     } catch (error) {
       this.logger?.info("Poll metadata not found", pollId);
       return null;
@@ -1347,8 +1511,35 @@ export class MatrixService {
       due,
       poll_id: pollId
     }, '');
+    // voter rooms of this poll created earlier by this user get it as well,
+    // so the guard bot can close them (see copyPollDeadlineInto):
+    for (const [cacheKey, voterRoomId] of this.voterRooms.entries()) {
+      if (cacheKey.startsWith(`${pollId}:`) && this.client.getRoom(voterRoomId)?.getMyMembership() === 'join') {
+        try {
+          await this.client.sendStateEvent(voterRoomId, 'm.room.vodle.poll.deadline' as any, { due, poll_id: pollId }, '');
+        } catch (error) {
+          // not our room (another voter's) — the owner copies it at creation
+          this.logger?.info("MatrixService.setPollDeadline: not copied into", voterRoomId);
+        }
+      }
+    }
     
     this.logger?.exit("MatrixService.setPollDeadline");
+  }
+  
+  /** copy the poll room's deadline state event (if any yet) into a room of
+   *  ours, for the guard bot's deadline scan; best effort */
+  private async copyPollDeadlineInto(pollId: string, roomId: string): Promise<void> {
+    try {
+      const pollRoomId = this.pollRooms.get(pollId) || await this.getPollRoom(pollId);
+      const deadline = pollRoomId ? this.getStateEvent(pollRoomId, 'm.room.vodle.poll.deadline', '') : null;
+      if (deadline?.due) {
+        await this.client!.sendStateEvent(roomId, 'm.room.vodle.poll.deadline' as any,
+          { due: deadline.due, poll_id: pollId }, '');
+      }
+    } catch (error) {
+      this.logger?.warn("MatrixService.copyPollDeadlineInto failed", pollId, roomId, error);
+    }
   }
   
   /**
@@ -1388,11 +1579,12 @@ export class MatrixService {
       url: option.url || ''
     };
     
-    // Send as timeline event (immutable by Matrix protocol)
+    // Send as timeline event (immutable by Matrix protocol); the option's
+    // texts are encrypted with the poll password, its id stays plain:
     try {
       await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
         option_id: optionId,
-        ...optionData
+        ...(await this.pollDataContent(pollId, optionData))
       });
       console.error("OPTION_DEBUG addOption: sendEvent succeeded for", optionId);
     } catch (err) {
@@ -1475,10 +1667,17 @@ export class MatrixService {
               const oid = content.option_id;
               // Only use the first occurrence (immutable — ignore any duplicates)
               if (oid && !options.has(oid)) {
+                // the texts are encrypted under the poll password (see
+                // addOption); events from before that are plain:
+                const fields = typeof content.enc === 'string'
+                  ? await this.readPollValue(pollId, content) : content;
+                if (!fields) {
+                  continue;
+                }
                 options.set(oid, {
-                  name: content.name,
-                  description: content.description || '',
-                  url: content.url || ''
+                  name: fields.name,
+                  description: fields.description || '',
+                  url: fields.url || ''
                 });
               }
             }
@@ -1814,7 +2013,8 @@ export class MatrixService {
         throw new Error(`Poll room not found for poll ${pollId}`);
       }
       const eventType = `m.room.vodle.poll.data.${key}`;
-      await this.sendStateEvent(roomId, eventType, { value }, '');
+      // encrypted with the poll password (see pollDataContent):
+      await this.sendStateEvent(roomId, eventType, await this.pollDataContent(pollId, value), '');
     } catch (error) {
       // see setUserData — queue writes the server never received (#293):
       if (!this.is_connection_error(error)) { throw error; }
@@ -1839,7 +2039,8 @@ export class MatrixService {
     try {
       const eventType = `m.room.vodle.poll.data.${key}`;
       const content = this.getStateEvent(roomId, eventType, '');
-      return content?.value ?? null;
+      const value = await this.readPollValue(pollId, content);
+      return value ?? null;
     } catch (error) {
       return null;
     }
@@ -1915,13 +2116,14 @@ export class MatrixService {
       users[guardBotId] = 100;
     }
     
-    // Voter rooms are PUBLIC because the data they contain is already
-    // encrypted by the poll password at the application level.  Only
-    // participants who know the poll password can make sense of the
-    // values.  Making rooms public allows other voters to discover and
-    // join them to read ratings without needing an invite.
-    // No Matrix-level E2EE — the client has no crypto support and it
-    // is unnecessary given the application-level encryption.
+    // Voter rooms are PUBLIC (joinable by anyone knowing the room) so that
+    // other voters can discover and join them to read ratings without an
+    // invite. The data they contain is encrypted with the poll password at
+    // the application level (see pollDataContent), so only participants
+    // who know the password — i.e. hold the magic link — can make sense of
+    // the values; the homeserver cannot.
+    // No Matrix-level E2EE: voter data are STATE events, which room
+    // encryption never covers (it protects timeline events only).
     const options: ICreateRoomOpts = {
       name: `Vodle Voter: ${pollId}`,
       topic: `Voter data for poll ${pollId}, voter ${voterId}`,
@@ -1967,6 +2169,11 @@ export class MatrixService {
         this.logger?.error("Failed to invite guard bot to voter room", error);
       }
     }
+    
+    // The guard bot closes rooms whose deadline has passed, and looks for
+    // the deadline in each room it is in — so the poll's deadline is copied
+    // into this voter room (it is plain; the bot must read it):
+    await this.copyPollDeadlineInto(pollId, roomId);
     
     const cacheKey = `${pollId}:${voterId}`;
     this.voterRooms.set(cacheKey, roomId);
@@ -2319,10 +2526,12 @@ export class MatrixService {
               continue;
             }
             
-            // Join the voter room (public, so joinRoom works)
+            // Join the voter room (public, so joinRoom works) — through the
+            // announcer's homeserver when it is a different one:
             try {
               console.log("[discoverVoterRooms] Joining voter room:", voterRoomId);
-              await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId));
+              const viaServers = MatrixService.viaServersFor(event.sender);
+              await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
               await this.waitForRoom(voterRoomId);
               
               this.voterRooms.set(cacheKey, voterRoomId);
@@ -2435,8 +2644,10 @@ export class MatrixService {
       // Use a dedicated state event type per rating key so that
       // each rating is independently overwritable.
       // state_key is always '' — each voter has their own room.
+      // The value is encrypted with the poll password when it is known:
       const eventType = `m.room.vodle.voter.rating.${key}` as any;
-      await this.client.sendStateEvent(roomId, eventType, { value, voter_vid: voterId }, '');
+      const content = { ...(await this.pollDataContent(pollId, value)), voter_vid: voterId };
+      await this.client.sendStateEvent(roomId, eventType, content, '');
     } catch (error) {
       // see setUserData — queue writes the server never received (#293). The
       // local rating cache below is still updated, so the own vote stays
@@ -2473,7 +2684,8 @@ export class MatrixService {
     try {
       const eventType = `m.room.vodle.voter.${key}`;
       const content = this.getStateEvent(roomId, eventType, '');
-      return content?.value ?? null;
+      const value = await this.readPollValue(pollId, content);
+      return value ?? null;
     } catch (error) {
       return null;
     }
@@ -2668,8 +2880,9 @@ export class MatrixService {
           if (event.type?.startsWith('m.room.vodle.voter.rating.rating.')) {
             const optionId = event.type.replace('m.room.vodle.voter.rating.rating.', '');
             const content = event.content || {};
-            if (content.value !== undefined && content.value !== null) {
-              const rawValue = content.value;
+            // decrypts poll-password-encrypted values (see pollDataContent):
+            const rawValue = await this.readPollValue(pollId, content);
+            if (rawValue !== undefined && rawValue !== null) {
               const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
               if (Number.isFinite(numericValue) && numericValue >= 0 && numericValue <= 100) {
                 voterRatings.set(optionId, numericValue);
@@ -3204,10 +3417,18 @@ export class MatrixService {
     if (environment.show_debug_info) {
       console.log("[handleRatingEvent] ENTER", pollId, voterId, optionId);
     }
-    
+    const content = event.getContent();
+    // the value may be encrypted with the poll password (see
+    // pollDataContent); decoding is asynchronous, dispatch follows it:
+    this.readPollValue(pollId, content).then(rawValue => {
+      this.dispatchRatingEvent(pollId, voterId, optionId, content, rawValue);
+    }).catch(err => {
+      console.error("[handleRatingEvent] EXCEPTION:", err);
+    });
+  }
+  
+  private dispatchRatingEvent(pollId: string, voterId: string, optionId: string, content: any, rawValue: any): void {
     try {
-      const content = event.getContent();
-      const rawValue = content?.value;
       if (environment.show_debug_info) {
         console.log("[handleRatingEvent] rawValue:", rawValue, typeof rawValue, "content:", JSON.stringify(content));
       }
@@ -3285,7 +3506,10 @@ export class MatrixService {
     this.logger?.info("Voter announce received", pollId, voterId, voterRoomId);
     
     try {
-      await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId));
+      // see discoverVoterRooms: a room on another homeserver is joined
+      // through the announcer's server
+      const viaServers = MatrixService.viaServersFor(event.getSender?.());
+      await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
       await this.waitForRoom(voterRoomId);
       
       this.voterRooms.set(cacheKey, voterRoomId);
@@ -3433,27 +3657,46 @@ export class MatrixService {
    * Handle a poll metadata state event update.
    * Notifies listeners when poll metadata changes (e.g., state transitions).
    */
+  /** the metadata object in an m.room.vodle.poll.meta content: encrypted
+   *  as a whole under the poll password (see setPollMetadata), or the plain
+   *  fields of an event from before encryption existed */
+  private async readPollMetaContent(pollId: string, content: any): Promise<Record<string, any> | undefined> {
+    if (!content) {
+      return undefined;
+    }
+    if (typeof content.enc === 'string') {
+      return await this.readPollValue(pollId, content);
+    }
+    return content;
+  }
+  
   private handlePollMetaUpdate(pollId: string, event: any): void {
     this.logger?.entry("MatrixService.handlePollMetaUpdate", pollId);
     
-    const content = event.getContent();
-    
-    // Notify listeners — wrap each in try-catch so one failure doesn't block others
-    const listeners = this.pollEventListeners.get(pollId);
-    if (listeners) {
-      for (const listener of listeners) {
-        try {
-          if (listener.onPollMetaUpdate) {
-            listener.onPollMetaUpdate(pollId, content);
+    // decrypting is asynchronous; listeners are notified once it is done
+    this.readPollMetaContent(pollId, event.getContent()).then(content => {
+      if (!content) {
+        return;
+      }
+      // Notify listeners — wrap each in try-catch so one failure doesn't block others
+      const listeners = this.pollEventListeners.get(pollId);
+      if (listeners) {
+        for (const listener of listeners) {
+          try {
+            if (listener.onPollMetaUpdate) {
+              listener.onPollMetaUpdate(pollId, content);
+            }
+            if (listener.onDataChange) {
+              listener.onDataChange();
+            }
+          } catch (error) {
+            this.logger?.error("Error in poll event listener (poll meta update)", error);
           }
-          if (listener.onDataChange) {
-            listener.onDataChange();
-          }
-        } catch (error) {
-          this.logger?.error("Error in poll event listener (poll meta update)", error);
         }
       }
-    }
+    }).catch(error => {
+      this.logger?.error("MatrixService.handlePollMetaUpdate failed", pollId, error);
+    });
     
     this.logger?.exit("MatrixService.handlePollMetaUpdate");
   }
@@ -3738,6 +3981,112 @@ export class MatrixService {
    * @param pollId - Used as salt for key derivation
    * @returns CryptoKey suitable for AES-GCM encryption
    */
+  // ========================================================================
+  // Application-layer encryption of stored data (#293)
+  //
+  // Matrix room encryption (Megolm) covers timeline events only, and vodle
+  // stores nearly everything as STATE events. So, as on the CouchDB backend
+  // where every document is encrypted with a password the server never
+  // holds, values are encrypted here before they are sent:
+  //   - poll data, options and voter data with the POLL password (from the
+  //     magic link; the homeserver never sees it),
+  //   - user data with the vodle USER password (the homeserver only ever
+  //     sees a derivation of it, see deriveMatrixPassword).
+  // Encrypted content is {enc: base64(IV + AES-GCM ciphertext of
+  // JSON(value))} instead of {value: ...}, so readers can tell the two apart
+  // and events written before this existed stay readable. Event types that a
+  // server-side component needs in the clear stay plain: the deadline and
+  // lifecycle state (guard bot), voter-room announcements and vids
+  // (discovery), and the consent record (as on CouchDB).
+  // ========================================================================
+  
+  /** user data keys stored unencrypted, as on the CouchDB backend */
+  static readonly USER_KEYS_UNENCRYPTED = ['consent', 'last_access'];
+  
+  /** An AES-GCM key from password + salt, derived once per pair. */
+  private derivedDataKey(salt: string, password: string): Promise<CryptoKey> {
+    const cacheKey = salt + '\u0000' + password;
+    let key = this.dataKeys.get(cacheKey);
+    if (!key) {
+      key = this.deriveKeyFromPassword(password, salt);
+      this.dataKeys.set(cacheKey, key);
+    }
+    return key;
+  }
+  
+  /** {enc: ...} for value under password/salt, or {value} without a password */
+  private async encryptedContent(password: string | null, salt: string, value: any): Promise<Record<string, any>> {
+    if (!password) {
+      return { value };
+    }
+    const key = await this.derivedDataKey(salt, password);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(value))));
+    const combined = new Uint8Array(iv.length + ciphertext.length);
+    combined.set(iv);
+    combined.set(ciphertext, iv.length);
+    let binary = '';
+    for (let i = 0; i < combined.length; i++) {
+      binary += String.fromCharCode(combined[i]);
+    }
+    return { enc: btoa(binary) };
+  }
+  
+  /**
+   * The value an event content carries: content.value when plain, else the
+   * decryption of content.enc. Undefined for absent, malformed, or
+   * undecryptable content (unknown or wrong password) — such a value
+   * counts as not present.
+   */
+  private async decryptedValue(password: string | null, salt: string, content: any, what: string): Promise<any> {
+    if (!content) {
+      return undefined;
+    }
+    if (typeof content.enc !== 'string') {
+      return content.value;
+    }
+    if (!password) {
+      this.logger?.warn("MatrixService: encrypted " + what + " but no password known", salt);
+      return undefined;
+    }
+    try {
+      const key = await this.derivedDataKey(salt, password);
+      const combined = Uint8Array.from(atob(content.enc), c => c.charCodeAt(0));
+      if (combined.length < 13) {
+        return undefined;
+      }
+      const plaintext = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: combined.slice(0, 12) }, key, combined.slice(12));
+      return JSON.parse(new TextDecoder().decode(plaintext));
+    } catch (error) {
+      this.logger?.warn("MatrixService: could not decrypt " + what, salt, error);
+      return undefined;
+    }
+  }
+  
+  /** event content for a poll's data (poll data, options, voter data) */
+  private pollDataContent(pollId: string, value: any): Promise<Record<string, any>> {
+    return this.encryptedContent(this.pollPasswordProvider?.(pollId) || null, pollId, value);
+  }
+  
+  /** the value in a poll-data, option or voter-data event content */
+  async readPollValue(pollId: string, content: any): Promise<any> {
+    return this.decryptedValue(this.pollPasswordProvider?.(pollId) || null, pollId, content, 'poll data');
+  }
+  
+  /** event content for a user-data key */
+  private userDataContent(key: string, value: any): Promise<Record<string, any>> {
+    const password = MatrixService.USER_KEYS_UNENCRYPTED.includes(key) ? null : (this.userPasswordProvider?.() || null);
+    return this.encryptedContent(password, 'user:' + this.userId, value);
+  }
+  
+  /** the value in a user-data event content */
+  async readUserValue(key: string, content: any): Promise<any> {
+    const password = MatrixService.USER_KEYS_UNENCRYPTED.includes(key) ? null : (this.userPasswordProvider?.() || null);
+    return this.decryptedValue(password, 'user:' + this.userId, content, 'user data');
+  }
+  
   private async deriveKeyFromPassword(password: string, pollId: string): Promise<CryptoKey> {
     const enc = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -4052,8 +4401,9 @@ export class MatrixService {
         
         if (eventType.startsWith(prefix) && stateKey === '') {
           const key = eventType.slice(prefix.length);
-          if ('value' in content) {
-            result[key] = content.value;
+          const value = await this.readPollValue(pollId, content);
+          if (value !== undefined) {
+            result[key] = value;
           }
         } else if (eventType === 'm.room.vodle.poll.state' && stateKey === '') {
           if (content.state) {

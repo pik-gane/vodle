@@ -188,6 +188,7 @@ const poll_keystarts_in_user_db = [
   'password', 'myvid', 
   'del_private_key', 'del_nickname', 'del_from', 
   'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
+  'is_archived',
   'is_test',
   'poll_page',
   'simulated_ratings',
@@ -414,6 +415,12 @@ export class DataService implements OnDestroy {
   private replication_progress: Record<string, number> = {};
   private replication_active: Record<string, boolean> = {};
   replication_stalled: Record<string, boolean> = {}; // exposed for UI/diagnostics
+
+  get replication_is_stalled(): boolean {
+    /** whether the watchdog currently considers any replication stalled;
+     *  shown as a warning sign in the page headers (#292, #159) */
+    return Object.values(this.replication_stalled).some(stalled => !!stalled);
+  }
   private replication_restart_pending: Record<string, boolean> = {};
   private user_sync_start_pending = false;
   private user_sync_start_generation = 0;
@@ -432,6 +439,15 @@ export class DataService implements OnDestroy {
       @Inject(DOCUMENT) private document: Document,
       private matrixService: MatrixService
       ) { 
+    // the poll passwords live here (user cache); with them the Matrix backend
+    // encrypts each poll's voter data, as every poll document is encrypted on
+    // the CouchDB backend (#293):
+    if (this.matrixService) {
+      this.matrixService.pollPasswordProvider = (pid: string) =>
+        this.user_cache?.[get_poll_key_prefix(pid) + 'password'] || null;
+      // likewise the user password encrypts the user's own data there:
+      this.matrixService.userPasswordProvider = () => this.user_cache?.['password'] || null;
+    }
   }
 
   ionViewWillLeave() {
@@ -781,6 +797,7 @@ export class DataService implements OnDestroy {
           await this.matrixService.login(email, password);
           this.G.L.info("DataService: Matrix login successful, syncing user data");
           await this.syncUserCacheToMatrix();
+          await this.restoreUserDataFromMatrix();
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
           this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
@@ -1360,14 +1377,30 @@ export class DataService implements OnDestroy {
     }
   }
 
-  connect_to_remote_poll_db(pid: string, wait_for_replication=false): Promise<any> {
-    // called at poll initialization or when joining a poll
-    this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication);
+  connect_to_remote_poll_db(pid: string, wait_for_replication=false, origin_server?: string): Promise<any> {
+    // called at poll initialization or when joining a poll.
+    // origin_server (Matrix backend only): the server_name of the homeserver
+    // the poll room lives on, as named in a magic link — needed to join a
+    // poll created on another homeserver (#293).
+    this.G.L.entry("DataService.connect_to_remote_poll_db", pid, wait_for_replication, origin_server);
 
     // Phase 12: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      // For Matrix backend, join the poll room and create voter room instead of PouchDB replication
-      return this.matrixService.getOrCreatePollRoom(pid, '').then(async (roomId) => {
+      // For Matrix backend, join the poll room and create voter room instead of PouchDB replication.
+      // A poll joined via a magic link is only ever joined, never created
+      // here: a link to a poll that cannot be found must fail, not silently
+      // produce an empty poll room on this user's homeserver.
+      const room_promise: Promise<string> = origin_server
+        ? this.matrixService.setPollOrigin(pid, origin_server)
+            .then(() => this.matrixService.getPollRoom(pid))
+            .then(roomId => {
+              if (!roomId) {
+                throw new Error("poll " + pid + " not found on homeserver " + origin_server);
+              }
+              return roomId;
+            })
+        : this.matrixService.getOrCreatePollRoom(pid, '');
+      return room_promise.then(async (roomId) => {
         console.log("[connect_to_remote_poll_db] getOrCreatePollRoom returned roomId:", roomId, "for pid:", pid);
 
         // DIAGNOSTIC: Direct fetch test to verify API connectivity from browser
@@ -2217,6 +2250,37 @@ export class DataService implements OnDestroy {
         || this.has_pending_poll_mutations(pid)) {
       throw make_consistency_failure_error("Poll publication is incomplete for " + pid);
     }
+  }
+
+  private async restoreUserDataFromMatrix(): Promise<void> {
+    /** Take over what this user's Matrix user room holds and the local cache
+     *  lacks — the restore of settings, poll memberships (their passwords and
+     *  voter ids) and keys on a second device, or after clearing the browser
+     *  (#293). Local values win: they are what the user currently sees, and
+     *  the push in syncUserCacheToMatrix has just made them the newest. */
+    let restored = 0;
+    try {
+      const remote = await this.matrixService.getAllUserData();
+      for (const [key, value] of Object.entries(remote)) {
+        if (local_only_user_keys.includes(key)) { continue; }
+        const local = this.user_cache[key];
+        if (local === undefined || local === null || local === '') {
+          this.user_cache[key] = value;
+          restored++;
+        }
+      }
+    } catch (err) {
+      this.G.L.error("DataService.restoreUserDataFromMatrix failed, continuing with local data", err);
+      return;
+    }
+    this.G.L.info("DataService.restoreUserDataFromMatrix restored", restored, "keys");
+  }
+
+  get_poll_origin_server(pid: string): Promise<string> {
+    /** Matrix backend: the server_name of the homeserver this poll's room
+     *  lives on, which a magic link must name so that users of OTHER
+     *  homeservers can join the poll (#293). */
+    return this.matrixService.getPollOrigin(pid);
   }
 
   replicate_once(pid: string): Promise<boolean> {
@@ -4177,7 +4241,8 @@ export class DataService implements OnDestroy {
       const due_str = this.G.D.getp(pid, 'due'),
             deletion_date = (due_str == '') ? null : 
               new Date((new Date(due_str)).getTime() + environment.polls.delete_after_days*24*60*60*1000);
-      if (!!deletion_date && (new Date()) >= deletion_date) {
+      // archived polls are kept (issue #83):
+      if (!!deletion_date && (new Date()) >= deletion_date && this.getp(pid, 'is_archived') != 'true') {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
         this.stop_poll_sync(pid);

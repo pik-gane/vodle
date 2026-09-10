@@ -47,6 +47,17 @@ Phase 16 enables the Matrix backend in the development environment.
 **346 migration-related tests pass** (34 InMemoryBackend + 50 MigrationService +
 41 MigrationPage + 67 Matrix Wiring + 154 MatrixService/DataAdapter).
 
+## Session 6 of the work plan (2026-09-10)
+
+The hardening work of `planning/WORK_PLAN.md` session 6 is done, see its
+ledger: two federating Synapse servers plus the guard bot as a test harness
+(`scripts/test-matrix.sh`), real-server specs for two-client convergence,
+federation, server-side deadline enforcement and the CouchDB → Matrix
+migration, encryption of poll, voter and user data at the application layer,
+and the performance/security/migration report
+[MATRIX_PERF_SECURITY_REPORT.md](MATRIX_PERF_SECURITY_REPORT.md), which also
+lists the remaining gaps.
+
 ## What Remains (Phase 17)
 
 | Phase | What | Status |

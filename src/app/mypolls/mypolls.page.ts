@@ -41,6 +41,7 @@ export class MypollsPage implements OnInit {
   closed_expanded = false;
   drafts_expanded = false;
   older_expanded = false;
+  archived_expanded = false;
 
   // LIFECYCLE:
 
@@ -126,10 +127,27 @@ export class MypollsPage implements OnInit {
   } 
 
   get closed_polls(): Poll[] {
-    // return polls sorted by due:
+    // return polls sorted by due, without the archived ones (issue #83):
     return Object.values(this.G.P.polls)
-      .filter((p) => p.state=='closed' && !!p.due)
+      .filter((p) => p.state=='closed' && !!p.due && !p.is_archived)
       .sort((p1, p2) => p2.due.getTime() - p1.due.getTime());
   } 
+
+  get archived_polls(): Poll[] {
+    // ended polls the user moved into the archive (issue #83), newest first:
+    return Object.values(this.G.P.polls)
+      .filter((p) => p.state=='closed' && p.is_archived)
+      .sort((p1, p2) => (p2.due?.getTime() || 0) - (p1.due?.getTime() || 0));
+  }
+
+  archive(p: Poll, ev?: Event) {
+    ev?.stopPropagation();
+    p.is_archived = true;
+  }
+
+  unarchive(p: Poll, ev?: Event) {
+    ev?.stopPropagation();
+    p.is_archived = false;
+  }
 
 }

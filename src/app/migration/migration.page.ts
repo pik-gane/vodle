@@ -67,8 +67,10 @@ export class MigrationPage implements OnInit {
   /** User data keys to migrate (matches settings.service.ts keys, excluding local-only keys) */
   private userDataKeys = ['consent', 'email', 'language', 'theme', 'default_wap'];
 
-  /** Poll metadata keys to migrate */
-  private pollMetadataKeys = ['title', 'description', 'deadline', 'state', 'type'];
+  /** Poll metadata keys to migrate: the poll-level keys of the CouchDB poll
+   *  database (see Poll in poll.service.ts); the lifecycle state is migrated
+   *  last, by its own step */
+  private pollMetadataKeys = ['title', 'desc', 'url', 'type', 'language', 'due', 'due_type', 'due_custom', 'start_date'];
 
   /** localStorage key for persisting migration state */
   private static readonly STORAGE_KEY = 'vodle_migration_state';
@@ -155,9 +157,18 @@ export class MigrationPage implements OnInit {
     this.addLog(`Starting poll data migration for ${trimmedPollId}...`);
 
     try {
-      const step = await this.migrationService.migratePollData(trimmedPollId, this.pollMetadataKeys);
-      this.addLog(`Poll ${trimmedPollId} migration ${step.status}: ${step.itemsMigrated} items migrated, ${step.itemsFailed} failed`);
-      if (step.errors.length > 0) {
+      // the poll's data, then its options (which the Matrix backend stores
+      // differently from other poll data) and its ratings, each under its
+      // original voter:
+      const steps = [await this.migrationService.migratePollData(trimmedPollId, this.pollMetadataKeys)];
+      if (steps[0].status === 'completed') {
+        steps.push(await this.migrationService.migratePollOptions(trimmedPollId));
+        steps.push(await this.migrationService.migrateRatings(trimmedPollId));
+        // last, since it locks the poll on the Matrix backend:
+        steps.push(await this.migrationService.migratePollState(trimmedPollId));
+      }
+      for (const step of steps) {
+        this.addLog(`${step.description} ${step.status}: ${step.itemsMigrated} items migrated, ${step.itemsFailed} failed`);
         for (const error of step.errors) {
           this.addLog(`  Error: ${error}`);
         }

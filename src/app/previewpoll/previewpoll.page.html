@@ -43,7 +43,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <b><i [lang]="p.language" [innerHtml]="p.title"></i></b>
         </h3></ion-text>
         <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
-          <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [lang]="p.language" [innerHtml]="p.desc"></i></ion-text>
+          <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [lang]="p.language" [innerHtml]="G.format_details(p.desc)"></i></ion-text>
           <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary"><span *ngIf="((p.desc||'')!='')&&((p.url||'')!='')">&nbsp;</span>
             (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
           </ion-text>

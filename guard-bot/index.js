@@ -6,7 +6,10 @@
  *
  * Its responsibilities:
  *   1. Accept room invitations automatically.
- *   2. Watch for poll deadline state events (it.vodle.deadline).
+ *   2. Watch for poll deadline state events (m.room.vodle.poll.deadline,
+ *      as written by the vodle app into every poll room and copied into
+ *      every voter room; the scaffold's original it.vodle.deadline is
+ *      still understood).
  *   3. When a deadline arrives, close the room by dropping all
  *      participants' power levels to 0 (the bot's own power stays at 100).
  *
@@ -29,6 +32,23 @@ const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008
 const BOT_USER      = process.env.BOT_USER      || "@vodle-guard:localhost";
 const BOT_PASSWORD   = process.env.BOT_PASSWORD   || "vodle-guard-password";
 const SCAN_INTERVAL  = parseInt(process.env.SCAN_INTERVAL_MS || "30000", 10);
+
+// The deadline state event the vodle app writes (MatrixService.setPollDeadline):
+// content.due is an ISO 8601 date. It is written into the poll room and
+// copied into each voter room, so this bot closes both kinds of room.
+const APP_DEADLINE_TYPE = "m.room.vodle.poll.deadline";
+// The event type this scaffold originally watched (content.deadline); kept
+// so that rooms written by hand for testing still work.
+const LEGACY_DEADLINE_TYPE = "it.vodle.deadline";
+
+/** the deadline of a room as an ISO date string, or null */
+function roomDeadline(room) {
+  const appEvent = room.currentState.getStateEvents(APP_DEADLINE_TYPE, "");
+  const due = appEvent?.getContent()?.due;
+  if (due) return due;
+  const legacyEvent = room.currentState.getStateEvents(LEGACY_DEADLINE_TYPE, "");
+  return legacyEvent?.getContent()?.deadline || null;
+}
 
 async function main() {
   console.log(`[guard-bot] Starting vodle guard bot`);
@@ -82,8 +102,8 @@ async function main() {
 }
 
 /**
- * Iterate over joined rooms, look for an `it.vodle.deadline` state event,
- * and close rooms whose deadline is in the past.
+ * Iterate over joined rooms, look for a deadline state event (see
+ * roomDeadline), and close rooms whose deadline is in the past.
  */
 async function scanForExpiredDeadlines(client) {
   const rooms = client.getRooms();
@@ -91,10 +111,8 @@ async function scanForExpiredDeadlines(client) {
 
   for (const room of rooms) {
     try {
-      const deadlineEvent = room.currentState.getStateEvents("it.vodle.deadline", "");
-      if (!deadlineEvent) continue;
-
-      const deadline = deadlineEvent.getContent()?.deadline;
+      if (room.getMyMembership() !== "join") continue;
+      const deadline = roomDeadline(room);
       if (!deadline) continue;
 
       const deadlineDate = new Date(deadline);

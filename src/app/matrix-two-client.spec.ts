@@ -32,8 +32,8 @@ import { environment } from '../environments/environment';
  * other kept voting. Those are exactly the failure modes the migration issue
  * (#293) needs confidence in, so they are tested against a real server.
  *
- * Start the server first (throw-away container + volume, port 8009, never
- * touches a development homeserver on 8008):
+ * Start the servers first (throw-away containers + volumes, client ports
+ * 8009/8010, never touching a development homeserver on 8008):
  *
  *     scripts/test-matrix.sh start
  *     CHROME_BIN=/usr/bin/chromium npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
@@ -42,15 +42,25 @@ import { environment } from '../environments/environment';
  * When no Synapse is reachable, every spec reports itself as pending, so the
  * ordinary suite stays runnable without docker.
  *
- * Deliberate limitation: poll-room E2EE is not exercised here (the service
- * does not initialize a crypto backend either; environment.matrix.enable_e2ee
- * is currently decorative).
+ * The specs also print VODLE_PERF lines (event-driven propagation latency,
+ * offline replay time) that planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md
+ * collects from CI runs.
+ *
+ * Two homeservers federating with each other are covered by
+ * matrix-federation.spec.ts.
  */
 
-// 'localhost', not 127.0.0.1: the service derives the room-alias domain from
-// the homeserver URL's hostname, and the test server's server_name is
-// 'localhost' — with a mismatch, alias resolution returns 502:
+// hs1 of scripts/test-matrix.sh. Its server_name is localhost:8449 (the
+// federation port), which differs from this URL's hostname on purpose: the
+// service derives the domain of room aliases from the logged-in user ID, not
+// from the URL, so the mismatch that used to break alias resolution must
+// not matter any more.
 const SYNAPSE_URL = 'http://localhost:8009';
+const SERVER_NAME = 'localhost:8449';
+// the guard bot registered by scripts/test-matrix.sh on hs1:
+const GUARD_BOT = '@vodle-guard:' + SERVER_NAME;
+// the poll password (from the magic link) that voter data is encrypted with:
+const POLL_PASSWORD = 'two-client-poll-password';
 
 describe('MatrixService against a real Synapse (two clients, #293)', () => {
 
@@ -61,6 +71,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
   let unavailable_reason = '';
   let previous_timeout: number;
   let previous_homeserver: string;
+  let previous_guard_bot: string;
   const services: any[] = [];
   // one poll shared by the specs in order, so the scenario builds up like a
   // real poll's life; a fresh id per run keeps the server reusable:
@@ -97,16 +108,73 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     };
   }
 
-  async function make_client(label: string): Promise<any> {
+  /** a fresh MatrixService (own storage, as a fresh browser) for `label` */
+  function fresh_service(label: string, poll_password: string | null): any {
     const svc: any = new (MatrixService as any)(storage_stub());
     svc.init(silent);
     // several concurrent clients share this page, and the persistent crypto
     // store holds only one account (see e2ee_store_in_memory):
     svc.e2ee_store_in_memory = true;
-    const email = label + '-' + pid + '@example.invalid';
-    await svc.register(email, 'test-password-' + label);
+    // in the app, DataService supplies the poll password (from the magic
+    // link) and the user password; poll and user data are encrypted with them:
+    svc.pollPasswordProvider = () => poll_password;
+    svc.userPasswordProvider = () => 'test-password-' + label;
     services.push(svc);
     return svc;
+  }
+
+  async function make_client(label: string, poll_password: string | null = POLL_PASSWORD): Promise<any> {
+    const svc = fresh_service(label, poll_password);
+    await svc.register(label + '-' + pid + '@example.invalid', 'test-password-' + label);
+    return svc;
+  }
+
+  /** a second session of an already registered user, as on another device */
+  async function login_client(label: string): Promise<any> {
+    const svc = fresh_service(label, POLL_PASSWORD);
+    await svc.login(label + '-' + pid + '@example.invalid', 'test-password-' + label);
+    return svc;
+  }
+
+  /** raw content of a voter-room state event as the SERVER stores it */
+  async function raw_state(svc: any, roomId: string, eventType: string): Promise<any> {
+    const response = await fetch(SYNAPSE_URL + '/_matrix/client/v3/rooms/' + encodeURIComponent(roomId)
+      + '/state/' + encodeURIComponent(eventType) + '/', {
+      headers: {Authorization: 'Bearer ' + svc.client.getAccessToken()},
+      cache: 'no-store',
+    });
+    return response.ok ? response.json() : null;
+  }
+
+  function median(values: number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
+  /** measure how long a rating change takes to reach another client's
+   *  poll event listener (event-driven, not polled), several times over */
+  async function propagation_latency(writer: any, reader: any, optionId: string, rounds: number): Promise<number[]> {
+    const samples: number[] = [];
+    for (let round = 1; round <= rounds; round++) {
+      const value = 10 + round;
+      let started = 0;
+      const arrived = new Promise<number>(resolve => {
+        const listener = {
+          onRatingUpdate: (pollId: string, vid: string, oid: string, rating: number) => {
+            if (pollId === pid && oid === optionId && rating === value) {
+              reader.removePollEventListener(pid, listener);
+              resolve(performance.now() - started);
+            }
+          },
+        };
+        reader.addPollEventListener(pid, listener);
+      });
+      started = performance.now();
+      await writer.submitRating(pid, optionId, value);
+      samples.push(await Promise.race([arrived, new Promise<number>((_, reject) =>
+        window.setTimeout(() => reject(new Error('rating round ' + round + ' never arrived')), 60000))]));
+    }
+    return samples;
   }
 
   async function until(condition: () => Promise<boolean>, what: string, timeout_ms = 30000): Promise<void> {
@@ -139,12 +207,15 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     previous_timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 180000;
     previous_homeserver = environment.matrix.homeserver_url;
+    previous_guard_bot = environment.matrix.guard_bot_user_id;
     (environment.matrix as any).homeserver_url = SYNAPSE_URL;
+    (environment.matrix as any).guard_bot_user_id = GUARD_BOT;
     await probe();
   });
 
   afterAll(async () => {
     (environment.matrix as any).homeserver_url = previous_homeserver;
+    (environment.matrix as any).guard_bot_user_id = previous_guard_bot;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = previous_timeout;
     for (const svc of services.splice(0)) {
       try { await svc.logout(); } catch (err) { /* best effort */ }
@@ -160,6 +231,9 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     // --- discovery: a second user finds the poll through its room alias ---
     const alice = await make_client('alice');
     const bob = await make_client('bob');
+    // the room-alias domain comes from the user ID, i.e. the server_name,
+    // which here deliberately differs from the URL's hostname:
+    expect(MatrixService.serverNameOf(alice.userId)).toBe(SERVER_NAME);
     const roomId = await alice.createPollRoom(pid, 'Integration test poll');
     expect(roomId).toMatch(/^!/);
     await alice.setPollMetadata(pid, {type: 'winner', language: 'en'});
@@ -182,6 +256,46 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       const values = rating_values(await fresh_ratings(alice), 'o1');
       return values.includes(33) && values.includes(66);
     }, "alice to see both ratings");
+
+    // --- confidentiality: what the SERVER stores is ciphertext under the
+    // poll password; a client without the password reads no ratings ---
+    const alice_room = alice.voterRooms.get(pid + ':' + alice.userId);
+    expect(alice_room).withContext('alice voter room').toBeTruthy();
+    const stored = await raw_state(bob, alice_room, 'm.room.vodle.voter.rating.rating.o1');
+    expect(typeof stored?.enc).withContext('rating stored encrypted: ' + JSON.stringify(stored)).toBe('string');
+    expect(stored.value).withContext('no plain value on the server').toBeUndefined();
+    expect(stored.voter_vid).toBe(alice.userId);
+    const mallory = await make_client('mallory', null);   // knows the poll id but not the password
+    expect(await mallory.getPollRoom(pid)).toBe(roomId);
+    expect(rating_values(await fresh_ratings(mallory), 'o1')).toEqual([]);
+    // the poll's metadata and options are ciphertext to such a client too:
+    const stored_meta = await raw_state(mallory, roomId, 'm.room.vodle.poll.meta');
+    expect(typeof stored_meta?.enc).withContext('poll metadata stored encrypted').toBe('string');
+    expect(stored_meta.type).toBeUndefined();
+    expect(await mallory.getPollMetadata(pid)).toBeNull();
+    expect((await mallory.getOptions(pid)).size).toBe(0);
+    expect((await bob.getOptions(pid)).get('o2').name).toBe('Option two');
+
+    // --- user data: encrypted on the server under the user password, and
+    // restored by a second session of the same user (as on another device) ---
+    await alice.setUserData('language', 'de');
+    await alice.setUserData('consent', 'yes');   // consent stays plain, as on CouchDB
+    const user_room = await alice.getUserRoom();
+    const stored_language = await raw_state(alice, user_room, 'm.room.vodle.user.language');
+    expect(typeof stored_language?.enc).withContext('user data stored encrypted').toBe('string');
+    expect(stored_language.value).toBeUndefined();
+    expect((await raw_state(alice, user_room, 'm.room.vodle.user.consent')).value).toBe('yes');
+    const alice_again = await login_client('alice');   // logs in with the derived password
+    expect(MatrixService.serverNameOf(alice_again.userId)).toBe(SERVER_NAME);
+    const restored = await alice_again.getAllUserData();
+    expect(restored.language).toBe('de');
+    expect(restored.consent).toBe('yes');
+
+    // --- event-driven propagation latency (VODLE_PERF, see the report) ---
+    await alice.setupPollEventHandlers(pid);
+    await bob.setupPollEventHandlers(pid);
+    const samples = await propagation_latency(alice, bob, 'o2', 5);
+    console.info('VODLE_PERF same_server_rating_propagation_ms', JSON.stringify(samples), 'median', median(samples));
 
     // --- offline reconvergence: bob's sync loop stops (as when the app
     // loses its connection) while alice keeps changing her rating ---
@@ -209,10 +323,14 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     // the recovering sync loop triggers the replay; alice then sees the
     // vote. The window must outlast a full idle long-poll cycle (~30s),
     // since the replay piggybacks on the next successful sync tick:
+    const replay_started = performance.now();
     await until(async () =>
       rating_values(await fresh_ratings(alice), 'o2').includes(55),
       "alice to see bob's offline-queued rating after replay", 75000);
-    expect(bob.getOfflineQueueSize()).toBe(0);
+    // the queue entry is removed once the replayed write has been confirmed,
+    // which can be a moment after alice already sees it:
+    await until(async () => bob.getOfflineQueueSize() === 0, 'the offline queue to drain', 10000);
+    console.info('VODLE_PERF offline_queue_replay_visible_ms', Math.round(performance.now() - replay_started));
 
     // --- a brand-new session (fresh in-memory storage, as after clearing
     // the browser) of a third user sees the full authoritative state ---
@@ -221,6 +339,48 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       const values = rating_values(await fresh_ratings(carol), 'o1');
       return values.includes(90) && values.includes(33);
     }, 'a fresh client to see the authoritative ratings');
+  });
+
+  it('lets the guard bot close the poll and voter rooms server-side once the deadline has passed', async () => {
+    if (!requires_synapse()) { return; }
+    // self-contained: own poll and user, since jasmine randomizes spec order
+    const gpid = pid + 'gb';
+    const frank = await make_client('frank');
+    const roomId = await frank.createPollRoom(gpid, 'Deadline enforcement poll');
+    // the bot is invited at room creation and joins by itself when running:
+    const bot_joined = async () => frank.client.getRoom(roomId)?.getMember(GUARD_BOT)?.membership === 'join';
+    try {
+      await until(bot_joined, 'the guard bot to join the poll room', 15000);
+    } catch (err) {
+      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      return;
+    }
+    const due = new Date(Date.now() + 4000).toISOString();
+    await frank.setPollDeadline(gpid, due);
+    await frank.addOption(gpid, 'o1', {name: 'Option'});
+    // starting the poll locks its metadata and demotes the creator to the
+    // voters' power level, as the app does — below the bot's, so the bot can
+    // close the poll room later:
+    await frank.changePollState(gpid, 'running');
+    await frank.submitRating(gpid, 'o1', 50);   // creates the voter room, with the deadline copied in
+    const voter_room = frank.voterRooms.get(gpid + ':' + frank.userId);
+    expect(await raw_state(frank, voter_room, 'm.room.vodle.poll.deadline')).toEqual(jasmine.objectContaining({due}));
+    // after the deadline (plus the bot's scan interval) the SERVER rejects
+    // further ratings and options — nothing a client could bypass:
+    let last_accepted = 50;
+    await until(async () => {
+      try {
+        await frank.submitRating(gpid, 'o1', last_accepted + 1);   // accepted until the room is closed
+        last_accepted++;
+        return false;
+      } catch (err: any) {
+        return err?.httpStatus === 403 || err?.errcode === 'M_FORBIDDEN';
+      }
+    }, 'the guard bot to close the voter room after the deadline', 60000);
+    await expectAsync(frank.addOption(gpid, 'o2', {name: 'Late option'})).toBeRejected();
+    // ... while the data written before stays readable:
+    frank.ratingCaches.delete(gpid);
+    expect(rating_values(await frank.getRatings(gpid), 'o1')).toEqual([last_accepted]);
   });
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {

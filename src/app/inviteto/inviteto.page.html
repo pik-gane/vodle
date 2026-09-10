@@ -42,7 +42,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <i [innerHtml]="p.title"></i>
         <ng-container *ngIf="details_expanded">
           <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
-            <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="p.desc"></small></i>
+            <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="G.format_details(p.desc)"></small></i>
             <small *ngIf="(p.url||'')!=''">
               &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
                   <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
