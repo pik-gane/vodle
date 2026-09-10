@@ -274,19 +274,21 @@ a migrated user can open the migrated poll.
 ## 6. CI figures
 
 Read from the `VODLE_PERF` lines of the "build and test" job of the green CI
-run 34457237560 (2026-09-10, commit acd3f46; 667 specs, 0 skipped). The
+run 34462199208 (2026-09-10, commit fa5a1cb; 669 specs, 0 skipped). The
 json-result reporter (`karma.conf.js`) records those lines in
 `karma-results.json` (field `perf`, uploaded as the `karma-results`
 artifact) and `scripts/check-test-results.js` prints them at the end of the
 job log. Medians are over five ratings. Compared with the sandbox figures
-of §2, the CI runner took longer for the cross-server join (1339 ms vs
-524 ms) and was similar or faster otherwise.
+of §2, the CI runner took longer for the cross-server join (1327 ms vs
+524 ms) and was similar otherwise. The offline replay figure is the one
+after #326; the previous green run (34457237560, before the change)
+measured 28087 ms for it.
 
 | metric | CI |
 | --- | --- |
-| same_server_rating_propagation_ms (median) | 82 |
-| federation_poll_join_ms | 1339 |
-| federation_first_vote_visible_ms | 953 |
-| federation_rating_propagation_hs1_to_hs2_ms (median) | 118 |
-| federation_rating_propagation_hs2_to_hs1_ms (median) | 98 |
-| offline_queue_replay_visible_ms | 28087 |
+| same_server_rating_propagation_ms (median) | 84 |
+| federation_poll_join_ms | 1327 |
+| federation_first_vote_visible_ms | 907 |
+| federation_rating_propagation_hs1_to_hs2_ms (median) | 108 |
+| federation_rating_propagation_hs2_to_hs1_ms (median) | 131 |
+| offline_queue_replay_visible_ms | 1110 |
