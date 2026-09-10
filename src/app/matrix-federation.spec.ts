@@ -325,6 +325,10 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     await until(async () => rating_values(await fresh_ratings(gina, fpid), 'o1').includes(40),
       "hs1 to see hugo's vote");
     expect(Date.now()).withContext('setup finished before the deadline').toBeLessThan(new Date(due).getTime());
+    // the link is cut only shortly before the deadline: every transaction
+    // that fails during a partition makes Synapse's federation client back
+    // off longer (4 s, 16 s, 64 s ...), and that backoff outlives the heal
+    await new Promise(resolve => window.setTimeout(resolve, Math.max(0, new Date(due).getTime() - 4000 - Date.now())));
 
     expect((await proxy('partition')).partitioned).toBeTrue();
     try {
@@ -358,6 +362,23 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const rating_event = (await restored.json()).find((e: any) => e.type === 'm.room.vodle.voter.rating.rating.o1');
     expect(rating_event?.sender).withContext(JSON.stringify(rating_event)).toBe(GUARD_BOT);
     await expectAsync(hugo.setVoterData(fpid, hugo.userId, 'rating.o1', 42)).toBeRejected();
+
+    // Before this spec ends, hs2's federation sender must deliver to hs1
+    // again: the transaction that failed during the partition is retried
+    // with a growing backoff that outlives the heal, and until it succeeds
+    // nothing else from hs2 reaches hs1 — the next spec's first cross-server
+    // vote once waited in that queue and timed out (a CI failure of
+    // 2026-09-10). A vote in a fresh poll proves the link has recovered:
+    const rpid = fpid + 'r';
+    await gina.createPollRoom(rpid, 'Recovery poll');
+    await gina.addOption(rpid, 'o1', {name: 'Option one'});
+    await hugo.setPollOrigin(rpid, HS1.name);
+    expect(await hugo.getPollRoom(rpid)).toBeTruthy();
+    await hugo.submitRating(rpid, 'o1', 5);
+    const recovery_started = performance.now();
+    await until(async () => rating_values(await fresh_ratings(gina, rpid), 'o1').includes(5),
+      "hs2's federation sender to deliver to hs1 again after the partition", 120000);
+    console.info('VODLE_PERF federation_send_recovery_after_partition_ms', Math.round(performance.now() - recovery_started));
   });
 
   it('keeps both sides voting during a partition of the federation link and converges after it heals (#329)', async () => {
