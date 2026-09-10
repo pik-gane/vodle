@@ -120,7 +120,11 @@ $ docker compose up synapse guard-bot -d
 
 The dev environment (`src/environments/environment.ts`) has
 `useMatrixBackend: true` by default, so the app will connect to the
-Matrix homeserver at `localhost:8008`.
+Matrix homeserver at `localhost:8008`. (The homeserver of this development
+setup registers accounts freely; a production homeserver should require a
+registration token instead, which the app supports — see
+[documentation/deployment/MATRIX.md](documentation/deployment/MATRIX.md),
+which also covers rate limits, the guard bot and retention.)
 
 #### Option 2: CouchDB (legacy)
 

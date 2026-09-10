@@ -622,6 +622,39 @@ export class MatrixService {
   /**
    * Register new user
    */
+  /**
+   * The next user-interactive-auth stage to complete for a registration,
+   * or null when the server offers no flow the app can complete. The app
+   * can complete m.login.dummy (open registration) and, when configured
+   * with one, m.login.registration_token; Synapse puts the token stage in
+   * front of the dummy stage, so a registration takes two steps (#327).
+   */
+  static registrationAuth(flows: any[] | undefined, token: string | null | undefined,
+                          session?: string, completed: string[] = []): any | null {
+    const supported = (stage: string) => stage === 'm.login.dummy'
+      || (stage === 'm.login.registration_token' && !!token);
+    let stage: string | null;
+    if (!flows || flows.length === 0) {
+      stage = token ? 'm.login.registration_token' : 'm.login.dummy';
+    } else {
+      const candidates = flows.map((flow: any) => (flow?.stages || []) as string[])
+        .filter(stages => stages.every(supported) && completed.every(done => stages.includes(done)))
+        .sort((a, b) => a.length - b.length);
+      stage = candidates.length ? (candidates[0].find(s => !completed.includes(s)) || null) : null;
+    }
+    if (!stage) {
+      return null;
+    }
+    const auth: any = {type: stage};
+    if (stage === 'm.login.registration_token') {
+      auth.token = token;
+    }
+    if (session) {
+      auth.session = session;
+    }
+    return auth;
+  }
+
   async register(email: string, password: string): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
     const emailHash = hashEmail(email);
@@ -637,32 +670,31 @@ export class MatrixService {
       const username = emailHash;
       const matrixPassword = deriveMatrixPassword(email, password);
       
-      // Registration is user-interactive auth: even with
-      // enable_registration_without_verification, Synapse requires the
-      // m.login.dummy stage, and the SDK's register() does no UIA handling
-      // of its own — an empty auth dict is rejected with a 401. Send the
-      // dummy stage directly, and if the server insists on a session, retry
-      // once with the session it issued:
-      let response;
-      try {
-        response = await tempClient.register(
-          username,
-          matrixPassword,
-          undefined, // sessionId
-          {type: 'm.login.dummy'} // auth
-        );
-      } catch (error: any) {
-        const session = error?.data?.session,
-              flows = error?.data?.flows || [];
-        if (error?.httpStatus === 401 && session
-            && flows.some((flow: any) => (flow.stages || []).includes('m.login.dummy'))) {
-          response = await tempClient.register(
-            username,
-            matrixPassword,
-            session,
-            {type: 'm.login.dummy'}
-          );
-        } else {
+      // Registration is user-interactive auth, and the SDK's register()
+      // does no UIA handling of its own — an empty auth dict is rejected
+      // with a 401. Send the stage the app can complete (the registration
+      // token when one is configured, else m.login.dummy) directly, and if
+      // the server insists on a session, retry once with the session and
+      // the flows it issued (#327):
+      const token = environment.matrix.registration_token || null;
+      let response: any, session: string | undefined, flows: any[] | undefined, completed: string[] = [];
+      for (let attempt = 0; ; attempt++) {
+        const auth = MatrixService.registrationAuth(flows, token, session, completed);
+        if (!auth) {
+          throw new Error("registration: the homeserver requires a stage this app cannot complete "
+            + "(a registration token may be missing from the configuration): " + JSON.stringify(flows));
+        }
+        try {
+          response = await tempClient.register(username, matrixPassword, session, auth);
+          break;
+        } catch (error: any) {
+          // 401 with a session: the server wants (more) stages of the flow
+          if (error?.httpStatus === 401 && error?.data?.session && attempt < 4) {
+            session = error.data.session;
+            flows = error.data.flows;
+            completed = error.data.completed || [];
+            continue;
+          }
           throw error;
         }
       }
@@ -3861,6 +3893,57 @@ export class MatrixService {
    * Called when the user navigates away from a poll or when
    * the poll is closed.
    */
+  /**
+   * Leave and forget the poll room and every voter room of a poll this
+   * client has deleted locally (#331), dropping caches and the stored room
+   * ids. Once no local user is left in a room the homeserver may purge it;
+   * the guard bot purges a poll's rooms after the retention period anyway.
+   */
+  async leavePollRooms(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.leavePollRooms", pollId);
+    if (!this.client) {
+      return;
+    }
+    this.teardownPollEventHandlers(pollId);
+    const rooms = new Set<string>();
+    const pollRoom = this.pollRooms.get(pollId) || await this.storage.get(`poll_room_${pollId}`);
+    if (pollRoom) {
+      rooms.add(pollRoom);
+    }
+    for (const [cacheKey, roomId] of Array.from(this.voterRooms.entries())) {
+      if (cacheKey.startsWith(`${pollId}:`)) {
+        rooms.add(roomId);
+        this.voterRooms.delete(cacheKey);
+        this.voterRoomReverseLookup.delete(roomId);
+        this.voterVidStored.delete(roomId);
+        this.voterVidMap.delete(cacheKey);
+        await this.storage.remove(`voter_room_${cacheKey}`);
+      }
+    }
+    // rooms of the poll this session never opened are known by their alias:
+    for (const room of (this.client.getRooms?.() || [])) {
+      const alias: string = room.getCanonicalAlias?.() || '';
+      if (alias.startsWith(`#vodle_poll_${pollId}:`) || alias.startsWith(`#vodle_voter_${pollId}_`)) {
+        rooms.add(room.roomId);
+      }
+    }
+    this.pollRooms.delete(pollId);
+    this.pollOrigins.delete(pollId);
+    this.optionCaches.delete(pollId);
+    this.ratingCaches.delete(pollId);
+    await this.storage.remove(`poll_room_${pollId}`);
+    for (const roomId of rooms) {
+      try {
+        await this.client.leave(roomId);
+        await this.client.forget(roomId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
+      }
+    }
+    this.logger?.info("MatrixService.leavePollRooms left", pollId, rooms.size, "rooms");
+    this.logger?.exit("MatrixService.leavePollRooms");
+  }
+
   teardownPollEventHandlers(pollId: string): void {
     this.logger?.entry("MatrixService.teardownPollEventHandlers", pollId);
     

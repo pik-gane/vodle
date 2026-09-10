@@ -56,6 +56,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
   let previous_timeout: number;
   let previous_homeserver: string;
   let previous_guard_bot: string;
+  let previous_registration_token: string;
   const services: any[] = [];
   const pid = 'FED' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -162,6 +163,9 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 240000;
     previous_homeserver = environment.matrix.homeserver_url;
     previous_guard_bot = environment.matrix.guard_bot_user_id;
+    previous_registration_token = environment.matrix.registration_token;
+    // the harness requires a registration token, as a production server should (#327):
+    (environment.matrix as any).registration_token = 'vodle-test-registration-token';
     (environment.matrix as any).guard_bot_user_id = GUARD_BOT;
     await probe();
   });
@@ -169,6 +173,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
   afterAll(async () => {
     (environment.matrix as any).homeserver_url = previous_homeserver;
     (environment.matrix as any).guard_bot_user_id = previous_guard_bot;
+    (environment.matrix as any).registration_token = previous_registration_token;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = previous_timeout;
     for (const svc of services.splice(0)) {
       try { await svc.logout(); } catch (err) { /* best effort */ }

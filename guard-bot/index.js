@@ -26,6 +26,7 @@
  */
 
 import * as sdk from "matrix-js-sdk";
+import http from "node:http";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";
@@ -46,6 +47,29 @@ const SCAN_INTERVAL  = parseInt(process.env.SCAN_INTERVAL_MS || "30000", 10);
 // the grace period.
 const CLOSE_GRACE_MS = parseInt(process.env.CLOSE_GRACE_MS || "10000", 10);
 const QUIET_PERIOD_MS = parseInt(process.env.QUIET_PERIOD_MS || "5000", 10);
+// A poll's rooms are removed RETENTION_DAYS after its deadline (#331): with
+// ADMIN_PURGE=true this bot, registered as a server admin, deletes them
+// through the Synapse admin API, so the (encrypted) data leaves the server;
+// otherwise it only leaves and forgets them. RETENTION_MS overrides the
+// days (the test harness uses seconds). Participants who archived the poll
+// keep what their app cached; the retention must be long enough for that
+// and must be named in the privacy statement.
+const RETENTION_MS = parseInt(process.env.RETENTION_MS
+  || String(Math.round(parseFloat(process.env.RETENTION_DAYS || "365") * 24 * 3600 * 1000)), 10);
+const ADMIN_PURGE = (process.env.ADMIN_PURGE || "false") === "true";
+// GET /healthz on HEALTH_PORT (0 = off) reports the bot's state to a
+// monitoring system or a docker healthcheck (#327).
+const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || "0", 10);
+
+/** what /healthz reports */
+const stats = {
+  startedAt: new Date().toISOString(),
+  lastScanAt: null,
+  lastScanError: null,
+  roomsJoined: 0,
+  closedTotal: 0,
+  purgedTotal: 0,
+};
 
 // The deadline state event the vodle app writes (MatrixService.setPollDeadline):
 // content.due is an ISO 8601 date. It is written into the poll room and
@@ -107,12 +131,33 @@ async function main() {
   console.log(`[guard-bot] Sync started — listening for invitations`);
 
   // --- 4. Periodic deadline scan ------------------------------------------
-  const scanTimer = setInterval(() => scanForExpiredDeadlines(client), SCAN_INTERVAL);
+  // one scan at a time: with many rooms (or slow admin purges) a scan can
+  // outlast the interval, and overlapping scans would close or remove the
+  // same room twice
+  let scanning = false;
+  const scanTimer = setInterval(async () => {
+    if (scanning) return;
+    scanning = true;
+    try {
+      await scanForExpiredDeadlines(client);
+    } catch (err) {
+      stats.lastScanError = err.message;
+      console.error("[guard-bot] Scan failed:", err.message);
+    } finally {
+      scanning = false;
+    }
+  }, SCAN_INTERVAL);
+  console.log(`[guard-bot] Closing ${CLOSE_GRACE_MS} ms after a deadline once a room is quiet for ${QUIET_PERIOD_MS} ms; `
+    + `removing rooms ${RETENTION_MS} ms after the deadline (${ADMIN_PURGE ? "admin purge" : "leave and forget"})`);
+
+  // --- 4b. Health endpoint --------------------------------------------------
+  const healthServer = HEALTH_PORT > 0 ? startHealthServer(client) : null;
 
   // --- 5. Graceful shutdown -----------------------------------------------
   const shutdown = () => {
     console.log("[guard-bot] Shutting down...");
     clearInterval(scanTimer);
+    healthServer?.close();
     client.stopClient();
     process.exit(0);
   };
@@ -170,6 +215,9 @@ function isClosed(room, botUserId) {
 async function scanForExpiredDeadlines(client) {
   const rooms = client.getRooms().filter((room) => room.getMyMembership() === "join");
   const now = new Date();
+  stats.lastScanAt = now.toISOString();
+  stats.roomsJoined = rooms.length;
+  stats.lastScanError = null;
   const voterRooms = rooms.filter((room) => roomKind(room) === "voter");
   for (const room of voterRooms) {
     await considerRoom(client, room, now);
@@ -180,6 +228,74 @@ async function scanForExpiredDeadlines(client) {
     const openVoterRooms = pid ? voterRooms.filter((v) => pollIdOf(v) === pid && !isClosed(v, client.getUserId())) : [];
     await considerRoom(client, room, now, openVoterRooms);
   }
+  // rooms closed long enough ago are removed (#331):
+  for (const room of rooms) {
+    const deadline = roomDeadline(room);
+    if (!deadline || !isClosed(room, client.getUserId())) continue;
+    if (new Date(deadline).getTime() + RETENTION_MS > now.getTime()) continue;
+    await removeRoom(client, room, deadline);
+  }
+}
+
+/** rooms this process already asked the server to remove (the SDK lists them until the kick arrives) */
+const removedByUs = new Set();
+
+/**
+ * Remove a room whose retention period is over: through the admin API
+ * (which kicks every local member, this bot included, and purges the
+ * room's events) when ADMIN_PURGE is set and the bot is an admin, else by
+ * leaving and forgetting it, so the server may purge it once nobody local
+ * is left.
+ */
+async function removeRoom(client, room, deadline) {
+  const roomId = room.roomId;
+  if (removedByUs.has(roomId)) return;
+  removedByUs.add(roomId);
+  if (ADMIN_PURGE) {
+    try {
+      const response = await fetch(`${client.baseUrl}/_synapse/admin/v2/rooms/${encodeURIComponent(roomId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${client.getAccessToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ purge: true, block: false }),
+      });
+      if (response.ok) {
+        stats.purgedTotal++;
+        console.log(`[guard-bot] Room ${roomId} (${roomKind(room)}, deadline ${deadline}) purged`);
+        return;
+      }
+      console.error(`[guard-bot] Admin purge of ${roomId} failed (${response.status}): ${await response.text()} — leaving it instead`);
+    } catch (err) {
+      console.error(`[guard-bot] Admin purge of ${roomId} failed: ${err.message} — leaving it instead`);
+    }
+  }
+  try {
+    await client.leave(roomId);
+    await client.forget(roomId);
+    stats.purgedTotal++;
+    console.log(`[guard-bot] Room ${roomId} (${roomKind(room)}, deadline ${deadline}) left and forgotten`);
+  } catch (err) {
+    console.error(`[guard-bot] Could not leave ${roomId}:`, err.message);
+    removedByUs.delete(roomId);
+  }
+}
+
+/** GET /healthz: 200 with the bot's state while it syncs, 503 otherwise */
+function startHealthServer(client) {
+  const server = http.createServer((req, res) => {
+    if (req.url !== "/healthz") {
+      res.writeHead(404); res.end(); return;
+    }
+    const syncState = client.getSyncState();
+    const ok = (syncState === "SYNCING" || syncState === "PREPARED") && !stats.lastScanError;
+    res.writeHead(ok ? 200 : 503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      ok, syncState, ...stats,
+      uptimeSeconds: Math.round(process.uptime()),
+      settings: { scanIntervalMs: SCAN_INTERVAL, closeGraceMs: CLOSE_GRACE_MS, quietPeriodMs: QUIET_PERIOD_MS, retentionMs: RETENTION_MS, adminPurge: ADMIN_PURGE },
+    }));
+  });
+  server.listen(HEALTH_PORT, () => console.log(`[guard-bot] Health endpoint on port ${HEALTH_PORT} (/healthz)`));
+  return server;
 }
 
 async function considerRoom(client, room, now, openVoterRooms = []) {
@@ -211,6 +327,7 @@ async function considerRoom(client, room, now, openVoterRooms = []) {
     await closeRoom(client, room.roomId, plEvent.getContent());
   } catch (err) {
     // Non-fatal — log and continue scanning
+    stats.lastScanError = `${room.roomId}: ${err.message}`;
     console.error(`[guard-bot] Error scanning room ${room.roomId}:`, err.message);
   }
 }
@@ -264,6 +381,7 @@ async function closeRoom(client, roomId, currentPowerLevels) {
   try {
     await client.sendStateEvent(roomId, "m.room.power_levels", newPl);
     closedByUs.add(roomId);
+    stats.closedTotal++;
     console.log(`[guard-bot] Room ${roomId} closed successfully`);
   } catch (err) {
     console.error(`[guard-bot] Failed to close room ${roomId}:`, err.message);

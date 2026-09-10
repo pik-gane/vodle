@@ -4367,6 +4367,12 @@ export class DataService implements OnDestroy {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
         this.stop_poll_sync(pid);
+        if (environment.useMatrixBackend) {
+          // and its rooms on the homeserver are left (#331):
+          this.matrixService.leavePollRooms(pid).catch(err => {
+            this.G.L.warn("DataService.after_changes could not leave the poll's rooms", pid, err);
+          });
+        }
         const expired_poll = this.G.P.polls[pid];
         if (!!expired_poll) {
           // cancel any pending deferred-finalization retry timer and remove

@@ -63,6 +63,7 @@ describe('CouchDB to Matrix migration against real backends (#293)', () => {
   let previous_retry_delay: number;
   let previous_homeserver: string;
   let previous_guard_bot: string;
+  let previous_registration_token: string;
   const couch_clients: any[] = [];
   const matrix_services: any[] = [];
   const pid = 'MIG' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -182,6 +183,9 @@ describe('CouchDB to Matrix migration against real backends (#293)', () => {
     previous_retry_delay = environment.db_put_retry_delay_ms;
     previous_homeserver = environment.matrix.homeserver_url;
     previous_guard_bot = environment.matrix.guard_bot_user_id;
+    previous_registration_token = environment.matrix.registration_token;
+    // the harness requires a registration token, as a production server should (#327):
+    (environment.matrix as any).registration_token = 'vodle-test-registration-token';
     // the CouchDB side of the migration runs DataService in CouchDB mode:
     (environment as any).useMatrixBackend = false;
     environment.db_put_retry_delay_ms = 10;
@@ -195,6 +199,7 @@ describe('CouchDB to Matrix migration against real backends (#293)', () => {
     environment.db_put_retry_delay_ms = previous_retry_delay;
     (environment.matrix as any).homeserver_url = previous_homeserver;
     (environment.matrix as any).guard_bot_user_id = previous_guard_bot;
+    (environment.matrix as any).registration_token = previous_registration_token;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = previous_timeout;
     for (const client of couch_clients.splice(0)) {
       client.svc.shutting_down = true;

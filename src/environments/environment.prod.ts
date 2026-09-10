@@ -47,6 +47,12 @@ export const environment = {
     homeserver_url: "/",
     // Enable Matrix E2EE (Olm/Megolm)
     enable_e2ee: true,
+    // Registration token (Synapse: registration_requires_token). vodle
+    // registers a Matrix account per user implicitly; with a token, the
+    // homeserver does not have to be open to anyone. The token is part of
+    // the app bundle, so it deters drive-by registration bots, no more
+    // (#327). Empty: open registration (m.login.dummy).
+    registration_token: "",
     // Guard bot Matrix user ID — this bot is invited to all poll and voter
     // rooms with admin power (100) for server-side deadline enforcement.
     guard_bot_user_id: "@vodle-guard:vodle.example.com",

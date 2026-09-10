@@ -212,6 +212,26 @@ same across federation: the second homeserver holds the same ciphertext.
    should set `federation.destination_min_retry_interval` to a few seconds
    as well, #327).
 
+### 3.6 Settled in plan session 10 (2026-09-10, #327, #331)
+
+- **Registration** needs no longer be open: the app completes Synapse's
+  `m.login.registration_token` stage when `matrix.registration_token` is
+  configured, and the test harness requires the token (the specs register
+  through it). The token travels in the app bundle, so it deters drive-by
+  registration bots only; an application service registering on the app's
+  behalf remains the stronger option.
+- **Rate limits**: the harness no longer disables them; it runs the suite
+  under the limits recommended in `documentation/deployment/MATRIX.md`
+  (logins, registrations, messages, joins, invites), so a burst the app
+  makes that would exceed them shows up in CI as a 429. Validated at the
+  suite's scale (polls of up to ~10 voters).
+- **Retention**: the guard bot removes a poll's rooms `RETENTION_DAYS` after
+  the deadline (through the admin API when it is an admin), and a client
+  leaves the rooms of a poll it deletes locally; the two-client spec sees
+  the rooms disappear.
+- **Monitoring**: the bot's `GET /healthz`; deployment guide and checklist in
+  `documentation/deployment/MATRIX.md`.
+
 ## 4. Migration (CouchDB → Matrix)
 
 ### 4.1 Schema mapping

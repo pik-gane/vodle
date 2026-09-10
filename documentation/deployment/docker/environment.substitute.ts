@@ -33,6 +33,13 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
       ]  
     },
     show_debug_info: false, // must be false in production!
+    useMatrixBackend: true,
+    matrix: {
+      homeserver_url: "/", // the nginx reverse proxy forwards /_matrix/ to Synapse; or "https://matrix.YOURDOMAIN"
+      enable_e2ee: true,
+      guard_bot_user_id: "@vodle-guard:YOURDOMAIN", // ADJUST! the server_name, forever
+      registration_token: "", // ADJUST! the homeserver's registration token, if it requires one
+    },
     data_service: {
       central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/", // ADJUST!
       central_db_password: "none",

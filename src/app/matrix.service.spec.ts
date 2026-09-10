@@ -54,7 +54,25 @@ describe('MatrixService', () => {
   it('should return null client when not initialized', () => {
     expect(service.getClient()).toBeNull();
   });
-  
+
+  it('walks the registration flow: the token stage when the app has a token, then the dummy stage; open registration without one (#327)', () => {
+    const synapse_with_token = [{stages: ['m.login.registration_token', 'm.login.dummy']}];
+    const open_server = [{stages: ['m.login.dummy']}];
+    // first request, flows not known yet:
+    expect(MatrixService.registrationAuth(undefined, 'secret')).toEqual({type: 'm.login.registration_token', token: 'secret'});
+    expect(MatrixService.registrationAuth(undefined, '')).toEqual({type: 'm.login.dummy'});
+    // the server answered 401 with its flows and a session:
+    expect(MatrixService.registrationAuth(synapse_with_token, 'secret', 's1', []))
+      .toEqual({type: 'm.login.registration_token', token: 'secret', session: 's1'});
+    expect(MatrixService.registrationAuth(synapse_with_token, 'secret', 's1', ['m.login.registration_token']))
+      .toEqual({type: 'm.login.dummy', session: 's1'});
+    // a token configured but the server open: the dummy stage suffices
+    expect(MatrixService.registrationAuth(open_server, 'secret', 's2')).toEqual({type: 'm.login.dummy', session: 's2'});
+    // the server requires a token the app does not have, or a stage it cannot do:
+    expect(MatrixService.registrationAuth(synapse_with_token, null, 's3')).toBeNull();
+    expect(MatrixService.registrationAuth([{stages: ['m.login.recaptcha', 'm.login.dummy']}], 'secret', 's4')).toBeNull();
+  });
+
   // Email Hashing Tests
   describe('Email Hashing for Privacy', () => {
     it('should hash email addresses consistently', () => {
@@ -530,6 +548,33 @@ describe('MatrixService', () => {
         await (service as any).handleOptionEvent('test-poll', {getContent: () => ({name: 'nameless'})});
         expect(added.length).toBe(1);
         service.teardownPollEventHandlers('test-poll');
+      });
+      
+      it('leaves and forgets every room of a poll deleted locally, and drops what it knew about them (#331)', async () => {
+        storageSpy.get.and.callFake((key: string) => Promise.resolve(key === 'poll_room_p1' ? '!poll:hs' : null));
+        storageSpy.remove.and.returnValue(Promise.resolve());
+        const left: string[] = [], forgotten: string[] = [];
+        const room = (roomId: string, alias: string) => ({roomId, getCanonicalAlias: () => alias});
+        (service as any).client = {
+          leave: (roomId: string) => { left.push(roomId); return Promise.resolve({}); },
+          forget: (roomId: string) => { forgotten.push(roomId); return Promise.resolve({}); },
+          getRooms: () => [room('!poll:hs', '#vodle_poll_p1:hs'), room('!v2:hs', '#vodle_voter_p1_YWxpY2U:hs'),
+                           room('!other:hs', '#vodle_poll_p2:hs'), room('!user:hs', '')],
+          removeListener: () => {},
+        };
+        (service as any).voterRooms.set('p1:@bob:hs', '!v1:hs');
+        (service as any).voterRoomReverseLookup.set('!v1:hs', {pollId: 'p1', voterId: '@bob:hs'});
+        (service as any).voterRooms.set('p2:@bob:hs', '!v3:hs');
+        (service as any).ratingCaches.set('p1', new Map());
+        await service.leavePollRooms('p1');
+        expect(left.sort()).toEqual(['!poll:hs', '!v1:hs', '!v2:hs']);
+        expect(forgotten.sort()).toEqual(['!poll:hs', '!v1:hs', '!v2:hs']);
+        expect((service as any).voterRooms.has('p1:@bob:hs')).toBeFalse();
+        expect((service as any).voterRooms.get('p2:@bob:hs')).withContext('other polls untouched').toBe('!v3:hs');
+        expect((service as any).ratingCaches.has('p1')).toBeFalse();
+        expect(storageSpy.remove).toHaveBeenCalledWith('poll_room_p1');
+        expect(storageSpy.remove).toHaveBeenCalledWith('voter_room_p1:@bob:hs');
+        (service as any).client = null;
       });
       
       it('should clean up all listeners on teardown', () => {

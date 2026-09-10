@@ -72,6 +72,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
   let previous_timeout: number;
   let previous_homeserver: string;
   let previous_guard_bot: string;
+  let previous_registration_token: string;
   const services: any[] = [];
   // one poll shared by the specs in order, so the scenario builds up like a
   // real poll's life; a fresh id per run keeps the server reusable:
@@ -208,14 +209,32 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 180000;
     previous_homeserver = environment.matrix.homeserver_url;
     previous_guard_bot = environment.matrix.guard_bot_user_id;
+    previous_registration_token = environment.matrix.registration_token;
+    // the harness requires a registration token, as a production server should (#327):
+    (environment.matrix as any).registration_token = 'vodle-test-registration-token';
     (environment.matrix as any).homeserver_url = SYNAPSE_URL;
     (environment.matrix as any).guard_bot_user_id = GUARD_BOT;
     await probe();
   });
 
+  // The browser allows six connections per host, and every client's sync
+  // long-poll holds one: clients left syncing after their spec would starve
+  // the next spec's requests (a replayed rating once waited 14 s in Chrome's
+  // queue behind the long-polls of an earlier spec's clients). So each spec
+  // stops the sync loops of the clients it created; afterAll still logs
+  // them all out.
+  let running_since = 0;
+  beforeEach(() => { running_since = services.length; });
+  afterEach(() => {
+    for (const svc of services.slice(running_since)) {
+      try { svc.client?.stopClient(); } catch (err) { /* already stopped */ }
+    }
+  });
+
   afterAll(async () => {
     (environment.matrix as any).homeserver_url = previous_homeserver;
     (environment.matrix as any).guard_bot_user_id = previous_guard_bot;
+    (environment.matrix as any).registration_token = previous_registration_token;
     jasmine.DEFAULT_TIMEOUT_INTERVAL = previous_timeout;
     for (const svc of services.splice(0)) {
       try { await svc.logout(); } catch (err) { /* best effort */ }
@@ -275,6 +294,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect(await mallory.getPollMetadata(pid)).toBeNull();
     expect((await mallory.getOptions(pid)).size).toBe(0);
     expect((await bob.getOptions(pid)).get('o2').name).toBe('Option two');
+    mallory.client.stopClient();   // done with mallory: free the connection (see afterEach)
 
     // --- user data: encrypted on the server under the user password, and
     // restored by a second session of the same user (as on another device) ---
@@ -290,6 +310,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     const restored = await alice_again.getAllUserData();
     expect(restored.language).toBe('de');
     expect(restored.consent).toBe('yes');
+    alice_again.client.stopClient();   // done with the second session
 
     // --- event-driven propagation latency (VODLE_PERF, see the report) ---
     await alice.setupPollEventHandlers(pid);
@@ -429,6 +450,12 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect(rating_values(await grace.refreshRatings(gpid), 'o1')).toEqual([last_accepted]);
     expect(rating_values(await frank.refreshRatings(gpid), 'o1')).toEqual([last_accepted]);
     expect((await frank.getAllPollData(gpid)).state).toBe('closed');
+    // --- retention (#331): the harness's bot removes a poll's rooms 60 s
+    // after the deadline (RETENTION_MS), as an admin, so the server has no
+    // trace of them: frank, kicked out, cannot read their state any more ---
+    await until(async () => await raw_state(frank, voter_room, 'm.room.power_levels') === null
+                         && await raw_state(frank, roomId, 'm.room.power_levels') === null,
+      'the guard bot to remove the poll and voter rooms after the retention period', 90000);
   });
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {
