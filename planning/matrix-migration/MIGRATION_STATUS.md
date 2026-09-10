@@ -37,7 +37,7 @@ The CI run of 2026-09-10 executed 667 specs.
 
 Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 
-- [#324](https://github.com/pik-gane/vodle/issues/324) options added to a running poll never reach the other participants (bug, also #163)
+- [#324](https://github.com/pik-gane/vodle/issues/324) options added to a running poll never reached the other participants — fixed 2026-09-10 (plan session 8): the app sends them as timeline events and every client's live handler picks them up
 - [#325](https://github.com/pik-gane/vodle/issues/325) the final tally is based on the local cache, not on the server state at the deadline (bug)
 - [#326](https://github.com/pik-gane/vodle/issues/326) offline-queued writes were replayed only on the next sync tick (≈ 25–30 s) — fixed on the PR #323 branch on 2026-09-10 (retry with backoff plus the browser's `online` event)
 - [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver: domain, registration policy, rate limits, guard bot deployment (`environment.prod.ts` still holds placeholders)

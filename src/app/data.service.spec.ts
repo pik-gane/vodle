@@ -2903,3 +2903,77 @@ describe('DataService consistency hardening (#292)', () => {
     });
   });
 });
+
+describe('options added to a running poll on the Matrix backend (#324)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, previous_flag: boolean;
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    (environment as any).useMatrixBackend = true;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = { 'poll.p1.state': 'running' };   // not a draft: poll data lives in the poll room
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    matrix = {
+      addOption: jasmine.createSpy('addOption').and.returnValue(Promise.resolve()),
+      setPollData: jasmine.createSpy('setPollData').and.returnValue(Promise.resolve()),
+      getPollData: jasmine.createSpy('getPollData').and.returnValue(Promise.resolve(null)),
+      addPollEventListener: jasmine.createSpy('addPollEventListener'),
+      setupPollEventHandlers: jasmine.createSpy('setupPollEventHandlers').and.returnValue(Promise.resolve()),
+    };
+    svc.matrixService = matrix;
+    svc.G = { L: L, P: { polls: {} }, D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+  });
+
+  it('sends a new option as ONE timeline event with all its fields, not as state events', async () => {
+    // what the Option constructor does, in this order:
+    expect(svc.setp('p1', 'option.o9.oid', 'o9')).toBeTrue();
+    svc.setp('p1', 'option.o9.name', 'Nine');
+    svc.setp('p1', 'option.o9.desc', 'the ninth');
+    svc.setp('p1', 'option.o9.url', 'https://example.org/9');
+    expect(matrix.addOption).withContext('waits until all fields are set').not.toHaveBeenCalled();
+    await new Promise(resolve => setTimeout(resolve, 5));
+    expect(matrix.addOption).toHaveBeenCalledTimes(1);
+    expect(matrix.addOption).toHaveBeenCalledWith('p1', 'o9', {name: 'Nine', description: 'the ninth', url: 'https://example.org/9'});
+    expect(matrix.setPollData).withContext('a locked room rejects state events').not.toHaveBeenCalled();
+    // and it is in the local cache right away:
+    expect(svc.getp('p1', 'option.o9.name')).toBe('Nine');
+    expect(svc.pids.has('p1')).toBeTrue();
+  });
+
+  it('does not send an option that never got a name', async () => {
+    svc.setp('p1', 'option.o8.oid', 'o8');
+    await new Promise(resolve => setTimeout(resolve, 5));
+    expect(matrix.addOption).not.toHaveBeenCalled();
+  });
+
+  it("registers an option another participant added, so the poll page can show it", () => {
+    const poll: any = { pid: 'p1', options: {} };
+    poll._add_option = (o: any) => { poll.options[o.oid] = o; return true; };
+    svc.G.P.polls['p1'] = poll;
+    svc.start_poll_sync('p1');
+    expect(matrix.addPollEventListener).toHaveBeenCalledTimes(1);
+    const listener = matrix.addPollEventListener.calls.mostRecent().args[1];
+    expect(listener.onOptionAdded).toBeDefined();
+
+    listener.onOptionAdded('p1', 'o7', {name: 'Seven', description: 'the seventh', url: ''});
+    expect(svc.getp('p1', 'option.o7.name')).toBe('Seven');
+    expect(svc.getp('p1', 'option.o7.desc')).toBe('the seventh');
+    expect(Object.keys(poll.options)).toEqual(['o7']);
+    expect(poll.options['o7'].oid).toBe('o7');
+    // the own echo of the event, or a repeated announcement, adds nothing:
+    listener.onOptionAdded('p1', 'o7', {name: 'Seven', description: 'the seventh', url: ''});
+    expect(Object.keys(poll.options)).toEqual(['o7']);
+    // registering did not write anything back to Matrix:
+    expect(matrix.addOption).not.toHaveBeenCalled();
+    expect(matrix.setPollData).not.toHaveBeenCalled();
+  });
+});

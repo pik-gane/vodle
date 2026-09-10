@@ -2824,6 +2824,29 @@ export class DataService implements OnDestroy {
               this.G.L.error("DataService Matrix onRatingUpdate callback failed", pollId, err);
             }
           },
+          onOptionAdded: (pollId: string, oid: string, option: {name: string; description: string; url: string}) => {
+            // an option another participant added while the poll runs
+            // (#324): register it like doc2poll_cache does for CouchDB, so
+            // the Poll object gets an Option and the page (onDataChange
+            // follows) shows it
+            try {
+              this.G.L.info("DataService Matrix onOptionAdded", pollId, oid);
+              const cache = this.ensure_poll_cache(pollId);
+              cache['option.' + oid + '.oid'] = oid;
+              cache['option.' + oid + '.name'] = option.name || '';
+              cache['option.' + oid + '.desc'] = option.description || '';
+              cache['option.' + oid + '.url'] = option.url || '';
+              if (!(pollId in this._pid_oids)) {
+                this._pid_oids[pollId] = new Set();
+              }
+              this._pid_oids[pollId].add(oid);
+              if (pollId in this.G.P.polls && !(oid in this.G.P.polls[pollId].options)) {
+                new Option(this.G, this.G.P.polls[pollId], oid);
+              }
+            } catch (err) {
+              this.G.L.error("DataService Matrix onOptionAdded callback failed", pollId, oid, err);
+            }
+          },
           onDataChange: () => {
             try {
               if (this.page && this.page.onDataChange) this.page.onDataChange();
@@ -3328,6 +3351,16 @@ export class DataService implements OnDestroy {
       // Non-draft, non-userdb key: store in local cache and sync to Matrix
       this.ensure_poll_cache(pid);
       this.poll_caches[pid][key] = value;
+      if (key.startsWith('option.')) {
+        // an option added while the poll runs. Not a state event: the room's
+        // state is locked once the poll runs (lockPollMetadata), and the
+        // other clients read options from the timeline only. One
+        // m.room.vodle.poll.option timeline event carries all of the
+        // option's fields, sent once the Option constructor has set them
+        // all (#324, the Matrix side of #163):
+        this.schedule_matrix_option_event(pid, key);
+        return true;
+      }
       this.matrixService.setPollData(pid, key, value).catch(err => {
         this.G.L.error("DataService.setp Matrix sync failed", pid, key, err);
       });
@@ -3345,6 +3378,38 @@ export class DataService implements OnDestroy {
     } else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
+  }
+
+  /** timers of options whose fields are still being set, by "<pid>:<oid>" */
+  private pending_matrix_options: Record<string, ReturnType<typeof setTimeout>> = {};
+
+  /**
+   * Send an option added to a running poll to Matrix as ONE timeline event
+   * (MatrixService.addOption) once the current task has set all of its
+   * fields: the Option constructor calls setp for oid, name, desc and url in
+   * a row, and the event is immutable, so it must carry all of them (#324).
+   */
+  private schedule_matrix_option_event(pid: string, key: string) {
+    const keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.')),
+          mkey = pid + ':' + oid;
+    if (!oid || mkey in this.pending_matrix_options) {
+      return;
+    }
+    this.pending_matrix_options[mkey] = setTimeout(() => {
+      delete this.pending_matrix_options[mkey];
+      const cache = this.poll_caches[pid] || {}, name = cache['option.' + oid + '.name'];
+      if (!name) {
+        this.G.L.warn("DataService: option without a name not sent to Matrix", pid, oid);
+        return;
+      }
+      this.matrixService.addOption(pid, oid, {
+        name,
+        description: cache['option.' + oid + '.desc'] || '',
+        url: cache['option.' + oid + '.url'] || ''
+      }).catch(err => {
+        this.G.L.error("DataService: sending the new option to Matrix failed", pid, oid, err);
+      });
+    }, 0);
   }
 
   delp(pid:string, key:string) {

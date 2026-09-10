@@ -114,6 +114,9 @@ export interface PollEventListener {
   onDelegationRequest?(pollId: string, request: DelegationRequest): void;
   onDelegationResponse?(pollId: string, response: DelegationResponse): void;
   onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
+  /** an option added to the running poll by any participant (a
+   *  m.room.vodle.poll.option timeline event), the own ones included */
+  onOptionAdded?(pollId: string, optionId: string, option: {name: string; description: string; url: string}): void;
   onDataChange?(): void;
   /** Fired once after setupPollEventHandlers has finished restoring the poll's
    *  existing ratings (voter room discovery + retroactive state scan).
@@ -3369,6 +3372,10 @@ export class MatrixService {
         case 'm.room.vodle.voter.announce':
           this.handleVoterAnnounce(pollId, event);
           break;
+        
+        case 'm.room.vodle.poll.option':
+          this.handleOptionEvent(pollId, event);
+          break;
       }
     };
     (this.client as any).on("Room.timeline", timelineHandler);
@@ -3581,6 +3588,50 @@ export class MatrixService {
       this.logger?.info("Joined announced voter room", pollId, voterId, voterRoomId);
     } catch (error) {
       this.logger?.error("Failed to join announced voter room", pollId, voterId, error);
+    }
+  }
+  
+  /**
+   * An option added while the poll runs (a m.room.vodle.poll.option timeline
+   * event, see addOption): make sure the option cache has it and tell the
+   * listeners, so the poll page shows it without a reload (#324). Fires for
+   * the own echo too; DataService registers an option only once.
+   */
+  private async handleOptionEvent(pollId: string, event: any): Promise<void> {
+    const content = event.getContent?.() || {};
+    const optionId = content.option_id;
+    if (!optionId) {
+      return;
+    }
+    try {
+      const options = await this.ensureOptionCache(pollId);
+      if (!options.has(optionId)) {
+        // the cache was built before this event reached the server's
+        // timeline: take the fields from the event itself
+        const fields = typeof content.enc === 'string' ? await this.readPollValue(pollId, content) : content;
+        if (!fields) {
+          return;
+        }
+        options.set(optionId, {name: fields.name || '', description: fields.description || '', url: fields.url || ''});
+      }
+      const option = options.get(optionId);
+      const listeners = this.pollEventListeners.get(pollId);
+      if (listeners) {
+        for (const listener of listeners) {
+          try {
+            if (listener.onOptionAdded) {
+              listener.onOptionAdded(pollId, optionId, option);
+            }
+            if (listener.onDataChange) {
+              listener.onDataChange();
+            }
+          } catch (error) {
+            this.logger?.error("Error in poll event listener (option added)", error);
+          }
+        }
+      }
+    } catch (error) {
+      this.logger?.error("MatrixService.handleOptionEvent failed", pollId, optionId, error);
     }
   }
   

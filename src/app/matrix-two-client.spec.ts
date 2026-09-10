@@ -294,6 +294,18 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     // --- event-driven propagation latency (VODLE_PERF, see the report) ---
     await alice.setupPollEventHandlers(pid);
     await bob.setupPollEventHandlers(pid);
+
+    // --- an option added while the poll RUNS reaches the other client
+    // (#324): starting the poll locks the room's state, so the option
+    // travels as a timeline event, and alice's cache and listener get it ---
+    await alice.changePollState(pid, 'running');
+    const options_seen: string[] = [];
+    alice.addPollEventListener(pid, {onOptionAdded: (_p: string, oid: string) => { options_seen.push(oid); }});
+    await bob.addOption(pid, 'o3', {name: 'Option three', description: 'added by bob'});
+    await until(async () => (await alice.getOptions(pid)).get('o3')?.name === 'Option three',
+      "alice to see the option bob added to the running poll");
+    expect((await alice.getOptions(pid)).get('o3')).toEqual({name: 'Option three', description: 'added by bob', url: ''});
+    expect(options_seen).withContext('the listener heard of it').toContain('o3');
     const samples = await propagation_latency(alice, bob, 'o2', 5);
     console.info('VODLE_PERF same_server_rating_propagation_ms', JSON.stringify(samples), 'median', median(samples));
 

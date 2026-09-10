@@ -468,6 +468,26 @@ describe('MatrixService', () => {
         service.teardownPollEventHandlers('test-poll');
       });
       
+      it("puts an option from the poll room's timeline into the cache and tells the listeners (#324)", async () => {
+        const added: any[] = [];
+        const listener: PollEventListener = {
+          onOptionAdded: (pollId, optionId, option) => added.push({pollId, optionId, option}),
+          onDataChange: jasmine.createSpy('onDataChange'),
+        };
+        service.addPollEventListener('test-poll', listener);
+        // the option cache exists (built from the server earlier) but lacks the new option:
+        (service as any).optionCaches.set('test-poll', new Map([['o1', {name: 'One', description: '', url: ''}]]));
+        const event = {getContent: () => ({option_id: 'o2', name: 'Two', description: 'second', url: ''})};
+        await (service as any).handleOptionEvent('test-poll', event);
+        expect(added).toEqual([{pollId: 'test-poll', optionId: 'o2', option: {name: 'Two', description: 'second', url: ''}}]);
+        expect(listener.onDataChange).toHaveBeenCalledTimes(1);
+        expect((await service.getOptions('test-poll')).get('o2')?.name).toBe('Two');
+        // an event without an option id is ignored:
+        await (service as any).handleOptionEvent('test-poll', {getContent: () => ({name: 'nameless'})});
+        expect(added.length).toBe(1);
+        service.teardownPollEventHandlers('test-poll');
+      });
+      
       it('should clean up all listeners on teardown', () => {
         const listener: PollEventListener = { onDataChange: () => {} };
         service.addPollEventListener('test-poll', listener);
