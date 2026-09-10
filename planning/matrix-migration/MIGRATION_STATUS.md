@@ -46,7 +46,7 @@ Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 - [#330](https://github.com/pik-gane/vodle/issues/330) user data is not re-encrypted when the password changes
 - [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are cleaned up since 2026-09-10 (plan session 10): the guard bot purges them `RETENTION_DAYS` after the deadline, clients leave the rooms of polls they delete
 - [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the closing power-level event is dropped by state resolution — mitigated by the bot's grace and quiet periods and, since session 9, the two-phase close (closed state first, power drop after); a client with a clock skewed by more than the grace period can still lose its last write
-- [#333](https://github.com/pik-gane/vodle/issues/333) delegation (disabled on the Matrix path) and multi-device use are untested against a real homeserver
+- [#333](https://github.com/pik-gane/vodle/issues/333) delegation events and two devices of one account are proven against a real homeserver since 2026-09-10 (plan session 11): delegation events encrypted, a second device finds the account's voter room; delegation itself stays disabled in both environments (product decision)
 - [#332](https://github.com/pik-gane/vodle/issues/332) Phase 17, the removal of the CouchDB code, waits for production confidence
 
 ## How it was built

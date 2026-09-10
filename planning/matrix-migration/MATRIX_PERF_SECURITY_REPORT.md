@@ -186,9 +186,12 @@ same across federation: the second homeserver holds the same ciphertext.
    identities are pseudonymous hashes, but participation itself is not
    hidden. Invite-only rooms with a bot handing out invites on presentation
    of the poll password would close this at the cost of a server component.
-2. **Delegation events are plain.** They carry delegate ids and option ids.
-   Encrypting them under the poll password is the same change as for the
-   other data; not done because delegation is disabled in both environments.
+2. **Delegation events** carried delegate ids and option ids in plain text
+   until 2026-09-10 (#333); now only the delegation id is plain, the rest
+   is encrypted under the poll password like the other poll data, and the
+   two-client spec shows a client without the password reads nothing.
+   Delegation stays disabled in both environments (`delegation.enabled`),
+   a product decision.
 3. **The guard bot is fully trusted** (power 100 in every room). A malicious
    bot could rewrite power levels but not read encrypted data.
 4. **No re-encryption on password change.** Changing the vodle password
@@ -231,6 +234,20 @@ same across federation: the second homeserver holds the same ciphertext.
   the rooms disappear.
 - **Monitoring**: the bot's `GET /healthz`; deployment guide and checklist in
   `documentation/deployment/MATRIX.md`.
+
+### 3.7 Settled in plan session 11 (2026-09-10, #333)
+
+- **Two devices of one account**: a second session wrote its ratings
+  into a *new* voter room when its storage did not know the account's room
+  (`getOrCreateVoterRoom` created before looking); it now finds the room
+  by its alias, and the two-client spec has the second device vote and the
+  first one see it, with the voter count unchanged.
+- **Delegation over Matrix**: request and response events are encrypted
+  (above), listeners get them decrypted, and `getDelegations` reads the
+  whole poll-room timeline from the server instead of the SDK's window.
+  Spec: request, live receipt, acceptance, a late reader with and without
+  the password. The tally effect of delegations is on the voter-data path
+  (unchanged) and covered by the tally-pipeline suite.
 
 ## 4. Migration (CouchDB → Matrix)
 

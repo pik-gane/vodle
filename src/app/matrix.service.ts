@@ -2363,6 +2363,14 @@ export class MatrixService {
       }
     }
     
+    // A second device of the same account (fresh storage) must write into
+    // the room the account already owns, which its alias names (#333):
+    const existing = await this.getVoterRoom(pollId, vodleVid);
+    if (existing) {
+      await this.ensureVoterVidStored(existing, vodleVid);
+      return existing;
+    }
+    
     // Serialize creation: if another call is already creating this room,
     // wait for it instead of racing and hitting M_ROOM_IN_USE.
     const mutexKey = `${pollId}:${vodleVid}`;
@@ -3130,15 +3138,19 @@ export class MatrixService {
     const delegationId = this.generateId();
     const timestamp = Date.now();
     
+    // the id stays plain (responses refer to it); who delegates what to
+    // whom is encrypted under the poll password like the other poll data:
     await this.client.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_request' as any,
       {
         delegation_id: delegationId,
-        delegate_id: delegateId,
-        option_ids: optionIds,
-        status: 'pending',
-        timestamp
+        ...(await this.pollDataContent(pollId, {
+          delegate_id: delegateId,
+          option_ids: optionIds,
+          status: 'pending',
+          timestamp
+        }))
       }
     );
     
@@ -3200,9 +3212,11 @@ export class MatrixService {
       'm.room.vodle.vote.delegation_response' as any,
       {
         delegation_id: delegationId,
-        status: resolvedStatus,
-        accepted_options: acceptedOptions || [],
-        timestamp
+        ...(await this.pollDataContent(pollId, {
+          status: resolvedStatus,
+          accepted_options: acceptedOptions || [],
+          timestamp
+        }))
       }
     );
     
@@ -3252,62 +3266,100 @@ export class MatrixService {
     }
     
     const delegations = new Map<string, DelegationRequest>();
-    
+    const responses = new Map<string, DelegationResponse>();
     if (!this.client) {
-      return delegations;
+      return delegations;   // nothing to read yet, and nothing to cache
     }
-    
-    const roomId = await this.getPollRoom(pollId);
-    if (!roomId) {
-      return delegations;
-    }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return delegations;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.vote.delegation_request') {
-        const content = event.getContent();
-        const sender = event.getSender();
-        
-        if (content.delegation_id) {
+    for (const event of await this.pollRoomTimeline(pollId)) {
+      const content = event.content || {};
+      if (!content.delegation_id) {
+        continue;
+      }
+      if (event.type === 'm.room.vodle.vote.delegation_request') {
+        const fields = await this.readDelegationFields(pollId, content);
+        if (fields) {
           delegations.set(content.delegation_id, {
             delegation_id: content.delegation_id,
-            delegator_id: sender,
-            delegate_id: content.delegate_id,
-            option_ids: content.option_ids || [],
-            status: content.status || 'pending',
-            timestamp: content.timestamp || 0
+            delegator_id: event.sender,
+            delegate_id: fields.delegate_id,
+            option_ids: fields.option_ids || [],
+            status: fields.status || 'pending',
+            timestamp: fields.timestamp || 0
+          });
+        }
+      } else if (event.type === 'm.room.vodle.vote.delegation_response') {
+        const fields = await this.readDelegationFields(pollId, content);
+        if (fields && (fields.status === 'accepted' || fields.status === 'declined')) {
+          responses.set(content.delegation_id, {
+            delegation_id: content.delegation_id,
+            responder_id: event.sender,
+            status: fields.status,
+            accepted_options: fields.accepted_options || [],
+            timestamp: fields.timestamp || 0
           });
         }
       }
-      
-      // Update delegation status from responses
-      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
-        const content = event.getContent();
-        
-        if (content.delegation_id && delegations.has(content.delegation_id)) {
-          const request = delegations.get(content.delegation_id);
-          // Only accept valid statuses, to mirror handleDelegationResponse logic
-          if (content.status === 'accepted' || content.status === 'declined') {
-            request.status = content.status;
-          }
-        }
+    }
+    // the responses update the requests' status (the timeline is in order)
+    for (const [delegationId, response] of responses) {
+      const request = delegations.get(delegationId);
+      if (request) {
+        request.status = response.status;
       }
     }
     
-    // Cache the result
+    // Cache the results
     this.delegationRequestCaches.set(pollId, delegations);
+    this.delegationResponseCaches.set(pollId, responses);
     
     this.logger?.exit("MatrixService.getDelegations");
     // Return a defensive copy so callers cannot mutate the cached map.
     // Note: the DelegationRequest objects are shared references — treat as read-only.
     return new Map<string, DelegationRequest>(delegations);
+  }
+  
+  /**
+   * All events of the poll room's timeline, oldest first, from the server
+   * (the SDK's timeline holds only a window of a room joined earlier).
+   */
+  private async pollRoomTimeline(pollId: string): Promise<any[]> {
+    if (!this.client) {
+      return [];
+    }
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return [];
+    }
+    const accessToken = this.client.getAccessToken();
+    const encodedRoomId = encodeURIComponent(roomId);
+    const events: any[] = [];
+    let from: string | undefined = undefined;
+    for (let page = 0; page < 100; page++) {
+      let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
+      if (from) {
+        url += `&from=${encodeURIComponent(from)}`;
+      }
+      const resp = await fetch(url, {headers: {'Authorization': `Bearer ${accessToken}`}, cache: 'no-store'});
+      if (!resp.ok) {
+        this.logger?.error("MatrixService.pollRoomTimeline could not read the timeline", pollId, resp.status);
+        break;
+      }
+      const data: any = await resp.json();
+      const chunk: any[] = data.chunk || [];
+      events.push(...chunk);
+      from = data.end;
+      if (chunk.length === 0 || !from || from === data.start) {
+        break;
+      }
+    }
+    return events.reverse();
+  }
+  
+  /** the fields of a delegation event: decrypted when encrypted (undefined
+   *  without the poll password), as they are for events from before the
+   *  encryption */
+  private async readDelegationFields(pollId: string, content: any): Promise<any> {
+    return typeof content?.enc === 'string' ? this.readPollValue(pollId, content) : content;
   }
   
   /**
@@ -3325,50 +3377,10 @@ export class MatrixService {
     if (cached) {
       return new Map<string, DelegationResponse>(cached);
     }
-    
-    const responses = new Map<string, DelegationResponse>();
-    
-    if (!this.client) {
-      return responses;
-    }
-    
-    const roomId = await this.getPollRoom(pollId);
-    if (!roomId) {
-      return responses;
-    }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return responses;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
-        const content = event.getContent();
-        const sender = event.getSender();
-        
-        if (content.delegation_id) {
-          responses.set(content.delegation_id, {
-            delegation_id: content.delegation_id,
-            responder_id: sender,
-            status: content.status === 'accepted' ? 'accepted' : 'declined',
-            accepted_options: content.accepted_options || [],
-            timestamp: content.timestamp || 0
-          });
-        }
-      }
-    }
-    
-    // Cache the result
-    this.delegationResponseCaches.set(pollId, responses);
-    
+    // getDelegations reads requests and responses in one pass and caches both
+    await this.getDelegations(pollId);
     this.logger?.exit("MatrixService.getDelegationResponses");
-    // Return a defensive copy so callers cannot mutate the cached map.
-    // Note: the DelegationResponse objects are shared references — treat as read-only.
-    return new Map<string, DelegationResponse>(responses);
+    return new Map<string, DelegationResponse>(this.delegationResponseCaches.get(pollId) || new Map());
   }
   
   // ========================================================================
@@ -3452,11 +3464,13 @@ export class MatrixService {
       
       switch (eventType) {
         case 'm.room.vodle.vote.delegation_request':
-          this.handleDelegationRequest(pollId, event);
+          this.handleDelegationRequest(pollId, event).catch(error =>
+            this.logger?.error("MatrixService.handleDelegationRequest failed", pollId, error));
           break;
         
         case 'm.room.vodle.vote.delegation_response':
-          this.handleDelegationResponse(pollId, event);
+          this.handleDelegationResponse(pollId, event).catch(error =>
+            this.logger?.error("MatrixService.handleDelegationResponse failed", pollId, error));
           break;
         
         case 'm.room.vodle.voter.announce':
@@ -3729,7 +3743,7 @@ export class MatrixService {
    * Handle an incoming delegation request event from the poll room.
    * Updates the local cache and notifies listeners.
    */
-  private handleDelegationRequest(pollId: string, event: any): void {
+  private async handleDelegationRequest(pollId: string, event: any): Promise<void> {
     this.logger?.entry("MatrixService.handleDelegationRequest", pollId);
     
     const sender = event.getSender();
@@ -3738,14 +3752,20 @@ export class MatrixService {
     if (!content.delegation_id) {
       return;
     }
+    // encrypted under the poll password (see requestDelegation); a client
+    // without it learns nothing beyond the id:
+    const fields = await this.readDelegationFields(pollId, content);
+    if (!fields) {
+      return;
+    }
     
     const request: DelegationRequest = {
       delegation_id: content.delegation_id,
       delegator_id: sender,
-      delegate_id: content.delegate_id,
-      option_ids: content.option_ids || [],
-      status: content.status || 'pending',
-      timestamp: content.timestamp || 0
+      delegate_id: fields.delegate_id,
+      option_ids: fields.option_ids || [],
+      status: fields.status || 'pending',
+      timestamp: fields.timestamp || 0
     };
     
     // Update cache
@@ -3780,7 +3800,7 @@ export class MatrixService {
    * Handle an incoming delegation response event from the poll room.
    * Updates both the response cache and the request status.
    */
-  private handleDelegationResponse(pollId: string, event: any): void {
+  private async handleDelegationResponse(pollId: string, event: any): Promise<void> {
     this.logger?.entry("MatrixService.handleDelegationResponse", pollId);
     
     const sender = event.getSender();
@@ -3789,17 +3809,21 @@ export class MatrixService {
     if (!content.delegation_id) {
       return;
     }
+    const fields = await this.readDelegationFields(pollId, content);
+    if (!fields) {
+      return;
+    }
     
     // Validate status: must be 'accepted' or 'declined'
     const validStatuses = ['accepted', 'declined'];
-    const status: 'accepted' | 'declined' = validStatuses.includes(content.status) ? content.status : 'declined';
+    const status: 'accepted' | 'declined' = validStatuses.includes(fields.status) ? fields.status : 'declined';
     
     const response: DelegationResponse = {
       delegation_id: content.delegation_id,
       responder_id: sender,
       status,
-      accepted_options: content.accepted_options || [],
-      timestamp: content.timestamp || 0
+      accepted_options: fields.accepted_options || [],
+      timestamp: fields.timestamp || 0
     };
     
     // Update response cache

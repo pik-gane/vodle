@@ -421,6 +421,38 @@ describe('MatrixService', () => {
         expect(delegations.size).toBe(0);
       });
       
+      it('encrypts delegation requests and responses under the poll password and decrypts them for listeners (#333)', async () => {
+        service.pollPasswordProvider = () => 'delegation-poll-password';
+        const requests: DelegationRequest[] = [], responses: DelegationResponse[] = [];
+        service.addPollEventListener('dp', {
+          onDelegationRequest: (_p, r) => requests.push(r),
+          onDelegationResponse: (_p, r) => responses.push(r),
+        });
+        // what requestDelegation puts on the wire: the id plain, the rest ciphertext
+        const request_content = {delegation_id: 'd1', ...(await (service as any).pollDataContent('dp',
+          {delegate_id: '@ida:hs', option_ids: ['o1'], status: 'pending', timestamp: 5}))};
+        expect(typeof request_content.enc).toBe('string');
+        expect((request_content as any).delegate_id).toBeUndefined();
+        await (service as any).handleDelegationRequest('dp', {getContent: () => request_content, getSender: () => '@hal:hs'});
+        expect(requests).toEqual([{delegation_id: 'd1', delegator_id: '@hal:hs', delegate_id: '@ida:hs', option_ids: ['o1'], status: 'pending', timestamp: 5}]);
+        const response_content = {delegation_id: 'd1', ...(await (service as any).pollDataContent('dp',
+          {status: 'accepted', accepted_options: ['o1'], timestamp: 6}))};
+        await (service as any).handleDelegationResponse('dp', {getContent: () => response_content, getSender: () => '@ida:hs'});
+        expect(responses).toEqual([{delegation_id: 'd1', responder_id: '@ida:hs', status: 'accepted', accepted_options: ['o1'], timestamp: 6}]);
+        expect((await service.getDelegations('dp')).get('d1')?.status).withContext('the cached request follows the response').toBe('accepted');
+        // a client without the poll password learns nothing from the same events:
+        service.teardownPollEventHandlers('dp');
+        (service as any).delegationRequestCaches.clear();
+        (service as any).delegationResponseCaches.clear();
+        (service as any).dataKeys?.clear?.();
+        service.pollPasswordProvider = () => null;
+        const blind: DelegationRequest[] = [];
+        service.addPollEventListener('dp', {onDelegationRequest: (_p, r) => blind.push(r)});
+        await (service as any).handleDelegationRequest('dp', {getContent: () => request_content, getSender: () => '@hal:hs'});
+        expect(blind).toEqual([]);
+        service.teardownPollEventHandlers('dp');
+      });
+      
       it('should return empty map for getDelegationResponses when not initialized', async () => {
         const responses = await service.getDelegationResponses('test-poll');
         expect(responses.size).toBe(0);

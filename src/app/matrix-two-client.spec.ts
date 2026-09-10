@@ -310,6 +310,14 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     const restored = await alice_again.getAllUserData();
     expect(restored.language).toBe('de');
     expect(restored.consent).toBe('yes');
+
+    // --- the second device votes (#333): it must write into the one voter
+    // room the account owns, found by its alias, not create another one ---
+    await alice_again.submitRating(pid, 'o1', 77);
+    expect(alice_again.voterRooms.get(pid + ':' + alice.userId)).withContext('the same voter room').toBe(alice_room);
+    await until(async () => JSON.stringify(rating_values(await fresh_ratings(alice), 'o1')) === '[33,77]',
+      "the first session to see the rating made on the second device");
+    expect((await fresh_ratings(bob)).size).withContext('still two voters').toBe(2);
     alice_again.client.stopClient();   // done with the second session
 
     // --- event-driven propagation latency (VODLE_PERF, see the report) ---
@@ -456,6 +464,58 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     await until(async () => await raw_state(frank, voter_room, 'm.room.power_levels') === null
                          && await raw_state(frank, roomId, 'm.room.power_levels') === null,
       'the guard bot to remove the poll and voter rooms after the retention period', 90000);
+  });
+
+  /** the poll room's timeline as the SERVER stores it (newest first) */
+  async function raw_timeline(svc: any, roomId: string): Promise<any[]> {
+    const response = await fetch(SYNAPSE_URL + '/_matrix/client/v3/rooms/' + encodeURIComponent(roomId)
+      + '/messages?dir=b&limit=100', {headers: {Authorization: 'Bearer ' + svc.client.getAccessToken()}, cache: 'no-store'});
+    return response.ok ? (await response.json()).chunk : [];
+  }
+
+  it('carries delegation requests and responses between clients, encrypted under the poll password (#333)', async () => {
+    if (!requires_synapse()) { return; }
+    // self-contained: own poll and users, since jasmine randomizes spec order
+    const dpid = pid + 'dl';
+    const hal = await make_client('hal');
+    const roomId = await hal.createPollRoom(dpid, 'Delegation poll');
+    await hal.addOption(dpid, 'o1', {name: 'Option'});
+    const ida = await make_client('ida');
+    expect(await ida.getPollRoom(dpid)).toBe(roomId);
+    await hal.setupPollEventHandlers(dpid);
+    await ida.setupPollEventHandlers(dpid);
+    const requests_seen: any[] = [], responses_seen: any[] = [];
+    ida.addPollEventListener(dpid, {onDelegationRequest: (_p: string, r: any) => { requests_seen.push(r); }});
+    hal.addPollEventListener(dpid, {onDelegationResponse: (_p: string, r: any) => { responses_seen.push(r); }});
+
+    // hal asks ida to vote for him on o1; ida's client hears of it live
+    const did = await hal.requestDelegation(dpid, ida.userId, ['o1']);
+    await until(async () => requests_seen.some(r => r.delegation_id === did), 'ida to receive the delegation request');
+    const request = requests_seen.find(r => r.delegation_id === did);
+    expect(request.delegator_id).toBe(hal.userId);
+    expect(request.delegate_id).toBe(ida.userId);
+    expect(request.option_ids).toEqual(['o1']);
+    // on the server, who delegates what to whom is ciphertext:
+    const stored = (await raw_timeline(ida, roomId)).find((e: any) => e.type === 'm.room.vodle.vote.delegation_request');
+    expect(stored.content.delegation_id).toBe(did);
+    expect(typeof stored.content.enc).withContext(JSON.stringify(stored.content)).toBe('string');
+    expect(stored.content.delegate_id).toBeUndefined();
+    expect(stored.content.option_ids).toBeUndefined();
+
+    // ida accepts; hal's client hears of it live
+    await ida.respondToDelegation(dpid, did, true, ['o1']);
+    await until(async () => responses_seen.some(r => r.delegation_id === did), 'hal to receive the response');
+    expect(responses_seen.find(r => r.delegation_id === did).status).toBe('accepted');
+
+    // a client joining later reads the request as accepted from the server —
+    // with the poll password; without it, nothing
+    const jo = await make_client('jo');
+    expect(await jo.getPollRoom(dpid)).toBe(roomId);
+    expect((await jo.getDelegations(dpid)).get(did)?.status).toBe('accepted');
+    expect((await jo.getDelegationResponses(dpid)).get(did)?.accepted_options).toEqual(['o1']);
+    const kim = await make_client('kim', null);
+    expect(await kim.getPollRoom(dpid)).toBe(roomId);
+    expect((await kim.getDelegations(dpid)).size).toBe(0);
   });
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {

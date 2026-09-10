@@ -74,10 +74,11 @@ wait_for_synapse() {  # wait_for_synapse CLIENT_PORT CONTAINER
   return 1
 }
 
-register_admin() {  # register_admin CONTAINER NAME PASSWORD  (idempotent; via the shared secret)
-  local container="$1" name="$2" password="$3" output
+register_admin() {  # register_admin CONTAINER CLIENT_PORT NAME PASSWORD  (idempotent; via the shared secret)
+  local container="$1" port="$2" name="$3" password="$4" output
+  # host networking: the container's client listener is the host's port
   if output=$(docker exec "${container}" register_new_matrix_user -c /data/homeserver.yaml \
-      -u "${name}" -p "${password}" --admin http://127.0.0.1:8008 2>&1); then
+      -u "${name}" -p "${password}" --admin "http://127.0.0.1:${port}" 2>&1); then
     echo "registered admin ${name} on ${container}"
   elif [[ "${output}" == *"User ID already taken"* ]]; then
     echo "${name} already registered on ${container}"
@@ -284,10 +285,10 @@ start() {
   # an admin too, so it may purge the rooms of expired polls (#331):
   for spec in ${SERVERS}; do
     IFS=: read -r name cport _ <<< "${spec}"
-    register_admin "${PREFIX}-${name}" "${ADMIN_USER}" "${ADMIN_PW}"
+    register_admin "${PREFIX}-${name}" "${cport}" "${ADMIN_USER}" "${ADMIN_PW}"
     create_registration_token "${cport}" "$(login_token "${cport}" "${ADMIN_USER}" "${ADMIN_PW}")"
   done
-  register_admin "${PREFIX}-hs1" "${GUARD_BOT_USER}" "${GUARD_BOT_PW}"
+  register_admin "${PREFIX}-hs1" 8009 "${GUARD_BOT_USER}" "${GUARD_BOT_PW}"
   start_guard_bot
   echo "Synapse hs1 ready at http://localhost:8009 (server_name localhost:8449, guard bot @${GUARD_BOT_USER}:localhost:8449)"
   echo "Synapse hs2 ready at http://localhost:8010 (server_name localhost:8450), federating with hs1"
