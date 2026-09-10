@@ -241,6 +241,15 @@ export class MatrixService {
   private offlineQueueProcessing: boolean = false;
   private offlineQueueLastProcessed: number | null = null;
   private offlineQueueFailedCount: number = 0;
+  // The queue retries by itself while the server is unreachable, with
+  // intervals growing from 1 s to 30 s, and immediately when the browser
+  // reports the connection back — instead of waiting for the sync loop's
+  // next long-poll tick, which took up to 30 s (#326):
+  private offlineQueueRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private offlineQueueRetryDelayMs: number = 0;
+  private onlineListener: (() => void) | null = null;
+  private static readonly OFFLINE_QUEUE_RETRY_MIN_MS = 1000;
+  private static readonly OFFLINE_QUEUE_RETRY_MAX_MS = 30000;
   private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
   private static readonly MAX_RETRY_COUNT = 5;
   private static readonly MAX_QUEUE_SIZE = 1000;
@@ -301,6 +310,18 @@ export class MatrixService {
   init(logger: Logger): void {
     this.logger = logger;
     this.logger?.entry("MatrixService.init");
+    // The browser knows first when the connection is back: replay queued
+    // writes right away and make the sync loop drop its retry backoff (#326).
+    if (typeof window !== 'undefined') {
+      if (this.onlineListener) { window.removeEventListener('online', this.onlineListener); }
+      this.onlineListener = () => {
+        this.logger?.info("MatrixService: the browser reports the connection is back");
+        try { (this.client as any)?.retryImmediately?.(); } catch (error) { /* not syncing */ }
+        this.processOfflineQueue().catch(error =>
+          this.logger?.warn("Offline queue replay after 'online' failed, retrying later", error));
+      };
+      window.addEventListener('online', this.onlineListener);
+    }
     this.logger?.exit("MatrixService.init");
   }
 
@@ -385,7 +406,8 @@ export class MatrixService {
       }
       
       // Restore any offline-queued writes from a previous session before
-      // syncing, so they are replayed once the connection is confirmed:
+      // syncing, so they are replayed once the connection is confirmed by
+      // the first successful sync below (rooms are known by then):
       await this.loadOfflineQueue();
       
       // Start syncing.  Lazy-load room members to reduce initial
@@ -703,6 +725,7 @@ export class MatrixService {
     this.offlineQueue = [];
     this.offlineQueueProcessing = false;
     this.offlineQueueFailedCount = 0;
+    this.cancelOfflineQueueRetry();
     this.userDataCache.clear();
     // Clear persisted offline queue so it is not reused after logout
     // (e.g., if a different user logs in next).
@@ -3781,6 +3804,8 @@ export class MatrixService {
     
     this.offlineQueue.push(queuedEvent);
     await this.saveOfflineQueue();
+    // a fresh write means the user is active: start retrying at the short end
+    this.scheduleOfflineQueueRetry(true);
     
     this.logger?.info("Event enqueued for offline processing", event.type, queuedEvent.id);
     this.logger?.exit("MatrixService.enqueueOfflineEvent");
@@ -3803,6 +3828,12 @@ export class MatrixService {
     
     if (this.offlineQueue.length === 0) {
       this.logger?.info("No events in offline queue");
+      this.cancelOfflineQueueRetry();
+      return 0;
+    }
+    if (!this.client) {
+      // nothing can be sent yet; the queue is retried once a client exists
+      this.logger?.info("Offline queue kept until a client is initialized");
       return 0;
     }
     
@@ -3820,6 +3851,13 @@ export class MatrixService {
           this.offlineQueueFailedCount = 0;
           await this.saveOfflineQueue();
         } catch (error) {
+          if (this.is_connection_error(error)) {
+            // the server is still unreachable: that is not an attempt the
+            // event should be charged for; try again later (#326)
+            this.logger?.warn("Offline queue: server still unreachable, retrying later", event.id);
+            this.scheduleOfflineQueueRetry();
+            break;
+          }
           this.logger?.error("Failed to process queued event", event.id, error);
           event.retryCount++;
           // Persist updated retry count so it survives app restarts
@@ -3831,12 +3869,16 @@ export class MatrixService {
             this.offlineQueueFailedCount++;
             await this.saveOfflineQueue();
           } else {
-            // Stop processing — connection may be down
+            // the server rejected it for now; give it its remaining attempts later
+            this.scheduleOfflineQueueRetry();
             break;
           }
         }
       }
       
+      if (this.offlineQueue.length === 0) {
+        this.cancelOfflineQueueRetry();
+      }
       this.offlineQueueLastProcessed = Date.now();
     } finally {
       this.offlineQueueProcessing = false;
@@ -3850,6 +3892,37 @@ export class MatrixService {
   /**
    * Process a single queued event by dispatching to the appropriate method.
    */
+  /**
+   * Arrange the next attempt at the offline queue: after 1 s for a fresh
+   * write (`reset`), otherwise after twice the previous interval, at most
+   * 30 s. Does nothing while an attempt is already scheduled or the queue
+   * is empty (#326).
+   */
+  private scheduleOfflineQueueRetry(reset = false): void {
+    if (reset) {
+      this.cancelOfflineQueueRetry();
+    }
+    if (this.offlineQueueRetryTimer !== null || this.offlineQueue.length === 0) {
+      return;
+    }
+    this.offlineQueueRetryDelayMs = this.offlineQueueRetryDelayMs === 0
+      ? MatrixService.OFFLINE_QUEUE_RETRY_MIN_MS
+      : Math.min(2 * this.offlineQueueRetryDelayMs, MatrixService.OFFLINE_QUEUE_RETRY_MAX_MS);
+    this.offlineQueueRetryTimer = setTimeout(() => {
+      this.offlineQueueRetryTimer = null;
+      this.processOfflineQueue().catch(error =>
+        this.logger?.warn("Offline queue retry failed", error));
+    }, this.offlineQueueRetryDelayMs);
+  }
+
+  private cancelOfflineQueueRetry(): void {
+    if (this.offlineQueueRetryTimer !== null) {
+      clearTimeout(this.offlineQueueRetryTimer);
+      this.offlineQueueRetryTimer = null;
+    }
+    this.offlineQueueRetryDelayMs = 0;
+  }
+
   private async processQueuedEvent(event: QueuedEvent): Promise<void> {
     switch (event.type) {
       case 'rating':
@@ -3933,6 +4006,7 @@ export class MatrixService {
     
     this.offlineQueue = [];
     this.offlineQueueFailedCount = 0;
+    this.cancelOfflineQueueRetry();
     await this.saveOfflineQueue();
     
     this.logger?.exit("MatrixService.clearOfflineQueue");

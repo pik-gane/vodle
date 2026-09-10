@@ -48,13 +48,17 @@ any more (it remains as a safety net for announcements missed while offline).
 | --- | --- | --- |
 | join a poll room on another homeserver (alias lookup over federation, remote join, power-level check) | 524 ms | see §6 |
 | first vote from the other homeserver visible to the creator (voter room creation on hs2, announcement federating into the poll room, hs1 joining the voter room through hs2, state fetch) | 975 ms | see §6 |
-| offline-queued rating visible to the other client after the connection is back | 24.6 to 29.1 s | see §6 |
+| offline-queued rating visible to the other client after the connection is back | 24.6 to 29.1 s before #326; 1.2 s after | see §6 |
 
-The last figure is not a network cost: the replay of the offline queue is
-triggered by the next successful `/sync` tick, and an idle sync long-poll is
-30 s. Triggering the replay directly on the browser's `online` event, or
-retrying the queued write immediately with backoff, would cut this to well
-under a second. Recorded as a follow-up.
+The last figure was not a network cost: until 2026-09-10 the replay of the
+offline queue was triggered only by the next successful `/sync` tick, and an
+idle sync long-poll is 30 s. Since then (#326) the queue retries by itself
+after 1 s, then 2 s, 4 s, ... up to every 30 s while the server stays
+unreachable, and immediately when the browser fires its `online` event
+(which also makes the sync loop drop its retry backoff); a connection
+failure during a retry does not count against the write's attempts. The
+row above shows the figure before the change; the figure after it is in
+§6 (`offline_queue_replay_visible_ms`).
 
 ### 2.3 Costs that scale with the number of voters
 

@@ -320,13 +320,13 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect(rating_values(await bob.getRatings(pid), 'o2')).toContain(55);
     bob.client.http.opts.baseUrl = real_base_url;
     (bob.client as any).baseUrl = real_base_url;
-    // the recovering sync loop triggers the replay; alice then sees the
-    // vote. The window must outlast a full idle long-poll cycle (~30s),
-    // since the replay piggybacks on the next successful sync tick:
+    // the queue retries by itself (after 1 s, then 2 s, 4 s, ... up to 30 s;
+    // #326), so alice sees the vote within seconds — no longer only on the
+    // sync loop's next long-poll tick, which took up to 30 s:
     const replay_started = performance.now();
     await until(async () =>
       rating_values(await fresh_ratings(alice), 'o2').includes(55),
-      "alice to see bob's offline-queued rating after replay", 75000);
+      "alice to see bob's offline-queued rating after replay", 15000);
     // the queue entry is removed once the replayed write has been confirmed,
     // which can be a moment after alice already sees it:
     await until(async () => bob.getOfflineQueueSize() === 0, 'the offline queue to drain', 10000);

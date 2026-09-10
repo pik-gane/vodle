@@ -39,7 +39,7 @@ Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 
 - [#324](https://github.com/pik-gane/vodle/issues/324) options added to a running poll never reach the other participants (bug, also #163)
 - [#325](https://github.com/pik-gane/vodle/issues/325) the final tally is based on the local cache, not on the server state at the deadline (bug)
-- [#326](https://github.com/pik-gane/vodle/issues/326) offline-queued writes are replayed only on the next periodic tick (≈ 25–30 s)
+- [#326](https://github.com/pik-gane/vodle/issues/326) offline-queued writes were replayed only on the next sync tick (≈ 25–30 s) — fixed on the PR #323 branch on 2026-09-10 (retry with backoff plus the browser's `online` event)
 - [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver: domain, registration policy, rate limits, guard bot deployment (`environment.prod.ts` still holds placeholders)
 - [#328](https://github.com/pik-gane/vodle/issues/328) participation in a poll is visible to anyone who learns the poll id (rooms are joinable by alias)
 - [#329](https://github.com/pik-gane/vodle/issues/329) no federation partition/merge test yet
