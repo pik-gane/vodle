@@ -355,7 +355,10 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
       return;
     }
-    const due = new Date(Date.now() + 4000).toISOString();
+    // the deadline must lie beyond the setup below (poll start, voter-room
+    // creation), which takes a few seconds on a slow CI runner — otherwise
+    // the bot closes the rooms while the setup is still writing to them:
+    const due = new Date(Date.now() + 20000).toISOString();
     await frank.setPollDeadline(gpid, due);
     await frank.addOption(gpid, 'o1', {name: 'Option'});
     // starting the poll locks its metadata and demotes the creator to the
@@ -365,6 +368,7 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     await frank.submitRating(gpid, 'o1', 50);   // creates the voter room, with the deadline copied in
     const voter_room = frank.voterRooms.get(gpid + ':' + frank.userId);
     expect(await raw_state(frank, voter_room, 'm.room.vodle.poll.deadline')).toEqual(jasmine.objectContaining({due}));
+    expect(Date.now()).withContext('setup finished before the deadline').toBeLessThan(new Date(due).getTime());
     // after the deadline (plus the bot's scan interval) the SERVER rejects
     // further ratings and options — nothing a client could bypass:
     let last_accepted = 50;

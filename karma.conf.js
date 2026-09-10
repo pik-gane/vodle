@@ -13,14 +13,20 @@ const path = require('path');
 const result_file = process.env.KARMA_RESULT_FILE;
 
 function JsonResultReporter() {
-  const failed = [], skipped = [], seen = new Set();
+  const failed = [], skipped = [], seen = new Set(), messages = {};
   let succeeded = 0;
   this.onSpecComplete = (browser, result) => {
     const name = result.suite.concat(result.description).join(' > ');
     if (seen.has(name)) { return; }
     seen.add(name);
     if (result.skipped) { skipped.push(name); }
-    else if (!result.success) { failed.push(name); }
+    else if (!result.success) {
+      failed.push(name);
+      // the failure messages, so that a failure is diagnosable from the end
+      // of a CI log (which is all one can fetch of a long log) and from the
+      // uploaded results file, not only from the progress output in between:
+      messages[name] = (result.log || []).map(line => String(line).split('\n')[0]);
+    }
     else { succeeded += 1; }
   };
   this.onRunComplete = (browsers, results) => {
@@ -33,6 +39,7 @@ function JsonResultReporter() {
       succeeded: succeeded,
       failed: failed.sort(),
       skipped: skipped.sort(),
+      messages: messages,
     }, null, 2) + '\n');
   };
 }

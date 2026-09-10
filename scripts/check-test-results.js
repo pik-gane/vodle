@@ -92,8 +92,12 @@ if (no_skips && skipped.length) {
      + 'integration specs silently stopped running.');
 }
 if (regressions.length) {
+  // with the messages the json-result reporter recorded, so that a failure
+  // is diagnosable from the end of the CI log alone:
+  const messages = results.messages || {};
   fail('NEW test failures (' + regressions.length + '):\n'
-     + regressions.map(name => '  - ' + name).join('\n')
+     + regressions.map(name => '  - ' + name
+         + (messages[name] || []).map(line => '\n      ' + line).join('')).join('\n')
      + '\n\nFix them, or — if the failure is genuinely expected — add the exact '
      + 'spec name to ' + baseline_path + ' with a comment saying why.');
 }
