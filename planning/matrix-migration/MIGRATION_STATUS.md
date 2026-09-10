@@ -35,7 +35,7 @@ What is still missing, and in which order to do it: [`../WORK_PLAN.md`](../WORK_
 | CouchDB → Matrix migration of a real poll (options, every voter's ratings under the original voter ids), readable by a fresh Matrix client | `migration-real-backends.spec.ts` |
 | Migration bookkeeping, rollback, persistence across reloads, the `/migration` page | `migration.service.spec.ts`, `migration/migration.page.spec.ts` |
 
-The CI run of 2026-09-10 for plan session 12 (run 34490212319) executed 714 specs, none skipped, none failed.
+The CI run of 2026-09-10 for plan session 13 (run 34514618913) executed 715 specs, none skipped, none failed, plus the guard bot's six node:test cases.
 
 ## What is missing for production use without syncing issues
 
