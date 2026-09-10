@@ -187,6 +187,8 @@ export class MatrixService {
   private voterRooms: Map<string, string> = new Map();
   // Reverse lookup: roomId -> { pollId, voterId } for O(1) event routing
   private voterRoomReverseLookup: Map<string, { pollId: string; voterId: string }> = new Map();
+  // voter rooms known to carry the m.room.vodle.voter.vid state event (see ensureVoterVidStored):
+  private voterVidStored: Set<string> = new Set();
   // Mapping from Matrix user ID to vodle vid for a given poll: "pollId:matrixUserId" -> vodleVid
   private voterVidMap: Map<string, string> = new Map();
   // Cache of poll options indexed by pollId -> (optionId -> option data)
@@ -703,6 +705,7 @@ export class MatrixService {
     this.pollRooms.clear();
     this.voterRooms.clear();
     this.voterRoomReverseLookup.clear();
+    this.voterVidStored.clear();
     this.optionCaches.clear();
     this.ratingCaches.clear();
     this.delegationRequestCaches.clear();
@@ -2273,6 +2276,30 @@ export class MatrixService {
    * In both cases the currently logged-in user is the room owner
    * and the one with write access.
    */
+  /**
+   * Make sure the voter room carries the m.room.vodle.voter.vid state event
+   * (rooms from before it existed lack it). Written at most once per room
+   * and session: until 2026-09-10 every rating write re-sent it, doubling
+   * the write traffic and adding a state event that could fork with the
+   * guard bot's closing power-level event.
+   */
+  private async ensureVoterVidStored(roomId: string, vodleVid: string): Promise<void> {
+    if (!this.client || this.voterVidStored.has(roomId)) {
+      return;
+    }
+    const existing = this.client.getRoom(roomId)?.currentState?.getStateEvents('m.room.vodle.voter.vid' as any, '');
+    if ((existing as any)?.getContent?.()?.value === vodleVid) {
+      this.voterVidStored.add(roomId);
+      return;
+    }
+    try {
+      await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
+      this.voterVidStored.add(roomId);
+    } catch (e) {
+      // a closed room, or one this account may not write to: nothing to do
+    }
+  }
+
   async getOrCreateVoterRoom(pollId: string, vodleVid: string): Promise<string> {
     if (!this.userId) {
       throw new Error("Not logged in");
@@ -2285,14 +2312,7 @@ export class MatrixService {
     // Fast path: room already exists in cache
     const cachedRoom = this.voterRooms.get(cacheKey);
     if (cachedRoom) {
-      // Ensure vid state event is present in case it wasn't stored before
-      if (this.client) {
-        try {
-          await this.client.sendStateEvent(cachedRoom, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
-        } catch (e) {
-          // Ignore — might already exist or insufficient permissions
-        }
-      }
+      await this.ensureVoterVidStored(cachedRoom, vodleVid);
       return cachedRoom;
     }
     
@@ -2303,6 +2323,7 @@ export class MatrixService {
       if (room) {
         this.voterRooms.set(cacheKey, stored);
         this.voterRoomReverseLookup.set(stored, { pollId, voterId: vodleVid });
+        await this.ensureVoterVidStored(stored, vodleVid);
         return stored;
       }
     }
@@ -2325,6 +2346,7 @@ export class MatrixService {
         if (this.client) {
           try {
             await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
+            this.voterVidStored.add(roomId);
             console.log("[getOrCreateVoterRoom] Stored vid", vodleVid, "in voter room", roomId);
           } catch (e) {
             console.error("[getOrCreateVoterRoom] Failed to store vid in voter room:", e);

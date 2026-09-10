@@ -369,20 +369,33 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     const voter_room = frank.voterRooms.get(gpid + ':' + frank.userId);
     expect(await raw_state(frank, voter_room, 'm.room.vodle.poll.deadline')).toEqual(jasmine.objectContaining({due}));
     expect(Date.now()).withContext('setup finished before the deadline').toBeLessThan(new Date(due).getTime());
-    // after the deadline (plus the bot's scan interval) the SERVER rejects
-    // further ratings and options — nothing a client could bypass:
+    // the rating keeps changing until shortly before the deadline, as a
+    // voter's does; the app stops writing at the deadline. (Writing ON until
+    // the server refuses is not what a client does, and it is not safe
+    // either: a rating created in the same instant as the bot's closing
+    // power-level event forks with it, and state resolution then drops the
+    // rating — see guard-bot/index.js, CLOSE_GRACE_MS.)
     let last_accepted = 50;
+    while (Date.now() < new Date(due).getTime() - 3000) {
+      await frank.submitRating(gpid, 'o1', last_accepted + 1);
+      last_accepted++;
+      await new Promise(resolve => window.setTimeout(resolve, 500));
+    }
+    // after the deadline, its grace period and the bot's scan interval, the
+    // bot drops everyone's power in the voter room and the poll room:
     await until(async () => {
-      try {
-        await frank.submitRating(gpid, 'o1', last_accepted + 1);   // accepted until the room is closed
-        last_accepted++;
-        return false;
-      } catch (err: any) {
-        return err?.httpStatus === 403 || err?.errcode === 'M_FORBIDDEN';
-      }
+      const pl = await raw_state(frank, voter_room, 'm.room.power_levels');
+      return pl?.events_default === 100 && pl?.users?.[frank.userId] === 0;
     }, 'the guard bot to close the voter room after the deadline', 60000);
+    // from then on the SERVER rejects ratings and options — nothing a client
+    // could bypass:
+    let rejection: any = null;
+    try { await frank.submitRating(gpid, 'o1', last_accepted + 1); } catch (err) { rejection = err; }
+    expect(rejection?.httpStatus === 403 || rejection?.errcode === 'M_FORBIDDEN')
+      .withContext('a rating after the close: ' + String(rejection)).toBeTrue();
     await expectAsync(frank.addOption(gpid, 'o2', {name: 'Late option'})).toBeRejected();
-    // ... while the data written before stays readable:
+    // ... while the data written before stays readable — the last value
+    // from before the deadline, not lost to the close:
     frank.ratingCaches.delete(gpid);
     expect(rating_values(await frank.getRatings(gpid), 'o1')).toEqual([last_accepted]);
   });

@@ -143,6 +143,16 @@ ciphertext.
   deadline into each voter room (the bot looks for it per room), and the
   two-client spec proves the server rejects a rating and an option after the
   deadline (`M_FORBIDDEN`), with the data staying readable.
+- Closing by a power-level change has a hazard of its own (#334): a rating
+  created in the same instant forks with the power-level event, and state
+  resolution then re-checks it against the new power levels and drops it,
+  together with the previous value of that key. Seen once in CI and once in
+  the sandbox when the spec wrote until refused: 35 accepted rating events,
+  the last one 33 ms before the power-level event, and no rating left in the
+  room state. The bot therefore closes only `CLOSE_GRACE_MS` (10 s) after
+  the deadline and once the room has been quiet for `QUIET_PERIOD_MS` (5 s);
+  clients stop writing at the deadline, so only a client whose clock is off
+  by more than the grace period can still lose its last write on an option.
 - The app never writes the lifecycle state `closed` on the Matrix backend
   (`change_poll_state` only stores it locally after the draft phase); ending
   a poll is decided by clients' clocks and enforced by the guard bot. This is

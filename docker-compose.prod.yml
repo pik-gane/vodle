@@ -85,6 +85,10 @@ services:
       - BOT_USER=${BOT_USER:-@vodle-guard:vodle.example.com}
       - BOT_PASSWORD=${BOT_PASSWORD:?Set BOT_PASSWORD in .env or environment}
       - SCAN_INTERVAL_MS=30000
+      # close a room only this long after its deadline, and only once no
+      # event has arrived in it for QUIET_PERIOD_MS (see guard-bot/index.js):
+      - CLOSE_GRACE_MS=10000
+      - QUIET_PERIOD_MS=5000
     depends_on:
       - synapse
     restart: unless-stopped

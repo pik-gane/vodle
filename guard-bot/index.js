@@ -32,6 +32,20 @@ const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008
 const BOT_USER      = process.env.BOT_USER      || "@vodle-guard:localhost";
 const BOT_PASSWORD   = process.env.BOT_PASSWORD   || "vodle-guard-password";
 const SCAN_INTERVAL  = parseInt(process.env.SCAN_INTERVAL_MS || "30000", 10);
+// A room is closed only once its deadline is at least CLOSE_GRACE_MS in the
+// past AND no event has arrived in it for QUIET_PERIOD_MS. Closing is a
+// power-level change; if a client's state event (a rating) is created at the
+// same moment, the two fork in the room's event graph, and Matrix state
+// resolution then re-checks the rating against the NEW power levels and
+// drops it — together with the previous value of that state key, so the
+// voter's rating for that option vanishes from the room state (seen in the
+// two-client spec: 35 accepted rating events, the last one 33 ms before the
+// power-level event, and no rating left in the resolved state). Clients stop
+// writing at the deadline, so with a grace period and a quiet room such a
+// fork only remains possible for a client whose clock is off by more than
+// the grace period.
+const CLOSE_GRACE_MS = parseInt(process.env.CLOSE_GRACE_MS || "10000", 10);
+const QUIET_PERIOD_MS = parseInt(process.env.QUIET_PERIOD_MS || "5000", 10);
 
 // The deadline state event the vodle app writes (MatrixService.setPollDeadline):
 // content.due is an ISO 8601 date. It is written into the poll room and
@@ -116,7 +130,7 @@ async function scanForExpiredDeadlines(client) {
       if (!deadline) continue;
 
       const deadlineDate = new Date(deadline);
-      if (deadlineDate > now) continue;
+      if (deadlineDate.getTime() + CLOSE_GRACE_MS > now.getTime()) continue;
 
       // Check if we already closed this room (power levels already dropped)
       const plEvent = room.currentState.getStateEvents("m.room.power_levels", "");
@@ -132,6 +146,14 @@ async function scanForExpiredDeadlines(client) {
         if (!hasNonBotUsersWithPower) continue; // already closed
       }
 
+      // see CLOSE_GRACE_MS / QUIET_PERIOD_MS above: never change the power
+      // levels while events are still arriving
+      const lastEventTs = latestEventTs(room);
+      if (lastEventTs !== null && now.getTime() - lastEventTs < QUIET_PERIOD_MS) {
+        console.log(`[guard-bot] Deadline expired for room ${room.roomId} but events still arriving — closing later`);
+        continue;
+      }
+
       console.log(`[guard-bot] Deadline expired for room ${room.roomId} (${deadline}) — closing`);
       await closeRoom(client, room.roomId, pl);
     } catch (err) {
@@ -139,6 +161,17 @@ async function scanForExpiredDeadlines(client) {
       console.error(`[guard-bot] Error scanning room ${room.roomId}:`, err.message);
     }
   }
+}
+
+/** origin_server_ts of the newest event in the room's live timeline, or null */
+function latestEventTs(room) {
+  const events = room.getLiveTimeline().getEvents();
+  let latest = null;
+  for (const event of events) {
+    const ts = event.getTs();
+    if (ts && (latest === null || ts > latest)) latest = ts;
+  }
+  return latest;
 }
 
 /**

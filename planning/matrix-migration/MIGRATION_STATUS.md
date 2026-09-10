@@ -45,6 +45,7 @@ Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 - [#329](https://github.com/pik-gane/vodle/issues/329) no federation partition/merge test yet
 - [#330](https://github.com/pik-gane/vodle/issues/330) user data is not re-encrypted when the password changes
 - [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are never cleaned up
+- [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the guard bot's closing power-level event is dropped by state resolution (mitigated 2026-09-10 by a grace and a quiet period in the bot; a clock-skewed client can still hit it)
 - [#333](https://github.com/pik-gane/vodle/issues/333) delegation (disabled on the Matrix path) and multi-device use are untested against a real homeserver
 - [#332](https://github.com/pik-gane/vodle/issues/332) Phase 17, the removal of the CouchDB code, waits for production confidence
 

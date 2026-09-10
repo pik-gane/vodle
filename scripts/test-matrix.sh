@@ -40,7 +40,9 @@ SERVERS="hs1:8009:8449 hs2:8010:8450"
 # The guard bot (guard-bot/index.js) is what enforces poll deadlines server-
 # side; the specs check that it closes rooms. It runs as a node process on
 # hs1's guard-bot account (no docker image of it is published), scanning
-# every 2 s instead of its default 30 s so the specs need not wait long.
+# every 2 s instead of its default 30 s and closing 5 s after a deadline
+# (default 10 s) once a room has been quiet for 3 s (default 5 s), so the
+# specs need not wait long.
 BOT_PID_FILE="${VODLE_TEST_MATRIX_BOT_PID_FILE:-/tmp/vodle-test-guard-bot.pid}"
 BOT_LOG="${VODLE_TEST_MATRIX_BOT_LOG:-/tmp/vodle-test-guard-bot.log}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -175,6 +177,8 @@ start_guard_bot() {
     BOT_USER="@${GUARD_BOT_USER}:localhost:8449" \
     BOT_PASSWORD="${GUARD_BOT_PW}" \
     SCAN_INTERVAL_MS=2000 \
+    CLOSE_GRACE_MS=5000 \
+    QUIET_PERIOD_MS=3000 \
     nohup node guard-bot/index.js > "${BOT_LOG}" 2>&1 &
     echo $! > "${BOT_PID_FILE}"
   )
