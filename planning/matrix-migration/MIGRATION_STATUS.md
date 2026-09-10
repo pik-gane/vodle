@@ -28,6 +28,9 @@ What is still missing, and in which order to do it: [`../WORK_PLAN.md`](../WORK_
 | Server-side deadline enforcement: after the deadline the homeserver rejects ratings and options (guard bot) | `matrix-two-client.spec.ts` |
 | A poll created on one homeserver is joined and voted on from another (federation); magic links carry the origin server | `matrix-federation.spec.ts` |
 | Poll, voter and user data are stored encrypted (poll password / user password); a client without the password reads nothing; Matrix login with a derived password | `matrix.service.spec.ts` |
+| A password change is followed by the homeserver (derived password) and the user room is re-encrypted; an account switch — a guest logging in with an account of their own, or a changed e-mail address — hands the voter rooms over to the new account, which changes the vote in the same room, and retires a guest account | `matrix.service.spec.ts`, `data.service.spec.ts`, `matrix-two-client.spec.ts` |
+| A second device of an account restores its settings and poll memberships (voter ids, poll passwords, drafts) from the user room | `data.service.spec.ts` (sync/restore), `matrix-two-client.spec.ts` (second session) |
+| A magic link opened without an account takes part as a guest instead of leading to the login flow | `test/specs/guest-join.e2e.js` (built app), `data.service.spec.ts` |
 | CouchDB → Matrix migration of a real poll (options, every voter's ratings under the original voter ids), readable by a fresh Matrix client | `migration-real-backends.spec.ts` |
 | Migration bookkeeping, rollback, persistence across reloads, the `/migration` page | `migration.service.spec.ts`, `migration/migration.page.spec.ts` |
 
@@ -43,11 +46,12 @@ Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 - [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver — since 2026-09-10 (plan session 10) the app supports registration tokens, the harness validates the recommended rate limits, the guard bot has a health endpoint, and `documentation/deployment/MATRIX.md` is the deployment guide; still the owner's: the domain, the token, TLS, backups, a rehearsal poll of the intended size
 - [#328](https://github.com/pik-gane/vodle/issues/328) participation in a poll is visible to anyone who learns the poll id (rooms are joinable by alias)
 - [#329](https://github.com/pik-gane/vodle/issues/329) federation partition/merge test — done 2026-09-10 (plan session 9b): a TCP proxy in the harness cuts and heals the link, the spec checks that both sides keep voting and converge after the heal
-- [#330](https://github.com/pik-gane/vodle/issues/330) user data is not re-encrypted when the password changes
+- [#330](https://github.com/pik-gane/vodle/issues/330) credential changes — fixed 2026-09-10 (plan session 12): a changed password is changed on the homeserver and the user room re-encrypted, a changed address hands the voter rooms and the data over to the new account (on CouchDB the user documents are re-written under the new identity); an interrupted move resumes at the next start. Found on the way and fixed: the poll membership keys were never written to the user room, so a second device of an account knew none of its polls
 - [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are cleaned up since 2026-09-10 (plan session 10): the guard bot purges them `RETENTION_DAYS` after the deadline, clients leave the rooms of polls they delete
 - [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the closing power-level event is dropped by state resolution — mitigated by the bot's grace and quiet periods and, since session 9, the two-phase close (closed state first, power drop after); a client with a clock skewed by more than the grace period can still lose its last write
 - [#333](https://github.com/pik-gane/vodle/issues/333) delegation events and two devices of one account are proven against a real homeserver since 2026-09-10 (plan session 11): delegation events encrypted, a second device finds the account's voter room; delegation itself stays disabled in both environments (product decision)
 - [#332](https://github.com/pik-gane/vodle/issues/332) Phase 17, the removal of the CouchDB code, waits for production confidence
+- [#193](https://github.com/pik-gane/vodle/issues/193) guest voting — done 2026-09-10 (plan session 12): a magic link opened without an account takes part as a guest account with random credentials; a later login moves the guest's votes and polls to the account (the #330 machinery) and deactivates the guest account
 
 ## How it was built
 

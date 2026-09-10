@@ -133,7 +133,15 @@ ciphertext.
 ### 3.3 Server-side enforcement
 
 - Voter rooms: only the voter (power 50) can write state; everybody else is
-  read-only (0); the guard bot holds 100.
+  read-only (0); the guard bot holds 100. Since 2026-09-10 the power-levels
+  event itself needs 50 in a voter room (Synapse's default is 100), so that
+  the voter can hand the room over to another account of theirs — a guest
+  logging in with an account, a changed e-mail address (#330, #193): the new
+  account joins (voter rooms are public) and is granted 50. The auth rules
+  cap what a voter can do with that: nobody can be raised above 50, the
+  bot cannot be touched, and history visibility, tombstone, server ACL and
+  encryption keep their default of 100. Rooms created before this change
+  cannot be handed over (only test data exists from before).
 - Options are timeline events and thus immutable; redaction needs power 100.
 - Poll metadata is locked when the poll starts (`lockPollMetadata`).
 - Deadline: the guard bot closes every room whose deadline has passed by
@@ -326,7 +334,8 @@ a migrated user can open the migrated poll.
 | metric | status |
 | --- | --- |
 | full poll lifecycle with 3 clients on the Matrix backend | create, join, vote, converge: 3 users in the two-client spec (alice, bob, carol) and across two homeservers; delegation is disabled in both environments; closing is enforced by the guard bot (spec) |
-| user data sync/restore across 2 devices | a second session of the same user restores its data from the user room (`getAllUserData`, spec); the app does this on every Matrix login (`restoreUserDataFromMatrix`) |
+| user data sync/restore across 2 devices | a second session of the same user restores its data from the user room (`getAllUserData`, spec); the app does this on every Matrix login (`syncUserDataWithMatrix`: pushes what differs, takes over what only the room holds — since 2026-09-10 including the poll membership keys, which were never written to the room before, so a second device knew none of the user's polls) |
+| password change / account switch | `changePassword` on the homeserver (user-interactive auth with the derived old password) and a forced re-sync re-encrypt the user room; an account switch (`takeOverVoterRooms`) lets the new account write into the old account's voter rooms — the two-client spec has an account change a guest's vote in the same room and proves the guest's credentials dead afterwards (#330, #193) |
 | resilience to offline mode, partitions, federation splits | offline reconvergence and offline-queued writes: spec; federation with two homeservers: spec; partition of the federation link: spec (§3.5) |
 | performance report | §2 |
 | security | §3 |
@@ -339,18 +348,21 @@ run 34462199208 (2026-09-10, commit fa5a1cb; 669 specs, 0 skipped). The
 json-result reporter (`karma.conf.js`) records those lines in
 `karma-results.json` (field `perf`, uploaded as the `karma-results`
 artifact) and `scripts/check-test-results.js` prints them at the end of the
-job log. Medians are over five ratings. Compared with the sandbox figures
-of §2, the CI runner took longer for the cross-server join (1327 ms vs
-524 ms) and was similar otherwise. The offline replay figure is the one
-after #326; the previous green run (34457237560, before the change)
-measured 28087 ms for it.
+job log. Medians are over five ratings; the figures below are from run
+34484622912 (2026-09-10, the Plan 2 sessions 8–11 branch). Compared with
+the sandbox figures of §2, the CI runner took longer for the cross-server
+join (about 1.1 s vs 0.5 s) and was similar otherwise. The offline replay
+figure is the one after #326; the last green run before that change
+(34457237560) measured 28087 ms for it. The partition heal time is
+dominated by the servers' federation retry interval (1–5 s in the harness)
+and the sync long-poll, not by vodle.
 
 | metric | CI |
 | --- | --- |
-| same_server_rating_propagation_ms (median) | 84 |
-| federation_poll_join_ms | 1327 |
-| federation_first_vote_visible_ms | 907 |
-| federation_rating_propagation_hs1_to_hs2_ms (median) | 108 |
-| federation_rating_propagation_hs2_to_hs1_ms (median) | 131 |
-| offline_queue_replay_visible_ms | 1110 |
-| federation_partition_heal_ms | pending (added 2026-09-10) |
+| same_server_rating_propagation_ms (median) | 38 |
+| federation_poll_join_ms | 1065 |
+| federation_first_vote_visible_ms | 857 |
+| federation_rating_propagation_hs1_to_hs2_ms (median) | 110 |
+| federation_rating_propagation_hs2_to_hs1_ms (median) | 102 |
+| offline_queue_replay_visible_ms | 1066 |
+| federation_partition_heal_ms | 19907 |

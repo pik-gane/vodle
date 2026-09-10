@@ -444,7 +444,12 @@
         "p4": "Wenn Du unsicher über eine oder mehrere Optionen bist, kannst Du diese Waps auch an eine:n andere:n Teilnehmer:in Deines Vertrauens <i>delegieren.</i>",
         "p5": "Du kannst den „Assistiere mir“-Knopf verwenden, um Deine anfänglichen Waps zu setzen. Nach Deiner anfänglichen Bewertung solltest Du „Live-Ergebnisse“ anschalten, um den Abstimmungs-Verlauf über die Zeit zu verfolgen. Dann kannst Du Deine Waps an das, was Du siehst, anpassen, neu vorgeschlagenen Optionen Waps geben, oder selbst welche vorschlagen. Auf diese Weise könnt Ihr gemeinsam einen guten Kompromiss finden oder sogar zu einem Konsens gelangen. Du kannst Deine Waps und Delegationen jederzeit ändern, bis zum Ende. Sie werden immer sofort gespeichert, Du muss keinen „Speichern“-Knopf drücken.",
         "lets-go-button": "Also los!",
-        "p6": "Wenn Du wissen willst, wie vodle die Waps verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}."
+        "p6": "Wenn Du wissen willst, wie vodle die Waps verwendet, um das Ergebnis zu bestimmen, siehe {{link_start}}hier{{link_end}}.",
+        "guest-welcome": "Willkommen bei vodle!",
+        "guest-intro": "Du bist zu einer Abstimmung eingeladen. vodle legt auf diesem Gerät ein Gast-Konto für Dich an, damit Du sofort abstimmen kannst. Du kannst Dich später jederzeit mit einer eigenen E-Mail-Adresse anmelden, um Deine Waps und Abstimmungen auch beim Gerätewechsel zu behalten; vodle überträgt sie dann auf Dein Konto.",
+        "take-part-as-guest-button": "Als Gast teilnehmen",
+        "have-account": "Hast Du vodle schon einmal benutzt? Dann melde Dich zuerst an, damit diese Abstimmung zu Deinem Konto kommt:",
+        "login-button": "Anmelden"
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -477,7 +482,8 @@
         "confirm-header": "Wirklich abmelden?",
         "confirm-intro": "Das ist nur nötig, wenn dieses Gerät unsicher oder mit anderen gemeinsam genutzt ist. Beim Abmelden werden alle vodle-Daten von diesem Gerät gelöscht (aber nicht vom verwendeten Datenbankserver). Bitte versichere Dich, dass Du die E-Mail-Adresse und das Passwort kennst, die Du für vodle verwendest, bevor Du Dich abmeldest. Wenn Du sie vergisst, können sie nicht wiederhergestellt werden, da wir sie nirgendwo speichern.",
         "confirm-button": "Ja, abmelden",
-        "failed": "Abmelden fehlgeschlagen"
+        "failed": "Abmelden fehlgeschlagen",
+        "confirm-guest": "Du nutzt ein Gast-Konto, dessen E-Mail-Adresse und Passwort nur auf diesem Gerät existieren. Nach dem Abmelden kommst Du nicht mehr an seine Abstimmungen und Waps, es sei denn, Du hast Dir beides von der Einstellungsseite notiert."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -524,6 +530,8 @@
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
         "-page-title": "Abstimmung",
+        "guest-banner": "Du nimmst als Gast teil. Deine Waps und Abstimmungen bleiben nur auf diesem Gerät, bis Du Dich mit einer eigenen E-Mail-Adresse anmeldest; vodle überträgt sie dann auf Dein Konto.",
+        "guest-login-button": "Anmelden",
         "-page-title-running": "Laufende Abstimmung",
         "checkmark-clicked": "Deine Änderungen werden immer sofort gesendet wenn Du online bist. Du musst nichts extra anklicken dafür. Das Häkchen zeigt, dass Deine Änderungen erfolgreich übermittelt wurden.",
         "delegate-button": "Delegieren",
@@ -628,6 +636,7 @@
         "-page-title": "Einstellungen",
         "data-storage": "Persönliche Daten",
         "data-storage-msg": "Um Deine Daten speichern und darauf sicher von verschiedenen Geräten zugreifen zu können, gib bitte eine Emailadresse an und lege ein Passwort fest.",
+        "guest-note": "Du nutzt ein Gast-Konto, das vodle auf diesem Gerät angelegt hat; seine E-Mail-Adresse und sein Passwort stehen unten, falls Du es auch auf einem anderen Gerät nutzen willst. Um daraus ein eigenes Konto zu machen, gib hier Deine eigene E-Mail-Adresse und ein Passwort ein: vodle überträgt Deine Abstimmungen und Waps dann dorthin.",
         "email-placeholder": "Bitte gib die Emailadresse an, die Du für vodle verwenden möchtest.",
         "edit": "Ändern",
         "db-label": "Wo soll vodle Deine Daten verschlüsselt ablegen?",

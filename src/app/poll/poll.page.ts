@@ -249,6 +249,13 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.ionViewWillLeave", specs);
   }
 
+  login_clicked() {
+    // a guest (#193) logs in with an account of their own; the login page
+    // returns here, and the guest's votes and polls move to the account
+    this.G.L.entry("PollPage.login_clicked");
+    this.router.navigate(['/login/used_before/' + encodeURIComponent('/poll/' + this.pid)]);
+  }
+
   ionViewDidLeave() {
     this.G.L.entry("PollPage.ionViewDidLeave");
     this.G.D.save_state();

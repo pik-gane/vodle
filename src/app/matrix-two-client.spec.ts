@@ -189,9 +189,9 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
 
   /** the ratings of a poll as one flat map option -> voter -> value,
    *  bypassing the client-side cache: */
-  async function fresh_ratings(svc: any): Promise<Map<string, Map<string, number>>> {
-    svc.ratingCaches.delete(pid);
-    return svc.getRatings(pid);
+  async function fresh_ratings(svc: any, poll_id = pid): Promise<Map<string, Map<string, number>>> {
+    svc.ratingCaches.delete(poll_id);
+    return svc.getRatings(poll_id);
   }
 
   function rating_values(ratings: Map<string, Map<string, number>>, optionId: string): number[] {
@@ -434,7 +434,6 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     try { await frank.submitRating(gpid, 'o1', last_accepted + 1); } catch (err) { rejection = err; }
     expect(rejection?.httpStatus === 403 || rejection?.errcode === 'M_FORBIDDEN')
       .withContext('a rating after the close: ' + String(rejection)).toBeTrue();
-    await expectAsync(frank.addOption(gpid, 'o2', {name: 'Late option'})).toBeRejected();
     // ... while the data written before stays readable — the last value
     // from before the deadline, not lost to the close:
     frank.ratingCaches.delete(gpid);
@@ -452,6 +451,9 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     expect((await raw_state(frank, roomId, 'm.room.vodle.poll.state')).closed_by).toBe(GUARD_BOT);
     await until(async () => (await raw_state(frank, roomId, 'm.room.power_levels'))?.events_default === 100,
       "the poll room's power levels to drop after the closed state", 30000);
+    // from then on the server rejects options too (the poll room closes
+    // after the voter rooms, so this cannot be checked right after theirs):
+    await expectAsync(frank.addOption(gpid, 'o2', {name: 'Late option'})).toBeRejected();
     const grace = await make_client('grace');   // a late reader, as a client finalizing after a restart
     const seen_by_grace = await grace.getPollClosure(gpid);
     expect(seen_by_grace.event_id).toBe(closure.event_id);
@@ -516,6 +518,60 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     const kim = await make_client('kim', null);
     expect(await kim.getPollRoom(dpid)).toBe(roomId);
     expect((await kim.getDelegations(dpid)).size).toBe(0);
+  });
+
+  it("moves a guest's vote to the account the guest logs in with, and changes an account's password (#193, #330)", async () => {
+    if (!requires_synapse()) { return; }
+    // self-contained (jasmine randomizes spec order): own poll and users
+    const gpid = pid + 'gs';
+    const host = await make_client('host');
+    await host.createPollRoom(gpid, 'Guest poll');
+    await host.addOption(gpid, 'o1', {name: 'Option'});
+    await host.setupPollEventHandlers(gpid);
+
+    // a guest — an account like any other, whose credentials only its device
+    // knows — joins and votes; the host sees one voter
+    const guest_email = 'guest-' + gpid.toLowerCase() + '@vodle.it', guest_password = 'GuestSecret-' + gpid;
+    const guest = fresh_service('guest', POLL_PASSWORD);
+    await guest.register(guest_email, guest_password);
+    expect(await guest.getPollRoom(gpid)).toBeTruthy();
+    const vid = 'g' + gpid.slice(-6);
+    await guest.setVoterData(gpid, vid, 'rating.o1', 40);
+    await guest.setUserData('language', 'de');
+    await until(async () => rating_values(await fresh_ratings(host, gpid), 'o1').join() === '40', 'the host to see the guest vote');
+    const guest_room = guest.voterRooms.get(gpid + ':' + vid);
+    expect(guest_room).toBeTruthy();
+
+    // the guest logs in with an account: the account takes the voter room
+    // over from the guest's own session ...
+    const account_email = 'account-' + gpid + '@example.invalid';
+    const account = fresh_service('account', POLL_PASSWORD);
+    await account.register(account_email, 'test-password-account');
+    const old_session = await guest.sessionFor(guest_email, guest_password);
+    expect(old_session.getUserId()).toBe(guest.userId);
+    const taken = await account.takeOverVoterRooms(old_session, [{pollId: gpid, vid}]);
+    expect(taken[gpid]).toBe(guest_room);
+    // ... and changes the vote in the SAME room: still one voter, new value
+    await account.setVoterData(gpid, vid, 'rating.o1', 60);
+    expect(account.voterRooms.get(gpid + ':' + vid)).toBe(guest_room);
+    await until(async () => rating_values(await fresh_ratings(host, gpid), 'o1').join() === '60', 'the host to see the changed vote');
+    expect((await fresh_ratings(host, gpid)).size).toBe(1);
+
+    // the guest account is retired: deactivated, so its credentials are dead
+    await account.retireSession(old_session, guest_email, guest_password, true);
+    guest.client.stopClient();
+    const guest_again = fresh_service('guest-again', POLL_PASSWORD);
+    await expectAsync(guest_again.login(guest_email, guest_password, false)).toBeRejected();
+
+    // a password change: the derived homeserver password follows the vodle
+    // password, and the session stays logged in
+    await account.changePassword(account_email, 'test-password-account', 'test-password-account-2');
+    await account.setVoterData(gpid, vid, 'rating.o1', 61);
+    const with_new = fresh_service('account-again', POLL_PASSWORD);
+    await with_new.login(account_email, 'test-password-account-2', false);
+    expect(with_new.userId).toBe(account.userId);
+    const with_old = fresh_service('account-old', POLL_PASSWORD);
+    await expectAsync(with_old.login(account_email, 'test-password-account', false)).toBeRejected();
   });
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {

@@ -3057,3 +3057,312 @@ describe('the final read of a Matrix poll (#325)', () => {
     expect(svc.G.P.update_own_rating).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('credential changes and guest accounts (#330, #193)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, previous_flag: boolean, previous_delay: number, previous_privacy: string;
+
+  /** a DataService with the given user cache; persistence, loading
+   *  animation and the login continuation are stubbed */
+  function fresh(cache: Record<string, string>, matrix_backend = true): void {
+    (environment as any).useMatrixBackend = matrix_backend;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = cache;
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    svc._pids = new Set(Object.keys(cache).filter(k => /^poll\.[^.]+\.state$/.test(k)).map(k => k.split('.')[1]));
+    svc.store_user_data = jasmine.createSpy('store_user_data').and.returnValue(true);
+    svc.save_state = jasmine.createSpy('save_state').and.returnValue(Promise.resolve());
+    svc.show_loading = noop;
+    svc.hide_loading = noop;
+    svc.email_and_password_exist = jasmine.createSpy('email_and_password_exist').and.returnValue(Promise.resolve());
+    matrix = {
+      isLoggedIn: jasmine.createSpy('isLoggedIn').and.returnValue(true),
+      login: jasmine.createSpy('login').and.returnValue(Promise.resolve()),
+      changePassword: jasmine.createSpy('changePassword').and.returnValue(Promise.resolve()),
+      sessionFor: jasmine.createSpy('sessionFor').and.returnValue(Promise.resolve({old: true})),
+      dropSession: jasmine.createSpy('dropSession').and.returnValue(Promise.resolve()),
+      takeOverVoterRooms: jasmine.createSpy('takeOverVoterRooms').and.returnValue(Promise.resolve({})),
+      retireSession: jasmine.createSpy('retireSession').and.returnValue(Promise.resolve()),
+      getAllUserData: jasmine.createSpy('getAllUserData').and.returnValue(Promise.resolve({})),
+      setUserData: jasmine.createSpy('setUserData').and.returnValue(Promise.resolve()),
+      deleteUserData: jasmine.createSpy('deleteUserData').and.returnValue(Promise.resolve()),
+    };
+    svc.matrixService = matrix;
+    // the settings service's accessors, as the app wires them:
+    const S: any = {
+      get email() { return svc.getu('email'); }, set email(v: string) { svc.setu('email', v); },
+      get password() { return svc.getu('password'); }, set password(v: string) { svc.setu('password', v); },
+      get language() { return svc.getu('language'); }, set language(v: string) { svc.setu('language', v); },
+      get db() { return svc.getu('db'); }, set db(v: string) { svc.setu('db', v); },
+      get consent() { return svc.getu('consent') != '0'; },
+      default_wap: 50,
+    };
+    svc.G = { L: L, S: S, P: { polls: {} }, D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
+    svc.router = { url: '/', navigate: jasmine.createSpy('navigate') };
+    svc.translate = { use: noop };
+    svc.document = { documentElement: {} };
+  }
+
+  const pushed_keys = () => matrix.setUserData.calls.allArgs().map((a: any[]) => a[0]).sort();
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    previous_delay = environment.data_service.matrix_user_data_delay_ms;
+    previous_privacy = environment.privacy_statement_url;
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+    environment.data_service.matrix_user_data_delay_ms = previous_delay;
+    (environment as any).privacy_statement_url = previous_privacy;
+  });
+
+  it('makes guest credentials that are random, typeable and satisfy the password pattern', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      const {email, password} = (DataService as any).guest_credentials();
+      expect(email).toMatch(/^guest-[a-z2-9]{10}@vodle\.it$/);
+      expect(password).toMatch(/^[a-zA-Z2-9]{20}$/);
+      expect(password).toMatch(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).*/);
+      expect(password).not.toMatch(/[0O1lI]/);
+      seen.add(email + password);
+    }
+    expect(seen.size).toBe(50);
+  });
+
+  it('takes part as a guest: fresh credentials, the consent recorded, the guest flag set, no move', () => {
+    fresh({});
+    svc.guest_login_pending = true;
+    svc.login_as_guest();
+    expect(svc.getu('email')).toMatch(/^guest-/);
+    expect(svc.getu('password').length).toBe(20);
+    expect(svc.getu('guest')).toBe('1');
+    expect(svc.getu('consent')).toContain('I consent');
+    expect(svc.getu('db')).toBe('central');
+    expect(svc.pending_user_data_move()).toBeNull();
+    expect(svc.email_and_password_exist).toHaveBeenCalled();
+    expect(svc.guest_login_pending).toBeFalse();
+  });
+
+  it("records the guest's credentials as a pending move when the guest types new ones into the login page, and the login drops the guest flag", () => {
+    fresh({email: 'guest-abcdefghij@vodle.it', password: 'GuestPw2345678901234', guest: '1', db: 'central', language: 'en'});
+    svc.committed_credentials = svc.credentials_snapshot();   // as after the login at the start
+    // the login page sets the credentials while they are typed:
+    svc.G.S.email = 'a';
+    svc.G.S.email = 'alice@example.org';
+    svc.G.S.password = 'Alice-secret-1';
+    expect(svc.pending_user_data_move()).withContext('the origin is what the data is owned by, not a typed prefix')
+      .toEqual(jasmine.objectContaining({email: 'guest-abcdefghij@vodle.it', password: 'GuestPw2345678901234', guest: true, attempts: 0}));
+    svc.login_submitted();
+    expect(svc.pending_user_data_move()).toEqual(jasmine.objectContaining({email: 'guest-abcdefghij@vodle.it'}));
+    expect(svc.getu('guest')).toBe('');
+    expect(svc.getu('email')).toBe('alice@example.org');
+    expect(svc.email_and_password_exist).toHaveBeenCalled();
+  });
+
+  it('records no move before any credentials were in use, or for the same ones typed again', () => {
+    fresh({db: 'central'});
+    svc.G.S.email = 'alice@example.org';
+    svc.G.S.password = 'Alice-secret-1';
+    svc.login_submitted();
+    expect(svc.pending_user_data_move()).toBeNull();
+    svc.committed_credentials = svc.credentials_snapshot();
+    svc.G.S.email = '';
+    svc.G.S.email = 'alice@example.org';
+    svc.login_submitted();
+    expect(svc.pending_user_data_move()).toBeNull();
+  });
+
+  it('changes the homeserver password and re-encrypts the whole user room when only the password changed (Matrix)', async () => {
+    fresh({email: 'alice@example.org', password: 'New-secret-1', language: 'de', consent: 'yes',
+           'poll.p1.state': 'running', 'poll.p1.myvid': 'v1'});
+    matrix.getAllUserData.and.returnValue(Promise.resolve({language: 'de'}));
+    svc.user_cache['pending_user_data_move'] = JSON.stringify({email: 'alice@example.org', password: 'Old-secret-1'});
+    await svc.perform_user_data_move(svc.pending_user_data_move());
+    expect(matrix.changePassword).toHaveBeenCalledWith('alice@example.org', 'Old-secret-1', 'New-secret-1');
+    expect(matrix.sessionFor).not.toHaveBeenCalled();
+    expect(pushed_keys()).withContext('everything re-encrypted, never the credentials')
+      .toEqual(['consent', 'language', 'poll.p1.myvid', 'poll.p1.state']);
+    expect(svc.pending_user_data_move()).toBeNull();
+  });
+
+  it('resumes an interrupted password change after a restart: the homeserver may already have the new password', async () => {
+    fresh({email: 'alice@example.org', password: 'New-secret-1', language: 'de'});
+    matrix.isLoggedIn.and.returnValue(false);
+    // the new password already works: nothing to change
+    await svc.perform_user_data_move({email: 'alice@example.org', password: 'Old-secret-1'});
+    expect(matrix.login).toHaveBeenCalledWith('alice@example.org', 'New-secret-1', false);
+    expect(matrix.changePassword).not.toHaveBeenCalled();
+    // the new password does not work yet: log in with the old one and change it
+    matrix.login.calls.reset();
+    matrix.login.and.callFake((email: string, password: string) =>
+      password == 'New-secret-1' ? Promise.reject(new Error('no account')) : Promise.resolve());
+    await svc.perform_user_data_move({email: 'alice@example.org', password: 'Old-secret-1'});
+    expect(matrix.login.calls.allArgs()).toEqual([
+      ['alice@example.org', 'New-secret-1', false], ['alice@example.org', 'Old-secret-1', false]]);
+    expect(matrix.changePassword).toHaveBeenCalledWith('alice@example.org', 'Old-secret-1', 'New-secret-1');
+  });
+
+  it("hands a guest's voter rooms and data over to the account the guest logs in with, then retires the guest (Matrix)", async () => {
+    fresh({email: 'alice@example.org', password: 'Alice-secret-1', language: 'en',
+           'poll.p1.state': 'running', 'poll.p1.myvid': 'v1', 'poll.p1.password': 'pp1',
+           'poll.p2.state': 'draft', 'poll.p2.myvid': 'v2',
+           'poll.p3.state': 'closed', 'poll.p3.myvid': 'v3'});
+    const order: string[] = [];
+    for (const name of ['sessionFor', 'dropSession', 'login', 'takeOverVoterRooms', 'retireSession']) {
+      matrix[name].and.callFake(() => { order.push(name); return Promise.resolve(name == 'sessionFor' ? {old: true} : {}); });
+    }
+    const reconnect = spyOn(svc, 'reconnect_matrix_polls').and.returnValue(Promise.resolve());
+    await svc.perform_user_data_move({email: 'guest-abcdefghij@vodle.it', password: 'GuestPw2345678901234', guest: true});
+    expect(order).toEqual(['sessionFor', 'dropSession', 'login', 'takeOverVoterRooms', 'retireSession']);
+    expect(matrix.sessionFor).toHaveBeenCalledWith('guest-abcdefghij@vodle.it', 'GuestPw2345678901234');
+    expect(matrix.login).toHaveBeenCalledWith('alice@example.org', 'Alice-secret-1');
+    expect(matrix.takeOverVoterRooms).withContext('the running poll only: not the draft, not the closed poll')
+      .toHaveBeenCalledWith({old: true}, [{pollId: 'p1', vid: 'v1'}]);
+    expect(matrix.retireSession).toHaveBeenCalledWith({old: true}, 'guest-abcdefghij@vodle.it', 'GuestPw2345678901234', true);
+    expect(pushed_keys()).toEqual(['language', 'poll.p1.myvid', 'poll.p1.password', 'poll.p1.state',
+                                   'poll.p2.myvid', 'poll.p2.state', 'poll.p3.myvid', 'poll.p3.state']);
+    expect(reconnect).toHaveBeenCalled();
+    expect(svc.pending_user_data_move()).toBeNull();
+  });
+
+  it('does not retire a regular account whose address changed: another device may still use it', async () => {
+    fresh({email: 'new@example.org', password: 'Alice-secret-1', 'poll.p1.state': 'running', 'poll.p1.myvid': 'v1'});
+    spyOn(svc, 'reconnect_matrix_polls').and.returnValue(Promise.resolve());
+    await svc.perform_user_data_move({email: 'old@example.org', password: 'Alice-secret-1', guest: false});
+    expect(matrix.takeOverVoterRooms).toHaveBeenCalledWith({old: true}, [{pollId: 'p1', vid: 'v1'}]);
+    expect(matrix.retireSession).not.toHaveBeenCalled();
+  });
+
+  it('keeps the pending record while the move fails, and gives up after three attempts', async () => {
+    fresh({email: 'alice@example.org', password: 'Alice-secret-1'});
+    matrix.sessionFor.and.returnValue(Promise.reject(new Error('server unreachable')));
+    const from = {email: 'guest-abcdefghij@vodle.it', password: 'GuestPw2345678901234', guest: true};
+    svc.record_pending_user_data_move(from);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await expectAsync(svc.perform_user_data_move(svc.pending_user_data_move())).toBeRejected();
+      expect(svc.pending_user_data_move()).toEqual(jasmine.objectContaining({...from, attempts: attempt}));
+    }
+    await svc.perform_user_data_move(svc.pending_user_data_move());
+    expect(svc.pending_user_data_move()).withContext('given up').toBeNull();
+    expect(matrix.sessionFor).toHaveBeenCalledTimes(3);
+  });
+
+  it('pushes only what differs and takes over what only the user room holds, poll memberships included', async () => {
+    fresh({email: 'a@b.c', password: 'Secret-12', language: 'en', 'poll.p1.myvid': 'v1', 'poll.p1.state': 'running'});
+    matrix.getAllUserData.and.returnValue(Promise.resolve({
+      language: 'de', 'poll.p1.myvid': 'v1', 'poll.p9.state': 'running', 'poll.p9.myvid': 'v9', 'poll.p9.password': 'pw9'}));
+    const registered = spyOn(svc, 'check_whether_poll_or_option').and.returnValue(false);
+    await svc.syncUserDataWithMatrix();
+    expect(pushed_keys()).withContext('the equal voter id is not re-sent, the credentials never').toEqual(['language', 'poll.p1.state']);
+    expect(svc.user_cache['language']).withContext('local wins').toBe('en');
+    expect(svc.user_cache['poll.p9.myvid']).toBe('v9');
+    expect(svc.user_cache['poll.p9.password']).toBe('pw9');
+    expect(registered).toHaveBeenCalledWith('poll.p9.state', 'running');
+    expect(svc.user_cache['email']).toBe('a@b.c');
+  });
+
+  it('never sends the credentials to the user room, and writes poll membership keys coalesced', async () => {
+    fresh({email: 'a@b.c', password: 'Secret-12', 'poll.p1.state': 'draft'});
+    environment.data_service.matrix_user_data_delay_ms = 20;
+    svc.setu('email', 'x@y.z');
+    svc.setu('language', 'fr');
+    expect(matrix.setUserData).toHaveBeenCalledWith('language', 'fr');
+    expect(matrix.setUserData).not.toHaveBeenCalledWith('email', jasmine.anything());
+    svc.setp('p1', 'title', 'a');
+    svc.setp('p1', 'title', 'ab');
+    svc.setp('p1', 'myvid', 'v1');
+    expect(matrix.setUserData).not.toHaveBeenCalledWith('poll.p1.title', jasmine.anything());
+    await new Promise(resolve => setTimeout(resolve, 80));
+    expect(matrix.setUserData).toHaveBeenCalledWith('poll.p1.title', 'ab');
+    expect(matrix.setUserData).toHaveBeenCalledWith('poll.p1.myvid', 'v1');
+    expect(matrix.setUserData.calls.allArgs().filter((a: any[]) => a[0] == 'poll.p1.title').length).toBe(1);
+  });
+
+  it('offers a guest login on a magic link instead of the login page: silently without a privacy statement', () => {
+    fresh({});
+    svc.router.url = '/joinpoll/_/x/P1/pw';
+    (environment as any).privacy_statement_url = '';
+    const guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(guest).toHaveBeenCalled();
+    expect(svc.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('asks for the consent first when the deployment has a privacy statement', () => {
+    fresh({});
+    svc.router.url = '/joinpoll/_/x/P1/pw';
+    (environment as any).privacy_statement_url = './assets/privacy.html';
+    svc.page = {onGuestLoginPending: jasmine.createSpy('onGuestLoginPending')};
+    const guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(guest).not.toHaveBeenCalled();
+    expect(svc.guest_login_pending).toBeTrue();
+    expect(svc.page.onGuestLoginPending).toHaveBeenCalled();
+    expect(svc.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('still sends a visitor of any other page to the login flow', () => {
+    fresh({});
+    svc.router.url = '/mypolls';
+    svc.after_local_only_user_cache_is_filled();
+    expect(svc.router.navigate).toHaveBeenCalledWith(['/login/start/' + encodeURIComponent('/mypolls')]);
+  });
+
+  it('commits a changed password from the settings page as a move (Matrix)', async () => {
+    fresh({email: 'alice@example.org', password: 'Old-secret-1', language: 'en'});
+    svc.committed_credentials = svc.credentials_snapshot();
+    await svc.change_credentials({password: 'New-secret-1'});
+    expect(matrix.changePassword).toHaveBeenCalledWith('alice@example.org', 'Old-secret-1', 'New-secret-1');
+    expect(svc.getu('password')).toBe('New-secret-1');
+    expect(svc.pending_user_data_move()).toBeNull();
+    await svc.change_credentials({password: 'New-secret-1'});
+    expect(matrix.changePassword).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-writes the user documents under the new identity and removes the old copies (CouchDB)', async () => {
+    fresh({email: 'alice@example.org', password: 'Old-secret-1', language: 'de', consent: 'yes', 'poll.p1.myvid': 'v1'}, false);
+    svc.store_user_data = (DataService.prototype as any).store_user_data;   // the real one
+    const db = new PouchDB('user-move-' + Date.now() + Math.random().toString(36).slice(2));
+    svc.local_synced_user_db = db;
+    try {
+      // the old identity's documents, one of them (nickname) no longer in the cache:
+      svc.user_cache['nickname'] = 'Ali';
+      for (const key of ['language', 'consent', 'poll.p1.myvid', 'nickname']) {
+        svc.store_user_data(key, svc.user_cache, key);
+      }
+      const old_prefix = '~vodle.user.' + svc.get_email_and_pw_hash('alice@example.org', 'Old-secret-1') + '§';
+      const docs_with = async (prefix: string) => (await db.allDocs({startkey: prefix, endkey: prefix + '￰'})).rows;
+      const deadline = Date.now() + 10000;
+      while ((await docs_with(old_prefix)).length < 4 && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      expect((await docs_with(old_prefix)).length).toBe(4);
+      delete svc.user_cache['nickname'];
+      svc.user_cache['password'] = 'New-secret-1';
+      svc.user_cache['language'] = 'fr';   // changed since the document was written: the cache is what counts
+
+      await svc.move_couchdb_user_data({email: 'alice@example.org', password: 'Old-secret-1'}, {email: 'alice@example.org', password: 'New-secret-1'});
+
+      expect((await docs_with(old_prefix)).length).withContext('old copies removed').toBe(0);
+      const new_prefix = '~vodle.user.' + svc.get_email_and_pw_hash('alice@example.org', 'New-secret-1') + '§';
+      const rows = await db.allDocs({startkey: new_prefix, endkey: new_prefix + '￰', include_docs: true});
+      expect(rows.rows.map(r => r.id.slice(new_prefix.length)).sort()).toEqual(['consent', 'language', 'nickname', 'poll.p1.myvid']);
+      // readable with the new password, as the app reads its user db:
+      svc.user_cache = {email: 'alice@example.org', password: 'New-secret-1'};
+      for (const row of rows.rows) {
+        svc.doc2user_cache(row.doc);
+      }
+      expect(svc.user_cache['language']).toBe('fr');
+      expect(svc.user_cache['nickname']).withContext('taken from the old document').toBe('Ali');
+      expect(svc.user_cache['poll.p1.myvid']).toBe('v1');
+      expect(svc.user_cache['consent']).toBe('yes');
+    } finally {
+      await db.destroy();
+    }
+  });
+});

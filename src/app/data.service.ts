@@ -47,7 +47,7 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 import * as Sodium from 'libsodium-wrappers';
 
-import { MatrixService } from './matrix.service';
+import { MatrixService, hashEmail } from './matrix.service';
 
 
 /** DATA STORAGE DESIGN
@@ -165,7 +165,9 @@ function make_consistency_failure_error(message: string): Error {
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
-const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password'];
+// (pending_user_data_move: a credential change whose data move has not
+// completed yet, see move_user_data / perform_user_data_move, #330)
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -190,6 +192,7 @@ const poll_keystarts_in_user_db = [
   'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
   'is_archived',
   'is_test',
+  'origin_server',
   'poll_page',
   'simulated_ratings',
   'start_date',
@@ -239,6 +242,13 @@ function myhash(what): string {
 }
 
 // TYPES:
+
+/** the credentials a device used until a change of e-mail address or
+ *  password — what a pending user data move starts from (#330) */
+export type credentials_t = {email: string, password: string, guest?: boolean, attempts?: number};
+
+/** the consent recorded when a user logs in or takes part as a guest */
+export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
 export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
@@ -300,6 +310,18 @@ export class DataService implements OnDestroy {
 
   // current page, used for notifying of changes method:
   page: any;
+
+  /** a magic link was opened on a device without credentials: the joinpoll
+   *  page offers to take part as a guest (#193), see
+   *  after_local_only_user_cache_is_filled */
+  guest_login_pending = false;
+
+  /** the credentials whose data this session uses (after the login, after a
+   *  completed move): a change away from them records a pending move (#330) */
+  private committed_credentials: credentials_t | null = null;
+
+  /** a guest login (#193) is under way, started by the app rather than the user */
+  private guest_login_in_progress = false;
 
   private loadingElement: HTMLIonLoadingElement;
 
@@ -770,11 +792,26 @@ export class DataService implements OnDestroy {
     this.G.L.entry("DataService.after_user_cache_is_filled");
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
-      this.G.L.info("DataService found empty email or password, redirecting to login page.");
       this.hide_loading();
-      if (!this.router.url.includes('/login')) {
-        const current_url = encodeURIComponent(this.router.url);
-        this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
+      if (this.router.url.includes('/joinpoll/')) {
+        // the first visit of a magic link on this device (#193): take part
+        // as a guest instead of asking for a login first — silently when
+        // the deployment has no privacy statement to consent to, otherwise
+        // after the consent question the joinpoll page shows. A later login
+        // moves the guest's data to the account (#330).
+        this.G.L.info("DataService found no credentials on a magic link, taking part as a guest");
+        this.guest_login_pending = true;
+        if (!environment.privacy_statement_url) {
+          this.login_as_guest();
+        } else if (this.page && this.page.onGuestLoginPending) {
+          this.page.onGuestLoginPending();
+        }
+      } else {
+        this.G.L.info("DataService found empty email or password, redirecting to login page.");
+        if (!this.router.url.includes('/login')) {
+          const current_url = encodeURIComponent(this.router.url);
+          this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
+        }
       }
     } else {
       this.email_and_password_exist();
@@ -784,7 +821,19 @@ export class DataService implements OnDestroy {
 
   private async email_and_password_exist() {
     this.G.L.entry("DataService.email_and_password_exist: email", 
-      this.user_cache['email'], ", password", this.user_cache['password']);
+      this.user_cache['email']);
+
+    // a change of the credentials whose data move did not complete (#330):
+    // on the CouchDB backend it is completed before the local user db is
+    // read below, since the documents' ids carry the identity
+    const pending_move = this.pending_user_data_move();
+    if (pending_move && !environment.useMatrixBackend) {
+      try {
+        await this.perform_user_data_move(pending_move);
+      } catch (err) {
+        this.G.L.error("DataService: the pending user data move failed, continuing with the new credentials", err);
+      }
+    }
 
     // Phase 2: Login to Matrix if flag is set (SYNCHRONOUS/BLOCKING)
     if (environment.useMatrixBackend) {
@@ -794,10 +843,20 @@ export class DataService implements OnDestroy {
         this.G.L.info("DataService: Logging into Matrix backend (blocking)");
         this.G.add_spinning_reason("matrix-login");
         try {
-          await this.matrixService.login(email, password);
+          if (pending_move) {
+            // the move logs in as the new account itself (#330, #193):
+            try {
+              await this.perform_user_data_move(pending_move);
+            } catch (err) {
+              this.G.L.error("DataService: the pending user data move failed, logging in without it", err);
+            }
+          }
+          if (!this.matrixService.isLoggedIn()) {
+            await this.matrixService.login(email, password);
+          }
+          this.committed_credentials = this.credentials_snapshot();
           this.G.L.info("DataService: Matrix login successful, syncing user data");
-          await this.syncUserCacheToMatrix();
-          await this.restoreUserDataFromMatrix();
+          await this.syncUserDataWithMatrix();
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
           this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
@@ -818,7 +877,7 @@ export class DataService implements OnDestroy {
               "./start-matrix-server.sh";
           }
           
-          alert(errorMessage);
+          this.report_login_failure(errorMessage);
         } finally {
           this.G.remove_spinning_reason("matrix-login");
         }
@@ -949,6 +1008,7 @@ export class DataService implements OnDestroy {
     // check if db credentials are set:
     if (this.has_user_db_credentials()) {
 
+      this.committed_credentials = this.credentials_snapshot();
       // ASYNC:
       // connect to remote and start sync:
       this.connect_to_remote_user_db()
@@ -974,34 +1034,72 @@ export class DataService implements OnDestroy {
   }
 
   /**
-   * Phase 2: Sync user_cache data to Matrix backend
-   * Called after successful Matrix login to sync existing user data
+   * Reconcile the local user cache with this account's Matrix user room
+   * (#293, #330): local values are pushed where the room's value differs
+   * (all of them with `force`, which re-encrypts everything after a
+   * password change or an account switch), and keys only the room holds
+   * are taken over — the restore of settings and poll memberships (voter
+   * ids, poll passwords, drafts) on a second device. Local values win:
+   * they are what the user sees. The device-local keys (credentials,
+   * database settings) never leave the device. Until 2026-09-10 the poll
+   * membership keys were not synced at all, so a second device knew none
+   * of the user's polls.
    */
-  private async syncUserCacheToMatrix(): Promise<void> {
-    this.G.L.entry("DataService.syncUserCacheToMatrix");
-    
+  private async syncUserDataWithMatrix(force = false): Promise<void> {
+    this.G.L.entry("DataService.syncUserDataWithMatrix", force);
+    let remote: Record<string, any> = {};
     try {
-      // Sync all non-sensitive user data to Matrix
-      const keysToSync = Object.keys(this.user_cache).filter(key => 
-        !local_only_user_keys.includes(key) && // Don't sync local-only keys like password
-        !key.startsWith('poll.') // Don't sync poll data (Phase 3)
-      );
-      
-      for (const key of keysToSync) {
-        const value = this.user_cache[key];
-        if (value !== undefined && value !== null && value !== '') {
-          await this.matrixService.setUserData(key, value);
-          this.G.L.trace("DataService.syncUserCacheToMatrix synced", key);
-        }
-      }
-      
-      this.G.L.info("DataService.syncUserCacheToMatrix completed successfully");
+      remote = await this.matrixService.getAllUserData();
     } catch (err) {
-      this.G.L.error("DataService.syncUserCacheToMatrix failed", err);
-      throw err;
+      this.G.L.error("DataService.syncUserDataWithMatrix could not read the user room, pushing everything", err);
+      force = true;
     }
-    
-    this.G.L.exit("DataService.syncUserCacheToMatrix");
+    let pushed = 0, restored = 0;
+    for (const key of Object.keys(this.user_cache)) {
+      if (local_only_user_keys.includes(key) || key == 'user_last_seq') {
+        continue;
+      }
+      const value = this.user_cache[key];
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      if (!force && remote[key] === value) {
+        continue;
+      }
+      await this.matrixService.setUserData(key, value);
+      pushed++;
+    }
+    for (const [key, value] of Object.entries(remote)) {
+      if (local_only_user_keys.includes(key) || value === '') {
+        continue;
+      }
+      const local = this.user_cache[key];
+      if (local === undefined || local === null || local === '') {
+        this.user_cache[key] = value;
+        restored++;
+        // a poll this device did not know yet:
+        this.check_whether_poll_or_option(key, value);
+      }
+    }
+    this.G.L.info("DataService.syncUserDataWithMatrix pushed", pushed, "and restored", restored, "keys");
+    this.G.L.exit("DataService.syncUserDataWithMatrix");
+  }
+
+  /** the message of the last login failure, for a page that enters later
+   *  (the joinpoll page of a guest whose account could not be created, #193) */
+  login_failure: string | null = null;
+
+  /** a login failure goes to the page when it can show it, else — for a
+   *  login the user asked for — to an alert; a guest login started on the
+   *  user's behalf must not block the app with an alert, the joinpoll page
+   *  shows the failure when it enters */
+  private report_login_failure(message: string) {
+    this.login_failure = message;
+    if (this.page && this.page.onLoginFailed) {
+      this.page.onLoginFailed(message);
+    } else if (!this.guest_login_in_progress) {
+      alert(message);
+    }
   }
 
   private init_poll_data() {
@@ -1094,9 +1192,10 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private connect_to_remote_user_db() {
+  private connect_to_remote_user_db(quiet = false) {
     // called at initialization and whenever db credentials were changed
-    this.G.L.entry("DataService.connect_to_remote_user_db");
+    // (quiet: a failure is only logged, the login page is not shown)
+    this.G.L.entry("DataService.connect_to_remote_user_db", quiet);
     const user_password = this.user_cache['password'];
     const user_db_private_username = "vodle.user." + this.get_email_and_pw_hash();
 
@@ -1121,9 +1220,11 @@ export class DataService implements OnDestroy {
 
       }).catch(err => {
 
-        this.G.L.warn("DataService.connect_to_remote_user_db failed, redirecting to login page", err);
+        this.G.L.warn("DataService.connect_to_remote_user_db failed" + (quiet ? "" : ", redirecting to login page"), err);
         // TODO: if no network, notify and try again when network available. if wrong url or password, ask again for credentials. if wrong permissions, notify to contact db admin. also set 'ready' to false?
-        this.router.navigate(['/login/db_credentials/failed']);
+        if (!quiet) {
+          this.router.navigate(['/login/db_credentials/failed']);
+        }
         // TODO: make that page
 
         // REJECT:
@@ -1390,6 +1491,13 @@ export class DataService implements OnDestroy {
       // A poll joined via a magic link is only ever joined, never created
       // here: a link to a poll that cannot be found must fail, not silently
       // produce an empty poll room on this user's homeserver.
+      // The origin server named by the link is kept as user data, so that
+      // another device of this account (which restores the poll membership
+      // from the user room) finds the room too (#330):
+      if (origin_server && this.getp(pid, 'origin_server') != origin_server) {
+        this.setp(pid, 'origin_server', origin_server);
+      }
+      origin_server = origin_server || this.getp(pid, 'origin_server') || undefined;
       const room_promise: Promise<string> = origin_server
         ? this.matrixService.setPollOrigin(pid, origin_server)
             .then(() => this.matrixService.getPollRoom(pid))
@@ -2308,30 +2416,6 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private async restoreUserDataFromMatrix(): Promise<void> {
-    /** Take over what this user's Matrix user room holds and the local cache
-     *  lacks — the restore of settings, poll memberships (their passwords and
-     *  voter ids) and keys on a second device, or after clearing the browser
-     *  (#293). Local values win: they are what the user currently sees, and
-     *  the push in syncUserCacheToMatrix has just made them the newest. */
-    let restored = 0;
-    try {
-      const remote = await this.matrixService.getAllUserData();
-      for (const [key, value] of Object.entries(remote)) {
-        if (local_only_user_keys.includes(key)) { continue; }
-        const local = this.user_cache[key];
-        if (local === undefined || local === null || local === '') {
-          this.user_cache[key] = value;
-          restored++;
-        }
-      }
-    } catch (err) {
-      this.G.L.error("DataService.restoreUserDataFromMatrix failed, continuing with local data", err);
-      return;
-    }
-    this.G.L.info("DataService.restoreUserDataFromMatrix restored", restored, "keys");
-  }
-
   get_poll_origin_server(pid: string): Promise<string> {
     /** Matrix backend: the server_name of the homeserver this poll's room
      *  lives on, which a magic link must name so that users of OTHER
@@ -2488,14 +2572,21 @@ export class DataService implements OnDestroy {
 
   // HOOKS FOR PAGES:
 
-  login_submitted() {
+  login_submitted(as_guest = false) {
     // called by login page when all necessary login information was submitted on the login page
-    this.G.L.entry("DataService.login_submitted");
+    this.G.L.entry("DataService.login_submitted", as_guest);
     this.show_loading();
     if ((this.user_cache['db']||'')=='') {
       this.G.S.db = 'central';
     }
     this.G.add_spinning_reason("login");
+    this.guest_login_pending = false;
+    // (the setters are cleared and re-set so that they fire even for
+    // unchanged values; the intermediate empty credentials are no identity.
+    // When the credentials differ from the ones this device used until now
+    // — a guest's (#193), an earlier account's — the first change already
+    // recorded those as the origin of a data move, see
+    // note_credentials_change; email_and_password_exist performs it, #330)
     const language = this.G.S.language,
           email = this.G.S.email,
           password = this.G.S.password;
@@ -2503,7 +2594,88 @@ export class DataService implements OnDestroy {
     this.G.S.language = language;
     this.G.S.email = email;
     this.G.S.password = password;
+    this.setu('guest', as_guest ? '1' : '');
     this.email_and_password_exist();
+  }
+
+  login_as_guest() {
+    /** Take part with a throw-away account whose credentials only this
+     *  device knows (#193): from the login page's guest button, and on the
+     *  first visit of a magic link. A later login with a real account moves
+     *  the guest's data and voter rooms to it (perform_user_data_move). */
+    this.G.L.entry("DataService.login_as_guest");
+    const {email, password} = DataService.guest_credentials();
+    this.G.S.password = password;
+    this.G.S.email = email;
+    this.record_consent();
+    this.G.S.default_wap = 10;
+    this.guest_login_in_progress = true;
+    this.login_submitted(true);
+  }
+
+  static guest_credentials(): {email: string, password: string} {
+    /** Random credentials for a guest account (#193): about 115 bits in the
+     *  password, 50 in the address. (Until 2026-09-10 a guest was "Guest"
+     *  plus a number below a million, used as password AND address, so every
+     *  guest account could be enumerated.) The password satisfies the app's
+     *  password pattern, and the alphabet leaves out 0/O/1/l/I, since the
+     *  credentials may have to be typed on another device. */
+    const alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const random_string = (length: number): string => {
+      let result = '';
+      while (result.length < length) {
+        const bytes = new Uint8Array(2 * length);
+        crypto.getRandomValues(bytes);
+        for (const byte of bytes) {
+          // rejection sampling keeps the letters equally likely:
+          if (byte < 4 * alphabet.length && result.length < length) {
+            result += alphabet[byte % alphabet.length];
+          }
+        }
+      }
+      return result;
+    };
+    let password = random_string(20);
+    while (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+      password = random_string(20);
+    }
+    return {email: 'guest-' + random_string(10).toLowerCase() + '@vodle.it', password};
+  }
+
+  record_consent() {
+    // store privacy consent in database:
+    this.setu('consent', consent_statement);
+  }
+
+  change_credentials(changes: {email?: string, password?: string}): Promise<void> {
+    /** The settings page's way of changing e-mail address or password
+     *  (#330): what the old credentials own moves to the new ones — on the
+     *  Matrix backend a new password is set on the homeserver and the user
+     *  room re-encrypted, a new address means another account, which takes
+     *  over the voter rooms and the data; on CouchDB the user documents are
+     *  re-written under the new identity and the user db connected anew. */
+    this.G.L.entry("DataService.change_credentials");
+    if (changes.email !== undefined) {
+      this.G.S.email = changes.email;
+    }
+    if (changes.password !== undefined) {
+      this.G.S.password = changes.password;
+    }
+    const move = this.pending_user_data_move();   // recorded by note_credentials_change
+    if (!move || !this.credentials_snapshot()) {
+      return Promise.resolve();
+    }
+    // a guest who gives an address of their own becomes a regular user:
+    this.setu('guest', '');
+    return this.perform_user_data_move(move)
+      .then(() => {
+        if (!environment.useMatrixBackend) {
+          return this.reconnect_user_db().then(() => {});
+        }
+      })
+      .catch(err => {
+        this.G.L.error("DataService.change_credentials: the move failed, it is retried at the next start", err);
+      });
   }
 
   // REMOTE CONNECTION METHODS:
@@ -3272,18 +3444,26 @@ export class DataService implements OnDestroy {
     }
     this.user_cache[key] = value;
     this.G.L.trace("DataService.setu", key, value);
+    if (key == 'email' || key == 'password') {
+      this.note_credentials_change();
+    }
     
     // Phase 2: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.matrixService.isLoggedIn()) {
+      if (local_only_user_keys.includes(key)) {
+        // credentials and database settings never leave the device
+        // (syncUserDataWithMatrix and its restore skip them alike):
+        this.store_user_data(key, this.user_cache, key);
+      } else if (this.matrixService.isLoggedIn()) {
         // Sync to Matrix immediately
         this.G.L.info("DataService.setu syncing to Matrix:", key);
         this.matrixService.setUserData(key, value).catch(err => {
           this.G.L.error("DataService.setu Matrix sync failed", key, err);
         });
       } else {
-        // Should not happen - login is now blocking
-        this.G.L.error("DataService.setu Matrix not logged in, cannot sync:", key);
+        // before the login (the consent, the guest flag): pushed by
+        // syncUserDataWithMatrix right after it
+        this.G.L.trace("DataService.setu Matrix not logged in yet, synced after login:", key);
       }
       
       // Skip CouchDB storage when using Matrix backend
@@ -3749,6 +3929,9 @@ export class DataService implements OnDestroy {
     const ukey = get_poll_key_prefix(pid) + key;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
+    if (environment.useMatrixBackend) {
+      this.schedule_matrix_user_data_write(ukey);
+    }
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
 
@@ -3782,6 +3965,9 @@ export class DataService implements OnDestroy {
     const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
     this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
+    if (environment.useMatrixBackend) {
+      this.schedule_matrix_user_data_write(ukey);
+    }
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
 
@@ -5477,7 +5663,338 @@ export class DataService implements OnDestroy {
         this.G.L.error("DataService.move_user_data could not reconcile retired voter sources", err);
       });
     this.voter_mutation_admission = admission;
-    // TODO: move the remaining user data to the new database as well!
+    // The user data itself moves when new credentials are COMMITTED — by
+    // login_submitted() and change_credentials() (#330) — not on every
+    // keystroke in a credentials field, which also arrives here. A change
+    // of the database settings alone keeps the identity, so the existing
+    // documents stay valid; the user db is connected anew (CouchDB):
+    if (!environment.useMatrixBackend && this.credentials_snapshot() && !!this.remote_user_db
+        && old_values['email'] == this.user_cache['email'] && old_values['password'] == this.user_cache['password']) {
+      this.schedule_user_db_reconnection();
+    }
+    this.G.L.exit("DataService.move_user_data");
+  }
+
+  // Credential changes (#330). The credentials a device used until a change
+  // are recorded as a pending move (a device-local key) until the move has
+  // completed, so that an interrupted move — a closed browser, an
+  // unreachable server — is resumed at the next start; every step of a
+  // move is idempotent.
+
+  private credentials_snapshot(): credentials_t | null {
+    const email = this.user_cache['email'] || '', password = this.user_cache['password'] || '';
+    if (!email || !password) {
+      return null;
+    }
+    return {email, password, guest: this.user_cache['guest'] == '1'};
+  }
+
+  private note_credentials_change() {
+    /** The credentials differ from the ones in use: remember the latter as
+     *  the origin of a data move — once, at the first change, so that
+     *  typing new credentials into the login or settings page records the
+     *  credentials the data is owned by, not an intermediate value. */
+    const committed = this.committed_credentials;
+    if (!committed || this.pending_user_data_move()) {
+      return;
+    }
+    const now = this.credentials_snapshot();
+    if (now && (now.email != committed.email || now.password != committed.password)) {
+      this.G.L.info("DataService.note_credentials_change: the credentials change, recording a data move");
+      this.record_pending_user_data_move(committed);
+    }
+  }
+
+  private record_pending_user_data_move(previous: credentials_t) {
+    this.user_cache['pending_user_data_move'] = JSON.stringify({...previous, attempts: 0});
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    this.save_state();
+  }
+
+  pending_user_data_move(): credentials_t | null {
+    const stored = this.user_cache['pending_user_data_move'];
+    if (!stored) {
+      return null;
+    }
+    try {
+      const move = JSON.parse(stored);
+      return (move && move.email && move.password) ? move : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  private clear_pending_user_data_move() {
+    this.user_cache['pending_user_data_move'] = '';
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    delete this.user_cache['pending_user_data_move'];
+    this.save_state();
+  }
+
+  async perform_user_data_move(from: credentials_t): Promise<void> {
+    /** Move the user's data from the credentials `from` to the current ones
+     *  (#330). Matrix: a changed password is changed on the homeserver and
+     *  the user room re-encrypted; a changed e-mail address names another
+     *  Matrix account, so the voter rooms are handed over to it and the
+     *  user data written to its user room (which is also how a guest's data
+     *  reaches the account the guest logs in with later, #193). CouchDB:
+     *  the user documents are re-written under the new identity. The
+     *  pending record is cleared only once the move has completed; a move
+     *  that keeps failing is given up after three attempts. */
+    const to = this.credentials_snapshot();
+    if (!to) {
+      // logged out meanwhile; the record stays for the next login
+      return;
+    }
+    if (from.email == to.email && from.password == to.password) {
+      this.clear_pending_user_data_move();
+      this.committed_credentials = to;
+      return;
+    }
+    const attempts = (from.attempts || 0) + 1;
+    if (attempts > 3) {
+      this.G.L.error("DataService.perform_user_data_move giving up after", attempts - 1, "failed attempts");
+      this.clear_pending_user_data_move();
+      return;
+    }
+    this.user_cache['pending_user_data_move'] = JSON.stringify({...from, attempts});
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    this.G.L.info("DataService.perform_user_data_move attempt", attempts, from.guest ? "(from a guest account)" : "");
+    this.G.add_spinning_reason("user-data-move");
+    try {
+      if (environment.useMatrixBackend) {
+        await this.move_matrix_user_data(from, to);
+      } else {
+        await this.move_couchdb_user_data(from, to);
+      }
+      this.clear_pending_user_data_move();
+      this.committed_credentials = to;
+      this.G.L.info("DataService.perform_user_data_move completed");
+    } finally {
+      this.G.remove_spinning_reason("user-data-move");
+    }
+  }
+
+  private async move_matrix_user_data(from: credentials_t, to: credentials_t): Promise<void> {
+    const matrix = this.matrixService;
+    if (hashEmail(from.email) == hashEmail(to.email)) {
+      // the same account, only the password changed — from which the
+      // homeserver password is derived and under which the user room's
+      // data is encrypted:
+      if (!matrix.isLoggedIn()) {
+        // resuming after a restart: the homeserver has the new password
+        // when the interrupted attempt got that far, else still the old one
+        let has_new_password = true;
+        try {
+          await matrix.login(to.email, to.password, false);
+        } catch (err) {
+          has_new_password = false;
+          await matrix.login(to.email, from.password, false);
+        }
+        if (!has_new_password) {
+          await matrix.changePassword(to.email, from.password, to.password);
+        }
+      } else {
+        await matrix.changePassword(to.email, from.password, to.password);
+      }
+      await this.syncUserDataWithMatrix(true);
+      return;
+    }
+    // another account, named by the new address: it takes over the voter
+    // rooms (same voter ids, so the tally does not change) and the data;
+    // a guest account is deactivated afterwards
+    const old_session = await matrix.sessionFor(from.email, from.password);
+    await matrix.dropSession();
+    await matrix.login(to.email, to.password);
+    await matrix.takeOverVoterRooms(old_session, this.my_voter_room_entries());
+    await this.syncUserDataWithMatrix(true);
+    if (from.guest) {
+      await matrix.retireSession(old_session, from.email, from.password, true);
+    }
+    await this.reconnect_matrix_polls();
+  }
+
+  private my_voter_room_entries(): Array<{pollId: string, vid: string}> {
+    /** the (poll, own voter id) pairs of the running polls this user takes
+     *  part in, whose voter rooms an account switch hands over */
+    const entries: Array<{pollId: string, vid: string}> = [];
+    for (const key of Object.keys(this.user_cache)) {
+      const match = /^poll\.([^.]+)\.myvid$/.exec(key);
+      if (!match) {
+        continue;
+      }
+      const pid = match[1], vid = this.user_cache[key];
+      if (!vid || this.pid_is_draft(pid) || this.getp(pid, 'state') == 'closed') {
+        continue;
+      }
+      entries.push({pollId: pid, vid});
+    }
+    return entries;
+  }
+
+  private async reconnect_matrix_polls(): Promise<void> {
+    /** after an account switch mid-session: the polls' Matrix wiring
+     *  belonged to the old session, so every connected poll is joined and
+     *  wired anew */
+    for (const pid of Array.from(this._pids)) {
+      if (!this._matrixPollListeners[pid]) {
+        continue;
+      }
+      this.stop_poll_sync(pid);
+      try {
+        await this.connect_to_remote_poll_db(pid, false);
+      } catch (err) {
+        this.G.L.error("DataService.reconnect_matrix_polls could not reconnect", pid, err);
+      }
+    }
+  }
+
+  private async move_couchdb_user_data(from: credentials_t, to: credentials_t): Promise<void> {
+    /** The user documents' ids carry the hash of e-mail address and
+     *  password and their values are encrypted with the password, so they
+     *  are re-written under the new identity: from the cache, which holds
+     *  the decrypted data, or from the old documents where the cache lacks
+     *  a key. The copies under the old identity leave this device; the old
+     *  remote database keeps its copies, which the old credentials still
+     *  open on another device. Documents of voter sources with mutations
+     *  in flight are left to migrate_retired_voter_sources (#292). */
+    const old_hash = this.get_email_and_pw_hash(from.email, from.password),
+          new_hash = this.get_email_and_pw_hash(to.email, to.password);
+    if (!old_hash || !new_hash || old_hash == new_hash) {
+      return;
+    }
+    // nothing written below may still reach the old remote db:
+    this.user_sync_start_pending = false;
+    this.user_sync_start_generation += 1;
+    if (this.user_db_sync_handler) {
+      try {
+        this.user_db_sync_handler.cancel();
+      } catch (err) {
+        this.G.L.warn("DataService.move_couchdb_user_data could not cancel the user data sync", err);
+      }
+      this.user_db_sync_handler = null;
+    }
+    this.remote_user_db = null;
+    const db = this.local_synced_user_db;
+    const old_prefix = user_doc_id_prefix + old_hash + '§', new_prefix = user_doc_id_prefix + new_hash + '§';
+    const old_docs = await db.allDocs({include_docs: true, startkey: old_prefix, endkey: user_doc_id_prefix + old_hash + '¨'});
+    const values: Record<string, string> = {};
+    for (const row of old_docs.rows) {
+      const key = row.id.slice(old_prefix.length);
+      try {
+        values[key] = user_keys_unencrypted.includes(key) ? row.doc.value : decrypt(row.doc.value, from.password);
+      } catch (err) {
+        this.G.L.warn("DataService.move_couchdb_user_data could not decrypt an old document", key);
+      }
+    }
+    const in_flight = new Set(Object.keys(this.voter_mutation_tails));
+    for (const key of Object.keys(this.user_cache)) {
+      if (!local_only_user_keys.includes(key) && key != 'user_last_seq' && (this.user_cache[key] ?? '') !== '') {
+        values[key] = this.user_cache[key];
+      }
+    }
+    const keys = Object.keys(values).filter(key => !in_flight.has(key) && (values[key] ?? '') !== '');
+    const existing = keys.length ? await db.allDocs({keys: keys.map(key => new_prefix + key)}) : {rows: []};
+    const revs: Record<string, string> = {};
+    for (const row of existing.rows) {
+      if (row.value && row.value.rev && !row.value.deleted) {
+        revs[row.id] = row.value.rev;
+      }
+    }
+    const docs = keys.map(key => ({
+      _id: new_prefix + key,
+      ...(revs[new_prefix + key] ? {_rev: revs[new_prefix + key]} : {}),
+      value: user_keys_unencrypted.includes(key) ? values[key] : encrypt(values[key], to.password),
+    }));
+    if (docs.length) {
+      await db.bulkDocs(docs);
+    }
+    const deletions = old_docs.rows
+      .filter(row => !in_flight.has(row.id.slice(old_prefix.length)))
+      .map(row => ({_id: row.id, _rev: row.value.rev, _deleted: true}));
+    if (deletions.length) {
+      await db.bulkDocs(deletions);
+    }
+    this.G.L.info("DataService.move_couchdb_user_data re-wrote", docs.length, "documents, removed", deletions.length);
+  }
+
+  private user_db_reconnection_timer: any = null;
+
+  private schedule_user_db_reconnection() {
+    if (this.user_db_reconnection_timer) {
+      clearTimeout(this.user_db_reconnection_timer);
+    }
+    this.user_db_reconnection_timer = setTimeout(() => {
+      this.user_db_reconnection_timer = null;
+      this.reconnect_user_db().catch(err => {
+        this.G.L.warn("DataService.schedule_user_db_reconnection failed", err);
+      });
+    }, 1000);
+  }
+
+  private reconnect_user_db(): Promise<any> {
+    /** CouchDB: connect the user db anew after the credentials or the
+     *  database settings changed (#330). Quiet: a failure is logged, the
+     *  next start asks for credentials as usual. */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return Promise.resolve(false);
+    }
+    this.user_sync_start_pending = false;
+    this.user_sync_start_generation += 1;
+    if (this.user_db_sync_handler) {
+      try {
+        this.user_db_sync_handler.cancel();
+      } catch (err) {
+        this.G.L.warn("DataService.reconnect_user_db could not cancel the user data sync", err);
+      }
+      this.user_db_sync_handler = null;
+    }
+    this.remote_user_db = null;
+    if (!this.has_user_db_credentials()) {
+      return Promise.resolve(false);
+    }
+    return this.connect_to_remote_user_db(true);
+  }
+
+  // Matrix: the poll membership keys (voter id, poll password, drafts…)
+  // are written to the user room like the settings, coalesced so that
+  // editing a draft does not send a state event per keystroke (#330):
+
+  private pending_matrix_user_data: Set<string> = new Set();
+  private matrix_user_data_timer: any = null;
+
+  private schedule_matrix_user_data_write(key: string) {
+    this.pending_matrix_user_data.add(key);
+    if (this.matrix_user_data_timer) {
+      return;
+    }
+    this.matrix_user_data_timer = setTimeout(() => {
+      this.matrix_user_data_timer = null;
+      this.flush_matrix_user_data().catch(err => {
+        this.G.L.warn("DataService.flush_matrix_user_data failed", err);
+      });
+    }, environment.data_service?.matrix_user_data_delay_ms ?? 1000);
+  }
+
+  private async flush_matrix_user_data(): Promise<void> {
+    if (this.shutting_down || !this.matrixService?.isLoggedIn()) {
+      // pushed by syncUserDataWithMatrix at the next login
+      return;
+    }
+    const keys = Array.from(this.pending_matrix_user_data);
+    this.pending_matrix_user_data.clear();
+    for (const key of keys) {
+      const value = this.user_cache[key];
+      try {
+        if (value === undefined || value === null || value === '') {
+          await this.matrixService.deleteUserData(key);
+        } else {
+          await this.matrixService.setUserData(key, value);
+        }
+      } catch (err) {
+        this.G.L.warn("DataService.flush_matrix_user_data could not write", key, err);
+      }
+    }
   }
 
   private async migrate_retired_voter_sources(keys: string[], old_hash: string | null): Promise<void> {

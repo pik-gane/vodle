@@ -448,7 +448,12 @@
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
         "p5": "You can use the “assist me” button to set your initial waps. After setting your initial waps, it makes sense to switch on “live results” to monitor the pollʼs development over time. Then you can adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. ",
         "lets-go-button": "OK, letʼs go",
-        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
+        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}.",
+        "guest-welcome": "Welcome to vodle!",
+        "guest-intro": "You have been invited to take part in a poll. vodle creates a guest account for you on this device, so that you can vote right away. You can log in with an e-mail address of your own at any time later to keep your votes and polls when you change devices; vodle then moves them to your account.",
+        "take-part-as-guest-button": "Take part as a guest",
+        "have-account": "Have you used vodle before? Then log in first, so that this poll is added to your account:",
+        "login-button": "Log in"
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -481,7 +486,8 @@
         "confirm-header": "Really log out?",
         "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
-        "failed": "Could not log out for some reason"
+        "failed": "Could not log out for some reason",
+        "confirm-guest": "You are using a guest account whose e-mail address and password exist only on this device. After logging out you cannot get back to its polls and votes unless you have noted both from the settings page."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -535,6 +541,8 @@
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
         "-page-title": "Poll",
+        "guest-banner": "You are taking part as a guest. Your votes and polls stay on this device only until you log in with an e-mail address of your own; vodle then moves them to your account.",
+        "guest-login-button": "Log in",
         "-page-title-running": "Running poll",
         "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
         "delegate-button": "Delegate",
@@ -640,6 +648,7 @@
         "-page-title": "Settings",
         "data-storage": "Personal data",
         "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an e-mail address and set a password.",
+        "guest-note": "You are using a guest account that vodle created on this device; its e-mail address and password are shown below, in case you want to use it on another device too. To turn it into an account of your own, enter your own e-mail address and a password here: vodle moves your polls and votes to it.",
         "email-placeholder": "Please specify the e-mail address you want to use with vodle",
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",

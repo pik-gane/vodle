@@ -74,7 +74,8 @@ export class LogoutPage implements OnInit {
   async confirm_dialog() {
     const dialog = await this.alertCtrl.create({ 
       header: this.translate.instant('logout.confirm-header'), 
-      message: this.translate.instant('logout.confirm-intro'), 
+      message: this.translate.instant('logout.confirm-intro')
+        + (this.G.S.use_guest ? '<br/><br/><b>' + this.translate.instant('logout.confirm-guest') + '</b>' : ''), 
       buttons: [
         { 
           text: this.translate.instant('cancel'), 

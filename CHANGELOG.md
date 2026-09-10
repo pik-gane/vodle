@@ -12,11 +12,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Tests and CI: the build and the full suite run on every pull request against a real CouchDB and two federating Synapse homeservers, plus an end-to-end smoke test of the built app (PRs #319–#321, #323); a proxy in the harness lets a spec cut and heal the federation link (#329).
 - Simple formatting (`**bold**`, `*italics*`, paragraphs) in details texts (#214); archiving of ended polls (#83); on first start the language question is skipped when the browser's language is offered (#193, partially); a sign in the page header while the data sync is stalled.
 - Dark theme (PR #291); Tamil translation (#277).
+- Guest voting (#193): a magic link opened on a device without an account takes part as a guest right away (after the consent checkbox when the deployment has a privacy statement); a later login with an e-mail address of one's own moves the guest's votes and polls to that account.
 
 ### Changed
 
 - CouchDB path hardened against the sync-consistency bugs (#292): bootstrap-gated sync, coalesced change batching, replication watchdog, conflict cleanup, transactional draft → running moves, ordered voter mutations, guarded finalization (PRs #316, #319).
 - On the Matrix backend poll, voter and user data are encrypted in the app (poll password / user password) and the homeserver login uses a password derived from the vodle password.
+- The settings page commits a changed e-mail address or password when editing ends (OK, enter), not on every keystroke.
+- Guest accounts get random credentials of about 115 bits (before, a guest was "Guest" plus a number below a million, used as password and address alike).
 
 ### Fixed
 
@@ -24,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Matrix backend: a second device of the same account votes in the account's own voter room instead of creating another; delegation events are encrypted under the poll password (#333).
 - Production readiness of the Matrix backend (#327, #331): the app registers through a Synapse registration token when configured; the guard bot removes a poll's rooms after a retention period and reports its health; a deployment guide (`documentation/deployment/MATRIX.md`) with the recommended rate limits, which the test suite runs under.
 - On the Matrix backend, an option added to a running poll now reaches the other participants without a reload (#324; the Matrix side of #163): it travels as a timeline event and every client's live handler registers it.
+- Changing the e-mail address or the password moves the user's data to the new credentials (#330): on the Matrix backend a changed password is changed on the homeserver and the user room re-encrypted, a changed address hands the voter rooms and the data over to the new account; on CouchDB the user documents are re-written under the new identity and the user db connected anew. An interrupted move resumes at the next start. Poll memberships and drafts now reach the Matrix user room, so a second device of an account knows its polls; the fresh-account registration from the login page honours the registration token.
 - Empty language list blocking login (#273); wrong waps on the approval explanation page (#186); option order after keyboard rating changes (#98); Matrix registration never worked (PR #322); the guard bot watched an event type the app never wrote (PR #323).
 
 ## Development version 0.6 - 2022-04-19

@@ -47,7 +47,45 @@ TODO:
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="!ready && !join_error">
+<!-- FIRST VISIT WITHOUT CREDENTIALS (#193): take part as a guest, or log in -->
+
+<ion-content *ngIf="guest_login_pending && !ready && !join_error" data-vodle="join-poll-guest-page">
+  <ion-grid>
+    <ion-item class="item-text-wrap" lines="none">
+      <ion-col>
+        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'joinpoll.guest-welcome'|translate"></h1>
+        <p class="ion-text-center" style="width:100%;" [innerHtml]="'joinpoll.guest-intro'|translate"></p>
+      </ion-col>
+    </ion-item>
+    <ng-container *ngIf="E.privacy_statement_url">
+      <ion-item lines="none" class="item-text-wrap">
+        <ion-checkbox slot="start" [(ngModel)]="accept_privacy" data-vodle="accept-privacy-checkbox"></ion-checkbox>
+        <small><p>
+          <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+        </p></small>
+      </ion-item>
+    </ng-container>
+    <ion-item lines="none">
+      <ion-button size="large" color="primary" slot="end" shape="round"
+          [disabled]="!accept_privacy" data-vodle="take-part-as-guest-button"
+          (click)="take_part_as_guest()">
+        <span [innerHtml]="'joinpoll.take-part-as-guest-button'|translate"></span>
+        &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    <ion-item class="item-text-wrap" lines="none">
+      <small><p style="width:100%;">
+        <span [innerHtml]="'joinpoll.have-account'|translate"></span><br/>
+        <ion-button color="primary" fill="outline" shape="round" data-vodle="join-login-button"
+            (click)="go_to_login()">
+          <span [innerHtml]="'joinpoll.login-button'|translate"></span>
+        </ion-button>
+      </p></small>
+    </ion-item>
+  </ion-grid>
+</ion-content>
+
+<ion-content *ngIf="!guest_login_pending && !ready && !join_error">
   <ion-item class="ion-text-center" lines="none">
     <h3>
       <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
@@ -60,7 +98,7 @@ TODO:
   </ion-item>
 </ion-content>
 
-<ion-content *ngIf="join_error">
+<ion-content *ngIf="join_error" data-vodle="join-poll-error">
   <ion-item class="ion-text-center" color="danger" lines="none">
     <ion-col>
       <h3>Failed to join this poll</h3>

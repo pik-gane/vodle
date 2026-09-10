@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
-import { MatrixService, hashEmail, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
+import { MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -1021,5 +1021,124 @@ describe('MatrixService', () => {
         expect(() => service.clearUserDataCache()).not.toThrow();
       });
     });
+  });
+});
+
+describe('MatrixService account switches and password changes (#330, #193)', () => {
+  const noop = () => {};
+  let service: any;
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    spy.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+  });
+
+  it('registers (token-aware) when no account exists, and refuses to when told so', async () => {
+    spyOn<any>(service, 'passwordLogin').and.returnValue(Promise.resolve(null));
+    const register = spyOn(service, 'register').and.returnValue(Promise.resolve());
+    await service.login('new@example.org', 'Secret-12');
+    expect(register).toHaveBeenCalledWith('new@example.org', 'Secret-12');
+    await expectAsync(service.login('new@example.org', 'Secret-12', false)).toBeRejected();
+    expect(register).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries the derived, the plain and the legacy login before giving up, but throws other errors', async () => {
+    const forbidden = Object.assign(new Error('forbidden'), {errcode: 'M_FORBIDDEN', httpStatus: 403});
+    const client = {loginWithPassword: jasmine.createSpy('loginWithPassword').and.returnValue(Promise.reject(forbidden))};
+    expect(await service.passwordLogin(client, 'a@b.c', 'pw')).toBeNull();
+    expect(client.loginWithPassword.calls.allArgs()).toEqual([
+      [hashEmail('a@b.c'), deriveMatrixPassword('a@b.c', 'pw')], [hashEmail('a@b.c'), 'pw'], ['a_at_b.c', 'pw']]);
+    client.loginWithPassword.and.returnValue(Promise.reject(new TypeError('Failed to fetch')));
+    await expectAsync(service.passwordLogin(client, 'a@b.c', 'pw')).toBeRejectedWithError(TypeError);
+  });
+
+  it('changes the homeserver password with the derived old password, falling back to the plain one', async () => {
+    const setPassword = jasmine.createSpy('setPassword').and.returnValue(Promise.resolve({}));
+    service.client = {setPassword};
+    service.userId = '@u:example.org';
+    await service.changePassword('a@b.c', 'old-pw', 'new-pw');
+    expect(setPassword).toHaveBeenCalledWith(
+      {type: 'm.login.password', identifier: {type: 'm.id.user', user: '@u:example.org'}, password: deriveMatrixPassword('a@b.c', 'old-pw')},
+      deriveMatrixPassword('a@b.c', 'new-pw'), false);
+    setPassword.calls.reset();
+    setPassword.and.returnValues(Promise.reject(Object.assign(new Error('wrong'), {httpStatus: 401})), Promise.resolve({}));
+    await service.changePassword('a@b.c', 'old-pw', 'new-pw');
+    expect(setPassword).toHaveBeenCalledTimes(2);
+    expect(setPassword.calls.mostRecent().args[0].password).toBe('old-pw');
+  });
+
+  it('takes voter rooms over: joins, gets power 50 from the old account, skips rooms it cannot get', async () => {
+    const joined: string[] = [];
+    service.client = {
+      getRoom: (id: string) => joined.includes(id) ? {roomId: id} : null,
+      joinRoom: async (id: string) => { joined.push(id); return {}; },
+    };
+    service.userId = '@new:example.org';
+    spyOn<any>(service, 'getVoterRoom').and.callFake(async (pollId: string) =>
+      pollId == 'p1' ? '!open:example.org' : pollId == 'p2' ? '!closed:example.org' : null);
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    const levels: any = {users: {'@old:example.org': 50, '@bot:example.org': 100}, users_default: 0, state_default: 50};
+    const old_session = {
+      getStateEvent: jasmine.createSpy('getStateEvent').and.callFake(async (roomId: string) =>
+        roomId == '!open:example.org' ? levels : {...levels, state_default: 100, users: {'@bot:example.org': 100}}),
+      sendStateEvent: jasmine.createSpy('sendStateEvent').and.callFake(async (roomId: string) => {
+        if (roomId != '!open:example.org') { throw Object.assign(new Error('closed'), {httpStatus: 403}); }
+        return {};
+      }),
+    };
+    const taken = await service.takeOverVoterRooms(old_session, [
+      {pollId: 'p1', vid: 'v1'}, {pollId: 'p2', vid: 'v2'}, {pollId: 'p3', vid: 'v3'}]);
+    expect(taken).toEqual({p1: '!open:example.org'});
+    expect(joined).toEqual(['!open:example.org', '!closed:example.org']);
+    const granted = old_session.sendStateEvent.calls.allArgs().find((a: any[]) => a[0] == '!open:example.org');
+    expect(granted[1]).toBe('m.room.power_levels');
+    expect(granted[2].users).toEqual({'@old:example.org': 50, '@bot:example.org': 100, '@new:example.org': 50});
+    expect(granted[2].state_default).toBe(50);
+  });
+
+  it('retires a guest account: clears its user room and deactivates it without erasure', async () => {
+    const old_session = {
+      getUserId: () => '@guest:example.org',
+      getRoomIdForAlias: jasmine.createSpy('getRoomIdForAlias').and.returnValue(Promise.resolve({room_id: '!user:example.org'})),
+      roomState: async () => [
+        {type: 'm.room.vodle.user.language', state_key: '', content: {enc: 'x'}},
+        {type: 'm.room.vodle.user.old', state_key: '', content: {}},
+        {type: 'm.room.power_levels', state_key: '', content: {users: {}}}],
+      sendStateEvent: jasmine.createSpy('sendStateEvent').and.returnValue(Promise.resolve({})),
+      deactivateAccount: jasmine.createSpy('deactivateAccount').and.returnValue(Promise.resolve({})),
+    };
+    await service.retireSession(old_session, 'guest-x@vodle.it', 'GuestPw', true);
+    expect(old_session.getRoomIdForAlias).toHaveBeenCalledWith('#vodle_user_guestexampleorg:example.org');
+    expect(old_session.sendStateEvent.calls.allArgs()).toEqual([['!user:example.org', 'm.room.vodle.user.language', {}, '']]);
+    expect(old_session.deactivateAccount).toHaveBeenCalledWith(
+      {type: 'm.login.password', identifier: {type: 'm.id.user', user: '@guest:example.org'},
+       password: deriveMatrixPassword('guest-x@vodle.it', 'GuestPw')}, false);
+    old_session.deactivateAccount.calls.reset();
+    await service.retireSession(old_session, 'guest-x@vodle.it', 'GuestPw', false);
+    expect(old_session.deactivateAccount).not.toHaveBeenCalled();
+  });
+
+  it('drops a session locally without logging it out on the server', async () => {
+    const client = {logout: jasmine.createSpy('logout'), stopClient: jasmine.createSpy('stopClient'), removeListener: noop};
+    service.client = client;
+    service.userId = '@u:example.org';
+    service.accessToken = 'tok';
+    await service.dropSession();
+    expect(client.logout).not.toHaveBeenCalled();
+    expect(client.stopClient).toHaveBeenCalled();
+    expect(service.isLoggedIn()).toBeFalse();
+  });
+
+  it('reuses its own session for the old account when it is logged in as it', async () => {
+    service.client = {};
+    service.userId = '@' + hashEmail('old@example.org') + ':example.org';
+    service.accessToken = 'tok';
+    const session = await service.sessionFor('old@example.org', 'pw');
+    expect(session.getUserId()).toBe(service.userId);
+    expect(session.getAccessToken()).toBe('tok');
   });
 });

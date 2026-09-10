@@ -483,140 +483,232 @@ export class MatrixService {
   }
   
   /**
-   * Login to Matrix
+   * Log this user's Matrix account in, registering it first when it does
+   * not exist yet. The account is named by the hash of the e-mail address
+   * and its Matrix password is derived from e-mail and vodle password (the
+   * homeserver never sees the real one, see deriveMatrixPassword).
+   * @param register_if_missing - false: fail instead of registering when
+   *   no account exists (an account switch must not create accounts by
+   *   accident, #330)
    */
-  async login(email: string, password: string): Promise<void> {
+  async login(email: string, password: string, register_if_missing = true): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
     const emailHash = hashEmail(email);
     this.logger?.entry("MatrixService.login", emailHash);
     
-    // Create temporary client for login
-    const tempClient = createClient({
-      baseUrl: this.homeserverUrl
-    });
-    
     try {
-      // Use hashed email as Matrix username to protect privacy
-      const username = emailHash;
-      // and a derived password, so the server never sees the real one:
-      const matrixPassword = deriveMatrixPassword(email, password);
-      
-      // Try to login first with new hash-based username and derived password
-      try {
-        let response;
-        try {
-          response = await tempClient.loginWithPassword(username, matrixPassword);
-        } catch (derivedError: any) {
-          // an account registered before password derivation existed still
-          // has the plain password:
-          if (derivedError?.errcode !== 'M_FORBIDDEN' && derivedError?.httpStatus !== 403) {
-            throw derivedError;
-          }
-          response = await tempClient.loginWithPassword(username, password);
-          this.logger?.warn("MatrixService.login: account still uses the plain password", response.user_id);
+      const tempClient = createClient({ baseUrl: this.homeserverUrl });
+      const response = await this.passwordLogin(tempClient, email, password);
+      if (!response) {
+        if (!register_if_missing) {
+          throw new Error("MatrixService.login: no account for this e-mail address and password");
         }
-        
-        // Store credentials
-        await this.saveCredentials({
-          accessToken: response.access_token,
-          userId: response.user_id,
-          deviceId: response.device_id
-        });
-        
-        // Initialize with new credentials
-        await this.initializeWithToken(
-          response.access_token,
-          response.user_id,
-          response.device_id
-        );
-        
-        this.logger?.info("Login successful", this.userId);
-      } catch (loginError: any) {
-        // If user doesn't exist with new format, try legacy username format for backward compatibility
-        if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
-          const legacyUsername = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
-          
-          try {
-            // Try login with old username format
-            const response = await tempClient.loginWithPassword(legacyUsername, password);
-            
-            this.logger?.info("Login successful with legacy username format", response.user_id);
-            
-            // Store credentials
-            await this.saveCredentials({
-              accessToken: response.access_token,
-              userId: response.user_id,
-              deviceId: response.device_id
-            });
-            
-            // Initialize with new credentials
-            await this.initializeWithToken(
-              response.access_token,
-              response.user_id,
-              response.device_id
-            );
-            
-            this.logger?.info("Login successful (legacy format)", this.userId);
-          } catch (legacyLoginError: any) {
-            // Neither format worked, try to register with new hash-based username
-            if (legacyLoginError?.errcode === 'M_FORBIDDEN' || legacyLoginError?.httpStatus === 403) {
-              this.logger?.info("User doesn't exist, attempting registration", username);
-              
-              try {
-                // First call to get the registration flows
-                await tempClient.register(username, matrixPassword);
-              } catch (firstRegError: any) {
-                // Expected: 401 with flows and session
-                if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
-                  this.logger?.info("Got registration flows, completing m.login.dummy");
-                  
-                  // Complete the m.login.dummy authentication
-                  const regResponse = await tempClient.register(
-                    username,
-                    matrixPassword,
-                    firstRegError.data.session,
-                    {
-                      type: 'm.login.dummy'
-                    }
-                  );
-                  
-                  // Store credentials
-                  await this.saveCredentials({
-                    accessToken: regResponse.access_token,
-                    userId: regResponse.user_id,
-                    deviceId: regResponse.device_id
-                  });
-                  
-                  // Initialize with new credentials
-                  await this.initializeWithToken(
-                    regResponse.access_token,
-                    regResponse.user_id,
-                    regResponse.device_id
-                  );
-                  
-                  this.logger?.info("Registration successful", this.userId);
-                } else {
-                  // Registration failed for other reasons
-                  this.logger?.error("Registration failed", firstRegError);
-                  throw firstRegError;
-                }
-              }
-            } else {
-              // Other login error, re-throw
-              throw legacyLoginError;
-            }
-          }
-        } else {
-          // Other login error, re-throw
-          throw loginError;
-        }
+        // No account in any of the formats: register one. The registration
+        // completes the homeserver's user-interactive-auth flow — with the
+        // registration token when one is configured (#327); until
+        // 2026-09-10 this path sent the dummy stage only, which a server
+        // requiring a token rejects.
+        this.logger?.info("MatrixService.login: no account yet, registering", emailHash);
+        await this.register(email, password);
+        this.logger?.exit("MatrixService.login");
+        return;
       }
+      
+      await this.saveCredentials({
+        accessToken: response.access_token,
+        userId: response.user_id,
+        deviceId: response.device_id
+      });
+      await this.initializeWithToken(
+        response.access_token,
+        response.user_id,
+        response.device_id
+      );
+      this.logger?.info("Login successful", this.userId);
     } catch (error) {
       this.logger?.error("MatrixService.login/register failed", error);
       throw error;
     }
     
     this.logger?.exit("MatrixService.login");
+  }
+  
+  /** whether a homeserver error means "wrong credentials or no such account" */
+  private static isForbidden(error: any): boolean {
+    return error?.errcode === 'M_FORBIDDEN' || error?.httpStatus === 403;
+  }
+  
+  /**
+   * A password login of the account for `email`, in the formats the app
+   * has used over time: the hashed e-mail with the derived password, the
+   * same account with the plain password (registered before password
+   * derivation existed), and the legacy plain-e-mail username. Null when
+   * none of them exists; any other error (an unreachable server, a rate
+   * limit) is thrown.
+   */
+  private async passwordLogin(tempClient: MatrixClient, email: string, password: string): Promise<any | null> {
+    const username = hashEmail(email);
+    const legacyUsername = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
+    const attempts: Array<[string, string, string | null]> = [
+      [username, deriveMatrixPassword(email, password), null],
+      [username, password, 'account still uses the plain password'],
+      [legacyUsername, password, 'account still uses the legacy username'],
+    ];
+    for (const [user, pw, remark] of attempts) {
+      try {
+        const response = await tempClient.loginWithPassword(user, pw);
+        if (remark) {
+          this.logger?.warn("MatrixService.login: " + remark, response.user_id);
+        }
+        return response;
+      } catch (error: any) {
+        if (!MatrixService.isForbidden(error)) {
+          throw error;
+        }
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * A session of the account for `email` that makes REST calls only (no
+   * sync loop): the OLD account during an account switch (#330, #193),
+   * which hands its voter rooms over to the new account and is retired
+   * afterwards. When this service is logged in as that account, its own
+   * access token is reused — dropSession() keeps it valid.
+   */
+  async sessionFor(email: string, password: string): Promise<MatrixClient> {
+    if (this.client && this.userId && this.accessToken
+        && this.userId.startsWith('@' + hashEmail(email) + ':')) {
+      return createClient({ baseUrl: this.homeserverUrl, accessToken: this.accessToken, userId: this.userId });
+    }
+    const tempClient = createClient({ baseUrl: this.homeserverUrl });
+    const response = await this.passwordLogin(tempClient, email, password);
+    if (!response) {
+      throw new Error("MatrixService.sessionFor: no account for this e-mail address and password");
+    }
+    return createClient({ baseUrl: this.homeserverUrl, accessToken: response.access_token, userId: response.user_id });
+  }
+  
+  /** the user-interactive-auth answer for a password stage */
+  private static passwordAuth(userId: string, password: string): any {
+    return { type: 'm.login.password', identifier: { type: 'm.id.user', user: userId }, password };
+  }
+  
+  /**
+   * Change this account's password on the homeserver after the vodle
+   * password changed (#330): the Matrix password is derived from e-mail
+   * address and vodle password. This session stays logged in. The old
+   * password authenticates the change (user-interactive auth); an account
+   * from before password derivation existed still has the plain old one.
+   */
+  async changePassword(email: string, oldPassword: string, newPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.changePassword");
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    const newMatrixPassword = deriveMatrixPassword(email, newPassword);
+    try {
+      await this.client.setPassword(
+        MatrixService.passwordAuth(this.userId, deriveMatrixPassword(email, oldPassword)), newMatrixPassword, false);
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error) && error?.httpStatus !== 401) {
+        throw error;
+      }
+      await this.client.setPassword(MatrixService.passwordAuth(this.userId, oldPassword), newMatrixPassword, false);
+    }
+    this.logger?.info("MatrixService.changePassword: password changed on the homeserver", this.userId);
+    this.logger?.exit("MatrixService.changePassword");
+  }
+  
+  /**
+   * Let this (new) account write into the voter rooms the OLD account owns
+   * for the given (poll, voter id) pairs — an account switch (#330), in
+   * particular a guest logging in with a real account (#193): the new
+   * account joins each room (voter rooms are public) and the old account,
+   * which has power 50 there, grants it the same power. The voter id and
+   * the room stay the same, so the other participants and the tally see
+   * nothing change; the old account's rating events remain the room's
+   * state until the new account overwrites them. A room the guard bot has
+   * closed cannot be granted (its state_default is 100) and is skipped —
+   * it is read-only for everyone anyway. Returns the rooms taken over, per
+   * poll; rooms that could not be taken over are logged.
+   */
+  async takeOverVoterRooms(oldSession: MatrixClient, entries: Array<{pollId: string, vid: string}>): Promise<Record<string, string>> {
+    this.logger?.entry("MatrixService.takeOverVoterRooms", entries.length);
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    const taken: Record<string, string> = {};
+    for (const {pollId, vid} of entries) {
+      let roomId: string | null = null;
+      try {
+        roomId = await this.getVoterRoom(pollId, vid);
+        if (!roomId) {
+          this.logger?.info("MatrixService.takeOverVoterRooms: no voter room", pollId, vid);
+          continue;
+        }
+        if (!this.client.getRoom(roomId)) {
+          await this.retryOnRateLimit(() => this.client!.joinRoom(roomId!));
+          await this.waitForRoom(roomId);
+        }
+        const levels: any = await this.retryOnRateLimit(() => oldSession.getStateEvent(roomId!, 'm.room.power_levels', ''));
+        const users = { ...(levels?.users || {}) };
+        if ((users[this.userId] ?? levels?.users_default ?? 0) < 50) {
+          users[this.userId] = 50;
+          await this.retryOnRateLimit(() => oldSession.sendStateEvent(roomId!, 'm.room.power_levels', { ...levels, users }, ''));
+        }
+        // the room carries its vid already (the old account wrote it):
+        this.voterVidStored.add(roomId);
+        taken[pollId] = roomId;
+        this.logger?.info("MatrixService.takeOverVoterRooms: taken over", pollId, vid, roomId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.takeOverVoterRooms: could not take over", pollId, vid, roomId, error);
+      }
+    }
+    this.logger?.exit("MatrixService.takeOverVoterRooms", Object.keys(taken).length);
+    return taken;
+  }
+  
+  /**
+   * Retire the OLD account after an account switch (#330, #193): its user
+   * room's data is cleared (the new account holds the data now) and, for a
+   * guest account whose random credentials are about to be forgotten, the
+   * account is deactivated — Synapse then leaves all its rooms; its rating
+   * events stay the voter rooms' state (no erasure). Best effort: a failure
+   * leaves an unused account behind, nothing worse.
+   */
+  async retireSession(oldSession: MatrixClient, email: string, password: string, deactivate: boolean): Promise<void> {
+    const oldUserId = oldSession.getUserId() || '';
+    this.logger?.entry("MatrixService.retireSession", oldUserId, deactivate);
+    try {
+      const { room_id } = await oldSession.getRoomIdForAlias(this.userRoomAliasFor(oldUserId));
+      const state: any[] = await oldSession.roomState(room_id);
+      for (const event of state) {
+        if (typeof event.type === 'string' && event.type.startsWith('m.room.vodle.user.')
+            && (event.state_key || '') === '' && Object.keys(event.content || {}).length > 0) {
+          await this.retryOnRateLimit(() => oldSession.sendStateEvent(room_id, event.type, {}, ''));
+        }
+      }
+    } catch (error) {
+      this.logger?.warn("MatrixService.retireSession: could not clear the old user room", oldUserId, error);
+    }
+    if (deactivate) {
+      try {
+        try {
+          await oldSession.deactivateAccount(MatrixService.passwordAuth(oldUserId, deriveMatrixPassword(email, password)), false);
+        } catch (error: any) {
+          if (!MatrixService.isForbidden(error) && error?.httpStatus !== 401) {
+            throw error;
+          }
+          await oldSession.deactivateAccount(MatrixService.passwordAuth(oldUserId, password), false);
+        }
+        this.logger?.info("MatrixService.retireSession: guest account deactivated", oldUserId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.retireSession: could not deactivate the old account", oldUserId, error);
+      }
+    }
+    this.logger?.exit("MatrixService.retireSession");
   }
   
   /**
@@ -728,6 +820,31 @@ export class MatrixService {
     
     if (this.client) {
       await this.client.logout();
+    }
+    await this.dropSession();
+    
+    this.logger?.exit("MatrixService.logout");
+  }
+  
+  /**
+   * Forget this session locally without logging it out on the server —
+   * before logging in as another account during an account switch (#330,
+   * #193): the old session's access token stays valid for handing its
+   * rooms over (see sessionFor). Everything cached about the old account's
+   * rooms and data is dropped; the persisted room ids are kept, they are
+   * verified against the new session's membership when used.
+   */
+  async dropSession(): Promise<void> {
+    this.logger?.entry("MatrixService.dropSession");
+    
+    if (this.client) {
+      // Unregister Matrix SDK event listeners before clearing tracking
+      // structures to prevent memory leaks from orphaned handlers.
+      for (const [, handlers] of this.pollEventHandlerRefs) {
+        for (const { event, handler } of handlers) {
+          (this.client as any).removeListener(event, handler);
+        }
+      }
       this.client.stopClient();
       this.client = null;
     }
@@ -745,13 +862,6 @@ export class MatrixService {
     this.ratingCaches.clear();
     this.delegationRequestCaches.clear();
     this.delegationResponseCaches.clear();
-    // Unregister Matrix SDK event listeners before clearing tracking structures
-    // to prevent memory leaks from orphaned handlers.
-    for (const [, handlers] of this.pollEventHandlerRefs) {
-      for (const { event, handler } of handlers) {
-        (this.client as any)?.removeListener(event, handler);
-      }
-    }
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
     this.pollEventHandlerRefs.clear();
@@ -769,7 +879,7 @@ export class MatrixService {
     // (e.g., if a different user logs in next).
     await this.storage.remove(MatrixService.OFFLINE_QUEUE_STORAGE_KEY);
     
-    this.logger?.exit("MatrixService.logout");
+    this.logger?.exit("MatrixService.dropSession");
   }
   
   /**
@@ -940,7 +1050,7 @@ export class MatrixService {
     
     try {
       // Try to find existing room by alias
-      const aliasResponse = await this.client.getRoomIdForAlias(`#${roomAlias}:${this.getHomeserverDomain()}`);
+      const aliasResponse = await this.client.getRoomIdForAlias(this.userRoomAliasFor(this.userId));
       this.userRoomId = aliasResponse.room_id;
       await this.storage.set('user_room_id', this.userRoomId);
       this.logger?.info("Found user room by alias", this.userRoomId);
@@ -1070,6 +1180,11 @@ export class MatrixService {
     await this.sendStateEvent(roomId, eventType, {}, '');
     
     this.logger?.exit("MatrixService.deleteUserData");
+  }
+  
+  /** the alias of the private user room of `userId` (on that user's server) */
+  private userRoomAliasFor(userId: string): string {
+    return `#vodle_user_${this.hashUserId(userId)}:${MatrixService.serverNameOf(userId) || this.getHomeserverDomain()}`;
   }
   
   /**
@@ -2192,6 +2307,19 @@ export class MatrixService {
       room_alias_name: roomAlias,
       power_level_content_override: {
         users,
+        // The owner (power 50 after creation) must be able to grant its
+        // power to another account: an account switch hands the room over
+        // (takeOverVoterRooms, #330, #193). Synapse's default for the
+        // power-levels event itself is 100, and an override replaces the
+        // preset's whole `events` map, so the defaults worth keeping are
+        // repeated here (the others fall back to state_default):
+        events: {
+          'm.room.power_levels': 50,
+          'm.room.history_visibility': 100,
+          'm.room.tombstone': 100,
+          'm.room.server_acl': 100,
+          'm.room.encryption': 100
+        },
         // All voter data event types require power level 50 to send
         state_default: 50,
         events_default: 50,

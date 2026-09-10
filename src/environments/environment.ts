@@ -70,6 +70,9 @@ export const environment = {
     nid_length: 4,
 //  if a backdoor for law enforcement into the end-to-end encrypted data is required, uncomment:
 //    backdoor_public_key: "ea17226c631a8a78c67626136d91980e82328b72e6b536c7df7e68fbb22c2aa7",
+    // Matrix backend: poll membership keys and drafts are written to the
+    // user room this long after the last change, coalesced (#330):
+    matrix_user_data_delay_ms: 1000,
   },
   delegation: {
     enabled: false,

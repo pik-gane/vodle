@@ -145,6 +145,18 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-card-content>
     </ion-card>
 
+    <!-- GUEST ACCOUNT (#193): -->
+
+    <ion-item *ngIf="G.S.use_guest" color="warning" class="ion-no-margin item-text-wrap" lines="none" data-vodle="guest-banner">
+      <ion-label class="ion-text-wrap">
+        <small [innerHtml]="'poll.guest-banner'|translate"></small>
+      </ion-label>
+      <ion-button slot="end" size="small" fill="solid" color="primary" shape="round" data-vodle="guest-login-button"
+          (click)="login_clicked()">
+        <span [innerHtml]="'poll.guest-login-button'|translate"></span>
+      </ion-button>
+    </ion-item>
+
     <!-- GENERAL POLL INFORMATION -->
 
     <ion-item color="primary" class="ion-no-margin" lines="none">
