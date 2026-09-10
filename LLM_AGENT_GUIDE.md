@@ -67,9 +67,17 @@ The login content element exposes the current step via `data-vodle-step`
 | `[data-vodle="running-poll-item"]` | Individual running poll (has `data-vodle-poll-title`) |
 | `[data-vodle="closed-polls-section"]` | Closed polls section header |
 | `[data-vodle="closed-poll-item"]` | Individual closed poll |
+| `[data-vodle="archive-poll-button"]` | Archive button on a closed poll item (moves it to the Archived section) |
+| `[data-vodle="archived-polls-section"]` | Archived polls section header (collapsed by default; click to expand) |
+| `[data-vodle="archived-poll-item"]` | Individual archived poll |
+| `[data-vodle="unarchive-poll-button"]` | Un-archive button on an archived poll item |
 | `[data-vodle="drafts-section"]` | Drafts section header |
 | `[data-vodle="draft-poll-item"]` | Individual draft poll |
 | `[data-vodle="create-new-poll-button"]` | Floating "+" button to create a new poll |
+
+The page header of My Polls and of the poll page shows
+`[data-vodle="sync-stalled-sign"]` while the data synchronization with the
+server is stalled; data shown while it is visible may be outdated.
 
 ### Draft Poll / Create Poll (draftpoll.page.html)
 

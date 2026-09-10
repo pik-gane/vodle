@@ -3387,7 +3387,7 @@ export class MatrixService {
     
     // Restoration of pre-existing ratings is now complete — notify listeners
     // so the poll page can re-sort options once with the full data
-    // (fixes "options not resorted after reload", see SYNC_DEBUG_STATE.md).
+    // (fixes "options not resorted after reload", see planning/matrix-migration/history/SYNC_DEBUG_STATE.md).
     const initListeners = this.pollEventListeners.get(pollId);
     if (initListeners) {
       for (const listener of initListeners) {

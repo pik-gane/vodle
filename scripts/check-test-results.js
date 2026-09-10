@@ -82,6 +82,11 @@ if (results.errored) {
 if (results.succeeded === 0 && failed.length === 0) {
   fail('No spec was executed.');
 }
+if ((results.perf || []).length) {
+  // the measurements of the real-server specs, for the report's CI column:
+  console.log('\nperformance lines:');
+  for (const line of results.perf) { console.log('  ' + line); }
+}
 if (fixed.length) {
   console.log('\nno longer failing — remove these from ' + baseline_path + ':');
   for (const name of fixed) { console.log('  - ' + name); }

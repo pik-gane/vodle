@@ -13,8 +13,15 @@ const path = require('path');
 const result_file = process.env.KARMA_RESULT_FILE;
 
 function JsonResultReporter() {
-  const failed = [], skipped = [], seen = new Set(), messages = {};
+  const failed = [], skipped = [], seen = new Set(), messages = {}, perf = [];
   let succeeded = 0;
+  // the VODLE_PERF console lines of the real-server specs (propagation and
+  // join latencies, see planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md),
+  // so that they can be read from the results file and the end of a CI log:
+  this.onBrowserLog = (browser, log) => {
+    const text = String(log);
+    if (text.includes('VODLE_PERF')) { perf.push(text.trim()); }
+  };
   this.onSpecComplete = (browser, result) => {
     const name = result.suite.concat(result.description).join(' > ');
     if (seen.has(name)) { return; }
@@ -22,10 +29,11 @@ function JsonResultReporter() {
     if (result.skipped) { skipped.push(name); }
     else if (!result.success) {
       failed.push(name);
-      // the failure messages, so that a failure is diagnosable from the end
-      // of a CI log (which is all one can fetch of a long log) and from the
-      // uploaded results file, not only from the progress output in between:
-      messages[name] = (result.log || []).map(line => String(line).split('\n')[0]);
+      // the failure messages (with the top of each stack trace), so that a
+      // failure is diagnosable from the end of a CI log (which is all one can
+      // fetch of a long log) and from the uploaded results file, not only
+      // from the progress output in between:
+      messages[name] = (result.log || []).map(line => String(line).split('\n').slice(0, 6).join('\n'));
     }
     else { succeeded += 1; }
   };
@@ -40,6 +48,7 @@ function JsonResultReporter() {
       failed: failed.sort(),
       skipped: skipped.sort(),
       messages: messages,
+      perf: perf,
     }, null, 2) + '\n');
   };
 }

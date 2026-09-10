@@ -1,3 +1,5 @@
+> **Historical record** (moved from the repository root on 2026-09-10; not updated any more). For the current state of the Matrix backend see [../MIGRATION_STATUS.md](../MIGRATION_STATUS.md).
+
 # Real-Time Sync Debugging State — February 17, 2026
 ## (Updated September 5, 2026 — root cause closed, see "Session 2 Findings" below)
 

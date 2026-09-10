@@ -269,9 +269,13 @@ a migrated user can open the migrated poll.
 
 ## 6. CI figures
 
-To be read from the `VODLE_PERF` lines of the "build and test" job of the CI
-run of the commit that adds this report (the job log is the source; the
-values are copied here once the run is green).
+To be read from the `VODLE_PERF` lines of the "build and test" job of a green
+CI run of this branch. The json-result reporter (`karma.conf.js`) records
+those lines in `karma-results.json` (field `perf`, uploaded as the
+`karma-results` artifact) and `scripts/check-test-results.js` prints them at
+the end of the job log. The first CI run of this branch (2026-09-10, one
+spec still failing) showed `offline_queue_replay_visible_ms` = 26639; the
+other lines were beyond the part of the log that could be fetched.
 
 | metric | CI |
 | --- | --- |

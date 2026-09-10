@@ -687,7 +687,9 @@ describe('MatrixService', () => {
         
         expect(encrypted).toBeTruthy();
         expect(typeof encrypted).toBe('string');
-        expect(encrypted).not.toContain('75');
+        // the plaintext must not be visible; NOT `.not.toContain('75')`, which
+        // the random base64 ciphertext contains in about 2 % of all runs:
+        expect(encrypted).not.toContain('rating');
         
         const decrypted = await service.decryptWithPassword(encrypted, password, pollId);
         

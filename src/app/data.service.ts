@@ -314,9 +314,9 @@ export class DataService implements OnDestroy {
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
   private user_db_sync_handler;
 
-  private _pids: Set<string>; // list of pids known to the user
+  private _pids: Set<string> = new Set(); // list of pids known to the user
   get pids() { return this._pids; }
-  private _pid_oids: Record<string, Set<string>>;
+  private _pid_oids: Record<string, Set<string>> = {};
 
   private poll_caches: Record<string, {}>; // temporary storage of poll data
   private local_poll_dbs: Record<string, PouchDB.Database>; // persistent local copies of this user's part of the poll data

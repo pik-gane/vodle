@@ -1,5 +1,12 @@
 # Glossary of terms used in vodle UI and code
 
+> **Backend note (2026):** the database entries below describe the CouchDB
+> backend. With the Matrix backend (the default since 2026) a *poll database*
+> corresponds to the poll's Matrix room plus one voter room per voter, the
+> *user database* to the user's private room, and the CouchDB validation
+> functions to Matrix power levels plus the guard bot; see
+> [ARCHITECTURE.md](ARCHITECTURE.md).
+
 *(If you read this on GitHub, you can access a table of contents via the* ⋮☰ *button in the top-left corner of this panel)*
 
 Note that some concepts are named differently in the GUI than in the code for reasons of accessibility. Such pairs of terms are mutually linked in this list.)  

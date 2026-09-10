@@ -8,6 +8,11 @@ loading pre-built test polls with simulated voters.
 homeserver, and guard bot all run inside Docker containers — no
 Node.js, npm, or other tools are needed on your machine.
 
+(For the *automated* integration suite — two federating Synapse homeservers,
+the guard bot and a CouchDB with the real validator — see
+`scripts/test-matrix.sh`, `scripts/test-couchdb.sh` and
+[MIGRATION_STATUS.md](MIGRATION_STATUS.md).)
+
 ---
 
 ## Prerequisites

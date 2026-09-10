@@ -1,3 +1,5 @@
+> **Historical record** of the dark-theme preparation (2025; moved from the repository root on 2026-09-10). The current colour conventions are in [../../../COLOR_SYSTEM.md](../../../COLOR_SYSTEM.md).
+
 # Summary of Changes for Dark Theme Preparation
 
 This document provides a quick overview of the changes made to prepare the vodle application for dark theme support.

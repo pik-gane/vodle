@@ -73,7 +73,7 @@ delegating participant, in a way similar to the concept of Liquid Democracy.
 All data processing and tallying logics are implemented in the local front-end 
 (browser or phone), the only central server component is a freely selectable 
 public [database](documentation/development/GLOSSARY.md#user-database) 
-(CouchDB) used for exchanging end-to-end encrypted data 
+(a Matrix homeserver, or in the legacy backend a CouchDB server) used for exchanging end-to-end encrypted data 
 between the participants.
 
 While many aspects of vodle are similar to d**dle, the main focus of vodle is 
