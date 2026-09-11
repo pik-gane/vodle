@@ -48,6 +48,12 @@ REGISTRATION_TOKEN=$(rand 32)
 # TLS_DIR empty (deploy/README.md)
 WEB_HTTP_PORT=80
 WEB_HTTPS_PORT=443
+# Where browsers reach this deployment, without a path. Empty: the server
+# name of environment.prod.ts over https. Set it when the app is served on
+# another port (https://vodle.example.org:8443) or under a name of its own
+# while the homeserver keeps a delegated server_name (deploy/README.md).
+# It must agree with magic_link_base_url in environment.prod.ts.
+PUBLIC_ORIGIN=
 # TLS: the directory holding the certificate files, mounted read-only into
 # the web container, and the certificate (full chain) and key inside it.
 # Let's Encrypt: TLS_DIR=/etc/letsencrypt TLS_CERT=live/<server name>/fullchain.pem TLS_KEY=live/<server name>/privkey.pem

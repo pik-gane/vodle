@@ -80,7 +80,9 @@ cd /opt/vodle
    ```
 
    `TLS_DIR` is mounted into the web container as a whole, so Let's Encrypt's
-   symlinks from `live/` into `archive/` keep working.
+   symlinks from `live/` into `archive/` keep working. Leave `PUBLIC_ORIGIN`
+   empty unless the deployment is not reached at `https://<server name>` —
+   see below.
 
 3. **Up** — `deploy/deploy.sh up`. In order, it
 
@@ -113,6 +115,61 @@ cd /opt/vodle
    ([MATRIX.md §5](../documentation/deployment/MATRIX.md#5-before-going-live)).
    `deploy/deploy.sh status` shows the containers, the bot's counters, the
    database size and the certificate's expiry.
+
+## When the deployment is not reached at `https://<server name>`
+
+`PUBLIC_ORIGIN` in `.env` is where browsers actually reach the deployment,
+without a path. Empty means `https://<server name>`, which is the usual
+case. Two situations need it, and the scripts take the certificate check,
+the smoke checks, Synapse's `public_baseurl` and nginx's redirect from
+port 80 from it:
+
+**A port of its own** — no name of your own points at the host, or port 443
+is taken, so the app lives at `https://the.hosts.own.name:8443/`. Put the
+port into both settings:
+
+```ts
+server_name: "the.hosts.own.name:8443",           // environment.prod.ts, permanent
+magic_link_base_url: "https://the.hosts.own.name:8443/#/",
+```
+
+```sh
+PUBLIC_ORIGIN=https://the.hosts.own.name:8443     # .env
+WEB_HTTPS_PORT=8443
+```
+
+A server name may carry a port; every user id then reads
+`@<hash>:the.hosts.own.name:8443` and other homeservers federate straight
+to that port, no `.well-known` needed. The certificate must name the host.
+An HTTP redirect from a prettier name to this URL is a convenience for
+people typing it, nothing more: it is not the deployment's address, so
+`magic_link_base_url` must be the real one, or the invitation links depend
+on the redirect forwarding path and fragment.
+
+**A name the homeserver keeps but is not served at** — the app lives at the
+host's own name (with or without a port) while user ids should read
+`@<hash>:vodle.example.org`, a name you keep even if the host changes:
+
+```ts
+server_name: "vodle.example.org",                 // environment.prod.ts, permanent
+magic_link_base_url: "https://the.hosts.own.name:8443/#/",
+```
+
+```sh
+PUBLIC_ORIGIN=https://the.hosts.own.name:8443     # .env
+```
+
+vodle's own app does not mind (it talks to `/_matrix/` on its own origin),
+and `deploy.sh up` says so. Federation with other homeservers needs
+`https://vodle.example.org/.well-known/matrix/server` — on whatever serves
+that name, not on this host — to answer
+
+```json
+{"m.server": "the.hosts.own.name:8443"}
+```
+
+with `Content-Type: application/json`. Without that file the deployment
+works on its own and only federation is missing.
 
 ## Operations
 

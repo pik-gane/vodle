@@ -4,8 +4,10 @@
 # The same settings, with the reasons, are in documentation/deployment/MATRIX.md.
 
 # the app and the homeserver share the origin: nginx forwards /_matrix/ and
-# /.well-known/matrix/ to Synapse
-public_baseurl: https://__SERVER_NAME__/
+# /.well-known/matrix/ to Synapse. PUBLIC_ORIGIN (.env) is where browsers
+# reach that origin — the server name over https unless the deployment sits
+# on another port or under another name (deploy/README.md).
+public_baseurl: __PUBLIC_ORIGIN__/
 # /.well-known/matrix/server for other homeservers (federation over 443)
 serve_server_wellknown: true
 

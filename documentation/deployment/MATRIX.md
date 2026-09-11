@@ -23,7 +23,7 @@ matrix: {
 }
 ```
 
-Set `magic_link_base_url` to where the app is served (`"https://vodle.example.org/#/"`) and, with a privacy statement and an imprint on the host, `privacy_statement_url: "./site/privacy.html"` and `imprint_url: "./site/impressum.html"` (the web container serves the files named in `.env` there). If the web app is served from a different host than the homeserver, publish `https://<server_name>/.well-known/matrix/client` and, for federation, `.well-known/matrix/server` as the [Matrix specification](https://spec.matrix.org/latest/client-server-api/#well-known-uri) describes, and point `homeserver_url` at the homeserver's public URL.
+The name may carry a port (`"vodle.example.org:8443"`) when the app cannot have port 443, and it need not be a name this host answers to: `PUBLIC_ORIGIN` in `.env` says where browsers reach the deployment when that is not `https://<server_name>`, and `deploy/README.md` has both cases. Set `magic_link_base_url` to where the app is served (`"https://vodle.example.org/#/"`) and, with a privacy statement and an imprint on the host, `privacy_statement_url: "./site/privacy.html"` and `imprint_url: "./site/impressum.html"` (the web container serves the files named in `.env` there). If the web app is served from a different host than the homeserver, publish `https://<server_name>/.well-known/matrix/client` and, for federation, `.well-known/matrix/server` as the [Matrix specification](https://spec.matrix.org/latest/client-server-api/#well-known-uri) describes, and point `homeserver_url` at the homeserver's public URL.
 
 ## 2. Synapse settings
 

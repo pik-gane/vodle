@@ -79,12 +79,49 @@ read_server_name() {
   export SERVER_NAME
 }
 
+# Where browsers reach this deployment: "https://<host>[:<port>]", no path.
+# Usually that is the server name over https, but the two differ when the app
+# is served on a non-standard port, or under a name of its own while the
+# homeserver keeps a delegated server_name (deploy/README.md).
+read_public_origin() {
+  if [ -n "${PUBLIC_ORIGIN:-}" ]; then
+    [[ "$PUBLIC_ORIGIN" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?$ ]] || die "PUBLIC_ORIGIN '$PUBLIC_ORIGIN' must be https://host or https://host:port, without a path"
+  elif [ -n "${TLS_DIR:-}" ]; then
+    PUBLIC_ORIGIN="https://$SERVER_NAME"
+  else
+    PUBLIC_ORIGIN="http://$SERVER_NAME"
+  fi
+  case "$PUBLIC_ORIGIN" in
+    https://*) PUBLIC_SCHEME=https ;;
+    *) PUBLIC_SCHEME=http ;;
+  esac
+  PUBLIC_HOST="${PUBLIC_ORIGIN#*://}"
+  case "$PUBLIC_HOST" in
+    *:*) PUBLIC_PORT="${PUBLIC_HOST##*:}"; PUBLIC_HOST="${PUBLIC_HOST%:*}" ;;
+    *) [ "$PUBLIC_SCHEME" = https ] && PUBLIC_PORT=443 || PUBLIC_PORT=80 ;;
+  esac
+  # the authority the server name itself names: with a port, that is where
+  # other homeservers connect; without one, they ask for .well-known
+  local server_authority="$SERVER_NAME"
+  case "$SERVER_NAME" in *:*) ;; *) server_authority="$SERVER_NAME:443" ;; esac
+  # .env carries it too, so that plain `docker compose` commands see it
+  if grep -q '^PUBLIC_ORIGIN=' "$ENV_FILE"; then
+    run sed -i "s|^PUBLIC_ORIGIN=.*|PUBLIC_ORIGIN=$PUBLIC_ORIGIN|" "$ENV_FILE"
+  else
+    [ "$DRY_RUN" = 1 ] || echo "PUBLIC_ORIGIN=$PUBLIC_ORIGIN" >> "$ENV_FILE"
+  fi
+  if [ "$server_authority" != "$PUBLIC_HOST:$PUBLIC_PORT" ]; then
+    echo "note: the homeserver is named '$SERVER_NAME' but reached at $PUBLIC_ORIGIN. vodle's own app does not mind (it talks to its own origin), but federation with other homeservers needs https://${SERVER_NAME%%:*}/.well-known/matrix/server to answer {\"m.server\": \"$PUBLIC_HOST:$PUBLIC_PORT\"}"
+  fi
+  export PUBLIC_ORIGIN
+}
+
 check_app_settings() {
   local links privacy imprint
   links=$(environment_value magic_link_base_url)
   case "$links" in
-    "https://$SERVER_NAME/#/") ;;
-    *) echo "note: magic_link_base_url in environment.prod.ts is '$links'; links to polls on this server would be https://$SERVER_NAME/#/ unless the app is served elsewhere" ;;
+    "$PUBLIC_ORIGIN/#/") ;;
+    *) echo "note: magic_link_base_url in environment.prod.ts is '$links'; links to polls on this server would be $PUBLIC_ORIGIN/#/ unless the app is served elsewhere" ;;
   esac
   privacy=$(environment_value privacy_statement_url)
   imprint=$(environment_value imprint_url)
@@ -126,8 +163,8 @@ check_tls() {
     local subject
     subject=$(openssl x509 -noout -subject -ext subjectAltName -in "$TLS_DIR/$TLS_CERT" 2>/dev/null | tr '\n' ' ')
     case "$subject" in
-      *"$SERVER_NAME"*) ;;
-      *) echo "note: the certificate does not name $SERVER_NAME: $subject" ;;
+      *"$PUBLIC_HOST"*) ;;
+      *) echo "note: the certificate does not name $PUBLIC_HOST: $subject" ;;
     esac
     openssl x509 -checkend 604800 -noout -in "$TLS_DIR/$TLS_CERT" >/dev/null 2>&1 || echo "note: the certificate expires within a week (or is expired)"
   fi
@@ -165,7 +202,8 @@ configure_synapse() {
   # everything but an earlier vodle block, then the current block
   awk '/^# >>> vodle deployment settings/{skip=1} !skip{print} /^# <<< vodle deployment settings/{skip=0}' \
     "$MATRIX_DATA/homeserver.yaml" > "$tmp"
-  sed -e "s|__SERVER_NAME__|$SERVER_NAME|g" -e "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g" "$SYNAPSE_TEMPLATE" >> "$tmp"
+  sed -e "s|__SERVER_NAME__|$SERVER_NAME|g" -e "s|__PUBLIC_ORIGIN__|$PUBLIC_ORIGIN|g" \
+      -e "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g" "$SYNAPSE_TEMPLATE" >> "$tmp"
   if [ "$DRY_RUN" = 1 ]; then
     echo "+ (would write $(wc -l < "$tmp") lines to matrix-data/homeserver.yaml)"
   elif cmp -s "$tmp" "$MATRIX_DATA/homeserver.yaml"; then
@@ -219,13 +257,13 @@ http_port() { echo "${WEB_HTTP_PORT:-80}" | sed 's/.*://'; }
 https_port() { echo "${WEB_HTTPS_PORT:-443}" | sed 's/.*://'; }
 
 web_url() {
-  if [ -n "${TLS_DIR:-}" ]; then echo "https://$SERVER_NAME:$(https_port)"; else echo "http://$SERVER_NAME:$(http_port)"; fi
+  echo "$PUBLIC_ORIGIN"
 }
 
-curl_here() {  # curl_here PATH — the deployment on this host, whatever DNS says
+curl_here() {  # curl_here PATH — the web container on this host, whatever DNS says
   local port scheme
   if [ -n "${TLS_DIR:-}" ]; then scheme=https; port=$(https_port); else scheme=http; port=$(http_port); fi
-  curl -sS -k --max-time 20 --resolve "$SERVER_NAME:$port:127.0.0.1" "$scheme://$SERVER_NAME:$port$1"
+  curl -sS -k --max-time 20 --resolve "$PUBLIC_HOST:$port:127.0.0.1" "$scheme://$PUBLIC_HOST:$port$1"
 }
 
 smoke_checks() {
@@ -257,6 +295,7 @@ cmd_up() {
   require_tools
   load_env
   read_server_name
+  read_public_origin
   check_app_settings
   check_tls
   prepare_site
@@ -282,6 +321,7 @@ cmd_status() {
   require_tools
   load_env
   SERVER_NAME="${SERVER_NAME:-$(server_name_from_environment)}"
+  read_public_origin > /dev/null
   compose ps
   [ "$DRY_RUN" = 1 ] && return
   echo

@@ -20,4 +20,8 @@ services:
     environment:
       - TLS_CERT=${TLS_CERT:?TLS_CERT missing in .env}
       - TLS_KEY=${TLS_KEY:?TLS_KEY missing in .env}
+      # where browsers reach this deployment, for the redirect from port 80;
+      # deploy/deploy.sh writes it into .env (the server name over https
+      # unless the deployment sits on another port or under another name)
+      - "TLS_PUBLIC_ORIGIN=${PUBLIC_ORIGIN:?PUBLIC_ORIGIN missing in .env (deploy/deploy.sh up writes it)}"
       - NGINX_ENVSUBST_FILTER=^TLS_

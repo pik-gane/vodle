@@ -20,7 +20,8 @@ server {
         root /var/www/acme;
     }
     location / {
-        return 301 https://$host$request_uri;
+        # TLS_PUBLIC_ORIGIN carries the port when it is not 443
+        return 301 ${TLS_PUBLIC_ORIGIN}$request_uri;
     }
 }
 
