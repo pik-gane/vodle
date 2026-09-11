@@ -997,7 +997,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
 <ion-footer *ngIf="consent_pending" data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
   <ion-item color="warning" lines="none" class="item-text-wrap">
-    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($event.detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
+    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($any($event).detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
     <small><p>
       <b [innerHtml]="'poll.consent-lead'|translate"></b>
       <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>

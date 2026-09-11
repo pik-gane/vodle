@@ -81,8 +81,13 @@ jobs:
       - name: Provision the two federating test Matrix homeservers
         run: scripts/test-matrix.sh start
 
+      # the production configuration, which is what a deployment builds
+      # (Dockerfile.prod) and the only one that type-checks the templates:
+      # it turns on AOT, and tsconfig.json has strictTemplates. A plain
+      # `ng build` compiles templates at run time and lets an error in one
+      # through (it let `$event.detail` on an ionChange handler through).
       - name: Build
-        run: npm run build
+        run: npm run build -- --configuration production
 
       - name: Test
         # the runner's browser needs --no-sandbox; see karma.conf.js.
