@@ -2932,6 +2932,8 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
       getPollData: jasmine.createSpy('getPollData').and.returnValue(Promise.resolve(null)),
       addPollEventListener: jasmine.createSpy('addPollEventListener'),
       setupPollEventHandlers: jasmine.createSpy('setupPollEventHandlers').and.returnValue(Promise.resolve()),
+      setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers').and.returnValue(Promise.resolve()),
+      startVoterSync: jasmine.createSpy('startVoterSync').and.returnValue(Promise.resolve()),
     };
     svc.matrixService = matrix;
     svc.G = { L: L, P: { polls: {} }, D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
@@ -3382,5 +3384,88 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     } finally {
       await db.destroy();
     }
+  });
+});
+
+describe("a poll's contents are fetched when the poll is opened (#327)", () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, previous_flag: boolean;
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    (environment as any).useMatrixBackend = true;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = { 'poll.p1.state': 'running', 'poll.p1.myvid': 'v-me' };
+    svc.poll_caches = {};
+    svc._pids = new Set(['p1']);
+    svc._pid_oids = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    matrix = {
+      getOrCreatePollRoom: jasmine.createSpy('getOrCreatePollRoom').and.returnValue(Promise.resolve('!room:h')),
+      getAllPollData: jasmine.createSpy('getAllPollData').and.returnValue(
+        Promise.resolve({state: 'running', title: 'A poll', due: '2030-01-01T00:00:00.000Z'})),
+      addPollEventListener: jasmine.createSpy('addPollEventListener'),
+      setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers').and.returnValue(Promise.resolve()),
+      startVoterSync: jasmine.createSpy('startVoterSync').and.returnValue(Promise.resolve()),
+      getOrCreateMyVoterRoom: jasmine.createSpy('getOrCreateMyVoterRoom').and.returnValue(Promise.resolve('!voter:h')),
+      warmupCache: jasmine.createSpy('warmupCache').and.returnValue(Promise.resolve()),
+      getOptions: jasmine.createSpy('getOptions').and.returnValue(
+        Promise.resolve(new Map([['o1', {name: 'One', description: '', url: ''}]]))),
+      getRatings: jasmine.createSpy('getRatings').and.returnValue(
+        Promise.resolve(new Map([['v-other', new Map([['o1', 50]])]]))),
+      setPollData: jasmine.createSpy('setPollData').and.returnValue(Promise.resolve()),
+    };
+    svc.matrixService = matrix;
+    svc.G = { L: L, P: { polls: {}, update_own_rating: jasmine.createSpy('update_own_rating') },
+              D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+  });
+
+  it("connects a poll at start without joining a single voter room", async () => {
+    await svc.connect_to_remote_poll_db('p1');
+    // what the poll list needs, and the poll room's own listeners:
+    expect(matrix.getAllPollData).toHaveBeenCalledWith('p1');
+    expect(svc.poll_caches['p1']['title']).toBe('A poll');
+    expect(svc.poll_caches['p1']['state']).toBe('running');
+    expect(matrix.setupPollRoomHandlers).toHaveBeenCalledWith('p1');
+    // and nothing that costs a room per voter:
+    expect(matrix.startVoterSync).not.toHaveBeenCalled();
+    expect(matrix.warmupCache).not.toHaveBeenCalled();
+    expect(matrix.getRatings).not.toHaveBeenCalled();
+    expect(matrix.getOrCreateMyVoterRoom).not.toHaveBeenCalled();
+  });
+
+  it("fetches the contents when the poll is opened, once however often it is asked", async () => {
+    await svc.connect_to_remote_poll_db('p1');
+    await Promise.all([svc.ensure_poll_loaded('p1'), svc.ensure_poll_loaded('p1')]);
+    await svc.ensure_poll_loaded('p1');
+    expect(matrix.getOrCreateMyVoterRoom).toHaveBeenCalledTimes(1);
+    expect(matrix.startVoterSync).toHaveBeenCalledTimes(1);
+    expect(matrix.warmupCache).toHaveBeenCalledTimes(1);
+    // the options are registered, so the page has something to show:
+    expect(Array.from(svc._pid_oids['p1'])).toEqual(['o1']);
+    expect(svc.poll_caches['p1']['option.o1.name']).toBe('One');
+    // and the other voters' ratings reach the tally:
+    expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v-other', 'o1', 50, false);
+  });
+
+  it("retries the load after a failure instead of remembering it as done", async () => {
+    matrix.warmupCache.and.returnValue(Promise.reject(new Error("no homeserver")));
+    await expectAsync(svc.ensure_poll_loaded('p1')).toBeRejected();
+    matrix.warmupCache.and.returnValue(Promise.resolve());
+    await expectAsync(svc.ensure_poll_loaded('p1')).toBeResolved();
+    expect(matrix.warmupCache).toHaveBeenCalledTimes(2);
+  });
+
+  it("does load the contents for a magic link, which is there to show the poll", async () => {
+    await svc.connect_to_remote_poll_db('p1', true);
+    expect(matrix.startVoterSync).toHaveBeenCalledWith('p1');
+    expect(matrix.getRatings).toHaveBeenCalledWith('p1');
   });
 });

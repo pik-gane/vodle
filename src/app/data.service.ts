@@ -350,6 +350,8 @@ export class DataService implements OnDestroy {
   private poll_db_sync_handlers: Record<string, any>;
   // Phase 14: Track Matrix poll event listeners per pid to prevent duplicates
   private _matrixPollListeners: Record<string, any> = {};
+  /** the in-flight or finished full load of a poll's contents, per pid (#327) */
+  private poll_load_promises: Record<string, Promise<void>> = {};
   // Promise for the async Matrix state-change work (draft→running).
   // Callers (e.g. publish_button_clicked) can await this to ensure all
   // poll data, options, and state have been committed to Matrix before
@@ -1542,6 +1544,83 @@ export class DataService implements OnDestroy {
     }
   }
 
+  ensure_poll_loaded(pid: string): Promise<void> {
+    /** Everything of a Matrix poll that the poll list does not need: this
+     *  device's own voter room, the options, the other voters' ratings and
+     *  the delegations.
+     *
+     *  That is a join and a state read per voter room, so for a 50-voter
+     *  poll it is on the order of a hundred round trips — which the app
+     *  used to make for every poll the user is in before showing anything.
+     *  It happens when a poll is opened instead (#327).
+     *
+     *  Idempotent: every later call gets the first one's promise. A failed
+     *  load is not remembered, so opening the poll again retries it. */
+    if (!environment.useMatrixBackend) {
+      return Promise.resolve();
+    }
+    if (!(pid in this.poll_load_promises)) {
+      this.poll_load_promises[pid] = this.load_poll_contents(pid).catch(err => {
+        delete this.poll_load_promises[pid];
+        throw err;
+      });
+    }
+    return this.poll_load_promises[pid];
+  }
+
+  private async load_poll_contents(pid: string): Promise<void> {
+    this.G.L.entry("DataService.load_poll_contents", pid);
+    await this.matrix_ready.catch(() => { /* reported where it failed */ });
+    const myVid = this.getp(pid, 'myvid');
+    // this device's own voter room is where its ratings are written, so it
+    // is needed before the page can be rated on, but not before the poll
+    // list can be shown:
+    await this.matrixService.getOrCreateMyVoterRoom(pid, myVid);
+    // join and read the other voters' rooms, and keep watching them:
+    await this.matrixService.startVoterSync(pid);
+    // options, ratings and delegations into the service's caches:
+    await this.matrixService.warmupCache(pid);
+
+    // Load options from timeline events (immutable) and register
+    // their oids + data in poll_caches so Option objects get created.
+    const options = await this.matrixService.getOptions(pid);
+    if (!(pid in this._pid_oids)) {
+      this._pid_oids[pid] = new Set();
+    }
+    this.ensure_poll_cache(pid);
+    for (const [oid, opt] of options) {
+      this._pid_oids[pid].add(oid);
+      this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
+      this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
+      this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
+      this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
+    }
+
+    // Bridge other voters' ratings from Matrix into poll_caches and tally system.
+    // getRatings() returns cached results (already fetched during warmupCache).
+    // Keys are vodle vids when available, or Matrix user IDs as fallback.
+    const ratings = await this.matrixService.getRatings(pid);
+    let bridgedVoters = 0;
+    let bridgedRatings = 0;
+    for (const [vid, voterRatings] of ratings) {
+      if (vid === myVid) continue; // Skip own ratings — already handled locally
+      bridgedVoters++;
+      for (const [oid, rating] of voterRatings) {
+        // Store in poll_caches in the format expected by getv():
+        //   voter.<vid>§rating.<oid> = stringified rating
+        const pkey = this.get_voter_key_prefix(pid, vid) + 'rating.' + oid;
+        this.poll_caches[pid][pkey] = String(rating);
+        // Register in the tally system's own_ratings_map so tally_all() finds it
+        this.G.P.update_own_rating(pid, vid, oid, rating, false);
+        bridgedRatings++;
+      }
+    }
+    this.G.L.info("DataService.load_poll_contents", pid,
+                   "options:", options.size,
+                   "voters:", bridgedVoters, "ratings:", bridgedRatings);
+    this.G.L.exit("DataService.load_poll_contents", pid);
+  }
+
   connect_to_remote_poll_db(pid: string, wait_for_replication=false, origin_server?: string): Promise<any> {
     // called at poll initialization or when joining a poll.
     // origin_server (Matrix backend only): the server_name of the homeserver
@@ -1576,87 +1655,20 @@ export class DataService implements OnDestroy {
             })
         : this.matrixService.getOrCreatePollRoom(pid, ''));
       return room_promise.then(async (roomId) => {
-        console.log("[connect_to_remote_poll_db] getOrCreatePollRoom returned roomId:", roomId, "for pid:", pid);
+        this.G.L.info("DataService.connect_to_remote_poll_db poll room", pid, roomId);
 
-        // DIAGNOSTIC: Direct fetch test to verify API connectivity from browser
-        try {
-          const diagToken = (this.matrixService as any).client?.getAccessToken();
-          const diagUrl = `${(this.matrixService as any).homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`;
-          console.log("[DIAG] Direct fetch test: url=", diagUrl, "token=", diagToken ? diagToken.substring(0, 15) + "..." : "NULL");
-          const diagResp = await fetch(diagUrl, {
-            headers: { 'Authorization': `Bearer ${diagToken}` },
-            cache: 'no-store',
-          });
-          console.log("[DIAG] Direct fetch response:", diagResp.status, diagResp.statusText);
-          if (diagResp.ok) {
-            const diagData = await diagResp.json();
-            const vodleEvents = diagData.filter((e: any) => (e.type || '').includes('vodle'));
-            console.log("[DIAG] Direct fetch got", diagData.length, "total events,", vodleEvents.length, "vodle events");
-            vodleEvents.forEach((e: any) => console.log("[DIAG]  ", e.type, "=", JSON.stringify(e.content).substring(0, 100)));
-          } else {
-            const errText = await diagResp.text();
-            console.error("[DIAG] Direct fetch FAILED:", errText.substring(0, 200));
-          }
-        } catch (diagErr) {
-          console.error("[DIAG] Direct fetch ERROR:", diagErr);
-        }
-
-        // Create voter room (pass vodle vid so it gets stored in the room + announce event)
-        const myVid = this.getp(pid, 'myvid');
-        await this.matrixService.getOrCreateMyVoterRoom(pid, myVid);
-
-        // Sync poll data from Matrix to local cache
-        await this.matrixService.warmupCache(pid);
-
-        // Load poll metadata (state, title, due, type, etc.) into poll_caches
+        // Only what the poll list needs — title, state, due, type — which
+        // the client's own sync usually already holds. The contents of the
+        // poll (its options, the other voters' ratings, the delegations)
+        // are a room per voter to join and read, and doing that for every
+        // poll the user is in is what kept the start waiting; they are
+        // fetched when the poll is opened (#327), see ensure_poll_loaded.
         const pollData = await this.matrixService.getAllPollData(pid);
         this.ensure_poll_cache(pid);
         for (const [key, value] of Object.entries(pollData)) {
           this.poll_caches[pid][key] = value;
         }
-
-        // Load options from timeline events (immutable) and register
-        // their oids + data in poll_caches so Option objects get created.
-        const options = await this.matrixService.getOptions(pid);
-        if (!(pid in this._pid_oids)) {
-          this._pid_oids[pid] = new Set();
-        }
-        for (const [oid, opt] of options) {
-          this._pid_oids[pid].add(oid);
-          this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
-          this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
-          this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
-          this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
-        }
-        
-        // Bridge other voters' ratings from Matrix into poll_caches and tally system.
-        // getRatings() returns cached results (already fetched during warmupCache).
-        // Keys are vodle vids when available, or Matrix user IDs as fallback.
-        const ratings = await this.matrixService.getRatings(pid);
-        let bridgedVoters = 0;
-        let bridgedRatings = 0;
-        for (const [vid, voterRatings] of ratings) {
-          if (vid === myVid) continue; // Skip own ratings — already handled locally
-          bridgedVoters++;
-          for (const [oid, rating] of voterRatings) {
-            // Store in poll_caches in the format expected by getv():
-            //   voter.<vid>§rating.<oid> = stringified rating
-            const pkey = this.get_voter_key_prefix(pid, vid) + 'rating.' + oid;
-            this.poll_caches[pid][pkey] = String(rating);
-            // Register in the tally system's own_ratings_map so tally_all() finds it
-            this.G.P.update_own_rating(pid, vid, oid, rating, false);
-            bridgedRatings++;
-          }
-        }
-        
-        console.log("[connect_to_remote_poll_db] poll:", pid,
-                     "pollData keys:", Object.keys(pollData),
-                     "options:", options.size,
-                     "state:", pollData['state'],
-                     "bridgedVoters:", bridgedVoters,
-                     "bridgedRatings:", bridgedRatings);
-        this.G.L.info("DataService.connect_to_remote_poll_db loaded poll data keys:", Object.keys(pollData),
-                       "options:", options.size);
+        this.G.L.info("DataService.connect_to_remote_poll_db loaded poll data keys:", Object.keys(pollData));
 
         // Persist poll state in user_cache so the app remembers this poll after refresh
         if (pollData['state']) {
@@ -1664,8 +1676,15 @@ export class DataService implements OnDestroy {
           this.setu(prefix + 'state', pollData['state']);
         }
 
-        // Phase 14: Start real-time sync via Matrix event handlers
+        // Phase 14: the poll room's own listeners. The voter rooms are the
+        // expensive half and wait for the poll to be opened (#327).
         this.start_poll_sync(pid);
+
+        if (wait_for_replication) {
+          // the caller is following a magic link and needs the poll itself,
+          // not just its name:
+          await this.ensure_poll_loaded(pid);
+        }
 
         this.G.L.exit("DataService.connect_to_remote_poll_db (Matrix)", pid);
       });
@@ -3180,7 +3199,9 @@ export class DataService implements OnDestroy {
         this._matrixPollListeners[pid] = listener;
         this.matrixService.addPollEventListener(pid, listener);
       }
-      this.matrixService.setupPollEventHandlers(pid).catch(err => {
+      // only the poll room's handlers: discovering and joining this poll's
+      // voter rooms waits until the poll is opened (#327, ensure_poll_loaded)
+      this.matrixService.setupPollRoomHandlers(pid).catch(err => {
         this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
       });
       result = true;

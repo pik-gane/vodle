@@ -253,6 +253,8 @@ export class MatrixService {
   private pollEventListeners: Map<string, PollEventListener[]> = new Map();
   // Phase 4: Track which polls have event handlers set up
   private pollEventHandlersSetup: Set<string> = new Set();
+  /** polls whose voter rooms this device has started discovering (#327) */
+  private voterSyncStarted: Set<string> = new Set();
   // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
   private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
   
@@ -1168,6 +1170,7 @@ export class MatrixService {
     this.delegationResponseCaches.clear();
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
+    this.voterSyncStarted.clear();
     this.pollEventHandlerRefs.clear();
     // Stop all periodic voter discovery timers
     for (const [, timer] of this.voterDiscoveryTimers) {
@@ -3290,6 +3293,32 @@ export class MatrixService {
    *
    * This is idempotent — rooms already in cache are skipped.
    */
+  /**
+   * A voter room this device joined in an earlier session, put back into the
+   * in-memory maps.
+   *
+   * True when there is one and the client's sync still holds it — which is
+   * what says this device is still a member, and is why a room remembered
+   * but since left is joined again rather than trusted. Both maps are what
+   * the rating handlers look the room up in, so rehydrating them is what
+   * makes the join unnecessary (#327).
+   */
+  private async rememberedVoterRoom(pollId: string, voterId: string, cacheKey: string): Promise<boolean> {
+    let stored: string | null = null;
+    try {
+      stored = await this.storage.get(`voter_room_${cacheKey}`);
+    } catch (error) {
+      this.logger?.warn("MatrixService could not read a remembered voter room", cacheKey, error);
+      return false;
+    }
+    if (!stored || !this.client?.getRoom(stored)) {
+      return false;
+    }
+    this.voterRooms.set(cacheKey, stored);
+    this.voterRoomReverseLookup.set(stored, { pollId, voterId });
+    return true;
+  }
+  
   async discoverVoterRooms(pollId: string): Promise<void> {
     this.logger?.entry("MatrixService.discoverVoterRooms", pollId);
     console.log("[discoverVoterRooms] START pollId=", pollId);
@@ -3379,6 +3408,13 @@ export class MatrixService {
               continue;
             }
             claimed.add(cacheKey);
+            if (await this.rememberedVoterRoom(pollId, effectiveId, cacheKey)) {
+              // this device joined that room in an earlier session and the
+              // sync still has it: joining it again is a request per voter
+              // on every load, which for a poll of fifty is most of what a
+              // reload used to cost (#327)
+              continue;
+            }
             // joined below, several at a time: one after the other took a
             // second each, so a newcomer to a 50-voter poll waited the best
             // part of a minute before seeing anybody (#327)
@@ -4209,7 +4245,19 @@ export class MatrixService {
   }
   
   /**
-   * Set up real-time event handlers for a poll.
+   * Set up real-time event handlers for a poll, and discover its voters.
+   *
+   * The two halves cost very different things, so they are also available
+   * separately: setupPollRoomHandlers only registers listeners, while
+   * startVoterSync walks the poll room and joins a room per voter (#327).
+   */
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    await this.setupPollRoomHandlers(pollId);
+    await this.startVoterSync(pollId);
+  }
+
+  /**
+   * Register this poll's event handlers.
    * 
    * Listens for:
    * - Rating events in voter rooms (m.room.vodle.voter.rating.*)
@@ -4220,11 +4268,14 @@ export class MatrixService {
    * Uses Matrix's Room.timeline and RoomState.events listeners
    * following the existing DataService pattern for real-time updates.
    * 
+   * One room lookup, no reads: this is the half of a poll's sync that is
+   * cheap enough to do for every poll the user is in at app start.
+   * 
    * Calling this method multiple times for the same poll is safe — it will
    * not register duplicate handlers.
    */
-  async setupPollEventHandlers(pollId: string): Promise<void> {
-    this.logger?.entry("MatrixService.setupPollEventHandlers", pollId);
+  async setupPollRoomHandlers(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.setupPollRoomHandlers", pollId);
     
     if (!this.client) {
       throw new Error("Matrix client not initialized");
@@ -4243,6 +4294,7 @@ export class MatrixService {
     if (!roomId) {
       // Undo the flag if room lookup fails
       this.pollEventHandlersSetup.delete(pollId);
+    this.voterSyncStarted.delete(pollId);
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
@@ -4320,13 +4372,39 @@ export class MatrixService {
     this.pollEventHandlerRefs.set(pollId, handlers);
     
     this.logger?.info("Event handlers set up for poll", pollId);
+    this.logger?.exit("MatrixService.setupPollRoomHandlers");
+  }
+
+  /**
+   * Discover this poll's voter rooms, read what they already hold, and keep
+   * watching for new ones.
+   *
+   * This is the expensive half of a poll's sync: a walk of the poll room's
+   * timeline, a join for every voter room this device has not joined yet,
+   * and a state read of each. Doing that for every poll the user is in
+   * before the app shows anything is what made the start take half a
+   * minute, so it happens when a poll is opened instead (#327).
+   *
+   * Calling it more than once for the same poll is safe.
+   */
+  async startVoterSync(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.startVoterSync", pollId);
+    if (this.voterSyncStarted.has(pollId)) {
+      this.logger?.info("Voter sync already running for poll", pollId);
+      this.logger?.exit("MatrixService.startVoterSync");
+      return;
+    }
+    // the handlers must be in place before the rooms are joined, or a rating
+    // arriving during the join would have nowhere to go:
+    await this.setupPollRoomHandlers(pollId);
+    this.voterSyncStarted.add(pollId);
     
     // Discover all voter rooms now (populates voterRoomReverseLookup)
     // so that the stateRatingHandler can match incoming events.
     try {
       await this.discoverVoterRooms(pollId);
     } catch (err) {
-      console.error("[setupPollEventHandlers] discoverVoterRooms failed:", err);
+      console.error("[startVoterSync] discoverVoterRooms failed:", err);
     }
     
     // Retroactively scan current state of all known voter rooms for this poll.
@@ -4346,7 +4424,7 @@ export class MatrixService {
             listener.onInitialScanComplete(pollId);
           }
         } catch (error) {
-          console.error("[setupPollEventHandlers] onInitialScanComplete listener error:", error);
+          console.error("[startVoterSync] onInitialScanComplete listener error:", error);
         }
       }
     }
@@ -4356,7 +4434,7 @@ export class MatrixService {
     // requests, so it's lightweight.
     this.startPeriodicVoterDiscovery(pollId);
     
-    this.logger?.exit("MatrixService.setupPollEventHandlers");
+    this.logger?.exit("MatrixService.startVoterSync");
   }
   
   /**
@@ -5237,6 +5315,30 @@ export class MatrixService {
    * arrived. Without one, the caller asks the server (#327).
    */
   private voterRoomStateFromStore(roomId: string): any[] | null {
+    return this.roomStateFromStore(roomId, type =>
+      type === 'm.room.vodle.voter.vid' || type === 'm.room.vodle.poll.deadline');
+  }
+  
+  /**
+   * A poll room's state as the SDK already holds it, or null.
+   *
+   * A poll room that has arrived carries its lifecycle state or its deadline
+   * (a draft that has neither is not in a poll room yet). Same reasoning as
+   * voterRoomStateFromStore: an empty answer from a room whose sync has not
+   * arrived would read as a poll without a title or a state (#327).
+   */
+  private pollRoomStateFromStore(roomId: string): any[] | null {
+    return this.roomStateFromStore(roomId, type =>
+      type === 'm.room.vodle.poll.state' || type === 'm.room.vodle.poll.deadline');
+  }
+  
+  /**
+   * The state events of a room as the SDK's store holds them, flattened into
+   * the shape the /state endpoint returns, or null when this client cannot
+   * be sure it holds all of them — which is what has_arrived decides, from
+   * the event types present.
+   */
+  private roomStateFromStore(roomId: string, has_arrived: (type: string) => boolean): any[] | null {
     const events = (this.client?.getRoom(roomId) as any)?.currentState?.events;
     if (!events || typeof events.forEach !== 'function') {
       return null;
@@ -5244,11 +5346,12 @@ export class MatrixService {
     const out: any[] = [];
     let vodle_state_arrived = false;
     events.forEach((byStateKey: any, eventType: string) => {
-      if (eventType === 'm.room.vodle.voter.vid' || eventType === 'm.room.vodle.poll.deadline') {
+      if (has_arrived(eventType)) {
         vodle_state_arrived = true;
       }
-      byStateKey.forEach((event: any) => {
-        out.push({ type: eventType, content: event?.getContent ? event.getContent() : event?.content });
+      byStateKey.forEach((event: any, stateKey: string) => {
+        out.push({ type: eventType, state_key: stateKey,
+                   content: event?.getContent ? event.getContent() : event?.content });
       });
     });
     return vodle_state_arrived ? out : null;
@@ -5739,30 +5842,35 @@ export class MatrixService {
     
     const result: Record<string, any> = {};
     
-    // Fetch the full room state directly from the server REST API.
-    // The local SDK sync store may not yet have all state events
-    // (especially for freshly-joined rooms).
-    const accessToken = this.client.getAccessToken();
-    const encodedRoomId = encodeURIComponent(roomId);
-    const fetchUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
-    console.log("[getAllPollData] Fetching:", fetchUrl);
+    // The sync this client has already done is the cheapest source there is:
+    // this is one request per poll otherwise, and it is on the path between
+    // the app starting and the poll list appearing (#327). The server is
+    // asked only when the store cannot vouch for the room — a freshly joined
+    // one, or a first load before the sync has arrived.
     try {
-      const resp = await fetch(
-        fetchUrl,
-        {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
+      let stateEvents: any[] | null = this.pollRoomStateFromStore(roomId);
+      if (!stateEvents) {
+        const accessToken = this.client.getAccessToken();
+        const encodedRoomId = encodeURIComponent(roomId);
+        const fetchUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
+        console.log("[getAllPollData] Fetching:", fetchUrl);
+        const resp = await fetch(
+          fetchUrl,
+          {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            cache: 'no-store',
+          }
+        );
+        console.log("[getAllPollData] Response status:", resp.status, resp.statusText);
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          console.error("[getAllPollData] Error body:", errBody);
+          this.logger?.error("Failed to fetch room state", roomId, resp.status);
+          return {};
         }
-      );
-      console.log("[getAllPollData] Response status:", resp.status, resp.statusText);
-      if (!resp.ok) {
-        const errBody = await resp.text();
-        console.error("[getAllPollData] Error body:", errBody);
-        this.logger?.error("Failed to fetch room state", roomId, resp.status);
-        return {};
+        stateEvents = await resp.json();
       }
-      const stateEvents: any[] = await resp.json();
-      console.log("[getAllPollData] Fetched", stateEvents.length, "state events for room", roomId);
+      console.log("[getAllPollData] Read", stateEvents.length, "state events for room", roomId);
       
       const prefix = 'm.room.vodle.poll.data.';
       for (const event of stateEvents) {

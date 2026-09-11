@@ -279,10 +279,55 @@ async function voters(p) {
         + ', guest ' + guest_voters + ', expected ' + expected);
     }
 
+    log('14. reload: how long until the poll list is there, and what it costs');
+    // The number the complaint was about: a reload of a device that already
+    // has the polls. Both halves are measured — the list, which must not
+    // wait for the homeserver at all, and opening the poll, which is where
+    // the voter rooms are read (#327).
+    const before_reload = matrix_requests.length;
+    const reload_start = Date.now();
+    await page.goto(BASE + '/', {waitUntil: 'domcontentloaded', timeout: STEP_TIMEOUT});
+    await visible(page, '[data-vodle="my-polls-page"]');
+    await page.waitForFunction((title) =>
+      Array.from(document.querySelectorAll('[data-vodle="running-poll-item"]'))
+        .some(n => n.getAttribute('data-vodle-poll-title') === title),
+      {timeout: STEP_TIMEOUT, polling: 50}, pd.title);
+    const list_ms = Date.now() - reload_start;
+    const list_requests = matrix_requests.length - before_reload;
+    log('   the poll list was there after', list_ms, 'ms and', list_requests, '/_matrix/ requests');
+
+    log('15. and how long until the poll itself shows every vote');
+    const before_open = matrix_requests.length;
+    const open_start = Date.now();
+    // the link is the label inside the item, not the item itself
+    await click(page, '[data-vodle="running-poll-item"] ion-label');
+    await visible(page, '[data-vodle="poll-voting-page"]');
+    const shown_ms = Date.now() - open_start;
+    await page.waitForFunction((n) => {
+      const m = document.body.innerText.match(/(\d+)\s+non-abstaining/);
+      return m && parseInt(m[1], 10) === n;
+    }, {timeout: STEP_TIMEOUT, polling: 200}, expected).catch(() => {});
+    const open_ms = Date.now() - open_start;
+    const open_requests = matrix_requests.length - before_open;
+    const reload_voters = await voters(page);
+    log('   the poll page appeared after', shown_ms, 'ms, all', reload_voters, 'voters after',
+        open_ms, 'ms and', open_requests, '/_matrix/ requests');
+    const reload = {list_ms, list_requests, shown_ms, open_ms, open_requests, voters: reload_voters};
+    if (reload_voters !== expected) {
+      throw new Error('after a reload the poll shows ' + reload_voters + ' voters, expected ' + expected);
+    }
+    // a ceiling, not a target: what this is here to catch is the poll list
+    // going back to waiting for the homeserver
+    const LIST_MS_MAX = parseInt(process.env.VODLE_LIST_MS_MAX || '10000', 10);
+    if (list_ms > LIST_MS_MAX) {
+      throw new Error('the poll list took ' + list_ms + ' ms (' + list_requests
+        + ' /_matrix/ requests), more than the ' + LIST_MS_MAX + ' ms this may take');
+    }
+
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
     console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
-      host_voters, guest_voters, console_errors, page_errors,
+      host_voters, guest_voters, reload, console_errors, page_errors,
       failed_requests: failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r))}, null, 1));
   } catch (err) {
     await page.screenshot({path: shot('-failed')}).catch(() => {});

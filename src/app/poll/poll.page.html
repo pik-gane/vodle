@@ -119,6 +119,21 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
 <!-- SCROLLABLE CONTENT: -->
 
+<!-- a poll opened on a device that holds nothing of it yet (#327): its
+     contents are being fetched -->
+<ion-content *ngIf="loading_contents" data-vodle="poll-loading-contents">
+  <ion-item class="ion-text-center" lines="none">
+    <h3>
+      <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
+    </h3>
+  </ion-item>
+  <ion-item class="ion-text-center" lines="none">
+    <h1>
+      <ion-spinner name="crescent" size="large"></ion-spinner>
+    </h1>
+  </ion-item>
+</ion-content>
+
 <ion-content *ngIf="ready && !!p" 
     (pointerup)="onBodyPointerup($event)"
     (touchup)="onBodyTouchup($event)"

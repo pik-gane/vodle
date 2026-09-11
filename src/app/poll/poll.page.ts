@@ -93,6 +93,8 @@ export class PollPage implements OnInit {
   // LIFECYCLE:
 
   ready = false;  
+  /** a poll opened on a device that holds nothing of it yet (#327) */
+  loading_contents = false;
 
   constructor(
       private changeDetector: ChangeDetectorRef,
@@ -156,6 +158,33 @@ export class PollPage implements OnInit {
       this.router.navigate(["/mypolls"]);
       return;
     }
+    /* The Matrix backend fetches a poll's contents when the poll is opened
+       rather than for every poll at app start (#327). What this device
+       already has is shown at once and the rest follows; only a poll this
+       device knows nothing about yet has to wait for it. */
+    const loaded = this.G.D.ensure_poll_loaded(this.pid);
+    if (this.p.oids.length == 0) {
+      this.G.L.info("PollPage waiting for the poll's contents", this.pid);
+      this.loading_contents = true;
+      loaded.catch(err => {
+        this.G.L.error("PollPage could not load the poll", this.pid, err);
+      }).then(() => {
+        this.loading_contents = false;
+        this.show_poll();
+        this.changeDetector.detectChanges();
+      });
+    } else {
+      this.show_poll();
+      loaded.then(() => {
+        // whatever arrived beyond what this device had:
+        this.seed_default_ratings();
+        this.onInitialScanComplete();
+      }).catch(err => this.G.L.error("PollPage could not load the poll", this.pid, err));
+    }
+    this.G.L.exit("PollPage.onDataReady");
+  }
+
+  private seed_default_ratings() {
     if (this.p.allow_voting && !this.consent_pending) {
       this.G.L.info("PollPage checking if default waps are needed", this.pid);
       for (let oid of this.p.oids) {
@@ -166,6 +195,10 @@ export class PollPage implements OnInit {
         }
       }  
     }
+  }
+
+  private show_poll() {
+    this.seed_default_ratings();
     this.p.tally_all();
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
@@ -186,7 +219,6 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
-    this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
