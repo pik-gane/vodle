@@ -1,80 +1,82 @@
-# vodle — production deployment stack
+# vodle — production deployment stack (see deploy/README.md)
 #
-# Three services on one Docker network:
+#   vodle-web   nginx serving the built app, forwarding /_matrix/ to Synapse
+#   synapse     the Matrix homeserver, on the internal network only
+#   postgres    its database
+#   guard-bot   closes polls at their deadline, lets participants into the
+#               closed poll rooms, removes rooms after the retention period
 #
-#   vodle-web      nginx serving the built Angular app   http://localhost:80
-#   synapse        Matrix homeserver                      (internal + :8448)
-#   guard-bot      Deadline enforcement bot               (internal)
+# Settings come from .env (deploy/generate-secrets.sh) and from
+# src/environments/environment.prod.ts (matrix.server_name, copied into .env
+# as SERVER_NAME by deploy/deploy.sh, which runs this stack). With TLS
+# certificate files on the host, add docker-compose.tls.yml:
 #
-# Quick start:
-#
-#   # First time only — generate Synapse config:
-#   docker run --rm -v "$(pwd)/matrix-data:/data" \
-#     -e SYNAPSE_SERVER_NAME=vodle.example.com \
-#     -e SYNAPSE_REPORT_STATS=no \
-#     matrixdotorg/synapse:latest generate
-#
-#   # Edit matrix-data/homeserver.yaml:
-#   #   enable_registration: true
-#   #   enable_registration_without_verification: true
-#   #   (or configure your own registration policy)
-#
-#   # Register the guard bot account:
-#   docker compose -f docker-compose.prod.yml up synapse -d
-#   docker exec vodle-matrix-synapse register_new_matrix_user \
-#     -c /data/homeserver.yaml \
-#     -u vodle-guard -p <STRONG_PASSWORD> --admin
-#
-#   # Build and start everything:
-#   docker compose -f docker-compose.prod.yml up --build -d
-#
-# The app will be available at http://localhost (port 80).
-# Put a TLS-terminating reverse proxy (e.g. Caddy, Traefik) in front
-# for HTTPS in real deployments.
-#
-# See MATRIX_TESTING_GUIDE.md for details.
+#   docker compose --env-file .env -f docker-compose.prod.yml -f docker-compose.tls.yml up --build -d
 
 services:
-  # -------------------------------------------------------------------
-  # 1. vodle web app — nginx serving the production Angular build
-  # -------------------------------------------------------------------
   vodle-web:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      args:
+        # built into the app: the token the homeserver requires to register (#327)
+        REGISTRATION_TOKEN: "${REGISTRATION_TOKEN:-}"
     container_name: vodle-web-prod
     ports:
-      - "80:80"
+      - "${WEB_HTTP_PORT:-80}:80"
+    volumes:
+      # the privacy statement and the imprint, served as /site/... (deploy/deploy.sh)
+      - ./deploy/site:/usr/share/nginx/html/site:ro
     depends_on:
-      - synapse
+      synapse:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - vodle-net
 
-  # -------------------------------------------------------------------
-  # 2. Matrix homeserver (Synapse)
-  # -------------------------------------------------------------------
   synapse:
     image: matrixdotorg/synapse:latest
     container_name: vodle-matrix-synapse
-    # Port 8008 is NOT exposed to the host in production —
-    # all Matrix traffic goes through the nginx reverse proxy.
-    # Uncomment if you need direct access for debugging:
-    # ports:
-    #   - "8008:8008"
+    # not published to the host: all Matrix traffic goes through the web container
     volumes:
       - ./matrix-data:/data
     environment:
-      - SYNAPSE_SERVER_NAME=${SYNAPSE_SERVER_NAME:-vodle.example.com}
+      - "SYNAPSE_SERVER_NAME=${SERVER_NAME:?SERVER_NAME missing in .env (deploy/deploy.sh up writes it)}"
       - SYNAPSE_REPORT_STATS=no
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
     command: run
     networks:
       - vodle-net
 
-  # -------------------------------------------------------------------
-  # 3. Guard bot — enforces poll deadlines
-  # -------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: vodle-postgres
+    environment:
+      - POSTGRES_USER=synapse
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD missing in .env (deploy/generate-secrets.sh writes it)}"
+      - POSTGRES_DB=synapse
+      # Synapse needs the C locale for its database
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - vodle-net
+
   guard-bot:
     build:
       context: ./guard-bot
@@ -82,27 +84,29 @@ services:
     container_name: vodle-guard-bot
     environment:
       - MATRIX_HOMESERVER_URL=http://synapse:8008
-      - BOT_USER=${BOT_USER:-@vodle-guard:vodle.example.com}
-      - BOT_PASSWORD=${BOT_PASSWORD:?Set BOT_PASSWORD in .env or environment}
+      - "BOT_USER=@${BOT_LOCALPART:-vodle-guard}:${SERVER_NAME:?SERVER_NAME missing in .env (deploy/deploy.sh up writes it)}"
+      - "BOT_PASSWORD=${BOT_PASSWORD:?BOT_PASSWORD missing in .env (deploy/generate-secrets.sh writes it)}"
       - SCAN_INTERVAL_MS=30000
       # close a room only this long after its deadline, and only once no
       # event has arrived in it for QUIET_PERIOD_MS (see guard-bot/index.js):
       - CLOSE_GRACE_MS=10000
       - QUIET_PERIOD_MS=5000
       # a poll's rooms are removed this many days after its deadline (#331);
-      # ADMIN_PURGE needs the bot registered with --admin (see INSTALL.md):
-      - RETENTION_DAYS=365
+      # ADMIN_PURGE needs the bot registered as an admin (deploy/deploy.sh does):
+      - RETENTION_DAYS=${RETENTION_DAYS:-365}
       - ADMIN_PURGE=true
       # GET /healthz for the healthcheck below and for monitoring (#327):
       - HEALTH_PORT=8012
     depends_on:
-      - synapse
+      synapse:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:8012/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 60s
       timeout: 10s
       retries: 3
+      start_period: 30s
     networks:
       - vodle-net
 

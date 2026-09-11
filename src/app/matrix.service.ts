@@ -332,7 +332,7 @@ export class MatrixService {
    * A valid Matrix user ID must match '@localpart:domain'.
    */
   private getValidatedGuardBotId(): string | null {
-    const botId = environment.matrix?.guard_bot_user_id;
+    const botId = MatrixService.configuredGuardBotId();
     if (!botId) {
       return null;
     }
@@ -342,6 +342,20 @@ export class MatrixService {
     return botId;
   }
 
+  /**
+   * The guard bot's user id as configured: matrix.guard_bot_user_id, or
+   * "@vodle-guard:" + matrix.server_name when that is empty — the account
+   * the deployment scripts register (deploy/deploy.sh). Null without either.
+   */
+  static configuredGuardBotId(): string | null {
+    const explicit = environment.matrix?.guard_bot_user_id;
+    if (explicit) {
+      return explicit;
+    }
+    const serverName = environment.matrix?.server_name;
+    return serverName ? '@vodle-guard:' + serverName : null;
+  }
+  
   /**
    * Initialize the Matrix service with a logger
    * Call this from GlobalService after logger is available
@@ -1250,6 +1264,11 @@ export class MatrixService {
     const from_user_id = MatrixService.serverNameOf(this.userId);
     if (from_user_id) {
       return from_user_id;
+    }
+    // before a login: the configured server name; the URL's host name is
+    // only a guess (a deployment reaches its homeserver at "/")
+    if (environment.matrix?.server_name) {
+      return environment.matrix.server_name;
     }
     try {
       const url = new URL(this.homeserverUrl);

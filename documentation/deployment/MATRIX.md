@@ -7,36 +7,31 @@ A production deployment consists of
 2. a **Synapse** homeserver that the app reaches at `/_matrix/` through nginx (same origin; `nginx.conf`),
 3. the **guard bot** (`guard-bot/`), a Matrix user with admin power in every poll room that closes polls at their deadline and removes their rooms after the retention period.
 
-`docker-compose.prod.yml` wires the three together. What follows are the decisions and settings the compose file cannot make for you. The test harness (`scripts/test-matrix.sh`) configures its throw-away servers the same way, so the settings below are what CI runs the whole suite under.
+`docker-compose.prod.yml` wires the three together with a PostgreSQL database, and the scripts in [`deploy/`](../../deploy/README.md) run it on one docker host: `deploy/generate-secrets.sh` writes the secrets, `deploy/deploy.sh up` does everything below in order and is safe to run again. What follows are the decisions and settings behind them. The test harness (`scripts/test-matrix.sh`) configures its throw-away servers the same way, so the settings below are what CI runs the whole suite under.
 
 ## 1. The server name — permanent
 
-Every Matrix user id (`@<hash>:<server_name>`) and every room alias (`#vodle_poll_<pid>:<server_name>`) carries the homeserver's `server_name` forever, and the app derives the alias domain from the logged-in user id. Choose it once (`vodle.example.org`, or `matrix.vodle.example.org` if the web app lives elsewhere) and set
-
-```
-SYNAPSE_SERVER_NAME=vodle.example.org     # docker-compose.prod.yml → Synapse
-BOT_USER=@vodle-guard:vodle.example.org   # docker-compose.prod.yml → guard bot
-```
-
-and in the app's `environment.prod.ts` (or `documentation/deployment/docker/environment.substitute.ts`):
+Every Matrix user id (`@<hash>:<server_name>`) and every room alias (`#vodle_poll_<pid>:<server_name>`) carries the homeserver's `server_name` forever, and the app derives the alias domain from the logged-in user id. Choose it once (`vodle.example.org`, or `matrix.vodle.example.org` if the web app lives elsewhere) and set it in the app's `environment.prod.ts` — the one place it is written; `deploy/deploy.sh` copies it into `.env` as `SERVER_NAME`, from where `docker-compose.prod.yml` hands it to Synapse (`SYNAPSE_SERVER_NAME`) and to the bot (`BOT_USER=@vodle-guard:<server_name>`), and refuses both the placeholder and a later change:
 
 ```ts
 matrix: {
-  homeserver_url: "/",                                   // the nginx reverse proxy; or "https://vodle.example.org"
+  homeserver_url: "/",              // the nginx reverse proxy; or "https://vodle.example.org"
+  server_name: "vodle.example.org", // permanent
   enable_e2ee: true,
-  guard_bot_user_id: "@vodle-guard:vodle.example.org",
-  registration_token: "<the token from step 2>",
+  guard_bot_user_id: "",            // empty: "@vodle-guard:" + server_name, the account deploy.sh registers
+  registration_token: "",           // empty: the image build puts the token from .env here
 }
 ```
 
-If the web app is served from a different host than the homeserver, publish `https://<server_name>/.well-known/matrix/client` and, for federation, `.well-known/matrix/server` as the [Matrix specification](https://spec.matrix.org/latest/client-server-api/#well-known-uri) describes, and point `homeserver_url` at the homeserver's public URL.
+Set `magic_link_base_url` to where the app is served (`"https://vodle.example.org/#/"`) and, with a privacy statement and an imprint on the host, `privacy_statement_url: "./site/privacy.html"` and `imprint_url: "./site/impressum.html"` (the web container serves the files named in `.env` there). If the web app is served from a different host than the homeserver, publish `https://<server_name>/.well-known/matrix/client` and, for federation, `.well-known/matrix/server` as the [Matrix specification](https://spec.matrix.org/latest/client-server-api/#well-known-uri) describes, and point `homeserver_url` at the homeserver's public URL.
 
 ## 2. Synapse settings
 
-Generate the configuration once (`docker compose -f docker-compose.prod.yml run --rm synapse generate` with `SYNAPSE_SERVER_NAME` set), then add to `matrix-data/homeserver.yaml`:
+`deploy/deploy.sh` generates the configuration and the signing key with the Synapse image (once) and appends `deploy/homeserver.vodle.yaml` — the settings below plus the PostgreSQL connection — to `matrix-data/homeserver.yaml`, between markers, on every run. By hand: `docker compose -f docker-compose.prod.yml run --rm synapse generate` with `SYNAPSE_SERVER_NAME` set, then add to `matrix-data/homeserver.yaml`:
 
 ```yaml
 public_baseurl: https://vodle.example.org/
+serve_server_wellknown: true   # /.well-known/matrix/server for other homeservers (federation over 443)
 
 # --- registration (#327) -----------------------------------------------
 # vodle registers a Matrix account per user on first use, so registration
@@ -81,9 +76,9 @@ federation:
   destination_max_retry_interval: 10s
 ```
 
-Use PostgreSQL for the database (Synapse's own recommendation for anything beyond a test setup) and keep `report_stats`, `enable_metrics` and the media store as you prefer — vodle stores no media.
+Use PostgreSQL for the database (Synapse's own recommendation for anything beyond a test setup; the compose file runs one with the C locale Synapse needs) and keep `report_stats`, `enable_metrics` and the media store as you prefer — vodle stores no media (`max_upload_size: 1M`) and needs no presence (`presence: {enabled: false}`).
 
-Then create the admin account, the guard bot's account (an admin too, so it may purge rooms) and the registration token:
+Then create the admin account, the guard bot's account (an admin too, so it may purge rooms) and the registration token — `deploy/deploy.sh up` does the three through the admin API from inside the container (`deploy/synapse-admin.py`, idempotent, no password on a command line); by hand:
 
 ```sh
 docker exec -it vodle-matrix-synapse register_new_matrix_user -c /data/homeserver.yaml -u admin -p '<admin password>' --admin
@@ -94,7 +89,7 @@ curl -X POST https://vodle.example.org/_synapse/admin/v1/registration_tokens/new
   -d '{"token": "<a long random string>", "uses_allowed": null, "expiry_time": null}'
 ```
 
-Put the token into the app's configuration (step 1) and rebuild the app. Rotating it is a new token here plus a rebuild; old accounts keep working (the token is only needed to register).
+Put the token into the app's configuration (step 1) and rebuild the app (the scripted deployment builds it in from `.env`). Rotating it is a new token here plus a rebuild; old accounts keep working (the token is only needed to register).
 
 Leave `default_room_version` at Synapse's default (10 or later): poll rooms use the `knock` join rule (room version 7 or later) and voter rooms the `restricted` join rule (8 or later) — see the bot's doorman role below ([#328](https://github.com/pik-gane/vodle/issues/328)).
 
@@ -126,15 +121,16 @@ Without a running bot no deadline is enforced on the server: clients then close 
 
 - **Bot**: `GET http://guard-bot:8012/healthz` returns 200 with `{ok, syncState, lastScanAt, lastScanError, roomsJoined, closedTotal, purgedTotal, restoredTotal, recheckPending, invitedTotal, declinedTotal, settings}` while the bot syncs, 503 otherwise (`restoredTotal` counts the state events written back after a close, #334 — a few per year are the expected noise, many point at clients with wrong clocks; `invitedTotal` and `declinedTotal` count the knocks let in and left unanswered, #328 — unanswered knocks are links with a wrong password, or someone guessing); the compose file uses it as the container's healthcheck. Alert on 503, on `lastScanAt` older than a few scan intervals, and on `lastScanError`.
 - **Synapse**: `GET /health` on the client port; Prometheus metrics with `enable_metrics: true` and a `metrics` listener.
-- **Backups**: the Synapse database and `matrix-data/` (signing key, config). Every poll's data — encrypted under its poll password — lives in the database; without the signing key the server's identity is lost.
+- **Backups**: the Synapse database and `matrix-data/` (signing key, config). Every poll's data — encrypted under its poll password — lives in the database; without the signing key the server's identity is lost. `deploy/backup.sh` dumps both into `deploy/backups/` (cron it; copy them off the host); the restore recipe is in `deploy/README.md`.
 - **Guest accounts**: a magic link opened on a device without an account registers a guest account with random credentials (#193) — a normal account, indistinguishable on the server. When the guest later logs in with an address of their own, the app hands the guest's rooms over to the new account and deactivates the guest account (its rating events stay the voter rooms' state). Guests who never do so leave an account behind that logs in from one browser only; nothing in vodle depends on them staying, so an operator may deactivate accounts that have not been seen for longer than `RETENTION_DAYS` (Synapse admin API `GET /_synapse/admin/v2/users`, `last_seen_ts`).
 - **Retention and the privacy statement**: state the retention period (`RETENTION_DAYS`) in the privacy statement (`privacy_statement_url`). Participants who archived a poll keep what their app cached; after the retention period the server has no copy. The homeserver also sees room membership (who takes part in which poll, as pseudonymous hashed ids) and the plaintext deadline and lifecycle state of every poll — everything else is ciphertext ([report, §3](../../planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md)).
 
 ## 5. Before going live
 
-- [ ] `server_name` chosen; `BOT_USER`, `guard_bot_user_id` and the alias domain agree with it
-- [ ] TLS in front of nginx; `public_baseurl` set
-- [ ] registration token created and built into the app; a test registration from the app works
+- [ ] `matrix.server_name` chosen in `environment.prod.ts` (the scripts derive `BOT_USER`, `guard_bot_user_id`, `public_baseurl` and the alias domain from it)
+- [ ] TLS: the certificate files named in `.env` (`deploy/deploy.sh up` checks the name and the expiry), or a proxy of the host in front
+- [ ] registration token created and built into the app (`deploy/deploy.sh up` does both); a test registration from the app works
+- [ ] the privacy statement (naming the retention period) and the imprint served: `/site/privacy.html`, `/site/impressum.html`
 - [ ] rate limits as above; a rehearsal poll of the largest intended size runs without 429s (watch the bot log and the browser console for `M_LIMIT_EXCEEDED`)
 - [ ] the guard bot runs as an admin, its healthcheck is green, a rehearsal poll closes at its deadline and its rooms disappear after `RETENTION_DAYS` (set it to a few minutes for the rehearsal)
 - [ ] database backups scheduled and restored once

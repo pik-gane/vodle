@@ -41,6 +41,10 @@ export const environment = {
   matrix: {
     // Local Matrix homeserver URL for development
     homeserver_url: "http://localhost:8008",
+    // The homeserver's server_name (permanent in a deployment: every user id
+    // and room alias carries it); the development homeserver of
+    // docker-compose.yml is "localhost"
+    server_name: "localhost",
     // Enable Matrix E2EE (Olm/Megolm)
     enable_e2ee: true,
     // Registration token (Synapse: registration_requires_token). vodle
@@ -51,7 +55,9 @@ export const environment = {
     registration_token: "",
     // Guard bot Matrix user ID — this bot is invited to all poll and voter
     // rooms with admin power (100). It monitors deadlines and closes rooms
-    // by dropping all power levels to 0 when the deadline arrives.
+    // by dropping all power levels to 0 when the deadline arrives, and lets
+    // participants into the closed poll rooms. Empty: derived as
+    // "@vodle-guard:" + server_name.
     // Server-side enforcement: the bot runs on the server, not in the client.
     guard_bot_user_id: "@vodle-guard:localhost",
     // How long a joiner waits for the guard bot to answer their knock on a

@@ -21,6 +21,14 @@ RUN npm ci --ignore-scripts
 
 COPY . .
 
+# the token the homeserver requires to register accounts, built into the
+# app (#327); docker-compose.prod.yml passes it from .env, the source file
+# in git keeps its placeholder
+ARG REGISTRATION_TOKEN=""
+RUN if [ -n "$REGISTRATION_TOKEN" ]; then \
+      sed -i "s|registration_token: \"[^\"]*\"|registration_token: \"$REGISTRATION_TOKEN\"|" src/environments/environment.prod.ts; \
+    fi
+
 RUN npx ng build --configuration production
 
 # ---------- Stage 2: Serve ----------

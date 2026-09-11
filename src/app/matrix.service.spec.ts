@@ -1337,3 +1337,66 @@ describe('MatrixService closed poll rooms (#328)', () => {
     expect(sent[0].content.state_default).toBe(100);
   });
 });
+
+describe('MatrixService deployment settings (#327)', () => {
+  // deploy/deploy.sh registers the bot as @vodle-guard:<matrix.server_name>
+  // and leaves guard_bot_user_id empty; the app must derive the same id
+  let service: any;
+  let previous: {guard_bot_user_id: string, server_name: string};
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    spy.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+    previous = {
+      guard_bot_user_id: environment.matrix.guard_bot_user_id,
+      server_name: environment.matrix.server_name,
+    };
+  });
+
+  afterEach(() => {
+    Object.assign(environment.matrix, previous);
+  });
+
+  it('takes an explicit guard_bot_user_id as it is', () => {
+    (environment.matrix as any).guard_bot_user_id = '@doorman:example.org';
+    (environment.matrix as any).server_name = 'vodle.example.org';
+    expect(MatrixService.configuredGuardBotId()).toBe('@doorman:example.org');
+    expect(service.getValidatedGuardBotId()).toBe('@doorman:example.org');
+  });
+
+  it('derives the bot the deployment scripts register from the server name when none is configured', () => {
+    (environment.matrix as any).guard_bot_user_id = '';
+    (environment.matrix as any).server_name = 'vodle.example.org';
+    expect(MatrixService.configuredGuardBotId()).toBe('@vodle-guard:vodle.example.org');
+    expect(service.getValidatedGuardBotId()).toBe('@vodle-guard:vodle.example.org');
+  });
+
+  it('has no bot without either setting', () => {
+    (environment.matrix as any).guard_bot_user_id = '';
+    (environment.matrix as any).server_name = '';
+    expect(MatrixService.configuredGuardBotId()).toBeNull();
+    expect(service.getValidatedGuardBotId()).toBeNull();
+  });
+
+  it('names the configured server before a login and the user id\'s server after it', () => {
+    (environment.matrix as any).server_name = 'vodle.example.org';
+    service.homeserverUrl = '/';  // a deployment reaches its homeserver through nginx
+    service.userId = null;
+    expect(service.getHomeserverDomain()).toBe('vodle.example.org');
+    service.userId = '@abc:other.example.org';
+    expect(service.getHomeserverDomain()).toBe('other.example.org');
+  });
+
+  it('falls back to the homeserver URL\'s host without a configured server name', () => {
+    (environment.matrix as any).server_name = '';
+    service.userId = null;
+    service.homeserverUrl = 'https://matrix.example.net:8448';
+    expect(service.getHomeserverDomain()).toBe('matrix.example.net');
+    service.homeserverUrl = '/';
+    expect(service.getHomeserverDomain()).toBe('localhost');
+  });
+});

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Tests and CI: the build and the full suite run on every pull request against a real CouchDB and two federating Synapse homeservers, plus an end-to-end smoke test of the built app (PRs #319–#321, #323); a proxy in the harness lets a spec cut and heal the federation link (#329).
 - Simple formatting (`**bold**`, `*italics*`, paragraphs) in details texts (#214); archiving of ended polls (#83); on first start the language question is skipped when the browser's language is offered (#193, partially); a sign in the page header while the data sync is stalled.
 - Dark theme (PR #291); Tamil translation (#277).
+- Scripted deployment on one docker host (`deploy/`, #327): the server name is set once in `environment.prod.ts`, `deploy/generate-secrets.sh` writes the secrets, `deploy/deploy.sh up` configures Synapse with PostgreSQL, creates the accounts and the registration token, builds the app with the token, serves the host's privacy statement and imprint and uses the host's TLS certificate files; with backup and certificate-reload scripts and a runbook (`deploy/README.md`).
 - Guest voting (#193): a magic link opened on a device without an account takes part as a guest right away and shows the poll; when the deployment has a privacy statement, the consent checkbox sits at the bottom of the poll page and no rating is stored before it is checked; a later login with an e-mail address of one's own moves the guest's votes and polls to that account.
 
 ### Changed

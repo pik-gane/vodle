@@ -1,0 +1,62 @@
+# >>> vodle deployment settings (deploy/deploy.sh regenerates this block; edit deploy/homeserver.vodle.yaml instead)
+# Appended to the homeserver.yaml that `synapse generate` wrote; a key given
+# again here replaces the generated one (Synapse takes the last occurrence).
+# The same settings, with the reasons, are in documentation/deployment/MATRIX.md.
+
+# the app and the homeserver share the origin: nginx forwards /_matrix/ and
+# /.well-known/matrix/ to Synapse
+public_baseurl: https://__SERVER_NAME__/
+# /.well-known/matrix/server for other homeservers (federation over 443)
+serve_server_wellknown: true
+
+# PostgreSQL (the postgres service of docker-compose.prod.yml)
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: "__POSTGRES_PASSWORD__"
+    database: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+# registration (#327): vodle registers a Matrix account per user on first
+# use, so registration is open — but only with the token the app carries
+enable_registration: true
+registration_requires_token: true
+suppress_key_server_warning: true
+report_stats: false
+
+# vodle sends no media and needs no presence
+max_upload_size: 1M
+presence:
+  enabled: false
+
+# rate limits: Synapse's defaults are far below what vodle does when a poll
+# starts (one room per voter, every participant joining every voter room,
+# bursts of state events); these run the whole test suite without a 429
+rc_login:
+  address: {per_second: 1, burst_count: 20}
+  account: {per_second: 1, burst_count: 20}
+  failed_attempts: {per_second: 0.5, burst_count: 10}
+rc_registration: {per_second: 0.5, burst_count: 20}
+rc_registration_token_validity: {per_second: 1, burst_count: 20}
+rc_message: {per_second: 5, burst_count: 100}
+rc_joins:
+  local: {per_second: 5, burst_count: 100}
+  remote: {per_second: 2, burst_count: 50}
+rc_joins_per_room: {per_second: 5, burst_count: 100}
+rc_invites:
+  per_room: {per_second: 2, burst_count: 50}
+  per_user: {per_second: 2, burst_count: 50}
+  per_issuer: {per_second: 5, burst_count: 200}
+
+# federation: after a network split Synapse retries a partner only every ten
+# minutes by default; seconds keep a split short for the voters (#329).
+# For a closed deployment add: federation_domain_whitelist: []
+federation:
+  destination_min_retry_interval: 1s
+  destination_retry_multiplier: 2
+  destination_max_retry_interval: 10s
+# <<< vodle deployment settings
