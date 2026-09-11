@@ -284,6 +284,20 @@ smoke_checks() {
       [ "$(curl_here /site/privacy.html -o /dev/null -w '%{http_code}')" = 200 ] && echo "privacy statement served" || echo "PROBLEM: /site/privacy.html is not served"
     fi
   fi
+  # The rate limits are the difference between a 50-voter test poll landing
+  # in half a minute and landing over the best part of an hour: Synapse's own
+  # default is one message per five seconds and one room per 62 seconds. They
+  # only take effect at a restart, and only from the block deploy.sh appends,
+  # so this reads them back from the homeserver's own config (#327).
+  local limits
+  limits=$(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T matrix \
+    sh -c 'grep -E "^rc_message:|^rc_room_creation:" /data/homeserver.yaml | tail -n 2' 2>/dev/null || true)
+  case "$limits" in
+    *rc_message*rc_room_creation*|*rc_room_creation*rc_message*)
+      echo "rate limits in the running configuration:"; echo "$limits" | sed 's/^/  /' ;;
+    *) echo "PROBLEM: the homeserver is running without vodle's rate limits (rc_message, rc_room_creation); run deploy/deploy.sh up again to write them and restart it" ;;
+  esac
+
   local i health
   for i in $(seq 1 45); do
     health=$(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T guard-bot \

@@ -1474,6 +1474,33 @@ describe('MatrixService throttled writes (#327)', () => {
     expect(calls).toBe(3);
   });
 
+  it('paces a burst so the writes leave in a stream, not all at once', async () => {
+    const started: number[] = [];
+    const writes = Array.from({length: 4}, () => () => {
+      started.push(Date.now());
+      return Promise.resolve('written');
+    });
+    await Promise.all(writes.map(w => service.retryOnRateLimit(w)));
+    expect(started.length).toBe(4);
+    // three gaps of at least the minimum interval between four writes
+    expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * 50);
+  });
+
+  it('lets a throttled write slow down every write, not just its own retry', async () => {
+    const before = service.writeIntervalMs;
+    await expectAsync(service.retryOnRateLimit(() => Promise.reject(throttled()), 2)).toBeRejected();
+    expect(service.writeIntervalMs).toBeGreaterThan(before);
+    expect(service.writesPausedUntil).toBeGreaterThan(Date.now() - 1000);
+  });
+
+  it('wins the pace back once the server takes writes again', async () => {
+    service.writeIntervalMs = 400;
+    service.writesAcceptedInARow = 0;
+    for (let i = 0; i < 20; i++) { service.noteWriteAccepted(); }
+    expect(service.writeIntervalMs).toBe(200);
+    expect(service.writeIntervalMs).toBeGreaterThanOrEqual(50);
+  });
+
   it('does not retry a refusal', async () => {
     let calls = 0;
     const forbidden = Object.assign(new Error('no'), {httpStatus: 403, errcode: 'M_FORBIDDEN'});
@@ -1530,6 +1557,34 @@ describe('MatrixService throttled writes (#327)', () => {
     spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
     await service.processOfflineQueue();
     expect(service.offlineQueueRetryDelayMs).toBe(0);
+  });
+
+  it('joins several voter rooms at a time, and every one of them', async () => {
+    // one after the other took a second each: a newcomer to a 50-voter poll
+    // waited the best part of a minute before seeing anybody (#327)
+    const items = Array.from({length: 10}, (_, i) => i);
+    const visited: number[] = [];
+    let running = 0, highWater = 0;
+    await MatrixService.forEachConcurrently(items, 3, async (i: number) => {
+      running++;
+      highWater = Math.max(highWater, running);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      visited.push(i);
+      running--;
+    });
+    expect(visited.sort((a, b) => a - b)).toEqual(items);
+    expect(highWater).toBe(3);
+  });
+
+  it('goes on with the other rooms when one of them fails', async () => {
+    const visited: number[] = [];
+    await MatrixService.forEachConcurrently([1, 2, 3], 2, async (i: number) => {
+      try {
+        if (i === 2) { throw new Error('refused'); }
+      } catch (e) { /* the caller handles its own failures */ }
+      visited.push(i);
+    });
+    expect(visited.length).toBe(3);
   });
 
   it('does not spend a queued write\'s attempts while the server throttles', async () => {

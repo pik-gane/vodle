@@ -142,11 +142,10 @@ export class PreviewpollPage implements OnInit {
       // if test, register simulated voters:
       this.G.L.trace("PreviewpollPage.publish_button_clicked poll is_test", this.p.is_test, this.G.D.getp(this.pid, 'is_test'));
       if (this.p.is_test) {
-        // Collect all simulated voter setVoterData promises so we can
-        // await them before navigating. The room creation mutex in
-        // getOrCreateMyVoterRoom serialises the first call; subsequent
-        // calls reuse the cached room and run concurrently.
-        const simulatedPromises: Promise<void>[] = [];
+        // A test poll of 50 voters over 5 options is some 400 writes. They
+        // are not awaited here — the invitation page must not wait half a
+        // minute for them — but MatrixService paces them so the homeserver
+        // accepts them rather than refusing the tail of the burst (#327).
         for (const oid of this.p.oids) {
           const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
           if (Array.isArray(ratings)) {

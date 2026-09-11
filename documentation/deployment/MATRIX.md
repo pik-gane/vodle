@@ -93,6 +93,25 @@ federation:
   destination_max_retry_interval: 10s
 ```
 
+These take effect only when Synapse restarts, and only if they really reached
+its configuration — a homeserver that was generated before the block existed
+keeps the defaults, one message per five seconds and one room per 62 seconds,
+which is what makes a large poll appear a piece at a time. Read them back
+from the running homeserver rather than assuming:
+
+```sh
+docker compose exec matrix grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
+```
+
+`deploy/deploy.sh up` writes the block, restarts Synapse when it changed, and
+its checks print those two lines (and say so when they are missing).
+
+The app does its part too, and does not rely on the limits being generous:
+writes leave in a paced stream rather than a burst, a refusal slows every
+write down for as long as the server asks, and a refused write is retried and
+then queued rather than lost. A tight server therefore makes a poll slower to
+appear, not wrong.
+
 Use PostgreSQL for the database (Synapse's own recommendation for anything beyond a test setup; the compose file runs one with the C locale Synapse needs) and keep `report_stats`, `enable_metrics` and the media store as you prefer — vodle stores no media (`max_upload_size: 1M`) and needs no presence (`presence: {enabled: false}`).
 
 Then create the admin account, the guard bot's account (an admin too, so it may purge rooms) and the registration token — `deploy/deploy.sh up` does the three through the admin API from inside the container (`deploy/synapse-admin.py`, idempotent, no password on a command line); by hand:

@@ -251,6 +251,25 @@ no-cache` while the hashed files it names are immutable. A tab left open
 *during* the update still holds the old shell and asks for chunks that are
 gone; that tab needs a reload (`ChunkLoadError` in its console).
 
+**A poll appears a piece at a time, or people see different numbers of
+voters**: read the homeserver's rate limits back. vodle creates one room per
+voter and writes one rating per option in each, so publishing a poll of 50
+over 5 options is some 400 writes; Synapse's own defaults are one message per
+five seconds and one room per 62 seconds, and a homeserver generated before
+`deploy/homeserver.vodle.yaml` carried the limits keeps them until the block
+is written and Synapse restarts. `deploy/deploy.sh up` does both and its
+checks print the two lines; by hand:
+
+```sh
+docker compose --env-file .env -f docker-compose.prod.yml exec matrix \
+  grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
+```
+
+Nothing is lost while the limits are low — the app paces its writes, retries
+what the server refuses and queues the rest — but the poll takes minutes to
+come up instead of seconds, and until it has, its participants count
+different numbers of voters.
+
 **Backups**: `deploy/backup.sh` writes `deploy/backups/<UTC time>/` with the
 database dump (`synapse.sql.gz`), `matrix-data/` without media and logs
 (`matrix-data.tgz`: the signing key, the configuration) and a copy of `.env`,

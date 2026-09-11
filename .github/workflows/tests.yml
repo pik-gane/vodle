@@ -72,6 +72,11 @@ jobs:
       - name: Guard bot unit tests
         run: node --test guard-bot/recheck.test.js
 
+      # English is the fallback language, so a key missing there renders as
+      # itself — a heading reading "mypolls.archived" (#327):
+      - name: Every translation key a template asks for exists in English
+        run: node scripts/check-i18n-keys.js
+
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 
@@ -91,7 +96,11 @@ jobs:
       # reached the first real deployment through the gap between this
       # configuration and the one the rest of the suite uses (#327).
       - name: Build and click through the production app
-        run: scripts/production-clickthrough.sh
+        # with simulated voters, so the poll is published as a burst of
+        # writes across several rooms and both sides have to agree on how
+        # many voters there are — one client writing for ten is what a poll
+        # of fifty does to a homeserver in miniature (#327)
+        run: VODLE_SIMULATED_VOTERS=8 scripts/production-clickthrough.sh
 
       - name: Test
         # the runner's browser needs --no-sandbox; see karma.conf.js.

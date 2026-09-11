@@ -293,6 +293,38 @@ export class MatrixService {
   private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
   private static readonly MAX_RETRY_COUNT = 5;
   private static readonly MAX_QUEUE_SIZE = 1000;
+
+  /*
+  Write pacing (#327).
+
+  A poll of n voters over m options is published as roughly n*(m+3) writes in
+  one go — a room, a vid, a deadline and an announcement per voter, plus a
+  rating per option — so a 50-voter test poll over 5 options is about 400
+  writes fired within a second. That empties whatever token bucket the
+  homeserver keeps for this user, and then every one of those writes retries
+  at the same moment against a bucket that is still empty: the retries become
+  the load. Synapse's own default is 0.2 events per second, so no deployment
+  setting alone makes such a burst fit (deploy/homeserver.vodle.yaml raises
+  the limit, but vodle also has to behave on a server whose limits it does
+  not own).
+
+  Every write therefore reserves a moment to start in, and the moments are at
+  least writeIntervalMs apart, so writes leave in a stream instead of a
+  burst. A refusal pushes a shared pause out for as long as the server asked
+  and doubles the interval; a run of accepted writes halves it back, down to
+  the floor. The interval is a start-to-start spacing rather than a lock, so
+  a paced call never waits for another to finish and nothing can deadlock
+  behind a write it issued itself.
+  */
+  private static readonly WRITE_INTERVAL_MIN_MS = 50;
+  private static readonly WRITE_INTERVAL_MAX_MS = 2000;
+  private static readonly WRITES_BEFORE_SPEEDUP = 20;
+  /** How many voter rooms a newcomer joins at once (#327). */
+  private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 6;
+  private writeIntervalMs: number = MatrixService.WRITE_INTERVAL_MIN_MS;
+  private nextWriteAt: number = 0;
+  private writesPausedUntil: number = 0;
+  private writesAcceptedInARow: number = 0;
   
   // Phase 5: User data cache for fast synchronous reads
   private userDataCache: Map<string, any> = new Map();
@@ -976,8 +1008,11 @@ export class MatrixService {
   private async retryOnRateLimit<T>(fn: () => Promise<T>, maxRetries = 6): Promise<T> {
     let attempt = 0;
     while (true) {
+      await this.paceWrite();
       try {
-        return await fn();
+        const result = await fn();
+        this.noteWriteAccepted();
+        return result;
       } catch (error: any) {
         attempt++;
         if (!this.is_rate_limit_error(error) || attempt >= maxRetries) {
@@ -987,11 +1022,65 @@ export class MatrixService {
         // when a poll is published, so they are all told the same thing and
         // would come back together: the jitter spreads them instead (#327).
         const waitMs = error?.data?.retry_after_ms ?? (2000 * Math.pow(2, attempt - 1));
+        this.noteWriteThrottled(waitMs);
         const jittered = Math.round(waitMs * (1 + Math.random()));
         this.logger?.info(`Rate limited (429), retrying in ${jittered}ms (attempt ${attempt}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, jittered));
       }
     }
+  }
+
+  /**
+   * Runs `work` over `items`, at most `limit` of them at a time. Rejections
+   * are the caller's to handle inside `work`: one failure must not stop the
+   * others (a voter room that refuses a newcomer is not the others' fault).
+   */
+  static async forEachConcurrently<T>(
+    items: T[], limit: number, work: (item: T) => Promise<void>
+  ): Promise<void> {
+    let next = 0;
+    const worker = async () => {
+      while (next < items.length) {
+        await work(items[next++]);
+      }
+    };
+    await Promise.all(
+      Array.from({length: Math.max(1, Math.min(limit, items.length))}, worker));
+  }
+
+  /** Waits for this write's turn in the stream (see writeIntervalMs). */
+  private async paceWrite(): Promise<void> {
+    const now = Date.now();
+    const at = Math.max(now, this.nextWriteAt, this.writesPausedUntil);
+    this.nextWriteAt = at + this.writeIntervalMs;
+    if (at > now) {
+      await new Promise(resolve => setTimeout(resolve, at - now));
+    }
+  }
+
+  /**
+   * A refused write slows down every write, not just its own retry: the
+   * bucket it found empty is shared by all of them.
+   */
+  private noteWriteThrottled(retryAfterMs: number): void {
+    this.writesPausedUntil = Math.max(this.writesPausedUntil, Date.now() + retryAfterMs);
+    this.writeIntervalMs = Math.min(
+      MatrixService.WRITE_INTERVAL_MAX_MS, 2 * this.writeIntervalMs);
+    this.writesAcceptedInARow = 0;
+  }
+
+  /** A run of accepted writes wins the pace back, halving at a time. */
+  private noteWriteAccepted(): void {
+    if (this.writeIntervalMs <= MatrixService.WRITE_INTERVAL_MIN_MS) {
+      return;
+    }
+    this.writesAcceptedInARow++;
+    if (this.writesAcceptedInARow < MatrixService.WRITES_BEFORE_SPEEDUP) {
+      return;
+    }
+    this.writesAcceptedInARow = 0;
+    this.writeIntervalMs = Math.max(
+      MatrixService.WRITE_INTERVAL_MIN_MS, Math.round(this.writeIntervalMs / 2));
   }
 
   /**
@@ -1040,6 +1129,20 @@ export class MatrixService {
     }
   }
   
+  /**
+   * Send a timeline event to a room, paced and retried like a state event:
+   * an option, a delegation request or a delegation response is as easy to
+   * lose to a throttled homeserver as a rating is (#327).
+   */
+  async sendEvent(roomId: string, eventType: string, content: any): Promise<void> {
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    await this.retryOnRateLimit(() =>
+      this.client!.sendEvent(roomId, eventType as any, content)
+    );
+  }
+
   /**
    * Get a state event from a room
    */
@@ -1738,7 +1841,7 @@ export class MatrixService {
     );
     plContent.users = { ...(plContent.users || {}) };
     plContent.users[this.userId] = 50;
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', plContent, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', plContent, '');
     this.logger?.info("Creator demoted to power 50 after poll data written", pollId);
     
     this.logger?.exit("MatrixService.demotePollCreator");
@@ -1908,7 +2011,7 @@ export class MatrixService {
     for (const [cacheKey, voterRoomId] of this.voterRooms.entries()) {
       if (cacheKey.startsWith(`${pollId}:`) && this.client.getRoom(voterRoomId)?.getMyMembership() === 'join') {
         try {
-          await this.client.sendStateEvent(voterRoomId, 'm.room.vodle.poll.deadline' as any, { due, poll_id: pollId }, '');
+          await this.sendStateEvent(voterRoomId, 'm.room.vodle.poll.deadline' as any, { due, poll_id: pollId }, '');
         } catch (error) {
           // not our room (another voter's) — the owner copies it at creation
           this.logger?.info("MatrixService.setPollDeadline: not copied into", voterRoomId);
@@ -1974,7 +2077,7 @@ export class MatrixService {
     // Send as timeline event (immutable by Matrix protocol); the option's
     // texts are encrypted with the poll password, its id stays plain:
     try {
-      await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
+      await this.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
         option_id: optionId,
         ...(await this.pollDataContent(pollId, optionData))
       });
@@ -2200,7 +2303,7 @@ export class MatrixService {
       if (currentLevel !== undefined && currentLevel > 50) {
         content.users = { ...(content.users || {}) };
         content.users[this.userId] = 50;
-        await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+        await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
         console.log("[ensureCreatorDemoted] Creator demoted to 50 in room", roomId);
       }
     } catch (err) {
@@ -2310,7 +2413,7 @@ export class MatrixService {
     // (m.room.vodle.poll.data.*) can no longer be written by humans.
     content.state_default = lockLevel;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     console.log("[lockPollMetadata] Power levels locked to", lockLevel);
     
     // NOW demote the creator from 100 → 50. This must happen AFTER
@@ -2331,7 +2434,7 @@ export class MatrixService {
           const plAfter = await plResp.json();
           plAfter.users = { ...(plAfter.users || {}) };
           plAfter.users[this.userId] = 50;
-          await this.client.sendStateEvent(roomId, 'm.room.power_levels', plAfter, '');
+          await this.sendStateEvent(roomId, 'm.room.power_levels', plAfter, '');
           console.log("[lockPollMetadata] Creator demoted to 50 after lock");
         } else {
           console.error("[lockPollMetadata] Failed to re-fetch power levels for demotion:", plResp.status);
@@ -2388,7 +2491,7 @@ export class MatrixService {
     }
     content.users = users;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     
     this.logger?.info("Poll room made read-only", pollId);
     this.logger?.exit("MatrixService.makeRoomReadOnly");
@@ -2686,7 +2789,7 @@ export class MatrixService {
       return;
     }
     try {
-      await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
+      await this.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
       this.voterVidStored.add(roomId);
     } catch (e) {
       // a closed room, or one this account may not write to: nothing to do
@@ -2746,7 +2849,7 @@ export class MatrixService {
         // Store vodle vid in voter room state for discovery
         if (this.client) {
           try {
-            await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
+            await this.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
             this.voterVidStored.add(roomId);
             console.log("[getOrCreateVoterRoom] Stored vid", vodleVid, "in voter room", roomId);
           } catch (e) {
@@ -2925,6 +3028,8 @@ export class MatrixService {
     
     let announceCount = 0;
     let totalEvents = 0;
+    const toJoin: {cacheKey: string, effectiveId: string, voterRoomId: string, sender: string}[] = [];
+    const claimed = new Set<string>();
     
     // a closed poll (#325): voter rooms announced after the guard bot's
     // closing event are not part of the poll, so that every client counts
@@ -2984,29 +3089,15 @@ export class MatrixService {
             }
             
             const cacheKey = `${pollId}:${effectiveId}`;
-            if (this.voterRooms.has(cacheKey)) {
+            if (this.voterRooms.has(cacheKey) || claimed.has(cacheKey)) {
               console.log("[discoverVoterRooms] Already cached:", cacheKey);
               continue;
             }
-            
-            // Join the voter room (public, so joinRoom works) — through the
-            // announcer's homeserver when it is a different one:
-            try {
-              console.log("[discoverVoterRooms] Joining voter room:", voterRoomId);
-              const viaServers = MatrixService.viaServersFor(event.sender);
-              await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
-              await this.waitForRoom(voterRoomId);
-              
-              this.voterRooms.set(cacheKey, voterRoomId);
-              this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId: effectiveId });
-              await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
-              
-              console.log("[discoverVoterRooms] Joined and cached voter room:", cacheKey, "->", voterRoomId);
-              this.logger?.info("Discovered and joined voter room", pollId, effectiveId, voterRoomId);
-            } catch (error) {
-              console.error("[discoverVoterRooms] Failed to join voter room:", effectiveId, voterRoomId, error);
-              this.logger?.error("Failed to join discovered voter room", pollId, effectiveId, error);
-            }
+            claimed.add(cacheKey);
+            // joined below, several at a time: one after the other took a
+            // second each, so a newcomer to a 50-voter poll waited the best
+            // part of a minute before seeing anybody (#327)
+            toJoin.push({ cacheKey, effectiveId, voterRoomId, sender: event.sender });
           }
         }
         
@@ -3015,6 +3106,28 @@ export class MatrixService {
           keepGoing = false;
         }
       }
+      
+      await MatrixService.forEachConcurrently(toJoin, MatrixService.VOTER_ROOM_JOIN_CONCURRENCY,
+        async ({ cacheKey, effectiveId, voterRoomId, sender }) => {
+          // the room is public within the poll, so joinRoom works — through
+          // the announcer's homeserver when it is a different one:
+          try {
+            console.log("[discoverVoterRooms] Joining voter room:", voterRoomId);
+            const viaServers = MatrixService.viaServersFor(sender);
+            await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
+            await this.waitForRoom(voterRoomId);
+            
+            this.voterRooms.set(cacheKey, voterRoomId);
+            this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId: effectiveId });
+            await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
+            
+            console.log("[discoverVoterRooms] Joined and cached voter room:", cacheKey, "->", voterRoomId);
+            this.logger?.info("Discovered and joined voter room", pollId, effectiveId, voterRoomId);
+          } catch (error) {
+            console.error("[discoverVoterRooms] Failed to join voter room:", effectiveId, voterRoomId, error);
+            this.logger?.error("Failed to join discovered voter room", pollId, effectiveId, error);
+          }
+        });
     } catch (error) {
       console.error("[discoverVoterRooms] Error:", error);
       this.logger?.error("Failed to discover voter rooms from server", pollId, error);
@@ -3066,7 +3179,7 @@ export class MatrixService {
     content.users = users;
     content.users_default = 0;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     
     this.logger?.info("Voter room made read-only", pollId, voterId);
     this.logger?.exit("MatrixService.makeVoterRoomReadOnly");
@@ -3507,7 +3620,7 @@ export class MatrixService {
     
     // the id stays plain (responses refer to it); who delegates what to
     // whom is encrypted under the poll password like the other poll data:
-    await this.client.sendEvent(
+    await this.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_request' as any,
       {
@@ -3574,7 +3687,7 @@ export class MatrixService {
     const timestamp = Date.now();
     const resolvedStatus: 'accepted' | 'declined' = accept ? 'accepted' : 'declined';
     
-    await this.client.sendEvent(
+    await this.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_response' as any,
       {
