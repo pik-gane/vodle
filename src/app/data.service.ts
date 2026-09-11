@@ -634,6 +634,12 @@ export class DataService implements OnDestroy {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
+    // MatrixService.init was never called from the app: its logger stayed
+    // undefined — which is why nothing it logs through this.logger ever
+    // reached a console — and, worse, the 'online' listener it registers was
+    // never registered, so a queued write waited for the next sync tick
+    // instead of going out the moment the connection came back (#326, #327).
+    this.matrixService?.init(G.L);
     const mutations_finished = this.cancel_voter_mutations();
     // a deliberate new initialization begins, so clear any teardown state
     // left over from a previous logout/destruction (#292):
@@ -866,7 +872,14 @@ export class DataService implements OnDestroy {
             }
           }
           if (!this.matrixService.isLoggedIn()) {
-            await this.matrixService.login(email, password);
+            // The access token this device already holds is enough: a
+            // password login on every page load costs a round trip and the
+            // key derivation, and leaves a new device on the homeserver each
+            // time. It falls back to the password when there is no usable
+            // token for this address (#327).
+            if (!await this.matrixService.resumeSession(email)) {
+              await this.matrixService.login(email, password);
+            }
           }
           this.committed_credentials = this.credentials_snapshot();
           this.G.L.info("DataService: Matrix login successful, syncing user data");

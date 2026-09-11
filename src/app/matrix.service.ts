@@ -25,6 +25,7 @@ import BLAKE2s from 'blake2s-js';
 
 // Import Matrix SDK
 import { createClient } from 'matrix-js-sdk/lib/matrix';
+import { IndexedDBStore } from 'matrix-js-sdk/lib/store/indexeddb';
 import type { MatrixClient } from 'matrix-js-sdk/lib/client';
 import type { ICreateRoomOpts } from 'matrix-js-sdk/lib/@types/requests';
 
@@ -306,6 +307,8 @@ export class MatrixService {
   private static readonly HARD_QUEUE_LIMIT = 10000;   // the only place a write is ever dropped
   /** after this long a pending write is reported as stuck, not merely slow */
   private static readonly SYNC_STALLED_AFTER_MS = 30000;
+  /** how long initialisation waits for the first usable sync state (#327) */
+  private static readonly SYNC_WAIT_TIMEOUT_MS = 30000;
   private offlineQueueDroppedCount: number = 0;
   private offlineQueueRefusedCount: number = 0;
   /** writes this session issued that the server has not confirmed yet */
@@ -502,6 +505,41 @@ export class MatrixService {
   }
 
   /**
+   * Start from the access token this device already holds, instead of logging
+   * in with the password again.
+   *
+   * A password login on every page load costs a round trip and the key
+   * derivation, and leaves the homeserver a NEW DEVICE each time — a device
+   * list that grows without bound, each entry uploading its own keys. The
+   * token is what a Matrix client is supposed to keep (#327).
+   *
+   * Returns false, having left nothing behind, when there is no usable token
+   * for this address: the caller then logs in with the password as before.
+   * The stored token is only used when it belongs to the account this
+   * address derives, so an account switch never resumes the old one (#330).
+   */
+  async resumeSession(email: string): Promise<boolean> {
+    const stored = await this.loadCredentials();
+    if (!stored || !stored.accessToken || !stored.userId) {
+      return false;
+    }
+    const expected_localpart = hashEmail(email);
+    const stored_localpart = stored.userId.replace(/^@/, '').split(':')[0];
+    if (stored_localpart !== expected_localpart) {
+      this.logger?.info("MatrixService.resumeSession: the stored session is another account's, logging in instead");
+      return false;
+    }
+    try {
+      await this.initializeWithToken(stored.accessToken, stored.userId, stored.deviceId);
+      this.logger?.info("MatrixService.resumeSession: resumed the stored session", stored.userId);
+      return true;
+    } catch (error) {
+      this.logger?.warn("MatrixService.resumeSession: the stored session is no longer good, logging in", error);
+      return false;
+    }
+  }
+  
+  /**
    * Initialize Matrix client with stored credentials
    */
   async initClient(): Promise<void> {
@@ -534,11 +572,18 @@ export class MatrixService {
     this.logger?.entry("MatrixService.initializeWithToken", userId);
     
     try {
+      // A store that survives the page makes the difference between resuming
+      // a sync and doing a full one. Without it every load asks the server
+      // for the complete current state of every joined room — and vodle
+      // joins one room per voter, so a single 50-voter poll puts the account
+      // in 52 rooms (#327).
+      const store = await this.makeSyncStore(userId);
       this.client = createClient({
         baseUrl: this.homeserverUrl,
         accessToken: accessToken,
         userId: userId,
         deviceId: deviceId,
+        ...(store ? { store } : {}),
       });
       
       this.accessToken = accessToken;
@@ -593,7 +638,11 @@ export class MatrixService {
       // sync payload and avoid fetching full membership lists for
       // rooms with many participants.
       await this.client.startClient({
-        initialSyncLimit: 10,
+        // vodle reads a room's options and announcements from /messages and
+        // its data from room state, never from the initial timeline, so one
+        // event per room is enough to establish it. Ten of them across 52
+        // rooms is half a megabyte nobody looks at (#327).
+        initialSyncLimit: 1,
         lazyLoadMembers: true,
       });
       
@@ -615,7 +664,13 @@ export class MatrixService {
       
       this.logger?.info("MatrixService initialized", this.userId);
     } catch (error) {
+      // Half a client is worse than none: isLoggedIn() would say yes and the
+      // caller would skip the password login that could still have worked
+      // (#327).
       this.logger?.error("Failed to initialize Matrix client", error);
+      try { (this.client as any)?.stopClient?.(); } catch { /* never started */ }
+      this.client = null;
+      this.accessToken = null;
       throw error;
     }
     
@@ -623,35 +678,78 @@ export class MatrixService {
   }
   
   /**
+   * The sync store: IndexedDB when the browser has it, nothing when it does
+   * not (a private window, blocked site data), in which case the SDK's own
+   * memory store applies and the sync starts from scratch as before.
+   *
+   * One database per account. The store holds the rooms of whoever wrote it,
+   * so sharing one across an address change would show the old account's
+   * polls after the switch (#330).
+   */
+  private async makeSyncStore(userId: string): Promise<any> {
+    if (this.e2ee_store_in_memory) {
+      // several clients in one page (the two-client and federation specs)
+      return null;
+    }
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      return null;
+    }
+    try {
+      // `as any`: the SDK's IOpts inherits localStorage from its base type,
+      // which this file's own `Storage` import (Ionic's) shadows here
+      const store = new IndexedDBStore({
+        indexedDB: window.indexedDB,
+        localStorage: window.localStorage,
+        dbName: 'vodle-sync-' + userId.replace(/[^A-Za-z0-9]/g, '_'),
+      } as any);
+      await store.startup();
+      return store;
+    } catch (error) {
+      this.logger?.warn("MatrixService: no persistent sync store, syncing from scratch", error);
+      return null;
+    }
+  }
+  
+  /**
    * Wait for initial sync to complete
    */
-  private waitForSync(): Promise<void> {
+  private waitForSync(timeout_ms = MatrixService.SYNC_WAIT_TIMEOUT_MS): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Sync timeout'));
-      }, 30000); // 30 second timeout
-      
-      let handled = false;
+      /*
+      This used to register with `once`, which unregisters after the FIRST
+      sync event whatever that event is, while only PREPARED resolved the
+      promise. A first event of SYNCING or CATCHUP — what a client with a
+      warm store emits — therefore left the promise with nobody to settle it,
+      and the app sat on the 30-second timeout before saying a word. That is
+      the half minute the owner measured, and it then presented itself as a
+      failed login (#327).
+
+      A sync that is SYNCING or CATCHUP is a sync that works: rooms are
+      arriving. Either resolves, an ERROR rejects, and the listener is removed
+      whichever way it goes.
+      */
+      let settled = false, timer: any = null;
+      const done = (fn: () => void) => {
+        if (settled) { return; }
+        settled = true;
+        if (timer !== null) { clearTimeout(timer); }
+        try { (this.client as any)?.off?.('sync', onSync); } catch { /* no off() */ }
+        fn();
+      };
       const onSync = (state: string) => {
-        if (handled) return;
-        
-        if (state === 'PREPARED') {
-          handled = true;
-          clearTimeout(timeout);
-          resolve();
+        if (state === 'PREPARED' || state === 'SYNCING' || state === 'CATCHUP') {
+          done(resolve);
         } else if (state === 'ERROR') {
-          handled = true;
-          clearTimeout(timeout);
-          reject(new Error('Sync error'));
+          done(() => reject(new Error('Sync error')));
         }
       };
-      
-      // Use once to auto-unregister (if supported) or just track with handled flag
-      try {
-        (this.client as any).once('sync', onSync);
-      } catch {
-        // Fallback to regular listener with handled flag
-        (this.client as any).on('sync', onSync);
+      timer = setTimeout(() => done(() => reject(new Error('Sync timeout'))), timeout_ms);
+      (this.client as any).on('sync', onSync);
+      // The client may already be syncing — a state it reached before this
+      // listener existed emits no further event to wait for:
+      const already = (this.client as any)?.getSyncState?.();
+      if (already === 'PREPARED' || already === 'SYNCING' || already === 'CATCHUP') {
+        done(resolve);
       }
     });
   }
@@ -1022,6 +1120,14 @@ export class MatrixService {
         }
       }
       this.client.stopClient();
+      // The sync store now outlives the page (#327), so a session that ends
+      // must take its rooms with it: until this, leaving the app left nothing
+      // of it on the device at all, and it should stay that way.
+      try {
+        await (this.client as any).clearStores();
+      } catch (error) {
+        this.logger?.warn("MatrixService.dropSession could not clear the sync store", error);
+      }
       this.client = null;
     }
     

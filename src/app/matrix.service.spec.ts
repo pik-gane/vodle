@@ -1739,3 +1739,86 @@ describe('MatrixService throttled writes (#327)', () => {
     expect(service.scheduleOfflineQueueRetry).toHaveBeenCalled();
   });
 });
+
+
+// The owner's report: "loading the website took almost half a minute until
+// the polls showed" (#327).
+describe('MatrixService starting up (#327)', () => {
+  let service: any, storage: any;
+
+  beforeEach(() => {
+    storage = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    storage.get.and.returnValue(Promise.resolve(null));
+    storage.set.and.returnValue(Promise.resolve());
+    storage.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: storage}]});
+    service = TestBed.inject(MatrixService);
+  });
+
+  function fake_client(initial_state: string | null = null) {
+    const listeners: any = {};
+    return {
+      on: (name: string, fn: any) => { (listeners[name] = listeners[name] || []).push(fn); },
+      off: (name: string, fn: any) => {
+        listeners[name] = (listeners[name] || []).filter((l: any) => l !== fn);
+      },
+      getSyncState: () => initial_state,
+      emit: (name: string, ...args: any[]) => (listeners[name] || []).forEach((l: any) => l(...args)),
+      listenerCount: (name: string) => (listeners[name] || []).length,
+    };
+  }
+
+  it('is satisfied by a sync that is under way, not only by PREPARED', async () => {
+    // registering with `once` unregistered on the first event whatever it
+    // was, so a first event of SYNCING left nobody to settle the promise and
+    // the app sat on the 30 s timeout — the half minute in the report
+    const client = fake_client();
+    service.client = client;
+    const waited = service.waitForSync(5000);
+    client.emit('sync', 'SYNCING');
+    await expectAsync(waited).toBeResolved();
+    expect(client.listenerCount('sync')).toBe(0);   // and it stopped listening
+  });
+
+  it('does not wait for an event the client has already passed', async () => {
+    service.client = fake_client('PREPARED');
+    await expectAsync(service.waitForSync(5000)).toBeResolved();
+  });
+
+  it('gives up on a sync error rather than on the clock', async () => {
+    const client = fake_client();
+    service.client = client;
+    const waited = service.waitForSync(5000);
+    client.emit('sync', 'ERROR');
+    await expectAsync(waited).toBeRejected();
+    expect(client.listenerCount('sync')).toBe(0);
+  });
+
+  it('resumes the stored session instead of logging in again', async () => {
+    const localpart = hashEmail('someone@example.org');
+    storage.get.and.returnValue(Promise.resolve(
+      {accessToken: 'tok', userId: '@' + localpart + ':example.org', deviceId: 'DEV'}));
+    const init = spyOn(service, 'initializeWithToken').and.returnValue(Promise.resolve());
+    expect(await service.resumeSession('someone@example.org')).toBeTrue();
+    expect(init).toHaveBeenCalledWith('tok', '@' + localpart + ':example.org', 'DEV');
+  });
+
+  it('never resumes another account\'s session', async () => {
+    // an address change hands the polls to a new account (#330); resuming the
+    // old token would put the app back into the account it just left
+    storage.get.and.returnValue(Promise.resolve(
+      {accessToken: 'tok', userId: '@someone-else:example.org', deviceId: 'DEV'}));
+    const init = spyOn(service, 'initializeWithToken');
+    expect(await service.resumeSession('someone@example.org')).toBeFalse();
+    expect(init).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the password when the stored token no longer works', async () => {
+    const localpart = hashEmail('someone@example.org');
+    storage.get.and.returnValue(Promise.resolve(
+      {accessToken: 'stale', userId: '@' + localpart + ':example.org', deviceId: 'DEV'}));
+    spyOn(service, 'initializeWithToken').and.returnValue(Promise.reject(new Error('M_UNKNOWN_TOKEN')));
+    expect(await service.resumeSession('someone@example.org')).toBeFalse();
+    expect(service.isLoggedIn()).toBeFalse();   // and nothing half-started is left behind
+  });
+});
