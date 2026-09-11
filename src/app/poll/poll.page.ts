@@ -191,6 +191,14 @@ export class PollPage implements OnInit {
 
   onDataChange() {
     this.G.L.entry("PollPage.onDataChange");
+    if (!this.ready || !this.p) {
+      // the Matrix backend reports data as it arrives, which on a fresh
+      // device starts before this page has its poll (onDataReady); there is
+      // nothing to tally yet, and onDataReady tallies once it has (#327 —
+      // this threw once per arriving voter room on a newcomer's first load)
+      this.G.L.trace("PollPage.onDataChange before the poll is ready, nothing to do");
+      return;
+    }
     this.p.tally_all();
     this.update_order();
     this.update_delegation_info();

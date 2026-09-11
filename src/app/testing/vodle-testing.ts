@@ -103,6 +103,7 @@ export function global_service_stub(): any {
     N: {
       dismiss: () => {},
       unseen: () => [],
+      filter: () => [],
     },
     Del: {},
   };
