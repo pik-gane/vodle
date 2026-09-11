@@ -361,6 +361,11 @@ export class MatrixService {
   private static readonly WRITES_BEFORE_SPEEDUP = 20;
   /** How many voter rooms a newcomer joins at once (#327). */
   private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 6;
+  /** How many voter rooms are read from the server at once (#327). */
+  private static readonly VOTER_ROOM_READ_CONCURRENCY = 8;
+  /** what the reads cost, for the record and for the benchmark (#327) */
+  ratingsFromStore = 0;
+  ratingsFromServer = 0;
   private writeIntervalMinMs: number = MatrixService.writeIntervalFloorMs();
   private writeIntervalMs: number = MatrixService.writeIntervalFloorMs();
   private writeBurst: number = MatrixService.writeBurstSize();
@@ -3665,13 +3670,29 @@ export class MatrixService {
     
     const accessToken = this.client.getAccessToken();
     
-    // For each voter room, fetch state events from server REST API
-    // (SDK sync store may not have state for freshly-joined rooms)
-    for (const { voterId, roomId } of voterRoomEntries) {
+    /*
+    One voter room at a time, each a full GET /state, awaited inside a for-of:
+    fifty serial round trips for a fifty-voter poll, and they ran for every
+    poll the user had while the poll list was still blank (#327).
+
+    The sync has already delivered these rooms' state — the client is IN these
+    rooms — so the first place to look is the SDK's own store, which costs
+    nothing. A room whose vodle state has not arrived there yet (freshly
+    joined, sync still catching up) still goes to the server, and those go
+    several at a time rather than one after the other.
+    */
+    await MatrixService.forEachConcurrently(voterRoomEntries,
+      MatrixService.VOTER_ROOM_READ_CONCURRENCY,
+      async ({ voterId, roomId }) => {
       const voterRatings = new Map<string, number>();
       let discoveredVid: string | null = null;
       
       try {
+        let stateEvents: any[] | null = this.voterRoomStateFromStore(roomId);
+        if (stateEvents) {
+          this.ratingsFromStore++;
+        } else {
+          this.ratingsFromServer++;
         const encodedRoomId = encodeURIComponent(roomId);
         const stateUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
         
@@ -3682,10 +3703,11 @@ export class MatrixService {
         
         if (!resp.ok) {
           console.error("[getRatings] Failed to fetch state for voter room:", roomId, "status:", resp.status);
-          continue;
+          return;                       // this room only; the others go on
         }
         
-        const stateEvents: any[] = await resp.json();
+        stateEvents = await resp.json();
+        }
         console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
           "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
         
@@ -3732,9 +3754,10 @@ export class MatrixService {
       if (voterRatings.size > 0) {
         ratings.set(effectiveVoterId, voterRatings);
       }
-    }
+    });
     
-    console.log("[getRatings] DONE. Total voters with ratings:", ratings.size);
+    console.log("[getRatings] DONE. Total voters with ratings:", ratings.size,
+      "| read from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer);
     
     // Cache the result
     this.ratingCaches.set(pollId, ratings);
@@ -5163,6 +5186,35 @@ export class MatrixService {
       this.logger?.warn("MatrixService.reconcileOwnRatings wrote back", rewritten, "rating(s) the server did not have", pollId);
     }
     return rewritten;
+  }
+  
+  /**
+   * A voter room's state as the SDK already holds it, or null when this
+   * client cannot be sure it holds all of it.
+   *
+   * "Cannot be sure" is the whole point: a room the client has joined but
+   * whose sync has not arrived has a Room object with a few events in it, and
+   * reading ratings from that would quietly report a voter as having none.
+   * Every voter room carries the poll's deadline and, since the room was
+   * created, its vid; either is evidence that this room's vodle state has
+   * arrived. Without one, the caller asks the server (#327).
+   */
+  private voterRoomStateFromStore(roomId: string): any[] | null {
+    const events = (this.client?.getRoom(roomId) as any)?.currentState?.events;
+    if (!events || typeof events.forEach !== 'function') {
+      return null;
+    }
+    const out: any[] = [];
+    let vodle_state_arrived = false;
+    events.forEach((byStateKey: any, eventType: string) => {
+      if (eventType === 'm.room.vodle.voter.vid' || eventType === 'm.room.vodle.poll.deadline') {
+        vodle_state_arrived = true;
+      }
+      byStateKey.forEach((event: any) => {
+        out.push({ type: eventType, content: event?.getContent ? event.getContent() : event?.content });
+      });
+    });
+    return vodle_state_arrived ? out : null;
   }
   
   /** The ratings a voter room actually holds, read from the server. */
