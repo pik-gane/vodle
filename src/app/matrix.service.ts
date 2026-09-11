@@ -3266,11 +3266,12 @@ export class MatrixService {
    * A voter room this device joined in an earlier session, put back into the
    * in-memory maps.
    *
-   * True when there is one and the client's sync still holds it — which is
-   * what says this device is still a member, and is why a room remembered
-   * but since left is joined again rather than trusted. Both maps are what
-   * the rating handlers look the room up in, so rehydrating them is what
-   * makes the join unnecessary (#327).
+   * True when there is one and this device is still *joined* to it
+   * according to its own sync. Membership, not mere presence: the SDK
+   * keeps a room it has left in the store too, and trusting that would
+   * skip the join for a room whose state this device can no longer read.
+   * Both maps are what the rating handlers look the room up in, so
+   * rehydrating them is what makes the join unnecessary (#327).
    */
   private async rememberedVoterRoom(pollId: string, voterId: string, cacheKey: string): Promise<boolean> {
     let stored: string | null = null;
@@ -3280,7 +3281,7 @@ export class MatrixService {
       this.logger?.warn("MatrixService could not read a remembered voter room", cacheKey, error);
       return false;
     }
-    if (!stored || !this.client?.getRoom(stored)) {
+    if (!stored || this.client?.getRoom(stored)?.getMyMembership() !== 'join') {
       return false;
     }
     this.voterRooms.set(cacheKey, stored);

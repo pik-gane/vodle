@@ -1899,7 +1899,8 @@ describe('MatrixService opening a poll costs what it must, once (#327)', () => {
     timeline_of(announce('v1', '!v1:hs.example'));
     storage.get.and.callFake(async (key: string) =>
       key === 'voter_room_p1:v1' ? '!v1:hs.example' : null);
-    service.client.getRoom = (id: string) => id === '!v1:hs.example' ? {roomId: id} : null;
+    service.client.getRoom = (id: string) =>
+      id === '!v1:hs.example' ? {roomId: id, getMyMembership: () => 'join'} : null;
     await service.discoverVoterRooms('p1');
     expect(service.client.joinRoom).not.toHaveBeenCalled();
     // and the maps the rating handlers look the room up in are filled again:
@@ -1912,7 +1913,10 @@ describe('MatrixService opening a poll costs what it must, once (#327)', () => {
     timeline_of(announce('v1', '!v1:hs.example'));
     storage.get.and.callFake(async (key: string) =>
       key === 'voter_room_p1:v1' ? '!v1:hs.example' : null);
-    service.client.getRoom = (_id: string) => null;   // the sync does not have it
+    // the SDK keeps a room it has left in the store, so mere presence is
+    // not membership:
+    service.client.getRoom = (id: string) =>
+      id === '!v1:hs.example' ? {roomId: id, getMyMembership: () => 'leave'} : null;
     await service.discoverVoterRooms('p1');
     expect(service.client.joinRoom).toHaveBeenCalled();
   });
