@@ -492,6 +492,10 @@
         "no-recently-closed-polls-2": "Vodle kennt keine beendeten Abstimmungen, an denen Du teilgenommen hast.",
         "no-recently-closed-polls-1": "Wenn Du eine alte Einladung zu einer bereits beendeten Abstimmung hast, kannst Du den Link in der Einladung anklicken, um die Ergebnisse zu sehen.",
         "older": "Älter",
+        "archived": "Archiviert",
+        "no-archived-polls": "Du hast keine beendeten Abstimmungen archiviert. Archivierte Abstimmungen bleiben erhalten, während andere beendete Abstimmungen einige Zeit nach ihrem Ende von diesem Gerät entfernt werden.",
+        "archive": "Diese Abstimmung ins Archiv verschieben",
+        "unarchive": "Diese Abstimmung aus dem Archiv holen",
         "drafts": "Entwürfe",
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
         "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf ‚+‘ rechts unten!"

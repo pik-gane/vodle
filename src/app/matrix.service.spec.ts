@@ -1503,6 +1503,25 @@ describe('MatrixService throttled writes (#327)', () => {
     expect(queued).not.toHaveBeenCalled();
   });
 
+  it('queues a lost announcement, because the voter room would be invisible for good', async () => {
+    // a lost rating is repairable; a lost announcement is not — nobody else
+    // ever learns the room exists, so the vote is never counted (#327)
+    service.client = {sendEvent: () => Promise.reject(throttled()), getUserId: () => '@alice:example.org'};
+    spyOn(service, 'getPollRoom').and.returnValue(Promise.resolve('!poll:example.org'));
+    const queued = spyOn(service, 'enqueueOfflineEvent').and.returnValue(Promise.resolve());
+    await service.announceVoterRoom('pid', '!voter:example.org', 'vid7');
+    expect(queued).toHaveBeenCalled();
+    expect(queued.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining(
+      {type: 'voter_announce', pollId: 'pid', voterRoomId: '!voter:example.org', voterId: 'vid7'}));
+  });
+
+  it('replays a queued announcement', async () => {
+    const announce = spyOn(service, 'announceVoterRoom').and.returnValue(Promise.resolve());
+    await service.processQueuedEvent({id: '1', type: 'voter_announce', pollId: 'pid',
+      voterRoomId: '!voter:example.org', voterId: 'vid7', timestamp: Date.now(), retryCount: 0});
+    expect(announce).toHaveBeenCalledWith('pid', '!voter:example.org', 'vid7');
+  });
+
   it('starts waiting from the short end again once a write goes through', async () => {
     service.client = {};
     service.offlineQueue = [{id: '1', type: 'user_data', key: 'k', value: 1, timestamp: Date.now(), retryCount: 0}];

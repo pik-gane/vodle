@@ -165,7 +165,7 @@ export interface PollEventListener {
  */
 export interface QueuedEvent {
   id: string;
-  type: 'rating' | 'delegation_request' | 'delegation_response' | 'poll_data' | 'voter_data' | 'user_data';
+  type: 'rating' | 'delegation_request' | 'delegation_response' | 'poll_data' | 'voter_data' | 'user_data' | 'voter_announce';
   pollId?: string;
   optionId?: string;
   rating?: number;
@@ -177,6 +177,7 @@ export interface QueuedEvent {
   key?: string;
   value?: any;
   voterId?: string;
+  voterRoomId?: string;
   timestamp: number;
   retryCount: number;
 }
@@ -2802,11 +2803,18 @@ export class MatrixService {
       if (vodleVid) {
         announceContent.vodle_vid = vodleVid;
       }
-      await this.client.sendEvent(pollRoomId, 'm.room.vodle.voter.announce' as any, announceContent);
+      await this.retryOnRateLimit(() =>
+        this.client!.sendEvent(pollRoomId, 'm.room.vodle.voter.announce' as any, announceContent));
       console.log("[announceVoterRoom] Announced voter room", voterRoomId, "voter_id=", effectiveVoterId, "vid=", vodleVid);
       this.logger?.info("Voter room announced in poll room", pollId, voterRoomId);
     } catch (error) {
-      this.logger?.error("Failed to announce voter room", pollId, error);
+      // This one must not be dropped. A lost rating can be repaired — the
+      // room is known and the guard bot re-reads it — but a lost
+      // announcement makes the whole voter room invisible to everyone else
+      // for good: the vote exists and is never counted. Queue it (#327).
+      this.logger?.error("Failed to announce voter room, queueing", pollId, error);
+      await this.enqueueOfflineEvent({type: 'voter_announce', pollId,
+        voterRoomId, voterId: vodleVid || this.userId});
     }
     
     this.logger?.exit("MatrixService.announceVoterRoom");
@@ -4569,6 +4577,14 @@ export class MatrixService {
         }
         break;
       
+      case 'voter_announce':
+        if (event.pollId && event.voterRoomId) {
+          await this.announceVoterRoom(event.pollId, event.voterRoomId, event.voterId);
+        } else {
+          throw new Error(`Malformed voter_announce event: missing required fields (id: ${event.id})`);
+        }
+        break;
+
       case 'user_data':
         if (event.key !== undefined) {
           await this.setUserData(event.key, event.value);
