@@ -160,16 +160,55 @@ PUBLIC_ORIGIN=https://the.hosts.own.name:8443     # .env
 ```
 
 vodle's own app does not mind (it talks to `/_matrix/` on its own origin),
-and `deploy.sh up` says so. Federation with other homeservers needs
-`https://vodle.example.org/.well-known/matrix/server` — on whatever serves
-that name, not on this host — to answer
+and `deploy.sh up` says so. Federation with other homeservers needs one
+file — `https://vodle.example.org/.well-known/matrix/server`, on whatever
+web server answers for that name, which is usually not this host — saying
+where the homeserver really is:
 
 ```json
 {"m.server": "the.hosts.own.name:8443"}
 ```
 
-with `Content-Type: application/json`. Without that file the deployment
-works on its own and only federation is missing.
+It must come back with `Content-Type: application/json`. In nginx, two
+lines in the `server` block that serves the name over HTTPS:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name vodle.example.org;
+    # ... the certificate and whatever this name already does ...
+
+    location = /.well-known/matrix/server {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin *;
+        return 200 '{"m.server": "the.hosts.own.name:8443"}';
+    }
+}
+```
+
+`location =` is an exact match and beats every prefix match, so this works
+even in a `server` block whose `location /` redirects everything
+elsewhere — a name that exists only to forward to the deployment can still
+carry the file. Reload nginx (`nginx -t && nginx -s reload`) and check:
+
+```sh
+curl https://vodle.example.org/.well-known/matrix/server
+```
+
+Third-party Matrix clients (Element and friends) find the homeserver
+through a second file, which vodle's own app never reads because it talks
+to its own origin:
+
+```nginx
+    location = /.well-known/matrix/client {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin *;
+        return 200 '{"m.homeserver": {"base_url": "https://the.hosts.own.name:8443"}}';
+    }
+```
+
+Without these files the deployment works on its own; only federation with
+other homeservers, and other people's Matrix clients, are missing.
 
 ## Operations
 
