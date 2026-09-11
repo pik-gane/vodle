@@ -100,7 +100,7 @@ which is what makes a large poll appear a piece at a time. Read them back
 from the running homeserver rather than assuming:
 
 ```sh
-docker compose exec matrix grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
+docker compose exec synapse grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
 ```
 
 `deploy/deploy.sh up` writes the block, restarts Synapse when it changed, and

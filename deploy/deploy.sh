@@ -289,14 +289,20 @@ smoke_checks() {
   # default is one message per five seconds and one room per 62 seconds. They
   # only take effect at a restart, and only from the block deploy.sh appends,
   # so this reads them back from the homeserver's own config (#327).
+  # The service is named `synapse` in docker-compose.prod.yml. A failure to
+  # reach it at all is reported as that, not as missing limits: a container
+  # that is not running would otherwise look like a misconfigured one.
   local limits
-  limits=$(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T matrix \
-    sh -c 'grep -E "^rc_message:|^rc_room_creation:" /data/homeserver.yaml | tail -n 2' 2>/dev/null || true)
-  case "$limits" in
-    *rc_message*rc_room_creation*|*rc_room_creation*rc_message*)
-      echo "rate limits in the running configuration:"; echo "$limits" | sed 's/^/  /' ;;
-    *) echo "PROBLEM: the homeserver is running without vodle's rate limits (rc_message, rc_room_creation); run deploy/deploy.sh up again to write them and restart it" ;;
-  esac
+  if limits=$(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T synapse \
+      sh -c 'grep -E "^rc_message:|^rc_room_creation:" /data/homeserver.yaml | tail -n 2' 2>&1); then
+    case "$limits" in
+      *rc_message*rc_room_creation*|*rc_room_creation*rc_message*)
+        echo "rate limits in the running configuration:"; echo "$limits" | sed 's/^/  /' ;;
+      *) echo "PROBLEM: the homeserver is running without vodle's rate limits (rc_message, rc_room_creation); run deploy/deploy.sh up again to write them and restart it" ;;
+    esac
+  else
+    echo "note: could not read the rate limits from the homeserver container: $limits"
+  fi
 
   local i health
   for i in $(seq 1 45); do

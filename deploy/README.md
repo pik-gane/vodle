@@ -261,9 +261,14 @@ is written and Synapse restarts. `deploy/deploy.sh up` does both and its
 checks print the two lines; by hand:
 
 ```sh
-docker compose --env-file .env -f docker-compose.prod.yml exec matrix \
+docker compose --env-file .env -f docker-compose.prod.yml exec synapse \
   grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
 ```
+
+(`synapse` is the service's name in `docker-compose.prod.yml`; "service … is
+not running" means the container is down — `docker compose --env-file .env -f
+docker-compose.prod.yml ps` says which are, and `deploy/deploy.sh up` starts
+them.)
 
 Nothing is lost while the limits are low — the app paces its writes, retries
 what the server refuses and queues the rest — but the poll takes minutes to
