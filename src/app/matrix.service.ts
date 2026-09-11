@@ -313,6 +313,11 @@ export class MatrixService {
   private offlineQueueRefusedCount: number = 0;
   /** writes this session issued that the server has not confirmed yet */
   private writesInFlight: number = 0;
+  /** whether a login, a registration or a resume is under way. A write made
+   *  while the session is still starting is queued rather than refused: the
+   *  start no longer blocks the app, so writes can now arrive before the
+   *  client exists (#327). */
+  private loginInProgress = false;
   
   /*
   What this device believes it has voted (#327).
@@ -524,6 +529,15 @@ export class MatrixService {
    * address derives, so an account switch never resumes the old one (#330).
    */
   async resumeSession(email: string): Promise<boolean> {
+    this.loginInProgress = true;
+    try {
+      return await this.resumeSessionInner(email);
+    } finally {
+      this.loginInProgress = false;
+    }
+  }
+  
+  private async resumeSessionInner(email: string): Promise<boolean> {
     const stored = await this.loadCredentials();
     if (!stored || !stored.accessToken || !stored.userId) {
       return false;
@@ -773,6 +787,7 @@ export class MatrixService {
     const emailHash = hashEmail(email);
     this.logger?.entry("MatrixService.login", emailHash);
     
+    this.loginInProgress = true;
     try {
       const tempClient = createClient({ baseUrl: this.homeserverUrl });
       const response = await this.passwordLogin(tempClient, email, password);
@@ -805,6 +820,8 @@ export class MatrixService {
     } catch (error) {
       this.logger?.error("MatrixService.login/register failed", error);
       throw error;
+    } finally {
+      this.loginInProgress = false;
     }
     
     this.logger?.exit("MatrixService.login");
@@ -1513,13 +1530,20 @@ export class MatrixService {
   async setUserData(key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setUserData", key);
     
-    // No client at all is a programming error, not a server that is busy:
-    // it must not be queued and quietly retried for ever.
-    if (!this.client) {
+    // No client and no login under way is a programming error, not a server
+    // that is busy: it must not be queued and quietly retried for ever. A
+    // client that is still starting is a different matter — see below.
+    if (!this.client && !this.loginInProgress) {
       throw new Error("Matrix client not initialized");
     }
     this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       const roomId = await this.getUserRoom();
       const eventType = `m.room.vodle.user.${key}`;
       // encrypted with the user password (see userDataContent):
@@ -2740,13 +2764,20 @@ export class MatrixService {
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setPollData", pollId, key);
     
-    // No client at all is a programming error, not a server that is busy:
-    // it must not be queued and quietly retried for ever.
-    if (!this.client) {
+    // No client and no login under way is a programming error, not a server
+    // that is busy: it must not be queued and quietly retried for ever. A
+    // client that is still starting is a different matter — see below.
+    if (!this.client && !this.loginInProgress) {
       throw new Error("Matrix client not initialized");
     }
     this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       const roomId = await this.getPollRoom(pollId);
       if (!roomId) {
         throw new Error(`Poll room not found for poll ${pollId}`);
@@ -3456,12 +3487,18 @@ export class MatrixService {
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setVoterData", pollId, key);
     
-    if (!this.client) {
+    if (!this.client && !this.loginInProgress) {
       throw new Error("Matrix client not initialized");
     }
     
     this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       // Voter data is stored as state events in the voter's own room.
       // Every voter (real or simulated) has a separate room.
       // The room owner (power 50) can write; everyone else is read-only (power 0).

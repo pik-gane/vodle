@@ -1794,6 +1794,24 @@ describe('MatrixService starting up (#327)', () => {
     expect(client.listenerCount('sync')).toBe(0);
   });
 
+  it('queues a write made while the session is still starting, and refuses one made with no session at all', async () => {
+    // the app no longer waits for the login before it starts, so a vote can
+    // now arrive before the client exists (#327)
+    service.client = null;
+    const queued = spyOn(service, 'enqueueOfflineEvent').and.returnValue(Promise.resolve());
+    spyOn(service, 'getOrCreateVoterRoom').and.returnValue(Promise.resolve('!voter:example.org'));
+    spyOn(service, 'pollDataContent').and.returnValue(Promise.resolve({value: 7}));
+
+    await expectAsync(service.setVoterData('pid', 'vid', 'rating.oid', 7)).toBeRejected();
+    expect(queued).not.toHaveBeenCalled();
+
+    service.loginInProgress = true;
+    await service.setVoterData('pid', 'vid', 'rating.oid', 7);   // must not throw
+    expect(queued).toHaveBeenCalled();
+    expect(queued.calls.mostRecent().args[0]).toEqual(
+      jasmine.objectContaining({type: 'voter_data', pollId: 'pid', key: 'rating.oid', value: 7}));
+  });
+
   it('resumes the stored session instead of logging in again', async () => {
     const localpart = hashEmail('someone@example.org');
     storage.get.and.returnValue(Promise.resolve(

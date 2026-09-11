@@ -307,6 +307,9 @@ export class DataService implements OnDestroy {
   
   private restored_user_cache = false;
   private restored_poll_caches = false;
+  /** resolves once the background Matrix login has finished; the start does
+   *  not wait for it, everything that needs the homeserver does (#327) */
+  private matrix_ready: Promise<void> = Promise.resolve();
 
   // current page, used for notifying of changes method:
   page: any;
@@ -855,13 +858,28 @@ export class DataService implements OnDestroy {
       }
     }
 
-    // Phase 2: Login to Matrix if flag is set (SYNCHRONOUS/BLOCKING)
+    /*
+    The Matrix login no longer stands between the user and their polls
+    (#327).
+
+    Everything the poll list shows — the polls, their titles, their state,
+    the ratings and even the computed tallies — was restored from this
+    device's own storage a few lines above (state_attributes). The app
+    nevertheless waited here for a login, a sync of every room and a read of
+    every poll before it would clear the spinner, which is how showing a list
+    that was already in hand came to take half a minute.
+
+    So: the login runs, and the rest of the start does not wait for it.
+    Anything that needs the homeserver awaits `matrix_ready` instead — see
+    connect_to_remote_poll_db and the write paths — and a write made before
+    it resolves is queued by the offline queue rather than lost.
+    */
     if (environment.useMatrixBackend) {
       const email = this.user_cache['email'];
       const password = this.user_cache['password'];
       if (email && password) {
-        this.G.L.info("DataService: Logging into Matrix backend (blocking)");
-        this.G.add_spinning_reason("matrix-login");
+        this.G.L.info("DataService: logging into the Matrix backend in the background");
+        this.matrix_ready = (async () => {
         try {
           if (pending_move) {
             // the move logs in as the new account itself (#330, #193):
@@ -905,9 +923,12 @@ export class DataService implements OnDestroy {
           }
           
           this.report_login_failure(errorMessage);
-        } finally {
-          this.G.remove_spinning_reason("matrix-login");
         }
+        })();
+        // the start does not wait for it, but a failure must not become an
+        // unhandled rejection either:
+        this.matrix_ready.catch(err =>
+          this.G.L.error("DataService: the background Matrix login failed", err));
       }
     }
 
@@ -1530,6 +1551,9 @@ export class DataService implements OnDestroy {
 
     // Phase 12: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
+      // The start no longer waits for the login (#327), so this does: it is
+      // the first thing here that needs a homeserver.
+      const after_login = this.matrix_ready.catch(() => { /* reported where it failed */ });
       // For Matrix backend, join the poll room and create voter room instead of PouchDB replication.
       // A poll joined via a magic link is only ever joined, never created
       // here: a link to a poll that cannot be found must fail, not silently
@@ -1541,7 +1565,7 @@ export class DataService implements OnDestroy {
         this.setp(pid, 'origin_server', origin_server);
       }
       origin_server = origin_server || this.getp(pid, 'origin_server') || undefined;
-      const room_promise: Promise<string> = origin_server
+      const room_promise: Promise<string> = after_login.then(() => origin_server
         ? this.matrixService.setPollOrigin(pid, origin_server)
             .then(() => this.matrixService.getPollRoom(pid))
             .then(roomId => {
@@ -1550,7 +1574,7 @@ export class DataService implements OnDestroy {
               }
               return roomId;
             })
-        : this.matrixService.getOrCreatePollRoom(pid, '');
+        : this.matrixService.getOrCreatePollRoom(pid, ''));
       return room_promise.then(async (roomId) => {
         console.log("[connect_to_remote_poll_db] getOrCreatePollRoom returned roomId:", roomId, "for pid:", pid);
 
