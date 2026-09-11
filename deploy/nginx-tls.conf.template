@@ -82,6 +82,16 @@ server {
         try_files $uri =404;
     }
 
+    # The shell is the one file that is not content-hashed, and it names the
+    # hashed chunks of the build it came from. A browser that keeps a cached
+    # copy across a redeployment asks for chunks this server no longer has,
+    # and the app dies with a ChunkLoadError on the first lazy route. So it
+    # is revalidated on every load (a 304 when nothing changed), while the
+    # hashed files above stay immutable for a year.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
     gzip_min_length 1000;

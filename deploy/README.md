@@ -245,6 +245,11 @@ without a port).
 
 **Update to a newer vodle**: `deploy/deploy.sh update` (pull, rebuild,
 restart; polls keep running — clients reconnect). Before updating, `deploy/backup.sh`.
+A browser that had the app open across the update reloads it by itself on
+the next navigation, because the shell is served with `Cache-Control:
+no-cache` while the hashed files it names are immutable. A tab left open
+*during* the update still holds the old shell and asks for chunks that are
+gone; that tab needs a reload (`ChunkLoadError` in its console).
 
 **Backups**: `deploy/backup.sh` writes `deploy/backups/<UTC time>/` with the
 database dump (`synapse.sql.gz`), `matrix-data/` without media and logs
