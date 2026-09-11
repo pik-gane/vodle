@@ -1391,6 +1391,33 @@ describe('MatrixService deployment settings (#327)', () => {
     expect(service.getHomeserverDomain()).toBe('other.example.org');
   });
 
+  it('resolves a relative homeserver URL against the page the app is served from', () => {
+    // a deployment configures "/": the app's own origin, where nginx
+    // forwards /_matrix/ to Synapse (#327)
+    const origin = window.location.origin;
+    expect(MatrixService.resolveHomeserverUrl('/')).toBe(origin);
+    expect(MatrixService.resolveHomeserverUrl('')).toBe(origin);
+    expect(MatrixService.resolveHomeserverUrl(null)).toBe(origin);
+    expect(MatrixService.resolveHomeserverUrl('/matrix/')).toBe(origin + '/matrix');
+    expect(MatrixService.resolveHomeserverUrl('matrix')).toBe(origin + '/matrix');
+  });
+
+  it('leaves an absolute homeserver URL alone, without its trailing slash', () => {
+    // the SDK concatenates baseUrl + "/_matrix/..." and so does this service
+    expect(MatrixService.resolveHomeserverUrl('https://matrix.example.org')).toBe('https://matrix.example.org');
+    expect(MatrixService.resolveHomeserverUrl('https://matrix.example.org/')).toBe('https://matrix.example.org');
+    expect(MatrixService.resolveHomeserverUrl('http://localhost:8008//')).toBe('http://localhost:8008');
+  });
+
+  it('builds a valid request URL from what it resolved', () => {
+    // matrix-js-sdk: new URL(baseUrlWithoutTrailingSlash + prefix + path)
+    for (const configured of ['/', '', '/matrix', 'https://matrix.example.org/']) {
+      const base = MatrixService.resolveHomeserverUrl(configured);
+      expect(() => new URL(base + '/_matrix/client/v3/login')).not.toThrow();
+      expect(new URL(base + '/_matrix/client/v3/login').pathname).toContain('/_matrix/client/v3/login');
+    }
+  });
+
   it('falls back to the homeserver URL\'s host without a configured server name', () => {
     (environment.matrix as any).server_name = '';
     service.userId = null;

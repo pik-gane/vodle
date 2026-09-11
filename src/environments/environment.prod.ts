@@ -46,8 +46,10 @@ export const environment = {
     // In production, Matrix API is served via nginx reverse proxy on the
     // same origin. The browser talks to /_matrix/* which nginx forwards
     // to Synapse internally. The SDK uses this as the base URL and appends
-    // /_matrix/client/... paths to it.  Override with your actual domain
-    // (e.g. "https://vodle.example.com") if not using the reverse proxy.
+    // /_matrix/client/... paths to it.  "/" (or any path, e.g. "/matrix")
+    // means the origin the app is served from and is resolved against it at
+    // start; override with the homeserver's own URL (e.g.
+    // "https://matrix.vodle.example.org") when it is served elsewhere.
     homeserver_url: "/",
     // The homeserver's server_name — PERMANENT: every user id
     // (@<hash>:<server_name>) and every room alias carries it forever.

@@ -305,7 +305,31 @@ export class MatrixService {
   constructor(
     private storage: Storage
   ) {
-    this.homeserverUrl = environment.matrix.homeserver_url;
+    this.homeserverUrl = MatrixService.resolveHomeserverUrl(environment.matrix.homeserver_url);
+  }
+
+  /**
+   * The homeserver's base URL, absolute and without a trailing slash.
+   *
+   * A deployment configures matrix.homeserver_url as "/" — the app's own
+   * origin, where nginx forwards /_matrix/ to Synapse — but nothing may use
+   * that string as it stands: matrix-js-sdk builds every request as
+   * `new URL(baseUrlWithoutTrailingSlash + prefix + path)` with no base, and
+   * "/_matrix/client/v3/login" is not a valid URL on its own; this service's
+   * own raw fetches concatenate too, and "/" + "/_matrix/..." is a
+   * protocol-relative URL naming a host "_matrix". So a relative setting is
+   * resolved against the page's origin here, once.
+   */
+  static resolveHomeserverUrl(configured: string | null | undefined): string {
+    const without_trailing_slashes = (configured || '').trim().replace(/\/+$/, '');
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(without_trailing_slashes)) {
+      return without_trailing_slashes;
+    }
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+    const path = without_trailing_slashes.startsWith('/') || without_trailing_slashes === ''
+      ? without_trailing_slashes
+      : '/' + without_trailing_slashes;
+    return origin + path;
   }
 
   /**
