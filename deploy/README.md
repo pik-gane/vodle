@@ -275,13 +275,13 @@ what the server refuses and queues the rest — but the poll takes minutes to
 come up instead of seconds, and until it has, its participants count
 different numbers of voters.
 
-To let more through, raise `rc_message` in `deploy/homeserver.vodle.yaml`
-**and** the client's mirror of it in `environment.prod.ts` together — raising
-one alone changes nothing. Note which half matters for what: `burst_count` /
-`matrix.write_burst` (1000) is how many writes go at once, and a poll of
-fifty over five options is about 450 of them, so it fits; `per_second` /
-`matrix.writes_per_second` (20) only governs sustained writing past that
-burst. To lift
+The settings are sized so that vodle never meets them — `rc_message` 1000 a
+second with a burst of 20000, `rc_room_creation` 200 with a burst of 5000 —
+which holds a poll of several hundred voters without the limiter engaging at
+all. To change them, change `deploy/homeserver.vodle.yaml` **and** the
+client's mirror of them in `environment.prod.ts` together; raising one alone
+changes nothing. `rc_login` and `rc_registration` are deliberately left low:
+they guard password guessing and account creation, not vodle's own work. To lift
 the limits for a single account — the one that publishes large test polls
 writes for fifty simulated voters at once — use Synapse's
 `override_ratelimit` admin API instead, which needs no restart and loosens

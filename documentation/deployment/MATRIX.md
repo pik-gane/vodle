@@ -45,9 +45,10 @@ registration_requires_token: true
 # --- rate limits -------------------------------------------------------
 # Synapse's defaults are far below what vodle does when a poll starts (one
 # room per voter, every participant joining every voter room, bursts of
-# state events). These values run the whole vodle test suite (polls of up
-# to ~10 voters, CI) without a 429; they are the starting point for a
-# larger deployment, to be checked with a poll of the largest intended size.
+# state events). The values below are sized so that vodle's own work never
+# meets the limiter at all, for polls far larger than anyone is expected to
+# run; the login and registration limits right after this are deliberately
+# NOT raised.
 rc_login:
   address: {per_second: 1, burst_count: 20}
   account: {per_second: 1, burst_count: 20}
@@ -56,10 +57,12 @@ rc_registration: {per_second: 0.5, burst_count: 20}
 rc_registration_token_validity: {per_second: 1, burst_count: 20}
 # Every vodle write is a state event, and publishing a poll writes a burst
 # of them: one vid, one deadline and one rating PER OPTION in each voter's
-# room, plus one announcement each. A test poll of 50 voters over 5 options
-# is around 400 events in a few seconds. At burst 100 the rest are refused,
-# and a refused rating used to be dropped (fixed), so the burst has to fit.
-rc_message: {per_second: 20, burst_count: 1000}
+# room, plus one announcement each — three events per voter and one per
+# rating, so a poll of 50 voters over 5 options is 400 events in a few
+# seconds and one of 500 voters is 4000. Synapse's limit is a leaky bucket
+# (burst_count actions before the rate bites at all, draining at
+# per_second), so the burst is what decides whether a poll appears at once.
+rc_message: {per_second: 1000, burst_count: 20000}
 # Note who is doing the writing: Synapse counts these PER USER (application
 # services are exempt, admins are not). Fifty people entering a poll are
 # fifty separate budgets and never collide. Two things do collide with
@@ -71,15 +74,15 @@ rc_message: {per_second: 20, burst_count: 1000}
 # the single most damaging limit for vodle: the poll comes up, the creator
 # counts the voters it holds locally, and a newcomer sees only the rooms
 # that exist so far. Found on the first production poll (#327).
-rc_room_creation: {per_second: 5, burst_count: 100}
+rc_room_creation: {per_second: 200, burst_count: 5000}
 rc_joins:
-  local: {per_second: 5, burst_count: 100}
-  remote: {per_second: 2, burst_count: 50}
-rc_joins_per_room: {per_second: 5, burst_count: 100}
+  local: {per_second: 200, burst_count: 5000}
+  remote: {per_second: 50, burst_count: 1000}
+rc_joins_per_room: {per_second: 200, burst_count: 5000}
 rc_invites:
-  per_room: {per_second: 2, burst_count: 50}
-  per_user: {per_second: 2, burst_count: 50}
-  per_issuer: {per_second: 5, burst_count: 200}
+  per_room: {per_second: 100, burst_count: 1000}
+  per_user: {per_second: 100, burst_count: 1000}
+  per_issuer: {per_second: 200, burst_count: 5000}
 
 # --- federation --------------------------------------------------------
 # Polls can be joined from other vodle homeservers (magic links carry the
@@ -118,18 +121,27 @@ tight server therefore makes a poll slower to appear, not wrong; while
 anything is still on its way the page header turns a spinner, and after half
 a minute a warning sign.
 
-The client's own pace mirrors the two numbers above, and both halves matter:
-`matrix.write_burst` (1000, like `rc_message.burst_count`) is how many writes
-go at once, and `matrix.writes_per_second` (20, like `rc_message.per_second`)
-is the rate once that burst is spent. The burst is the half that decides how
-long publishing a poll takes: fifty voters over five options is about 450
-writes, which fits inside a thousand and therefore goes straight out; the
-per-second figure only governs sustained writing beyond the burst. Keep each
-at or below the homeserver's own, and raise both together — a client faster
-than its server only earns refusals, a client slower than its server is the
-bottleneck instead of the server. Raising the limits themselves is fine too;
-they exist to stop a runaway client, and the cost of raising them is that a
-runaway client is no longer stopped.
+These are deliberately set so that vodle never meets them. Publishing a poll
+writes three events per voter (a vid, a deadline, an announcement) and one
+per rating, so 50 voters over 5 options is 400 events and 51 rooms, and 500
+voters is 4000 events and 501 rooms. Both fit inside the bursts above, so the
+limiter never engages and the database is what sets the pace — which is the
+honest constraint. The per-second figures sit above what a homeserver of
+this size can write anyway.
+
+What that gives up is the server-side protection against a runaway client.
+Weigh it against what still holds: registration needs a token, `rc_login`
+and `rc_registration` are **not** raised (those guard passwords and account
+creation, where a limit is the point), and vodle's own client paces itself
+against the same two numbers — `matrix.write_burst` (20000, like
+`rc_message.burst_count`) is how many writes it sends at once and
+`matrix.writes_per_second` (1000, like `rc_message.per_second`) the rate
+past that — retries what is refused and queues what it cannot send. Lower
+both pairs if the homeserver serves anything besides vodle.
+
+Keep the client's pair at or below the server's, and change them together: a
+client faster than its server only earns refusals, a client slower than its
+server is the bottleneck instead of the server.
 
 **Exempting one account entirely.** A single account that publishes large
 test polls writes for every simulated voter at once and so collides with

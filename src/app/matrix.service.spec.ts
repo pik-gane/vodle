@@ -1486,26 +1486,30 @@ describe('MatrixService throttled writes (#327)', () => {
     return {started, run: () => Promise.all(writes.map(w => service.retryOnRateLimit(w)))};
   }
 
+  // The two below set the bucket themselves rather than reading the
+  // deployment's figures: what is being tested is the mechanism, and the
+  // configured burst is deliberately far larger than any poll.
   it('lets the burst the homeserver allows through without spacing it', async () => {
     // rc_message.burst_count is what a poll publication fits inside; spacing
     // within it would only make vodle slower than its server asked for
-    expect(MatrixService.writeBurstSize()).toBeGreaterThan(4);
+    service.writeIntervalMs = 50;
+    service.writeTokens = 100;
+    service.writeTokensAt = Date.now();
     const {started, run} = timedWrites(4);
     await run();
     expect(started.length).toBe(4);
-    expect(started[3] - started[0]).toBeLessThan(MatrixService.writeIntervalFloorMs());
+    expect(started[3] - started[0]).toBeLessThan(50);
   });
 
   it('paces what follows once that burst is spent', async () => {
-    const floor = MatrixService.writeIntervalFloorMs();
-    expect(floor).toBeGreaterThan(0);           // the test environment paces
+    service.writeIntervalMs = 50;
     service.writeTokens = 0;
     service.writeTokensAt = Date.now();
     const {started, run} = timedWrites(4);
     await run();
     expect(started.length).toBe(4);
-    // three gaps of at least the floor between four writes
-    expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * floor);
+    // three gaps of at least the interval between four writes
+    expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * 50);
   });
 
   it('empties its own bucket when the server says the bucket is empty', async () => {
@@ -1521,6 +1525,8 @@ describe('MatrixService throttled writes (#327)', () => {
       expect(MatrixService.writeIntervalFloorMs()).toBe(50);
       environment.matrix.writes_per_second = 200;
       expect(MatrixService.writeIntervalFloorMs()).toBe(5);
+      environment.matrix.writes_per_second = 1000;
+      expect(MatrixService.writeIntervalFloorMs()).toBe(1);
       // a homeserver that does not rate-limit this account at all
       environment.matrix.writes_per_second = 0;
       expect(MatrixService.writeIntervalFloorMs()).toBe(0);

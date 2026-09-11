@@ -44,27 +44,46 @@ rc_login:
   failed_attempts: {per_second: 0.5, burst_count: 10}
 rc_registration: {per_second: 0.5, burst_count: 20}
 rc_registration_token_validity: {per_second: 1, burst_count: 20}
-# Every vodle write is a state event, and publishing a poll writes a burst
-# of them: one vid, one deadline and one rating PER OPTION in each voter's
-# room, plus one announcement each. A test poll of 50 voters over 5 options
-# is around 400 events in a few seconds. At burst 100 the rest are refused,
-# and a refused rating used to be dropped (fixed), so the burst has to fit.
-rc_message: {per_second: 20, burst_count: 1000}
-# room creation: Synapse's default is a burst of 10 and then ONE ROOM PER
-# 62 SECONDS (per_second 0.016), which vodle blows through at the start of
-# any poll — it creates one room per voter. A poll of 50 then materialises
-# over the best part of an hour, and until it has, a newcomer sees only the
-# voters whose rooms exist, while the creator counts the ones it holds
-# locally. Found on the first production poll (#327).
-rc_room_creation: {per_second: 5, burst_count: 100}
+# The limits below are set high enough that vodle never meets them, on
+# purpose. What follows applies to the bulk work of running polls only —
+# rc_login, rc_registration and rc_registration_token_validity above are
+# NOT raised: those guard against guessing passwords and against drive-by
+# account creation, where a limit is the point.
+#
+# Every vodle write is a state event, and publishing a poll writes a burst of
+# them: one vid, one deadline and one rating PER OPTION in each voter's room,
+# plus one announcement each — three events per voter and one per rating, so
+# a poll of 50 voters over 5 options is 400 events in a few seconds and one
+# of 500 voters is 4000, besides one room per voter. Synapse's limit is a leaky
+# bucket — Ratelimiter.can_do_action allows burst_count actions before the
+# rate bites at all, draining at per_second — so the burst is what decides
+# whether a poll appears at once, and it is set to hold a poll far larger
+# than anyone is expected to run. The rate is above what a homeserver of this
+# size can write anyway, which is the point: the database, not the limiter,
+# should be what sets the pace.
+#
+# The risk this accepts is that a runaway client is no longer stopped by the
+# server. vodle's own client paces itself against the same two numbers
+# (matrix.write_burst and matrix.writes_per_second in environment.prod.ts,
+# kept in step with these), retries what is refused and queues what it
+# cannot send, so the protection it gives up was never what kept this
+# deployment honest. Lower them if the homeserver serves anything else.
+rc_message: {per_second: 1000, burst_count: 20000}
+# Room creation: vodle creates one room per voter, so a poll of N needs N+1
+# rooms in short order. Synapse's default is a burst of 10 and then ONE ROOM
+# PER 62 SECONDS (per_second 0.016): a poll of 50 then materialised over the
+# best part of an hour, and until it had, a newcomer saw only the voters
+# whose rooms existed while the creator counted the ones it held locally.
+# Found on the first production poll (#327).
+rc_room_creation: {per_second: 200, burst_count: 5000}
 rc_joins:
-  local: {per_second: 5, burst_count: 100}
-  remote: {per_second: 2, burst_count: 50}
-rc_joins_per_room: {per_second: 5, burst_count: 100}
+  local: {per_second: 200, burst_count: 5000}
+  remote: {per_second: 50, burst_count: 1000}
+rc_joins_per_room: {per_second: 200, burst_count: 5000}
 rc_invites:
-  per_room: {per_second: 2, burst_count: 50}
-  per_user: {per_second: 2, burst_count: 50}
-  per_issuer: {per_second: 5, burst_count: 200}
+  per_room: {per_second: 100, burst_count: 1000}
+  per_user: {per_second: 100, burst_count: 1000}
+  per_issuer: {per_second: 200, burst_count: 5000}
 
 # federation: after a network split Synapse retries a partner only every ten
 # minutes by default; seconds keep a split short for the voters (#329).
