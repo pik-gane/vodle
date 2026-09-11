@@ -534,11 +534,16 @@ async function considerRoom(client, room, now, openVoterRooms = []) {
 async function writeClosedState(client, room, now) {
   const current = room.currentState.getStateEvents(POLL_STATE_TYPE, "")?.getContent();
   if (current?.state === "closed") return;
-  await client.sendStateEvent(room.roomId, POLL_STATE_TYPE, {
+  // through the retry, like the invitations and the snapshots: closing a
+  // large poll is a burst by ONE user (the bot), which is what Synapse's
+  // rc_message counts, and without this the throttled write propagated to
+  // the scan, leaving the poll room unmarked while its voter rooms closed —
+  // clients then wait for a "closed" that never comes (#325, #327)
+  await sendStateWithRetry(client, room.roomId, POLL_STATE_TYPE, {
     state: "closed",
     closed_at: now.toISOString(),
     closed_by: client.getUserId(),
-  }, "");
+  });
   console.log(`[guard-bot] Poll room ${room.roomId} marked closed`);
 }
 
@@ -577,7 +582,10 @@ async function closeRoom(client, roomId, currentPowerLevels) {
   };
 
   try {
-    await client.sendStateEvent(roomId, "m.room.power_levels", newPl);
+    // likewise: a throttled close used to cost the room a whole
+    // RETRY_FAILED_MS round, and until it closes the room still takes
+    // ratings past the deadline (#327)
+    await sendStateWithRetry(client, roomId, "m.room.power_levels", newPl);
     closedByUs.add(roomId);
     stats.closedTotal++;
     console.log(`[guard-bot] Room ${roomId} closed successfully`);

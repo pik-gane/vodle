@@ -60,6 +60,12 @@ rc_registration_token_validity: {per_second: 1, burst_count: 20}
 # is around 400 events in a few seconds. At burst 100 the rest are refused,
 # and a refused rating used to be dropped (fixed), so the burst has to fit.
 rc_message: {per_second: 20, burst_count: 1000}
+# Note who is doing the writing: Synapse counts these PER USER (application
+# services are exempt, admins are not). Fifty people entering a poll are
+# fifty separate budgets and never collide. Two things do collide with
+# themselves: a poll published with simulated voters, where one client writes
+# for all of them, and the guard bot, which is a single user that closes
+# every voter room of a poll in one burst.
 # vodle creates one room per voter, so a poll of N people needs N+1 rooms
 # in short order. Synapse's default (burst 10, then one room per 62 s) is
 # the single most damaging limit for vodle: the poll comes up, the creator
