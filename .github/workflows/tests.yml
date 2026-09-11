@@ -81,13 +81,17 @@ jobs:
       - name: Provision the two federating test Matrix homeservers
         run: scripts/test-matrix.sh start
 
-      # the production configuration, which is what a deployment builds
-      # (Dockerfile.prod) and the only one that type-checks the templates:
-      # it turns on AOT, and tsconfig.json has strictTemplates. A plain
-      # `ng build` compiles templates at run time and lets an error in one
-      # through (it let `$event.detail` on an ionChange handler through).
-      - name: Build
-        run: npm run build -- --configuration production
+      # Builds the production configuration — what a deployment builds
+      # (Dockerfile.prod), and the only one that type-checks the templates,
+      # since it turns on AOT and tsconfig.json has strictTemplates — then
+      # serves it at its own origin with /_matrix/ forwarded to the
+      # homeserver above and drives it through a real browser: register,
+      # publish a poll, join it from a fresh profile by magic link, vote,
+      # and check that both sides count the same voters. Five defects
+      # reached the first real deployment through the gap between this
+      # configuration and the one the rest of the suite uses (#327).
+      - name: Build and click through the production app
+        run: scripts/production-clickthrough.sh
 
       - name: Test
         # the runner's browser needs --no-sandbox; see karma.conf.js.
@@ -101,6 +105,14 @@ jobs:
         # --no-skips because CouchDB was provisioned above: if the integration
         # specs skip themselves here, they have silently stopped running.
         run: node scripts/check-test-results.js --no-skips
+
+      - name: Upload the click-through screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-clickthrough-screenshots
+          path: e2e-screenshots/
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()

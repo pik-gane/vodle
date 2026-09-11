@@ -286,6 +286,22 @@ $ scripts/test-matrix.sh start
 ```
 
 and remove them including all their data with `scripts/test-matrix.sh stop`.
+
+A further suite drives the **production build** rather than the development
+one, because they differ in ways that have hidden real defects: templates
+compiled ahead of time, `environment.prod.ts`, and the app served at its own
+origin with `/_matrix/` forwarded to the homeserver.
+
+```
+$ scripts/test-matrix.sh start
+$ npm run e2e:production
+```
+
+It builds the production configuration, serves it the way the deployment's
+nginx does, and drives a real browser through registration, publishing a
+poll, joining it from a fresh browser profile by magic link, voting, and
+checking that both sides count the same voters. CI runs it in place of the
+plain production build.
 These specs also skip themselves when no Synapse is reachable. The guard bot
 runs as a node process from `guard-bot/index.js`; without it the deadline
 enforcement spec reports itself pending.
