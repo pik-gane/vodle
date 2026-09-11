@@ -1475,6 +1475,8 @@ describe('MatrixService throttled writes (#327)', () => {
   });
 
   it('paces a burst so the writes leave in a stream, not all at once', async () => {
+    const floor = MatrixService.writeIntervalFloorMs();
+    expect(floor).toBeGreaterThan(0);           // the test environment paces
     const started: number[] = [];
     const writes = Array.from({length: 4}, () => () => {
       started.push(Date.now());
@@ -1482,8 +1484,29 @@ describe('MatrixService throttled writes (#327)', () => {
     });
     await Promise.all(writes.map(w => service.retryOnRateLimit(w)));
     expect(started.length).toBe(4);
-    // three gaps of at least the minimum interval between four writes
-    expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * 50);
+    // three gaps of at least the floor between four writes
+    expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * floor);
+  });
+
+  it('takes the floor from the deployment, and drops the spacing at 0', () => {
+    const original = environment.matrix.writes_per_second;
+    try {
+      environment.matrix.writes_per_second = 20;
+      expect(MatrixService.writeIntervalFloorMs()).toBe(50);
+      environment.matrix.writes_per_second = 200;
+      expect(MatrixService.writeIntervalFloorMs()).toBe(5);
+      // a homeserver that does not rate-limit this account at all
+      environment.matrix.writes_per_second = 0;
+      expect(MatrixService.writeIntervalFloorMs()).toBe(0);
+    } finally {
+      environment.matrix.writes_per_second = original;
+    }
+  });
+
+  it('starts pacing anyway once a server refuses a write', () => {
+    service.writeIntervalMs = 0;                // the deployment turned it off
+    service.noteWriteThrottled(1);
+    expect(service.writeIntervalMs).toBeGreaterThanOrEqual(50);
   });
 
   it('lets a throttled write slow down every write, not just its own retry', async () => {
@@ -1494,6 +1517,7 @@ describe('MatrixService throttled writes (#327)', () => {
   });
 
   it('wins the pace back once the server takes writes again', async () => {
+    service.writeIntervalMinMs = 50;
     service.writeIntervalMs = 400;
     service.writesAcceptedInARow = 0;
     for (let i = 0; i < 20; i++) { service.noteWriteAccepted(); }

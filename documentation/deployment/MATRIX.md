@@ -112,6 +112,32 @@ write down for as long as the server asks, and a refused write is retried and
 then queued rather than lost. A tight server therefore makes a poll slower to
 appear, not wrong.
 
+The pace is `matrix.writes_per_second` in `environment.prod.ts`, 20 by
+default — the same figure as `rc_message.per_second` above. Keep the two in
+step: a client faster than its server only earns refusals, and a client
+slower than its server is the bottleneck instead of the server. Raising both
+is fine — they exist to stop a runaway client, and the cost of raising them
+is that a runaway client is no longer stopped.
+
+**Exempting one account entirely.** A single account that publishes large
+test polls writes for every simulated voter at once and so collides with
+itself where real voters never do. Synapse can lift the limits for it without
+a restart and without loosening them for anybody else:
+
+```sh
+curl -XPOST -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"messages_per_second": 0, "burst_count": 0}' \
+  https://<server>/_synapse/admin/v1/users/@someone:<server>/override_ratelimit
+```
+
+A zero there is not "zero per second": Synapse reads the row as *this user is
+not rate-limited*, and — as its own source notes, somewhat cheekily — that
+covers every one of these limiters, room creation and joins included, not
+just messages. `DELETE` on the same path takes the exemption back. For such
+an account, `matrix.writes_per_second: 0` in the environment turns the
+client's own spacing off as well; a refusal from any other server still
+starts it again.
+
 Use PostgreSQL for the database (Synapse's own recommendation for anything beyond a test setup; the compose file runs one with the C locale Synapse needs) and keep `report_stats`, `enable_metrics` and the media store as you prefer — vodle stores no media (`max_upload_size: 1M`) and needs no presence (`presence: {enabled: false}`).
 
 Then create the admin account, the guard bot's account (an admin too, so it may purge rooms) and the registration token — `deploy/deploy.sh up` does the three through the admin API from inside the container (`deploy/synapse-admin.py`, idempotent, no password on a command line); by hand:

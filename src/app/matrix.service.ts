@@ -315,13 +315,18 @@ export class MatrixService {
   the floor. The interval is a start-to-start spacing rather than a lock, so
   a paced call never waits for another to finish and nothing can deadlock
   behind a write it issued itself.
+
+  The floor is the deployment's own matrix.writes_per_second, so a homeserver
+  whose limits were raised is not held back by the client instead: set it to
+  the server's rc_message.per_second, or to 0 for an account the server does
+  not rate-limit at all.
   */
-  private static readonly WRITE_INTERVAL_MIN_MS = 50;
   private static readonly WRITE_INTERVAL_MAX_MS = 2000;
   private static readonly WRITES_BEFORE_SPEEDUP = 20;
   /** How many voter rooms a newcomer joins at once (#327). */
   private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 6;
-  private writeIntervalMs: number = MatrixService.WRITE_INTERVAL_MIN_MS;
+  private writeIntervalMinMs: number = MatrixService.writeIntervalFloorMs();
+  private writeIntervalMs: number = MatrixService.writeIntervalFloorMs();
   private nextWriteAt: number = 0;
   private writesPausedUntil: number = 0;
   private writesAcceptedInARow: number = 0;
@@ -1048,8 +1053,24 @@ export class MatrixService {
       Array.from({length: Math.max(1, Math.min(limit, items.length))}, worker));
   }
 
+  /**
+   * The shortest spacing between two writes, from matrix.writes_per_second:
+   * 0 (or an unset value) turns the spacing off, for a homeserver that does
+   * not rate-limit this account.
+   */
+  static writeIntervalFloorMs(): number {
+    const per_second = Number(environment.matrix.writes_per_second);
+    if (!Number.isFinite(per_second) || per_second <= 0) {
+      return 0;
+    }
+    return Math.max(1, Math.round(1000 / per_second));
+  }
+
   /** Waits for this write's turn in the stream (see writeIntervalMs). */
   private async paceWrite(): Promise<void> {
+    if (this.writeIntervalMs <= 0 && this.writesPausedUntil <= Date.now()) {
+      return;
+    }
     const now = Date.now();
     const at = Math.max(now, this.nextWriteAt, this.writesPausedUntil);
     this.nextWriteAt = at + this.writeIntervalMs;
@@ -1064,14 +1085,16 @@ export class MatrixService {
    */
   private noteWriteThrottled(retryAfterMs: number): void {
     this.writesPausedUntil = Math.max(this.writesPausedUntil, Date.now() + retryAfterMs);
-    this.writeIntervalMs = Math.min(
-      MatrixService.WRITE_INTERVAL_MAX_MS, 2 * this.writeIntervalMs);
+    // a server that refuses writes is rate-limiting after all, so the pace
+    // starts from 20/s even when the deployment turned the spacing off
+    this.writeIntervalMs = Math.min(MatrixService.WRITE_INTERVAL_MAX_MS,
+      Math.max(50, 2 * this.writeIntervalMs));
     this.writesAcceptedInARow = 0;
   }
 
   /** A run of accepted writes wins the pace back, halving at a time. */
   private noteWriteAccepted(): void {
-    if (this.writeIntervalMs <= MatrixService.WRITE_INTERVAL_MIN_MS) {
+    if (this.writeIntervalMs <= this.writeIntervalMinMs) {
       return;
     }
     this.writesAcceptedInARow++;
@@ -1080,7 +1103,7 @@ export class MatrixService {
     }
     this.writesAcceptedInARow = 0;
     this.writeIntervalMs = Math.max(
-      MatrixService.WRITE_INTERVAL_MIN_MS, Math.round(this.writeIntervalMs / 2));
+      this.writeIntervalMinMs, Math.round(this.writeIntervalMs / 2));
   }
 
   /**

@@ -270,6 +270,15 @@ what the server refuses and queues the rest — but the poll takes minutes to
 come up instead of seconds, and until it has, its participants count
 different numbers of voters.
 
+To go faster than the recommended 20 writes a second, raise `rc_message` in
+`deploy/homeserver.vodle.yaml` **and** `matrix.writes_per_second` in
+`environment.prod.ts` together; raising one alone changes nothing. To lift
+the limits for a single account — the one that publishes large test polls
+writes for fifty simulated voters at once — use Synapse's
+`override_ratelimit` admin API instead, which needs no restart and loosens
+nothing for anyone else
+([MATRIX.md §2](../documentation/deployment/MATRIX.md#2-synapse-settings)).
+
 **Backups**: `deploy/backup.sh` writes `deploy/backups/<UTC time>/` with the
 database dump (`synapse.sql.gz`), `matrix-data/` without media and logs
 (`matrix-data.tgz`: the signing key, the configuration) and a copy of `.env`,

@@ -74,6 +74,19 @@ export const environment = {
     // a second when it runs; the wait only ends by this timeout when it
     // does not.
     join_timeout_ms: 60000,
+    // How many writes a second this client sends to the homeserver (#327).
+    // Publishing a poll of fifty voters over five options is some 400 state
+    // events; fired at once they empty the account's token bucket and every
+    // one of them then retries against a bucket that is still empty. The
+    // client therefore spaces its writes, and a refusal widens the spacing
+    // further until the server accepts them again.
+    //
+    // Keep this at or below the homeserver's rc_message.per_second (the
+    // deployment settings recommend 20, deploy/homeserver.vodle.yaml). A
+    // homeserver that rate-limits vodle's account not at all — see the
+    // admin API's override_ratelimit in documentation/deployment/MATRIX.md
+    // — can set 0 here, which turns the spacing off entirely.
+    writes_per_second: 20,
   },
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",
