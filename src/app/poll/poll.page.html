@@ -82,8 +82,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
-      <!-- SYNC STALLED SIGN: the replication watchdog found a sync without progress and is restarting it (#292) -->
-      <ion-icon *ngIf="G.D.replication_is_stalled" name="warning-outline" color="warning"
+      <!-- SYNC PENDING SIGN: changes of ours that the server has not confirmed yet (#327) -->
+      <ion-spinner *ngIf="G.D.sync_pending && !G.D.sync_is_stalled" name="circular" color="medium"
+        style="width: 18px; height: 18px; vertical-align: middle;"
+        [title]="'sync-pending'|translate" data-vodle="sync-pending-sign"></ion-spinner>
+
+      <!-- SYNC STALLED SIGN: a replication without progress (#292), or writes
+           the Matrix homeserver has not taken for a while (#327). Neither is a
+           loss: both are retried until they go through. -->
+      <ion-icon *ngIf="G.D.sync_is_stalled" name="warning-outline" color="warning"
         [title]="'sync-stalled'|translate" data-vodle="sync-stalled-sign"></ion-icon>
 
       <!-- TRANSMITTED SIGN -->

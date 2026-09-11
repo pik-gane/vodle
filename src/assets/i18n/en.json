@@ -67,6 +67,7 @@
     "show": "Show",
     "skip": "Skip",
     "start": "Start",
+    "sync-pending": "Your changes are on their way to the server.",
     "sync-stalled": "Synchronization with the server is stuck; vodle keeps retrying it.",
     "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",

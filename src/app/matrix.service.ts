@@ -191,6 +191,14 @@ export interface OfflineQueueStatus {
   isOnline: boolean;
   lastProcessedAt: number | null;
   failedCount: number;
+  /** writes issued but not yet confirmed by the server */
+  inFlight: number;
+  /** when the oldest write still waiting was first attempted */
+  oldestPendingAt: number | null;
+  /** writes the server refused for good (a closed or purged room) */
+  refusedCount: number;
+  /** writes lost because the queue reached its hard limit — normally 0 */
+  droppedCount: number;
 }
 
 /**
@@ -291,8 +299,33 @@ export class MatrixService {
   private static readonly OFFLINE_QUEUE_RETRY_MIN_MS = 1000;
   private static readonly OFFLINE_QUEUE_RETRY_MAX_MS = 30000;
   private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
+  // After this many failed attempts a write stops holding up the ones behind
+  // it and goes to the back of the queue; it is NOT given up on.
   private static readonly MAX_RETRY_COUNT = 5;
-  private static readonly MAX_QUEUE_SIZE = 1000;
+  private static readonly MAX_QUEUE_SIZE = 1000;      // a warning, not a limit
+  private static readonly HARD_QUEUE_LIMIT = 10000;   // the only place a write is ever dropped
+  /** after this long a pending write is reported as stuck, not merely slow */
+  private static readonly SYNC_STALLED_AFTER_MS = 30000;
+  private offlineQueueDroppedCount: number = 0;
+  private offlineQueueRefusedCount: number = 0;
+  /** writes this session issued that the server has not confirmed yet */
+  private writesInFlight: number = 0;
+  
+  /*
+  What this device believes it has voted (#327).
+
+  The offline queue holds writes that failed and said so. This holds every
+  rating this device has set, whether or not it was ever acknowledged, and it
+  is what `reconcileOwnRatings` compares against the voter room itself. It
+  therefore also covers a write whose answer never came back at all — the
+  page was closed, the browser killed the request, the server took it and
+  forgot it. Persisted, debounced, so a burst of four hundred ratings costs a
+  handful of writes to storage rather than four hundred.
+  */
+  private ownRatings: Map<string, number> = new Map();   // "pollId\u0000voterId\u0000optionId" -> rating
+  private ownRatingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly OWN_RATINGS_STORAGE_KEY = 'matrix_own_ratings';
+  private static readonly OWN_RATINGS_SAVE_DELAY_MS = 1000;
 
   /*
   Write pacing (#327).
@@ -396,6 +429,21 @@ export class MatrixService {
    */
   private is_rate_limit_error(error: any): boolean {
     return !!error && (error.httpStatus === 429 || error.errcode === 'M_LIMIT_EXCEEDED');
+  }
+
+  /**
+   * Whether the server's answer means "this write will never be accepted",
+   * as opposed to "not now". A closed poll room and a room that has been
+   * purged are the two cases; everything else — a 500, a gateway error, a
+   * write attempted before the room was joined — is temporary and belongs
+   * in the queue, where it is retried until it goes through.
+   *
+   * This is the ONLY reason a write is ever given up on, and even then it
+   * is counted and reported rather than dropped in silence (#327).
+   */
+  private is_permanent_refusal(error: any): boolean {
+    return !!error && (error.httpStatus === 403 || error.httpStatus === 404
+      || error.errcode === 'M_FORBIDDEN' || error.errcode === 'M_NOT_FOUND');
   }
 
   /**
@@ -535,6 +583,9 @@ export class MatrixService {
       // syncing, so they are replayed once the connection is confirmed by
       // the first successful sync below (rooms are known by then):
       await this.loadOfflineQueue();
+      // what this device voted before, to be compared against the rooms
+      // themselves once a poll is open (#327):
+      await this.loadOwnRatings();
       
       // Start syncing.  Lazy-load room members to reduce initial
       // sync payload and avoid fetching full membership lists for
@@ -1309,17 +1360,26 @@ export class MatrixService {
   async setUserData(key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setUserData", key);
     
+    // No client at all is a programming error, not a server that is busy:
+    // it must not be queued and quietly retried for ever.
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    this.writesInFlight++;
     try {
       const roomId = await this.getUserRoom();
       const eventType = `m.room.vodle.user.${key}`;
       // encrypted with the user password (see userDataContent):
       await this.sendStateEvent(roomId, eventType, await this.userDataContent(key, value), '');
     } catch (error) {
-      // an unreachable server must not lose the write — queue it for replay
-      // when the sync loop reconnects (#293); server rejections still throw:
-      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setUserData could not reach the server, queueing", key);
+      // a write the server did not take must not be lost — queue it for
+      // replay (#293, #327). Only a refusal that will never be accepted
+      // still throws; everything else is a delay, not a loss:
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setUserData did not reach the server, queueing", key);
       await this.enqueueOfflineEvent({type: 'user_data', key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     this.logger?.exit("MatrixService.setUserData");
@@ -2527,6 +2587,12 @@ export class MatrixService {
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setPollData", pollId, key);
     
+    // No client at all is a programming error, not a server that is busy:
+    // it must not be queued and quietly retried for ever.
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    this.writesInFlight++;
     try {
       const roomId = await this.getPollRoom(pollId);
       if (!roomId) {
@@ -2536,10 +2602,12 @@ export class MatrixService {
       // encrypted with the poll password (see pollDataContent):
       await this.sendStateEvent(roomId, eventType, await this.pollDataContent(pollId, value), '');
     } catch (error) {
-      // see setUserData — queue writes the server never received (#293):
-      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setPollData could not reach the server, queueing", pollId, key);
+      // see setUserData — queue what the server did not take (#293, #327):
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setPollData did not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'poll_data', pollId, key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     this.logger?.exit("MatrixService.setPollData");
@@ -2998,7 +3066,13 @@ export class MatrixService {
     if (this.voterDiscoveryTimers.has(pollId)) return;
     
     const INTERVAL_MS = 15000; // 15 seconds
+    // …and every fourth round, about once a minute, this device's own votes
+    // are compared against the rooms that hold them (#327). Not every round:
+    // it reads the state of every voter room this device writes to, and a
+    // write that is merely in flight or queued needs no help.
+    const RECONCILE_EVERY = 4;
     let running = false;
+    let round = 0;
     
     const timer = setInterval(async () => {
       if (running) return; // skip if previous iteration still running
@@ -3011,6 +3085,10 @@ export class MatrixService {
           console.log("[periodicDiscovery]", pollId, "found", newSize - prevSize, "new voter rooms");
           // Scan the new voter rooms' current state
           this.retroactiveScanVoterRooms(pollId);
+        }
+        if (++round % RECONCILE_EVERY === 0
+            && this.writesInFlight === 0 && this.offlineQueue.length === 0) {
+          await this.reconcileOwnRatings(pollId);
         }
       } catch (err) {
         console.error("[periodicDiscovery] error:", err);
@@ -3229,6 +3307,7 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
+    this.writesInFlight++;
     try {
       // Voter data is stored as state events in the voter's own room.
       // Every voter (real or simulated) has a separate room.
@@ -3250,12 +3329,14 @@ export class MatrixService {
       // throttled write instead of losing the rating (#327)
       await this.sendStateEvent(roomId, eventType, content, '');
     } catch (error) {
-      // see setUserData — queue writes the server never received (#293). The
-      // local rating cache below is still updated, so the own vote stays
-      // visible while offline (replay makes it durable):
-      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setVoterData could not reach the server, queueing", pollId, key);
+      // see setUserData — queue what the server did not take (#293, #327).
+      // The local rating cache below is still updated, so the own vote stays
+      // visible meanwhile (replay makes it durable):
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setVoterData did not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'voter_data', pollId, voterId, key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     // Update rating cache if this is a rating event
@@ -3264,6 +3345,8 @@ export class MatrixService {
       const numericValue = typeof value === 'number' ? value : Number(value);
       if (Number.isFinite(numericValue)) {
         this.updateRatingCache(pollId, voterId, optionId, numericValue);
+        // what this device believes it voted, for reconcileOwnRatings (#327)
+        this.recordOwnRating(pollId, voterId, optionId, numericValue);
       }
     }
     
@@ -4523,6 +4606,24 @@ export class MatrixService {
   }
   
   /**
+   * What makes two queued writes the same write. Writes that name a value
+   * (a rating, a data key) are identified by what they set, so a later one
+   * replaces an earlier one; writes that are events in their own right (a
+   * delegation request, an answer to one) have no key and all of them are
+   * kept.
+   */
+  static offlineEventKey(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): string | null {
+    switch (event.type) {
+      case 'rating':          return `rating:${event.pollId}:${event.optionId}`;
+      case 'voter_data':      return `voter_data:${event.pollId}:${event.voterId}:${event.key}`;
+      case 'poll_data':       return `poll_data:${event.pollId}:${event.key}`;
+      case 'user_data':       return `user_data:${event.key}`;
+      case 'voter_announce':  return `voter_announce:${event.pollId}:${event.voterId}`;
+      default:                return null;
+    }
+  }
+  
+  /**
    * Enqueue an event for later processing when offline.
    * The event is persisted to Ionic Storage so it survives app restarts.
    * 
@@ -4531,9 +4632,39 @@ export class MatrixService {
   async enqueueOfflineEvent(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
     this.logger?.entry("MatrixService.enqueueOfflineEvent", event.type);
     
-    if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
-      this.logger?.error("Offline queue is full, discarding oldest event");
+    // A queued write is superseded by a later one for the same thing: a voter
+    // who moves one slider five times while the server is busy queues one
+    // rating, not five. This is what keeps the queue bounded by the number of
+    // distinct keys — a poll's voters times its options — rather than by the
+    // number of clicks, so nothing ever has to be thrown away to make room
+    // for something newer (#327).
+    const key = MatrixService.offlineEventKey(event);
+    const superseded = key === null ? -1
+      : this.offlineQueue.findIndex(q => MatrixService.offlineEventKey(q) === key);
+    if (superseded !== -1) {
+      this.offlineQueue[superseded] = {
+        ...event,
+        id: this.offlineQueue[superseded].id,
+        timestamp: Date.now(),
+        retryCount: this.offlineQueue[superseded].retryCount,
+      } as QueuedEvent;
+      await this.saveOfflineQueue();
+      this.scheduleOfflineQueueRetry(true);
+      this.logger?.exit("MatrixService.enqueueOfflineEvent");
+      return;
+    }
+    
+    if (this.offlineQueue.length >= MatrixService.HARD_QUEUE_LIMIT) {
+      // Never reached by a poll of any plausible size, since writes for the
+      // same key coalesce above. If it ever is, the loss is counted and
+      // reported rather than silent: getOfflineQueueStatus().droppedCount
+      // is what the page's sync sign reads.
+      this.offlineQueueDroppedCount++;
+      this.logger?.error("Offline queue is full, a write had to be dropped",
+        this.offlineQueue.length, this.offlineQueueDroppedCount);
       this.offlineQueue.shift();
+    } else if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
+      this.logger?.warn("Offline queue is unusually long", this.offlineQueue.length);
     }
     
     const queuedEvent: QueuedEvent = {
@@ -4582,8 +4713,17 @@ export class MatrixService {
     let processedCount = 0;
     
     try {
+      // One pass over the queue: an event that fails goes to the back rather
+      // than blocking everything behind it, and `attempted` is what stops the
+      // pass from going round for ever.
+      const attempted = new Set<string>();
       while (this.offlineQueue.length > 0) {
         const event = this.offlineQueue[0];
+        if (attempted.has(event.id)) {
+          this.scheduleOfflineQueueRetry();
+          break;
+        }
+        attempted.add(event.id);
         
         try {
           await this.processQueuedEvent(event);
@@ -4608,19 +4748,38 @@ export class MatrixService {
           }
           this.logger?.error("Failed to process queued event", event.id, error);
           event.retryCount++;
-          // Persist updated retry count so it survives app restarts
-          await this.saveOfflineQueue();
+          
+          if (this.is_permanent_refusal(error)) {
+            // the room is closed, or gone: no number of retries would make
+            // this write land. It is counted and reported — the one thing it
+            // is never is silently forgotten (#327).
+            this.logger?.error("Queued write refused for good, giving up on it",
+              event.id, event.type, error);
+            this.offlineQueue.shift();
+            this.offlineQueueRefusedCount++;
+            await this.saveOfflineQueue();
+            continue;
+          }
           
           if (event.retryCount >= MatrixService.MAX_RETRY_COUNT) {
-            this.logger?.error("Event exceeded max retries, discarding", event.id);
-            this.offlineQueue.shift();
+            // Not given up on: moved out of the way, so one stubborn write
+            // does not hold up every write behind it. Until 2026-09-11 this
+            // was where a write was DISCARDED after five attempts, which is
+            // exactly the "sync eventually loses things" that the move off
+            // CouchDB was meant to end.
+            this.logger?.warn("Queued write still failing, moving it to the back of the queue",
+              event.id, event.type, event.retryCount);
+            this.offlineQueue.push(this.offlineQueue.shift()!);
             this.offlineQueueFailedCount++;
             await this.saveOfflineQueue();
-          } else {
-            // the server rejected it for now; give it its remaining attempts later
             this.scheduleOfflineQueueRetry();
-            break;
+            continue;
           }
+          
+          // the server did not take it this time; try again shortly
+          await this.saveOfflineQueue();
+          this.scheduleOfflineQueueRetry();
+          break;
         }
       }
       
@@ -4742,6 +4901,144 @@ export class MatrixService {
   }
   
   /**
+   * How many of this device's writes the server has not confirmed yet — what
+   * the page's sync sign reads, so it has to stay cheap enough for a change
+   * detection cycle (#327).
+   */
+  get pendingWriteCount(): number {
+    return this.writesInFlight + this.offlineQueue.length;
+  }
+  
+  /**
+   * Whether those writes are not merely on their way but stuck: one has been
+   * waiting longer than SYNC_STALLED_AFTER_MS, or one keeps being refused.
+   * Neither is a loss — the queue goes on retrying — but the voter should be
+   * able to see that what they did has not arrived yet.
+   */
+  get syncIsStalled(): boolean {
+    if (this.offlineQueueFailedCount > 0) { return true; }
+    const oldest = this.offlineQueue.length === 0 ? null : this.offlineQueue[0].timestamp;
+    return oldest !== null && Date.now() - oldest > MatrixService.SYNC_STALLED_AFTER_MS;
+  }
+  
+  private static ownRatingKey(pollId: string, voterId: string, optionId: string): string {
+    return `${pollId}\u0000${voterId}\u0000${optionId}`;
+  }
+  
+  /** Remembers a rating this device set, for reconcileOwnRatings (#327). */
+  private recordOwnRating(pollId: string, voterId: string, optionId: string, rating: number): void {
+    this.ownRatings.set(MatrixService.ownRatingKey(pollId, voterId, optionId), rating);
+    if (this.ownRatingsSaveTimer === null) {
+      this.ownRatingsSaveTimer = setTimeout(() => {
+        this.ownRatingsSaveTimer = null;
+        this.saveOwnRatings().catch(error =>
+          this.logger?.warn("MatrixService could not persist its own ratings", error));
+      }, MatrixService.OWN_RATINGS_SAVE_DELAY_MS);
+    }
+  }
+  
+  private async saveOwnRatings(): Promise<void> {
+    await this.storage.set(MatrixService.OWN_RATINGS_STORAGE_KEY,
+      Array.from(this.ownRatings.entries()));
+  }
+  
+  async loadOwnRatings(): Promise<void> {
+    try {
+      const stored = await this.storage.get(MatrixService.OWN_RATINGS_STORAGE_KEY);
+      if (Array.isArray(stored)) {
+        this.ownRatings = new Map(stored as [string, number][]);
+      }
+    } catch (error) {
+      this.logger?.warn("MatrixService could not restore its own ratings", error);
+    }
+  }
+  
+  /** Forgets a poll's ratings — it ended, or the user removed it. */
+  async forgetOwnRatings(pollId: string): Promise<void> {
+    const prefix = `${pollId}\u0000`;
+    let removed = false;
+    for (const key of Array.from(this.ownRatings.keys())) {
+      if (key.startsWith(prefix)) { this.ownRatings.delete(key); removed = true; }
+    }
+    if (removed) { await this.saveOwnRatings(); }
+  }
+  
+  /**
+   * Re-sends anything this device has voted that its voter room does not
+   * hold, and reports how many that was.
+   *
+   * The offline queue covers a write that failed and said so. This covers
+   * everything else: an answer that never came back because the page went
+   * away, a room created but never filled, a write lost in a way nobody
+   * thought of. Whatever the cause, the next reconciliation finds the
+   * difference and writes it again through the ordinary paced, queued path —
+   * so a write can be delayed, but not lost (#327).
+   *
+   * Only rooms this device wrote to are reconciled: another voter's room is
+   * theirs to repair, and their client does the same for it.
+   */
+  async reconcileOwnRatings(pollId: string): Promise<number> {
+    if (!this.client) { return 0; }
+    const prefix = `${pollId}\u0000`;
+    const byVoter = new Map<string, Map<string, number>>();
+    for (const [key, rating] of this.ownRatings.entries()) {
+      if (!key.startsWith(prefix)) { continue; }
+      const [, voterId, optionId] = key.split('\u0000');
+      if (!byVoter.has(voterId)) { byVoter.set(voterId, new Map()); }
+      byVoter.get(voterId)!.set(optionId, rating);
+    }
+    
+    let rewritten = 0;
+    for (const [voterId, intended] of byVoter.entries()) {
+      const roomId = this.voterRooms.get(`${pollId}:${voterId}`);
+      if (!roomId) {
+        // the room is not known here yet; getOrCreateVoterRoom makes one and
+        // the next round compares against it
+        continue;
+      }
+      let onServer: Map<string, number>;
+      try {
+        onServer = await this.readVoterRoomRatings(pollId, roomId);
+      } catch (error) {
+        this.logger?.info("MatrixService.reconcileOwnRatings could not read a voter room, leaving it for the next round", pollId, error);
+        continue;
+      }
+      for (const [optionId, rating] of intended.entries()) {
+        if (onServer.get(optionId) === rating) { continue; }
+        this.logger?.warn("MatrixService.reconcileOwnRatings the server does not have this rating, writing it again",
+          pollId, voterId, optionId);
+        await this.setVoterData(pollId, voterId, `rating.${optionId}`, rating);
+        rewritten++;
+      }
+    }
+    if (rewritten > 0) {
+      this.logger?.warn("MatrixService.reconcileOwnRatings wrote back", rewritten, "rating(s) the server did not have", pollId);
+    }
+    return rewritten;
+  }
+  
+  /** The ratings a voter room actually holds, read from the server. */
+  private async readVoterRoomRatings(pollId: string, roomId: string): Promise<Map<string, number>> {
+    const ratings = new Map<string, number>();
+    const resp = await fetch(
+      `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`,
+      {headers: {'Authorization': `Bearer ${this.client!.getAccessToken()}`}, cache: 'no-store'});
+    if (!resp.ok) {
+      throw new Error(`could not read the state of ${roomId}: ${resp.status}`);
+    }
+    const prefix = 'm.room.vodle.voter.rating.rating.';
+    for (const event of await resp.json()) {
+      if (!event.type?.startsWith(prefix)) { continue; }
+      const raw = await this.readPollValue(pollId, event.content || {});
+      const value = typeof raw === 'number' ? raw : Number(raw);
+      if (Number.isFinite(value)) {
+        ratings.set(event.type.substring(prefix.length), value);
+      }
+    }
+    return ratings;
+  }
+  
+  /**
    * Get the current status of the offline queue.
    */
   getOfflineQueueStatus(): OfflineQueueStatus {
@@ -4750,7 +5047,12 @@ export class MatrixService {
       isProcessing: this.offlineQueueProcessing,
       isOnline: this.isOnline(),
       lastProcessedAt: this.offlineQueueLastProcessed,
-      failedCount: this.offlineQueueFailedCount
+      failedCount: this.offlineQueueFailedCount,
+      inFlight: this.writesInFlight,
+      oldestPendingAt: this.offlineQueue.length === 0 ? null
+        : this.offlineQueue[0].timestamp,
+      refusedCount: this.offlineQueueRefusedCount,
+      droppedCount: this.offlineQueueDroppedCount,
     };
   }
   
@@ -4762,6 +5064,8 @@ export class MatrixService {
     
     this.offlineQueue = [];
     this.offlineQueueFailedCount = 0;
+    this.offlineQueueRefusedCount = 0;
+    this.offlineQueueDroppedCount = 0;
     this.cancelOfflineQueueRetry();
     await this.saveOfflineQueue();
     

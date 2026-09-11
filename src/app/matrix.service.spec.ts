@@ -841,7 +841,9 @@ describe('MatrixService', () => {
         (service as any).offlineQueue = events;
         expect(service.getOfflineQueueSize()).toBe(1000);
         
-        // Enqueue one more — should discard oldest
+        // One more, past the length at which the queue used to throw its
+        // oldest write away. It does not: a write nobody has taken is the
+        // only copy of what a voter did (#327).
         await service.enqueueOfflineEvent({
           type: 'rating',
           pollId: 'poll2',
@@ -849,7 +851,8 @@ describe('MatrixService', () => {
           rating: 75
         });
         
-        expect(service.getOfflineQueueSize()).toBe(1000);
+        expect(service.getOfflineQueueSize()).toBe(1001);
+        expect(service.getOfflineQueueStatus().droppedCount).toBe(0);
       });
     });
     
@@ -1609,6 +1612,88 @@ describe('MatrixService throttled writes (#327)', () => {
       visited.push(i);
     });
     expect(visited.length).toBe(3);
+  });
+
+  // "whatever the limit, it should never have led to a loss, only to a
+  // delay" — the owner, after a poll of fifty lost 34 ratings (#327)
+  it('queues a write the server refused for a reason that may pass', async () => {
+    const failures: any[] = [];
+    service.client = {};
+    spyOn(service, 'getUserRoom').and.returnValue(Promise.resolve('!room:example.org'));
+    spyOn(service, 'userDataContent').and.returnValue(Promise.resolve({}));
+    spyOn(service, 'sendStateEvent').and.returnValue(
+      Promise.reject(Object.assign(new Error('boom'), {httpStatus: 500})));
+    spyOn(service, 'enqueueOfflineEvent').and.callFake((e: any) => { failures.push(e); return Promise.resolve(); });
+    await service.setUserData('language', 'de');   // must not throw
+    expect(failures.length).toBe(1);
+    expect(failures[0].type).toBe('user_data');
+  });
+
+  it('keeps a stubborn write, at the back of the queue, rather than dropping it', async () => {
+    service.client = {};
+    service.offlineQueue = [
+      {id: '1', type: 'voter_data', pollId: 'p', voterId: 'v', key: 'rating.o1', value: 3,
+       timestamp: Date.now(), retryCount: 5},
+      {id: '2', type: 'voter_data', pollId: 'p', voterId: 'v', key: 'rating.o2', value: 4,
+       timestamp: Date.now(), retryCount: 0},
+    ];
+    spyOn(service, 'processQueuedEvent').and.callFake((event: any) =>
+      event.id === '1' ? Promise.reject(new Error('still failing')) : Promise.resolve());
+    spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
+    await service.processOfflineQueue();
+    // the second write went through, the first is still there to try again
+    expect(service.offlineQueue.map((e: any) => e.id)).toEqual(['1']);
+    expect(service.getOfflineQueueStatus().droppedCount).toBe(0);
+  });
+
+  it('gives up only on a refusal that can never be accepted, and counts it', async () => {
+    service.client = {};
+    service.offlineQueue = [{id: '1', type: 'voter_data', pollId: 'p', voterId: 'v',
+                             key: 'rating.o', value: 3, timestamp: Date.now(), retryCount: 0}];
+    spyOn(service, 'processQueuedEvent').and.returnValue(Promise.reject(
+      Object.assign(new Error('closed'), {httpStatus: 403, errcode: 'M_FORBIDDEN'})));
+    spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
+    await service.processOfflineQueue();
+    expect(service.offlineQueue.length).toBe(0);
+    expect(service.getOfflineQueueStatus().refusedCount).toBe(1);
+  });
+
+  it('lets a later rating supersede the one queued for the same option', async () => {
+    spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
+    spyOn(service, 'scheduleOfflineQueueRetry');
+    await service.enqueueOfflineEvent({type: 'voter_data', pollId: 'p', voterId: 'v', key: 'rating.o', value: 3});
+    await service.enqueueOfflineEvent({type: 'voter_data', pollId: 'p', voterId: 'v', key: 'rating.o', value: 7});
+    await service.enqueueOfflineEvent({type: 'voter_data', pollId: 'p', voterId: 'v', key: 'rating.other', value: 1});
+    expect(service.offlineQueue.length).toBe(2);
+    expect(service.offlineQueue[0].value).toBe(7);
+  });
+
+  it('writes back a rating the voter room turns out not to hold', async () => {
+    service.client = {};
+    service.voterRooms.set('P:v1', '!room:example.org');
+    service.ownRatings.set('P\u0000v1\u0000o1', 60);
+    service.ownRatings.set('P\u0000v1\u0000o2', 30);
+    spyOn(service, 'readVoterRoomRatings').and.returnValue(
+      Promise.resolve(new Map([['o1', 60]])));      // o2 never arrived
+    const written: any[] = [];
+    spyOn(service, 'setVoterData').and.callFake((...args: any[]) => {
+      written.push(args); return Promise.resolve();
+    });
+    expect(await service.reconcileOwnRatings('P')).toBe(1);
+    expect(written.length).toBe(1);
+    expect(written[0][2]).toBe('rating.o2');
+    expect(written[0][3]).toBe(30);
+  });
+
+  it('reports what is still on its way, and when it is stuck', () => {
+    expect(service.pendingWriteCount).toBe(0);
+    expect(service.syncIsStalled).toBeFalse();
+    service.offlineQueue = [{id: '1', type: 'voter_data', pollId: 'p', voterId: 'v',
+                             key: 'rating.o', value: 3, timestamp: Date.now(), retryCount: 0}];
+    expect(service.pendingWriteCount).toBe(1);
+    expect(service.syncIsStalled).toBeFalse();      // on its way, not stuck
+    service.offlineQueue[0].timestamp = Date.now() - 60000;
+    expect(service.syncIsStalled).toBeTrue();
   });
 
   it('does not spend a queued write\'s attempts while the server throttles', async () => {

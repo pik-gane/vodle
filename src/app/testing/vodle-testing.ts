@@ -83,6 +83,8 @@ export function global_service_stub(): any {
     D: {
       ready: false,
       replication_is_stalled: false,
+      sync_pending: false,
+      sync_is_stalled: false,
       save_state: () => {},
       fix_url: (url: string) => url,
       format_date: () => '',

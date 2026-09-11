@@ -443,6 +443,23 @@ export class DataService implements OnDestroy {
      *  shown as a warning sign in the page headers (#292, #159) */
     return Object.values(this.replication_stalled).some(stalled => !!stalled);
   }
+
+  get sync_pending(): boolean {
+    /** whether changes of this device's are still on their way to the
+     *  server: the page shows a turning sign while they are (#327). On the
+     *  Matrix backend this counts the writes in flight and the ones queued
+     *  for another try; the CouchDB backend replicates continuously and has
+     *  no such count, so it reports only the stall below. */
+    return environment.useMatrixBackend && this.matrixService.pendingWriteCount > 0;
+  }
+
+  get sync_is_stalled(): boolean {
+    /** whether those changes are not merely on their way but stuck. Nothing
+     *  is lost either way — vodle keeps retrying, and compares its own votes
+     *  against the server once a minute — but the voter gets to see it. */
+    return this.replication_is_stalled
+      || (environment.useMatrixBackend && this.matrixService.syncIsStalled);
+  }
   private replication_restart_pending: Record<string, boolean> = {};
   private user_sync_start_pending = false;
   private user_sync_start_generation = 0;

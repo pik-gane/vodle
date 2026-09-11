@@ -108,9 +108,15 @@ its checks print those two lines (and say so when they are missing).
 
 The app does its part too, and does not rely on the limits being generous:
 writes leave in a paced stream rather than a burst, a refusal slows every
-write down for as long as the server asks, and a refused write is retried and
-then queued rather than lost. A tight server therefore makes a poll slower to
-appear, not wrong.
+write down for as long as the server asks, and a write the server does not
+take is queued and retried until it goes through — with one exception, a
+refusal that can never be accepted (a closed or deleted room), which is
+counted and shown rather than dropped. On top of that, an open poll compares
+the votes the device has cast against the rooms that hold them once a minute
+and writes back anything missing, whatever the reason for its absence. A
+tight server therefore makes a poll slower to appear, not wrong; while
+anything is still on its way the page header turns a spinner, and after half
+a minute a warning sign.
 
 The pace is `matrix.writes_per_second` in `environment.prod.ts`, 20 by
 default — the same figure as `rc_message.per_second` above. Keep the two in
