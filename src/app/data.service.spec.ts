@@ -2881,19 +2881,27 @@ describe('DataService consistency hardening (#292)', () => {
         expect(svc.local_docs2cache_finished).toHaveBeenCalledTimes(1);
       });
 
-      it('does not reconcile restored Matrix poll caches against PouchDB', () => {
+      it('starts a restored Matrix poll\'s lifecycle without reconciling it against PouchDB', () => {
+        // A restored poll used to keep the state it had when the app was last
+        // closed, because the only branch that started a lifecycle was the
+        // CouchDB one: a poll whose deadline had passed stayed "running" for
+        // ever, and one still running got no closing timer (#327).
         const previous = environment.useMatrixBackend;
         (environment as any).useMatrixBackend = true;
         try {
+          const start_lifecycle = jasmine.createSpy('start_lifecycle');
           svc.restored_poll_caches = true;
           svc.uninitialized_pids = new Set();
-          svc._pids = new Set(['p1']);
+          svc._pids = new Set(['p1', 'pdraft']);
           svc.user_cache['poll.p1.state'] = 'running';
+          svc.G.P.polls = {p1: {start_lifecycle}};
+          svc.pid_is_draft = (pid: string) => pid === 'pdraft';
           svc.ensure_local_poll_data = jasmine.createSpy('ensure_local_poll_data');
           svc.local_docs2cache_finished = jasmine.createSpy('local_docs2cache_finished');
 
           svc.init_poll_data();
 
+          expect(start_lifecycle).toHaveBeenCalledTimes(1);   // and not for the draft
           expect(svc.ensure_local_poll_data).not.toHaveBeenCalled();
           expect(svc.local_docs2cache_finished).toHaveBeenCalled();
         } finally {

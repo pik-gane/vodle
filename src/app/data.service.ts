@@ -1135,7 +1135,23 @@ export class DataService implements OnDestroy {
           this.ensure_local_poll_data(pid);
         }
       }
-    }    
+    } else {
+      // Matrix: the restored caches ARE the poll data — there is no local
+      // PouchDB to reconcile them against, so the branch above does not run
+      // and, until 2026-09-11, nothing else started these polls' lifecycles
+      // either. A poll restored from the cache therefore kept the state it
+      // had when the app was last closed: one whose deadline had passed in
+      // the meantime stayed "running" for ever — listed under Running polls,
+      // never tallied, never showing its result — and one that was still
+      // running got no timer, so it did not close while the app was open
+      // either. start_lifecycle() ends a poll that is past due and sets the
+      // timer for one that is not; it is idempotent (#327).
+      for (const pid of this._pids) {
+        if (this.pid_is_draft(pid)) { continue; }
+        const p = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+        p.start_lifecycle();
+      }
+    }
     if (this.uninitialized_pids.size == 0) {
       this.local_docs2cache_finished();
     }
