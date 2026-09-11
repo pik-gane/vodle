@@ -194,6 +194,13 @@ rc_login:
 rc_registration: {per_second: 0.5, burst_count: 20}
 rc_registration_token_validity: {per_second: 1, burst_count: 20}
 rc_message: {per_second: 5, burst_count: 100}
+# room creation: Synapse's default is a burst of 10 and then ONE ROOM PER
+# 62 SECONDS (per_second 0.016), which vodle blows through at the start of
+# any poll — it creates one room per voter. A poll of 50 then materialises
+# over the best part of an hour, and until it has, a newcomer sees only the
+# voters whose rooms exist, while the creator counts the ones it holds
+# locally. Found on the first production poll (#327).
+rc_room_creation: {per_second: 5, burst_count: 100}
 rc_joins:
   local: {per_second: 5, burst_count: 100}
   remote: {per_second: 2, burst_count: 50}
