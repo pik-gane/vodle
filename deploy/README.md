@@ -210,6 +210,37 @@ to its own origin:
 Without these files the deployment works on its own; only federation with
 other homeservers, and other people's Matrix clients, are missing.
 
+**When you cannot put a file on that name's web server.** A redirect is no
+substitute. A resolving homeserver does follow redirects while fetching the
+file (Synapse wraps the fetch in Twisted's `RedirectAgent`), but redirecting
+to this deployment's own `/.well-known/matrix/server` achieves nothing:
+Synapse builds that answer from its own `server_name` and always says
+`{"m.server": "<server_name>:443"}`, which points back at the redirecting
+name. `serve_server_wellknown` is for a homeserver reached at its own name
+on the standard port, not for delegation. So the choice is:
+
+- **get the file served** on the name, by whoever runs it — two lines of
+  nginx, as above, or a static file at that path; or
+- **get a DNS record** for the name pointing at this host, and serve the
+  deployment under it directly, which needs no delegation at all; or
+- **name the deployment after a host it serves** (`the.hosts.own.name`,
+  with a port if it has one) and accept that the name is permanent: every
+  user id and room alias carries it, so the deployment cannot move to
+  another host later without abandoning every account; or
+- **keep the name you want and do without federation.** A `server_name` is
+  an identifier; nothing in a single-server deployment resolves it. Set it
+  to the name you intend to keep, serve the app wherever you can
+  (`PUBLIC_ORIGIN`), and add `federation_domain_whitelist: []` to
+  `deploy/homeserver.vodle.yaml` so the homeserver does not try. Polls
+  cannot then be joined from other vodle homeservers — which matters only
+  once a second one exists — and the day the file or the record appears,
+  federation starts working without touching a single identity.
+
+A `server_name` that carries a port skips the whole question: other
+homeservers then connect straight to that host and port, and no
+`.well-known` is consulted at all (Synapse only looks it up for a name
+without a port).
+
 ## Operations
 
 **Update to a newer vodle**: `deploy/deploy.sh update` (pull, rebuild,
