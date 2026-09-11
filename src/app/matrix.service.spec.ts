@@ -1840,3 +1840,80 @@ describe('MatrixService starting up (#327)', () => {
     expect(service.isLoggedIn()).toBeFalse();   // and nothing half-started is left behind
   });
 });
+
+describe('MatrixService opening a poll costs what it must, once (#327)', () => {
+  let service: any, storage: any;
+
+  beforeEach(() => {
+    storage = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    storage.get.and.returnValue(Promise.resolve(null));
+    storage.set.and.returnValue(Promise.resolve());
+    storage.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: storage}]});
+    service = TestBed.inject(MatrixService);
+    service.homeserverUrl = 'https://hs.example';
+    service.userId = '@u:hs.example';
+    service.pollRooms.set('p1', '!poll:hs.example');
+    service.client = {
+      getAccessToken: () => 'token',
+      getRoom: (_id: string) => null,
+      joinRoom: jasmine.createSpy('joinRoom').and.returnValue(Promise.resolve({})),
+    };
+    service.waitForRoom = () => Promise.resolve();
+  });
+
+  function timeline_of(...events: any[]) {
+    return spyOn(window, 'fetch').and.returnValue(Promise.resolve({
+      ok: true, status: 200,
+      json: async () => ({chunk: events, start: 's', end: 's'}),
+    } as any));
+  }
+
+  const announce = (vid: string, room: string) => ({
+    type: 'm.room.vodle.voter.announce', sender: '@u:hs.example', origin_server_ts: 1,
+    content: {voter_id: vid, voter_room_id: room, vodle_vid: vid},
+  });
+
+  it('walks the poll room timeline once for the three things it holds', async () => {
+    const fetched = timeline_of(
+      {type: 'm.room.vodle.poll.option', content: {option_id: 'o1', name: 'One'}},
+      announce('v1', '!v1:hs.example'));
+    // the three readers of the timeline, as opening a poll runs them:
+    await service.getOptions('p1');
+    await service.discoverVoterRooms('p1', (MatrixService as any).POLL_TIMELINE_MAX_AGE_MS);
+    await service.getDelegations('p1');
+    const walks = fetched.calls.all().filter(c => String(c.args[0]).includes('/messages'));
+    expect(walks.length).withContext('one walk, not three').toBe(1);
+    expect((await service.getOptions('p1')).get('o1').name).toBe('One');
+  });
+
+  it('insists on a fresh walk for the periodic voter discovery', async () => {
+    const fetched = timeline_of(announce('v1', '!v1:hs.example'));
+    await service.getOptions('p1');                  // walks
+    await service.discoverVoterRooms('p1');          // the default is fresh: walks again
+    const walks = fetched.calls.all().filter(c => String(c.args[0]).includes('/messages'));
+    expect(walks.length).toBe(2);
+  });
+
+  it('does not join a voter room this device is already in from an earlier session', async () => {
+    timeline_of(announce('v1', '!v1:hs.example'));
+    storage.get.and.callFake(async (key: string) =>
+      key === 'voter_room_p1:v1' ? '!v1:hs.example' : null);
+    service.client.getRoom = (id: string) => id === '!v1:hs.example' ? {roomId: id} : null;
+    await service.discoverVoterRooms('p1');
+    expect(service.client.joinRoom).not.toHaveBeenCalled();
+    // and the maps the rating handlers look the room up in are filled again:
+    expect(service.voterRooms.get('p1:v1')).toBe('!v1:hs.example');
+    expect(service.voterRoomReverseLookup.get('!v1:hs.example'))
+      .toEqual({pollId: 'p1', voterId: 'v1'});
+  });
+
+  it('joins a room it remembers but is no longer in', async () => {
+    timeline_of(announce('v1', '!v1:hs.example'));
+    storage.get.and.callFake(async (key: string) =>
+      key === 'voter_room_p1:v1' ? '!v1:hs.example' : null);
+    service.client.getRoom = (_id: string) => null;   // the sync does not have it
+    await service.discoverVoterRooms('p1');
+    expect(service.client.joinRoom).toHaveBeenCalled();
+  });
+});

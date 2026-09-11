@@ -21,8 +21,10 @@ function send_file(res, file, url) {
     if (err) { res.writeHead(404, {'Content-Type': 'text/html'}); res.end('<h1>404</h1>'); return; }
     const ext = path.extname(file).toLowerCase();
     const headers = {'Content-Type': TYPES[ext] || 'application/octet-stream'};
-    // the deployment's rules: the shell revalidates, hashed assets do not
-    if (ext === '.html') { headers['Cache-Control'] = 'no-cache'; }
+    // the deployment's rules: the shell, the translations and the crypto
+    // WASM revalidate (they keep their names across releases), hashed
+    // assets do not
+    if (ext === '.html' || ext === '.json' || ext === '.wasm') { headers['Cache-Control'] = 'no-cache'; }
     else if (/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/.test(url)) {
       headers['Cache-Control'] = 'public, immutable'; headers['Expires'] = new Date(Date.now() + 31536000000).toUTCString();
     }

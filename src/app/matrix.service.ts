@@ -255,6 +255,13 @@ export class MatrixService {
   private pollEventHandlersSetup: Set<string> = new Set();
   /** polls whose voter rooms this device has started discovering (#327) */
   private voterSyncStarted: Set<string> = new Set();
+  /** the last walk of a poll room's timeline, shared by the three readers
+   *  of it during a poll's load (#327) */
+  private pollTimelineCache: Map<string, {at: number, events: Promise<any[]>}> = new Map();
+  /** how old a walk of a poll room's timeline may be to be shared. Long
+   *  enough to cover one poll's load, short enough that nothing a user
+   *  waits for is ever this stale. */
+  static readonly POLL_TIMELINE_MAX_AGE_MS = 15000;
   // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
   private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
   
@@ -1171,6 +1178,7 @@ export class MatrixService {
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
     this.voterSyncStarted.clear();
+    this.pollTimelineCache.clear();
     this.pollEventHandlerRefs.clear();
     // Stop all periodic voter discovery timers
     for (const [, timer] of this.voterDiscoveryTimers) {
@@ -2385,69 +2393,30 @@ export class MatrixService {
     const roomId = await this.getPollRoom(pollId);
     console.log("[ensureOptionCache] pollId=", pollId, "roomId=", roomId);
     if (roomId) {
-      // Fetch timeline events from the server REST API.
-      // The local SDK timeline may be empty for freshly-joined rooms.
-      const accessToken = this.client.getAccessToken();
-      const encodedRoomId = encodeURIComponent(roomId);
-      
       try {
-        // Paginate backward through the timeline to find all option events.
-        let from: string | undefined = undefined;
-        let keepGoing = true;
-        
-        while (keepGoing) {
-          let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
-          if (from) {
-            url += `&from=${encodeURIComponent(from)}`;
-          }
-          
-          console.log("[ensureOptionCache] Fetching:", url);
-          const resp = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            cache: 'no-store',
-          });
-          
-          console.log("[ensureOptionCache] Response status:", resp.status, resp.statusText);
-          if (!resp.ok) {
-            const errBody = await resp.text();
-            console.error("[ensureOptionCache] Error body:", errBody);
-            this.logger?.error("Failed to fetch timeline from server", roomId, resp.status);
-            break;
-          }
-          
-          const data: any = await resp.json();
-          const chunk: any[] = data.chunk || [];
-          console.log("[ensureOptionCache] chunk size:", chunk.length, "types:", chunk.map(e => e.type));
-          
-          for (const event of chunk) {
-            if (event.type === 'm.room.vodle.poll.option') {
-              const content = event.content || {};
-              const oid = content.option_id;
-              // Only use the first occurrence (immutable — ignore any duplicates)
-              if (oid && !options.has(oid)) {
-                // the texts are encrypted under the poll password (see
-                // addOption); events from before that are plain:
-                const fields = typeof content.enc === 'string'
-                  ? await this.readPollValue(pollId, content) : content;
-                if (!fields) {
-                  continue;
-                }
-                options.set(oid, {
-                  name: fields.name,
-                  description: fields.description || '',
-                  url: fields.url || ''
-                });
+        // the shared walk of the poll room's timeline, newest first
+        for (const event of await this.pollRoomTimeline(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS)) {
+          if (event.type === 'm.room.vodle.poll.option') {
+            const content = event.content || {};
+            const oid = content.option_id;
+            // Only use the first occurrence (immutable — ignore any duplicates)
+            if (oid && !options.has(oid)) {
+              // the texts are encrypted under the poll password (see
+              // addOption); events from before that are plain:
+              const fields = typeof content.enc === 'string'
+                ? await this.readPollValue(pollId, content) : content;
+              if (!fields) {
+                continue;
               }
+              options.set(oid, {
+                name: fields.name,
+                description: fields.description || '',
+                url: fields.url || ''
+              });
             }
           }
-          
-          from = data.end;
-          // Stop when there are no more events or no pagination token
-          if (chunk.length === 0 || !from || from === data.start) {
-            keepGoing = false;
-          }
         }
-        
+        console.log("[ensureOptionCache] options found:", options.size);
         // Only cache after successful retrieval
         this.optionCaches.set(pollId, options);
       } catch (error) {
@@ -3319,7 +3288,7 @@ export class MatrixService {
     return true;
   }
   
-  async discoverVoterRooms(pollId: string): Promise<void> {
+  async discoverVoterRooms(pollId: string, timeline_max_age_ms = 0): Promise<void> {
     this.logger?.entry("MatrixService.discoverVoterRooms", pollId);
     console.log("[discoverVoterRooms] START pollId=", pollId);
     
@@ -3335,11 +3304,6 @@ export class MatrixService {
       return;
     }
     
-    // Fetch timeline from the server REST API to find announcements.
-    // The local SDK timeline may be empty for freshly-joined rooms.
-    const accessToken = this.client.getAccessToken();
-    const encodedRoomId = encodeURIComponent(pollRoomId);
-    
     let announceCount = 0;
     let totalEvents = 0;
     const toJoin: {cacheKey: string, effectiveId: string, voterRoomId: string, sender: string}[] = [];
@@ -3352,30 +3316,14 @@ export class MatrixService {
     const closed_ts: number | null = closing?.getContent?.()?.state === 'closed' ? (closing.getTs?.() || null) : null;
     
     try {
-      let from: string | undefined = undefined;
-      let keepGoing = true;
-      
-      while (keepGoing) {
-        let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
-        if (from) {
-          url += `&from=${encodeURIComponent(from)}`;
-        }
-        
-        const resp = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        
-        if (!resp.ok) {
-          console.error("[discoverVoterRooms] Failed to fetch timeline:", resp.status, resp.statusText);
-          this.logger?.error("Failed to fetch timeline for voter discovery", pollRoomId, resp.status);
-          break;
-        }
-        
-        const data: any = await resp.json();
-        const chunk: any[] = data.chunk || [];
+      // The poll room's timeline, newest first. The periodic re-discovery
+      // runs precisely to see what has just arrived, so it leaves
+      // timeline_max_age_ms at 0 and gets a walk of its own; a poll being
+      // opened shares the one its options and delegations also read (#327).
+      {
+        const chunk: any[] = await this.pollRoomTimeline(pollId, timeline_max_age_ms);
         totalEvents += chunk.length;
-        console.log("[discoverVoterRooms] Fetched chunk:", chunk.length, "events, types:", chunk.map(e => e.type));
+        console.log("[discoverVoterRooms] Read", chunk.length, "timeline events");
         
         for (const event of chunk) {
           if (event.type === 'm.room.vodle.voter.announce') {
@@ -3420,11 +3368,6 @@ export class MatrixService {
             // part of a minute before seeing anybody (#327)
             toJoin.push({ cacheKey, effectiveId, voterRoomId, sender: event.sender });
           }
-        }
-        
-        from = data.end;
-        if (chunk.length === 0 || !from || from === data.start) {
-          keepGoing = false;
         }
       }
       
@@ -3720,7 +3663,7 @@ export class MatrixService {
     // Discover voter rooms from announcement events in the poll room.
     // This populates voterRooms / voterRoomReverseLookup with all
     // announced voter rooms, joining them if needed.
-    await this.discoverVoterRooms(pollId);
+    await this.discoverVoterRooms(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
     
     const ratings = new Map<string, Map<string, number>>();
     
@@ -4100,7 +4043,8 @@ export class MatrixService {
     if (!this.client) {
       return delegations;   // nothing to read yet, and nothing to cache
     }
-    for (const event of await this.pollRoomTimeline(pollId)) {
+    const timeline = await this.pollRoomTimeline(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
+    for (const event of [...timeline].reverse()) {          // oldest first
       const content = event.content || {};
       if (!content.delegation_id) {
         continue;
@@ -4149,10 +4093,36 @@ export class MatrixService {
   }
   
   /**
-   * All events of the poll room's timeline, oldest first, from the server
+   * All events of the poll room's timeline, NEWEST FIRST, from the server
    * (the SDK's timeline holds only a window of a room joined earlier).
+   *
+   * The poll room's timeline carries three different things vodle reads —
+   * the options, the voter-room announcements and the delegations — and
+   * each of the three used to walk it for itself, so opening a poll
+   * paginated the same room three times over. A walk younger than
+   * max_age_ms is shared instead, which during a poll's load means one
+   * (#327). Pass 0 to insist on a fresh one, as the periodic voter
+   * discovery does: its whole purpose is to see what has just arrived.
    */
-  private async pollRoomTimeline(pollId: string): Promise<any[]> {
+  private async pollRoomTimeline(pollId: string, max_age_ms = 0): Promise<any[]> {
+    const cached = this.pollTimelineCache.get(pollId);
+    // strictly younger, so that max_age_ms 0 never shares a walk — two
+    // calls in the same millisecond otherwise would
+    if (cached && Date.now() - cached.at < max_age_ms) {
+      return cached.events;
+    }
+    const walk = this.walkPollRoomTimeline(pollId);
+    this.pollTimelineCache.set(pollId, {at: Date.now(), events: walk});
+    // a walk that threw must not be handed to the next caller:
+    walk.catch(() => {
+      if (this.pollTimelineCache.get(pollId)?.events === walk) {
+        this.pollTimelineCache.delete(pollId);
+      }
+    });
+    return walk;
+  }
+  
+  private async walkPollRoomTimeline(pollId: string): Promise<any[]> {
     if (!this.client) {
       return [];
     }
@@ -4182,7 +4152,7 @@ export class MatrixService {
         break;
       }
     }
-    return events.reverse();
+    return events;
   }
   
   /** the fields of a delegation event: decrypted when encrypted (undefined
@@ -4295,6 +4265,7 @@ export class MatrixService {
       // Undo the flag if room lookup fails
       this.pollEventHandlersSetup.delete(pollId);
     this.voterSyncStarted.delete(pollId);
+    this.pollTimelineCache.delete(pollId);
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
@@ -4402,7 +4373,7 @@ export class MatrixService {
     // Discover all voter rooms now (populates voterRoomReverseLookup)
     // so that the stateRatingHandler can match incoming events.
     try {
-      await this.discoverVoterRooms(pollId);
+      await this.discoverVoterRooms(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
     } catch (err) {
       console.error("[startVoterSync] discoverVoterRooms failed:", err);
     }
