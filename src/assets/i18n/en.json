@@ -507,6 +507,13 @@
         "no-draft-polls-1": "Currently, you have no polls drafted.",
         "no-draft-polls-2": "To start or draft a new poll, click the ‘+‘ button below!"
     },
+    "handover": {
+        "_COMMENT_SECTION_": "[COMMENT] strings shown when a vodle server hands over to another one (a retired server starts no new polls):",
+        "successor-title": "New polls are started elsewhere",
+        "successor-message": "This vodle server does not start new polls any more. Please use {{host}} from now on. The polls you already take part in here continue until they end.",
+        "successor-go": "Go to {{host}}",
+        "predecessor-note": "Polls that started before the move to this server are still at <a href=\"{{url}}\">{{host}}</a>."
+    },
     "news-title": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as titles of News items:",
         "delegation_accepted": "{{nickname}} accepted your delegation request.",

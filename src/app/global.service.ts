@@ -19,6 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Injectable, HostListener, OnDestroy } from '@angular/core';
 import { format_details } from './simple-format';
+import { environment } from '../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -109,6 +110,60 @@ export class GlobalService implements OnDestroy {
       }  
     }
     console.log("DATA onBeforeUnload exit");
+  }
+
+  // HANDOVER OF A DEPLOYMENT (environment.handover, deployment guide §6):
+
+  /** where new polls are started from now on, when this deployment is
+   *  being retired; '' otherwise */
+  get successor_url(): string {
+    return environment.handover?.successor_url || '';
+  }
+
+  /** where the polls started before the move to this deployment live on;
+   *  '' when there is no predecessor (any more) */
+  get predecessor_url(): string {
+    return environment.handover?.predecessor_url || '';
+  }
+
+  /** the host name of a URL, for a notice: "matrix.vodle.it" */
+  static host_of(url: string): string {
+    try {
+      return new URL(url).host;
+    } catch (error) {
+      return url;
+    }
+  }
+
+  /** When this deployment is being retired, tells where new polls are
+   *  started from now on, with a button that goes there, and resolves to
+   *  true; resolves to false without a successor (nothing shown). Called
+   *  wherever a poll would be started here. */
+  async show_successor_notice(): Promise<boolean> {
+    const url = this.successor_url;
+    if (!url) {
+      return false;
+    }
+    const host = GlobalService.host_of(url);
+    const notice = await this.alertCtrl.create({
+      header: this.translate.instant('handover.successor-title'),
+      message: this.translate.instant('handover.successor-message', {host: host}),
+      buttons: [
+        {
+          text: this.translate.instant('cancel'),
+          role: 'cancel',
+        },
+        {
+          text: this.translate.instant('handover.successor-go', {host: host}),
+          role: 'confirm',
+          handler: () => {
+            window.location.assign(url);
+          },
+        },
+      ],
+    });
+    await notice.present();
+    return true;
   }
 
   // TODO: use this consistently wherever an external page is accessed:

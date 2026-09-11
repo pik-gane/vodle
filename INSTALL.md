@@ -389,7 +389,9 @@ deploy/deploy.sh up
 
 Afterwards `deploy/deploy.sh status`, `update`, `backup`, `logs`, `down`.
 The decisions behind the settings are in
-[documentation/deployment/MATRIX.md](./documentation/deployment/MATRIX.md).
+[documentation/deployment/MATRIX.md](./documentation/deployment/MATRIX.md);
+its §6 describes how a running CouchDB deployment hands over to a Matrix
+one (`environment.handover` in both builds).
 
 #### Architecture
 

@@ -496,6 +496,13 @@
         "no-draft-polls-1": "Momentan hast Du keine Abstimmungen entworfen.",
         "no-draft-polls-2": "Um eine Abstimmung zu starten oder zu entwerfen, klick auf den Knopf ‚+‘ rechts unten!"
     },
+    "handover": {
+        "_COMMENT_SECTION_": "[COMMENT] strings shown when a vodle server hands over to another one (a retired server starts no new polls):",
+        "successor-title": "Neue Abstimmungen werden woanders gestartet",
+        "successor-message": "Dieser vodle-Server startet keine neuen Abstimmungen mehr. Bitte benutze ab jetzt {{host}}. Die Abstimmungen, an denen Du hier schon teilnimmst, laufen bis zu ihrem Ende weiter.",
+        "successor-go": "Zu {{host}} wechseln",
+        "predecessor-note": "Abstimmungen, die vor dem Umzug auf diesen Server gestartet wurden, findest Du weiterhin unter <a href=\"{{url}}\">{{host}}</a>."
+    },
     "news-title": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as titles of News items:",
         "delegation_accepted": "{{nickname}} hat Deiner Bitte um Delegation zugestimmt.",

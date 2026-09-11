@@ -80,5 +80,10 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
     polls: {
       max_duration_days: 31,
       delete_after_days: 31
-    }  
+    },
+    // handing a deployment over to another one (documentation/deployment/MATRIX.md §6):
+    handover: {
+      successor_url: "",   // on the deployment being retired: where new polls are started from now on, e.g. "https://matrix.YOURDOMAIN/#/"
+      predecessor_url: "", // on the successor: where the polls started before the move live on, e.g. "https://app.YOURDOMAIN/#/"
+    }
 })

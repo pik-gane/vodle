@@ -159,12 +159,36 @@ The old token keeps working until it is deleted with the
 existing accounts need no token. The token is part of the app bundle, so it
 keeps drive-by registration bots out, nothing more.
 
-**Behind a reverse proxy of the host** (something else already serves 443):
+**Behind a reverse proxy of the host** (something else already serves 443,
+e.g. the nginx of a CouchDB deployment that stays up during a handover,
+[MATRIX.md §6](../documentation/deployment/MATRIX.md#6-moving-a-couchdb-deployment-to-matrix-the-handover)):
 leave `TLS_DIR` empty, set `WEB_HTTP_PORT=127.0.0.1:8080`, and make the
 proxy forward `https://<server name>/` — the whole site, `/_matrix/` and
 `/.well-known/matrix/` included — to `http://127.0.0.1:8080` with a read
 timeout above 30 s for the sync long-poll. The web container then serves
-plain HTTP on that port only.
+plain HTTP on that port only. For nginx:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name matrix.vodle.it;
+    ssl_certificate     /etc/letsencrypt/live/matrix.vodle.it/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/matrix.vodle.it/privkey.pem;
+    client_max_body_size 4m;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 120s;
+    }
+}
+```
+
+If that nginx runs in a container itself, `127.0.0.1` is the container, not
+the host: forward to the host's address on the docker bridge instead
+(`172.17.0.1:8080` by default) and publish the port there
+(`WEB_HTTP_PORT=172.17.0.1:8080`).
 
 **Where the data lives**: `postgres-data/` (the database), `matrix-data/`
 (keys, configuration, logs, media), `deploy/site/` (the copied privacy

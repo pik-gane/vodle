@@ -125,6 +125,18 @@ export const environment = {
     max_duration_days: 31,
     delete_after_days: 31
   },
+  // Handing this deployment over to another one, e.g. a CouchDB deployment
+  // to its Matrix successor (documentation/deployment/MATRIX.md §6):
+  handover: {
+    // On the deployment being retired: new polls are no longer started
+    // here. The "+" button, a new draft and the start of a draft show a
+    // notice with this link instead; the polls that run here continue
+    // until they end.
+    successor_url: "",     // e.g. "https://matrix.vodle.it/#/"
+    // On the successor: where the polls that started before the move live
+    // on; shown on the "my polls" page. Empty once the predecessor is gone.
+    predecessor_url: "",   // e.g. "https://app.vodle.it/#/"
+  },
   hosting_institution: {
     name: null,
     url: null

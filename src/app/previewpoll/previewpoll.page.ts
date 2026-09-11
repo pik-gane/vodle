@@ -99,8 +99,13 @@ export class PreviewpollPage implements OnInit {
 
   // HOOKS:
 
-  publish_button_clicked() {
+  async publish_button_clicked() {
     this.G.L.entry("PreviewpollPage.publish_button_clicked");
+    if (await this.G.show_successor_notice()) {
+      // this deployment is being retired: the poll is started elsewhere
+      // (environment.handover); the draft stays
+      return;
+    }
     // TODO: 
     // - again check that due is in future!
     // - show spinner while busy!

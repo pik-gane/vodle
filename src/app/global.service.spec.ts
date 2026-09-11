@@ -26,6 +26,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LoggingServiceModule } from 'ionic-logging-service';
 
 import { GlobalService } from './global.service';
+import { environment } from '../environments/environment';
 
 describe('GlobalService', () => {
   let service: GlobalService;
@@ -68,5 +69,53 @@ describe('GlobalService', () => {
     // the constructor wired itself into the service tree (G is private):
     expect((service.D as any).G).toBe(service);
     expect((service.P as any).G).toBe(service);
+  });
+  describe('the handover of a deployment (environment.handover)', () => {
+    let previous: any;
+
+    beforeEach(() => {
+      previous = {...(environment as any).handover};
+      service.translate.setTranslation('en', {
+        cancel: 'Cancel',
+        handover: {
+          'successor-title': 'New polls are started elsewhere',
+          'successor-message': 'Please use {{host}} from now on.',
+          'successor-go': 'Go to {{host}}',
+        },
+      }, true);
+      service.translate.use('en');
+    });
+
+    afterEach(() => {
+      (environment as any).handover = previous;
+    });
+
+    it('shows nothing without a successor', async () => {
+      (environment as any).handover.successor_url = '';
+      const create = spyOn(service.alertCtrl, 'create');
+      expect(service.successor_url).toBe('');
+      expect(await service.show_successor_notice()).toBeFalse();
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('names the successor and offers to go there', async () => {
+      (environment as any).handover.successor_url = 'https://matrix.vodle.it/#/';
+      const notice = jasmine.createSpyObj('HTMLIonAlertElement', ['present']);
+      notice.present.and.returnValue(Promise.resolve());
+      const create = spyOn(service.alertCtrl, 'create').and.returnValue(Promise.resolve(notice));
+      expect(await service.show_successor_notice()).toBeTrue();
+      const options: any = create.calls.mostRecent().args[0];
+      expect(options.message).toBe('Please use matrix.vodle.it from now on.');
+      expect(options.buttons.map((b: any) => b.text)).toEqual(['Cancel', 'Go to matrix.vodle.it']);
+      expect(notice.present).toHaveBeenCalled();
+    });
+
+    it('takes the host name out of a URL for the notices', () => {
+      expect(GlobalService.host_of('https://matrix.vodle.it/#/')).toBe('matrix.vodle.it');
+      expect(GlobalService.host_of('https://vodle.example.org:8443/#/')).toBe('vodle.example.org:8443');
+      expect(GlobalService.host_of('not a url')).toBe('not a url');
+      (environment as any).handover.predecessor_url = 'https://app.vodle.it/#/';
+      expect(service.predecessor_url).toBe('https://app.vodle.it/#/');
+    });
   });
 });

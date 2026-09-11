@@ -52,6 +52,10 @@ export function global_service_stub(): any {
     map2str: (map: any) => '' + map,
     go_home: () => {},
     go_fullscreen_on_mobile: () => {},
+    // the handover of a deployment (environment.handover): none by default
+    successor_url: '',
+    predecessor_url: '',
+    show_successor_notice: async () => false,
     S: {
       language: 'en',
       email: '',
