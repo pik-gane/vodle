@@ -302,6 +302,11 @@ nginx does, and drives a real browser through registration, publishing a
 poll, joining it from a fresh browser profile by magic link, voting, and
 checking that both sides count the same voters. CI runs it in place of the
 plain production build.
+
+`VODLE_SIMULATED_VOTERS=50 npm run e2e:production` publishes a poll of that
+size instead, which is the rehearsal the deployment guide's go-live
+checklist asks for: it writes several hundred state events in a burst and so
+exercises the homeserver's rate limits, where a poll of two never does.
 These specs also skip themselves when no Synapse is reachable. The guard bot
 runs as a node process from `guard-bot/index.js`; without it the deadline
 enforcement spec reports itself pending.

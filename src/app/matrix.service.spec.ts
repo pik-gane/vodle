@@ -1427,3 +1427,102 @@ describe('MatrixService deployment settings (#327)', () => {
     expect(service.getHomeserverDomain()).toBe('localhost');
   });
 });
+
+// Publishing a poll writes several hundred state events at once, so Synapse
+// throttles; a throttled rating used to be thrown away, which is why a poll
+// creator saw voters the server had never heard of (#327)
+describe('MatrixService throttled writes (#327)', () => {
+  let service: any;
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    spy.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+    service.userId = '@alice:example.org';
+  });
+
+  function throttled() {
+    return Object.assign(new Error('Too Many Requests'),
+      {httpStatus: 429, errcode: 'M_LIMIT_EXCEEDED', data: {retry_after_ms: 1}});
+  }
+
+  it('tells a throttled write apart from a refusal and from a lost connection', () => {
+    expect(service.is_rate_limit_error(throttled())).toBeTrue();
+    expect(service.is_rate_limit_error({errcode: 'M_LIMIT_EXCEEDED'})).toBeTrue();
+    expect(service.is_rate_limit_error({httpStatus: 403, errcode: 'M_FORBIDDEN'})).toBeFalse();
+    expect(service.is_rate_limit_error(new TypeError('Failed to fetch'))).toBeFalse();
+    expect(service.is_connection_error(throttled())).toBeFalse();
+  });
+
+  it('retries a throttled call and returns its result', async () => {
+    let calls = 0;
+    const result = await service.retryOnRateLimit(() => {
+      calls++;
+      return calls < 3 ? Promise.reject(throttled()) : Promise.resolve('written');
+    });
+    expect(result).toBe('written');
+    expect(calls).toBe(3);
+  });
+
+  it('gives up after its attempts, so the caller can queue the write', async () => {
+    let calls = 0;
+    await expectAsync(service.retryOnRateLimit(() => { calls++; return Promise.reject(throttled()); }, 3))
+      .toBeRejected();
+    expect(calls).toBe(3);
+  });
+
+  it('does not retry a refusal', async () => {
+    let calls = 0;
+    const forbidden = Object.assign(new Error('no'), {httpStatus: 403, errcode: 'M_FORBIDDEN'});
+    await expectAsync(service.retryOnRateLimit(() => { calls++; return Promise.reject(forbidden); }))
+      .toBeRejected();
+    expect(calls).toBe(1);
+  });
+
+  it('queues a rating the server was too busy to take, instead of losing it', async () => {
+    service.client = {sendStateEvent: () => Promise.reject(throttled())};
+    spyOn(service, 'getOrCreateVoterRoom').and.returnValue(Promise.resolve('!voter:example.org'));
+    spyOn(service, 'pollDataContent').and.returnValue(Promise.resolve({value: 7}));
+    const queued = spyOn(service, 'enqueueOfflineEvent').and.returnValue(Promise.resolve());
+    await service.setVoterData('pid', 'vid', 'rating.oid', 7);
+    expect(queued).toHaveBeenCalled();
+    expect(queued.calls.mostRecent().args[0]).toEqual(
+      jasmine.objectContaining({type: 'voter_data', pollId: 'pid', key: 'rating.oid', value: 7}));
+  });
+
+  it('still throws when the server refuses the rating', async () => {
+    const forbidden = Object.assign(new Error('no'), {httpStatus: 403, errcode: 'M_FORBIDDEN'});
+    service.client = {sendStateEvent: () => Promise.reject(forbidden)};
+    spyOn(service, 'getOrCreateVoterRoom').and.returnValue(Promise.resolve('!voter:example.org'));
+    spyOn(service, 'pollDataContent').and.returnValue(Promise.resolve({value: 7}));
+    const queued = spyOn(service, 'enqueueOfflineEvent').and.returnValue(Promise.resolve());
+    await expectAsync(service.setVoterData('pid', 'vid', 'rating.oid', 7)).toBeRejected();
+    expect(queued).not.toHaveBeenCalled();
+  });
+
+  it('starts waiting from the short end again once a write goes through', async () => {
+    service.client = {};
+    service.offlineQueue = [{id: '1', type: 'user_data', key: 'k', value: 1, timestamp: Date.now(), retryCount: 0}];
+    service.offlineQueueRetryDelayMs = 30000;      // backed off to the ceiling
+    spyOn(service, 'processQueuedEvent').and.returnValue(Promise.resolve());
+    spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
+    await service.processOfflineQueue();
+    expect(service.offlineQueueRetryDelayMs).toBe(0);
+  });
+
+  it('does not spend a queued write\'s attempts while the server throttles', async () => {
+    service.client = {};
+    service.offlineQueue = [{id: '1', type: 'voter_data', pollId: 'p', voterId: 'v',
+                             key: 'rating.o', value: 3, timestamp: Date.now(), retryCount: 0}];
+    spyOn(service, 'processQueuedEvent').and.returnValue(Promise.reject(throttled()));
+    spyOn(service, 'saveOfflineQueue').and.returnValue(Promise.resolve());
+    spyOn(service, 'scheduleOfflineQueueRetry');
+    await service.processOfflineQueue();
+    expect(service.offlineQueue.length).toBe(1);
+    expect(service.offlineQueue[0].retryCount).toBe(0);
+    expect(service.scheduleOfflineQueueRetry).toHaveBeenCalled();
+  });
+});

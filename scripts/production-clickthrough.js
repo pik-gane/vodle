@@ -27,6 +27,13 @@ const path = require('path');
 
 const BASE = process.env.VODLE_BASE || 'http://localhost:8100';
 const STEP_TIMEOUT = 60000;
+// VODLE_SIMULATED_VOTERS publishes a *test* poll carrying that many
+// simulated voters, which is how a poll of real size is reproduced: the
+// creator writes one room and a rating per option for each of them, several
+// hundred state events in a burst, which is where Synapse starts throttling
+// (#327). 0 means an ordinary two-person poll.
+const SIMULATED = parseInt(process.env.VODLE_SIMULATED_VOTERS || '0', 10);
+const CONVERGE_TRIES = parseInt(process.env.VODLE_CONVERGE_TRIES || '30', 10);
 const stamp = Date.now();
 const EMAIL = `prodtest${stamp}@example.org`;
 const PASSWORD = 'ProdTest!' + stamp;
@@ -193,9 +200,14 @@ async function voters(p) {
     log('   logged in, my polls shown; mx_user_id =', user_id);
 
     log('6. a draft poll, pre-filled through the draftpoll/use route');
+    const ratings = (seed) => Array.from({length: SIMULATED}, (_, i) => (seed * 17 + i * 7) % 101);
+    const option = (name, seed) => SIMULATED > 0
+      ? {name, desc: '', url: '', ratings: ratings(seed)}
+      : {name, desc: '', url: ''};
     const pd = {type: 'winner', language: 'en', title: 'Internal production test ' + stamp,
-      desc: '', url: '', due_type: '10min', db: 'default',
-      options: [{name: 'Apples', desc: '', url: ''}, {name: 'Oranges', desc: '', url: ''}]};
+      desc: '', url: '', due_type: '10min', db: 'default', is_test: SIMULATED > 0,
+      options: [option('Apples', 1), option('Oranges', 2), option('Pears', 3)]};
+    if (SIMULATED > 0) { log('   a test poll with', SIMULATED, 'simulated voters'); }
     await page.goto(BASE + '/#/draftpoll/use/' + encodeURIComponent(JSON.stringify(pd)), {waitUntil: 'networkidle2'});
     await page.reload({waitUntil: 'networkidle2'});
     await visible(page, '[data-vodle="draft-poll-page"]');
@@ -247,20 +259,24 @@ async function voters(p) {
     await guest.waitForFunction(() => !document.querySelector('[data-vodle="consent-footer"]'),
       {timeout: STEP_TIMEOUT, polling: 200});
     await rate_first_option(guest);
-    const guest_voters = await voters(guest);
+    let guest_voters = await voters(guest);
     log('   guest sees:', guest_voters);
 
     log('13. both sides should count the same voters');
-    let host_voters = null;
-    for (let i = 0; i < 30; i++) {
+    const expected = SIMULATED + 2;                 // the simulated ones, the creator, the newcomer
+    let host_voters = null, seen_guest = guest_voters;
+    for (let i = 0; i < CONVERGE_TRIES; i++) {
       host_voters = await voters(page);
-      if (host_voters === guest_voters && host_voters === 2) { break; }
+      seen_guest = await voters(guest);
+      if (host_voters === seen_guest && host_voters === expected) { break; }
       await new Promise(r => setTimeout(r, 2000));
     }
-    log('   creator sees:', host_voters, '| guest sees:', guest_voters);
+    guest_voters = seen_guest;
+    log('   creator sees:', host_voters, '| guest sees:', guest_voters, '| expected:', expected);
     await guest.screenshot({path: shot('-guest')});
-    if (host_voters !== 2 || guest_voters !== 2) {
-      throw new Error('the two sides disagree or a vote is missing: creator ' + host_voters + ', guest ' + guest_voters);
+    if (host_voters !== expected || guest_voters !== expected) {
+      throw new Error('the two sides disagree or a vote is missing: creator ' + host_voters
+        + ', guest ' + guest_voters + ', expected ' + expected);
     }
 
     await page.screenshot({path: shot(''), fullPage: false});

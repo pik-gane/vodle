@@ -44,7 +44,12 @@ rc_login:
   failed_attempts: {per_second: 0.5, burst_count: 10}
 rc_registration: {per_second: 0.5, burst_count: 20}
 rc_registration_token_validity: {per_second: 1, burst_count: 20}
-rc_message: {per_second: 5, burst_count: 100}
+# Every vodle write is a state event, and publishing a poll writes a burst
+# of them: one vid, one deadline and one rating PER OPTION in each voter's
+# room, plus one announcement each. A test poll of 50 voters over 5 options
+# is around 400 events in a few seconds. At burst 100 the rest are refused,
+# and a refused rating used to be dropped (fixed), so the burst has to fit.
+rc_message: {per_second: 20, burst_count: 1000}
 # room creation: Synapse's default is a burst of 10 and then ONE ROOM PER
 # 62 SECONDS (per_second 0.016), which vodle blows through at the start of
 # any poll — it creates one room per voter. A poll of 50 then materialises

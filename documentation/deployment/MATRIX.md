@@ -54,7 +54,12 @@ rc_login:
   failed_attempts: {per_second: 0.5, burst_count: 10}
 rc_registration: {per_second: 0.5, burst_count: 20}
 rc_registration_token_validity: {per_second: 1, burst_count: 20}
-rc_message: {per_second: 5, burst_count: 100}
+# Every vodle write is a state event, and publishing a poll writes a burst
+# of them: one vid, one deadline and one rating PER OPTION in each voter's
+# room, plus one announcement each. A test poll of 50 voters over 5 options
+# is around 400 events in a few seconds. At burst 100 the rest are refused,
+# and a refused rating used to be dropped (fixed), so the burst has to fit.
+rc_message: {per_second: 20, burst_count: 1000}
 # vodle creates one room per voter, so a poll of N people needs N+1 rooms
 # in short order. Synapse's default (burst 10, then one room per 62 s) is
 # the single most damaging limit for vodle: the poll comes up, the creator
@@ -137,7 +142,7 @@ Without a running bot no deadline is enforced on the server: clients then close 
 - [ ] TLS: the certificate files named in `.env` (`deploy/deploy.sh up` checks the name and the expiry), or a proxy of the host in front
 - [ ] registration token created and built into the app (`deploy/deploy.sh up` does both); a test registration from the app works
 - [ ] the privacy statement (naming the retention period) and the imprint served: `/site/privacy.html`, `/site/impressum.html`
-- [ ] rate limits as above; a rehearsal poll of the largest intended size runs without 429s (watch the bot log and the browser console for `M_LIMIT_EXCEEDED`)
+- [ ] rate limits as above; a rehearsal poll of the largest intended size runs without 429s (`VODLE_SIMULATED_VOTERS=<n> npm run e2e:production` does this against a test homeserver, and the same poll published on the deployment itself confirms its own limits) (watch the bot log and the browser console for `M_LIMIT_EXCEEDED`)
 - [ ] the guard bot runs as an admin, its healthcheck is green, a rehearsal poll closes at its deadline and its rooms disappear after `RETENTION_DAYS` (set it to a few minutes for the rehearsal)
 - [ ] database backups scheduled and restored once
 - [ ] privacy statement names the retention period and the homeserver operator

@@ -350,6 +350,17 @@ export class MatrixService {
   }
 
   /**
+   * Whether an error means "the server is throttling this user", as opposed
+   * to refusing the write. Synapse answers 429 / M_LIMIT_EXCEEDED with a
+   * retry_after_ms; the write is legitimate and must not be dropped —
+   * publishing a poll of fifty voters writes several hundred state events
+   * at once and runs into this on any deployment (#327).
+   */
+  private is_rate_limit_error(error: any): boolean {
+    return !!error && (error.httpStatus === 429 || error.errcode === 'M_LIMIT_EXCEEDED');
+  }
+
+  /**
    * Validate and return the guard bot user ID from environment config.
    * Returns null if not configured. Throws if configured but invalid.
    * 
@@ -961,19 +972,23 @@ export class MatrixService {
    * Uses the server-provided retry_after_ms or falls back to exponential
    * backoff starting at 2 s, up to 3 retries.
    */
-  private async retryOnRateLimit<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  private async retryOnRateLimit<T>(fn: () => Promise<T>, maxRetries = 6): Promise<T> {
     let attempt = 0;
     while (true) {
       try {
         return await fn();
       } catch (error: any) {
         attempt++;
-        if (error?.httpStatus !== 429 || attempt >= maxRetries) {
+        if (!this.is_rate_limit_error(error) || attempt >= maxRetries) {
           throw error;
         }
+        // Synapse says how long to wait. Hundreds of writes go out together
+        // when a poll is published, so they are all told the same thing and
+        // would come back together: the jitter spreads them instead (#327).
         const waitMs = error?.data?.retry_after_ms ?? (2000 * Math.pow(2, attempt - 1));
-        this.logger?.info(`Rate limited (429), retrying in ${waitMs}ms (attempt ${attempt}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const jittered = Math.round(waitMs * (1 + Math.random()));
+        this.logger?.info(`Rate limited (429), retrying in ${jittered}ms (attempt ${attempt}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, jittered));
       }
     }
   }
@@ -1175,8 +1190,8 @@ export class MatrixService {
     } catch (error) {
       // an unreachable server must not lose the write — queue it for replay
       // when the sync loop reconnects (#293); server rejections still throw:
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setUserData offline, queueing", key);
+      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setUserData could not reach the server, queueing", key);
       await this.enqueueOfflineEvent({type: 'user_data', key, value});
     }
     
@@ -2395,8 +2410,8 @@ export class MatrixService {
       await this.sendStateEvent(roomId, eventType, await this.pollDataContent(pollId, value), '');
     } catch (error) {
       // see setUserData — queue writes the server never received (#293):
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setPollData offline, queueing", pollId, key);
+      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setPollData could not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'poll_data', pollId, key, value});
     }
     
@@ -3087,13 +3102,15 @@ export class MatrixService {
       // The value is encrypted with the poll password when it is known:
       const eventType = `m.room.vodle.voter.rating.${key}` as any;
       const content = { ...(await this.pollDataContent(pollId, value)), voter_vid: voterId };
-      await this.client.sendStateEvent(roomId, eventType, content, '');
+      // through the wrapper, like setUserData and setPollData: it retries a
+      // throttled write instead of losing the rating (#327)
+      await this.sendStateEvent(roomId, eventType, content, '');
     } catch (error) {
       // see setUserData — queue writes the server never received (#293). The
       // local rating cache below is still updated, so the own vote stays
       // visible while offline (replay makes it durable):
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setVoterData offline, queueing", pollId, key);
+      if (!this.is_connection_error(error) && !this.is_rate_limit_error(error)) { throw error; }
+      this.logger?.warn("MatrixService.setVoterData could not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'voter_data', pollId, voterId, key, value});
     }
     
@@ -4429,12 +4446,19 @@ export class MatrixService {
           this.offlineQueue.shift();
           processedCount++;
           this.offlineQueueFailedCount = 0;
+          // the server is taking writes again, so the next wait starts at
+          // the short end: without this the interval keeps doubling to its
+          // 30 s ceiling and stays there, which is what made a throttled
+          // burst take many minutes to drain rather than seconds (#327)
+          this.offlineQueueRetryDelayMs = 0;
           await this.saveOfflineQueue();
         } catch (error) {
-          if (this.is_connection_error(error)) {
-            // the server is still unreachable: that is not an attempt the
-            // event should be charged for; try again later (#326)
-            this.logger?.warn("Offline queue: server still unreachable, retrying later", event.id);
+          if (this.is_connection_error(error) || this.is_rate_limit_error(error)) {
+            // the server is unreachable, or throttling this user: neither is
+            // an attempt the event should be charged for (#326, #327). The
+            // queue is drained one event at a time, so waiting here is also
+            // what lets a throttled burst through in the server's own time.
+            this.logger?.warn("Offline queue: server unreachable or throttling, retrying later", event.id);
             this.scheduleOfflineQueueRetry();
             break;
           }
