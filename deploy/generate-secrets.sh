@@ -69,6 +69,10 @@ ACME_WEBROOT=
 # (environment.prod.ts: privacy_statement_url, imprint_url)
 PRIVACY_STATEMENT_FILE=
 IMPRINT_FILE=
+# whether this homeserver talks to other vodle homeservers. Set it to "off"
+# when nothing resolves the server name — polls can then not be joined
+# across homeservers, and the name stays yours to keep (deploy/README.md)
+FEDERATION=on
 # a poll's rooms are removed this many days after its deadline (#331);
 # the privacy statement must say so
 RETENTION_DAYS=365

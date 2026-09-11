@@ -230,8 +230,8 @@ on the standard port, not for delegation. So the choice is:
 - **keep the name you want and do without federation.** A `server_name` is
   an identifier; nothing in a single-server deployment resolves it. Set it
   to the name you intend to keep, serve the app wherever you can
-  (`PUBLIC_ORIGIN`), and add `federation_domain_whitelist: []` to
-  `deploy/homeserver.vodle.yaml` so the homeserver does not try. Polls
+  (`PUBLIC_ORIGIN`), and put `FEDERATION=off` in `.env` so the homeserver
+  does not try (it gets `federation_domain_whitelist: []`). Polls
   cannot then be joined from other vodle homeservers — which matters only
   once a second one exists — and the day the file or the record appears,
   federation starts working without touching a single identity.

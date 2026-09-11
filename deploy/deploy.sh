@@ -110,7 +110,7 @@ read_public_origin() {
   else
     [ "$DRY_RUN" = 1 ] || echo "PUBLIC_ORIGIN=$PUBLIC_ORIGIN" >> "$ENV_FILE"
   fi
-  if [ "$server_authority" != "$PUBLIC_HOST:$PUBLIC_PORT" ]; then
+  if [ "$server_authority" != "$PUBLIC_HOST:$PUBLIC_PORT" ] && [ "${FEDERATION:-on}" != off ]; then
     echo "note: the homeserver is named '$SERVER_NAME' but reached at $PUBLIC_ORIGIN. vodle's own app does not mind (it talks to its own origin), but federation with other homeservers needs https://${SERVER_NAME%%:*}/.well-known/matrix/server to answer {\"m.server\": \"$PUBLIC_HOST:$PUBLIC_PORT\"}"
   fi
   export PUBLIC_ORIGIN
@@ -202,7 +202,12 @@ configure_synapse() {
   # everything but an earlier vodle block, then the current block
   awk '/^# >>> vodle deployment settings/{skip=1} !skip{print} /^# <<< vodle deployment settings/{skip=0}' \
     "$MATRIX_DATA/homeserver.yaml" > "$tmp"
+  local federation_line="# FEDERATION=on in .env: this homeserver federates with others"
+  if [ "${FEDERATION:-on}" = off ]; then
+    federation_line="federation_domain_whitelist: []  # FEDERATION=off in .env"
+  fi
   sed -e "s|__SERVER_NAME__|$SERVER_NAME|g" -e "s|__PUBLIC_ORIGIN__|$PUBLIC_ORIGIN|g" \
+      -e "s|__FEDERATION_WHITELIST__|$federation_line|" \
       -e "s|__POSTGRES_PASSWORD__|$POSTGRES_PASSWORD|g" "$SYNAPSE_TEMPLATE" >> "$tmp"
   if [ "$DRY_RUN" = 1 ]; then
     echo "+ (would write $(wc -l < "$tmp") lines to matrix-data/homeserver.yaml)"

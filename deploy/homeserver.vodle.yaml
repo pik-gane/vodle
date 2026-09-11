@@ -56,9 +56,12 @@ rc_invites:
 
 # federation: after a network split Synapse retries a partner only every ten
 # minutes by default; seconds keep a split short for the voters (#329).
-# For a closed deployment add: federation_domain_whitelist: []
+# FEDERATION=off in .env closes the homeserver to other homeservers
+# entirely, which a deployment whose server name nothing resolves has to do
+# (deploy/README.md).
 federation:
   destination_min_retry_interval: 1s
   destination_retry_multiplier: 2
   destination_max_retry_interval: 10s
+__FEDERATION_WHITELIST__
 # <<< vodle deployment settings
