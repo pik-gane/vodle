@@ -87,6 +87,15 @@ export const environment = {
     // admin API's override_ratelimit in documentation/deployment/MATRIX.md
     // — can set 0 here, which turns the spacing off entirely.
     writes_per_second: 20,
+    // How many writes may go at once, before that rate applies at all. The
+    // homeserver allows a burst of its own before its limit bites
+    // (rc_message.burst_count, 1000 in the deployment settings), and vodle
+    // has no reason to be slower than its server asked for: publishing a
+    // poll of fifty voters over five options is some 450 writes, which fits
+    // inside that burst and so goes at once. The rate above governs what
+    // follows once the burst is spent. Keep this at or below the
+    // homeserver's rc_message.burst_count.
+    write_burst: 1000,
   },
   data_service: {
     central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/",

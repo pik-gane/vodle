@@ -1477,18 +1477,41 @@ describe('MatrixService throttled writes (#327)', () => {
     expect(calls).toBe(3);
   });
 
-  it('paces a burst so the writes leave in a stream, not all at once', async () => {
-    const floor = MatrixService.writeIntervalFloorMs();
-    expect(floor).toBeGreaterThan(0);           // the test environment paces
+  function timedWrites(n: number): {started: number[], run: () => Promise<any[]>} {
     const started: number[] = [];
-    const writes = Array.from({length: 4}, () => () => {
+    const writes = Array.from({length: n}, () => () => {
       started.push(Date.now());
       return Promise.resolve('written');
     });
-    await Promise.all(writes.map(w => service.retryOnRateLimit(w)));
+    return {started, run: () => Promise.all(writes.map(w => service.retryOnRateLimit(w)))};
+  }
+
+  it('lets the burst the homeserver allows through without spacing it', async () => {
+    // rc_message.burst_count is what a poll publication fits inside; spacing
+    // within it would only make vodle slower than its server asked for
+    expect(MatrixService.writeBurstSize()).toBeGreaterThan(4);
+    const {started, run} = timedWrites(4);
+    await run();
+    expect(started.length).toBe(4);
+    expect(started[3] - started[0]).toBeLessThan(MatrixService.writeIntervalFloorMs());
+  });
+
+  it('paces what follows once that burst is spent', async () => {
+    const floor = MatrixService.writeIntervalFloorMs();
+    expect(floor).toBeGreaterThan(0);           // the test environment paces
+    service.writeTokens = 0;
+    service.writeTokensAt = Date.now();
+    const {started, run} = timedWrites(4);
+    await run();
     expect(started.length).toBe(4);
     // three gaps of at least the floor between four writes
     expect(started[3] - started[0]).toBeGreaterThanOrEqual(2 * floor);
+  });
+
+  it('empties its own bucket when the server says the bucket is empty', async () => {
+    service.writeTokens = 500;
+    await expectAsync(service.retryOnRateLimit(() => Promise.reject(throttled()), 2)).toBeRejected();
+    expect(service.writeTokens).toBeLessThanOrEqual(0);
   });
 
   it('takes the floor from the deployment, and drops the spacing at 0', () => {
@@ -1501,6 +1524,7 @@ describe('MatrixService throttled writes (#327)', () => {
       // a homeserver that does not rate-limit this account at all
       environment.matrix.writes_per_second = 0;
       expect(MatrixService.writeIntervalFloorMs()).toBe(0);
+      expect(MatrixService.writeBurstSize()).toBe(environment.matrix.write_burst);
     } finally {
       environment.matrix.writes_per_second = original;
     }

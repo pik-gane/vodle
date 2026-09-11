@@ -118,12 +118,18 @@ tight server therefore makes a poll slower to appear, not wrong; while
 anything is still on its way the page header turns a spinner, and after half
 a minute a warning sign.
 
-The pace is `matrix.writes_per_second` in `environment.prod.ts`, 20 by
-default — the same figure as `rc_message.per_second` above. Keep the two in
-step: a client faster than its server only earns refusals, and a client
-slower than its server is the bottleneck instead of the server. Raising both
-is fine — they exist to stop a runaway client, and the cost of raising them
-is that a runaway client is no longer stopped.
+The client's own pace mirrors the two numbers above, and both halves matter:
+`matrix.write_burst` (1000, like `rc_message.burst_count`) is how many writes
+go at once, and `matrix.writes_per_second` (20, like `rc_message.per_second`)
+is the rate once that burst is spent. The burst is the half that decides how
+long publishing a poll takes: fifty voters over five options is about 450
+writes, which fits inside a thousand and therefore goes straight out; the
+per-second figure only governs sustained writing beyond the burst. Keep each
+at or below the homeserver's own, and raise both together — a client faster
+than its server only earns refusals, a client slower than its server is the
+bottleneck instead of the server. Raising the limits themselves is fine too;
+they exist to stop a runaway client, and the cost of raising them is that a
+runaway client is no longer stopped.
 
 **Exempting one account entirely.** A single account that publishes large
 test polls writes for every simulated voter at once and so collides with

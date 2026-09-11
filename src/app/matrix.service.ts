@@ -360,7 +360,9 @@ export class MatrixService {
   private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 6;
   private writeIntervalMinMs: number = MatrixService.writeIntervalFloorMs();
   private writeIntervalMs: number = MatrixService.writeIntervalFloorMs();
-  private nextWriteAt: number = 0;
+  private writeBurst: number = MatrixService.writeBurstSize();
+  private writeTokens: number = MatrixService.writeBurstSize();
+  private writeTokensAt: number = Date.now();
   private writesPausedUntil: number = 0;
   private writesAcceptedInARow: number = 0;
   
@@ -1074,14 +1076,15 @@ export class MatrixService {
         if (!this.is_rate_limit_error(error) || attempt >= maxRetries) {
           throw error;
         }
-        // Synapse says how long to wait. Hundreds of writes go out together
-        // when a poll is published, so they are all told the same thing and
-        // would come back together: the jitter spreads them instead (#327).
+        // Synapse says how long to wait. Several hundred writes go out
+        // together when a poll is published, so they are all told the same
+        // thing and would come back together: the jitter spreads them. The
+        // wait itself is the shared pause — paceWrite at the top of the loop
+        // sits it out, so it is not slept through here as well (#327).
         const waitMs = error?.data?.retry_after_ms ?? (2000 * Math.pow(2, attempt - 1));
-        this.noteWriteThrottled(waitMs);
         const jittered = Math.round(waitMs * (1 + Math.random()));
+        this.noteWriteThrottled(jittered);
         this.logger?.info(`Rate limited (429), retrying in ${jittered}ms (attempt ${attempt}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, jittered));
       }
     }
   }
@@ -1109,6 +1112,20 @@ export class MatrixService {
    * 0 (or an unset value) turns the spacing off, for a homeserver that does
    * not rate-limit this account.
    */
+  /**
+   * How many writes may go without any spacing at all, from
+   * matrix.write_burst: the homeserver allows a burst of its own
+   * (rc_message.burst_count) before its limit bites, and vodle has no reason
+   * to be slower than that. Publishing a poll of fifty voters over five
+   * options is some 450 writes, which fits inside the recommended burst of a
+   * thousand and therefore goes at once; the per-second rate only governs
+   * what follows once the burst is spent (#327).
+   */
+  static writeBurstSize(): number {
+    const burst = Number(environment.matrix.write_burst);
+    return Number.isFinite(burst) && burst > 0 ? burst : 1;
+  }
+
   static writeIntervalFloorMs(): number {
     const per_second = Number(environment.matrix.writes_per_second);
     if (!Number.isFinite(per_second) || per_second <= 0) {
@@ -1119,14 +1136,33 @@ export class MatrixService {
 
   /** Waits for this write's turn in the stream (see writeIntervalMs). */
   private async paceWrite(): Promise<void> {
-    if (this.writeIntervalMs <= 0 && this.writesPausedUntil <= Date.now()) {
-      return;
+    // A refusal pauses every write for as long as the server asked.
+    const paused = this.writesPausedUntil - Date.now();
+    if (paused > 0) {
+      await new Promise(resolve => setTimeout(resolve, paused));
     }
+    if (this.writeIntervalMs <= 0) {
+      return;                                   // spacing turned off entirely
+    }
+    
+    // The bucket, refilled at one write per writeIntervalMs and never fuller
+    // than the burst. While it holds tokens a write goes at once — that is
+    // what the homeserver's own burst_count allows, and spacing inside it
+    // would only make vodle slower than its server asked for. Once it is
+    // empty, writes leave one per interval, which is the sustained rate.
     const now = Date.now();
-    const at = Math.max(now, this.nextWriteAt, this.writesPausedUntil);
-    this.nextWriteAt = at + this.writeIntervalMs;
-    if (at > now) {
-      await new Promise(resolve => setTimeout(resolve, at - now));
+    this.writeTokens = Math.min(this.writeBurst,
+      this.writeTokens + (now - this.writeTokensAt) / this.writeIntervalMs);
+    this.writeTokensAt = now;
+    
+    const waitMs = this.writeTokens >= 1 ? 0
+      : Math.ceil((1 - this.writeTokens) * this.writeIntervalMs);
+    // Reserved even when it goes negative: each waiter takes the next slot in
+    // the queue, so concurrent writes leave one interval apart rather than
+    // all waking to the same moment.
+    this.writeTokens -= 1;
+    if (waitMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
   }
 
@@ -1136,6 +1172,12 @@ export class MatrixService {
    */
   private noteWriteThrottled(retryAfterMs: number): void {
     this.writesPausedUntil = Math.max(this.writesPausedUntil, Date.now() + retryAfterMs);
+    // The server has just said its own bucket is empty, so ours is wrong.
+    // Emptied rather than put into deficit: the deficit is counted in
+    // intervals, and the interval is about to change below, so carrying one
+    // across would be measured in the wrong unit and compound.
+    this.writeTokens = 0;
+    this.writeTokensAt = Date.now();
     // a server that refuses writes is rate-limiting after all, so the pace
     // starts from 20/s even when the deployment turned the spacing off
     this.writeIntervalMs = Math.min(MatrixService.WRITE_INTERVAL_MAX_MS,
