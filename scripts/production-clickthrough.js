@@ -22,6 +22,8 @@
  * blur, which a person does by clicking the next thing).
  */
 const puppeteer = require('puppeteer-core');
+const fs = require('fs');
+const path = require('path');
 
 const BASE = process.env.VODLE_BASE || 'http://localhost:8100';
 const STEP_TIMEOUT = 60000;
@@ -30,6 +32,15 @@ const EMAIL = `prodtest${stamp}@example.org`;
 const PASSWORD = 'ProdTest!' + stamp;
 
 const console_errors = [], page_errors = [], failed_requests = [];
+
+/** where to put a screenshot; the directory is gitignored, so on a fresh
+ *  checkout it does not exist and page.screenshot() would throw ENOENT
+ *  after a run that otherwise succeeded */
+function shot(suffix) {
+  const file = (process.env.SHOT || '/tmp/production-clickthrough.png').replace(/\.png$/, suffix + '.png');
+  fs.mkdirSync(path.dirname(path.resolve(file)), {recursive: true});
+  return file;
+}
 
 function log(...a) { console.log('[clickthrough]', ...a); }
 
@@ -247,18 +258,18 @@ async function voters(p) {
       await new Promise(r => setTimeout(r, 2000));
     }
     log('   creator sees:', host_voters, '| guest sees:', guest_voters);
-    await guest.screenshot({path: (process.env.SHOT || '/tmp/clickthrough.png').replace('.png', '-guest.png')});
+    await guest.screenshot({path: shot('-guest')});
     if (host_voters !== 2 || guest_voters !== 2) {
       throw new Error('the two sides disagree or a vote is missing: creator ' + host_voters + ', guest ' + guest_voters);
     }
 
-    await page.screenshot({path: process.env.SHOT || '/tmp/clickthrough.png', fullPage: false});
+    await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
     console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
       host_voters, guest_voters, console_errors, page_errors,
       failed_requests: failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r))}, null, 1));
   } catch (err) {
-    await page.screenshot({path: (process.env.SHOT || '/tmp/clickthrough.png').replace('.png', '-failed.png')}).catch(() => {});
+    await page.screenshot({path: shot('-failed')}).catch(() => {});
     const step = await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '');
     const alerts = await page.evaluate(() =>
       Array.from(document.querySelectorAll('ion-alert, ion-toast')).map(a => a.innerText.trim())).catch(() => []);
