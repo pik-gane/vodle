@@ -1879,8 +1879,8 @@ describe('MatrixService opening a poll costs what it must, once (#327)', () => {
       {type: 'm.room.vodle.poll.option', content: {option_id: 'o1', name: 'One'}},
       announce('v1', '!v1:hs.example'));
     // the three readers of the timeline, as opening a poll runs them:
-    await service.getOptions('p1');
     await service.discoverVoterRooms('p1', (MatrixService as any).POLL_TIMELINE_MAX_AGE_MS);
+    await service.getOptions('p1');
     await service.getDelegations('p1');
     const walks = fetched.calls.all().filter(c => String(c.args[0]).includes('/messages'));
     expect(walks.length).withContext('one walk, not three').toBe(1);
@@ -1893,6 +1893,17 @@ describe('MatrixService opening a poll costs what it must, once (#327)', () => {
     await service.discoverVoterRooms('p1');          // the default is fresh: walks again
     const walks = fetched.calls.all().filter(c => String(c.args[0]).includes('/messages'));
     expect(walks.length).toBe(2);
+  });
+
+  it('reads the poll room afresh when the ratings cache has been dropped', async () => {
+    // a voter room announced a moment ago — a newcomer's, or one arriving
+    // across federation — must not wait for an older walk to age out
+    const fetched = timeline_of(announce('v1', '!v1:hs.example'));
+    await service.getOptions('p1');                      // walks and shares
+    service.ratingCaches.delete('p1');
+    await service.getRatings('p1').catch(() => { /* the rooms are stubs */ });
+    const walks = fetched.calls.all().filter(c => String(c.args[0]).includes('/messages'));
+    expect(walks.length).withContext('a fresh walk, not the shared one').toBe(2);
   });
 
   it('does not join a voter room this device is already in from an earlier session', async () => {

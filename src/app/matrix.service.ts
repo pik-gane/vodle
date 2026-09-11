@@ -3664,7 +3664,14 @@ export class MatrixService {
     // Discover voter rooms from announcement events in the poll room.
     // This populates voterRooms / voterRoomReverseLookup with all
     // announced voter rooms, joining them if needed.
-    await this.discoverVoterRooms(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
+    //
+    // A FRESH walk, deliberately: this runs when the ratings cache has been
+    // invalidated, which is how a caller asks what the poll room holds
+    // *now*. Sharing a walk up to 15 s old here left a voter room that had
+    // just been announced — a newcomer's, or one arriving across
+    // federation — invisible until that walk aged out, however often it was
+    // asked for (#327).
+    await this.discoverVoterRooms(pollId);
     
     const ratings = new Map<string, Map<string, number>>();
     
