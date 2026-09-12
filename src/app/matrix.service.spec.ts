@@ -2172,7 +2172,7 @@ describe("MatrixService.within (#327)", () => {
 });
 
 describe("MatrixService does not meet the crypto store's owner by exception (#327)", () => {
-  let service: any, storage: any, store: any, client: any;
+  let service: any, storage: any, store: any, client: any, dropped: number;
 
   beforeEach(() => {
     store = new Map<string, any>();
@@ -2190,22 +2190,22 @@ describe("MatrixService does not meet the crypto store's owner by exception (#32
       removeListener: () => {},
     };
     service.client = client;
+    dropped = 0;
+    spyOn(MatrixService, 'dropRustCryptoStore').and.callFake(async () => { dropped += 1; });
   });
 
-  /** the crypto half of initializeWithToken, as the real one runs it */
+  /** what initializeWithToken does around initRustCrypto, calling the real
+   *  decision rather than a copy of it */
   async function init_crypto(userId: string) {
-    const crypto_account = await service.storage.get('matrix_crypto_account');
-    if (crypto_account && crypto_account !== userId) {
-      await service.client.clearStores();
-    }
+    await service.adoptCryptoStore(userId, () => {});
     await service.client.initRustCrypto({});
     await service.storage.set('matrix_crypto_account', userId);
   }
 
-  it("clears a store belonging to another account BEFORE trying to use it", async () => {
+  it("drops a store belonging to another account BEFORE trying to use it", async () => {
     store.set('matrix_crypto_account', '@guest_one:hs');
     await init_crypto('@guest_two:hs');
-    expect(client.clearStores).toHaveBeenCalledTimes(1);
+    expect(dropped).toBe(1);
     expect(client.initRustCrypto).withContext('one attempt, not a failed one and a retry').toHaveBeenCalledTimes(1);
     expect(store.get('matrix_crypto_account')).toBe('@guest_two:hs');
   });
@@ -2213,14 +2213,24 @@ describe("MatrixService does not meet the crypto store's owner by exception (#32
   it("leaves the store alone for the account that owns it", async () => {
     store.set('matrix_crypto_account', '@me:hs');
     await init_crypto('@me:hs');
-    expect(client.clearStores).not.toHaveBeenCalled();
+    expect(dropped).toBe(0);
     expect(client.initRustCrypto).toHaveBeenCalledTimes(1);
   });
 
-  it("does not clear when no account has claimed the store yet", async () => {
+  it("drops a store no account has claimed: unproved is not the same as ours", async () => {
+    // the case CI caught: a profile whose marker had gone with the rest of
+    // vodle's storage while the crypto store stayed, and which then spent
+    // 18.4 s in a failed init, a blocked delete and a migration (#327)
     await init_crypto('@first:hs');
-    expect(client.clearStores).not.toHaveBeenCalled();
+    expect(dropped).toBe(1);
     expect(store.get('matrix_crypto_account')).toBe('@first:hs');
+  });
+
+  it("drops nothing when the store is in memory", async () => {
+    service.e2ee_store_in_memory = true;
+    store.set('matrix_crypto_account', '@someone_else:hs');
+    await init_crypto('@me:hs');
+    expect(dropped).toBe(0);
   });
 
   it("forgets the marker when the session drops, since the store goes with it", async () => {
@@ -2228,5 +2238,68 @@ describe("MatrixService does not meet the crypto store's owner by exception (#32
     service.pollEventHandlerRefs = new Map();
     await service.dropSession();
     expect(store.has('matrix_crypto_account')).withContext('no stale claim').toBeFalse();
+  });
+});
+
+describe("MatrixService.dropRustCryptoStore (#327)", () => {
+  let deleted: string[], outcome: 'success' | 'error' | 'blocked';
+
+  /** a deleteDatabase that answers the way the browser would. Handed in as
+   *  a parameter: window.indexedDB is a getter on Window.prototype, and a
+   *  spec that shadows it takes PouchDB's specs down with it. */
+  function fake_indexeddb(names: string[] | null): any {
+    return {
+      databases: names === null ? undefined : async () => names.map(name => ({name})),
+      deleteDatabase: (name: string) => {
+        const request: any = {};
+        setTimeout(() => {
+          deleted.push(name);
+          if (outcome === 'success') request.onsuccess?.({});
+          else if (outcome === 'error') request.onerror?.({});
+          else request.onblocked?.({});
+        }, 0);
+        return request;
+      },
+    };
+  }
+
+  beforeEach(() => {
+    deleted = [];
+    outcome = 'success';
+  });
+
+  it("deletes the crypto stores and nothing else", async () => {
+    await MatrixService.dropRustCryptoStore(fake_indexeddb([
+      'matrix-js-sdk::matrix-sdk-crypto', 'matrix-js-sdk::matrix-sdk-crypto-meta',
+      'matrix-js-sdk:riot-web-sync', '_ionicstorage',
+    ]));
+    expect(deleted).toEqual(['matrix-js-sdk::matrix-sdk-crypto', 'matrix-js-sdk::matrix-sdk-crypto-meta']);
+  });
+
+  it("falls back to the known names where databases() is missing", async () => {
+    await MatrixService.dropRustCryptoStore(fake_indexeddb(null));
+    expect(deleted).toEqual(['matrix-js-sdk::matrix-sdk-crypto', 'matrix-js-sdk::matrix-sdk-crypto-meta']);
+  });
+
+  it("does not wait for another tab that holds the store open", async () => {
+    // onblocked without onsuccess is a delete that only completes when the
+    // other connection closes: the start must not hang on it
+    outcome = 'blocked';
+    await expectAsync(MatrixService.dropRustCryptoStore(fake_indexeddb(['matrix-js-sdk::matrix-sdk-crypto'])))
+      .toBeResolved();
+    expect(deleted).toEqual(['matrix-js-sdk::matrix-sdk-crypto']);
+  });
+
+  it("carries on when the delete is refused", async () => {
+    // private browsing in Firefox refuses deleteDatabase outright
+    outcome = 'error';
+    await expectAsync(MatrixService.dropRustCryptoStore(fake_indexeddb(['matrix-js-sdk::matrix-sdk-crypto'])))
+      .toBeResolved();
+    expect(deleted).toEqual(['matrix-js-sdk::matrix-sdk-crypto']);
+  });
+
+  it("does nothing without IndexedDB at all", async () => {
+    await expectAsync(MatrixService.dropRustCryptoStore(null)).toBeResolved();
+    expect(deleted).toEqual([]);
   });
 });

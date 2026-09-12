@@ -100,6 +100,12 @@ jobs:
       - name: Check the boot-stage parser
         run: node scripts/boot-stages.js --self-test
 
+      # and the digest that makes a failed click-through readable: the run of
+      # 2026-09-12 printed 300 KB of console dump with the one line naming
+      # the failure buried in it (#327)
+      - name: Check the click-through report helpers
+        run: node scripts/clickthrough-report.js --self-test
+
       - name: Build and click through the production app
         # with simulated voters, so the poll is published as a burst of
         # writes across several rooms and both sides have to agree on how

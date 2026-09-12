@@ -45,6 +45,9 @@ const boot_lines = {creator: [], guest: [], returning: []};
 let guest_boot_target = 'guest';
 const guest_boot = () => boot_lines[guest_boot_target];
 
+/* the report helpers and the boot-log parsing live in their own modules so
+   they can be tested without a browser: each takes --self-test (#327) */
+const { digest, console_tail } = require('./clickthrough-report');
 /* the parsing lives in its own module so it can be tested without a browser:
    node scripts/boot-stages.js --self-test (#327) */
 const { boot_stages, slowest_stage } = require('./boot-stages');
@@ -413,16 +416,22 @@ async function voters(p) {
         + over.map(([who, b]) => `${who} spent ${b.slowest_ms} ms in "${b.slowest_stage}"`).join('; ')
         + ` (the ceiling is ${STAGE_MS_MAX} ms, VODLE_BOOT_STAGE_MS_MAX)`);
     }
-    if (boot_lines.creator.length === 0) {
-      throw new Error('no [vodle boot] lines at all — an old bundle, or the boot log is gone');
+    // index.html prints "the page arrived" before any bundle has run, so
+    // the app's own first stage is what says the boot log is still there:
+    if (!boot_lines.creator.some(line => /data service init/.test(line))) {
+      throw new Error('no "[vodle boot] data service init" line — an old bundle, or the boot log is gone');
+    }
+    if (!boot_lines.creator.some(line => /the app bundle ran/.test(line))) {
+      throw new Error('no "[vodle boot] the app bundle ran" line — index.html or main.ts lost its stopwatch');
     }
 
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
     console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
       host_voters, guest_voters, reload, boots, returning_ms,
-      diagnostics: diagnostics.slice(-12), console_errors, page_errors,
-      failed_requests: failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r))}, null, 1));
+      diagnostics: diagnostics.slice(-12),
+      console_errors: digest(console_errors), page_errors: digest(page_errors),
+      failed_requests: digest(failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r)))}, null, 1));
   } catch (err) {
     await page.screenshot({path: shot('-failed')}).catch(() => {});
     const step = await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '');
@@ -433,8 +442,12 @@ async function voters(p) {
              guest: boot_stages(boot_lines.guest),
              returning: boot_stages(boot_lines.returning)},
       diagnostics: diagnostics.slice(-30),
-      matrix_requests, console_errors, page_errors, failed_requests,
-      console_tail: console_all.slice(-25)}, null, 1));
+      // digested, not dumped: what is wrong shows up as the line with the
+      // biggest count, and the report stays a page instead of 300 KB (#327)
+      matrix_requests: digest(matrix_requests.map(r => r.replace(/\?.*$/, '')), 20),
+      console_errors: digest(console_errors), page_errors: digest(page_errors),
+      failed_requests: digest(failed_requests),
+      console_tail: console_tail(console_all)}, null, 1));
     process.exitCode = 1;
   } finally {
     await browser.close();

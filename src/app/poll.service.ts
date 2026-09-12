@@ -1789,7 +1789,14 @@ export class Poll {
   update_score(oid: string, approval_score: number, total_rating: number, score_factor: number) {
     // TODO: make the following tie-breaker faster by storing i permanently.
     // calculate a tiebreaking value between 0 and 1 based on the hash of the option name:
-    const tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(this.options[oid].name), 16).toString());
+    // by the option's name when there is one: an oid can reach the tally
+    // before its Option object exists, and a tie-breaker is not worth
+    // aborting a tally over (#327).
+    const option = this.options[oid];
+    if (!option) {
+      this.G.L.warn("Poll.update_score option not registered yet, breaking ties by oid", this.pid, oid);
+    }
+    const tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(option ? option.name : oid), 16).toString());
     this.T.scores_map.set(oid, approval_score * score_factor + total_rating + tie_breaker);
   }
 

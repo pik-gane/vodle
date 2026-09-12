@@ -3214,6 +3214,19 @@ export class DataService implements OnDestroy {
               }
               const pkey = this.get_voter_key_prefix(pollId, vid) + 'rating.' + optionId;
               this.poll_caches[pollId][pkey] = String(rating);
+              const poll = this.G.P.polls[pollId];
+              if (poll && !(optionId in poll.options)) {
+                // A rating can arrive before this poll's Option objects
+                // exist — the live handlers are registered before
+                // load_poll_contents has read the options. Tallying it then
+                // throws on the missing Option and aborts the whole tally
+                // (#327). The value is in poll_caches above, and
+                // load_poll_contents bridges every rating into the tally
+                // once the options are there, so it is not lost:
+                this.G.L.info("DataService Matrix onRatingUpdate before the option exists",
+                  pollId, optionId);
+                return;
+              }
               // Feed the tally system — update_own_rating is idempotent (no-op if
               // the value hasn't changed) and with update_tally=true it calls
               // tally_all() which recomputes scores and updates the UI.

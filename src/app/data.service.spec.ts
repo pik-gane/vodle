@@ -3469,3 +3469,66 @@ describe("a poll's contents are fetched when the poll is opened (#327)", () => {
     expect(matrix.getRatings).toHaveBeenCalledWith('p1');
   });
 });
+
+// A rating can reach the live handler before the poll's Option objects
+// exist: the poll page registers the handlers as soon as the poll is
+// opened, while the options are still being read. Tallying such a rating
+// used to throw in Poll.update_score ("Cannot read properties of undefined
+// (reading 'name')") and abort the whole tally — it filled the guest's
+// console in the click-through run of 2026-09-12 (#327).
+describe('a rating that arrives before its option does (#327)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, previous_flag: boolean, update_own_rating: jasmine.Spy;
+
+  const listener_for = (pid: string) => {
+    expect(svc.start_poll_sync(pid)).toBeTrue();
+    return svc._matrixPollListeners[pid];
+  };
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    (environment as any).useMatrixBackend = true;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = {};
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    matrix = {
+      addPollEventListener: jasmine.createSpy('addPollEventListener'),
+      setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers').and.returnValue(Promise.resolve()),
+    };
+    svc.matrixService = matrix;
+    update_own_rating = jasmine.createSpy('update_own_rating');
+    svc.G = { L: L, P: { polls: {}, update_own_rating: update_own_rating },
+              D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+  });
+
+  it('keeps the rating but does not tally it while the option is unknown', () => {
+    svc.G.P.polls['p1'] = { options: {} };
+    listener_for('p1').onRatingUpdate('p1', 'v1', 'o1', 42);
+    expect(update_own_rating).not.toHaveBeenCalled();
+    expect(svc.poll_caches['p1'][svc.get_voter_key_prefix('p1', 'v1') + 'rating.o1']).toBe('42');
+  });
+
+  it('tallies it once the option is registered', () => {
+    svc.G.P.polls['p2'] = { options: {} };
+    const listener = listener_for('p2');
+    listener.onRatingUpdate('p2', 'v1', 'o1', 42);
+    svc.G.P.polls['p2'].options['o1'] = {oid: 'o1', name: 'One'};
+    listener.onRatingUpdate('p2', 'v1', 'o1', 43);
+    expect(update_own_rating).toHaveBeenCalledTimes(1);
+    expect(update_own_rating).toHaveBeenCalledWith('p2', 'v1', 'o1', 43, true);
+  });
+
+  it('tallies it when the poll object itself is not there yet', () => {
+    // no Poll means no tally to abort; update_own_rating stores the value
+    listener_for('p3').onRatingUpdate('p3', 'v1', 'o1', 7);
+    expect(update_own_rating).toHaveBeenCalledWith('p3', 'v1', 'o1', 7, true);
+  });
+});

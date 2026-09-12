@@ -691,26 +691,9 @@ export class MatrixService {
           });
           boot("crypto WASM loaded");
           const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
-          // The SDK's crypto store is one per browser profile and belongs to
-          // ONE account. vodle hands out a fresh account to every silent
-          // guest (#193), so a browser that has been a guest before arrives
-          // with a store belonging to somebody else — and finding that out
-          // by exception costs a failed init, a deleteDatabase that blocks
-          // on the connection the failed init left open, and a full schema
-          // migration of the store that is about to be thrown away: 26
-          // seconds of it in the owner's log, against 1.5 s for a device
-          // reusing its account. So the mismatch is settled before the
-          // attempt rather than after it (#327).
-          const crypto_account = await this.storage.get('matrix_crypto_account');
-          if (crypto_account && crypto_account !== userId) {
-            boot("the crypto store belongs to another account, clearing it", crypto_account);
-            try {
-              await this.client.clearStores();
-            } catch (clear_error) {
-              console.warn("[vodle boot] could not clear the old crypto store:",
-                (clear_error as any)?.message || clear_error);
-            }
-          }
+          // a store left behind by another account is dropped before the
+          // attempt rather than discovered by its exception (#327):
+          await this.adoptCryptoStore(userId, boot);
           try {
             await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
               "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
@@ -1321,11 +1304,6 @@ export class MatrixService {
     }
   }
 
-  /**
-   * Runs `work` over `items`, at most `limit` of them at a time. Rejections
-   * are the caller's to handle inside `work`: one failure must not stop the
-   * others (a voter room that refuses a newcomer is not the others' fault).
-   */
   /** how long the crypto WASM may take before the start goes on without it */
   static readonly CRYPTO_INIT_TIMEOUT_MS = 20000;
   /**
@@ -1354,6 +1332,88 @@ export class MatrixService {
     });
   }
   
+  /**
+   * Make sure the Rust crypto store on disk is this account's, before the
+   * SDK opens it.
+   *
+   * The store is one per browser profile and belongs to ONE account. vodle
+   * hands out a fresh account to every silent guest (#193), so a browser
+   * that has been a guest before arrives with a store belonging to somebody
+   * else — and finding that out by exception costs a failed init, a
+   * deleteDatabase that blocks on the connection the failed init left open,
+   * and a full schema migration of the store that is about to be thrown
+   * away: 26 seconds of it in the owner's log and 18.4 s in CI, against
+   * 1.5 s for a device reusing its account (#327).
+   *
+   * Ownership has to be *proved*, not merely not-disproved: a browser with
+   * no marker (storage cleared, or a version older than this check) has not
+   * shown the store is this account's, and paid the 18.4 s.
+   */
+  private async adoptCryptoStore(userId: string, boot: (stage: string, detail?: any) => void): Promise<void> {
+    // (nothing to do when the store is in memory: there is none on disk,
+    // and tests running several clients in one page share the profile)
+    if (this.e2ee_store_in_memory) return;
+    const crypto_account = await this.storage.get('matrix_crypto_account');
+    if (crypto_account === userId) return;
+    boot("the crypto store is not this account's, dropping it",
+      crypto_account || "no marker");
+    await MatrixService.dropRustCryptoStore();
+    boot("the old crypto store is gone");
+  }
+  
+  /**
+   * Delete the Rust crypto store, before anything in this tab has opened it.
+   *
+   * `client.clearStores()` would do this too, but it also throws away the
+   * sync store, and by the time it is reached from the catch below the
+   * failed init is holding the store open — so `deleteDatabase` fires
+   * `onblocked` and the start waits for a connection that only closes when
+   * the page does. Dropping the store *before* the attempt costs a
+   * `deleteDatabase` with nothing to block it (#327).
+   */
+  static async dropRustCryptoStore(factory?: IDBFactory | null): Promise<void> {
+    // the factory is a parameter so that a test can hand in its own rather
+    // than overwrite window.indexedDB, which is a getter on Window.prototype
+    // and, once shadowed, takes PouchDB down with it:
+    let databases = factory;
+    if (factory === undefined) {
+      try {
+        databases = globalThis.indexedDB;
+      } catch {
+        return;  // no IndexedDB (private browsing in some browsers): nothing to drop
+      }
+    }
+    if (!databases) return;
+    // by name, so a renamed store is still found; the two literal names are
+    // what matrix-js-sdk 37 uses (RUST_SDK_STORE_PREFIX + "::matrix-sdk-crypto"):
+    let names = ['matrix-js-sdk::matrix-sdk-crypto', 'matrix-js-sdk::matrix-sdk-crypto-meta'];
+    try {
+      const listed = await (databases as any).databases?.();
+      if (Array.isArray(listed)) {
+        names = listed.map((entry: any) => entry?.name)
+                      .filter((name: any) => typeof name === 'string' && name.includes('matrix-sdk-crypto'));
+      }
+    } catch {
+      // databases() is not everywhere; the literal names above still apply
+    }
+    for (const name of names) {
+      await new Promise<void>(resolve => {
+        const request = databases.deleteDatabase(name);
+        request.onsuccess = () => resolve();
+        // a delete that fails or is blocked by another tab must not hold the
+        // start: the init below then fails as it did before, and its catch
+        // clears and retries:
+        request.onerror = () => resolve();
+        request.onblocked = () => resolve();
+      });
+    }
+  }
+  
+  /**
+   * Runs `work` over `items`, at most `limit` of them at a time. Rejections
+   * are the caller's to handle inside `work`: one failure must not stop the
+   * others (a voter room that refuses a newcomer is not the others' fault).
+   */
   static async forEachConcurrently<T>(
     items: T[], limit: number, work: (item: T) => Promise<void>
   ): Promise<void> {
