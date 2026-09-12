@@ -707,6 +707,16 @@ export class DataService implements OnDestroy {
         detail === undefined ? "" : detail);
     (this as any).boot_log = boot;
     boot("data service init");
+    // 5.4 MB of crypto WebAssembly the start cannot finish without. Asking
+    // for it here rather than after the login lets it download WHILE the
+    // login and the registration happen: in the owner's guest start of
+    // 2026-09-12 those took 4.9 s and the WASM 8.9 s, one after the other
+    // (#327). The fetch is memoised, so the await in initializeWithToken is
+    // the same promise, and a failure here is nobody's to handle — crypto
+    // reports and degrades on its own path.
+    if (environment.useMatrixBackend && environment.matrix.enable_e2ee) {
+      MatrixService.fetchCryptoWasm().catch(() => { /* reported where it is awaited */ });
+    }
     this.storage.create();
     boot("local storage created");
     // restore state from storage:

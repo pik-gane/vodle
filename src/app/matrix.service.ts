@@ -677,18 +677,11 @@ export class MatrixService {
         try {
           // The crypto WASM's default loading URL is built from
           // import.meta.url, which Angular's webpack leaves as an unfetchable
-          // file:/// source path — so load the module explicitly from the
-          // copy shipped as an app asset (see angular.json); the loader
-          // memoizes, and initRustCrypto below reuses the loaded module:
-          // 5.4 MB of WebAssembly on the path between the app starting and
-          // it being able to talk to the homeserver at all. It already
-          // degrades gracefully (the catch below), so it is time-boxed too:
-          // an asset slow to arrive must cost the start a known number of
-          // seconds rather than an unknown one (#327).
-          await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS, "the crypto WASM", async () => {
-            const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
-            await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
-          });
+          // file:/// source path (see fetchCryptoWasm). DataService.init
+          // starts that fetch when the app starts, so by here it is usually
+          // already on its way — or done (#327):
+          await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS, "the crypto WASM",
+            () => MatrixService.fetchCryptoWasm());
           boot("crypto WASM loaded");
           const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
           // a store left behind by another account is dropped before the
@@ -1331,6 +1324,43 @@ export class MatrixService {
         value => { clearTimeout(timer); resolve(value); },
         error => { clearTimeout(timer); reject(error); });
     });
+  }
+  
+  /** the one crypto-WASM fetch, however many times it is asked for.
+   *  Not private so that a test can reset it without fetching 5.4 MB. */
+  static cryptoWasm: Promise<void> | null = null;
+  
+  /** how the WASM is actually loaded; a test replaces this */
+  static loadCryptoWasm: () => Promise<void> = async () => {
+    // The module's own default URL is built from import.meta.url, which
+    // Angular's webpack leaves as an unfetchable file:/// path, so the copy
+    // shipped as an app asset (see angular.json) is named explicitly.
+    const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
+    await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+  };
+  
+  /**
+   * Fetch and instantiate the Rust crypto WASM, once.
+   *
+   * 5.4 MB of WebAssembly, and it sits on the path between the app starting
+   * and its first sync. The owner's guest start of 2026-09-12 spent 8.9 s of
+   * a 33 s join on it, because it was only ASKED for after the login and the
+   * registration had finished — some five seconds during which the link was
+   * doing nothing else worth the bandwidth. DataService.init calls this at
+   * the start of the start instead, and initializeWithToken awaits the same
+   * promise, so the download overlaps the login rather than following it.
+   *
+   * A failure is not remembered: crypto degrades gracefully, and a second
+   * start should be free to try again.
+   */
+  static fetchCryptoWasm(): Promise<void> {
+    if (!MatrixService.cryptoWasm) {
+      MatrixService.cryptoWasm = MatrixService.loadCryptoWasm().catch(error => {
+        MatrixService.cryptoWasm = null;
+        throw error;
+      });
+    }
+    return MatrixService.cryptoWasm;
   }
   
   /**

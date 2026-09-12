@@ -2342,3 +2342,40 @@ describe("MatrixService.stopMatrixRTC (#327)", () => {
     expect(client.stopped).toBe(1);
   });
 });
+
+describe("MatrixService.fetchCryptoWasm (#327)", () => {
+  let real_loader: () => Promise<void>, calls: number;
+
+  beforeEach(() => {
+    real_loader = MatrixService.loadCryptoWasm;
+    MatrixService.cryptoWasm = null;
+    calls = 0;
+  });
+
+  afterEach(() => {
+    MatrixService.loadCryptoWasm = real_loader;
+    MatrixService.cryptoWasm = null;
+  });
+
+  it("fetches the 5.4 MB once however many times it is asked for", async () => {
+    // DataService.init asks at the start of the start and
+    // initializeWithToken asks again after the login: two fetches would be
+    // worse than the one serialised fetch this replaced (#327)
+    MatrixService.loadCryptoWasm = async () => { calls += 1; };
+    const first = MatrixService.fetchCryptoWasm();
+    const second = MatrixService.fetchCryptoWasm();
+    expect(second).withContext('the same promise, not a second fetch').toBe(first);
+    await Promise.all([first, second]);
+    expect(MatrixService.fetchCryptoWasm()).toBe(first);
+    expect(calls).toBe(1);
+  });
+
+  it("does not remember a failure", async () => {
+    // crypto degrades gracefully, so a start that could not fetch it must
+    // not poison every later start in the same page
+    MatrixService.loadCryptoWasm = async () => { calls += 1; throw new Error('offline'); };
+    await expectAsync(MatrixService.fetchCryptoWasm()).toBeRejectedWithError('offline');
+    await expectAsync(MatrixService.fetchCryptoWasm()).toBeRejectedWithError('offline');
+    expect(calls).withContext('tried again rather than replaying the failure').toBe(2);
+  });
+});
