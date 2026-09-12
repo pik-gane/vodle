@@ -255,6 +255,23 @@ export class MatrixService {
   private pollEventHandlersSetup: Set<string> = new Set();
   /** polls whose voter rooms this device has started discovering (#327) */
   private voterSyncStarted: Set<string> = new Set();
+  /**
+   * Polls whose ratings have actually been READ, room by room (#327).
+   *
+   * ratingCaches alone cannot say that: the live rating handlers and the
+   * retroactive scan of the SDK's store both build entries in it through
+   * updateRatingCache, so a poll could have a cache holding only what the
+   * sync happened to carry — and getRatings, seeing a cache, returned it
+   * and never went and looked. A poll of fifty then showed however many
+   * the store had (242 of 260 rating events in the report), for good.
+   */
+  private ratingsScanned: Set<string> = new Set();
+  /**
+   * Ratings that arrive live WHILE a read is in flight, per poll. The read
+   * is a snapshot of a moment already past by the time it finishes, so
+   * these are layered back on top of it: they are strictly newer.
+   */
+  private ratingsDuringScan: Map<string, Map<string, Map<string, number>>> = new Map();
   /** the last walk of a poll room's timeline, shared by the three readers
    *  of it during a poll's load (#327) */
   private pollTimelineCache: Map<string, {at: number, events: Promise<any[]>}> = new Map();
@@ -1179,6 +1196,8 @@ export class MatrixService {
     this.pollEventHandlersSetup.clear();
     this.voterSyncStarted.clear();
     this.pollTimelineCache.clear();
+    this.ratingsScanned.clear();
+    this.ratingsDuringScan.clear();
     this.pollEventHandlerRefs.clear();
     // Stop all periodic voter discovery timers
     for (const [, timer] of this.voterDiscoveryTimers) {
@@ -2417,8 +2436,14 @@ export class MatrixService {
           }
         }
         console.log("[ensureOptionCache] options found:", options.size);
-        // Only cache after successful retrieval
-        this.optionCaches.set(pollId, options);
+        // Only cache a real answer. A poll that is running has options, so
+        // an empty result means the walk found nothing — a room not yet
+        // joined, a request that failed, a timeline not yet backfilled —
+        // and caching it made the poll optionless for the rest of the
+        // session, which is what the creator's log showed (#327).
+        if (options.size > 0) {
+          this.optionCaches.set(pollId, options);
+        }
       } catch (error) {
         this.logger?.error("Failed to fetch options from server", pollId, error);
       }
@@ -3650,9 +3675,13 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
-    // Check cache — return defensive copy so callers cannot corrupt internal state
+    // Check cache — return defensive copy so callers cannot corrupt internal
+    // state. Only a cache this method itself filled will do: one built by
+    // the live handlers or by the retroactive scan of the SDK store holds
+    // whatever the sync happened to carry, which is not the same thing as
+    // what the voter rooms contain (#327).
     const cached = this.ratingCaches.get(pollId);
-    if (cached) {
+    if (cached && this.ratingsScanned.has(pollId)) {
       console.log("[getRatings] Returning cached ratings for", pollId, "voters:", cached.size);
       const copy = new Map<string, Map<string, number>>();
       for (const [voterId, voterRatings] of cached) {
@@ -3674,6 +3703,8 @@ export class MatrixService {
     await this.discoverVoterRooms(pollId);
     
     const ratings = new Map<string, Map<string, number>>();
+    // from here until the read is done, keep what arrives live as well:
+    this.ratingsDuringScan.set(pollId, new Map());
     
     // Get all options for this poll to know which rating keys to look for
     const options = await this.getOptions(pollId);
@@ -3712,25 +3743,43 @@ export class MatrixService {
       let discoveredVid: string | null = null;
       
       try {
+        const fromServer = async (): Promise<any[] | null> => {
+          const encodedRoomId = encodeURIComponent(roomId);
+          const stateUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
+          const resp = await fetch(stateUrl, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            cache: 'no-store',
+          });
+          if (!resp.ok) {
+            console.error("[getRatings] Failed to fetch state for voter room:", roomId, "status:", resp.status);
+            return null;
+          }
+          return await resp.json();
+        };
+        
+        // The store first, but only when it holds a COMPLETE answer.
+        //
+        // A room's presence in the store, even with its vid and the poll's
+        // deadline in it, says nothing about whether its rating events
+        // arrived: /sync can deliver a room whose vodle state is partial,
+        // and reading that as authoritative reports a voter as having
+        // fewer ratings than they cast. That is how a poll of fifty came
+        // out at 242 of 260 ratings and showed 50 voters instead of 52
+        // (#327). So the store's answer is checked against the number of
+        // options, and anything short is asked of the server — which costs
+        // a request only for a voter who really has not rated everything.
         let stateEvents: any[] | null = this.voterRoomStateFromStore(roomId);
+        if (stateEvents && !MatrixService.holdsEveryRating(stateEvents, options)) {
+          stateEvents = null;
+        }
         if (stateEvents) {
           this.ratingsFromStore++;
         } else {
           this.ratingsFromServer++;
-        const encodedRoomId = encodeURIComponent(roomId);
-        const stateUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
-        
-        const resp = await fetch(stateUrl, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        
-        if (!resp.ok) {
-          console.error("[getRatings] Failed to fetch state for voter room:", roomId, "status:", resp.status);
-          return;                       // this room only; the others go on
-        }
-        
-        stateEvents = await resp.json();
+          stateEvents = await fromServer();
+          if (!stateEvents) {
+            return;                     // this room only; the others go on
+          }
         }
         console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
           "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
@@ -3780,11 +3829,31 @@ export class MatrixService {
       }
     });
     
-    console.log("[getRatings] DONE. Total voters with ratings:", ratings.size,
-      "| read from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer);
+    // anything that arrived while the rooms were being read is newer than
+    // the read, so it goes on top of it:
+    const live = this.ratingsDuringScan.get(pollId);
+    this.ratingsDuringScan.delete(pollId);
+    let layered = 0;
+    if (live) {
+      for (const [voterId, voterRatings] of live) {
+        let into = ratings.get(voterId);
+        if (!into) { into = new Map<string, number>(); ratings.set(voterId, into); }
+        for (const [optionId, rating] of voterRatings) { into.set(optionId, rating); layered++; }
+      }
+    }
     
-    // Cache the result
+    let total_ratings = 0;
+    for (const voterRatings of ratings.values()) { total_ratings += voterRatings.size; }
+    console.log("[getRatings] DONE.", pollId, "voter rooms:", voterRoomEntries.length,
+      "| voters with ratings:", ratings.size, "| ratings:", total_ratings,
+      "| expected:", voterRoomEntries.length * options.size,
+      "| from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer,
+      "| arrived during the read:", layered);
+    
+    // Cache the result, and record that it was actually read rather than
+    // merely accumulated from whatever the sync delivered (#327):
     this.ratingCaches.set(pollId, ratings);
+    this.ratingsScanned.add(pollId);
     
     // Return a defensive copy so callers cannot mutate the cached map
     const result = new Map<string, Map<string, number>>();
@@ -3802,6 +3871,7 @@ export class MatrixService {
    */
   async refreshRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
     this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
     return this.getRatings(pollId);
   }
   
@@ -3849,6 +3919,15 @@ export class MatrixService {
    * Called by real-time event handlers when a rating event arrives.
    */
   updateRatingCache(pollId: string, voterId: string, optionId: string, rating: number): void {
+    // a read in flight gets this too, so that finishing it cannot throw
+    // away a rating that arrived while it ran (#327):
+    const during = this.ratingsDuringScan.get(pollId);
+    if (during) {
+      let voterDuring = during.get(voterId);
+      if (!voterDuring) { voterDuring = new Map(); during.set(voterId, voterDuring); }
+      voterDuring.set(optionId, rating);
+    }
+    
     let pollRatings = this.ratingCaches.get(pollId);
     if (!pollRatings) {
       pollRatings = new Map();
@@ -3869,6 +3948,7 @@ export class MatrixService {
    */
   clearRatingCache(pollId: string): void {
     this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
   }
   
   // ========================================================================
@@ -4525,6 +4605,7 @@ export class MatrixService {
       
       // Invalidate rating cache so next getRatings() includes this voter
       this.ratingCaches.delete(pollId);
+      this.ratingsScanned.delete(pollId);
       
       // Notify listeners that data changed (new voter discovered)
       const listeners = this.pollEventListeners.get(pollId);
@@ -4806,6 +4887,7 @@ export class MatrixService {
     this.pollOrigins.delete(pollId);
     this.optionCaches.delete(pollId);
     this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
     await this.storage.remove(`poll_room_${pollId}`);
     for (const roomId of rooms) {
       try {
@@ -5293,6 +5375,29 @@ export class MatrixService {
    * created, its vid; either is evidence that this room's vodle state has
    * arrived. Without one, the caller asks the server (#327).
    */
+  /**
+   * Whether a voter room's state, as read from somewhere, carries a rating
+   * for every option of the poll — i.e. whether it can be believed without
+   * asking the server (#327).
+   */
+  private static holdsEveryRating(stateEvents: any[], options: Map<string, any>): boolean {
+    if (options.size === 0) {
+      return false;                     // nothing to check against
+    }
+    const prefix = 'm.room.vodle.voter.rating.rating.';
+    const rated = new Set<string>();
+    for (const event of stateEvents) {
+      const type = event?.type;
+      if (typeof type === 'string' && type.startsWith(prefix)) {
+        rated.add(type.slice(prefix.length));
+      }
+    }
+    for (const optionId of options.keys()) {
+      if (!rated.has(optionId)) { return false; }
+    }
+    return true;
+  }
+  
   private voterRoomStateFromStore(roomId: string): any[] | null {
     return this.roomStateFromStore(roomId, type =>
       type === 'm.room.vodle.voter.vid' || type === 'm.room.vodle.poll.deadline');

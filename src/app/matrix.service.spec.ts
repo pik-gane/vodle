@@ -1932,3 +1932,207 @@ describe('MatrixService opening a poll costs what it must, once (#327)', () => {
     expect(service.client.joinRoom).toHaveBeenCalled();
   });
 });
+
+describe("MatrixService reads the voter rooms rather than trusting what the sync brought (#327)", () => {
+  const PID = 'p1';
+  let service: any, storage: any, fetch_spy: any;
+
+  // one option, two announced voters, each voter room holding a rating for it
+  const POLL_TIMELINE = [
+    {type: 'm.room.vodle.poll.option', content: {option_id: 'o1', name: 'One'}},
+    {type: 'm.room.vodle.voter.announce', sender: '@u:hs', origin_server_ts: 1,
+     content: {voter_id: 'v1', voter_room_id: '!v1:hs', vodle_vid: 'v1'}},
+    {type: 'm.room.vodle.voter.announce', sender: '@u:hs', origin_server_ts: 2,
+     content: {voter_id: 'v2', voter_room_id: '!v2:hs', vodle_vid: 'v2'}},
+  ];
+  const voter_state = (vid: string, rating: number) => [
+    {type: 'm.room.vodle.voter.vid', state_key: '', content: {value: vid}},
+    {type: 'm.room.vodle.voter.rating.rating.o1', state_key: '', content: {value: rating, voter_vid: vid}},
+  ];
+
+  beforeEach(() => {
+    storage = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    storage.get.and.returnValue(Promise.resolve(null));
+    storage.set.and.returnValue(Promise.resolve());
+    storage.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: storage}]});
+    service = TestBed.inject(MatrixService);
+    service.homeserverUrl = 'https://hs';
+    service.userId = '@u:hs';
+    service.pollRooms.set(PID, '!poll:hs');
+    service.client = {
+      getAccessToken: () => 'token',
+      getRoom: (_id: string) => null,          // nothing in the store: the rooms are read
+      joinRoom: jasmine.createSpy('joinRoom').and.returnValue(Promise.resolve({})),
+    };
+    service.waitForRoom = () => Promise.resolve();
+    fetch_spy = spyOn(window, 'fetch').and.callFake(async (url: any) => {
+      const u = String(url);
+      if (u.includes('/messages')) {
+        return {ok: true, status: 200, json: async () => ({chunk: POLL_TIMELINE, start: 's', end: 's'})} as any;
+      }
+      const d = decodeURIComponent(u);
+      if (d.includes('/rooms/!v1:hs/state')) { return {ok: true, status: 200, json: async () => voter_state('v1', 70)} as any; }
+      if (d.includes('/rooms/!v2:hs/state')) { return {ok: true, status: 200, json: async () => voter_state('v2', 40)} as any; }
+      return {ok: false, status: 404, text: async () => 'no', json: async () => ({})} as any;
+    });
+  });
+
+  it("does not let a cache the live handlers built stand in for reading the rooms", async () => {
+    // what the retroactive scan of the SDK store does: feed it whatever the
+    // sync happened to carry. In the report that was 242 of 260 ratings, and
+    // because it filled ratingCaches, getRatings then returned it for ever
+    // and the two voters it was short never appeared.
+    service.updateRatingCache(PID, 'v1', 'o1', 70);
+    expect(service.ratingCaches.get(PID).size).withContext('the partial cache exists').toBe(1);
+
+    const ratings = await service.getRatings(PID);
+
+    expect(ratings.size).withContext('both voters, not the one the sync had').toBe(2);
+    expect(ratings.get('v1').get('o1')).toBe(70);
+    expect(ratings.get('v2').get('o1')).toBe(40);
+    const reads = fetch_spy.calls.all().filter((c: any) => String(c.args[0]).includes('/state'));
+    expect(reads.length).withContext('it went and looked').toBe(2);
+  });
+
+  it("answers from the cache once it HAS read the rooms", async () => {
+    await service.getRatings(PID);
+    const after_first = fetch_spy.calls.count();
+    const again = await service.getRatings(PID);
+    expect(again.size).toBe(2);
+    expect(fetch_spy.calls.count()).withContext('no second pass').toBe(after_first);
+  });
+
+  it("reads again after the cache is dropped", async () => {
+    await service.getRatings(PID);
+    service.clearRatingCache(PID);
+    const reads_before = fetch_spy.calls.all().filter((c: any) => String(c.args[0]).includes('/state')).length;
+    await service.getRatings(PID);
+    const reads_after = fetch_spy.calls.all().filter((c: any) => String(c.args[0]).includes('/state')).length;
+    expect(reads_after).toBeGreaterThan(reads_before);
+  });
+
+  it("keeps a rating that arrives while the rooms are being read", async () => {
+    // the read is a snapshot of a moment already past by the time it ends,
+    // so a live event during it must survive the caching of the result
+    fetch_spy.and.callFake(async (url: any) => {
+      const u = String(url);
+      if (u.includes('/messages')) {
+        return {ok: true, status: 200, json: async () => ({chunk: POLL_TIMELINE, start: 's', end: 's'})} as any;
+      }
+      const d = decodeURIComponent(u);
+      if (d.includes('/rooms/!v1:hs/state')) {
+        // v2 votes while v1's room is being read
+        service.updateRatingCache(PID, 'v2', 'o1', 99);
+        return {ok: true, status: 200, json: async () => voter_state('v1', 70)} as any;
+      }
+      if (d.includes('/rooms/!v2:hs/state')) { return {ok: true, status: 200, json: async () => voter_state('v2', 40)} as any; }
+      return {ok: false, status: 404, text: async () => 'no', json: async () => ({})} as any;
+    });
+
+    const ratings = await service.getRatings(PID);
+    expect(ratings.get('v2').get('o1')).withContext('the live value, not the one the read saw').toBe(99);
+    expect(ratings.get('v1').get('o1')).toBe(70);
+  });
+
+  it("does not cache an empty set of options", async () => {
+    // a running poll has options, so an empty answer means the walk found
+    // nothing — and caching it made the poll optionless for the rest of the
+    // session, which is what the creator's log showed
+    fetch_spy.and.returnValue(Promise.resolve(
+      {ok: true, status: 200, json: async () => ({chunk: [], start: 's', end: 's'})} as any));
+    expect((await service.getOptions(PID)).size).toBe(0);
+    expect(service.optionCaches.has(PID)).withContext('nothing worth remembering').toBeFalse();
+
+    fetch_spy.and.returnValue(Promise.resolve(
+      {ok: true, status: 200, json: async () => ({chunk: POLL_TIMELINE, start: 's', end: 's'})} as any));
+    service.pollTimelineCache.delete(PID);
+    expect((await service.getOptions(PID)).size).withContext('and it looks again').toBe(1);
+  });
+});
+
+describe("MatrixService trusts the sync store only when it holds a complete answer (#327)", () => {
+  const PID = 'p1';
+  let service: any, storage: any, fetch_spy: any;
+
+  const POLL_TIMELINE = [
+    {type: 'm.room.vodle.poll.option', content: {option_id: 'o1', name: 'One'}},
+    {type: 'm.room.vodle.poll.option', content: {option_id: 'o2', name: 'Two'}},
+    {type: 'm.room.vodle.voter.announce', sender: '@u:hs', origin_server_ts: 1,
+     content: {voter_id: 'v1', voter_room_id: '!v1:hs', vodle_vid: 'v1'}},
+  ];
+
+  /** a Room as the SDK store holds it: currentState.events is
+   *  Map<type, Map<stateKey, MatrixEvent>> */
+  function store_room(events: Array<{type: string, value: any}>) {
+    const byType = new Map<string, Map<string, any>>();
+    for (const e of events) {
+      byType.set(e.type, new Map([['', {getContent: () => ({value: e.value, voter_vid: 'v1'})}]]));
+    }
+    return {currentState: {events: byType}, getMyMembership: () => 'join'};
+  }
+
+  beforeEach(() => {
+    storage = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    storage.get.and.returnValue(Promise.resolve(null));
+    storage.set.and.returnValue(Promise.resolve());
+    storage.remove.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: storage}]});
+    service = TestBed.inject(MatrixService);
+    service.homeserverUrl = 'https://hs';
+    service.userId = '@u:hs';
+    service.pollRooms.set(PID, '!poll:hs');
+    service.waitForRoom = () => Promise.resolve();
+    fetch_spy = spyOn(window, 'fetch').and.callFake(async (url: any) => {
+      const d = decodeURIComponent(String(url));
+      if (d.includes('/messages')) {
+        return {ok: true, status: 200, json: async () => ({chunk: POLL_TIMELINE, start: 's', end: 's'})} as any;
+      }
+      if (d.includes('/rooms/!v1:hs/state')) {
+        return {ok: true, status: 200, json: async () => [
+          {type: 'm.room.vodle.voter.vid', state_key: '', content: {value: 'v1'}},
+          {type: 'm.room.vodle.voter.rating.rating.o1', state_key: '', content: {value: 70, voter_vid: 'v1'}},
+          {type: 'm.room.vodle.voter.rating.rating.o2', state_key: '', content: {value: 40, voter_vid: 'v1'}},
+        ]} as any;
+      }
+      return {ok: false, status: 404, text: async () => 'no', json: async () => []} as any;
+    });
+  });
+
+  function with_store(room: any) {
+    service.client = {
+      getAccessToken: () => 'token',
+      getRoom: (id: string) => id === '!v1:hs' ? room : null,
+      joinRoom: jasmine.createSpy('joinRoom').and.returnValue(Promise.resolve({})),
+    };
+  }
+
+  function state_reads(): number {
+    return fetch_spy.calls.all().filter((c: any) => decodeURIComponent(String(c.args[0])).includes('/state')).length;
+  }
+
+  it("asks the server when the store has the room but not all of its ratings", async () => {
+    // the room is in the store, carrying its vid — which used to be taken
+    // as proof that its vodle state had arrived — but only one of the two
+    // ratings came with it
+    with_store(store_room([
+      {type: 'm.room.vodle.voter.vid', value: 'v1'},
+      {type: 'm.room.vodle.voter.rating.rating.o1', value: 70},
+    ]));
+    const ratings = await service.getRatings(PID);
+    expect(state_reads()).withContext('it did not believe the store').toBe(1);
+    expect(ratings.get('v1').size).withContext('both ratings, from the server').toBe(2);
+    expect(ratings.get('v1').get('o2')).toBe(40);
+  });
+
+  it("believes the store when it has every rating, and asks no one", async () => {
+    with_store(store_room([
+      {type: 'm.room.vodle.voter.vid', value: 'v1'},
+      {type: 'm.room.vodle.voter.rating.rating.o1', value: 70},
+      {type: 'm.room.vodle.voter.rating.rating.o2', value: 40},
+    ]));
+    const ratings = await service.getRatings(PID);
+    expect(state_reads()).withContext('the sync had it all').toBe(0);
+    expect(ratings.get('v1').size).toBe(2);
+  });
+});
