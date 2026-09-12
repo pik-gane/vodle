@@ -32,6 +32,21 @@ import type { ICreateRoomOpts } from 'matrix-js-sdk/lib/@types/requests';
 // TextEncoder for hashing
 const textEncoder = new TextEncoder();
 
+/**
+ * Per-item tracing: nothing at all unless environment.show_debug_info.
+ *
+ * The read paths log once per voter room and once per rating event, so a
+ * poll of fifty produced on the order of a thousand console calls per load
+ * — 187 lines for a poll of TWO in the owner's log, 101 of them from
+ * discoverVoterRooms, which also re-runs every fifteen seconds. A console
+ * call with the developer tools open is not free, and none of it was
+ * telling anyone anything: the summaries do that, and they stay
+ * unconditional (#327).
+ */
+const trace: (...args: any[]) => void = environment.show_debug_info
+  ? (...args: any[]) => console.log(...args)
+  : () => { /* nothing */ };
+
 export interface MatrixCredentials {
   accessToken: string;
   userId: string;
@@ -2013,7 +2028,7 @@ export class MatrixService {
       }
       const plContent: any = await resp.json();
       const users: Record<string, number> = plContent?.users || {};
-      console.log("[validatePL] Power levels for room", roomId, "users:", JSON.stringify(users));
+      trace("[validatePL] Power levels for room", roomId, "users:", JSON.stringify(users));
       for (const [userId, level] of Object.entries(users)) {
         if (level >= 100 && userId !== guardBotId) {
           // Warn but do NOT block.  The creator may still be at 100
@@ -2238,7 +2253,7 @@ export class MatrixService {
     const cached = this.pollRooms.get(pollId);
     if (cached) {
       // Power level validation already passed when we first cached this
-      console.log("[getPollRoom] Cache hit for poll", pollId, "→", cached);
+      trace("[getPollRoom] Cache hit for poll", pollId, "→", cached);
       return cached;
     }
     
@@ -2249,7 +2264,7 @@ export class MatrixService {
       // left (#328): only a joined one counts, the alias path handles the rest
       const room = this.client.getRoom(stored);
       if (room && room.getMyMembership() === 'join') {
-        console.log("[getPollRoom] Storage hit for poll", pollId, "→", stored);
+        trace("[getPollRoom] Storage hit for poll", pollId, "→", stored);
         await this.validatePollRoomPowerLevels(stored);
         this.pollRooms.set(pollId, stored);
         return stored;
@@ -2497,7 +2512,7 @@ export class MatrixService {
     }
     
     const roomId = await this.getPollRoom(pollId);
-    console.log("[ensureOptionCache] pollId=", pollId, "roomId=", roomId);
+    trace("[ensureOptionCache] pollId=", pollId, "roomId=", roomId);
     if (roomId) {
       try {
         // the shared walk of the poll room's timeline, newest first
@@ -3403,7 +3418,7 @@ export class MatrixService {
   
   async discoverVoterRooms(pollId: string, timeline_max_age_ms = 0): Promise<void> {
     this.logger?.entry("MatrixService.discoverVoterRooms", pollId);
-    console.log("[discoverVoterRooms] START pollId=", pollId);
+    trace("[discoverVoterRooms] START pollId=", pollId);
     
     if (!this.client) {
       console.warn("[discoverVoterRooms] BAIL: no client");
@@ -3411,7 +3426,7 @@ export class MatrixService {
     }
     
     const pollRoomId = await this.getPollRoom(pollId);
-    console.log("[discoverVoterRooms] pollRoomId=", pollRoomId);
+    trace("[discoverVoterRooms] pollRoomId=", pollRoomId);
     if (!pollRoomId) {
       console.warn("[discoverVoterRooms] BAIL: no poll room");
       return;
@@ -3436,7 +3451,7 @@ export class MatrixService {
       {
         const chunk: any[] = await this.pollRoomTimeline(pollId, timeline_max_age_ms);
         totalEvents += chunk.length;
-        console.log("[discoverVoterRooms] Read", chunk.length, "timeline events");
+        trace("[discoverVoterRooms] Read", chunk.length, "timeline events");
         
         for (const event of chunk) {
           if (event.type === 'm.room.vodle.voter.announce') {
@@ -3445,10 +3460,10 @@ export class MatrixService {
             const voterId = content.voter_id;
             const voterRoomId = content.voter_room_id;
             const vodleVid = content.vodle_vid;
-            console.log("[discoverVoterRooms] Found announce event: voterId=", voterId, "voterRoomId=", voterRoomId, "vodleVid=", vodleVid);
+            trace("[discoverVoterRooms] Found announce event: voterId=", voterId, "voterRoomId=", voterRoomId, "vodleVid=", vodleVid);
             if (!voterId || !voterRoomId) continue;
             if (closed_ts !== null && event.origin_server_ts > closed_ts) {
-              console.log("[discoverVoterRooms] Ignoring voter room announced after the poll was closed:", voterRoomId);
+              trace("[discoverVoterRooms] Ignoring voter room announced after the poll was closed:", voterRoomId);
               continue;
             }
             
@@ -3465,7 +3480,7 @@ export class MatrixService {
             
             const cacheKey = `${pollId}:${effectiveId}`;
             if (this.voterRooms.has(cacheKey) || claimed.has(cacheKey)) {
-              console.log("[discoverVoterRooms] Already cached:", cacheKey);
+              trace("[discoverVoterRooms] Already cached:", cacheKey);
               continue;
             }
             claimed.add(cacheKey);
@@ -3878,14 +3893,18 @@ export class MatrixService {
             return;                     // this room only; the others go on
           }
         }
-        console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
-          "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
+        if (environment.show_debug_info) {
+          // the filter and the map run per voter room, so they stay inside
+          // the test rather than being handed to a call that discards them
+          console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
+            "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
+        }
         
         // Extract vodle vid from voter room state (if stored)
         for (const event of stateEvents) {
           if (event.type === 'm.room.vodle.voter.vid') {
             discoveredVid = event.content?.value || null;
-            console.log("[getRatings] Found vid in voter room state:", discoveredVid, "for Matrix user:", voterId);
+            trace("[getRatings] Found vid in voter room state:", discoveredVid, "for Matrix user:", voterId);
           }
         }
         
@@ -3893,7 +3912,7 @@ export class MatrixService {
         if (!discoveredVid) {
           discoveredVid = this.voterVidMap.get(`${pollId}:${voterId}`) || null;
           if (discoveredVid) {
-            console.log("[getRatings] Found vid from announce event:", discoveredVid, "for Matrix user:", voterId);
+            trace("[getRatings] Found vid from announce event:", discoveredVid, "for Matrix user:", voterId);
           }
         }
         
@@ -3920,7 +3939,7 @@ export class MatrixService {
       
       // Use vodle vid as key if available, otherwise fall back to Matrix user ID
       const effectiveVoterId = discoveredVid || voterId;
-      console.log("[getRatings] Voter", voterId, "effectiveVid:", effectiveVoterId, "ratings count:", voterRatings.size);
+      trace("[getRatings] Voter", voterId, "effectiveVid:", effectiveVoterId, "ratings count:", voterRatings.size);
       if (voterRatings.size > 0) {
         ratings.set(effectiveVoterId, voterRatings);
       }
@@ -4474,7 +4493,7 @@ export class MatrixService {
     // (delegation requests/responses AND voter room announcements)
     const timelineHandler = (event: any, room: any) => {
       if (room.roomId !== roomId) return;
-      console.log("[timelineHandler] poll room event:", event.getType());
+      trace("[timelineHandler] poll room event:", event.getType());
       
       const eventType = event.getType();
       
@@ -4526,7 +4545,7 @@ export class MatrixService {
         const lookup = this.voterRoomReverseLookup.get(roomId_ev);
         if (lookup && lookup.pollId === pollId) {
           const optionId = eventType.substring('m.room.vodle.voter.rating.rating.'.length);
-          console.log("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
+          trace("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
           try {
             this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
           } catch (err) {
@@ -6029,7 +6048,7 @@ export class MatrixService {
     }
     
     const roomId = this.pollRooms.get(pollId);
-    console.log("[getAllPollData] pollId=", pollId, "roomId=", roomId, "pollRooms keys:", Array.from(this.pollRooms.keys()));
+    trace("[getAllPollData] pollId=", pollId, "roomId=", roomId, "pollRooms keys:", Array.from(this.pollRooms.keys()));
     if (!roomId) {
       this.logger?.info("Poll room not found for getAllPollData", pollId);
       return {};
@@ -6048,7 +6067,7 @@ export class MatrixService {
         const accessToken = this.client.getAccessToken();
         const encodedRoomId = encodeURIComponent(roomId);
         const fetchUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
-        console.log("[getAllPollData] Fetching:", fetchUrl);
+        trace("[getAllPollData] Fetching:", fetchUrl);
         const resp = await fetch(
           fetchUrl,
           {
@@ -6056,7 +6075,7 @@ export class MatrixService {
             cache: 'no-store',
           }
         );
-        console.log("[getAllPollData] Response status:", resp.status, resp.statusText);
+        trace("[getAllPollData] Response status:", resp.status, resp.statusText);
         if (!resp.ok) {
           const errBody = await resp.text();
           console.error("[getAllPollData] Error body:", errBody);

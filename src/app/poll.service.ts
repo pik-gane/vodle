@@ -1336,7 +1336,9 @@ export class Poll {
       this.ratings_have_changed = true;
       // store new value:
       rs_map.set(vid, value);
-      this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
+      }
       // check whether vid has not delegated:
       if (!this.direct_delegation_map.get(oid)) {
         this.direct_delegation_map.set(oid, new Map());
@@ -1392,7 +1394,9 @@ export class Poll {
       const old_max_r = this.max_proxy_ratings_map.get(vid) || 0,
             old_argmax_r_set = this.argmax_proxy_ratings_map.get(vid) || new Set(),
             eff_rating_changes_map = new Map<string, number>();
-      this.G.L.trace("Poll.update_proxy_rating old max, argmax",old_max_r,[...old_argmax_r_set]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_proxy_rating old max, argmax",old_max_r,[...old_argmax_r_set]);
+      }
       var max_r = old_max_r, 
       argmax_r_set = old_argmax_r_set;
       if (old_max_r == 0) {
@@ -1553,7 +1557,9 @@ export class Poll {
           }
         }
       }
-      this.G.L.trace("Poll.update_proxy_rating",n_changed,[...eff_rating_changes_map],old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_proxy_rating",n_changed,[...eff_rating_changes_map],old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      }
       // store new max, argmax:
       if (max_r > 0) {
         this.max_proxy_ratings_map.set(vid, max_r);
@@ -1584,7 +1590,9 @@ export class Poll {
             return;
           }
         }
-        this.G.L.trace("Poll.update_rating produced consistent shares:", [...my_shares_map], [...this.T.shares_map]);
+        if (environment.show_debug_info) {
+          this.G.L.trace("Poll.update_rating produced consistent shares:", [...my_shares_map], [...this.T.shares_map]);
+        }
       }
     }
   }
