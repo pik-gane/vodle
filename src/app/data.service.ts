@@ -706,17 +706,22 @@ export class DataService implements OnDestroy {
         if (('_pids' in state) && ('poll_caches' in state)) {
           this.restored_poll_caches = true;
         }
-        this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
-        this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
-        for (const pid in this._pid_oids) {
-          this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid]]);
-        }  
+        boot("state restored into the caches",
+          this._pids ? this._pids.size + " polls" : "no polls");
+        if (environment.show_debug_info) {
+          this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
+          this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
+          for (const pid in this._pid_oids) {
+            this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid]]);
+          }
+        }
       } else {
         G.L.warn('DataService could not get state from storage (empty)', state);
       }
     }).catch((error) => {
       G.L.warn('DataService could not get state from storage:', error);
     }).finally(() => {
+      boot("opening the local databases");
       this.init_databases();
     });
     this.init_notifications(false);
@@ -749,6 +754,7 @@ export class DataService implements OnDestroy {
     */
 
     this.local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
+    (this as any).boot_log?.("local databases open");
 
     /* deactivated for performance:
     this.local_synced_user_db.info()
@@ -783,9 +789,11 @@ export class DataService implements OnDestroy {
     if (this.restored_user_cache) {
       // user_cache was restored from storage.
 
+      (this as any).boot_log?.("the user cache came from storage");
       this.after_local_only_user_cache_is_filled();
 
     } else {
+      (this as any).boot_log?.("no stored user cache: reading every local-only document");
       // try restoring from local PouchDB:
 
       this.user_cache = {};
@@ -829,6 +837,7 @@ export class DataService implements OnDestroy {
   }
 
   private after_local_only_user_cache_is_filled() {
+    (this as any).boot_log?.("the user cache is ready");
     this.G.L.entry("DataService.after_user_cache_is_filled");
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
@@ -857,6 +866,7 @@ export class DataService implements OnDestroy {
   }
 
   private async email_and_password_exist() {
+    (this as any).boot_log?.("credentials found, starting the backend");
     this.G.L.entry("DataService.email_and_password_exist: email", 
       this.user_cache['email']);
 
