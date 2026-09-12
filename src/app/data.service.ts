@@ -1654,6 +1654,7 @@ export class DataService implements OnDestroy {
       // join page fetching for ever, saying nothing, which is exactly what
       // the owner saw. A ceiling turns that into an error the page can
       // show.
+      (this as any).boot_log?.("this poll needs the homeserver; waiting for the login");
       const after_login = MatrixService.within(
         MatrixService.LOGIN_WAIT_TIMEOUT_MS, "the connection to the homeserver",
         () => this.matrix_ready)

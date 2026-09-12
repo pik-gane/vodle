@@ -57,6 +57,11 @@ TODO:
       <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
     </h3>
   </ion-item>
+  <ion-item *ngIf="slow" class="ion-text-center" lines="none" data-vodle="join-poll-slow">
+    <h4>
+      <i [innerHtml]="'joinpoll.still-waiting'|translate"></i>&nbsp;
+    </h4>
+  </ion-item>
   <ion-item class="ion-text-center" lines="none">
     <h1>
       <ion-spinner name="crescent" size="large"></ion-spinner>

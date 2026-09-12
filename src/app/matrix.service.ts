@@ -564,7 +564,9 @@ export class MatrixService {
   }
   
   private async resumeSessionInner(email: string): Promise<boolean> {
+    console.log("[vodle boot] reading the stored credentials");
     const stored = await this.loadCredentials();
+    console.log("[vodle boot] stored credentials read", stored?.userId ? "(a session to resume)" : "(none)");
     if (!stored || !stored.accessToken || !stored.userId) {
       return false;
     }
@@ -843,7 +845,9 @@ export class MatrixService {
     this.loginInProgress = true;
     try {
       const tempClient = createClient({ baseUrl: this.homeserverUrl });
+      console.log("[vodle boot] logging in with the password");
       const response = await this.passwordLogin(tempClient, email, password);
+      console.log("[vodle boot] the homeserver accepted the password");
       if (!response) {
         if (!register_if_missing) {
           throw new Error("MatrixService.login: no account for this e-mail address and password");
@@ -1281,8 +1285,15 @@ export class MatrixService {
    */
   /** how long the crypto WASM may take before the start goes on without it */
   static readonly CRYPTO_INIT_TIMEOUT_MS = 20000;
-  /** how long a page that needs the homeserver waits for the login (#327) */
-  static readonly LOGIN_WAIT_TIMEOUT_MS = 90000;
+  /**
+   * How long a page that needs the homeserver waits for the login (#327).
+   *
+   * Below the symptom it is there to catch, not above it: the owner waited
+   * eighty seconds, so a ninety-second ceiling would have let the same
+   * silence happen again in full. The budget on this path is the sync wait
+   * (SYNC_WAIT_TIMEOUT_MS, 30 s) plus a round trip.
+   */
+  static readonly LOGIN_WAIT_TIMEOUT_MS = 35000;
   
   /**
    * Run work with a ceiling on how long it may take. The rejection names

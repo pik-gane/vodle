@@ -48,6 +48,9 @@ export class JoinpollPage implements OnInit {
 
   ready = false;  
   join_error: string = null;
+  /** the homeserver is taking its time, but has not given up (#327) */
+  slow = false;
+  private slow_timer: any = null;
 
   constructor(
     public router: Router,
@@ -93,6 +96,11 @@ export class JoinpollPage implements OnInit {
     this.join_error = message;
   }
 
+  private stop_waiting() {
+    if (this.slow_timer) { window.clearTimeout(this.slow_timer); this.slow_timer = null; }
+    this.slow = false;
+  }
+
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("JoinpollPage.onDataReady");
@@ -119,7 +127,11 @@ export class JoinpollPage implements OnInit {
         // federation support, meaning: this user's own homeserver); the
         // CouchDB db_password segment is meaningless here.
         const origin_server = (this.db_server_url && this.db_server_url != '_') ? this.db_server_url : undefined;
+        // a join that takes longer than a few seconds says so, rather than
+        // showing the same "just a moment" until the ceiling runs out (#327)
+        this.slow_timer = window.setTimeout(() => { this.slow = true; }, 8000);
         this.G.D.connect_to_remote_poll_db(this.pid, true, origin_server).then(() => {
+          this.stop_waiting();
           // Re-read state from poll_caches now that it has been populated
           this.p._state = (this.G.D.getp(this.pid, 'state') as any) || 'running';
           this.ready = true;
@@ -140,6 +152,7 @@ export class JoinpollPage implements OnInit {
           this.p.tally_all();
           this.router.navigate(['/poll/' + this.pid]);
         }).catch(err => {
+          this.stop_waiting();
           this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
           this.join_error = String(err?.message || err);
         });
