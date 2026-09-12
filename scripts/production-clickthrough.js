@@ -39,79 +39,12 @@ const EMAIL = `prodtest${stamp}@example.org`;
 const PASSWORD = 'ProdTest!' + stamp;
 
 const console_errors = [], page_errors = [], failed_requests = [], diagnostics = [];
+// every "[vodle boot] +Nms <stage>" line, per browser, in order
+const boot_lines = {creator: [], guest: [], returning: []};
 
-/** where to put a screenshot; the directory is gitignored, so on a fresh
- *  checkout it does not exist and page.screenshot() would throw ENOENT
- *  after a run that otherwise succeeded */
-function shot(suffix) {
-  const file = (process.env.SHOT || '/tmp/production-clickthrough.png').replace(/\.png$/, suffix + '.png');
-  fs.mkdirSync(path.dirname(path.resolve(file)), {recursive: true});
-  return file;
-}
-
-function log(...a) { console.log('[clickthrough]', ...a); }
-
-async function visible(page, selector) {
-  return page.waitForFunction((sel) => {
-    const nodes = Array.from(document.querySelectorAll(sel));
-    return nodes.some(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0) || null;
-  }, {timeout: STEP_TIMEOUT, polling: 200}, selector);
-}
-
-async function click(page, selector) {
-  await visible(page, selector);
-  await page.evaluate((sel) => {
-    const node = Array.from(document.querySelectorAll(sel))
-      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
-    node.click();
-  }, selector);
-}
-
-async function type_into(page, selector, text) {
-  await visible(page, selector);
-  const handle = await page.evaluateHandle((sel) => {
-    const host = Array.from(document.querySelectorAll(sel))
-      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
-    return host.tagName === 'INPUT' ? host : host.querySelector('input');
-  }, selector);
-  const input = handle.asElement();
-  // Ionic settles focus asynchronously after a click, and typing before it
-  // has landed puts the first characters into whichever field still holds
-  // focus. Focus explicitly, let it settle, then select all and type.
-  await input.focus();
-  await new Promise(r => setTimeout(r, 250));
-  await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
-  await input.type(text, {delay: 20});
-  const got = await page.evaluate(el => el.value, input);
-  if (got !== text) { throw new Error('typing into ' + selector + ' produced ' + JSON.stringify(got) + ', wanted ' + JSON.stringify(text)); }
-  // Ionic hands the value to Angular's form control on blur; a person blurs
-  // the field by clicking the next thing, a programmatic click does not
-  await page.keyboard.press('Tab');
-  await new Promise(r => setTimeout(r, 200));
-  // Ionic listens on its own events; a blur commits the value
-  await page.evaluate(el => el.dispatchEvent(new Event('change', {bubbles: true})), input);
-}
-
-/** drag the first option's slider up with the keyboard and let it settle */
-async function rate_first_option(p) {
-  await visible(p, '[data-vodle="rating-slider"]');
-  await p.evaluate(() => {
-    const slider = document.querySelector('[data-vodle="rating-slider"]');
-    slider.scrollIntoView({block: 'center'});
-    const knob = slider.shadowRoot && slider.shadowRoot.querySelector('.range-knob-handle');
-    (knob || slider).focus();
-  });
-  for (let i = 0; i < 15; i++) { await p.keyboard.press('ArrowRight'); }
-  await new Promise(r => setTimeout(r, 5000));
-}
-
-/** the "N non-abstaining" the poll page shows */
-async function voters(p) {
-  return p.evaluate(() => {
-    const m = document.body.innerText.match(/(\d+)\s+non-abstaining/);
-    return m ? parseInt(m[1], 10) : null;
-  });
-}
+/* the parsing lives in its own module so it can be tested without a browser:
+   node scripts/boot-stages.js --self-test (#327) */
+const { boot_stages, slowest_stage } = require('./boot-stages');
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -128,7 +61,8 @@ async function voters(p) {
   const is_diagnostic = (t) => /\[vodle boot\]|\[getRatings\] DONE|\[discoverVoterRooms\] DONE/.test(t);
   page.on('console', m => { const t = m.text(); console_all.push(m.type() + ': ' + t);
     if (m.type() === 'error' || /fail|error|exception/i.test(t)) { console_errors.push(t); }
-    if (is_diagnostic(t)) { diagnostics.push('creator: ' + t); } });
+    if (is_diagnostic(t)) { diagnostics.push('creator: ' + t); }
+    if (t.includes('[vodle boot]')) { boot_lines.creator.push(t); } });
   page.on('response', r => { if (r.url().includes('/_matrix/')) { matrix_requests.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(BASE, '')); } });
   page.on('pageerror', e => page_errors.push(String(e)));
   page.on('requestfailed', r => failed_requests.push(r.url() + ' ' + (r.failure() || {}).errorText));
@@ -256,6 +190,7 @@ async function voters(p) {
       const t = m.text();
       if (m.type() === 'error') { console_errors.push('guest: ' + t); }
       if (is_diagnostic(t)) { diagnostics.push('guest: ' + t); }
+      if (t.includes('[vodle boot]')) { boot_lines.guest.push(t); }
     });
     await guest.goto(invite_link, {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
     await visible(guest, '[data-vodle="poll-voting-page"]');
@@ -332,10 +267,71 @@ async function voters(p) {
         + ' /_matrix/ requests), more than the ' + LIST_MS_MAX + ' ms this may take');
     }
 
+    log('16. a browser that has ALREADY been a guest joins again');
+    // The scenario every one of the owner's start-up bugs came from, and the
+    // one a pristine profile can never show: the browser still holds the
+    // matrix-js-sdk crypto store of the PREVIOUS guest account while vodle's
+    // own credentials are gone, so the next login finds a store belonging to
+    // somebody else. Discovering that by exception cost 25.9 s of a 29.5 s
+    // start on the owner's device (#327).
+    const kept = await guest.evaluate(async () => {
+      // everything of vodle's own goes; the SDK's crypto store stays
+      const names = (await indexedDB.databases()).map(d => d.name).filter(Boolean);
+      const removed = [], left = [];
+      for (const name of names) {
+        if (/matrix-sdk-crypto/.test(name)) { left.push(name); continue; }
+        await new Promise(resolve => {
+          const request = indexedDB.deleteDatabase(name);
+          request.onsuccess = request.onerror = request.onblocked = () => resolve();
+        });
+        removed.push(name);
+      }
+      try { localStorage.clear(); } catch (e) { /* nothing */ }
+      return {removed, left};
+    });
+    log('   wiped', kept.removed.length, 'databases, kept', JSON.stringify(kept.left));
+    if (kept.left.length === 0) {
+      throw new Error('no crypto store was left behind, so this cannot test what it is for');
+    }
+    boot_lines.returning = [];
+    guest.on('console', m => {
+      const t = m.text();
+      if (t.includes('[vodle boot]')) { boot_lines.returning.push(t); }
+    });
+    const returning_started = Date.now();
+    await guest.goto(invite_link, {waitUntil: 'domcontentloaded', timeout: STEP_TIMEOUT});
+    await visible(guest, '[data-vodle="poll-voting-page"]');
+    const returning_ms = Date.now() - returning_started;
+    const returning_worst = slowest_stage(boot_lines.returning);
+    log('   the returning guest reached the poll in', returning_ms, 'ms; slowest stage:',
+        returning_worst.stage, returning_worst.took + 'ms');
+
+    log('17. no stage of any start may take longer than it should');
+    // The gap BETWEEN two stages is the thing: a total hides a single stage
+    // that has gone wrong, and an average hides it twice over.
+    const STAGE_MS_MAX = parseInt(process.env.VODLE_BOOT_STAGE_MS_MAX || '15000', 10);
+    const boots = {};
+    for (const who of ['creator', 'guest', 'returning']) {
+      const worst = slowest_stage(boot_lines[who]);
+      boots[who] = {slowest_stage: worst.stage, slowest_ms: worst.took,
+                    stages: boot_stages(boot_lines[who])};
+      log('   ' + who + ': slowest stage "' + worst.stage + '" took ' + worst.took + 'ms');
+    }
+    const over = Object.entries(boots).filter(([, b]) => b.slowest_ms > STAGE_MS_MAX);
+    if (over.length) {
+      throw new Error('a start stage took too long: '
+        + over.map(([who, b]) => `${who} spent ${b.slowest_ms} ms in "${b.slowest_stage}"`).join('; ')
+        + ` (the ceiling is ${STAGE_MS_MAX} ms, VODLE_BOOT_STAGE_MS_MAX)`);
+    }
+    if (boot_lines.creator.length === 0) {
+      throw new Error('no [vodle boot] lines at all — an old bundle, or the boot log is gone');
+    }
+
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
     console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
-      host_voters, guest_voters, reload, diagnostics: diagnostics.slice(-12), console_errors, page_errors,
+      host_voters, guest_voters, reload, boots, returning_ms,
+      diagnostics: diagnostics.slice(-12), console_errors, page_errors,
       failed_requests: failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r))}, null, 1));
   } catch (err) {
     await page.screenshot({path: shot('-failed')}).catch(() => {});
@@ -343,6 +339,9 @@ async function voters(p) {
     const alerts = await page.evaluate(() =>
       Array.from(document.querySelectorAll('ion-alert, ion-toast')).map(a => a.innerText.trim())).catch(() => []);
     console.log(JSON.stringify({ok: false, error: String(err), visible_text: step, alerts,
+      boot: {creator: boot_stages(boot_lines.creator),
+             guest: boot_stages(boot_lines.guest),
+             returning: boot_stages(boot_lines.returning)},
       diagnostics: diagnostics.slice(-30),
       matrix_requests, console_errors, page_errors, failed_requests,
       console_tail: console_all.slice(-25)}, null, 1));

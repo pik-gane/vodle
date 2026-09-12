@@ -95,6 +95,11 @@ jobs:
       # and check that both sides count the same voters. Five defects
       # reached the first real deployment through the gap between this
       # configuration and the one the rest of the suite uses (#327).
+      # the boot-log parser the click-through gates on, checked against the
+      # real console log that found the crypto-store defect (#327)
+      - name: Check the boot-stage parser
+        run: node scripts/boot-stages.js --self-test
+
       - name: Build and click through the production app
         # with simulated voters, so the poll is published as a burst of
         # writes across several rooms and both sides have to agree on how
