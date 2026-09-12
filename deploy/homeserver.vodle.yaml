@@ -38,6 +38,29 @@ presence:
 # rate limits: Synapse's defaults are far below what vodle does when a poll
 # starts (one room per voter, every participant joining every voter room,
 # bursts of state events); these run the whole test suite without a 429
+#
+# The account limits need a word of their own, because vodle uses ONE MATRIX
+# ACCOUNT PER (POLL, VOTER) — the privacy guarantee it inherits from the
+# CouchDB backend, where a poll was always joined as vodle.poll.<pid>.voter
+# .<vid> and never as the person (#327). So a device registers or signs in
+# once per poll it takes part in, not once in its life: a person in ten polls
+# is ten accounts — ten registrations on the device that joined the polls,
+# ten logins on every further device of theirs, spread over however long it
+# took them to join ten polls. Synapse counts rc_login.address and
+# rc_registration PER IP ADDRESS, so everyone behind one shared connection —
+# a university, an office, a conference — adds to the same bucket.
+#
+# Hence a burst of 20 and then one per second. Synapse's own defaults are a
+# burst of 5 and then one login per 5.5 MINUTES (per_second 0.003), and 3
+# registrations and then one per 6 seconds: a second device restoring a
+# person's ten polls signs in ten times, which under the defaults is five
+# straight away and then 28 minutes of waiting. The client waits a 429 out
+# and tries again either way, so a limit reached costs time and nothing
+# else — but not that much time.
+#
+# failed_attempts stays tight, and that is the one that guards passwords:
+# it counts only logins that got the password wrong. rc_registration is
+# token-gated as well (registration_requires_token below).
 rc_login:
   address: {per_second: 1, burst_count: 20}
   account: {per_second: 1, burst_count: 20}
@@ -47,7 +70,8 @@ rc_registration_token_validity: {per_second: 1, burst_count: 20}
 # The limits below are set high enough that vodle never meets them, on
 # purpose. What follows applies to the bulk work of running polls only —
 # rc_login, rc_registration and rc_registration_token_validity above are
-# NOT raised: those guard against guessing passwords and against drive-by
+# raised only as far as the paragraph above argues for, not into the
+# thousands: those guard against guessing passwords and against drive-by
 # account creation, where a limit is the point.
 #
 # Every vodle write is a state event, and publishing a poll writes a burst of

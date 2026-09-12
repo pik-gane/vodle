@@ -1011,7 +1011,9 @@ export class MatrixService {
     ];
     for (const [user, pw, remark] of attempts) {
       try {
-        const response = await tempClient.loginWithPassword(user, pw);
+        // a 429 is not a wrong password: rc_login is counted per IP address
+        // as well as per account, so it can be another user's doing (#327)
+        const response = await this.retryOnRateLimit(() => tempClient.loginWithPassword(user, pw));
         if (remark) {
           this.logger?.warn("MatrixService.login: " + remark, response.user_id);
         }
@@ -1097,7 +1099,7 @@ export class MatrixService {
     const probe = createClient({ baseUrl: this.homeserverUrl });
     let response: any;
     try {
-      response = await probe.loginWithPassword(username, old_matrix_password);
+      response = await this.retryOnRateLimit(() => probe.loginWithPassword(username, old_matrix_password));
     } catch (error: any) {
       if (!MatrixService.isForbidden(error)) { throw error; }
       // either the change already happened (a move resumed after a
@@ -1113,8 +1115,8 @@ export class MatrixService {
       userId: response.user_id,
       deviceId: response.device_id,
     });
-    await session.setPassword(
-      MatrixService.passwordAuth(response.user_id, old_matrix_password), new_matrix_password, false);
+    await this.retryOnRateLimit(() => session.setPassword(
+      MatrixService.passwordAuth(response.user_id, old_matrix_password), new_matrix_password, false));
     this.logger?.info("MatrixService.changePollAccountPassword: changed", pollId);
     this.logger?.exit("MatrixService.changePollAccountPassword");
   }
@@ -1168,6 +1170,132 @@ export class MatrixService {
     }
     this.logger?.exit("MatrixService.takeOverVoterRooms", Object.keys(taken).length);
     return taken;
+  }
+  
+  /** how often a handover of a poll from before is attempted (takeOverFrom) */
+  static HANDOVER_ATTEMPTS = 3;
+  
+  /**
+   * Let this account write in `pollId`'s POLL room as the `oldSession`
+   * account can — the poll-room half of takeOverFrom below.
+   *
+   * A poll room gives every member power 50 (users_default), which is all
+   * taking part needs; its CREATOR holds 100, which is what locking the
+   * metadata when the poll starts takes. So this grants the old account's
+   * level when it is above what this account has anyway, and does nothing
+   * at all for an account that merely votes. Granting one's own level is
+   * allowed by the Matrix auth rules (raising someone ABOVE the sender is
+   * not), and the poll room lets its creator send m.room.power_levels
+   * before the lock (50) and after it (100) alike.
+   *
+   * Returns whether the poll account can now do what the old one could;
+   * false means try again later, not "nothing to do".
+   */
+  async takeOverPollRoom(oldSession: MatrixClient, pollId: string): Promise<boolean> {
+    this.logger?.entry("MatrixService.takeOverPollRoom", pollId);
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    try {
+      const roomId = await this.getPollRoom(pollId);
+      if (!roomId) {
+        // the poll's room is gone (purged after the retention period, or
+        // never reached this homeserver): nothing to take over
+        this.logger?.exit("MatrixService.takeOverPollRoom (no poll room)");
+        return true;
+      }
+      const levels: any = await this.retryOnRateLimit(
+        () => oldSession.getStateEvent(roomId, 'm.room.power_levels', ''));
+      const users = { ...(levels?.users || {}) };
+      const theirs = users[oldSession.getUserId()!] ?? levels?.users_default ?? 0;
+      const mine = users[this.userId] ?? levels?.users_default ?? 0;
+      if (theirs <= mine) {
+        this.logger?.exit("MatrixService.takeOverPollRoom (nothing to grant)");
+        return true;
+      }
+      users[this.userId] = theirs;
+      await this.retryOnRateLimit(
+        () => oldSession.sendStateEvent(roomId, 'm.room.power_levels', { ...levels, users }, ''));
+      this.logger?.info("MatrixService.takeOverPollRoom: granted", pollId, theirs);
+      this.logger?.exit("MatrixService.takeOverPollRoom");
+      return true;
+    } catch (error) {
+      this.logger?.warn("MatrixService.takeOverPollRoom: could not take over", pollId, error);
+      this.logger?.exit("MatrixService.takeOverPollRoom (failed)");
+      return false;
+    }
+  }
+  
+  /**
+   * Take `pollId`'s rooms over from the account that acted for this device
+   * before it had a poll account (#327) — the person's own account, which
+   * created the voter room (power 50 there) and, if this device created the
+   * poll, holds power 100 in the poll room. Without this the poll account
+   * joins both rooms and can write to neither: every rating comes back 403,
+   * which the offline queue rightly takes for a refusal that will never be
+   * accepted.
+   *
+   * The same handover an account switch does (takeOverVoterRooms), for the
+   * same reason and with the same consequences: the rooms, the voter id and
+   * the ratings already in them do not change, so nobody else sees anything
+   * happen and no tally moves.
+   *
+   * The gate is local and costs no request — unless THIS device stored the
+   * poll's rooms under the previous account, there is nothing of its to take
+   * over — so a poll created or joined after this exists pays one storage
+   * read. Done once per (device, poll); a handover that fails is not
+   * recorded, so the next operation on the poll tries again.
+   *
+   * What this cannot repair is the privacy of a poll from before: the old
+   * account's announcement, with the vid in plain text and its own user id
+   * as the sender, is in the poll room's history for good. Only the polls
+   * from here on are unlinkable.
+   */
+  async takeOverFrom(previous: MatrixService, pollId: string, vid: string): Promise<void> {
+    if (previous === this || !this.pollAccountFor) {
+      return;
+    }
+    const doneKey = this.storageKey(`handover_${pollId}`);
+    if (await this.storage.get(doneKey)) {
+      return;
+    }
+    const hadPollRoom = await previous.storage.get(previous.storageKey(`poll_room_${pollId}`));
+    const hadVoterRoom = await previous.storage.get(previous.storageKey(`voter_room_${pollId}:${vid}`));
+    if (!hadPollRoom && !hadVoterRoom) {
+      await this.storage.set(doneKey, 'nothing to take over');
+      return;
+    }
+    this.logger?.entry("MatrixService.takeOverFrom", pollId);
+    if (!previous.client || !previous.isLoggedIn()) {
+      // the person is not signed in on this device right now; the rooms are
+      // still theirs, so leave the handover for a start that has them
+      this.logger?.exit("MatrixService.takeOverFrom (the previous account is not signed in)");
+      return;
+    }
+    const pollRoomDone = await this.takeOverPollRoom(previous.client, pollId);
+    const taken = await this.takeOverVoterRooms(previous.client, [{pollId, vid}]);
+    const voterRoomDone = !hadVoterRoom || !!taken[pollId];
+    if (pollRoomDone && voterRoomDone) {
+      await this.storage.set(doneKey, previous.userId);
+      this.logger?.info("MatrixService.takeOverFrom: taken over", pollId, previous.userId);
+    } else {
+      const attemptsKey = this.storageKey(`handover_attempts_${pollId}`);
+      const attempts = ((await this.storage.get(attemptsKey)) || 0) + 1;
+      await this.storage.set(attemptsKey, attempts);
+      if (attempts >= MatrixService.HANDOVER_ATTEMPTS) {
+        // Not every handover CAN succeed: a voter room the guard bot has
+        // closed keeps its power levels at 100 and would refuse the grant
+        // for ever, and it is read-only for its owner too, so there is
+        // nothing to take over. After three starts this is not a homeserver
+        // having a bad day, and retrying it at every start costs a 403 each
+        // time.
+        await this.storage.set(doneKey, 'given up after ' + attempts + ' attempts');
+        this.logger?.warn("MatrixService.takeOverFrom: given up", pollId, attempts);
+      } else {
+        this.logger?.warn("MatrixService.takeOverFrom: incomplete, will try again", pollId, attempts);
+      }
+    }
+    this.logger?.exit("MatrixService.takeOverFrom");
   }
   
   /**
@@ -1286,7 +1414,12 @@ export class MatrixService {
             + "(a registration token may be missing from the configuration): " + JSON.stringify(flows));
         }
         try {
-          response = await tempClient.register(username, matrixPassword, session, auth);
+          // one account per (poll, voter) means a device registers once per
+          // poll, and rc_registration is counted per IP ADDRESS: a shared
+          // connection makes other people's registrations this one's problem,
+          // so a 429 waits as long as the server asks and tries again (#327)
+          response = await this.retryOnRateLimit(() =>
+            tempClient.register(username, matrixPassword, session, auth));
           break;
         } catch (error: any) {
           // 401 with a session: the server wants (more) stages of the flow
@@ -1332,7 +1465,10 @@ export class MatrixService {
     const tempClient = createClient({ baseUrl: this.homeserverUrl });
     let response: any = null;
     try {
-      response = await tempClient.loginWithPassword(username, matrixPassword);
+      // like registerAs: rc_login.address is counted per IP address, and a
+      // device signs in once per poll it takes part in (#327)
+      response = await this.retryOnRateLimit(() =>
+        tempClient.loginWithPassword(username, matrixPassword));
     } catch (error: any) {
       if (!MatrixService.isForbidden(error)) { throw error; }
     }
@@ -2183,7 +2319,11 @@ export class MatrixService {
       return;
     }
     this.pollOrigins.set(pollId, serverName);
-    await this.storage.set(this.storageKey(`poll_origin_${pollId}`), serverName);
+    // NOT prefixed by the identity (see storageKey): which homeserver a poll
+    // lives on is a fact about the POLL, the same for every account this
+    // device signs in as, and the poll account must see what the person's
+    // own account learned from the magic link before it existed (#327).
+    await this.storage.set(`poll_origin_${pollId}`, serverName);
   }
   
   /**
@@ -2196,7 +2336,7 @@ export class MatrixService {
     if (cached) {
       return cached;
     }
-    const stored = await this.storage.get(this.storageKey(`poll_origin_${pollId}`));
+    const stored = await this.storage.get(`poll_origin_${pollId}`);
     if (stored) {
       this.pollOrigins.set(pollId, stored);
       return stored;

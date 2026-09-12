@@ -128,6 +128,14 @@ ciphertext.
   operator could learn the very secret that encrypts the user's data.
   Accounts registered before this existed still log in with the plain
   password (fallback on `M_FORBIDDEN`), which the log flags.
+- **A poll is not joined as the person** (#327, §3.8): the account that
+  joins a poll room, owns a voter room and sends every event of that poll
+  is derived from the poll id and the voter id —
+  `pollAccountName(pid, vid)` = BLAKE2s("vodle.poll." + pid + ".voter." +
+  vid), the CouchDB user name in Matrix clothing — and its password from
+  the poll, the vid and the user's password, so it can never hand the
+  user's own password back. The account named after the e-mail hash above
+  holds the user room and joins no poll.
 - The poll password never reaches any homeserver: it travels in the magic
   link and stays in the (encrypted) user room and the local cache.
 
@@ -233,7 +241,9 @@ same across federation: the second homeserver holds the same ciphertext.
    poll password, and voter rooms admit the poll room's members only. What
    remains: the homeserver sees all membership (voter identities are
    pseudonymous hashes), and every member sees the other members' hashed
-   ids, as on the CouchDB backend. A wrong password (or no guard bot) means
+   ids, as on the CouchDB backend — and since #327 (§3.8) those ids are per
+   (poll, voter), so they say who takes part in *this* poll and nothing
+   about any other. A wrong password (or no guard bot) means
    a knock nobody answers and a join that gives up after
    `matrix.join_timeout_ms` (60 s); the two cases are indistinguishable to
    the knocker by design, since any answer would have to be a membership
@@ -300,6 +310,47 @@ same across federation: the second homeserver holds the same ciphertext.
   Spec: request, live receipt, acceptance, a late reader with and without
   the password. The tally effect of delegations is on the voter-data path
   (unchanged) and covered by the tally-pipeline suite.
+
+### 3.8 Settled in plan sessions 25 and 26 (2026-09-12, #327)
+
+- **One Matrix account per (poll, voter)**, which is what the CouchDB
+  backend has always done (`vodle.poll.<pid>.voter.<myvid>`) and what the
+  port had lost. Until this, one `@<hash of e-mail>` joined every poll
+  room, created every voter room and sent every
+  `m.room.vodle.voter.announce` — and that event carries the vid in plain
+  text, so the homeserver and every co-participant could read the person
+  behind two different vids straight off the sender field. Now a poll is
+  joined by an account derived from the poll and the vid alone (§3.2), and
+  two polls of one person share no user id, no device and no password.
+  What the protocol still cannot hide, here as on CouchDB: the IP address
+  and the timing of the requests.
+- **End-to-end encryption is off** in both environments. For poll accounts
+  it could not be on — the SDK's crypto store is one per browser profile
+  and belongs to one account — and for the person's own account it would
+  protect nothing: every payload vodle writes is a *state* event, which
+  megolm never encrypts, and the only room ever created with
+  `m.room.encryption` was the user room, whose payloads are state events
+  too. Confidentiality is and was vodle's own AES-GCM under the poll
+  password and the user password. The flag remains, and a spec against a
+  real Synapse still proves that turning it on brings the Rust crypto
+  backend up and encrypts a timeline event.
+- **A poll from before keeps working**: its rooms belong to the person's
+  own account, which created them, so the poll account would join a voter
+  room it may not write to. The first time such a poll is opened, the
+  person's account grants the poll account its own power in both rooms
+  (`takeOverFrom`, the same handover an account switch does), once per
+  device and poll, gated on a local record so a poll from after costs one
+  storage read. What it cannot repair is the past: the announcements the
+  old account made are in the poll room's history for good, so the
+  unlinkability is a property of polls from here on.
+- **Rate limits are an account matter now.** A device registers or signs in
+  once per poll it takes part in rather than once in its life, and Synapse
+  counts `rc_login.address` and `rc_registration` per IP address, so a
+  shared connection makes other people's logins this one's problem. Every
+  login, registration and password change waits a 429 out and tries again,
+  and `deploy/homeserver.vodle.yaml` sizes the two limits for it (burst 20,
+  then one per second) while leaving `rc_login.failed_attempts` — the one
+  that guards passwords — tight.
 
 ## 4. Migration (CouchDB → Matrix)
 

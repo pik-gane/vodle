@@ -624,12 +624,21 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
 
   it('initializes end-to-end encryption and round-trips an encrypted direct message', async () => {
     if (!requires_synapse()) { return; }
-    // self-contained (fresh users), since jasmine randomizes spec order:
-    const dave = await make_client('dave');
-    const erin = await make_client('erin');
+    // self-contained (fresh users), since jasmine randomizes spec order.
+    // environment.matrix.enable_e2ee is OFF in both deployments — it
+    // protects nothing vodle stores, since every payload of its own is a
+    // state event, and it costs 5.4 MB of WebAssembly on every start
+    // (#327) — so these two clients turn it on for themselves. That keeps
+    // the switch honest: what this spec proves is that turning it on still
+    // brings up the Rust crypto backend and encrypts a timeline event.
+    const dave = fresh_service('dave', POLL_PASSWORD);
+    const erin = fresh_service('erin', POLL_PASSWORD);
+    dave.use_e2ee = erin.use_e2ee = true;
+    await dave.register('dave-' + pid + '@example.invalid', 'test-password-dave');
+    await erin.register('erin-' + pid + '@example.invalid', 'test-password-erin');
 
-    // enable_e2ee made each client bring up the Rust crypto backend and
-    // publish device keys:
+    // ... each client brought up the Rust crypto backend and published
+    // device keys:
     expect(dave.client.getCrypto()).withContext('dave crypto').toBeTruthy();
     expect(erin.client.getCrypto()).withContext('erin crypto').toBeTruthy();
 
@@ -706,4 +715,64 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       wrong.signInAs(pollAccountName(poll_one, vid_one), person_password)
     ).withContext('the account password is derived, not the user\'s').toBeRejected();
   }, 120000);
+
+  /**
+   * A poll from BEFORE the poll accounts: its rooms belong to the person's
+   * own account, which created them, so the poll account joins a voter room
+   * it may not write to — power 0 against a state_default of 50, i.e. a 403
+   * for every rating. The handover (MatrixService.takeOverFrom, run by
+   * DataService.open_poll_matrix) is what keeps such a poll working (#327).
+   */
+  it('lets the poll account into a poll the person joined before it existed', async () => {
+    if (!requires_synapse()) { return; }
+    const password = 'test-password-handover';
+    const hpid = 'HANDOVER_' + pid, vid = 'vid_handover_' + pid;
+    // ONE device, so one storage: that is what says this poll is from before
+    const device = storage_stub();
+
+    function service_on_this_device(svc: any): any {
+      svc.init(silent);
+      svc.e2ee_store_in_memory = true;
+      svc.pollPasswordProvider = () => POLL_PASSWORD;
+      svc.userPasswordProvider = () => password;
+      services.push(svc);
+      return svc;
+    }
+
+    // the world before: the person's own account makes the poll, its voter
+    // room and a vote
+    const person = service_on_this_device(new (MatrixService as any)(device));
+    await person.register('handover-' + pid + '@example.invalid', password);
+    await person.getOrCreatePollRoom(hpid, 'a poll from before the poll accounts');
+    const room = await person.getOrCreateVoterRoom(hpid, vid);
+    await person.setVoterData(hpid, vid, 'rating.o1', 30);
+    await until(async () => rating_values(await fresh_ratings(person, hpid), 'o1').join() === '30',
+      'the old vote to be readable');
+
+    // today's poll account, on the same device: another account entirely,
+    // and a stranger in the person's rooms
+    const poll_account = service_on_this_device(MatrixService.forPoll(device, hpid, vid));
+    await poll_account.signInForPoll(hpid, vid, password);
+    expect(poll_account.userId).withContext('not the person').not.toBe(person.userId);
+    const before: any = await raw_state(person, room, 'm.room.power_levels');
+    expect(before.users[poll_account.userId] ?? before.users_default ?? 0)
+      .withContext('no power in the voter room yet').toBeLessThan(50);
+
+    // the handover, as DataService.open_poll_matrix runs it
+    await poll_account.takeOverFrom(person, hpid, vid);
+
+    const after: any = await raw_state(person, room, 'm.room.power_levels');
+    expect(after.users[poll_account.userId]).withContext('may write ratings now').toBe(50);
+    // the creator's 100 as well, which locking the metadata at the start takes
+    const poll_room = await poll_account.getPollRoom(hpid);
+    const poll_levels: any = await raw_state(person, poll_room, 'm.room.power_levels');
+    expect(poll_levels.users[poll_account.userId]).withContext('may lock the poll now').toBe(100);
+
+    // ... and the vote changes in the SAME room, so no voter appears twice
+    await poll_account.setVoterData(hpid, vid, 'rating.o1', 70);
+    expect(await poll_account.getVoterRoom(hpid, vid)).withContext('the same room').toBe(room);
+    await until(async () => rating_values(await fresh_ratings(person, hpid), 'o1').join() === '70',
+      'the new vote, in the room the old account made');
+    expect((await fresh_ratings(person, hpid)).size).withContext('still one voter').toBe(1);
+  }, 180000);
 });

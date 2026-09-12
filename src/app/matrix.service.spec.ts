@@ -2457,4 +2457,168 @@ describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327
       expect((new MatrixService(storage) as any).pollAccountFor).toBeNull();
     });
   });
+
+  describe("a poll from before the poll accounts is handed over (#327)", () => {
+    // Such a poll's rooms belong to the person's own account: it created
+    // the voter room, and if it created the poll it holds power 100 in the
+    // poll room. Without a handover the poll account joins both and every
+    // write comes back 403.
+    let storage: any, store: Map<string, any>;
+    let previous: any, poll_account: any, sent: any[], levels: any;
+
+    beforeEach(() => {
+      store = new Map<string, any>();
+      storage = {
+        get: async (k: string) => store.has(k) ? store.get(k) : null,
+        set: async (k: string, v: any) => { store.set(k, v); },
+        remove: async (k: string) => { store.delete(k); },
+      };
+      sent = [];
+      levels = {
+        '!poll:hs': {users: {'@me:hs': 100}, users_default: 50},
+        '!voter:hs': {users: {'@me:hs': 50}, users_default: 0},
+      };
+      previous = new MatrixService(storage);
+      previous.client = {
+        getUserId: () => '@me:hs',
+        getStateEvent: async (roomId: string) => levels[roomId],
+        sendStateEvent: async (roomId: string, type: string, content: any) => {
+          sent.push({roomId, type, users: content.users});
+          levels[roomId] = content;
+          return {event_id: '$1'};
+        },
+      };
+      previous.userId = '@me:hs';
+      previous.accessToken = 'personal-token';
+      poll_account = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      poll_account.client = {getRoom: () => ({}), joinRoom: async () => ({})};
+      poll_account.userId = '@poll:hs';
+      poll_account.accessToken = 'poll-token';
+      poll_account.getPollRoom = async () => '!poll:hs';
+      poll_account.getVoterRoom = async () => '!voter:hs';
+    });
+
+    function took_part_before() {
+      // what the person's own account stored on THIS device back then
+      store.set('poll_room_POLL_ONE', '!poll:hs');
+      store.set('voter_room_POLL_ONE:vid_a', '!voter:hs');
+    }
+
+    it("costs nothing at all for a poll that came after", async () => {
+      poll_account.getPollRoom = async () => { fail("asked the server about a poll it never joined"); return null; };
+      poll_account.getVoterRoom = async () => { fail("asked the server about a voter room it never had"); return null; };
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(sent.length).toBe(0);
+      // ... and it is not asked again
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toBeTruthy();
+    });
+
+    it("grants the poll account what the creator's own account held, in both rooms", async () => {
+      took_part_before();
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      const poll_room = sent.find(e => e.roomId === '!poll:hs');
+      const voter_room = sent.find(e => e.roomId === '!voter:hs');
+      // the creator's 100 is what locking the metadata at the start takes
+      expect(poll_room.users['@poll:hs']).toBe(100);
+      // 50 is what writing a rating takes; the old account keeps its own
+      expect(voter_room.users['@poll:hs']).toBe(50);
+      expect(voter_room.users['@me:hs']).toBe(50);
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toBe('@me:hs');
+    });
+
+    it("grants nothing in the poll room of a poll the person only voted in", async () => {
+      // every member of a poll room has power 50 (users_default) already
+      levels['!poll:hs'] = {users: {'@guard:hs': 100}, users_default: 50};
+      took_part_before();
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(sent.find(e => e.roomId === '!poll:hs')).toBeUndefined();
+      expect(sent.find(e => e.roomId === '!voter:hs')).toBeTruthy();
+    });
+
+    it("does it once, however often the poll is opened", async () => {
+      took_part_before();
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      const after_first = sent.length;
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(sent.length).toBe(after_first);
+    });
+
+    it("is tried again when it could not be finished", async () => {
+      took_part_before();
+      poll_account.getVoterRoom = async () => { throw new Error("the homeserver is not answering"); };
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toBeFalsy();
+      // ... and the next attempt, with the server back, finishes it
+      poll_account.getVoterRoom = async () => '!voter:hs';
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(sent.find(e => e.roomId === '!voter:hs')).toBeTruthy();
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toBe('@me:hs');
+    });
+
+    it("gives up on a handover that can never succeed", async () => {
+      // a voter room the guard bot has closed keeps its power levels at 100
+      // and refuses the grant for ever — and is read-only for its owner
+      // too, so there is nothing to take over
+      took_part_before();
+      previous.client.sendStateEvent = async () => { throw {httpStatus: 403, errcode: 'M_FORBIDDEN'}; };
+      for (let attempt = 0; attempt < MatrixService.HANDOVER_ATTEMPTS; attempt++) {
+        await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      }
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toContain('given up');
+      // ... and then it stops asking
+      let asked = false;
+      poll_account.getVoterRoom = async () => { asked = true; return '!voter:hs'; };
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(asked).toBeFalse();
+    });
+
+    it("waits for the person to be signed in rather than recording a handover that did not happen", async () => {
+      took_part_before();
+      previous.accessToken = null;
+      await poll_account.takeOverFrom(previous, 'POLL_ONE', 'vid_a');
+      expect(sent.length).toBe(0);
+      expect(store.get('poll_account_POLL_ONE_handover_POLL_ONE')).toBeFalsy();
+    });
+  });
+
+  describe("signing a poll account in waits out a rate limit (#327)", () => {
+    // one account per (poll, voter) means a device registers or signs in
+    // once per poll, and Synapse counts rc_login.address and rc_registration
+    // PER IP ADDRESS — a shared connection makes other people's logins this
+    // one's problem, so neither call may give up on a 429.
+    let storage: any;
+
+    beforeEach(() => {
+      const store = new Map<string, any>();
+      storage = {
+        get: async (k: string) => store.has(k) ? store.get(k) : null,
+        set: async (k: string, v: any) => { store.set(k, v); },
+        remove: async (k: string) => { store.delete(k); },
+      };
+    });
+
+    it("sends the login through the retry", async () => {
+      const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      let retried = 0;
+      svc.retryOnRateLimit = async (fn: any) => {
+        retried++;
+        return {access_token: 'a', user_id: '@poll:hs', device_id: 'D1'};
+      };
+      svc.initializeWithToken = async () => {};
+      await svc.signInAs('poll-account', 'derived-password');
+      expect(retried).toBe(1);
+    });
+
+    it("sends the registration through the retry", async () => {
+      const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      let retried = 0;
+      svc.retryOnRateLimit = async (fn: any) => {
+        retried++;
+        return {access_token: 'a', user_id: '@poll:hs', device_id: 'D1'};
+      };
+      svc.initializeWithToken = async () => {};
+      await svc.registerAs('poll-account', 'derived-password');
+      expect(retried).toBe(1);
+    });
+  });
 });

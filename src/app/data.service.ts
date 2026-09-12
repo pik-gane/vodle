@@ -560,6 +560,11 @@ export class DataService implements OnDestroy {
     service.logger = this.matrixService.logger;
     this.G.L.info("DataService.poll_matrix signing in as this poll's voter", pid);
     await service.signInForPoll(pid, vid, this.user_cache?.['password'] || '');
+    // a poll this device took part in BEFORE it had poll accounts has its
+    // rooms owned by the person's own account, which must hand them over
+    // once or the poll account can write nothing (#327). Costs one local
+    // read for every poll that came after.
+    await service.takeOverFrom(this.matrixService, pid, vid);
     return service;
   }
   

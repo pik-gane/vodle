@@ -34,11 +34,14 @@ public_baseurl: https://vodle.example.org/
 serve_server_wellknown: true   # /.well-known/matrix/server for other homeservers (federation over 443)
 
 # --- registration (#327) -----------------------------------------------
-# vodle registers a Matrix account per user on first use, so registration
-# must be open — but only with a token that the app carries. The token stops
-# drive-by registration bots; it is part of the app bundle, so it is no
-# secret against a determined attacker (an application service that
-# registers on the app's behalf would be the next step).
+# vodle registers a Matrix account per user on first use AND ONE PER (POLL,
+# VOTER) — see §4 on what that buys — so registration must be open, but only
+# with a token that the app carries. The token stops drive-by registration
+# bots; it is part of the app bundle, so it is no secret against a determined
+# attacker (an application service that registers on the app's behalf would
+# be the next step). Expect the account table to grow with participations
+# rather than with people: a poll of 50 is 50 accounts, and a deactivated
+# account is never reused.
 enable_registration: true
 registration_requires_token: true
 
@@ -209,7 +212,8 @@ Without a running bot no deadline is enforced on the server: clients then close 
 - **Synapse**: `GET /health` on the client port; Prometheus metrics with `enable_metrics: true` and a `metrics` listener.
 - **Backups**: the Synapse database and `matrix-data/` (signing key, config). Every poll's data — encrypted under its poll password — lives in the database; without the signing key the server's identity is lost. `deploy/backup.sh` dumps both into `deploy/backups/` (cron it; copy them off the host); the restore recipe is in `deploy/README.md`.
 - **Guest accounts**: a magic link opened on a device without an account registers a guest account with random credentials (#193) — a normal account, indistinguishable on the server. When the guest later logs in with an address of their own, the app hands the guest's rooms over to the new account and deactivates the guest account (its rating events stay the voter rooms' state). Guests who never do so leave an account behind that logs in from one browser only; nothing in vodle depends on them staying, so an operator may deactivate accounts that have not been seen for longer than `RETENTION_DAYS` (Synapse admin API `GET /_synapse/admin/v2/users`, `last_seen_ts`).
-- **Retention and the privacy statement**: state the retention period (`RETENTION_DAYS`) in the privacy statement (`privacy_statement_url`). Participants who archived a poll keep what their app cached; after the retention period the server has no copy. The homeserver also sees room membership (who takes part in which poll, as pseudonymous hashed ids) and the plaintext deadline and lifecycle state of every poll — everything else is ciphertext ([report, §3](../../planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md)).
+- **One account per (poll, voter)**: a participant does not join a poll as themselves. vodle derives a Matrix account from the poll id and the voter id (`pollAccountName`, #327), the same design the CouchDB backend has always had, and that account joins the poll room, owns the voter room and sends every event of that poll. So the homeserver sees *that* an account takes part in a poll, but two polls of one person carry no common identity — no shared user id, no shared device, no password in common (each is derived from the person's, never equal to it). What can still connect them is what the protocol cannot hide: the IP address and the timing of the requests, the same on the CouchDB backend. Only the person's own account (`@<hash of e-mail>`) holds the user room, and it joins no poll. A poll from before this existed keeps its rooms in the person's own account, which hands them over the first time the poll is opened; the announcements it already made stay in the poll room's history, so the unlinkability is a property of polls from here on.
+- **Retention and the privacy statement**: state the retention period (`RETENTION_DAYS`) in the privacy statement (`privacy_statement_url`). Participants who archived a poll keep what their app cached; after the retention period the server has no copy. The homeserver also sees room membership (which accounts take part in which poll — see above for what that does and does not reveal) and the plaintext deadline and lifecycle state of every poll — everything else is ciphertext ([report, §3](../../planning/matrix-migration/MATRIX_PERF_SECURITY_REPORT.md)).
 
 ## 5. Before going live
 

@@ -57,16 +57,20 @@ export const environment = {
     // refuse the placeholder.
     server_name: "vodle.example.com",
     // Enable Matrix E2EE (Olm/Megolm)
-    /* Matrix end-to-end encryption. OFF, and it is the architecture that
-       decides it, not a preference: vodle gives every (poll, voter) its own
-       Matrix account (pollAccountName), and the SDK's crypto store is one
-       per browser profile and belongs to ONE account — so a poll account
-       could never have it. It protected nothing in any case: user data,
-       poll data, options, ratings and delegations are all STATE events,
-       which megolm never encrypts, and the only room ever created with
-       m.room.encryption was the user room, whose payloads are state events
-       too. What does protect the contents is vodle's own AES-GCM under the
-       poll password and the user password, which is untouched by this.
+    /* Matrix end-to-end encryption. OFF, for two reasons of which the
+       second would be enough on its own:
+       - vodle gives every (poll, voter) its own Matrix account
+         (pollAccountName), and the SDK's crypto store is one per browser
+         profile and belongs to ONE account, so a POLL account can never
+         have crypto at all. The person's own account still could — nothing
+         stops the user room being encrypted — which is why this is a
+         switch and not a deletion.
+       - It would protect nothing. User data, poll data, options, ratings
+         and delegations are all STATE events, which megolm never encrypts,
+         and the only room ever created with m.room.encryption is the user
+         room, whose payloads are state events too. What does protect the
+         contents is vodle's own AES-GCM under the poll password and the
+         user password, which is untouched by this.
        Turning it on costs every start a 5.4 MB WebAssembly download — 8.9 s
        on the owner's link — and buys published device keys (#327). */
     enable_e2ee: false,
