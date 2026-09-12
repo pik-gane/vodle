@@ -2012,6 +2012,23 @@ describe("MatrixService reads the voter rooms rather than trusting what the sync
     expect(reads_after).toBeGreaterThan(reads_before);
   });
 
+  it("does not lose a voter the live handlers already had", async () => {
+    // the read is a snapshot of the rooms this device knows about; a voter
+    // the handlers had already seen must survive it. Replacing the cache
+    // with the read cost the click-through a voter the moment the read
+    // started happening at all.
+    service.updateRatingCache(PID, 'v9', 'o1', 55);
+    const ratings = await service.getRatings(PID);
+    expect(ratings.get('v9').get('o1')).withContext('still there after the read').toBe(55);
+    expect(ratings.size).withContext('v1, v2 from the read and v9 from before').toBe(3);
+  });
+
+  it("lets the read correct a value the handlers had", async () => {
+    service.updateRatingCache(PID, 'v1', 'o1', 11);
+    const ratings = await service.getRatings(PID);
+    expect(ratings.get('v1').get('o1')).withContext('the read is newer').toBe(70);
+  });
+
   it("keeps a rating that arrives while the rooms are being read", async () => {
     // the read is a snapshot of a moment already past by the time it ends,
     // so a live event during it must survive the caching of the result

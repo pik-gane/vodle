@@ -38,7 +38,7 @@ const stamp = Date.now();
 const EMAIL = `prodtest${stamp}@example.org`;
 const PASSWORD = 'ProdTest!' + stamp;
 
-const console_errors = [], page_errors = [], failed_requests = [];
+const console_errors = [], page_errors = [], failed_requests = [], diagnostics = [];
 
 /** where to put a screenshot; the directory is gitignored, so on a fresh
  *  checkout it does not exist and page.screenshot() would throw ENOENT
@@ -123,8 +123,12 @@ async function voters(p) {
   const page = await browser.newPage();
   await page.setViewport({width: 1280, height: 900});
   const console_all = [], matrix_requests = [];
+  // the lines that say where a shortfall comes from, kept for the report:
+  // the boot stopwatch and getRatings' own summary (#327)
+  const is_diagnostic = (t) => /\[vodle boot\]|\[getRatings\] DONE|\[discoverVoterRooms\] DONE/.test(t);
   page.on('console', m => { const t = m.text(); console_all.push(m.type() + ': ' + t);
-    if (m.type() === 'error' || /fail|error|exception/i.test(t)) { console_errors.push(t); } });
+    if (m.type() === 'error' || /fail|error|exception/i.test(t)) { console_errors.push(t); }
+    if (is_diagnostic(t)) { diagnostics.push('creator: ' + t); } });
   page.on('response', r => { if (r.url().includes('/_matrix/')) { matrix_requests.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(BASE, '')); } });
   page.on('pageerror', e => page_errors.push(String(e)));
   page.on('requestfailed', r => failed_requests.push(r.url() + ' ' + (r.failure() || {}).errorText));
@@ -248,7 +252,11 @@ async function voters(p) {
     const guest = await guest_context.newPage();
     await guest.setViewport({width: 1280, height: 900});
     guest.on('pageerror', e => page_errors.push('guest: ' + String(e)));
-    guest.on('console', m => { if (m.type() === 'error') { console_errors.push('guest: ' + m.text()); } });
+    guest.on('console', m => {
+      const t = m.text();
+      if (m.type() === 'error') { console_errors.push('guest: ' + t); }
+      if (is_diagnostic(t)) { diagnostics.push('guest: ' + t); }
+    });
     await guest.goto(invite_link, {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
     await visible(guest, '[data-vodle="poll-voting-page"]');
     log('   the guest is on the poll page without being asked anything');
@@ -327,7 +335,7 @@ async function voters(p) {
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
     console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
-      host_voters, guest_voters, reload, console_errors, page_errors,
+      host_voters, guest_voters, reload, diagnostics: diagnostics.slice(-12), console_errors, page_errors,
       failed_requests: failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r))}, null, 1));
   } catch (err) {
     await page.screenshot({path: shot('-failed')}).catch(() => {});
@@ -335,6 +343,7 @@ async function voters(p) {
     const alerts = await page.evaluate(() =>
       Array.from(document.querySelectorAll('ion-alert, ion-toast')).map(a => a.innerText.trim())).catch(() => []);
     console.log(JSON.stringify({ok: false, error: String(err), visible_text: step, alerts,
+      diagnostics: diagnostics.slice(-30),
       matrix_requests, console_errors, page_errors, failed_requests,
       console_tail: console_all.slice(-25)}, null, 1));
     process.exitCode = 1;

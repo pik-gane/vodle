@@ -3887,24 +3887,38 @@ export class MatrixService {
       }
     });
     
-    // anything that arrived while the rooms were being read is newer than
-    // the read, so it goes on top of it:
+    // The read ADDS to what is known; it does not replace it. A rating is
+    // only ever set, never withdrawn, so a union can never under-report —
+    // whereas substituting the read for the cache threw away everything the
+    // live handlers had gathered before it began, which cost a voter in the
+    // click-through the moment the read started happening at all (#327).
+    // In time order: what was already known, then the read, then whatever
+    // arrived while it ran.
+    const known = new Map<string, Map<string, number>>();
+    const layer = (from: Map<string, Map<string, number>> | undefined): number => {
+      let n = 0;
+      for (const [voterId, voterRatings] of (from || new Map())) {
+        let into = known.get(voterId);
+        if (!into) { into = new Map<string, number>(); known.set(voterId, into); }
+        for (const [optionId, rating] of voterRatings) { into.set(optionId, rating); n++; }
+      }
+      return n;
+    };
+    const kept = layer(this.ratingCaches.get(pollId));
+    layer(ratings);
     const live = this.ratingsDuringScan.get(pollId);
     this.ratingsDuringScan.delete(pollId);
-    let layered = 0;
-    if (live) {
-      for (const [voterId, voterRatings] of live) {
-        let into = ratings.get(voterId);
-        if (!into) { into = new Map<string, number>(); ratings.set(voterId, into); }
-        for (const [optionId, rating] of voterRatings) { into.set(optionId, rating); layered++; }
-      }
-    }
+    const layered = layer(live);
+    const read_size = ratings.size;
+    ratings.clear();
+    for (const [voterId, voterRatings] of known) { ratings.set(voterId, voterRatings); }
     
     let total_ratings = 0;
     for (const voterRatings of ratings.values()) { total_ratings += voterRatings.size; }
     console.log("[getRatings] DONE.", pollId, "voter rooms:", voterRoomEntries.length,
       "| voters with ratings:", ratings.size, "| ratings:", total_ratings,
       "| expected:", voterRoomEntries.length * options.size,
+      "| the read found:", read_size, "voters | already known:", kept,
       "| from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer,
       "| arrived during the read:", layered);
     
