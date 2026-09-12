@@ -1366,6 +1366,23 @@ export class DataService implements OnDestroy {
     return this.local_poll_dbs[pid];
   }
 
+  /** What a poll needs on the Matrix backend when it first shows up in the
+   *  user cache: to be listed, to have a cache to be filled into, and to
+   *  have its lifecycle running, so that one whose deadline passed while
+   *  the app was closed is ended rather than left "running" for ever
+   *  (the same thing init_poll_data does for restored caches, #327). */
+  private ensure_matrix_poll_known(pid: string) {
+    this.G.L.entry("DataService.ensure_matrix_poll_known", pid);
+    this._pids.add(pid);
+    this.ensure_poll_cache(pid);
+    const poll = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+    for (const oid of this._pid_oids[pid] || []) {
+      if (!(oid in poll.options)) { new Option(this.G, poll, oid); }
+    }
+    poll.start_lifecycle();
+    this.G.L.exit("DataService.ensure_matrix_poll_known", pid);
+  }
+
   private ensure_local_poll_data(pid:string) {
     // start fetching poll data from local poll db:
     this.G.L.entry("DataService.ensure_local_poll_data", pid);
@@ -4933,6 +4950,15 @@ export class DataService implements OnDestroy {
         this.G.L.trace("DataService.check_whether_poll_or_option found new poll", pid);
         if (state == 'draft') {
           this._pids.add(pid);
+        } else if (environment.useMatrixBackend) {
+          // no local PouchDB on this backend: the poll's data lives in its
+          // Matrix room and the cache is filled from there. Going through
+          // ensure_local_poll_data would create a `local_poll_<pid>`
+          // database per poll, read it three times (info, allDocs, changes)
+          // and hold `_ready` false until those reads of an always-empty
+          // database came back — every start, for every poll the user room
+          // names (#327).
+          this.ensure_matrix_poll_known(pid);
         } else {
           this.ensure_local_poll_data(pid);
           initializing_poll = true;

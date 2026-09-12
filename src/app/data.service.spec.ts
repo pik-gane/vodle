@@ -3532,3 +3532,64 @@ describe('a rating that arrives before its option does (#327)', () => {
     expect(update_own_rating).toHaveBeenCalledWith('p3', 'v1', 'o1', 7, true);
   });
 });
+
+// The Matrix backend has no local poll database — a poll's data lives in
+// its room — yet every poll the user room named went through
+// ensure_local_poll_data, which creates `local_poll_<pid>`, reads it three
+// times and holds the service un-ready until those reads of an always-empty
+// database come back (#327).
+describe('a running poll found in the user cache on the Matrix backend (#327)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, previous_flag: boolean;
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = {'poll.p1.state': 'running', 'poll.p1.due': '2099-01-01'};
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    svc.G = { L: L, P: { polls: {} }, D: svc, S: { consent: false },
+              add_spinning_reason: noop, remove_spinning_reason: noop };
+    // the Poll constructor reads these; the real DataService declares them
+    for (const cache of ['tally_caches', 'own_ratings_map_caches', 'direct_delegation_map_caches',
+                         'inv_direct_delegation_map_caches', 'indirect_delegation_map_caches',
+                         'inv_indirect_delegation_map_caches', 'effective_delegation_map_caches',
+                         'inv_effective_delegation_map_caches', 'proxy_ratings_map_caches',
+                         'max_proxy_ratings_map_caches', 'argmax_proxy_ratings_map_caches',
+                         'effective_ratings_map_caches']) {
+      svc[cache] = {};
+    }
+    svc.ensure_local_poll_data = jasmine.createSpy('ensure_local_poll_data');
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+  });
+
+  it('is listed and given a lifecycle without a local database', () => {
+    (environment as any).useMatrixBackend = true;
+    svc.check_whether_poll_or_option('poll.p1.state', 'running');
+    expect(svc.ensure_local_poll_data).withContext('no PouchDB bootstrap').not.toHaveBeenCalled();
+    expect(Object.keys(svc.local_poll_dbs)).withContext('no database created').toEqual([]);
+    expect(svc.pids.has('p1')).withContext('still listed').toBeTrue();
+    expect(svc.G.P.polls['p1']).withContext('and it has a Poll').toBeTruthy();
+    expect(svc.uninitialized_pids.size).withContext('nothing to wait for').toBe(0);
+  });
+
+  it('still bootstraps the local database on the CouchDB backend', () => {
+    (environment as any).useMatrixBackend = false;
+    svc.check_whether_poll_or_option('poll.p1.state', 'running');
+    expect(svc.ensure_local_poll_data).toHaveBeenCalledWith('p1');
+  });
+
+  it('leaves a draft alone on either backend', () => {
+    (environment as any).useMatrixBackend = true;
+    svc.check_whether_poll_or_option('poll.p2.state', 'draft');
+    expect(svc.ensure_local_poll_data).not.toHaveBeenCalled();
+    expect(svc.pids.has('p2')).toBeTrue();
+    expect(svc.G.P.polls['p2']).withContext('a draft gets no lifecycle here').toBeUndefined();
+  });
+});
