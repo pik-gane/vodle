@@ -741,6 +741,7 @@ export class MatrixService {
         initialSyncLimit: 1,
         lazyLoadMembers: true,
       });
+      MatrixService.stopMatrixRTC(this.client);
       boot("syncing started");
       
       // Monitor sync state transitions to detect if sync loop stops
@@ -1330,6 +1331,35 @@ export class MatrixService {
         value => { clearTimeout(timer); resolve(value); },
         error => { clearTimeout(timer); reject(error); });
     });
+  }
+  
+  /**
+   * Turn off the SDK's MatrixRTC session manager, which vodle has no use for.
+   *
+   * It subscribes to RoomState.events — EVERY state event the client sees —
+   * and vodle's ratings ARE state events, so a poll of fifty voters runs it
+   * some thousands of times a sync, each one looking for voice/video
+   * memberships that are never there. Worse, a state event for a room the
+   * client has not got yet is reported with logger.error, which no log level
+   * suppresses: the click-through of 2026-09-12 collected some hundreds of
+   * "Got room state event for unknown room" lines from a poll of ten (#327).
+   *
+   * `matrixRTC` and the ClientEvent.Sync listener that starts it are the
+   * SDK's own names, so this is written to do nothing quietly if a later
+   * version renames them, rather than to fail the start.
+   */
+  static stopMatrixRTC(client: any): void {
+    try {
+      // the manager is started from a Sync listener once the initial sync
+      // completes, so stopping it now is not enough on its own:
+      if (typeof client?.startMatrixRTC === 'function') {
+        client.off('sync', client.startMatrixRTC);
+      }
+      client?.matrixRTC?.stop?.();
+    } catch (error) {
+      console.warn("[vodle boot] could not turn off MatrixRTC:",
+        (error as any)?.message || error);
+    }
   }
   
   /**

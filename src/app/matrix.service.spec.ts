@@ -2303,3 +2303,42 @@ describe("MatrixService.dropRustCryptoStore (#327)", () => {
     expect(deleted).toEqual([]);
   });
 });
+
+describe("MatrixService.stopMatrixRTC (#327)", () => {
+  /** the two things startClient leaves behind for MatrixRTC */
+  function fake_client() {
+    const client: any = {
+      off_calls: [] as any[],
+      stopped: 0,
+      startMatrixRTC: () => {},
+      matrixRTC: {stop: () => { client.stopped += 1; }},
+      off: (event: string, handler: any) => { client.off_calls.push([event, handler]); },
+    };
+    return client;
+  }
+
+  it("removes the listener that would start it, and stops it", () => {
+    const client = fake_client();
+    MatrixService.stopMatrixRTC(client);
+    expect(client.off_calls.length).toBe(1);
+    expect(client.off_calls[0][0]).toBe('sync');
+    expect(client.off_calls[0][1]).withContext('the SDK\'s own handler').toBe(client.startMatrixRTC);
+    expect(client.stopped).toBe(1);
+  });
+
+  it("says nothing and does nothing when the SDK has renamed things", () => {
+    // it must never be able to fail a start: a poll works without it
+    const client: any = {off: () => { throw new Error('no such listener'); }};
+    expect(() => MatrixService.stopMatrixRTC(client)).not.toThrow();
+    expect(() => MatrixService.stopMatrixRTC({})).not.toThrow();
+    expect(() => MatrixService.stopMatrixRTC(null)).not.toThrow();
+  });
+
+  it("stops it even when the starting listener is already gone", () => {
+    const client = fake_client();
+    delete client.startMatrixRTC;
+    MatrixService.stopMatrixRTC(client);
+    expect(client.off_calls.length).withContext('nothing to remove').toBe(0);
+    expect(client.stopped).toBe(1);
+  });
+});
