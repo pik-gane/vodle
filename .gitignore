@@ -60,3 +60,4 @@ karma-results.json
 
 # screenshots saved by the e2e smoke suite on failure (see test/wdio.conf.js)
 e2e-screenshots/
+clickthrough-result.json

@@ -126,6 +126,19 @@ jobs:
         # specs skip themselves here, they have silently stopped running.
         run: node scripts/check-test-results.js --no-skips
 
+      # always, and not only on a failure: the click-through's own numbers
+      # (the boot stages, the reload timings, the voter counts) sit ahead of
+      # some hundreds of thousands of lines of karma in the job log, past
+      # what the log API hands back — so a green run's timings were
+      # unreadable (#327)
+      - name: Upload the click-through result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-clickthrough-result
+          path: clickthrough-result.json
+          if-no-files-found: warn
+
       - name: Upload the click-through screenshots
         if: failure()
         uses: actions/upload-artifact@v4

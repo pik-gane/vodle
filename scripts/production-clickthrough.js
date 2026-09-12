@@ -48,6 +48,21 @@ const guest_boot = () => boot_lines[guest_boot_target];
 /* the report helpers and the boot-log parsing live in their own modules so
    they can be tested without a browser: each takes --self-test (#327) */
 const { digest, console_tail } = require('./clickthrough-report');
+
+/** The report goes to stdout AND to a file. In CI the click-through's output
+ *  sits ahead of some hundreds of thousands of lines of karma, past what the
+ *  log API will hand back, so the run that proves a timing cannot be read
+ *  for the timing itself. The file is uploaded as an artifact (#327). */
+const REPORT_FILE = process.env.VODLE_REPORT_FILE || 'clickthrough-result.json';
+function report(payload) {
+  const text = JSON.stringify(payload, null, 1);
+  console.log(text);
+  try {
+    require('fs').writeFileSync(REPORT_FILE, text);
+  } catch (err) {
+    console.log('(could not write ' + REPORT_FILE + ': ' + err.message + ')');
+  }
+}
 /* the parsing lives in its own module so it can be tested without a browser:
    node scripts/boot-stages.js --self-test (#327) */
 const { boot_stages, slowest_stage } = require('./boot-stages');
@@ -427,17 +442,17 @@ async function voters(p) {
 
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
-    console.log(JSON.stringify({ok: true, email: EMAIL, user_id, invite_link,
+    report({ok: true, email: EMAIL, user_id, invite_link,
       host_voters, guest_voters, reload, boots, returning_ms,
       diagnostics: diagnostics.slice(-12),
       console_errors: digest(console_errors), page_errors: digest(page_errors),
-      failed_requests: digest(failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r)))}, null, 1));
+      failed_requests: digest(failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r)))});
   } catch (err) {
     await page.screenshot({path: shot('-failed')}).catch(() => {});
     const step = await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '');
     const alerts = await page.evaluate(() =>
       Array.from(document.querySelectorAll('ion-alert, ion-toast')).map(a => a.innerText.trim())).catch(() => []);
-    console.log(JSON.stringify({ok: false, error: String(err), visible_text: step, alerts,
+    report({ok: false, error: String(err), visible_text: step, alerts,
       boot: {creator: boot_stages(boot_lines.creator),
              guest: boot_stages(boot_lines.guest),
              returning: boot_stages(boot_lines.returning)},
@@ -447,7 +462,7 @@ async function voters(p) {
       matrix_requests: digest(matrix_requests.map(r => r.replace(/\?.*$/, '')), 20),
       console_errors: digest(console_errors), page_errors: digest(page_errors),
       failed_requests: digest(failed_requests),
-      console_tail: console_tail(console_all)}, null, 1));
+      console_tail: console_tail(console_all)});
     process.exitCode = 1;
   } finally {
     await browser.close();
