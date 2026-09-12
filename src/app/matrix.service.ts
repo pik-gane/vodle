@@ -80,6 +80,40 @@ export function deriveMatrixPassword(email: string, password: string): string {
   return blake2s.hexDigest();
 }
 
+/**
+ * The account that acts for one voter in one poll — the whole of vodle's
+ * cross-poll privacy.
+ *
+ * The CouchDB backend has always connected to a poll's database as
+ * `vodle.poll.<pid>.voter.<myvid>` (DataService.connect_to_remote_poll_db),
+ * NOT as the person: the server sees a separate account per poll, so two
+ * polls of the same person carry nothing that ties them together. The
+ * Matrix port collapsed that to one account per person, and with it the
+ * guarantee: one `@<hash of e-mail>` joined every poll room, created every
+ * voter room and sent every announcement, so the homeserver — and every
+ * co-participant — could read the person behind two different vids
+ * straight off the sender field (#327).
+ *
+ * So the vid defines the account again. The localpart is a hash because a
+ * Matrix localpart may not carry the upper case a pid does, and the
+ * password is derived rather than reused so that a poll account cannot
+ * hand back the user's own password.
+ */
+export function pollAccountName(pollId: string, vid: string): string {
+  const hashBytes = Math.max(environment.data_service.hash_n_bytes ?? 0, 16);
+  const blake2s = new BLAKE2s(hashBytes);
+  blake2s.update(textEncoder.encode('vodle.poll.' + pollId + '.voter.' + vid));
+  return blake2s.hexDigest();
+}
+
+/** the password of that account, from the user's own (as CouchDB does) */
+export function pollAccountPassword(pollId: string, vid: string, userPassword: string): string {
+  const blake2s = new BLAKE2s(32);
+  blake2s.update(textEncoder.encode(
+    'vodle-matrix-poll:' + pollId + ':' + vid + ':' + userPassword));
+  return blake2s.hexDigest();
+}
+
 export function hashEmail(email: string): string {
   // Normalize email: trim whitespace and convert to lowercase for consistency
   const normalizedEmail = email.trim().toLowerCase();
@@ -429,10 +463,54 @@ export class MatrixService {
    *  one page must opt out of persistence. The app keeps the default. */
   e2ee_store_in_memory = false;
   
+  /**
+   * What this instance's storage keys are prefixed with.
+   *
+   * One instance per identity (see forPoll): the personal account keeps the
+   * unprefixed keys it has always used, and a poll account gets its own, so
+   * two identities in one browser profile do not overwrite each other's
+   * credentials or room ids (#327).
+   */
+  private keyPrefix = '';
+  
+  /** whether this instance initialises end-to-end encryption at all. The
+   *  SDK's crypto store is one per browser profile and belongs to ONE
+   *  account, so only the personal one can have it. */
+  private use_e2ee = environment.matrix.enable_e2ee;
+  
+  /** the poll this instance acts for, if it is a poll account */
+  pollAccountFor: {pollId: string, vid: string} | null = null;
+  
   constructor(
     private storage: Storage
   ) {
     this.homeserverUrl = MatrixService.resolveHomeserverUrl(environment.matrix.homeserver_url);
+  }
+  
+  /**
+   * A service that acts as `vid` in poll `pollId` and nowhere else — the
+   * Matrix counterpart of the CouchDB backend's `vodle.poll.<pid>.voter.<vid>`
+   * database user (see pollAccountName).
+   *
+   * Everything this service does to a poll room or a voter room already
+   * acts "as this.client"; handing it a different client is therefore the
+   * whole of the change, and the 129 places that say `this.client` need not
+   * know which account they are (#327).
+   */
+  static forPoll(storage: Storage, pollId: string, vid: string): MatrixService {
+    const service = new MatrixService(storage);
+    service.keyPrefix = 'poll_account_' + pollId + '_';
+    service.pollAccountFor = {pollId, vid};
+    // no crypto: the profile's one crypto store belongs to the personal
+    // account, and nothing a poll account writes is a timeline event in an
+    // encrypted room anyway
+    service.use_e2ee = false;
+    return service;
+  }
+  
+  /** this instance's name for a stored value */
+  private storageKey(name: string): string {
+    return this.keyPrefix + name;
   }
 
   /**
@@ -675,7 +753,7 @@ export class MatrixService {
       // encryption (encryptWithPassword/submitEncryptedRating), not from
       // this. A crypto-init failure (e.g. missing WASM support) therefore
       // degrades gracefully to an unencrypted-capable session:
-      if (environment.matrix.enable_e2ee) {
+      if (this.use_e2ee) {
         try {
           // The crypto WASM's default loading URL is built from
           // import.meta.url, which Angular's webpack leaves as an unfetchable
@@ -704,7 +782,7 @@ export class MatrixService {
             await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
               "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
           }
-          await this.storage.set('matrix_crypto_account', userId);
+          await this.storage.set(this.storageKey('matrix_crypto_account'), userId);
           this.logger?.info("MatrixService end-to-end encryption initialized", userId);
           boot("end-to-end encryption ready");
         } catch (error) {
@@ -1225,7 +1303,7 @@ export class MatrixService {
         await (this.client as any).clearStores();
         // the crypto store went with them, so the marker must not go on
         // claiming an account owns one (#327):
-        await this.storage.remove('matrix_crypto_account');
+        await this.storage.remove(this.storageKey('matrix_crypto_account'));
       } catch (error) {
         this.logger?.warn("MatrixService.dropSession could not clear the sync store", error);
       }
@@ -1438,7 +1516,7 @@ export class MatrixService {
     // (nothing to do when the store is in memory: there is none on disk,
     // and tests running several clients in one page share the profile)
     if (this.e2ee_store_in_memory) return;
-    const crypto_account = await this.storage.get('matrix_crypto_account');
+    const crypto_account = await this.storage.get(this.storageKey('matrix_crypto_account'));
     if (crypto_account === userId) return;
     boot("the crypto store is not this account's, dropping it",
       crypto_account || "no marker");
@@ -1708,21 +1786,21 @@ export class MatrixService {
    * Save credentials to storage
    */
   private async saveCredentials(creds: MatrixCredentials): Promise<void> {
-    await this.storage.set('matrix_credentials', creds);
+    await this.storage.set(this.storageKey('matrix_credentials'), creds);
   }
   
   /**
    * Load credentials from storage
    */
   private async loadCredentials(): Promise<MatrixCredentials | null> {
-    return await this.storage.get('matrix_credentials');
+    return await this.storage.get(this.storageKey('matrix_credentials'));
   }
   
   /**
    * Clear credentials from storage
    */
   private async clearCredentials(): Promise<void> {
-    await this.storage.remove('matrix_credentials');
+    await this.storage.remove(this.storageKey('matrix_credentials'));
   }
   
   // ========================================================================
@@ -1747,7 +1825,7 @@ export class MatrixService {
     }
     
     // Check if user room already exists in storage
-    const storedRoomId = await this.storage.get('user_room_id');
+    const storedRoomId = await this.storage.get(this.storageKey('user_room_id'));
     if (storedRoomId) {
       // Verify room still exists
       const room = this.client.getRoom(storedRoomId);
@@ -1766,7 +1844,7 @@ export class MatrixService {
       // Try to find existing room by alias
       const aliasResponse = await this.client.getRoomIdForAlias(this.userRoomAliasFor(this.userId));
       this.userRoomId = aliasResponse.room_id;
-      await this.storage.set('user_room_id', this.userRoomId);
+      await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
       this.logger?.info("Found user room by alias", this.userRoomId);
       return this.userRoomId;
     } catch (error) {
@@ -1792,7 +1870,7 @@ export class MatrixService {
       };
       
       this.userRoomId = await this.createRoom(options);
-      await this.storage.set('user_room_id', this.userRoomId);
+      await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
       this.logger?.info("Created new user room", this.userRoomId);
       return this.userRoomId;
     }
@@ -1992,7 +2070,7 @@ export class MatrixService {
       return;
     }
     this.pollOrigins.set(pollId, serverName);
-    await this.storage.set(`poll_origin_${pollId}`, serverName);
+    await this.storage.set(this.storageKey(`poll_origin_${pollId}`), serverName);
   }
   
   /**
@@ -2005,7 +2083,7 @@ export class MatrixService {
     if (cached) {
       return cached;
     }
-    const stored = await this.storage.get(`poll_origin_${pollId}`);
+    const stored = await this.storage.get(this.storageKey(`poll_origin_${pollId}`));
     if (stored) {
       this.pollOrigins.set(pollId, stored);
       return stored;
@@ -2341,7 +2419,7 @@ export class MatrixService {
     
     // Cache the mapping
     this.pollRooms.set(pollId, roomId);
-    await this.storage.set(`poll_room_${pollId}`, roomId);
+    await this.storage.set(this.storageKey(`poll_room_${pollId}`), roomId);
     
     this.logger?.info("Poll room created", pollId, roomId);
     this.logger?.exit("MatrixService.createPollRoom");
@@ -2403,7 +2481,7 @@ export class MatrixService {
     }
     
     // Check persistent storage
-    const stored = await this.storage.get(`poll_room_${pollId}`);
+    const stored = await this.storage.get(this.storageKey(`poll_room_${pollId}`));
     if (stored) {
       // the store also holds rooms one is invited to, knocking on or has
       // left (#328): only a joined one counts, the alias path handles the rest
@@ -2447,7 +2525,7 @@ export class MatrixService {
       
       await this.validatePollRoomPowerLevels(roomId);
       this.pollRooms.set(pollId, roomId);
-      await this.storage.set(`poll_room_${pollId}`, roomId);
+      await this.storage.set(this.storageKey(`poll_room_${pollId}`), roomId);
       return roomId;
     } catch (error: any) {
       // Only treat "not found" (404) as "room doesn't exist".
@@ -3219,7 +3297,7 @@ export class MatrixService {
     const cacheKey = `${pollId}:${voterId}`;
     this.voterRooms.set(cacheKey, roomId);
     this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-    await this.storage.set(`voter_room_${cacheKey}`, roomId);
+    await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
     
     this.logger?.info("Voter room created", pollId, voterId, roomId);
     this.logger?.exit("MatrixService.createVoterRoom");
@@ -3257,7 +3335,7 @@ export class MatrixService {
     }
     
     // Check persistent storage
-    const stored = await this.storage.get(`voter_room_${cacheKey}`);
+    const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
     if (stored) {
       const room = this.client.getRoom(stored);
       if (room) {
@@ -3276,7 +3354,7 @@ export class MatrixService {
       const roomId = aliasResponse.room_id;
       this.voterRooms.set(cacheKey, roomId);
       this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-      await this.storage.set(`voter_room_${cacheKey}`, roomId);
+      await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
       return roomId;
     } catch (error) {
       this.logger?.info("Voter room not found", pollId, voterId);
@@ -3332,7 +3410,7 @@ export class MatrixService {
     }
     
     // Also check persistent storage and alias lookup
-    const stored = await this.storage.get(`voter_room_${cacheKey}`);
+    const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
     if (stored && this.client) {
       const room = this.client.getRoom(stored);
       if (room) {
@@ -3548,7 +3626,7 @@ export class MatrixService {
   private async rememberedVoterRoom(pollId: string, voterId: string, cacheKey: string): Promise<boolean> {
     let stored: string | null = null;
     try {
-      stored = await this.storage.get(`voter_room_${cacheKey}`);
+      stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
     } catch (error) {
       this.logger?.warn("MatrixService could not read a remembered voter room", cacheKey, error);
       return false;
@@ -3662,7 +3740,7 @@ export class MatrixService {
             
             this.voterRooms.set(cacheKey, voterRoomId);
             this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId: effectiveId });
-            await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
+            await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), voterRoomId);
             
             console.log("[discoverVoterRooms] Joined and cached voter room:", cacheKey, "->", voterRoomId);
             this.logger?.info("Discovered and joined voter room", pollId, effectiveId, voterRoomId);
@@ -4880,7 +4958,7 @@ export class MatrixService {
       
       this.voterRooms.set(cacheKey, voterRoomId);
       this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId });
-      await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
+      await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), voterRoomId);
       
       // Invalidate rating cache so next getRatings() includes this voter
       this.ratingCaches.delete(pollId);
@@ -5141,7 +5219,7 @@ export class MatrixService {
     }
     this.teardownPollEventHandlers(pollId);
     const rooms = new Set<string>();
-    const pollRoom = this.pollRooms.get(pollId) || await this.storage.get(`poll_room_${pollId}`);
+    const pollRoom = this.pollRooms.get(pollId) || await this.storage.get(this.storageKey(`poll_room_${pollId}`));
     if (pollRoom) {
       rooms.add(pollRoom);
     }
@@ -5152,7 +5230,7 @@ export class MatrixService {
         this.voterRoomReverseLookup.delete(roomId);
         this.voterVidStored.delete(roomId);
         this.voterVidMap.delete(cacheKey);
-        await this.storage.remove(`voter_room_${cacheKey}`);
+        await this.storage.remove(this.storageKey(`voter_room_${cacheKey}`));
       }
     }
     // rooms of the poll this session never opened are known by their alias:
@@ -5167,7 +5245,7 @@ export class MatrixService {
     this.optionCaches.delete(pollId);
     this.ratingCaches.delete(pollId);
     this.ratingsScanned.delete(pollId);
-    await this.storage.remove(`poll_room_${pollId}`);
+    await this.storage.remove(this.storageKey(`poll_room_${pollId}`));
     for (const roomId of rooms) {
       try {
         await this.client.leave(roomId);

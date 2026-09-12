@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
 import { environment } from '../environments/environment';
-import { JOIN_KEY_EVENT_TYPE, KNOCK_REASON_PREFIX, joinKey, joinProof, MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus } from './matrix.service';
+import { JOIN_KEY_EVENT_TYPE, KNOCK_REASON_PREFIX, joinKey, joinProof, MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus, pollAccountName, pollAccountPassword } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -2377,5 +2377,84 @@ describe("MatrixService.fetchCryptoWasm (#327)", () => {
     await expectAsync(MatrixService.fetchCryptoWasm()).toBeRejectedWithError('offline');
     await expectAsync(MatrixService.fetchCryptoWasm()).toBeRejectedWithError('offline');
     expect(calls).withContext('tried again rather than replaying the failure').toBe(2);
+  });
+});
+
+describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327)", () => {
+  // The CouchDB backend has always connected to a poll's database as
+  // `vodle.poll.<pid>.voter.<myvid>`, never as the person, so two polls of
+  // one person share no identity on the server. These pin the Matrix
+  // counterpart.
+
+  it("gives the same voter in two polls two unrelated accounts", () => {
+    const in_poll_1 = pollAccountName('POLL_ONE', 'vid_a');
+    const in_poll_2 = pollAccountName('POLL_TWO', 'vid_a');
+    expect(in_poll_1).not.toBe(in_poll_2);
+  });
+
+  it("gives two voters in one poll two unrelated accounts", () => {
+    expect(pollAccountName('POLL_ONE', 'vid_a')).not.toBe(pollAccountName('POLL_ONE', 'vid_b'));
+  });
+
+  it("is the same account again for the same poll and vid, on any device", () => {
+    // a second device restores the vid from the user room and must arrive
+    // at the same account without anything else being stored
+    expect(pollAccountName('POLL_ONE', 'vid_a')).toBe(pollAccountName('POLL_ONE', 'vid_a'));
+    expect(pollAccountPassword('POLL_ONE', 'vid_a', 'hunter2'))
+      .toBe(pollAccountPassword('POLL_ONE', 'vid_a', 'hunter2'));
+  });
+
+  it("is a usable Matrix localpart, whatever the poll id looks like", () => {
+    // pids carry upper case ("TEST_c58d4d70"), which a localpart may not
+    const name = pollAccountName('TEST_c58d4d70', 'd04297cd');
+    expect(name).toMatch(/^[a-z0-9._=\-/+]+$/);
+    expect(name.length).toBeLessThanOrEqual(255);
+  });
+
+  it("does not hand the user's own password to the homeserver", () => {
+    const password = pollAccountPassword('POLL_ONE', 'vid_a', 'hunter2');
+    expect(password).not.toContain('hunter2');
+    expect(pollAccountPassword('POLL_ONE', 'vid_a', 'hunter3')).not.toBe(password);
+  });
+
+  describe("MatrixService.forPoll", () => {
+    let storage: any, store: Map<string, any>;
+
+    beforeEach(() => {
+      store = new Map<string, any>();
+      storage = {
+        get: async (k: string) => store.has(k) ? store.get(k) : null,
+        set: async (k: string, v: any) => { store.set(k, v); },
+        remove: async (k: string) => { store.delete(k); },
+      };
+    });
+
+    it("keeps its credentials apart from the personal account's", async () => {
+      const personal = new MatrixService(storage);
+      const for_poll = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      await (personal as any).saveCredentials(
+        {accessToken: 'personal', userId: '@me:hs', deviceId: 'D1'});
+      await (for_poll as any).saveCredentials(
+        {accessToken: 'poll', userId: '@vid:hs', deviceId: 'D2'});
+      expect(store.get('matrix_credentials').accessToken).toBe('personal');
+      expect(store.get('poll_account_POLL_ONE_matrix_credentials').accessToken).toBe('poll');
+    });
+
+    it("two polls of the same person do not share stored state", async () => {
+      const one = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      const two = MatrixService.forPoll(storage, 'POLL_TWO', 'vid_b');
+      await (one as any).saveCredentials({accessToken: 'one', userId: '@a:hs', deviceId: 'D1'});
+      await (two as any).saveCredentials({accessToken: 'two', userId: '@b:hs', deviceId: 'D2'});
+      expect(store.get('poll_account_POLL_ONE_matrix_credentials').accessToken).toBe('one');
+      expect(store.get('poll_account_POLL_TWO_matrix_credentials').accessToken).toBe('two');
+    });
+
+    it("knows which poll and voter it acts for, and takes no crypto store", () => {
+      const for_poll = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      expect(for_poll.pollAccountFor).toEqual({pollId: 'POLL_ONE', vid: 'vid_a'});
+      // the profile's one crypto store belongs to the personal account
+      expect((for_poll as any).use_e2ee).toBeFalse();
+      expect((new MatrixService(storage) as any).pollAccountFor).toBeNull();
+    });
   });
 });
