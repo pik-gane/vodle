@@ -346,11 +346,28 @@ same across federation: the second homeserver holds the same ciphertext.
 - **Rate limits are an account matter now.** A device registers or signs in
   once per poll it takes part in rather than once in its life, and Synapse
   counts `rc_login.address` and `rc_registration` per IP address, so a
-  shared connection makes other people's logins this one's problem. Every
-  login, registration and password change waits a 429 out and tries again,
-  and `deploy/homeserver.vodle.yaml` sizes the two limits for it (burst 20,
-  then one per second) while leaving `rc_login.failed_attempts` — the one
-  that guards passwords — tight.
+  shared connection makes other people's logins this one's problem — a
+  lecture hall opening one magic link at the same moment is 500
+  registrations from a single address. Every login, registration and
+  password change waits a 429 out and tries again, and the recommended
+  settings size those two for that case (burst 1000, then 100 per second)
+  while leaving `rc_login.failed_attempts` tight: it counts only logins that
+  got the password *wrong*, which is what makes guessing one expensive, and
+  raising the other two does not help a guesser. vodle also stops producing
+  failed logins at all — before signing a poll account in it asks
+  `/register/available` and registers instead of trying a login it expects
+  to be refused (`usernameIsFree`), which also tells a wrong vodle password
+  apart from a first join.
+- **`rc_federation` was the one limiter still left at its defaults**, and it
+  is the only one that answers by *sleeping*: past 10 requests per second
+  from one server, each further one waits 500 ms, at 3 concurrent. A poll of
+  500 joined across federation is 501 rooms' worth of traffic from one
+  origin, which that paces at about two rooms a second. Now 500 per second
+  before any sleep, 20 concurrent — still per origin server, so still a
+  brake on a talkative one, and a deployment federating with the open
+  network should lower it again. The limiters vodle never calls
+  (`rc_3pid_validation`, `rc_media_create`, `rc_key_requests`, `rc_presence`,
+  `rc_delayed_event_mgmt`) stay at their defaults, and the template says why.
 
 ## 4. Migration (CouchDB → Matrix)
 

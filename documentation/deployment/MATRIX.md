@@ -50,14 +50,20 @@ registration_requires_token: true
 # room per voter, every participant joining every voter room, bursts of
 # state events). The values below are sized so that vodle's own work never
 # meets the limiter at all, for polls far larger than anyone is expected to
-# run; the login and registration limits right after this are deliberately
-# NOT raised.
+# run.
+# The account limits are raised too, because vodle signs in once per POLL a
+# device takes part in (§4, one account per (poll, voter)) and Synapse counts
+# them per IP ADDRESS: a lecture hall opening one magic link at once is that
+# many registrations from a single address. failed_attempts is the exception
+# and stays tight — it counts only logins that got the password WRONG, which
+# is what makes guessing one expensive, and the app avoids spending it by
+# asking /register/available before it signs a poll account in.
 rc_login:
-  address: {per_second: 1, burst_count: 20}
-  account: {per_second: 1, burst_count: 20}
+  address: {per_second: 100, burst_count: 1000}
+  account: {per_second: 100, burst_count: 1000}
   failed_attempts: {per_second: 0.5, burst_count: 10}
-rc_registration: {per_second: 0.5, burst_count: 20}
-rc_registration_token_validity: {per_second: 1, burst_count: 20}
+rc_registration: {per_second: 100, burst_count: 1000}
+rc_registration_token_validity: {per_second: 100, burst_count: 1000}
 # Every vodle write is a state event, and publishing a poll writes a burst
 # of them: one vid, one deadline and one rating PER OPTION in each voter's
 # room, plus one announcement each — three events per voter and one per
@@ -86,6 +92,25 @@ rc_invites:
   per_room: {per_second: 100, burst_count: 1000}
   per_user: {per_second: 100, burst_count: 1000}
   per_issuer: {per_second: 200, burst_count: 5000}
+# Incoming federation is the only limiter that answers by SLEEPING rather
+# than refusing: past sleep_limit requests per window_size, each further
+# request from that server waits sleep_delay ms, and past reject_limit it is
+# refused. The defaults — 10 per second, then 500 ms each, 3 concurrent —
+# pace a federated poll of 500 (501 rooms arriving from one server) at about
+# two rooms a second. These count per ORIGIN SERVER and are also what
+# protects this homeserver from a talkative one, so lower them again for a
+# deployment that federates with the open network rather than with a known
+# partner.
+rc_federation:
+  window_size: 1000
+  sleep_limit: 500
+  sleep_delay: 100
+  reject_limit: 1000
+  concurrent: 20
+# Left at Synapse's defaults because vodle never calls them:
+# rc_3pid_validation (the address never reaches the homeserver),
+# rc_media_create (no uploads), rc_key_requests (no Matrix-level end-to-end
+# encryption), rc_presence (presence off), rc_delayed_event_mgmt.
 
 # --- federation --------------------------------------------------------
 # Polls can be joined from other vodle homeservers (magic links carry the
@@ -106,11 +131,11 @@ which is what makes a large poll appear a piece at a time. Read them back
 from the running homeserver rather than assuming:
 
 ```sh
-docker compose exec synapse grep -E '^rc_message:|^rc_room_creation:' /data/homeserver.yaml
+docker compose exec synapse grep -E '^rc_(message|room_creation|login|federation):' /data/homeserver.yaml
 ```
 
 `deploy/deploy.sh up` writes the block, restarts Synapse when it changed, and
-its checks print those two lines (and say so when they are missing).
+its checks print those four lines (and name the ones that are missing).
 
 The app does its part too, and does not rely on the limits being generous:
 writes leave in a paced stream rather than a burst, a refusal slows every
@@ -133,9 +158,10 @@ honest constraint. The per-second figures sit above what a homeserver of
 this size can write anyway.
 
 What that gives up is the server-side protection against a runaway client.
-Weigh it against what still holds: registration needs a token, `rc_login`
-and `rc_registration` are **not** raised (those guard passwords and account
-creation, where a limit is the point), and vodle's own client paces itself
+Weigh it against what still holds: registration needs a token,
+`rc_login.failed_attempts` is **not** raised (that is the one that makes
+guessing a password expensive, and the only one of the account limits that
+guards anything a raise would weaken), and vodle's own client paces itself
 against the same two numbers — `matrix.write_burst` (20000, like
 `rc_message.burst_count`) is how many writes it sends at once and
 `matrix.writes_per_second` (1000, like `rc_message.per_second`) the rate

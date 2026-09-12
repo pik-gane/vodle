@@ -292,14 +292,22 @@ smoke_checks() {
   # The service is named `synapse` in docker-compose.prod.yml. A failure to
   # reach it at all is reported as that, not as missing limits: a container
   # that is not running would otherwise look like a misconfigured one.
-  local limits
+  # rc_login and rc_federation are checked with them: vodle signs in once per
+  # poll a device takes part in (one account per (poll, voter), #327) and
+  # Synapse counts logins per IP address, and incoming federation is the one
+  # limiter that answers by sleeping rather than refusing.
+  local limits missing key
   if limits=$(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T synapse \
-      sh -c 'grep -E "^rc_message:|^rc_room_creation:" /data/homeserver.yaml | tail -n 2' 2>&1); then
-    case "$limits" in
-      *rc_message*rc_room_creation*|*rc_room_creation*rc_message*)
-        echo "rate limits in the running configuration:"; echo "$limits" | sed 's/^/  /' ;;
-      *) echo "PROBLEM: the homeserver is running without vodle's rate limits (rc_message, rc_room_creation); run deploy/deploy.sh up again to write them and restart it" ;;
-    esac
+      sh -c 'grep -E "^rc_(message|room_creation|login|federation):" /data/homeserver.yaml || true' 2>&1); then
+    missing=""
+    for key in rc_message rc_room_creation rc_login rc_federation; do
+      case "$limits" in *"$key:"*) ;; *) missing="$missing $key" ;; esac
+    done
+    if [ -n "$missing" ]; then
+      echo "PROBLEM: the homeserver is running without vodle's rate limits (${missing# }); run deploy/deploy.sh up again to write them and restart it"
+    else
+      echo "rate limits in the running configuration:"; echo "$limits" | sed 's/^/  /'
+    fi
   else
     echo "note: could not read the rate limits from the homeserver container: $limits"
   fi

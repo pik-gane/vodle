@@ -50,29 +50,36 @@ presence:
 # rc_registration PER IP ADDRESS, so everyone behind one shared connection —
 # a university, an office, a conference — adds to the same bucket.
 #
-# Hence a burst of 20 and then one per second. Synapse's own defaults are a
-# burst of 5 and then one login per 5.5 MINUTES (per_second 0.003), and 3
-# registrations and then one per 6 seconds: a second device restoring a
-# person's ten polls signs in ten times, which under the defaults is five
-# straight away and then 28 minutes of waiting. The client waits a 429 out
-# and tries again either way, so a limit reached costs time and nothing
-# else — but not that much time.
+# Synapse's own defaults are a burst of 5 and then one login per 5.5 MINUTES
+# (per_second 0.003), and 3 registrations and then one per 6 seconds. The
+# case these have to fit is a lecture hall, an office or a conference opening
+# the same magic link at the same moment from one NAT: 500 people is 500
+# registrations within seconds from a single address. So the burst holds far
+# more than that and the rate is above what this homeserver can serve anyway,
+# which is the same reasoning as for the bulk limits below.
 #
-# failed_attempts stays tight, and that is the one that guards passwords:
-# it counts only logins that got the password wrong. rc_registration is
-# token-gated as well (registration_requires_token below).
+# failed_attempts is the ONE limit here deliberately left tight, and it is
+# the one that matters: it counts logins that got the password WRONG, so it
+# is what makes guessing a password expensive. Raising the other two does
+# not help a guesser — every wrong password is still counted here. And vodle
+# does not produce failed logins in normal use: before signing a poll account
+# in, it asks the homeserver whether the name is free
+# (GET /register/available, MatrixService.usernameIsFree) and registers,
+# instead of trying a login it expects to be refused.
+#
+# What raising rc_registration gives up is the server-side brake on somebody
+# who has extracted the registration token from the app bundle and creates
+# accounts in bulk. registration_requires_token (below) is what stands in
+# their way; the limit only ever made that slow, not expensive, and an
+# operator who sees the account table growing can rotate the token.
 rc_login:
-  address: {per_second: 1, burst_count: 20}
-  account: {per_second: 1, burst_count: 20}
+  address: {per_second: 100, burst_count: 1000}
+  account: {per_second: 100, burst_count: 1000}
   failed_attempts: {per_second: 0.5, burst_count: 10}
-rc_registration: {per_second: 0.5, burst_count: 20}
-rc_registration_token_validity: {per_second: 1, burst_count: 20}
+rc_registration: {per_second: 100, burst_count: 1000}
+rc_registration_token_validity: {per_second: 100, burst_count: 1000}
 # The limits below are set high enough that vodle never meets them, on
-# purpose. What follows applies to the bulk work of running polls only —
-# rc_login, rc_registration and rc_registration_token_validity above are
-# raised only as far as the paragraph above argues for, not into the
-# thousands: those guard against guessing passwords and against drive-by
-# account creation, where a limit is the point.
+# purpose. What follows applies to the bulk work of running polls.
 #
 # Every vodle write is a state event, and publishing a poll writes a burst of
 # them: one vid, one deadline and one rating PER OPTION in each voter's room,
@@ -108,6 +115,27 @@ rc_invites:
   per_room: {per_second: 100, burst_count: 1000}
   per_user: {per_second: 100, burst_count: 1000}
   per_issuer: {per_second: 200, burst_count: 5000}
+# Incoming federation. This is the only limiter that answers by SLEEPING
+# rather than by refusing: past sleep_limit requests inside window_size,
+# Synapse holds each further request from that server for sleep_delay ms,
+# and past reject_limit it refuses. The defaults are 10 per second, then
+# 500 ms each, at 3 concurrent — and a poll of 500 that federates is 501
+# rooms' worth of joins and events arriving from one server at once, which
+# would have been served at two per second. These are per ORIGIN SERVER, so
+# they are also what protects this homeserver from a talkative one: a
+# deployment that federates with the open network rather than with a known
+# partner should lower them again.
+rc_federation:
+  window_size: 1000
+  sleep_limit: 500
+  sleep_delay: 100
+  reject_limit: 1000
+  concurrent: 20
+# Deliberately left at Synapse's defaults, because vodle never calls them:
+# rc_3pid_validation (no e-mail or phone verification — the address never
+# reaches the homeserver), rc_media_create (no uploads, max_upload_size is
+# 1M above), rc_key_requests (no end-to-end encryption, see enable_e2ee),
+# rc_presence (presence is off), rc_delayed_event_mgmt (no delayed events).
 
 # federation: after a network split Synapse retries a partner only every ten
 # minutes by default; seconds keep a split short for the voters (#329).

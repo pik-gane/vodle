@@ -188,11 +188,11 @@ suppress_key_server_warning: true
 # a limit that vodle's bursts (poll start, joins, ratings) would hit shows
 # up here as a 429 in CI:
 rc_login:
-  address: {per_second: 1, burst_count: 20}
-  account: {per_second: 1, burst_count: 20}
+  address: {per_second: 100, burst_count: 1000}
+  account: {per_second: 100, burst_count: 1000}
   failed_attempts: {per_second: 0.5, burst_count: 10}
-rc_registration: {per_second: 0.5, burst_count: 20}
-rc_registration_token_validity: {per_second: 1, burst_count: 20}
+rc_registration: {per_second: 100, burst_count: 1000}
+rc_registration_token_validity: {per_second: 100, burst_count: 1000}
 # Every vodle write is a state event, and publishing a poll writes a burst
 # of them: one vid, one deadline and one rating PER OPTION in each voter's
 # room, plus one announcement each. A test poll of 50 voters over 5 options
@@ -214,6 +214,17 @@ rc_invites:
   per_room: {per_second: 100, burst_count: 1000}
   per_user: {per_second: 100, burst_count: 1000}
   per_issuer: {per_second: 200, burst_count: 5000}
+# incoming federation, the one limiter that answers by SLEEPING: past
+# sleep_limit requests per window_size, each further one from that server
+# waits sleep_delay ms. The federation spec sends a poll's rooms across the
+# link in a burst, which the defaults (10 per second, then 500 ms each,
+# 3 concurrent) would have paced at two per second.
+rc_federation:
+  window_size: 1000
+  sleep_limit: 500
+  sleep_delay: 100
+  reject_limit: 1000
+  concurrent: 20
 YAML
     # host networking: the server must be "localhost:<port>" both for the
     # browser and for the other homeserver

@@ -1455,6 +1455,42 @@ export class MatrixService {
   }
   
   /**
+   * Whether the homeserver has no account by this name yet.
+   *
+   * Asking is what keeps signing a poll account in from producing a FAILED
+   * login every time a device takes part in a new poll. `rc_login
+   * .failed_attempts` is the one rate limit a vodle homeserver leaves tight,
+   * because it is the one that makes guessing a password expensive, and
+   * vodle should not be spending it on logins it expects to be refused
+   * (#327). `/register/available` costs `rc_registration` instead, which is
+   * sized for a lecture hall arriving at once.
+   *
+   * Null when the homeserver will not say — an older server, registration
+   * closed, a name it rejects for a reason of its own — and the caller then
+   * falls back to trying the login, as it always did.
+   */
+  private async usernameIsFree(username: string): Promise<boolean | null> {
+    try {
+      return await this.retryOnRateLimit(async () => {
+        const response = await fetch(this.homeserverUrl
+          + '/_matrix/client/v3/register/available?username=' + encodeURIComponent(username),
+          {cache: 'no-store'});
+        if (response.ok) {
+          return !!(await response.json())?.available;
+        }
+        const body = await response.json().catch(() => null);
+        if (body?.errcode === 'M_USER_IN_USE') { return false; }
+        // fetch does not throw on a 429, and retryOnRateLimit needs one:
+        if (response.status === 429) { throw {httpStatus: 429, data: body}; }
+        return null;
+      });
+    } catch (error) {
+      this.logger?.info("MatrixService.usernameIsFree: the homeserver would not say", username, error);
+      return null;
+    }
+  }
+
+  /**
    * Sign one account in by name, registering it if the homeserver has never
    * seen it. No ladder of historical credential formats (see passwordLogin):
    * an account named this way was invented by this version of vodle and
@@ -1462,6 +1498,15 @@ export class MatrixService {
    */
   async signInAs(username: string, matrixPassword: string): Promise<void> {
     this.logger?.entry("MatrixService.signInAs", username);
+    // A name the homeserver has never seen is registered straight away,
+    // without a refused login first (usernameIsFree); when it will not say,
+    // the login decides, as it always did.
+    const free = await this.usernameIsFree(username);
+    if (free === true) {
+      await this.registerAs(username, matrixPassword);
+      this.logger?.exit("MatrixService.signInAs (registered)");
+      return;
+    }
     const tempClient = createClient({ baseUrl: this.homeserverUrl });
     let response: any = null;
     try {
@@ -1471,6 +1516,13 @@ export class MatrixService {
         tempClient.loginWithPassword(username, matrixPassword));
     } catch (error: any) {
       if (!MatrixService.isForbidden(error)) { throw error; }
+      if (free === false) {
+        // the account exists and this password does not open it, so this is
+        // a wrong vodle password rather than a first join: registering would
+        // only turn a clear refusal into M_USER_IN_USE
+        this.logger?.warn("MatrixService.signInAs: the account exists and the password was refused", username);
+        throw error;
+      }
     }
     if (!response) {
       await this.registerAs(username, matrixPassword);

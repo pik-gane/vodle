@@ -2600,6 +2600,7 @@ describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327
     it("sends the login through the retry", async () => {
       const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
       let retried = 0;
+      svc.usernameIsFree = async () => null;
       svc.retryOnRateLimit = async (fn: any) => {
         retried++;
         return {access_token: 'a', user_id: '@poll:hs', device_id: 'D1'};
@@ -2619,6 +2620,42 @@ describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327
       svc.initializeWithToken = async () => {};
       await svc.registerAs('poll-account', 'derived-password');
       expect(retried).toBe(1);
+    });
+
+    it("does not spend a failed login on a name the homeserver has never seen", async () => {
+      // rc_login.failed_attempts is the one limit a vodle homeserver keeps
+      // tight, because it is what makes guessing a password expensive; a
+      // device joining its tenth poll must not be spending it
+      const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      let logins = 0, registered = false;
+      svc.usernameIsFree = async () => true;
+      svc.retryOnRateLimit = async () => { logins++; throw {httpStatus: 403, errcode: 'M_FORBIDDEN'}; };
+      svc.registerAs = async () => { registered = true; };
+      await svc.signInAs('poll-account', 'derived-password');
+      expect(registered).toBeTrue();
+      expect(logins).toBe(0);
+    });
+
+    it("does not try to register a poll account whose password is simply wrong", async () => {
+      // the name is taken and the password does not open it: registering
+      // would only turn a clear refusal into M_USER_IN_USE
+      const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      let registered = false;
+      svc.usernameIsFree = async () => false;
+      svc.retryOnRateLimit = async () => { throw {httpStatus: 403, errcode: 'M_FORBIDDEN'}; };
+      svc.registerAs = async () => { registered = true; };
+      await expectAsync(svc.signInAs('poll-account', 'wrong')).toBeRejected();
+      expect(registered).toBeFalse();
+    });
+
+    it("falls back to the login when the homeserver will not say", async () => {
+      const svc: any = MatrixService.forPoll(storage, 'POLL_ONE', 'vid_a');
+      let registered = false;
+      svc.usernameIsFree = async () => null;
+      svc.retryOnRateLimit = async () => { throw {httpStatus: 403, errcode: 'M_FORBIDDEN'}; };
+      svc.registerAs = async () => { registered = true; };
+      await svc.signInAs('poll-account', 'derived-password');
+      expect(registered).toBeTrue();
     });
   });
 });
