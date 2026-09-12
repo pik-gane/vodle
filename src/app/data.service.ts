@@ -334,7 +334,30 @@ export class DataService implements OnDestroy {
 
   user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
-  private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
+  private _local_synced_user_db: PouchDB.Database = null; // see local_synced_user_db
+  /**
+   * The persistent local copy of the synced user data — CouchDB's, and made
+   * only when something asks for it (#327).
+   *
+   * On the Matrix backend nothing does, by design: setu() sends everything
+   * but the local-only keys (the credentials and the language, which live
+   * in local_only_user_DB) to the homeserver instead, and the restore path
+   * says so in as many words. Yet it was opened at every start regardless,
+   * against a database that on a device of long standing has a CouchDB era
+   * behind it. Opening a PouchDB is not free — auto_compaction is on — and
+   * this one was pure cost there.
+   */
+  private get local_synced_user_db(): PouchDB.Database {
+    if (!this._local_synced_user_db) {
+      this._local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
+      this.G.L.info("DataService opened the local synced user database");
+    }
+    return this._local_synced_user_db;
+  }
+  /** assignable, so a test (or a reset) can put its own database there */
+  private set local_synced_user_db(db: PouchDB.Database) {
+    this._local_synced_user_db = db;
+  }
 
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
   private user_db_sync_handler;
@@ -753,7 +776,9 @@ export class DataService implements OnDestroy {
     });
     */
 
-    this.local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
+    // the synced user database is opened by its getter, when something
+    // actually wants it — which on the Matrix backend is never (#327)
+    this._local_synced_user_db = null;
     (this as any).boot_log?.("local databases open");
 
     /* deactivated for performance:
@@ -3059,7 +3084,7 @@ export class DataService implements OnDestroy {
           this.user_sync_start_pending = false;
           return;
         }
-        if (!this.local_synced_user_db) {
+        if (!this._local_synced_user_db) {
           this.user_sync_start_pending = false;
           return;
         }
@@ -6243,7 +6268,9 @@ export class DataService implements OnDestroy {
       // TODO: wait for all syncs to finish
       // delete all local dbs:
       this.G.L.info("Deleting local databases...");
-      mutations_finished.then(() => this.local_synced_user_db.destroy())
+      // only if it was ever opened: asking for it would open it to destroy it
+      mutations_finished.then(() => this._local_synced_user_db
+          ? this._local_synced_user_db.destroy() : Promise.resolve())
       .then(() => {
         this.local_only_user_DB.destroy()
         .then(() => {
