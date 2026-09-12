@@ -4035,7 +4035,11 @@ export class MatrixService {
     for (const voterRatings of ratings.values()) { total_ratings += voterRatings.size; }
     console.log("[getRatings] DONE.", pollId, "voter rooms:", voterRoomEntries.length,
       "| voters with ratings:", ratings.size, "| ratings:", total_ratings,
-      "| expected:", voterRoomEntries.length * options.size,
+      // an upper bound, not an expectation: a voter who abstains on an option
+      // has no rating for it, and this device's own room contributes none
+      // here at all — labelling it "expected" made every healthy run look
+      // like a shortfall (#327)
+      "| at most:", voterRoomEntries.length * options.size,
       "| the read found:", read_size, "voters | already known:", kept,
       "| from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer,
       "| arrived during the read:", layered);
