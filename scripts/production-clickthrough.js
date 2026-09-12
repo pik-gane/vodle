@@ -49,6 +49,79 @@ const guest_boot = () => boot_lines[guest_boot_target];
    node scripts/boot-stages.js --self-test (#327) */
 const { boot_stages, slowest_stage } = require('./boot-stages');
 
+/** where to put a screenshot; the directory is gitignored, so on a fresh
+ *  checkout it does not exist and page.screenshot() would throw ENOENT
+ *  after a run that otherwise succeeded */
+function shot(suffix) {
+  const file = (process.env.SHOT || '/tmp/production-clickthrough.png').replace(/\.png$/, suffix + '.png');
+  fs.mkdirSync(path.dirname(path.resolve(file)), {recursive: true});
+  return file;
+}
+
+function log(...a) { console.log('[clickthrough]', ...a); }
+
+async function visible(page, selector) {
+  return page.waitForFunction((sel) => {
+    const nodes = Array.from(document.querySelectorAll(sel));
+    return nodes.some(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0) || null;
+  }, {timeout: STEP_TIMEOUT, polling: 200}, selector);
+}
+
+async function click(page, selector) {
+  await visible(page, selector);
+  await page.evaluate((sel) => {
+    const node = Array.from(document.querySelectorAll(sel))
+      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
+    node.click();
+  }, selector);
+}
+
+async function type_into(page, selector, text) {
+  await visible(page, selector);
+  const handle = await page.evaluateHandle((sel) => {
+    const host = Array.from(document.querySelectorAll(sel))
+      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
+    return host.tagName === 'INPUT' ? host : host.querySelector('input');
+  }, selector);
+  const input = handle.asElement();
+  // Ionic settles focus asynchronously after a click, and typing before it
+  // has landed puts the first characters into whichever field still holds
+  // focus. Focus explicitly, let it settle, then select all and type.
+  await input.focus();
+  await new Promise(r => setTimeout(r, 250));
+  await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
+  await input.type(text, {delay: 20});
+  const got = await page.evaluate(el => el.value, input);
+  if (got !== text) { throw new Error('typing into ' + selector + ' produced ' + JSON.stringify(got) + ', wanted ' + JSON.stringify(text)); }
+  // Ionic hands the value to Angular's form control on blur; a person blurs
+  // the field by clicking the next thing, a programmatic click does not
+  await page.keyboard.press('Tab');
+  await new Promise(r => setTimeout(r, 200));
+  // Ionic listens on its own events; a blur commits the value
+  await page.evaluate(el => el.dispatchEvent(new Event('change', {bubbles: true})), input);
+}
+
+/** drag the first option's slider up with the keyboard and let it settle */
+async function rate_first_option(p) {
+  await visible(p, '[data-vodle="rating-slider"]');
+  await p.evaluate(() => {
+    const slider = document.querySelector('[data-vodle="rating-slider"]');
+    slider.scrollIntoView({block: 'center'});
+    const knob = slider.shadowRoot && slider.shadowRoot.querySelector('.range-knob-handle');
+    (knob || slider).focus();
+  });
+  for (let i = 0; i < 15; i++) { await p.keyboard.press('ArrowRight'); }
+  await new Promise(r => setTimeout(r, 5000));
+}
+
+/** the "N non-abstaining" the poll page shows */
+async function voters(p) {
+  return p.evaluate(() => {
+    const m = document.body.innerText.match(/(\d+)\s+non-abstaining/);
+    return m ? parseInt(m[1], 10) : null;
+  });
+}
+
 (async () => {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_BIN,
