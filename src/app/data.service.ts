@@ -6061,8 +6061,34 @@ export class DataService implements OnDestroy {
     }
   }
 
+  /** every poll account's password follows the user's own (#327) */
+  private async change_poll_account_passwords(
+      matrix: MatrixService, from_password: string, to_password: string): Promise<void> {
+    for (const pid of this._pids) {
+      const vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
+      if (!vid) { continue; }
+      try {
+        await matrix.changePollAccountPassword(pid, vid, from_password, to_password);
+      } catch (error) {
+        // one poll that cannot be reached must not strand the whole move;
+        // the account keeps the old password and says so in the log
+        this.G.L.error("DataService: a poll account's password did not change", pid, error);
+      }
+    }
+  }
+  
   private async move_matrix_user_data(from: credentials_t, to: credentials_t): Promise<void> {
     const matrix = this.matrixService;
+    // First, before anything can leave the old password behind: every poll
+    // account's password is derived from the user's (pollAccountPassword),
+    // so a password change locks the user out of every poll they take part
+    // in unless the accounts follow. The accounts themselves do not change
+    // — they are named after poll and vid, not the e-mail — so the rooms,
+    // the ratings and the tally are untouched, and an e-mail change alone
+    // needs nothing here at all (#327).
+    if (from.password !== to.password) {
+      await this.change_poll_account_passwords(matrix, from.password, to.password);
+    }
     if (hashEmail(from.email) == hashEmail(to.email)) {
       // the same account, only the password changed — from which the
       // homeserver password is derived and under which the user room's

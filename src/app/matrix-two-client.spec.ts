@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { JOIN_KEY_EVENT_TYPE, MatrixService } from './matrix.service';
+import { JOIN_KEY_EVENT_TYPE, MatrixService, pollAccountName } from './matrix.service';
 import { environment } from '../environments/environment';
 
 /**
@@ -665,4 +665,45 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
       return false;
     }, 'erin to decrypt the direct message', 60000);
   });
+
+
+  /*
+   * The privacy the CouchDB backend has always given: it connects to a
+   * poll's database as `vodle.poll.<pid>.voter.<myvid>`, never as the
+   * person, so the server holds nothing that ties two of a person's polls
+   * together. Against a real homeserver, that one person taking part in two
+   * polls leaves two unrelated senders (#327).
+   */
+  it('leaves nothing on the homeserver that ties one person\'s two polls together', async () => {
+    if (!requires_synapse()) { return; }
+    const person_password = 'test-password-two-polls';
+    const poll_one = 'TWOPOLLS_A_' + pid, poll_two = 'TWOPOLLS_B_' + pid;
+    const vid_one = 'vid_one_' + pid, vid_two = 'vid_two_' + pid;
+
+    // the same person, taking part in two polls: one service per poll, as
+    // DataService.poll_matrix makes them
+    const in_poll_one = fresh_service('two-polls-a', POLL_PASSWORD);
+    const in_poll_two = fresh_service('two-polls-b', POLL_PASSWORD);
+    await in_poll_one.signInForPoll(poll_one, vid_one, person_password);
+    await in_poll_two.signInForPoll(poll_two, vid_two, person_password);
+
+    expect(in_poll_one.userId).withContext('signed in').toBeTruthy();
+    expect(in_poll_two.userId).withContext('signed in').toBeTruthy();
+    expect(in_poll_one.userId).withContext('two polls, two accounts').not.toBe(in_poll_two.userId);
+
+    // and neither account is the person: nothing derived from an e-mail
+    expect(in_poll_one.userId).toContain(pollAccountName(poll_one, vid_one));
+    expect(in_poll_two.userId).toContain(pollAccountName(poll_two, vid_two));
+
+    // signing in again reaches the same account, as a second device must
+    const again = fresh_service('two-polls-a-again', POLL_PASSWORD);
+    await again.signInForPoll(poll_one, vid_one, person_password);
+    expect(again.userId).withContext('the same account from the vid alone').toBe(in_poll_one.userId);
+
+    // and the person's own password does not open a poll account
+    const wrong = fresh_service('two-polls-wrong', POLL_PASSWORD);
+    await expectAsync(
+      wrong.signInAs(pollAccountName(poll_one, vid_one), person_password)
+    ).withContext('the account password is derived, not the user\'s').toBeRejected();
+  }, 120000);
 });

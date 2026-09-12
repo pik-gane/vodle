@@ -1077,6 +1077,49 @@ export class MatrixService {
   }
   
   /**
+   * Change the password of the account that acts for `vid` in `pollId`.
+   *
+   * A poll account's password is derived from the user's (pollAccountPassword),
+   * so a user who changes their password would otherwise be locked out of
+   * every poll they take part in. The account itself does not change — its
+   * name is the poll and the vid, not the e-mail — so the rooms, the
+   * ratings and the tally are untouched (#327).
+   *
+   * Devices stay logged in (logoutDevices false): this very device has a
+   * session for the account, and so may others.
+   */
+  async changePollAccountPassword(pollId: string, vid: string,
+                                  oldUserPassword: string, newUserPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.changePollAccountPassword", pollId);
+    const username = pollAccountName(pollId, vid);
+    const old_matrix_password = pollAccountPassword(pollId, vid, oldUserPassword);
+    const new_matrix_password = pollAccountPassword(pollId, vid, newUserPassword);
+    const probe = createClient({ baseUrl: this.homeserverUrl });
+    let response: any;
+    try {
+      response = await probe.loginWithPassword(username, old_matrix_password);
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error)) { throw error; }
+      // either the change already happened (a move resumed after a
+      // restart) or this device never took part in this poll; both are
+      // nothing to do, and neither is a reason to fail the move
+      this.logger?.info("MatrixService.changePollAccountPassword: nothing to change", pollId);
+      this.logger?.exit("MatrixService.changePollAccountPassword");
+      return;
+    }
+    const session = createClient({
+      baseUrl: this.homeserverUrl,
+      accessToken: response.access_token,
+      userId: response.user_id,
+      deviceId: response.device_id,
+    });
+    await session.setPassword(
+      MatrixService.passwordAuth(response.user_id, old_matrix_password), new_matrix_password, false);
+    this.logger?.info("MatrixService.changePollAccountPassword: changed", pollId);
+    this.logger?.exit("MatrixService.changePollAccountPassword");
+  }
+  
+  /**
    * Let this (new) account write into the voter rooms the OLD account owns
    * for the given (poll, voter id) pairs — an account switch (#330), in
    * particular a guest logging in with a real account (#193): the new

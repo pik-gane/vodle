@@ -3701,3 +3701,48 @@ describe('one Matrix account per (poll, voter) (#327)', () => {
     await expectAsync(real.open_poll_matrix('p9')).toBeRejectedWithError(/has no vid yet/);
   });
 });
+
+// A poll account's password is derived from the user's, so a password
+// change must carry every poll account with it or the user is locked out
+// of every poll they take part in (#327).
+describe('a password change carries the poll accounts (#327)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, changed: any[];
+
+  beforeEach(() => {
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = {};
+    svc.poll_caches = {};
+    svc.G = { L: L, P: { polls: {} }, D: svc };
+    changed = [];
+    matrix = {
+      changePollAccountPassword: jasmine.createSpy('changePollAccountPassword')
+        .and.callFake(async (pid: string, vid: string, from: string, to: string) => {
+          changed.push([pid, vid, from, to]);
+        }),
+    };
+  });
+
+  it('changes it for every poll this device has a vid in', async () => {
+    svc._pids = new Set(['p1', 'p2', 'p3']);
+    svc.user_cache['poll.p1.myvid'] = 'v1';
+    svc.user_cache['poll.p2.myvid'] = 'v2';
+    // p3: this device knows the poll but never joined it
+    await svc.change_poll_account_passwords(matrix, 'old', 'new');
+    expect(changed).toEqual([['p1', 'v1', 'old', 'new'], ['p2', 'v2', 'old', 'new']]);
+  });
+
+  it('does not strand the whole move when one poll cannot be reached', async () => {
+    svc._pids = new Set(['p1', 'p2']);
+    svc.user_cache['poll.p1.myvid'] = 'v1';
+    svc.user_cache['poll.p2.myvid'] = 'v2';
+    matrix.changePollAccountPassword = jasmine.createSpy('changePollAccountPassword')
+      .and.callFake(async (pid: string) => {
+        if (pid === 'p1') { throw new Error('unreachable'); }
+        changed.push([pid]);
+      });
+    await expectAsync(svc.change_poll_account_passwords(matrix, 'old', 'new')).toBeResolved();
+    expect(changed).withContext('the other poll still followed').toEqual([['p2']]);
+  });
+});
