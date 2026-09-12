@@ -674,10 +674,22 @@ export class DataService implements OnDestroy {
     this.effective_ratings_map_caches = {};
     this.news_keys = new Set();
     // make sure storage exists:
+    // Everything below hangs off this read, and a start that sat for
+    // eighty seconds before it had even attempted a login had to have sat
+    // here — in IndexedDB, through Ionic Storage — with nothing said. So
+    // it says something (#327).
+    const boot_started_at = Date.now();
+    const boot = (stage: string, detail?: any) =>
+      console.log("[vodle boot] +" + (Date.now() - boot_started_at) + "ms", stage,
+        detail === undefined ? "" : detail);
+    (this as any).boot_log = boot;
+    boot("data service init");
     this.storage.create();
+    boot("local storage created");
     // restore state from storage:
     mutations_finished.then(() => this.storage.get('state'))
     .then((state) => {
+      boot("restored from local storage", state ? "state found" : "nothing stored yet");
       if (!!state) {
         G.L.debug('DataService got state from storage');
         for (const a of state_attributes) {
@@ -897,13 +909,17 @@ export class DataService implements OnDestroy {
             // key derivation, and leaves a new device on the homeserver each
             // time. It falls back to the password when there is no usable
             // token for this address (#327).
+            (this as any).boot_log?.("resuming the stored session");
             if (!await this.matrixService.resumeSession(email)) {
+              (this as any).boot_log?.("no stored session, logging in with the password");
               await this.matrixService.login(email, password);
             }
           }
+          (this as any).boot_log?.("logged in to the homeserver");
           this.committed_credentials = this.credentials_snapshot();
           this.G.L.info("DataService: Matrix login successful, syncing user data");
           await this.syncUserDataWithMatrix();
+          (this as any).boot_log?.("user data synced; the backend is ready");
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
           this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
