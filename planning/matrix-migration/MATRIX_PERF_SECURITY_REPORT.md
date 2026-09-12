@@ -104,13 +104,13 @@ every document is encrypted with a password the server never holds:
 
 | data | Matrix representation | protection | who can read it |
 | --- | --- | --- | --- |
-| user settings, poll memberships (poll passwords, voter ids, keys) | state events `m.room.vodle.user.*` in the private user room | AES-GCM under the vodle **user password** (`consent` and `last_access` plain, as on CouchDB) | the user's devices |
+| user settings, poll memberships (poll passwords, voter ids, keys) | state events `m.room.vodle.user.*` in the private user room | AES-GCM under the vodle **user password** (`consent` and `last_access` plain, as on CouchDB) | the user's devices — but the key is part of the event *type*, so `poll.<pid>.myvid` tells the homeserver which polls the person is in; see PRIVACY.md §3 |
 | poll data (title, description, type, language, …) and poll metadata | state events `m.room.vodle.poll.data.*`, `m.room.vodle.poll.meta` | AES-GCM under the **poll password** | holders of the magic link |
 | options | timeline events `m.room.vodle.poll.option` (immutable) | texts under the poll password, option id plain | holders of the magic link |
 | ratings and other voter data | state events `m.room.vodle.voter.rating.*` in the voter's room | under the poll password; `voter_vid` (pseudonymous id) plain | holders of the magic link |
 | deadline, lifecycle state | `m.room.vodle.poll.deadline`, `m.room.vodle.poll.state` | plain — the guard bot enforces the deadline server-side | homeserver, room members |
 | voter-room announcements, voter ids | timeline `m.room.vodle.voter.announce`, state `m.room.vodle.voter.vid` | plain — needed for discovery | homeserver, room members |
-| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*` | plain (delegation is disabled in both environments) | homeserver, room members |
+| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*`; records as poll and voter data | the delegation id plain, the rest under the poll password (#333); the id in the *event type* of the records names the two vids involved, see PRIVACY.md §6 (delegation is disabled in both environments) | homeserver, room members |
 | room names and topics | `vodle poll <id>` | plain, carry only the poll id | homeserver, room members |
 
 The specs check the wire format: what the homeserver stores for a rating,
@@ -368,6 +368,30 @@ same across federation: the second homeserver holds the same ciphertext.
   network should lower it again. The limiters vodle never calls
   (`rc_3pid_validation`, `rc_media_create`, `rc_key_requests`, `rc_presence`,
   `rc_delayed_event_mgmt`) stay at their defaults, and the template says why.
+
+### 3.9 Who sees what, written out
+
+`documentation/PRIVACY.md` is the standing version of §3 for a reader who
+wants the whole picture rather than the history: every actor, every store,
+what is encrypted and what is only metadata, delegations included, and a
+list of the known weaknesses ordered by what they would cost to exploit.
+Two of those are worth repeating here, because §3.8's account work does not
+touch them and neither did the CouchDB backend:
+
+- **A person's user room names the polls they take part in.** User data is
+  keyed `poll.<pid>.myvid`, `poll.<pid>.password`, `poll.<pid>.state`, and a
+  vodle data key becomes part of the Matrix *event type*, which is never
+  encrypted. So the per-poll accounts make two of a person's polls
+  unlinkable to co-participants and to anyone reading the poll rooms — not
+  to the operator of the homeserver that holds the user room. The CouchDB
+  user database has the same thing in its document ids
+  (`~<hash>§poll.<pid>.state`). Closing it means an opaque per-user key with
+  the pid inside the encrypted value, on both backends, with a migration.
+- **The login password is a fast derivation.** `deriveMatrixPassword` is one
+  BLAKE2s, so an operator who records login requests can dictionary-attack a
+  human-chosen vodle password cheaply and then read the user room. The
+  derivation keeps the password from arriving in the clear; it does not make
+  guessing it expensive. A slow KDF would, at the cost of a migration.
 
 ## 4. Migration (CouchDB → Matrix)
 
