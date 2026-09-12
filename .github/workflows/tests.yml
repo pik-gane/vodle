@@ -131,7 +131,11 @@ jobs:
       # is longer than the log API will hand back (#327)
       - name: The click-through's numbers
         if: always()
-        run: cat clickthrough-result.json || echo "(no click-through result)"
+        # a dozen lines, not the whole 170-line report: after this step the
+        # job prints two artifact uploads, its cleanup and the entire CouchDB
+        # service container's log, so anything longer is out of reach of a
+        # short log tail. The full report is the artifact above (#327).
+        run: node scripts/clickthrough-report.js --summary clickthrough-result.json
 
       # always, and not only on a failure: the click-through's own numbers
       # (the boot stages, the reload timings, the voter counts) sit ahead of
