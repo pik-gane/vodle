@@ -2136,3 +2136,20 @@ describe("MatrixService trusts the sync store only when it holds a complete answ
     expect(ratings.get('v1').size).toBe(2);
   });
 });
+
+describe("MatrixService.within (#327)", () => {
+  it("passes a result through", async () => {
+    await expectAsync(MatrixService.within(5000, 'x', async () => 42)).toBeResolvedTo(42);
+  });
+
+  it("names what it was waiting for when the wait runs out", async () => {
+    const forever = () => new Promise<void>(() => { /* never */ });
+    await expectAsync(MatrixService.within(20, 'the crypto WASM', forever))
+      .toBeRejectedWithError(/the crypto WASM did not arrive within/);
+  });
+
+  it("passes a failure through unchanged", async () => {
+    await expectAsync(MatrixService.within(5000, 'x', async () => { throw new Error('nope'); }))
+      .toBeRejectedWithError('nope');
+  });
+});

@@ -1632,7 +1632,23 @@ export class DataService implements OnDestroy {
     if (environment.useMatrixBackend) {
       // The start no longer waits for the login (#327), so this does: it is
       // the first thing here that needs a homeserver.
-      const after_login = this.matrix_ready.catch(() => { /* reported where it failed */ });
+      //
+      // Bounded, because a magic link that is being followed shows a
+      // spinner until this resolves: a login that never settles left the
+      // join page fetching for ever, saying nothing, which is exactly what
+      // the owner saw. A ceiling turns that into an error the page can
+      // show.
+      const after_login = MatrixService.within(
+        MatrixService.LOGIN_WAIT_TIMEOUT_MS, "the connection to the homeserver",
+        () => this.matrix_ready)
+        .catch(err => {
+          console.warn("[vodle] the poll cannot be opened yet:", err?.message || err);
+          if (wait_for_replication) {
+            throw err;                  // the join page shows this
+          }
+          // a poll being reconnected in the background: reported where it
+          // failed, and the periodic retry will come back to it
+        });
       // For Matrix backend, join the poll room and create voter room instead of PouchDB replication.
       // A poll joined via a magic link is only ever joined, never created
       // here: a link to a poll that cannot be found must fail, not silently

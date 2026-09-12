@@ -617,12 +617,24 @@ export class MatrixService {
     this.logger?.entry("MatrixService.initializeWithToken", userId);
     
     try {
+      // Every stage of the start says so, unconditionally and with the
+      // milliseconds since it began. The app's logger runs at ERROR in a
+      // deployment, so anything logged through it is invisible there —
+      // which is why a start that sat for eighty seconds produced not one
+      // line saying what it was waiting for (#327).
+      const started_at = Date.now();
+      const boot = (stage: string, detail?: any) =>
+        console.log("[vodle boot] +" + (Date.now() - started_at) + "ms", stage,
+          detail === undefined ? "" : detail);
+      boot("client setup begins", userId);
+      
       // A store that survives the page makes the difference between resuming
       // a sync and doing a full one. Without it every load asks the server
       // for the complete current state of every joined room — and vodle
       // joins one room per voter, so a single 50-voter poll puts the account
       // in 52 rooms (#327).
       const store = await this.makeSyncStore(userId);
+      boot("sync store ready", store ? "IndexedDB" : "in memory");
       this.client = createClient({
         baseUrl: this.homeserverUrl,
         accessToken: accessToken,
@@ -651,8 +663,16 @@ export class MatrixService {
           // file:/// source path — so load the module explicitly from the
           // copy shipped as an app asset (see angular.json); the loader
           // memoizes, and initRustCrypto below reuses the loaded module:
-          const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
-          await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+          // 5.4 MB of WebAssembly on the path between the app starting and
+          // it being able to talk to the homeserver at all. It already
+          // degrades gracefully (the catch below), so it is time-boxed too:
+          // an asset slow to arrive must cost the start a known number of
+          // seconds rather than an unknown one (#327).
+          await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS, "the crypto WASM", async () => {
+            const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
+            await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+          });
+          boot("crypto WASM loaded");
           const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
           try {
             await this.client.initRustCrypto(crypto_options);
@@ -666,9 +686,14 @@ export class MatrixService {
             await this.client.initRustCrypto(crypto_options);
           }
           this.logger?.info("MatrixService end-to-end encryption initialized", userId);
+          boot("end-to-end encryption ready");
         } catch (error) {
+          console.warn("[vodle boot] end-to-end encryption unavailable, carrying on without it:",
+            (error as any)?.message || error);
           this.logger?.warn("MatrixService could not initialize end-to-end encryption, continuing without", error);
         }
+      } else {
+        boot("end-to-end encryption is off");
       }
       
       // Restore any offline-queued writes from a previous session before
@@ -678,6 +703,7 @@ export class MatrixService {
       // what this device voted before, to be compared against the rooms
       // themselves once a poll is open (#327):
       await this.loadOwnRatings();
+      boot("queued writes and own ratings restored", this.offlineQueue.length + " queued");
       
       // Start syncing.  Lazy-load room members to reduce initial
       // sync payload and avoid fetching full membership lists for
@@ -690,6 +716,7 @@ export class MatrixService {
         initialSyncLimit: 1,
         lazyLoadMembers: true,
       });
+      boot("syncing started");
       
       // Monitor sync state transitions to detect if sync loop stops
       (this.client as any).on('sync', (state: string, prevState: string | null) => {
@@ -1252,6 +1279,27 @@ export class MatrixService {
    * are the caller's to handle inside `work`: one failure must not stop the
    * others (a voter room that refuses a newcomer is not the others' fault).
    */
+  /** how long the crypto WASM may take before the start goes on without it */
+  static readonly CRYPTO_INIT_TIMEOUT_MS = 20000;
+  /** how long a page that needs the homeserver waits for the login (#327) */
+  static readonly LOGIN_WAIT_TIMEOUT_MS = 90000;
+  
+  /**
+   * Run work with a ceiling on how long it may take. The rejection names
+   * what it was waiting for, so a slow start says so instead of sitting
+   * there in silence (#327).
+   */
+  static within<T>(timeout_ms: number, what: string, work: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(what + " did not arrive within " + Math.round(timeout_ms / 1000) + " s")),
+        timeout_ms);
+      work().then(
+        value => { clearTimeout(timer); resolve(value); },
+        error => { clearTimeout(timer); reject(error); });
+    });
+  }
+  
   static async forEachConcurrently<T>(
     items: T[], limit: number, work: (item: T) => Promise<void>
   ): Promise<void> {
@@ -3397,6 +3445,12 @@ export class MatrixService {
         }
       }
       
+      if (toJoin.length > 0) {
+        // rooms this device did not have: whatever was read before did not
+        // include them, so the next read must happen rather than being
+        // answered from the cache (#327)
+        this.ratingsScanned.delete(pollId);
+      }
       await MatrixService.forEachConcurrently(toJoin, MatrixService.VOTER_ROOM_JOIN_CONCURRENCY,
         async ({ cacheKey, effectiveId, voterRoomId, sender }) => {
           // the room is public within the poll, so joinRoom works — through
@@ -3705,6 +3759,10 @@ export class MatrixService {
     const ratings = new Map<string, Map<string, number>>();
     // from here until the read is done, keep what arrives live as well:
     this.ratingsDuringScan.set(pollId, new Map());
+    // per read, not cumulative: these two are what say whether a shortfall
+    // is the client's reading or the server's holding (#327)
+    this.ratingsFromStore = 0;
+    this.ratingsFromServer = 0;
     
     // Get all options for this poll to know which rating keys to look for
     const options = await this.getOptions(pollId);
