@@ -395,8 +395,20 @@ async function voters(p) {
     });
     log('   wiped', kept.removed.length, 'databases, kept', JSON.stringify(kept.left),
         kept.blocked.length ? '(blocked: ' + JSON.stringify(kept.blocked) + ')' : '');
-    if (kept.left.length === 0) {
+    // A crypto store is left behind only when the app has one: vodle gives
+    // every (poll, voter) its own Matrix account, and the SDK's crypto
+    // store is one per browser profile and belongs to ONE account, so
+    // matrix.enable_e2ee is off and there is no store to keep. When it IS
+    // on, keeping it is the whole point of this step — it is how the
+    // 18.4 s crypto stage was caught (#327).
+    const crypto_is_on = boot_lines.guest.concat(boot_lines.creator)
+      .some(line => /end-to-end encryption ready/.test(line));
+    if (crypto_is_on && kept.left.length === 0) {
       throw new Error('no crypto store was left behind, so this cannot test what it is for');
+    }
+    if (!crypto_is_on && kept.left.length) {
+      throw new Error('a crypto store exists although end-to-end encryption is off: '
+        + JSON.stringify(kept.left));
     }
     if (kept.blocked.length) {
       throw new Error('vodle\'s own databases could not be deleted (' + kept.blocked.join(', ')
