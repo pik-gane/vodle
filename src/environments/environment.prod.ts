@@ -25,8 +25,8 @@ export const environment = {
   // deploy/site/ (deploy/README.md): set the URLs to "./site/privacy.html"
   // and "./site/impressum.html" then. With a privacy statement the app asks
   // for the consent before it stores a vote; without one it asks nobody.
-  imprint_url: "./site/impressum.html",
-  privacy_statement_url: "./site/privacy.html",
+  imprint_url: null,
+  privacy_statement_url: null,
 //  imprint_url: "./site/impressum.html",
 //  privacy_statement_url: "./site/privacy.html",
   privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
@@ -55,7 +55,7 @@ export const environment = {
     // (@<hash>:<server_name>) and every room alias carries it forever.
     // The deployment scripts (deploy/deploy.sh) take it from here and
     // refuse the placeholder.
-    server_name: "localhost:8449",
+    server_name: "vodle.example.com",
     // Enable Matrix E2EE (Olm/Megolm)
     enable_e2ee: true,
     // Registration token (Synapse: registration_requires_token). vodle
@@ -63,7 +63,7 @@ export const environment = {
     // homeserver does not have to be open to anyone. The token is part of
     // the app bundle, so it deters drive-by registration bots, no more
     // (#327). Empty: open registration (m.login.dummy).
-    registration_token: "vodle-test-registration-token",
+    registration_token: "",
     // Guard bot Matrix user ID — this bot is invited to all poll and voter
     // rooms with admin power (100) for server-side deadline enforcement and
     // lets participants into the closed poll rooms. Empty: derived as
@@ -124,7 +124,7 @@ export const environment = {
   github_url: "https://github.com/pik-gane/vodle",
   // where the app is served: invitation links are built from this
   // ("https://" + server_name + "/#/" for the scripted deployment)
-  magic_link_base_url: "http://localhost:8100/#/",
+  magic_link_base_url: "https://sandstorm.pik-potsdam.de/#/",
   support_vodle_url: "http://vodle.it/#support",
   tallying: {
     verify_updates: false

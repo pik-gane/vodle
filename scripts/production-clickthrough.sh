@@ -23,6 +23,13 @@ SERVER_PID=""
 
 cleanup() {
   [ -f "$WORK/environment.prod.ts" ] && cp "$WORK/environment.prod.ts" "$ENV_FILE"
+  # and if that did not put it back as git has it — a copy taken from an
+  # already-patched tree, a restore that itself failed — take it from git.
+  # A run killed outright (SIGKILL skips this trap) once left the test
+  # homeserver's name and registration token in the tracked file, and they
+  # were committed by the next `git add -A` (#327).
+  git -C "$(dirname "$0")/.." diff --quiet -- "$ENV_FILE" 2>/dev/null \
+    || git -C "$(dirname "$0")/.." checkout -- "$ENV_FILE" 2>/dev/null || true
   [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null || true
   rm -rf "$WORK"
 }
@@ -32,6 +39,14 @@ command -v node >/dev/null || { echo "node is needed" >&2; exit 1; }
 curl -sf -m 5 "http://localhost:$HS_PORT/_matrix/client/versions" > /dev/null \
   || { echo "no homeserver on port $HS_PORT — run scripts/test-matrix.sh start" >&2; exit 1; }
 
+# Never save a patched file as "the original": if a previous run was killed
+# before its trap ran, the tracked file still names the test homeserver, and
+# copying that aside would make the damage permanent (#327).
+if ! git diff --quiet -- "$ENV_FILE" 2>/dev/null; then
+  echo "$ENV_FILE has uncommitted changes — a previous run may have been killed." >&2
+  echo "Restore it first:  git checkout -- $ENV_FILE" >&2
+  exit 1
+fi
 cp "$ENV_FILE" "$WORK/environment.prod.ts"
 mkdir -p "$WORK/site"
 printf '<!doctype html><meta charset=utf-8><title>Privacy</title><h1>Privacy statement (test)</h1><p>Poll data is removed 365 days after a poll ends.</p>\n' > "$WORK/site/privacy.html"
