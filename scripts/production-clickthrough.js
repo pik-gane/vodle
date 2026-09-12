@@ -41,6 +41,9 @@ const PASSWORD = 'ProdTest!' + stamp;
 const console_errors = [], page_errors = [], failed_requests = [], diagnostics = [];
 // every "[vodle boot] +Nms <stage>" line, per browser, in order
 const boot_lines = {creator: [], guest: [], returning: []};
+// which of the guest's two starts its boot lines belong to
+let guest_boot_target = 'guest';
+const guest_boot = () => boot_lines[guest_boot_target];
 
 /* the parsing lives in its own module so it can be tested without a browser:
    node scripts/boot-stages.js --self-test (#327) */
@@ -190,7 +193,9 @@ const { boot_stages, slowest_stage } = require('./boot-stages');
       const t = m.text();
       if (m.type() === 'error') { console_errors.push('guest: ' + t); }
       if (is_diagnostic(t)) { diagnostics.push('guest: ' + t); }
-      if (t.includes('[vodle boot]')) { boot_lines.guest.push(t); }
+      // one listener, one target: step 16 points guest_boot at the returning
+      // load so the two starts are reported apart rather than merged
+      if (t.includes('[vodle boot]')) { guest_boot().push(t); }
     });
     await guest.goto(invite_link, {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
     await visible(guest, '[data-vodle="poll-voting-page"]');
@@ -274,30 +279,42 @@ const { boot_stages, slowest_stage } = require('./boot-stages');
     // own credentials are gone, so the next login finds a store belonging to
     // somebody else. Discovering that by exception cost 25.9 s of a 29.5 s
     // start on the owner's device (#327).
+    // the app holds these databases open, and deleteDatabase on an open one
+    // fires onblocked and does nothing — so take the page down first, to the
+    // app's own origin (same origin, no app)
+    await guest.goto(BASE + '/assets/icon/favicon.ico', {waitUntil: 'domcontentloaded'});
     const kept = await guest.evaluate(async () => {
       // everything of vodle's own goes; the SDK's crypto store stays
       const names = (await indexedDB.databases()).map(d => d.name).filter(Boolean);
-      const removed = [], left = [];
+      const removed = [], blocked = [], left = [];
       for (const name of names) {
         if (/matrix-sdk-crypto/.test(name)) { left.push(name); continue; }
-        await new Promise(resolve => {
+        const outcome = await new Promise(resolve => {
           const request = indexedDB.deleteDatabase(name);
-          request.onsuccess = request.onerror = request.onblocked = () => resolve();
+          request.onsuccess = () => resolve('removed');
+          request.onerror = () => resolve('error');
+          request.onblocked = () => resolve('blocked');
+          setTimeout(() => resolve('timeout'), 5000);
         });
-        removed.push(name);
+        (outcome === 'removed' ? removed : blocked).push(name + ':' + outcome);
       }
       try { localStorage.clear(); } catch (e) { /* nothing */ }
-      return {removed, left};
+      const after = (await indexedDB.databases()).map(d => d.name).filter(Boolean);
+      return {removed, blocked, left, after};
     });
-    log('   wiped', kept.removed.length, 'databases, kept', JSON.stringify(kept.left));
+    log('   wiped', kept.removed.length, 'databases, kept', JSON.stringify(kept.left),
+        kept.blocked.length ? '(blocked: ' + JSON.stringify(kept.blocked) + ')' : '');
     if (kept.left.length === 0) {
       throw new Error('no crypto store was left behind, so this cannot test what it is for');
     }
-    boot_lines.returning = [];
-    guest.on('console', m => {
-      const t = m.text();
-      if (t.includes('[vodle boot]')) { boot_lines.returning.push(t); }
-    });
+    if (kept.blocked.length) {
+      throw new Error('vodle\'s own databases could not be deleted (' + kept.blocked.join(', ')
+        + '), so the returning guest would just resume its old session');
+    }
+    if (kept.after.some(n => !/matrix-sdk-crypto/.test(n))) {
+      throw new Error('databases of vodle\'s own survived the wipe: ' + JSON.stringify(kept.after));
+    }
+    guest_boot_target = 'returning';
     const returning_started = Date.now();
     await guest.goto(invite_link, {waitUntil: 'domcontentloaded', timeout: STEP_TIMEOUT});
     await visible(guest, '[data-vodle="poll-voting-page"]');
