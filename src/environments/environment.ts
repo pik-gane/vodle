@@ -46,7 +46,19 @@ export const environment = {
     // docker-compose.yml is "localhost"
     server_name: "localhost",
     // Enable Matrix E2EE (Olm/Megolm)
-    enable_e2ee: true,
+    /* Matrix end-to-end encryption. OFF, and it is the architecture that
+       decides it, not a preference: vodle gives every (poll, voter) its own
+       Matrix account (pollAccountName), and the SDK's crypto store is one
+       per browser profile and belongs to ONE account — so a poll account
+       could never have it. It protected nothing in any case: user data,
+       poll data, options, ratings and delegations are all STATE events,
+       which megolm never encrypts, and the only room ever created with
+       m.room.encryption was the user room, whose payloads are state events
+       too. What does protect the contents is vodle's own AES-GCM under the
+       poll password and the user password, which is untouched by this.
+       Turning it on costs every start a 5.4 MB WebAssembly download — 8.9 s
+       on the owner's link — and buys published device keys (#327). */
+    enable_e2ee: false,
     // Registration token (Synapse: registration_requires_token). vodle
     // registers a Matrix account per user implicitly; with a token, the
     // homeserver does not have to be open to anyone. The token is part of

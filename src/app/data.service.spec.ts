@@ -2936,6 +2936,9 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
       startVoterSync: jasmine.createSpy('startVoterSync').and.returnValue(Promise.resolve()),
     };
     svc.matrixService = matrix;
+    // one Matrix account per (poll, voter) in the app (#327); a spec that
+    // stands in for the backend stands in at that seam too
+    svc.open_poll_matrix = async () => matrix;
     svc.G = { L: L, P: { polls: {} }, D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
   });
 
@@ -2965,11 +2968,14 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
     expect(matrix.addOption).not.toHaveBeenCalled();
   });
 
-  it("registers an option another participant added, so the poll page can show it", () => {
+  it("registers an option another participant added, so the poll page can show it", async () => {
     const poll: any = { pid: 'p1', options: {} };
     poll._add_option = (o: any) => { poll.options[o.oid] = o; return true; };
     svc.G.P.polls['p1'] = poll;
     svc.start_poll_sync('p1');
+    // the listeners go on the poll's OWN account, which is signed in first;
+    // there is nothing to listen to before it exists (#327)
+    await svc.poll_matrix('p1');
     expect(matrix.addPollEventListener).toHaveBeenCalledTimes(1);
     const listener = matrix.addPollEventListener.calls.mostRecent().args[1];
     expect(listener.onOptionAdded).toBeDefined();
@@ -3010,6 +3016,9 @@ describe('the final read of a Matrix poll (#325)', () => {
       refreshRatings: jasmine.createSpy('refreshRatings'),
     };
     svc.matrixService = matrix;
+    // one Matrix account per (poll, voter) in the app (#327); a spec that
+    // stands in for the backend stands in at that seam too
+    svc.open_poll_matrix = async () => matrix;
     svc.G = { L: L, P: { polls: {}, update_own_rating: jasmine.createSpy('update_own_rating') }, D: svc,
               add_spinning_reason: noop, remove_spinning_reason: noop };
   });
@@ -3102,6 +3111,9 @@ describe('credential changes and guest accounts (#330, #193)', () => {
       deleteUserData: jasmine.createSpy('deleteUserData').and.returnValue(Promise.resolve()),
     };
     svc.matrixService = matrix;
+    // one Matrix account per (poll, voter) in the app (#327); a spec that
+    // stands in for the backend stands in at that seam too
+    svc.open_poll_matrix = async () => matrix;
     // the settings service's accessors, as the app wires them:
     const S: any = {
       get email() { return svc.getu('email'); }, set email(v: string) { svc.setu('email', v); },
@@ -3419,6 +3431,9 @@ describe("a poll's contents are fetched when the poll is opened (#327)", () => {
       setPollData: jasmine.createSpy('setPollData').and.returnValue(Promise.resolve()),
     };
     svc.matrixService = matrix;
+    // one Matrix account per (poll, voter) in the app (#327); a spec that
+    // stands in for the backend stands in at that seam too
+    svc.open_poll_matrix = async () => matrix;
     svc.G = { L: L, P: { polls: {}, update_own_rating: jasmine.createSpy('update_own_rating') },
               D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
   });
@@ -3500,6 +3515,9 @@ describe('a rating that arrives before its option does (#327)', () => {
       setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers').and.returnValue(Promise.resolve()),
     };
     svc.matrixService = matrix;
+    // one Matrix account per (poll, voter) in the app (#327); a spec that
+    // stands in for the backend stands in at that seam too
+    svc.open_poll_matrix = async () => matrix;
     update_own_rating = jasmine.createSpy('update_own_rating');
     svc.G = { L: L, P: { polls: {}, update_own_rating: update_own_rating },
               D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
@@ -3591,5 +3609,95 @@ describe('a running poll found in the user cache on the Matrix backend (#327)', 
     expect(svc.ensure_local_poll_data).not.toHaveBeenCalled();
     expect(svc.pids.has('p2')).toBeTrue();
     expect(svc.G.P.polls['p2']).withContext('a draft gets no lifecycle here').toBeUndefined();
+  });
+});
+
+// The CouchDB backend connects to a poll's database as
+// `vodle.poll.<pid>.voter.<myvid>`, never as the person, so the server can
+// tie no two polls of one person together. These pin the Matrix
+// counterpart end to end: the routing, not just the derivation (#327).
+describe('one Matrix account per (poll, voter) (#327)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, personal: any, opened: string[], previous_flag: boolean;
+
+  const poll_service = (pid: string) => ({
+    pid,
+    setPollData: jasmine.createSpy('setPollData_' + pid).and.returnValue(Promise.resolve()),
+    addPollEventListener: jasmine.createSpy('addPollEventListener_' + pid),
+    setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers_' + pid)
+      .and.returnValue(Promise.resolve()),
+  });
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    (environment as any).useMatrixBackend = true;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = {};
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    personal = {
+      setUserData: jasmine.createSpy('setUserData').and.returnValue(Promise.resolve()),
+      setPollData: jasmine.createSpy('personal_setPollData').and.returnValue(Promise.resolve()),
+      addPollEventListener: jasmine.createSpy('personal_addPollEventListener'),
+    };
+    svc.matrixService = personal;
+    svc.G = { L: L, P: { polls: {} }, D: svc, add_spinning_reason: noop, remove_spinning_reason: noop };
+    opened = [];
+    svc.open_poll_matrix = async (pid: string) => { opened.push(pid); return poll_service(pid); };
+  });
+
+  afterEach(() => {
+    (environment as any).useMatrixBackend = previous_flag;
+  });
+
+  it('sends a poll write with the poll\'s own account, never the person\'s', async () => {
+    svc.user_cache['poll.p1.state'] = 'running';
+    svc._setp_in_polldb('p1', 'title', 'Lunch');
+    const for_poll = await svc.poll_matrix('p1');
+    expect(for_poll.setPollData).toHaveBeenCalledWith('p1', 'title', 'Lunch');
+    expect(personal.setPollData).withContext('the person never writes poll data').not.toHaveBeenCalled();
+  });
+
+  it('gives two polls two different accounts', async () => {
+    const one = await svc.poll_matrix('p1');
+    const two = await svc.poll_matrix('p2');
+    expect(one).not.toBe(two);
+    expect(one.pid).toBe('p1');
+    expect(two.pid).toBe('p2');
+    expect(opened).toEqual(['p1', 'p2']);
+  });
+
+  it('signs each poll in once, however often it is asked', async () => {
+    await Promise.all([svc.poll_matrix('p1'), svc.poll_matrix('p1'), svc.poll_matrix('p1')]);
+    expect(opened).toEqual(['p1']);
+  });
+
+  it('does not remember a sign-in that failed', async () => {
+    let attempts = 0;
+    svc.open_poll_matrix = async () => { attempts += 1; throw new Error('offline'); };
+    await expectAsync(svc.poll_matrix('p1')).toBeRejectedWithError('offline');
+    await expectAsync(svc.poll_matrix('p1')).toBeRejectedWithError('offline');
+    expect(attempts).withContext('tried again rather than replaying the failure').toBe(2);
+  });
+
+  it('registers the poll listeners on the poll account', async () => {
+    expect(svc.start_poll_sync('p3')).toBeTrue();
+    const for_poll = await svc.poll_matrix('p3');
+    await Promise.resolve();
+    expect(for_poll.addPollEventListener).toHaveBeenCalled();
+    expect(personal.addPollEventListener).not.toHaveBeenCalled();
+  });
+
+  it('refuses to invent an account for a poll with no vid', async () => {
+    // previewpoll and joinpoll both call init_myvid before connecting, as
+    // the CouchDB user name has always needed
+    const real = new (DataService as any)(null, null, null, null, null, null, null);
+    real.user_cache = {};
+    real.poll_caches = {};
+    real.G = { L: L, P: { polls: {} }, D: real };
+    await expectAsync(real.open_poll_matrix('p9')).toBeRejectedWithError(/has no vid yet/);
   });
 });

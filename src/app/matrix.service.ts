@@ -273,7 +273,8 @@ export class MatrixService {
   private accessToken: string | null = null;
   private userId: string | null = null;
   private deviceId: string | null = null;
-  private logger: Logger | null = null;
+  /** not private: a poll's own service shares the person's logger (#327) */
+  logger: Logger | null = null;
   
   // Cache for quick access
   private userRoomId: string | null = null;
@@ -648,22 +649,28 @@ export class MatrixService {
    * address derives, so an account switch never resumes the old one (#330).
    */
   async resumeSession(email: string): Promise<boolean> {
+    return this.resumeSessionAs(hashEmail(email));
+  }
+  
+  /** resume a stored session, if it belongs to the account named here —
+   *  the hash of an e-mail for a person, or pollAccountName for the
+   *  account that acts for one voter in one poll (#327) */
+  async resumeSessionAs(expected_localpart: string): Promise<boolean> {
     this.loginInProgress = true;
     try {
-      return await this.resumeSessionInner(email);
+      return await this.resumeSessionInner(expected_localpart);
     } finally {
       this.loginInProgress = false;
     }
   }
   
-  private async resumeSessionInner(email: string): Promise<boolean> {
+  private async resumeSessionInner(expected_localpart: string): Promise<boolean> {
     console.log("[vodle boot] reading the stored credentials");
     const stored = await this.loadCredentials();
     console.log("[vodle boot] stored credentials read", stored?.userId ? "(a session to resume)" : "(none)");
     if (!stored || !stored.accessToken || !stored.userId) {
       return false;
     }
-    const expected_localpart = hashEmail(email);
     const stored_localpart = stored.userId.replace(/^@/, '').split(':')[0];
     if (stored_localpart !== expected_localpart) {
       this.logger?.info("MatrixService.resumeSession: the stored session is another account's, logging in instead");
@@ -1199,19 +1206,28 @@ export class MatrixService {
 
   async register(email: string, password: string): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
-    const emailHash = hashEmail(email);
-    this.logger?.entry("MatrixService.register", emailHash);
+    this.logger?.entry("MatrixService.register", hashEmail(email));
+    // the hashed e-mail as the account name, and a derived password so the
+    // server never sees the real one:
+    await this.registerAs(hashEmail(email), deriveMatrixPassword(email, password));
+    this.logger?.exit("MatrixService.register");
+  }
+  
+  /**
+   * Register one account, by the name it is to have.
+   *
+   * The name is the caller's business: the hash of an e-mail for a person
+   * (register), or the hash of poll and vid for the account that acts for
+   * one voter in one poll (pollAccountName, #327).
+   */
+  async registerAs(username: string, matrixPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.registerAs", username);
     
     const tempClient = createClient({
       baseUrl: this.homeserverUrl
     });
     
     try {
-      // Use hashed email as Matrix username to protect privacy, and a
-      // derived password so the server never sees the real one:
-      const username = emailHash;
-      const matrixPassword = deriveMatrixPassword(email, password);
-      
       // Registration is user-interactive auth, and the SDK's register()
       // does no UIA handling of its own — an empty auth dict is rejected
       // with a 401. Send the stage the app can complete (the registration
@@ -1255,11 +1271,60 @@ export class MatrixService {
       
       this.logger?.info("Registration successful", this.userId);
     } catch (error) {
-      this.logger?.error("MatrixService.register failed", error);
+      this.logger?.error("MatrixService.registerAs failed", error);
       throw error;
     }
     
-    this.logger?.exit("MatrixService.register");
+    this.logger?.exit("MatrixService.registerAs");
+  }
+  
+  /**
+   * Sign one account in by name, registering it if the homeserver has never
+   * seen it. No ladder of historical credential formats (see passwordLogin):
+   * an account named this way was invented by this version of vodle and
+   * cannot exist in an older shape (#327).
+   */
+  async signInAs(username: string, matrixPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.signInAs", username);
+    const tempClient = createClient({ baseUrl: this.homeserverUrl });
+    let response: any = null;
+    try {
+      response = await tempClient.loginWithPassword(username, matrixPassword);
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error)) { throw error; }
+    }
+    if (!response) {
+      await this.registerAs(username, matrixPassword);
+      this.logger?.exit("MatrixService.signInAs (registered)");
+      return;
+    }
+    await this.saveCredentials({
+      accessToken: response.access_token,
+      userId: response.user_id,
+      deviceId: response.device_id
+    });
+    await this.initializeWithToken(response.access_token, response.user_id, response.device_id);
+    this.logger?.exit("MatrixService.signInAs");
+  }
+  
+  /**
+   * Bring this instance up as the account that acts for `vid` in `pollId` —
+   * the Matrix counterpart of the CouchDB backend's
+   * `vodle.poll.<pid>.voter.<myvid>` database user (#327).
+   *
+   * A session stored under this instance's own prefix is resumed; otherwise
+   * the account is signed in, or registered the first time this device
+   * takes part in this poll.
+   */
+  async signInForPoll(pollId: string, vid: string, userPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.signInForPoll", pollId);
+    if (await this.resumeSessionAs(pollAccountName(pollId, vid))) {
+      this.logger?.exit("MatrixService.signInForPoll (resumed)");
+      return;
+    }
+    await this.signInAs(pollAccountName(pollId, vid),
+                        pollAccountPassword(pollId, vid, userPassword));
+    this.logger?.exit("MatrixService.signInForPoll");
   }
   
   /**
@@ -1856,12 +1921,17 @@ export class MatrixService {
         preset: 'private_chat',
         is_direct: false,
         room_alias_name: roomAlias,
-        initial_state: [{
+        // Only when end-to-end encryption is on at all. It never covered
+        // anything here — user data is written as STATE events (setUserData),
+        // which megolm does not encrypt — and a room advertised as encrypted
+        // to a client that cannot encrypt is a trap for whoever sends the
+        // first timeline event into it (#327).
+        ...(environment.matrix.enable_e2ee ? {initial_state: [{
           type: 'm.room.encryption',
           content: {
             algorithm: 'm.megolm.v1.aes-sha2'
           }
-        }],
+        }]} : {}),
         power_level_content_override: {
           users: {
             [this.userId]: 100

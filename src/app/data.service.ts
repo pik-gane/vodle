@@ -517,6 +517,63 @@ export class DataService implements OnDestroy {
     }
   }
 
+  /**
+   * One Matrix account per (poll, voter) — vodle's cross-poll privacy.
+   *
+   * The CouchDB backend connects to a poll's database as
+   * `vodle.poll.<pid>.voter.<myvid>` (see connect_to_remote_poll_db), never
+   * as the person, so the server can tie no two polls of one person
+   * together. These are the Matrix counterpart: a service of its own per
+   * poll, signed in as that poll's vid, which does every poll-room and
+   * voter-room operation. The injected service keeps the person's own
+   * account and does the user room and nothing else (#327).
+   */
+  private poll_matrix_promises: {[pid: string]: Promise<MatrixService>} = {};
+  
+  /** the service that acts for this device in poll `pid` */
+  poll_matrix(pid: string): Promise<MatrixService> {
+    if (!environment.useMatrixBackend) {
+      return Promise.resolve(this.matrixService);
+    }
+    if (!this.poll_matrix_promises[pid]) {
+      this.poll_matrix_promises[pid] = this.open_poll_matrix(pid).catch(error => {
+        // not remembered: a poll whose account could not be signed in must
+        // be free to try again on the next operation
+        delete this.poll_matrix_promises[pid];
+        throw error;
+      });
+    }
+    return this.poll_matrix_promises[pid];
+  }
+  
+  private async open_poll_matrix(pid: string): Promise<MatrixService> {
+    const vid = this.getp(pid, 'myvid');
+    if (!vid) {
+      // previewpoll (creator) and joinpoll (everyone else) both call
+      // init_myvid before the poll is ever connected to, exactly as the
+      // CouchDB user name needs it
+      throw new Error("DataService.poll_matrix: poll " + pid + " has no vid yet");
+    }
+    const service = MatrixService.forPoll(this.storage, pid, vid);
+    service.pollPasswordProvider = this.matrixService.pollPasswordProvider;
+    service.userPasswordProvider = this.matrixService.userPasswordProvider;
+    service.logger = this.matrixService.logger;
+    this.G.L.info("DataService.poll_matrix signing in as this poll's voter", pid);
+    await service.signInForPoll(pid, vid, this.user_cache?.['password'] || '');
+    return service;
+  }
+  
+  /** let go of a poll's account, e.g. when its data is deleted */
+  private async close_poll_matrix(pid: string): Promise<void> {
+    const pending = this.poll_matrix_promises[pid];
+    delete this.poll_matrix_promises[pid];
+    if (!pending) { return; }
+    try {
+      const service = await pending;
+      if (service !== this.matrixService) { await service.dropSession(); }
+    } catch { /* it never came up; nothing to let go of */ }
+  }
+  
   ionViewWillLeave() {
     this.save_state();
   }
@@ -1657,15 +1714,15 @@ export class DataService implements OnDestroy {
     // this device's own voter room is where its ratings are written, so it
     // is needed before the page can be rated on, but not before the poll
     // list can be shown:
-    await this.matrixService.getOrCreateMyVoterRoom(pid, myVid);
+    await (await this.poll_matrix(pid)).getOrCreateMyVoterRoom(pid, myVid);
     // join and read the other voters' rooms, and keep watching them:
-    await this.matrixService.startVoterSync(pid);
+    await (await this.poll_matrix(pid)).startVoterSync(pid);
     // options, ratings and delegations into the service's caches:
-    await this.matrixService.warmupCache(pid);
+    await (await this.poll_matrix(pid)).warmupCache(pid);
 
     // Load options from timeline events (immutable) and register
     // their oids + data in poll_caches so Option objects get created.
-    const options = await this.matrixService.getOptions(pid);
+    const options = await (await this.poll_matrix(pid)).getOptions(pid);
     if (!(pid in this._pid_oids)) {
       this._pid_oids[pid] = new Set();
     }
@@ -1681,7 +1738,7 @@ export class DataService implements OnDestroy {
     // Bridge other voters' ratings from Matrix into poll_caches and tally system.
     // getRatings() returns cached results (already fetched during warmupCache).
     // Keys are vodle vids when available, or Matrix user IDs as fallback.
-    const ratings = await this.matrixService.getRatings(pid);
+    const ratings = await (await this.poll_matrix(pid)).getRatings(pid);
     let bridgedVoters = 0;
     let bridgedRatings = 0;
     for (const [vid, voterRatings] of ratings) {
@@ -1744,15 +1801,15 @@ export class DataService implements OnDestroy {
       }
       origin_server = origin_server || this.getp(pid, 'origin_server') || undefined;
       const room_promise: Promise<string> = after_login.then(() => origin_server
-        ? this.matrixService.setPollOrigin(pid, origin_server)
-            .then(() => this.matrixService.getPollRoom(pid))
+        ? this.poll_matrix(pid)
+            .then(m => m.setPollOrigin(pid, origin_server).then(() => m.getPollRoom(pid)))
             .then(roomId => {
               if (!roomId) {
                 throw new Error("poll " + pid + " not found on homeserver " + origin_server);
               }
               return roomId;
             })
-        : this.matrixService.getOrCreatePollRoom(pid, ''));
+        : this.poll_matrix(pid).then(m => m.getOrCreatePollRoom(pid, '')));
       return room_promise.then(async (roomId) => {
         this.G.L.info("DataService.connect_to_remote_poll_db poll room", pid, roomId);
 
@@ -1762,7 +1819,7 @@ export class DataService implements OnDestroy {
         // are a room per voter to join and read, and doing that for every
         // poll the user is in is what kept the start waiting; they are
         // fetched when the poll is opened (#327), see ensure_poll_loaded.
-        const pollData = await this.matrixService.getAllPollData(pid);
+        const pollData = await (await this.poll_matrix(pid)).getAllPollData(pid);
         this.ensure_poll_cache(pid);
         for (const [key, value] of Object.entries(pollData)) {
           this.poll_caches[pid][key] = value;
@@ -1990,10 +2047,11 @@ export class DataService implements OnDestroy {
 
         // Create Matrix poll room and move data from user cache to Matrix
         const title = this.getp(pid, 'title');
-        this._matrixStateChangePromises[pid] = this.matrixService.createPollRoom(pid, title).then(async () => {
+        this._matrixStateChangePromises[pid] = this.poll_matrix(pid)
+          .then(m => m.createPollRoom(pid, title)).then(async () => {
           // Set deadline (if present)
           if (p.due) {
-            await this.matrixService.setPollDeadline(pid, p.due.toISOString());
+            await (await this.poll_matrix(pid)).setPollDeadline(pid, p.due.toISOString());
           }
 
           // Move data from user cache to Matrix poll room.
@@ -2032,7 +2090,7 @@ export class DataService implements OnDestroy {
                   // events exist. The delu() is called below after addOption()
                   // succeeds for each option.
                 } else {
-                  await this.matrixService.setPollData(pid, key, value as string);
+                  await (await this.poll_matrix(pid)).setPollData(pid, key, value as string);
                   // Also store in poll_caches so getp() finds it immediately
                   this.ensure_poll_cache(pid);
                   this.poll_caches[pid][key] = value as string;
@@ -2048,7 +2106,7 @@ export class DataService implements OnDestroy {
           for (const [oid, fields] of Object.entries(optionData)) {
             console.error("OPTION_DEBUG change_poll_state: sending option oid=" + oid + " fields=" + JSON.stringify(fields));
             if (fields['name']) {
-              await this.matrixService.addOption(pid, oid, {
+              await (await this.poll_matrix(pid)).addOption(pid, oid, {
                 name: fields['name'],
                 description: fields['desc'] || '',
                 url: fields['url'] || ''
@@ -2077,7 +2135,7 @@ export class DataService implements OnDestroy {
           // because lockPollMetadata raises m.room.vodle.poll.state to
           // power 100 so the creator (50) can no longer send it.
           if (new_state != 'draft' && new_state != 'closing') {
-            await this.matrixService.changePollState(pid, new_state);
+            await (await this.poll_matrix(pid)).changePollState(pid, new_state);
           }
           
           // Start real-time sync so the creator receives rating updates
@@ -2168,7 +2226,7 @@ export class DataService implements OnDestroy {
         throw new Error("poll finalization cancelled");
       }
       try {
-        const closure = await this.matrixService.getPollClosure(pid);
+        const closure = await (await this.poll_matrix(pid)).getPollClosure(pid);
         if (closure.closed) {
           this.G.L.info("DataService.wait_for_matrix_poll_closure: the poll is closed on the server", pid, closure.event_id);
           return closure;
@@ -2190,7 +2248,7 @@ export class DataService implements OnDestroy {
    * once more and completely, before the final tally.
    */
   async reconcile_matrix_ratings(pid: string): Promise<void> {
-    const ratings = await this.matrixService.refreshRatings(pid);
+    const ratings = await (await this.poll_matrix(pid)).refreshRatings(pid);
     const cache = this.ensure_poll_cache(pid);
     let count = 0;
     for (const [vid, per_option] of ratings) {
@@ -2605,7 +2663,7 @@ export class DataService implements OnDestroy {
     /** Matrix backend: the server_name of the homeserver this poll's room
      *  lives on, which a magic link must name so that users of OTHER
      *  homeservers can join the poll (#293). */
-    return this.matrixService.getPollOrigin(pid);
+    return this.poll_matrix(pid).then(m => m.getPollOrigin(pid));
   }
 
   replicate_once(pid: string): Promise<boolean> {
@@ -3309,11 +3367,13 @@ export class DataService implements OnDestroy {
           }
         };
         this._matrixPollListeners[pid] = listener;
-        this.matrixService.addPollEventListener(pid, listener);
+        this.poll_matrix(pid).then(m => m.addPollEventListener(pid, listener)).catch(err => {
+          this.G.L.error("DataService could not register the poll's listeners", pid, err);
+        });
       }
       // only the poll room's handlers: discovering and joining this poll's
       // voter rooms waits until the poll is opened (#327, ensure_poll_loaded)
-      this.matrixService.setupPollRoomHandlers(pid).catch(err => {
+      this.poll_matrix(pid).then(m => m.setupPollRoomHandlers(pid)).catch(err => {
         this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
       });
       result = true;
@@ -3484,7 +3544,7 @@ export class DataService implements OnDestroy {
     // Phase 14: Tear down Matrix event handlers
     if (environment.useMatrixBackend) {
       delete this._matrixPollListeners[pid];
-      this.matrixService.teardownPollEventHandlers(pid);
+      this.poll_matrix_promises[pid]?.then(m => m.teardownPollEventHandlers(pid)).catch(() => {});
       return;
     }
     if (pid in this.G.D.poll_db_sync_handlers && !!this.G.D.poll_db_sync_handlers[pid]) {
@@ -3813,7 +3873,7 @@ export class DataService implements OnDestroy {
         this.schedule_matrix_option_event(pid, key);
         return true;
       }
-      this.matrixService.setPollData(pid, key, value).catch(err => {
+      this.poll_matrix(pid).then(m => m.setPollData(pid, key, value)).catch(err => {
         this.G.L.error("DataService.setp Matrix sync failed", pid, key, err);
       });
       return true;
@@ -3854,11 +3914,11 @@ export class DataService implements OnDestroy {
         this.G.L.warn("DataService: option without a name not sent to Matrix", pid, oid);
         return;
       }
-      this.matrixService.addOption(pid, oid, {
+      this.poll_matrix(pid).then(m => m.addOption(pid, oid, {
         name,
         description: cache['option.' + oid + '.desc'] || '',
         url: cache['option.' + oid + '.url'] || ''
-      }).catch(err => {
+      })).catch(err => {
         this.G.L.error("DataService: sending the new option to Matrix failed", pid, oid, err);
       });
     }, 0);
@@ -3887,7 +3947,7 @@ export class DataService implements OnDestroy {
       } else {
         this.ensure_poll_cache(pid);
         delete this.poll_caches[pid][key];
-        this.matrixService.deletePollData(pid, key).catch(err => {
+        this.poll_matrix(pid).then(m => m.deletePollData(pid, key)).catch(err => {
           this.G.L.warn("DataService.delp Matrix delete failed", pid, key, err);
         });
       }
@@ -4083,7 +4143,7 @@ export class DataService implements OnDestroy {
         const pkey = this.get_voter_key_prefix(pid) + key;
         this.ensure_poll_cache(pid);
         const vid = this.getp(pid, 'myvid');
-        await this.matrixService.deleteVoterData(pid, vid, key);
+        await (await this.poll_matrix(pid)).deleteVoterData(pid, vid, key);
         delete this.poll_caches[pid][pkey];
       }
       return;
@@ -4163,7 +4223,7 @@ export class DataService implements OnDestroy {
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      this.matrixService.setPollData(pid, key, value).catch(err => {
+      this.poll_matrix(pid).then(m => m.setPollData(pid, key, value)).catch(err => {
         this.G.L.error("DataService._setp_in_polldb Matrix sync failed", pid, key, err);
       });
       return true;
@@ -4202,7 +4262,7 @@ export class DataService implements OnDestroy {
     // Phase 11: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
       const effectiveVid = vid || this.getp(pid, 'myvid');
-      this.matrixService.setVoterData(pid, effectiveVid, key, value).catch(err => {
+      this.poll_matrix(pid).then(m => m.setVoterData(pid, effectiveVid, key, value)).catch(err => {
         this.G.L.error("DataService.setv_in_polldb Matrix sync failed", pid, key, err);
       });
       return true;
@@ -4771,7 +4831,8 @@ export class DataService implements OnDestroy {
         this.stop_poll_sync(pid);
         if (environment.useMatrixBackend) {
           // and its rooms on the homeserver are left (#331):
-          this.matrixService.leavePollRooms(pid).catch(err => {
+          this.poll_matrix(pid).then(m => m.leavePollRooms(pid))
+            .then(() => this.close_poll_matrix(pid)).catch(err => {
             this.G.L.warn("DataService.after_changes could not leave the poll's rooms", pid, err);
           });
         }
