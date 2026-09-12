@@ -14,6 +14,7 @@ in them is specific to it. The decisions behind the settings are in
 | `deploy/deploy.sh status`, `logs [service]`, `down` | what runs, what it says, stop |
 | `deploy/deploy.sh update` | `git pull --ff-only`, then `up` (rebuilds the app and the bot) |
 | `deploy/backup.sh` (= `deploy.sh backup`) | database dump and homeserver keys into `deploy/backups/` |
+| `deploy/disk-report.sh` | where the disk has gone: filesystem, directories, docker, the Synapse database per table and per poll (read-only) |
 | `deploy/reload-tls.sh` | nginx picks up renewed certificate files (certbot deploy hook) |
 
 Two files hold the settings:
@@ -298,6 +299,23 @@ server's identity is lost. Run it from cron, and copy the directory off the host
 ```
 0 3 * * * /opt/vodle/deploy/backup.sh >> /var/log/vodle-backup.log 2>&1
 ```
+
+**When the disk fills up**: `deploy/disk-report.sh`. It reads and prints, and
+changes nothing. It covers the four places the space can be — the filesystem,
+the deployment's own directories, docker, and the Synapse database broken down
+by table, by room and by poll — and ends with the arithmetic of what vodle
+*should* be using, so the numbers can be judged rather than stared at.
+
+Two things it usually finds. **Docker**: every `deploy.sh up` rebuilds the app
+image, and the layers it replaces stay until something removes them —
+`docker image prune -f` and `docker builder prune -f` are safe and often free
+gigabytes (`docker system prune --volumes` is not: it would take any volume
+nothing currently uses). **`state_groups_state`**: the table every Synapse
+grows, and faster here than on a chat server, because vodle stores each rating
+as a state event and each one starts a new state group;
+[rust-synapse-compress-state](https://github.com/matrix-org/rust-synapse-compress-state)
+is the tool for it. Test polls are worth purging outright rather than waiting
+for `RETENTION_DAYS` — the per-poll roll-up in the report names them.
 
 **Restore** onto a fresh host with the same server name:
 
