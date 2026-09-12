@@ -126,6 +126,13 @@ jobs:
         # specs skip themselves here, they have silently stopped running.
         run: node scripts/check-test-results.js --no-skips
 
+      # ... and again here, at the end of the job, where the log tail reaches
+      # it: the click-through runs before the suite, and karma's own output
+      # is longer than the log API will hand back (#327)
+      - name: The click-through's numbers
+        if: always()
+        run: cat clickthrough-result.json || echo "(no click-through result)"
+
       # always, and not only on a failure: the click-through's own numbers
       # (the boot stages, the reload timings, the voter counts) sit ahead of
       # some hundreds of thousands of lines of karma in the job log, past
