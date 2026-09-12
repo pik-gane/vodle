@@ -640,9 +640,11 @@ export class MatrixService {
       // which is why a start that sat for eighty seconds produced not one
       // line saying what it was waiting for (#327).
       const started_at = Date.now();
-      const boot = (stage: string, detail?: any) =>
+      const boot = (stage: string, detail?: any) => {
         console.log("[vodle boot] +" + (Date.now() - started_at) + "ms", stage,
           detail === undefined ? "" : detail);
+        MatrixService.noteBootStage(stage);
+      };
       boot("client setup begins", userId);
       
       // A store that survives the page makes the difference between resuming
@@ -1324,6 +1326,29 @@ export class MatrixService {
         value => { clearTimeout(timer); resolve(value); },
         error => { clearTimeout(timer); reject(error); });
     });
+  }
+  
+  /**
+   * The start stage most recently reached, and when.
+   *
+   * The console says this already, but three times running the owner has
+   * reported a join "stuck without any console message" — and a console
+   * they cannot see is a diagnosis nobody can make. It is a static because
+   * both stopwatches write it (DataService's, from the app starting, and
+   * this service's, from the client being set up) and the joinpoll page
+   * reads it without either of them knowing about the page (#327).
+   */
+  static boot_stage = '';
+  static boot_stage_at = 0;
+  
+  /** what the waiting page shows: the stage and how long it has been there */
+  static bootStageAge(): number {
+    return MatrixService.boot_stage_at ? Date.now() - MatrixService.boot_stage_at : 0;
+  }
+  
+  static noteBootStage(stage: string): void {
+    MatrixService.boot_stage = stage;
+    MatrixService.boot_stage_at = Date.now();
   }
   
   /** the one crypto-WASM fetch, however many times it is asked for.

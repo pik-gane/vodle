@@ -702,9 +702,13 @@ export class DataService implements OnDestroy {
     // here — in IndexedDB, through Ionic Storage — with nothing said. So
     // it says something (#327).
     const boot_started_at = Date.now();
-    const boot = (stage: string, detail?: any) =>
+    const boot = (stage: string, detail?: any) => {
       console.log("[vodle boot] +" + (Date.now() - boot_started_at) + "ms", stage,
         detail === undefined ? "" : detail);
+      // ...and where a waiting page can show it, since a console the owner
+      // cannot see is a diagnosis nobody can make (#327):
+      MatrixService.noteBootStage(stage);
+    };
     (this as any).boot_log = boot;
     boot("data service init");
     // 5.4 MB of crypto WebAssembly the start cannot finish without. Asking

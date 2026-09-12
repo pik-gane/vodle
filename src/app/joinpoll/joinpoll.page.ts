@@ -24,6 +24,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { Poll, Option } from '../poll.service';
+import { MatrixService } from '../matrix.service';
 
 @Component({
   selector: 'app-join',
@@ -51,6 +52,12 @@ export class JoinpollPage implements OnInit {
   /** the homeserver is taking its time, but has not given up (#327) */
   slow = false;
   private slow_timer: any = null;
+
+  /** What the start is doing right now, for the page that is waiting on it.
+   *  A spinner for half a minute says nothing; the stage says where the
+   *  time is going, and says it to someone with no console open (#327). */
+  get boot_stage(): string { return MatrixService.boot_stage; }
+  get boot_stage_seconds(): number { return Math.round(MatrixService.bootStageAge() / 1000); }
 
   constructor(
     public router: Router,

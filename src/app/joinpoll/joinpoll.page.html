@@ -62,6 +62,12 @@ TODO:
       <i [innerHtml]="'joinpoll.still-waiting'|translate"></i>&nbsp;
     </h4>
   </ion-item>
+  <!-- what it is doing, for a visitor with no console open (#327) -->
+  <ion-item *ngIf="slow && boot_stage" class="ion-text-center" lines="none" data-vodle="join-poll-stage">
+    <h4>
+      <i>{{boot_stage}} ({{boot_stage_seconds}}s)</i>&nbsp;
+    </h4>
+  </ion-item>
   <ion-item class="ion-text-center" lines="none">
     <h1>
       <ion-spinner name="crescent" size="large"></ion-spinner>
