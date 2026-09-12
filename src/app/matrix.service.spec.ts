@@ -2581,7 +2581,96 @@ describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327
     });
   });
 
-  describe("signing a poll account in waits out a rate limit (#327)", () => {
+  describe("a voter room is looked up once, not once per write (#327)", () => {
+  // Publishing a poll calls getOrCreateVoterRoom once per key it writes for
+  // a voter — a vid, a deadline and one rating per option — and they arrive
+  // together. The creation mutex used to sit BELOW the alias lookup, so each
+  // of them paid its own 404 first: about five wasted round trips per voter,
+  // some two hundred and sixty for a poll of fifty.
+  let svc: any, looked_up: number, created: number, vid_writes: number;
+
+  beforeEach(() => {
+    const store = new Map<string, any>();
+    const storage = {
+      get: async (k: string) => store.has(k) ? store.get(k) : null,
+      set: async (k: string, v: any) => { store.set(k, v); },
+      remove: async (k: string) => { store.delete(k); },
+    };
+    looked_up = created = vid_writes = 0;
+    svc = MatrixService.forPoll(storage as any, 'POLL_ONE', 'vid_a');
+    svc.userId = '@poll:hs';
+    svc.client = { getRoom: () => null };
+    svc.getVoterRoom = async () => { looked_up++; return null; };
+    svc.createVoterRoom = async () => { created++; return '!voter:hs'; };
+    svc.sendStateEvent = async () => { vid_writes++; };
+    svc.announceVoterRoom = async () => {};
+  });
+
+  it("asks the homeserver once however many writes want the room at once", async () => {
+    const rooms = await Promise.all(
+      Array.from({length: 7}, () => svc.getOrCreateVoterRoom('POLL_ONE', 'vid_a')));
+    expect(rooms.every(r => r === '!voter:hs')).withContext('all the same room').toBeTrue();
+    expect(looked_up).withContext('one alias lookup').toBe(1);
+    expect(created).withContext('one room').toBe(1);
+  });
+
+  it("writes the voter's id into the room once, not once per caller", async () => {
+    // the state event takes a round trip to come back through the sync, and
+    // until it does every caller saw an empty state: 88 writes for 52 rooms
+    await Promise.all(
+      Array.from({length: 7}, () => svc.getOrCreateVoterRoom('POLL_ONE', 'vid_a')));
+    expect(vid_writes).toBe(1);
+  });
+
+  it("a write that fails leaves the id to be written again", async () => {
+    svc.sendStateEvent = async () => { vid_writes++; throw new Error('the server said no'); };
+    await svc.getOrCreateVoterRoom('POLL_ONE', 'vid_a');
+    const after_the_first = vid_writes;
+    await svc.getOrCreateVoterRoom('POLL_ONE', 'vid_a');
+    expect(after_the_first).withContext('it was attempted').toBeGreaterThan(0);
+    expect(vid_writes).withContext('and again, since it did not land').toBeGreaterThan(after_the_first);
+  });
+});
+
+describe("a brand-new account is registered, not logged in three times (#327)", () => {
+  // A guest's credentials were invented a moment ago (#193), so the login
+  // ladder can only produce three REFUSED logins before registering anyway:
+  // three round trips the visitor waits through, and three ticks of the one
+  // rate limit a vodle homeserver keeps tight.
+  it("skips the ladder when the caller knows the account is new", async () => {
+    const store = new Map<string, any>();
+    const storage: any = {
+      get: async (k: string) => store.has(k) ? store.get(k) : null,
+      set: async (k: string, v: any) => { store.set(k, v); },
+      remove: async (k: string) => { store.delete(k); },
+    };
+    const svc: any = new MatrixService(storage);
+    let logins = 0, registered = 0;
+    svc.passwordLogin = async () => { logins++; return null; };
+    svc.register = async () => { registered++; };
+    await svc.login('guest-abc@vodle.it', 'GuestPw2345678901234', true, true);
+    expect(registered).toBe(1);
+    expect(logins).withContext('not one refused login').toBe(0);
+  });
+
+  it("still tries the login for credentials that may belong to an account", async () => {
+    const store = new Map<string, any>();
+    const storage: any = {
+      get: async (k: string) => store.has(k) ? store.get(k) : null,
+      set: async (k: string, v: any) => { store.set(k, v); },
+      remove: async (k: string) => { store.delete(k); },
+    };
+    const svc: any = new MatrixService(storage);
+    let logins = 0, registered = 0;
+    svc.passwordLogin = async () => { logins++; return null; };
+    svc.register = async () => { registered++; };
+    await svc.login('a@b.c', 'Secret-12');
+    expect(logins).toBe(1);
+    expect(registered).withContext('and registers when there is none').toBe(1);
+  });
+});
+
+describe("signing a poll account in waits out a rate limit (#327)", () => {
     // one account per (poll, voter) means a device registers or signs in
     // once per poll, and Synapse counts rc_login.address and rc_registration
     // PER IP ADDRESS — a shared connection makes other people's logins this

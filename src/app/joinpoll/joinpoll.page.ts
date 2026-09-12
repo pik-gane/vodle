@@ -52,6 +52,10 @@ export class JoinpollPage implements OnInit {
   /** the homeserver is taking its time, but has not given up (#327) */
   slow = false;
   private slow_timer: any = null;
+  /** how long a magic link may look like nothing before it says what it is
+   *  doing. Eight seconds of blank page is not a wait, it is a failure that
+   *  has not been reported yet (#327). */
+  static SLOW_AFTER_MS = 3000;
 
   /** What the start is doing right now, for the page that is waiting on it.
    *  A spinner for half a minute says nothing; the stage says where the
@@ -75,6 +79,17 @@ export class JoinpollPage implements OnInit {
 
   ngOnInit() {
     this.G.L.entry("JoinpollPage.ngOnInit");
+    // From HERE, not from the moment the poll is asked for: a magic link
+    // opened on a device with no credentials creates a guest first, and the
+    // owner reported nine seconds of blank page before anything at all
+    // happened — the join had not even been attempted yet, so the timer
+    // that was started there could not fire (#327).
+    this.start_waiting();
+  }
+
+  private start_waiting() {
+    if (this.slow_timer) { return; }
+    this.slow_timer = window.setTimeout(() => { this.slow = true; }, JoinpollPage.SLOW_AFTER_MS);
   }
 
   ionViewWillEnter() {
@@ -136,7 +151,7 @@ export class JoinpollPage implements OnInit {
         const origin_server = (this.db_server_url && this.db_server_url != '_') ? this.db_server_url : undefined;
         // a join that takes longer than a few seconds says so, rather than
         // showing the same "just a moment" until the ceiling runs out (#327)
-        this.slow_timer = window.setTimeout(() => { this.slow = true; }, 8000);
+        this.start_waiting();
         this.G.D.connect_to_remote_poll_db(this.pid, true, origin_server).then(() => {
           this.stop_waiting();
           // Re-read state from poll_caches now that it has been populated

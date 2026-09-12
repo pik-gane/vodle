@@ -310,6 +310,13 @@ export class DataService implements OnDestroy {
   /** resolves once the background Matrix login has finished; the start does
    *  not wait for it, everything that needs the homeserver does (#327) */
   private matrix_ready: Promise<void> = Promise.resolve();
+  /** resolves once this device's user data and the user room agree. A POLL
+   *  does not wait for this — it needs a logged-in client and nothing else,
+   *  and on a magic link the vid and the password come from the link and
+   *  this device's own storage, never from the user room. Waiting for it
+   *  cost a guest with no polls at all 12.8 s before the poll page began
+   *  (#327). */
+  private matrix_user_data_ready: Promise<void> = Promise.resolve();
 
   // current page, used for notifying of changes method:
   page: any;
@@ -1023,14 +1030,30 @@ export class DataService implements OnDestroy {
             (this as any).boot_log?.("resuming the stored session");
             if (!await this.matrixService.resumeSession(email)) {
               (this as any).boot_log?.("no stored session, logging in with the password");
-              await this.matrixService.login(email, password);
+              // a guest's credentials were invented a moment ago, so the
+              // account cannot exist yet and the login ladder would only
+              // produce refusals (#193, #327):
+              await this.matrixService.login(email, password, true,
+                this.guest_login_in_progress);
             }
           }
           (this as any).boot_log?.("logged in to the homeserver");
           this.committed_credentials = this.credentials_snapshot();
           this.G.L.info("DataService: Matrix login successful, syncing user data");
-          await this.syncUserDataWithMatrix();
-          (this as any).boot_log?.("user data synced; the backend is ready");
+          // NOT awaited here: the client is usable now, and that is all a
+          // poll needs. The sync writes one state event per user-data key
+          // and reads the user room back, which for a fresh guest means
+          // creating the room first — 12.8 s in the owner's measurement,
+          // every millisecond of it in front of a poll page that needed
+          // none of it (#327).
+          this.matrix_user_data_ready = this.syncUserDataWithMatrix()
+            .then(() => {
+              (this as any).boot_log?.("user data synced");
+              this.G.L.info("DataService: Matrix user data synced");
+            });
+          this.matrix_user_data_ready.catch(err =>
+            this.G.L.error("DataService: the user data sync failed", err));
+          (this as any).boot_log?.("the backend is ready");
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
           this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
@@ -1231,21 +1254,22 @@ export class DataService implements OnDestroy {
       this.G.L.error("DataService.syncUserDataWithMatrix could not read the user room, pushing everything", err);
       force = true;
     }
-    let pushed = 0, restored = 0;
-    for (const key of Object.keys(this.user_cache)) {
-      if (local_only_user_keys.includes(key) || key == 'user_last_seq') {
-        continue;
-      }
+    let restored = 0;
+    const to_push = Object.keys(this.user_cache).filter(key => {
+      if (local_only_user_keys.includes(key) || key == 'user_last_seq') { return false; }
       const value = this.user_cache[key];
-      if (value === undefined || value === null || value === '') {
-        continue;
-      }
-      if (!force && remote[key] === value) {
-        continue;
-      }
-      await this.matrixService.setUserData(key, value);
-      pushed++;
-    }
+      if (value === undefined || value === null || value === '') { return false; }
+      return force || remote[key] !== value;
+    });
+    // One state event per key, and they used to go out one after another: a
+    // published poll of fifty writes about thirty-five of them into the user
+    // room, which at a round trip each is most of a minute on a slow link
+    // (#327). They do not depend on one another, so they go together, as far
+    // apart as the client's own write pacing says (matrix.write_burst).
+    const pushed = to_push.length;
+    await MatrixService.forEachConcurrently(to_push,
+      environment.data_service.matrix_user_data_concurrency ?? 8,
+      async key => { await this.matrixService.setUserData(key, this.user_cache[key]); });
     for (const [key, value] of Object.entries(remote)) {
       if (local_only_user_keys.includes(key) || value === '') {
         continue;
@@ -2838,10 +2862,14 @@ export class DataService implements OnDestroy {
     const language = this.G.S.language,
           email = this.G.S.email,
           password = this.G.S.password;
+    (this as any).boot_log?.("re-setting the credentials");
     this.G.S.language = this.G.S.email = this.G.S.password = "";
+    (this as any).boot_log?.("credentials cleared");
     this.G.S.language = language;
+    (this as any).boot_log?.("language set");
     this.G.S.email = email;
     this.G.S.password = password;
+    (this as any).boot_log?.("credentials set");
     this.setu('guest', as_guest ? '1' : '');
     this.email_and_password_exist();
   }
@@ -2850,11 +2878,19 @@ export class DataService implements OnDestroy {
     /** Take part with a throw-away account whose credentials only this
      *  device knows (#193): from the login page's guest button, and on the
      *  first visit of a magic link. A later login with a real account moves
-     *  the guest's data and voter rooms to it (perform_user_data_move). */
+     *  the guest's data and voter rooms to it (perform_user_data_move).
+     *
+     *  Logged step by step, because this is where a magic link opened on a
+     *  fresh device spent nine seconds with no network traffic at all in the
+     *  owner's report, and the code below reads as if none of it could cost
+     *  anything: the next log says which line does (#327). */
     this.G.L.entry("DataService.login_as_guest");
+    (this as any).boot_log?.("creating a guest for this magic link");
     const {email, password} = DataService.guest_credentials();
+    (this as any).boot_log?.("guest credentials generated");
     this.G.S.password = password;
     this.G.S.email = email;
+    (this as any).boot_log?.("guest credentials recorded");
     if (environment.privacy_statement_url) {
       // nobody has consented to anything yet: the poll page asks before
       // the first rating is stored (consent_pending)
@@ -2862,6 +2898,7 @@ export class DataService implements OnDestroy {
     } else {
       this.record_consent();
     }
+    (this as any).boot_log?.("consent recorded");
     this.G.S.default_wap = 10;
     this.guest_login_in_progress = true;
     this.login_submitted(true);

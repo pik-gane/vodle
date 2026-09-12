@@ -441,7 +441,11 @@ export class MatrixService {
   private static readonly WRITE_INTERVAL_MAX_MS = 2000;
   private static readonly WRITES_BEFORE_SPEEDUP = 20;
   /** How many voter rooms a newcomer joins at once (#327). */
-  private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 6;
+  // A newcomer to a poll of fifty joins fifty-two rooms before it can show
+  // a tally, at a round trip each. Six at a time was chosen against HTTP/1.1's
+  // six-connections-per-host; a deployment behind nginx speaks HTTP/2, where
+  // they share one connection and the limit is the server's willingness (#327).
+  private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 16;
   /** How many voter rooms are read from the server at once (#327). */
   private static readonly VOTER_ROOM_READ_CONCURRENCY = 8;
   /** what the reads cost, for the record and for the benchmark (#327) */
@@ -941,13 +945,25 @@ export class MatrixService {
    *   no account exists (an account switch must not create accounts by
    *   accident, #330)
    */
-  async login(email: string, password: string, register_if_missing = true): Promise<void> {
+  async login(email: string, password: string, register_if_missing = true,
+              account_is_new = false): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
     const emailHash = hashEmail(email);
     this.logger?.entry("MatrixService.login", emailHash);
     
     this.loginInProgress = true;
     try {
+      if (account_is_new) {
+        // The credentials were invented a moment ago (a guest, #193), so
+        // passwordLogin's ladder can only produce three REFUSED logins
+        // before registering anyway: three round trips the visitor waits
+        // through, and three ticks of rc_login.failed_attempts, which is the
+        // one rate limit a vodle homeserver keeps tight (#327).
+        console.log("[vodle boot] registering the new account");
+        await this.register(email, password);
+        this.logger?.exit("MatrixService.login (registered)");
+        return;
+      }
       const tempClient = createClient({ baseUrl: this.homeserverUrl });
       console.log("[vodle boot] logging in with the password");
       const response = await this.passwordLogin(tempClient, email, password);
@@ -3690,11 +3706,16 @@ export class MatrixService {
       this.voterVidStored.add(roomId);
       return;
     }
+    // marked BEFORE the write, not after: the state event takes a round trip
+    // to come back through the sync, and until it does every further caller
+    // saw an empty state and wrote it again — 88 writes for 52 voter rooms
+    // in the owner's log (#327). A write that fails un-marks it.
+    this.voterVidStored.add(roomId);
     try {
       await this.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
-      this.voterVidStored.add(roomId);
     } catch (e) {
       // a closed room, or one this account may not write to: nothing to do
+      this.voterVidStored.delete(roomId);
     }
   }
 
@@ -3714,63 +3735,55 @@ export class MatrixService {
       return cachedRoom;
     }
     
-    // Also check persistent storage and alias lookup
-    const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
-    if (stored && this.client) {
-      const room = this.client.getRoom(stored);
-      if (room) {
+    // Everything below this line asks the homeserver, so the mutex belongs
+    // HERE and not further down: publishing a poll calls this once per key
+    // it writes for a voter — a vid, a deadline and one rating per option —
+    // and they arrive together. With the mutex below the alias lookup, each
+    // of them paid its own 404 before finding out that another was already
+    // creating the room: about five wasted round trips per voter, some two
+    // hundred and sixty when publishing a poll of fifty (#327).
+    const inflight = this.voterRoomCreationMutex.get(cacheKey);
+    if (inflight) {
+      const roomId = await inflight;
+      await this.ensureVoterVidStored(roomId, vodleVid);
+      return roomId;
+    }
+    
+    const resolution = (async () => {
+      // persistent storage: this device has been here before
+      const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
+      if (stored && this.client?.getRoom(stored)) {
         this.voterRooms.set(cacheKey, stored);
         this.voterRoomReverseLookup.set(stored, { pollId, voterId: vodleVid });
-        await this.ensureVoterVidStored(stored, vodleVid);
         return stored;
       }
-    }
-    
-    // A second device of the same account (fresh storage) must write into
-    // the room the account already owns, which its alias names (#333):
-    const existing = await this.getVoterRoom(pollId, vodleVid);
-    if (existing) {
-      await this.ensureVoterVidStored(existing, vodleVid);
-      return existing;
-    }
-    
-    // Serialize creation: if another call is already creating this room,
-    // wait for it instead of racing and hitting M_ROOM_IN_USE.
-    const mutexKey = `${pollId}:${vodleVid}`;
-    const inflight = this.voterRoomCreationMutex.get(mutexKey);
-    if (inflight) {
-      return inflight;
-    }
-    
-    const creationPromise = (async () => {
-      try {
-        // createVoterRoom uses vodleVid for the room alias; the actual
-        // Matrix room owner is always this.userId (the creator).
-        const roomId = await this.createVoterRoom(pollId, vodleVid);
-        
-        // Store vodle vid in voter room state for discovery
-        if (this.client) {
-          try {
-            await this.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
-            this.voterVidStored.add(roomId);
-            console.log("[getOrCreateVoterRoom] Stored vid", vodleVid, "in voter room", roomId);
-          } catch (e) {
-            console.error("[getOrCreateVoterRoom] Failed to store vid in voter room:", e);
-          }
-        }
-        
-        // Announce the new voter room in the poll room so that other
-        // participants can discover it and join to read ratings.
-        await this.announceVoterRoom(pollId, roomId, vodleVid);
-        
-        return roomId;
-      } finally {
-        this.voterRoomCreationMutex.delete(mutexKey);
+      // A second device of the same account (fresh storage) must write into
+      // the room the account already owns, which its alias names (#333):
+      const existing = await this.getVoterRoom(pollId, vodleVid);
+      if (existing) {
+        return existing;
       }
-    })();
+      // createVoterRoom uses vodleVid for the room alias; the actual
+      // Matrix room owner is always this.userId (the creator).
+      const roomId = await this.createVoterRoom(pollId, vodleVid);
+      
+      // The vid goes into the room's state for discovery — through the one
+      // place that writes it, so a caller arriving behind this one does not
+      // write it again (ensureVoterVidStored).
+      await this.ensureVoterVidStored(roomId, vodleVid);
+      
+      // Announce the new voter room in the poll room so that other
+      // participants can discover it and join to read ratings.
+      await this.announceVoterRoom(pollId, roomId, vodleVid);
+      
+      return roomId;
+    })().finally(() => { this.voterRoomCreationMutex.delete(cacheKey); });
     
-    this.voterRoomCreationMutex.set(mutexKey, creationPromise);
-    return creationPromise;
+    // synchronously, before the first await above can let anyone else in:
+    this.voterRoomCreationMutex.set(cacheKey, resolution);
+    const roomId = await resolution;
+    await this.ensureVoterVidStored(roomId, vodleVid);
+    return roomId;
   }
   
   /**

@@ -3290,6 +3290,46 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     expect(svc.user_cache['email']).toBe('a@b.c');
   });
 
+  it('writes the user room several keys at a time instead of one after another', async () => {
+    // A published poll of fifty puts about thirty-five keys in the user room,
+    // and one round trip each is most of a minute on a slow link (#327).
+    const cache: Record<string, string> = {email: 'a@b.c', password: 'Secret-12'};
+    for (let i = 0; i < 12; i++) { cache['poll.p' + i + '.state'] = 'running'; }
+    fresh(cache);
+    let in_flight = 0, most_at_once = 0;
+    matrix.setUserData.and.callFake(async () => {
+      most_at_once = Math.max(most_at_once, ++in_flight);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      in_flight--;
+    });
+    await svc.syncUserDataWithMatrix();
+    expect(pushed_keys().length).withContext('every key written').toBe(12);
+    expect(most_at_once).withContext('and not one after another').toBeGreaterThan(1);
+  });
+
+  it('lets the poll start once the login is done, without waiting for the user data', async () => {
+    // The join page waits for matrix_ready; it used to resolve only after
+    // the whole user-data sync, which for a guest with no polls at all was
+    // 12.8 s of creating a user room and filling it (#327).
+    fresh({email: 'a@b.c', password: 'Secret-12'});
+    let sync_finished = false;
+    svc.syncUserDataWithMatrix = async () => {
+      await new Promise(resolve => setTimeout(resolve, 30));
+      sync_finished = true;
+    };
+    svc.pending_user_data_move = () => null;
+    svc.credentials_snapshot = () => ({email: 'a@b.c', password: 'Secret-12', guest: false});
+    svc.restored_user_cache = true;
+    svc.mark_user_db_bootstrapped = () => {};
+    svc.init_poll_data = () => {};
+    // fresh() stubs this one out; here it is the method under test
+    await (DataService as any).prototype.email_and_password_exist.call(svc);
+    await svc.matrix_ready;
+    expect(sync_finished).withContext('the poll does not wait for the user data').toBeFalse();
+    await svc.matrix_user_data_ready;
+    expect(sync_finished).withContext('but it does happen').toBeTrue();
+  });
+
   it('never sends the credentials to the user room, and writes poll membership keys coalesced', async () => {
     fresh({email: 'a@b.c', password: 'Secret-12', 'poll.p1.state': 'draft'});
     environment.data_service.matrix_user_data_delay_ms = 20;

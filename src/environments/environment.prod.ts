@@ -129,6 +129,10 @@ export const environment = {
     // Matrix backend: poll membership keys and drafts are written to the
     // user room this long after the last change, coalesced (#330):
     matrix_user_data_delay_ms: 1000,
+    // how many user-data keys are written to the user room at once. They do
+    // not depend on one another, and a published poll writes about
+    // thirty-five of them, which one at a time is a round trip each (#327).
+    matrix_user_data_concurrency: 8,
   },
   delegation: {
     enabled: false,
