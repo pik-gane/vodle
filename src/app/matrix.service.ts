@@ -676,17 +676,42 @@ export class MatrixService {
           });
           boot("crypto WASM loaded");
           const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
+          // The SDK's crypto store is one per browser profile and belongs to
+          // ONE account. vodle hands out a fresh account to every silent
+          // guest (#193), so a browser that has been a guest before arrives
+          // with a store belonging to somebody else — and finding that out
+          // by exception costs a failed init, a deleteDatabase that blocks
+          // on the connection the failed init left open, and a full schema
+          // migration of the store that is about to be thrown away: 26
+          // seconds of it in the owner's log, against 1.5 s for a device
+          // reusing its account. So the mismatch is settled before the
+          // attempt rather than after it (#327).
+          const crypto_account = await this.storage.get('matrix_crypto_account');
+          if (crypto_account && crypto_account !== userId) {
+            boot("the crypto store belongs to another account, clearing it", crypto_account);
+            try {
+              await this.client.clearStores();
+            } catch (clear_error) {
+              console.warn("[vodle boot] could not clear the old crypto store:",
+                (clear_error as any)?.message || clear_error);
+            }
+          }
           try {
-            await this.client.initRustCrypto(crypto_options);
+            await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
+              "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
           } catch (crypto_error) {
-            // the SDK's persistent crypto store is shared per browser profile
-            // and holds only one account — after logging out and in as a
-            // DIFFERENT user, initialization fails until the old store is
-            // cleared. The client is not started yet, so clearing is safe:
+            // a store this device cannot use at all: clear it and try once
+            // more. Reported loudly — it used to go through the logger,
+            // which a deployment runs at ERROR, so the one line explaining
+            // a 26-second start was invisible (#327).
+            console.warn("[vodle boot] the crypto store was rejected, clearing and retrying:",
+              (crypto_error as any)?.message || crypto_error);
             this.logger?.warn("MatrixService crypto store rejected, clearing and retrying", crypto_error);
             await this.client.clearStores();
-            await this.client.initRustCrypto(crypto_options);
+            await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
+              "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
           }
+          await this.storage.set('matrix_crypto_account', userId);
           this.logger?.info("MatrixService end-to-end encryption initialized", userId);
           boot("end-to-end encryption ready");
         } catch (error) {
@@ -1204,6 +1229,9 @@ export class MatrixService {
       // of it on the device at all, and it should stay that way.
       try {
         await (this.client as any).clearStores();
+        // the crypto store went with them, so the marker must not go on
+        // claiming an account owns one (#327):
+        await this.storage.remove('matrix_crypto_account');
       } catch (error) {
         this.logger?.warn("MatrixService.dropSession could not clear the sync store", error);
       }

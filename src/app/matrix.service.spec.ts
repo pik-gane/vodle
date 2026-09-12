@@ -2170,3 +2170,63 @@ describe("MatrixService.within (#327)", () => {
       .toBeRejectedWithError('nope');
   });
 });
+
+describe("MatrixService does not meet the crypto store's owner by exception (#327)", () => {
+  let service: any, storage: any, store: any, client: any;
+
+  beforeEach(() => {
+    store = new Map<string, any>();
+    storage = {
+      get: async (k: string) => store.has(k) ? store.get(k) : null,
+      set: async (k: string, v: any) => { store.set(k, v); },
+      remove: async (k: string) => { store.delete(k); },
+    };
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: storage}]});
+    service = TestBed.inject(MatrixService);
+    client = {
+      initRustCrypto: jasmine.createSpy('initRustCrypto').and.returnValue(Promise.resolve()),
+      clearStores: jasmine.createSpy('clearStores').and.returnValue(Promise.resolve()),
+      stopClient: () => {},
+      removeListener: () => {},
+    };
+    service.client = client;
+  });
+
+  /** the crypto half of initializeWithToken, as the real one runs it */
+  async function init_crypto(userId: string) {
+    const crypto_account = await service.storage.get('matrix_crypto_account');
+    if (crypto_account && crypto_account !== userId) {
+      await service.client.clearStores();
+    }
+    await service.client.initRustCrypto({});
+    await service.storage.set('matrix_crypto_account', userId);
+  }
+
+  it("clears a store belonging to another account BEFORE trying to use it", async () => {
+    store.set('matrix_crypto_account', '@guest_one:hs');
+    await init_crypto('@guest_two:hs');
+    expect(client.clearStores).toHaveBeenCalledTimes(1);
+    expect(client.initRustCrypto).withContext('one attempt, not a failed one and a retry').toHaveBeenCalledTimes(1);
+    expect(store.get('matrix_crypto_account')).toBe('@guest_two:hs');
+  });
+
+  it("leaves the store alone for the account that owns it", async () => {
+    store.set('matrix_crypto_account', '@me:hs');
+    await init_crypto('@me:hs');
+    expect(client.clearStores).not.toHaveBeenCalled();
+    expect(client.initRustCrypto).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not clear when no account has claimed the store yet", async () => {
+    await init_crypto('@first:hs');
+    expect(client.clearStores).not.toHaveBeenCalled();
+    expect(store.get('matrix_crypto_account')).toBe('@first:hs');
+  });
+
+  it("forgets the marker when the session drops, since the store goes with it", async () => {
+    store.set('matrix_crypto_account', '@me:hs');
+    service.pollEventHandlerRefs = new Map();
+    await service.dropSession();
+    expect(store.has('matrix_crypto_account')).withContext('no stale claim').toBeFalse();
+  });
+});
