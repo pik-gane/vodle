@@ -49,24 +49,22 @@ const POLL_PASSWORD = 'federation-poll-password';
 /**
  * How long a spec waits for something to cross the federation link.
  *
- * NOT a padded timeout: a partition leaves Synapse's per-destination backoff
- * elevated — 4 s, 16 s, 64 s … — and that backoff OUTLIVES the heal, as the
- * #334 spec below says in as many words and already allows 120 s for. Jasmine
- * randomises spec order, so the join spec can run AFTER either partition spec
- * and inherit a sender that is still backing off; it used to allow only the
- * 60 s default, on the assumption that it ran first.
+ * A ceiling, not a strategy. The strategy is reset_federation_backoff()
+ * below, which clears what a partition leaves in Synapse's federation
+ * senders; waiting the backoff out was tried twice and does not work. The
+ * history, since it cost three CI runs:
  *
- * That assumption failed in CI on 2026-09-13: "timed out waiting for alice to
- * see bob's rating from the other homeserver", with the perf lines — captured
- * in execution order — showing both partition specs had run before it, and
- * with the failure in the hs2 → hs1 direction, exactly the one the #334 spec
- * calls "hs2's federation sender to deliver to hs1 again after the partition".
- * The spec passed whenever the shuffle put it first.
+ *  - The join spec allowed the 60 s default, on the unstated assumption that
+ *    it runs first. Jasmine randomises spec order, so when the shuffle put it
+ *    after a partition spec it inherited a sender still backing off (4 s,
+ *    16 s, 64 s …) and timed out — always in the hs2 → hs1 direction, the one
+ *    the #334 spec names.
+ *  - Raising it to 120 s was not enough either: on 2026-09-13 both that spec
+ *    and #334's own recovery wait, which had allowed 120 s all along, timed
+ *    out in the same run.
  *
- * The cleaner fix would be to reset the backoff between specs — Synapse has
- * POST /_synapse/admin/v1/federation/destinations/<dest>/reset_connection —
- * but that needs an admin token, which the harness keeps in the shell and
- * never hands to the browser.
+ * So the backoff is cleared instead, and this stays only so that a genuinely
+ * stuck link fails the spec rather than hanging the suite.
  */
 const CROSS_SERVER_TIMEOUT_MS = 120000;
 
@@ -239,7 +237,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
   // costs one request, and is a no-op without the proxy.
   beforeEach(async () => {
     if (!available) { return; }
-    try { await proxy('heal'); } catch (err) { /* no proxy: the partition specs report themselves pending */ }
+    try { await heal(); } catch (err) { /* no proxy: the partition specs report themselves pending */ }
   });
 
   afterAll(async () => {
@@ -346,6 +344,62 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     }
   }
 
+  /** an admin access token for one of the test homeservers, cached per run.
+   *  scripts/test-matrix.sh registers admin/admin on each of them (#331). */
+  const admin_tokens = new Map<string, string>();
+  async function admin_token(hs: {url: string}): Promise<string | null> {
+    if (admin_tokens.has(hs.url)) { return admin_tokens.get(hs.url); }
+    try {
+      const response = await fetch(hs.url + '/_matrix/client/v3/login', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: 'm.login.password',
+          identifier: {type: 'm.id.user', user: 'admin'}, password: 'admin'}),
+      });
+      if (!response.ok) { return null; }
+      const token = (await response.json()).access_token;
+      admin_tokens.set(hs.url, token);
+      return token;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /**
+   * Tell each homeserver to forget that the other was ever unreachable.
+   *
+   * THE reason the specs in this file have fought each other. A write that
+   * fails during a partition makes Synapse's federation client back off
+   * longer each time — 4 s, 16 s, 64 s … — and that backoff OUTLIVES the
+   * heal, so a spec that merely reconnects the proxy hands the next one, or
+   * its own next phase, a sender that will not try again for a minute or
+   * more. Waiting it out was tried twice: 120 s was not enough on 2026-09-13,
+   * in both the join spec and the #334 spec's own recovery wait.
+   *
+   * Synapse can simply be told. reset_connection clears the retry timings
+   * for one destination, which is exactly the state the partition left
+   * behind. It answers 400 when there is nothing to reset, which is fine.
+   */
+  async function reset_federation_backoff(): Promise<void> {
+    for (const [hs, other] of [[HS1, HS2], [HS2, HS1]]) {
+      const token = await admin_token(hs);
+      if (!token) { continue; }          // no admin: the old waiting behaviour
+      try {
+        await fetch(hs.url + '/_synapse/admin/v1/federation/destinations/'
+          + encodeURIComponent(other.name) + '/reset_connection',
+          {method: 'POST', headers: {Authorization: 'Bearer ' + token}, cache: 'no-store'});
+      } catch (err) {
+        /* nothing to reset, or a Synapse without the endpoint */
+      }
+    }
+  }
+
+  /** heal the link and clear what the partition left in the senders */
+  async function heal(): Promise<any> {
+    const result = await proxy('heal');
+    await reset_federation_backoff();
+    return result;
+  }
+
   /** raw content of a room's state event as the given server stores it */
   async function raw_state(hs: {url: string}, svc: any, roomId: string, eventType: string): Promise<any> {
     const response = await fetch(hs.url + '/_matrix/client/v3/rooms/' + encodeURIComponent(roomId)
@@ -418,7 +472,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
         return pl?.events_default === 100 && pl?.users?.[hugo.userId] === 0;
       }, 'the guard bot to close the voter room on hs1 during the partition', 60000);
     } finally {
-      expect((await proxy('heal')).partitioned).toBeFalse();
+      expect((await heal()).partitioned).toBeFalse();
     }
     // after the heal, hs2 drops the rating for a moment and then takes the
     // bot's re-affirmed pre-close value (logged for the CI record):
@@ -503,7 +557,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     } finally {
       // --- the link heals: the servers retry each other within seconds (see
       // the federation section of the harness config) and both sides converge ---
-      expect((await proxy('heal')).partitioned).toBeFalse();
+      expect((await heal()).partitioned).toBeFalse();
     }
     const heal_started = performance.now();
     await until(async () => JSON.stringify(rating_values(await fresh_ratings(dora, ppid), 'o1')) === '[11,21]'
