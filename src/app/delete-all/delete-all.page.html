@@ -35,4 +35,19 @@ TODO:
 </ion-header>
 
 <ion-content>
+
+  <!-- WHAT THE DELETION IS DOING (#327). It takes tens of seconds — a
+       poll's every voter room is left and forgotten — and until this the
+       page was simply blank for all of it. -->
+  <ion-list *ngIf="deleting">
+    <ion-item color="warning" data-vodle="deleting-data">
+      <ion-spinner name="dots" slot="start" color="dark"></ion-spinner>
+      <p [innerHtml]="(G.D.deletion_progress?.key || 'delete-all.progress-votes')
+                      |translate:(G.D.deletion_progress?.params || {})"></p>
+    </ion-item>
+    <ion-item lines="none">
+      <p [innerHtml]="'delete-all.progress-note'|translate"></p>
+    </ion-item>
+  </ion-list>
+
 </ion-content>

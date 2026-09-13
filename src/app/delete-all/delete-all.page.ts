@@ -34,6 +34,10 @@ import { restart_at_the_beginning } from "../data.service";
 })
 export class DeleteAllPage implements OnInit {
 
+  /** whether the deletion is under way, so that the page can say so rather
+   *  than showing an empty screen for the tens of seconds it takes (#327) */
+  deleting = false;
+
   constructor(
     private location: Location,
     public alertCtrl: AlertController,
@@ -88,6 +92,7 @@ export class DeleteAllPage implements OnInit {
           handler: () => {
             this.G.L.trace('DeleteAllPage.confirm_dialog delete');
             // clear all local storage:
+            this.deleting = true;
             this.G.D.delete_all().then(() => {
               LocalNotifications.schedule({ notifications: [{ id: null,
                 title: this.translate.instant("delete-all.success-title"),
@@ -101,6 +106,8 @@ export class DeleteAllPage implements OnInit {
               // this did, left a self-hosted deployment altogether.
               restart_at_the_beginning();
             }).catch(error => {
+              this.deleting = false;
+              this.G.D.deletion_progress = null;
               LocalNotifications.schedule({ notifications: [{ id: null,
                   title: this.translate.instant("delete-all.failed"),
                   body: null

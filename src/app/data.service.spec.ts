@@ -3975,6 +3975,34 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(matrix.deleteAllUserData).toHaveBeenCalled();
   });
 
+  it('says what it is doing while it does it (#327)', async () => {
+    svc._pids = new Set(['p1', 'p2']);
+    const seen: any[] = [];
+    // the page reads it, so record it at each step the deletion takes
+    poll_matrix.leavePollRooms.and.callFake(() => {
+      seen.push(JSON.parse(JSON.stringify(svc.deletion_progress)));
+      return Promise.resolve();
+    });
+    matrix.deleteAllUserData.and.callFake(() => {
+      seen.push(JSON.parse(JSON.stringify(svc.deletion_progress)));
+      return Promise.resolve();
+    });
+    svc.clear_all_local.and.callFake(() => {
+      seen.push(JSON.parse(JSON.stringify(svc.deletion_progress)));
+      return Promise.resolve(true);
+    });
+    await svc.delete_all();
+    expect(seen).toEqual([
+      {key: 'delete-all.progress-polls', params: {done: 1, total: 2}},
+      {key: 'delete-all.progress-polls', params: {done: 2, total: 2}},
+      {key: 'delete-all.progress-user'},
+      {key: 'delete-all.progress-local'},
+    ]);
+    expect(svc.deletion_progress)
+      .withContext('left standing: the page restarts the app straight after')
+      .toEqual({key: 'delete-all.progress-local'});
+  });
+
   it('logs out of the poll accounts as well as the person\'s own', async () => {
     await svc.poll_matrix('p1');
     await svc.logout_matrix_everywhere();

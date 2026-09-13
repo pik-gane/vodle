@@ -196,7 +196,12 @@
         "confirm-button": "Ja, lösche meine Daten",
         "success-title": "Deine Daten wurden gelöscht.",
         "success-body": "vodle hofft, Dich bald wiederzusehen, auch wenn es sich nicht an Dich erinnern wird :-)",
-        "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden."
+        "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden.",
+        "progress-votes": "Deine Waps werden auf Null gesetzt und Deine Delegationen widerrufen…",
+        "progress-polls": "Du wirst aus Deinen Abstimmungen entfernt ({{done}} von {{total}})…",
+        "progress-user": "Deine persönlichen Daten werden vom Server gelöscht…",
+        "progress-local": "Die Daten dieses Geräts werden gelöscht…",
+        "progress-note": "Das kann eine Minute dauern: jede Abstimmung, an der Du teilgenommen hast, hat für jede abstimmende Person einen eigenen Raum, und vodle verlässt jeden davon. Bitte schließe diese Seite nicht."
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",

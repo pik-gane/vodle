@@ -201,7 +201,12 @@
         "confirm-button": "Yes, delete my data",
         "success-title": "Your data was deleted.",
         "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
-        "failed": "Could not delete all data for some reason."
+        "failed": "Could not delete all data for some reason.",
+        "progress-votes": "Setting your ratings to zero and withdrawing your delegations…",
+        "progress-polls": "Removing you from your polls ({{done}} of {{total}})…",
+        "progress-user": "Deleting your personal data from the server…",
+        "progress-local": "Deleting this deviceʼs data…",
+        "progress-note": "This can take a minute: every poll you took part in has a room of its own for each voter, and vodle leaves every one of them. Please do not close this page."
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",

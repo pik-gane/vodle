@@ -5641,14 +5641,21 @@ export class MatrixService {
     this.ratingCaches.delete(pollId);
     this.ratingsScanned.delete(pollId);
     await this.storage.remove(this.storageKey(`poll_room_${pollId}`));
-    for (const roomId of rooms) {
-      try {
-        await this.client.leave(roomId);
-        await this.client.forget(roomId);
-      } catch (error) {
-        this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
-      }
-    }
+    // Several at a time, and through the rate-limit retry. Serially it was
+    // two round trips per room one after another — about 130 ms each on the
+    // owner's deployment, so a poll of fifty voters took a quarter of a
+    // minute of leaving alone — and a leave the homeserver refused with a
+    // 429 was warned about and dropped, which for "delete my data" means a
+    // room quietly not left. The write pacing still bounds the actual rate.
+    await MatrixService.forEachConcurrently(Array.from(rooms),
+      MatrixService.VOTER_ROOM_JOIN_CONCURRENCY, async (roomId) => {
+        try {
+          await this.retryOnRateLimit(() => this.client.leave(roomId));
+          await this.retryOnRateLimit(() => this.client.forget(roomId));
+        } catch (error) {
+          this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
+        }
+      });
     this.logger?.info("MatrixService.leavePollRooms left", pollId, rooms.size, "rooms");
     this.logger?.exit("MatrixService.leavePollRooms");
   }

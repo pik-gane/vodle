@@ -602,6 +602,7 @@ describe('MatrixService', () => {
         await service.leavePollRooms('p1');
         expect(left.sort()).toEqual(['!poll:hs', '!v1:hs', '!v2:hs']);
         expect(forgotten.sort()).toEqual(['!poll:hs', '!v1:hs', '!v2:hs']);
+        expect(left.length).withContext('each room left exactly once, however concurrent').toBe(3);
         expect((service as any).voterRooms.has('p1:@bob:hs')).toBeFalse();
         expect((service as any).voterRooms.get('p2:@bob:hs')).withContext('other polls untouched').toBe('!v3:hs');
         expect((service as any).ratingCaches.has('p1')).toBeFalse();

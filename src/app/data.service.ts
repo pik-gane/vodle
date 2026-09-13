@@ -6649,7 +6649,15 @@ export class DataService implements OnDestroy {
     });
   }
 
+  /** What deleting all of a person's data is doing right now, for the page
+   *  to show: a translation key and its parameters, or null when nothing is
+   *  being deleted. It takes tens of seconds — a poll's every voter room is
+   *  left and forgotten, two round trips each — and the page was blank for
+   *  all of it (#327). */
+  deletion_progress: {key: string, params?: any} | null = null;
+
   async delete_all(): Promise<any> {
+      this.deletion_progress = {key: 'delete-all.progress-votes'};
       // decline all not yet declined delegation requests:
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
@@ -6694,9 +6702,13 @@ export class DataService implements OnDestroy {
       }
       // don't let the watchdog restart the cancelled sync (#292):
       this.replication_active['user'] = false;
-      // delete all in remote_user_db:
+      // delete everything this person has on the server:
       await this.delete_remote();
-      return this.clear_all_local();
+      this.deletion_progress = {key: 'delete-all.progress-local'};
+      // left standing on success: the page restarts the app straight after,
+      // and blanking it first would put the empty screen back for the last
+      // moment of it. The page clears it if the deletion fails.
+      return await this.clear_all_local();
   }
 
   delete_remote(): Promise<any> {
@@ -6726,7 +6738,10 @@ export class DataService implements OnDestroy {
     // loaded: a poll the person never opened this session still has their
     // rooms, and its account is the only member that can leave them
     const pids = new Set([...Object.keys(this.G.P.polls || {}), ...(this._pids || [])]);
+    let done = 0;
     for (const pid of pids) {
+      this.deletion_progress = {key: 'delete-all.progress-polls',
+                                params: {done: ++done, total: pids.size}};
       try {
         const service = await this.poll_matrix(pid);
         await this.drain_pending_writes(service);
@@ -6740,6 +6755,7 @@ export class DataService implements OnDestroy {
     // user database held: the settings, the poll memberships, the vids and
     // the poll passwords
     if (this.matrixService?.isLoggedIn()) {
+      this.deletion_progress = {key: 'delete-all.progress-user'};
       await this.drain_pending_writes(this.matrixService);
       await this.matrixService.deleteAllUserData(Object.keys(this.user_cache || {}));
     }
@@ -6763,6 +6779,7 @@ export class DataService implements OnDestroy {
   }
 
   private delete_remote_couchdb(): Promise<any> {
+    this.deletion_progress = {key: 'delete-all.progress-user'};
     const email_and_pw_hash = this.get_email_and_pw_hash();
     return new Promise((resolve, reject) => {
       this.remote_user_db.allDocs({
