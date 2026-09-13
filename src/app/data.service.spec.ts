@@ -4011,6 +4011,19 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(Object.keys(svc.poll_matrix_sessions)).toEqual([]);
   });
 
+  it('gives an account with no stored settings the default wap a new one gets', () => {
+    svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
+               get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
+    // absent after the sync: nothing ever set it, so use what registration uses
+    delete svc.user_cache['default_wap'];
+    svc.ensure_user_defaults();
+    expect(svc.user_cache['default_wap']).toBe('10');
+    // a deliberate zero is stored as '0' and must survive
+    svc.user_cache['default_wap'] = '0';
+    svc.ensure_user_defaults();
+    expect(svc.user_cache['default_wap']).withContext('someone chose zero').toBe('0');
+  });
+
   it("counts a poll account's writes in the header's in-progress sign", async () => {
     expect(svc.sync_pending).withContext('nothing outstanding').toBeFalse();
     await svc.poll_matrix('p1');

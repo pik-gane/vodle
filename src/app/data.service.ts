@@ -1197,6 +1197,7 @@ export class DataService implements OnDestroy {
           this.matrix_user_data_ready = this.syncUserDataWithMatrix()
             .then(() => {
               (this as any).boot_log?.("user data synced");
+              this.ensure_user_defaults();
               this.G.L.info("DataService: Matrix user data synced");
             });
           this.matrix_user_data_ready.catch(err =>
@@ -6647,6 +6648,30 @@ export class DataService implements OnDestroy {
         }).catch(reject);
       }).catch(reject);
     });
+  }
+
+  /**
+   * The settings a fresh account gets, for an account whose settings turn
+   * out to be genuinely absent — after the sync, so that "absent" means
+   * absent and not merely "not here yet".
+   *
+   * Both paths that CREATE an account set the default wap to 10: the login
+   * page's new-password step and the guest. The path for someone who says
+   * they have used vodle before deliberately does not, because the value is
+   * supposed to arrive from their user room. After "delete my data" and a
+   * registration with the same address there is no user room left to bring
+   * it, so nothing set it and SettingsService fell back to its `||'0'` —
+   * a wap of zero for every option nobody has rated, which is not what a
+   * new account gets (#327).
+   *
+   * A deliberate zero is untouched: it is stored as '0', not as nothing.
+   */
+  private ensure_user_defaults(): void {
+    if (!this.user_cache) { return; }
+    if ((this.user_cache['default_wap'] || '') === '') {
+      this.G.L.info("DataService: no default wap is stored, using the one a new account gets");
+      this.G.S.default_wap = 10;
+    }
   }
 
   /** What deleting all of a person's data is doing right now, for the page

@@ -611,23 +611,94 @@ describe('MatrixService', () => {
         (service as any).client = null;
       });
       
+      it('does not trust a user-room alias it cannot enter, and starts a fresh room (#327)', async () => {
+        // The regression this guards: "delete my data" leaves and forgets the
+        // user room, but the ALIAS survives it, and the localpart comes from
+        // the e-mail address — so registering again with the same address
+        // resolved the alias to a room the account was no longer in, and
+        // every user-data write was a 403 for ever.
+        storageSpy.get.and.returnValue(Promise.resolve(null));
+        storageSpy.set.and.returnValue(Promise.resolve());
+        const deleted: string[] = [];
+        let created: any = null;
+        (service as any).client = {
+          getRoomIdForAlias: () => Promise.resolve({room_id: '!abandoned:hs'}),
+          joinRoom: () => Promise.reject(Object.assign(new Error('not invited'), {errcode: 'M_FORBIDDEN'})),
+          deleteAlias: (alias: string) => { deleted.push(alias); return Promise.resolve({}); },
+          createRoom: (options: any) => { created = options; return Promise.resolve({room_id: '!fresh:hs'}); },
+        };
+        (service as any).userRoomId = null;
+        (service as any).userId = '@someone:hs';
+        expect(await service.getUserRoom()).withContext('a room of its own, not the abandoned one').toBe('!fresh:hs');
+        expect(deleted.length).withContext('the stale alias was released').toBe(1);
+        expect(created.room_alias_name).withContext('so the fresh room can take it').toBeTruthy();
+        (service as any).client = null;
+        (service as any).userRoomId = null;
+        (service as any).userId = null;
+      });
+
+      it('keeps the aliased user room when it can still be entered (#327)', async () => {
+        storageSpy.get.and.returnValue(Promise.resolve(null));
+        storageSpy.set.and.returnValue(Promise.resolve());
+        const createRoom = jasmine.createSpy('createRoom');
+        const deleteAlias = jasmine.createSpy('deleteAlias');
+        (service as any).client = {
+          getRoomIdForAlias: () => Promise.resolve({room_id: '!mine:hs'}),
+          joinRoom: () => Promise.resolve({}),      // already a member: a no-op
+          deleteAlias, createRoom,
+        };
+        (service as any).userRoomId = null;
+        (service as any).userId = '@someone:hs';
+        expect(await service.getUserRoom()).withContext('a second device finds the account\'s room').toBe('!mine:hs');
+        expect(deleteAlias).not.toHaveBeenCalled();
+        expect(createRoom).not.toHaveBeenCalled();
+        (service as any).client = null;
+        (service as any).userRoomId = null;
+        (service as any).userId = null;
+      });
+
+      it('makes the fresh room without an alias when the old one cannot be released (#327)', async () => {
+        storageSpy.get.and.returnValue(Promise.resolve(null));
+        storageSpy.set.and.returnValue(Promise.resolve());
+        let created: any = null;
+        (service as any).client = {
+          getRoomIdForAlias: () => Promise.resolve({room_id: '!abandoned:hs'}),
+          joinRoom: () => Promise.reject(new Error('not invited')),
+          deleteAlias: () => Promise.reject(new Error('not yours')),
+          createRoom: (options: any) => { created = options; return Promise.resolve({room_id: '!fresh:hs'}); },
+        };
+        (service as any).userRoomId = null;
+        (service as any).userId = '@someone:hs';
+        expect(await service.getUserRoom()).toBe('!fresh:hs');
+        expect(created.room_alias_name)
+          .withContext('claiming the taken alias would fail the creation outright').toBeUndefined();
+        (service as any).client = null;
+        (service as any).userRoomId = null;
+        (service as any).userId = null;
+      });
+
       it("clears the user room's every key and leaves it, and never creates one (#327)", async () => {
         storageSpy.get.and.callFake((key: string) => Promise.resolve(key === 'user_room_id' ? '!user:hs' : null));
         storageSpy.remove.and.returnValue(Promise.resolve());
-        const cleared: string[] = [], left: string[] = [], forgotten: string[] = [];
+        const cleared: string[] = [], left: string[] = [], forgotten: string[] = [], released: string[] = [];
         (service as any).client = {
           sendStateEvent: (roomId: string, type: string) => { cleared.push(type); return Promise.resolve({}); },
+          deleteAlias: (alias: string) => { released.push(alias); return Promise.resolve({}); },
           leave: (roomId: string) => { left.push(roomId); return Promise.resolve({}); },
           forget: (roomId: string) => { forgotten.push(roomId); return Promise.resolve({}); },
         };
         (service as any).userRoomId = null;
+        (service as any).userId = '@someone:hs';
         await service.deleteAllUserData(['email', 'poll.p1.myvid']);
         expect(cleared).toEqual(['m.room.vodle.user.email', 'm.room.vodle.user.poll.p1.myvid']);
+        expect(released).withContext('the alias goes too, or the next account inherits a room it is not in')
+          .toEqual([(service as any).userRoomAliasFor((service as any).userId)]);
         expect(left).toEqual(['!user:hs']);
         expect(forgotten).withContext('left AND forgotten, so the server may purge it').toEqual(['!user:hs']);
         expect((service as any).userRoomId).toBeNull();
         expect(storageSpy.remove).toHaveBeenCalledWith('user_room_id');
         (service as any).client = null;
+        (service as any).userId = null;
       });
 
       it('deletes nothing and creates nothing when there is no user room (#327)', async () => {

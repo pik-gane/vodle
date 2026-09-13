@@ -2158,22 +2158,53 @@ export class MatrixService {
     const userHash = this.hashUserId(this.userId);
     const roomAlias = `vodle_user_${userHash}`;
     
+    let alias_to_claim = true;
     try {
       // Try to find existing room by alias
       const aliasResponse = await this.client.getRoomIdForAlias(this.userRoomAliasFor(this.userId));
-      this.userRoomId = aliasResponse.room_id;
-      await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
-      this.logger?.info("Found user room by alias", this.userRoomId);
-      return this.userRoomId;
+      // ... and make sure this account can actually USE it. The alias
+      // outlives the room's membership: "delete my data" leaves and forgets
+      // the user room (deleteAllUserData), and the localpart is derived from
+      // the e-mail address, so registering again with the same address gives
+      // the same account, the same alias and a room this account is no
+      // longer in — whereupon every user-data write is
+      // "403 M_FORBIDDEN: User ... not in room" for ever, and the settings
+      // silently fall back to their unset values (#327). Joining a room one
+      // is already in is a no-op, so this costs a round trip on the cold
+      // path and tells us what we need on the broken one.
+      const roomId = aliasResponse.room_id;
+      try {
+        await this.client.joinRoom(roomId);
+        this.userRoomId = roomId;
+        await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
+        this.logger?.info("Found user room by alias", this.userRoomId);
+        return this.userRoomId;
+      } catch (joinError) {
+        // A room of ours that we have left and cannot re-enter: let the
+        // alias go, so that the fresh room below can take it.
+        this.logger?.warn("MatrixService.getUserRoom: the user room alias points at a room this account cannot enter; starting a new one",
+          roomId, joinError);
+        try {
+          await this.client.deleteAlias(this.userRoomAliasFor(this.userId));
+        } catch (aliasError) {
+          // Then the new room cannot have the alias either; it still works
+          // on this device, but another device of this account would make
+          // one of its own rather than find this one.
+          this.logger?.warn("MatrixService.getUserRoom: could not release the old alias", aliasError);
+          alias_to_claim = false;
+        }
+      }
     } catch (error) {
-      // Room doesn't exist, create it
+      // no such alias: the first user room of this account
+    }
+    {
       this.logger?.info("Creating new user room");
       
       const options: ICreateRoomOpts = {
         name: 'Vodle User Settings',
         preset: 'private_chat',
         is_direct: false,
-        room_alias_name: roomAlias,
+        ...(alias_to_claim ? {room_alias_name: roomAlias} : {}),
         // Only when end-to-end encryption is on at all. It never covered
         // anything here — user data is written as STATE events (setUserData),
         // which megolm does not encrypt — and a room advertised as encrypted
@@ -2349,6 +2380,17 @@ export class MatrixService {
       }
     }
     this.userDataCache.clear();
+    // The ALIAS first, and this is not tidiness: it outlives the room's
+    // membership, and the localpart is derived from the e-mail address, so
+    // registering again with the same address would otherwise resolve this
+    // alias to a room the new session has left — every user-data write a
+    // "403 ... not in room", for ever. getUserRoom repairs that when it
+    // meets it; releasing the alias here means it never has to.
+    try {
+      await this.client.deleteAlias(this.userRoomAliasFor(this.userId));
+    } catch (error) {
+      this.logger?.warn("MatrixService.deleteAllUserData could not release the user room alias", error);
+    }
     try {
       await this.client.leave(roomId);
       await this.client.forget(roomId);
