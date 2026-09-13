@@ -292,8 +292,32 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     // voter room through hs2 ---
     const vote_started = performance.now();
     await bob.submitRating(pid, 'o1', 40);
-    await until(async () => rating_values(await fresh_ratings(alice), 'o1').includes(40),
-      "alice to see bob's rating from the other homeserver", CROSS_SERVER_TIMEOUT_MS);
+    // Two things have to happen here and they fail for entirely different
+    // reasons: hs1 must LEARN of bob's voter room — its announcement is a
+    // timeline event in the poll room, so it has to federate — and then JOIN
+    // it, which hs2 authorises because a voter room is restricted to the
+    // members of the poll room (#328). All this wait used to say was that
+    // alice could not see the rating, which sent the last two readings of a
+    // failure here (runs 109 and 111) to the timeout and to the federation
+    // backoff. Run 111 healed in 1.8 s and joined the poll room in 754 ms,
+    // so neither of those was it; what is missing is which of these two
+    // steps stalled, and the failure says so now (#329).
+    const bob_voter_rooms = () => [...alice.voterRooms.entries()]
+      .filter(([key]: [string, string]) => key.startsWith(pid + ':'))
+      .map(([, roomId]: [string, string]) => roomId);
+    try {
+      await until(async () => rating_values(await fresh_ratings(alice), 'o1').includes(40),
+        "alice to see bob's rating from the other homeserver", CROSS_SERVER_TIMEOUT_MS);
+    } catch (err) {
+      const rooms = bob_voter_rooms();
+      const membership = rooms.map(roomId =>
+        roomId + '=' + (alice.client.getRoom(roomId)?.getMyMembership() ?? 'not in the store'));
+      throw new Error((err as Error).message
+        + ' — alice knows ' + rooms.length + ' voter room(s) of this poll ['
+        + (membership.join(', ') || 'none')
+        + ']. One room means bob\'s ANNOUNCEMENT never reached hs1; two with a'
+        + ' membership that is not "join" means the restricted JOIN is being refused.');
+    }
     console.info('VODLE_PERF federation_first_vote_visible_ms', Math.round(performance.now() - vote_started));
     expect(rating_values(await fresh_ratings(alice), 'o1')).toEqual([40, 70]);
 
@@ -379,24 +403,36 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
    * for one destination, which is exactly the state the partition left
    * behind. It answers 400 when there is nothing to reset, which is fine.
    */
-  async function reset_federation_backoff(): Promise<void> {
+  async function reset_federation_backoff(): Promise<number> {
+    let reset = 0;
     for (const [hs, other] of [[HS1, HS2], [HS2, HS1]]) {
       const token = await admin_token(hs);
-      if (!token) { continue; }          // no admin: the old waiting behaviour
+      if (!token) {
+        // no admin: the old waiting behaviour. SAID rather than skipped in
+        // silence, because a reset that quietly does not happen looks
+        // exactly like a reset that did not help.
+        console.info('VODLE_PERF federation_backoff_reset_unavailable', hs.url, 'no admin token');
+        continue;
+      }
       try {
-        await fetch(hs.url + '/_synapse/admin/v1/federation/destinations/'
+        const response = await fetch(hs.url + '/_synapse/admin/v1/federation/destinations/'
           + encodeURIComponent(other.name) + '/reset_connection',
           {method: 'POST', headers: {Authorization: 'Bearer ' + token}, cache: 'no-store'});
+        // 400 is "there is nothing to reset", which is a success for us
+        if (response.ok || response.status === 400) { reset++; }
+        else { console.info('VODLE_PERF federation_backoff_reset_refused', hs.url, response.status); }
       } catch (err) {
-        /* nothing to reset, or a Synapse without the endpoint */
+        console.info('VODLE_PERF federation_backoff_reset_failed', hs.url, String(err));
       }
     }
+    return reset;
   }
 
   /** heal the link and clear what the partition left in the senders */
   async function heal(): Promise<any> {
     const result = await proxy('heal');
-    await reset_federation_backoff();
+    const reset = await reset_federation_backoff();
+    console.info('VODLE_PERF federation_backoff_reset', reset, 'of 2');
     return result;
   }
 
