@@ -46,6 +46,30 @@ const GUARD_BOT = '@vodle-guard:' + HS1.name;   // registered on hs1 by the harn
 const PROXY_CONTROL = 'http://localhost:8011';
 const POLL_PASSWORD = 'federation-poll-password';
 
+/**
+ * How long a spec waits for something to cross the federation link.
+ *
+ * NOT a padded timeout: a partition leaves Synapse's per-destination backoff
+ * elevated — 4 s, 16 s, 64 s … — and that backoff OUTLIVES the heal, as the
+ * #334 spec below says in as many words and already allows 120 s for. Jasmine
+ * randomises spec order, so the join spec can run AFTER either partition spec
+ * and inherit a sender that is still backing off; it used to allow only the
+ * 60 s default, on the assumption that it ran first.
+ *
+ * That assumption failed in CI on 2026-09-13: "timed out waiting for alice to
+ * see bob's rating from the other homeserver", with the perf lines — captured
+ * in execution order — showing both partition specs had run before it, and
+ * with the failure in the hs2 → hs1 direction, exactly the one the #334 spec
+ * calls "hs2's federation sender to deliver to hs1 again after the partition".
+ * The spec passed whenever the shuffle put it first.
+ *
+ * The cleaner fix would be to reset the backoff between specs — Synapse has
+ * POST /_synapse/admin/v1/federation/destinations/<dest>/reset_connection —
+ * but that needs an admin token, which the harness keeps in the shell and
+ * never hands to the browser.
+ */
+const CROSS_SERVER_TIMEOUT_MS = 120000;
+
 describe('MatrixService across two federating Synapse homeservers (#293)', () => {
 
   const noop = () => {};
@@ -168,7 +192,8 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
       started = performance.now();
       await writer.submitRating(pid, optionId, value);
       samples.push(await Promise.race([arrived, new Promise<number>((_, reject) =>
-        window.setTimeout(() => reject(new Error('rating round ' + round + ' never crossed the federation link')), 60000))]));
+        window.setTimeout(() => reject(new Error('rating round ' + round + ' never crossed the federation link')),
+          CROSS_SERVER_TIMEOUT_MS))]));
     }
     return samples;
   }
@@ -183,6 +208,16 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     (environment.matrix as any).registration_token = 'vodle-test-registration-token';
     (environment.matrix as any).guard_bot_user_id = GUARD_BOT;
     await probe();
+  });
+
+  // The other half of the order dependency the timeout above describes: a
+  // spec that partitions the link heals it again at its end, but a spec that
+  // FAILS mid-partition does not, and jasmine's next spec would then start
+  // with the link cut and no way to tell why. Healing here is idempotent,
+  // costs one request, and is a no-op without the proxy.
+  beforeEach(async () => {
+    if (!available) { return; }
+    try { await proxy('heal'); } catch (err) { /* no proxy: the partition specs report themselves pending */ }
   });
 
   afterAll(async () => {
@@ -230,7 +265,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     expect(options.get('o2')?.name).toBe('Option two');
     // and so do the ratings that already existed:
     await until(async () => rating_values(await fresh_ratings(bob), 'o1').includes(70),
-      "bob to read alice's pre-existing rating from hs2");
+      "bob to read alice's pre-existing rating from hs2", CROSS_SERVER_TIMEOUT_MS);
 
     // --- a vote from hs2 reaches hs1: bob's voter room is created on hs2,
     // its announcement federates into the poll room, and hs1 joins the
@@ -238,7 +273,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const vote_started = performance.now();
     await bob.submitRating(pid, 'o1', 40);
     await until(async () => rating_values(await fresh_ratings(alice), 'o1').includes(40),
-      "alice to see bob's rating from the other homeserver");
+      "alice to see bob's rating from the other homeserver", CROSS_SERVER_TIMEOUT_MS);
     console.info('VODLE_PERF federation_first_vote_visible_ms', Math.round(performance.now() - vote_started));
     expect(rating_values(await fresh_ratings(alice), 'o1')).toEqual([40, 70]);
 
@@ -255,7 +290,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     await until(async () => {
       const a = rating_values(await fresh_ratings(alice), 'o2'), b = rating_values(await fresh_ratings(bob), 'o2');
       return JSON.stringify(a) === JSON.stringify(expected_o2) && JSON.stringify(b) === JSON.stringify(expected_o2);
-    }, 'both homeservers to converge on the same ratings');
+    }, 'both homeservers to converge on the same ratings', CROSS_SERVER_TIMEOUT_MS);
 
     // --- a brand-new user of hs2 reads the whole poll from hs2, which now
     // serves it authoritatively ---
