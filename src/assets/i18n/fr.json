@@ -30,7 +30,8 @@
         "declined-intro": "Vos évaluations ne sont donc pas <i>actuellement</i> contrôlant les évaluations de cette personne dans le sondage <i>«{{poll_title}}».</i>",
         "weight-exceeded-revoke-first": "Si vous souhaitez toujours accepter la demande, veuillez envisager de refuser d'autres demandes que vous avez acceptées, ou de révoquer votre propre délégation, puis de revenir ici.",
         "cycle-intro": "Cependant, votre propre délégué pour ce sondage a délégué directement ou indirectement vos évaluations à {{from}}. Tant que c'est le cas, vous ne pouvez pas accepter cette demande.",
-        "declined-header": "Vous avez refusé cette demande de {{from}}."
+        "declined-header": "Vous avez refusé cette demande de {{from}}.",
+        "checking": "Vérification de cette demande…"
     },
     "draftpoll": {
         "option-url-placeholder": "Un lien vers une page web contenant plus de détails sur «{{name}}»",

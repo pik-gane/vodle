@@ -233,7 +233,8 @@
         "poll-unknown": "Et ole vielä osallistunut kyselyyn. Varmista, oletko saanut kyselyn kutsulinkin. Jos olet, käytä sitä linkkiä ensin ja yritä sitten tätä uudelleen.",
         "try-again": "vodle valitettavasti odottaa vielä tietoja tähän pyyntöön. Yritä käyttää linkkiä myöhemmin uudelleen.",
         "closed": "Tämä kysely on valitettavasti jo päättynyt.",
-        "is-self": "Tämä pyyntö on sinulta itseltäsi. :-) Lähetä linkki osallistujalle, jonka haluaisit edustavan sinua."
+        "is-self": "Tämä pyyntö on sinulta itseltäsi. :-) Lähetä linkki osallistujalle, jonka haluaisit edustavan sinua.",
+        "checking": "Tarkistetaan tätä pyyntöä…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",

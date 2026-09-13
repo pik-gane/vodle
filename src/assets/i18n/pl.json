@@ -237,7 +237,8 @@
         "poll-unknown": "Jeszcze nie uczestniczyłaś w tej ankiecie. Sprawdź, czy otrzymałaś link z zaproszeniem do tej ankiety. Jeśli tak, najpierw użyj tego linku, a następnie spróbuj ponownie.",
         "try-again": "Przepraszamy, vodle wciąż czeka na niektóre dane dotyczące tego żądania. Spróbuj ponownie później.",
         "closed": "Niestety ta ankieta już się zakończyła.",
-        "is-self": "Ta prośba została stworzona przez Ciebie :-) Proszę wyślij ten link do osoby, którą chcesz poprosić o delegację!"
+        "is-self": "Ta prośba została stworzona przez Ciebie :-) Proszę wyślij ten link do osoby, którą chcesz poprosić o delegację!",
+        "checking": "Sprawdzanie tej prośby…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",

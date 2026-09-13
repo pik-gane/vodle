@@ -234,7 +234,8 @@
         "poll-unknown": "Du nimmst bisher nicht an dieser Abstimmung teil. Bitte prüfe, ob Du einen Einladungs-Link zu dieser Abstimmung erhalten hast. Wenn ja, klicke bitte zuerst den Einladungs-Link an und dann erst diesen.",
         "try-again": "Entschuldigung, vodle wartet noch auf ein paar Daten zu dieser Anfrage. Bitte versuche diesen Link später noch einmal.",
         "closed": "Unfortunately, this poll has already ended.",
-        "is-self": "Diese Anfrage hast Du selbst erstellt :-) Schicke den Link bitte an die Person, die Du um Delegation bitten möchtest!"
+        "is-self": "Diese Anfrage hast Du selbst erstellt :-) Schicke den Link bitte an die Person, die Du um Delegation bitten möchtest!",
+        "checking": "Diese Anfrage wird geprüft…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",

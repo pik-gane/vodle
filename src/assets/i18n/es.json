@@ -237,7 +237,8 @@
         "poll-unknown": "Todavía no estás participando en esta encuesta. Por favor, verifica que hayas recibido un link de invitación para esta encuesta. Si es así, utiliza ese link primero y luego éste.",
         "try-again": "Lo sentimos, vodle todavía está esperando algunos datos en esta petición. Prueba este link más tarde.",
         "closed": "Lo sentimos, esta encuesta ya ha terminado.",
-        "is-self": "Esta petición fue creada por ti :-) Envía este link a la persona que quieras delegar tus waps!"
+        "is-self": "Esta petición fue creada por ti :-) Envía este link a la persona que quieras delegar tus waps!",
+        "checking": "Comprobando esta solicitud…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",

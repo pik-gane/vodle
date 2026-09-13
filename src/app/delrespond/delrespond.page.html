@@ -26,6 +26,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
+<ion-content *ngIf="!ready">
+  <ion-item lines="none" class="ion-text-center">
+    <ion-col class="ion-no-padding ion-no-margin">
+      <p>
+        <ion-spinner name="dots"></ion-spinner>&nbsp;
+        <span [innerHtml]="'delrespond.checking'|translate"></span>
+      </p>
+    </ion-col>
+  </ion-item>
+</ion-content>
+
 <ion-content *ngIf="ready">
 
   <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
@@ -152,7 +163,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   
   <!-- Acceptance would exceed maximum allowed voting weight: -->
 
-  <ng-container *ngIf="status[1]=='weight-exceeded'">
+  <ng-container *ngIf="status[0]=='impossible' && status[1]=='weight-exceeded'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.weight-exceeded-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -297,7 +308,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Poll is unknown: -->
 
-  <ng-container *ngIf="status==['impossible','poll-unknown']">
+  <ng-container *ngIf="status[0]=='impossible' && status[1]=='poll-unknown'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
@@ -316,7 +327,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Poll is already closed (has already ended): -->
 
-  <ng-container *ngIf="status==['impossible','closed']">
+  <ng-container *ngIf="status[0]=='closed'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p> 
@@ -344,7 +355,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- We're still missing some data: -->
 
-  <ng-container *ngIf="status==['impossible','not-in-db']">
+  <ng-container *ngIf="status[0]=='impossible' && status[1]=='not-in-db'">
     <ion-item [innerHtml]="'delrespond.try-again'|translate">      
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
@@ -355,9 +366,31 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-button>
   </ng-container>
 
+  <!-- A status no block above claims. There is no such status today, and
+       there was none when four of the blocks above could not match one
+       either: `status == ['impossible','not-in-db']` compares an array with
+       a fresh array, which is false in JavaScript, so those four rendered an
+       empty page — which is what a delegation link showed the owner (#327).
+       A page that cannot explain itself must at least say so. -->
+
+  <ng-container *ngIf="!handled()">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'delrespond.try-again'|translate"></p>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="primary" shape="round" (click)="dismiss()">
+          <span [innerHtml]="'OK'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+  </ng-container>
+
   <!-- It's ourselves: -->
 
-  <ng-container *ngIf="status==['impossible','is-self']">
+  <ng-container *ngIf="status[0]=='impossible' && status[1]=='is-self'">
     <ion-item [innerHtml]="'delrespond.is-self'|translate">      
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"
