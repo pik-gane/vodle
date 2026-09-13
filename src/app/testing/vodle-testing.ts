@@ -93,6 +93,8 @@ export function global_service_stub(): any {
       getv: () => '',
       email_is_valid: () => false,
       pid_is_draft: () => false,
+      // the join page asks for a guest when it has been waiting (#193, #327)
+      ensure_guest_for_magic_link: () => {},
     },
     P: {
       polls: {},

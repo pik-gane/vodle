@@ -89,7 +89,15 @@ export class JoinpollPage implements OnInit {
 
   private start_waiting() {
     if (this.slow_timer) { return; }
-    this.slow_timer = window.setTimeout(() => { this.slow = true; }, JoinpollPage.SLOW_AFTER_MS);
+    this.slow_timer = window.setTimeout(() => {
+      this.slow = true;
+      // ...and while we are here: a magic link on a device with no
+      // credentials should have had a guest created for it during the start.
+      // If the start could not see which page this is, it did not, and this
+      // page would sit here for ever — which is exactly what the owner saw
+      // after using the logout button (#193, #327). Idempotent.
+      this.G.D.ensure_guest_for_magic_link();
+    }, JoinpollPage.SLOW_AFTER_MS);
   }
 
   ionViewWillEnter() {

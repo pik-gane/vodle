@@ -3290,6 +3290,52 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     expect(svc.user_cache['email']).toBe('a@b.c');
   });
 
+  it('takes a magic link for a magic link even before the router has navigated', () => {
+    // DataService.init runs during the app's bootstrap, where router.url is
+    // still "/". Losing that race sent a magic link to the login page, and
+    // the in-flight navigation to the join page then cancelled the redirect:
+    // the join page stayed on screen with nothing behind it, for ever (#327)
+    fresh({});
+    svc.router.url = '/';
+    svc.location_hash = () => '#/joinpoll/a.server/_/TEST_p1/pollpw';
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(as_guest).toHaveBeenCalled();
+    expect(svc.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('still sends a visitor without credentials to the login page', () => {
+    fresh({});
+    svc.router.url = '/';
+    svc.location_hash = () => '#/mypolls';
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(as_guest).not.toHaveBeenCalled();
+    expect(svc.router.navigate).toHaveBeenCalled();
+  });
+
+  it('lets the join page ask for a guest when the start did not make one', () => {
+    // the second line of defence: the page knows what it is, and calls this
+    // when it has been waiting a few seconds (#327)
+    fresh({});
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.ensure_guest_for_magic_link();
+    expect(as_guest).withContext('not before the user cache is ready').not.toHaveBeenCalled();
+    svc.user_cache_ready = true;
+    svc.ensure_guest_for_magic_link();
+    expect(as_guest).toHaveBeenCalledTimes(1);
+    svc.ensure_guest_for_magic_link();
+    expect(as_guest).withContext('and only once').toHaveBeenCalledTimes(1);
+  });
+
+  it('does not make a guest for a device that has credentials', () => {
+    fresh({email: 'a@b.c', password: 'Secret-12'});
+    svc.user_cache_ready = true;
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.ensure_guest_for_magic_link();
+    expect(as_guest).not.toHaveBeenCalled();
+  });
+
   it('writes the user room several keys at a time instead of one after another', async () => {
     // A published poll of fifty puts about thirty-five keys in the user room,
     // and one round trip each is most of a minute on a slow link (#327).

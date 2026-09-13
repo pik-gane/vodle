@@ -306,6 +306,8 @@ export class DataService implements OnDestroy {
   private G: GlobalService;
   
   private restored_user_cache = false;
+  /** whether after_local_only_user_cache_is_filled has run */
+  private user_cache_ready = false;
   private restored_poll_caches = false;
   /** resolves once the background Matrix login has finished; the start does
    *  not wait for it, everything that needs the homeserver does (#327) */
@@ -944,13 +946,68 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.process_local_only_user_docs");
   }
 
+  /**
+   * Where the app is, as the BROWSER knows it rather than as the router does.
+   *
+   * DataService.init runs during the app's bootstrap, and `router.url` is
+   * "/" until the router's own initial navigation has finished. The two race,
+   * and the loser decides whether a magic link opened on a device with no
+   * credentials takes part as a guest or is redirected to the login page — a
+   * redirect the in-flight navigation to the join page then cancels, leaving
+   * the join page on screen with nothing behind it and no further log line.
+   * That is the freeze the owner reported after using the logout button
+   * (#193, #327). The location hash is set before any of this app's code
+   * runs, so it cannot race with it.
+   */
+  private current_route(): string {
+    const hash = this.location_hash();
+    if (hash.startsWith('#')) { return hash.substring(1); }
+    return this.router?.url || '';
+  }
+
+  /** the browser's URL fragment; its own method so that a spec can say what
+   *  the browser shows without navigating the test page */
+  private location_hash(): string {
+    try {
+      return (typeof window !== 'undefined' && window.location && window.location.hash) || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  /**
+   * Make sure a magic link on a device without credentials gets its guest.
+   *
+   * The start normally decides this (below); this is the second line of
+   * defence, called by the join page when it has been waiting a few seconds,
+   * for the case where the start could not see the route or the page arrived
+   * after the decision (#193, #327). Idempotent and cheap: it does nothing
+   * unless the user cache is ready, there are no credentials, and no guest
+   * is already on its way.
+   */
+  ensure_guest_for_magic_link(): void {
+    if (!this.user_cache_ready || this.guest_login_pending || this.guest_login_in_progress) {
+      return;
+    }
+    if ((this.user_cache['email']||'') != '' && (this.user_cache['password']||'') != '') {
+      return;
+    }
+    this.G.L.warn("DataService.ensure_guest_for_magic_link: the join page is waiting and there are no credentials, creating a guest");
+    (this as any).boot_log?.("the join page asked for a guest");
+    this.guest_login_pending = true;
+    this.login_as_guest();
+  }
+
   private after_local_only_user_cache_is_filled() {
     (this as any).boot_log?.("the user cache is ready");
+    this.user_cache_ready = true;
     this.G.L.entry("DataService.after_user_cache_is_filled");
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
       this.hide_loading();
-      if (this.router.url.includes('/joinpoll/')) {
+      const route = this.current_route();
+      (this as any).boot_log?.("no credentials; the page is", route || "(not known yet)");
+      if (route.includes('/joinpoll/')) {
         // the first visit of a magic link on this device (#193): take part
         // as a guest right away instead of asking for a login first — the
         // visitor votes before registering anything. When the deployment
@@ -962,8 +1019,8 @@ export class DataService implements OnDestroy {
         this.login_as_guest();
       } else {
         this.G.L.info("DataService found empty email or password, redirecting to login page.");
-        if (!this.router.url.includes('/login')) {
-          const current_url = encodeURIComponent(this.router.url);
+        if (!route.includes('/login')) {
+          const current_url = encodeURIComponent(route);
           this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
         }
       }
