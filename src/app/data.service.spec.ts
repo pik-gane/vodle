@@ -3276,6 +3276,25 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     expect(matrix.sessionFor).toHaveBeenCalledTimes(3);
   });
 
+  it('keeps a default wap the person chose across a logout and a login (#327)', async () => {
+    // The owner's report: set it to 51, log out, log back in, and it was 10
+    // again while every other setting survived. A logout leaves this device
+    // with nothing, the login page's fresh-password step ran — it also runs
+    // for someone who HAS used vodle before, since neither they nor the app
+    // can tell after a logout — and it seeded the default into the cache
+    // BEFORE the sync. The sync is local-wins, so the seed was pushed over
+    // the 51 in the user room. Nothing else is written at login time, which
+    // is why nothing else was lost.
+    fresh({email: 'a@b.c', password: 'Secret-12'});     // a wiped device
+    matrix.getAllUserData.and.returnValue(Promise.resolve({default_wap: '51', theme: 'dark'}));
+    spyOn(svc, 'check_whether_poll_or_option').and.returnValue(false);
+    await svc.syncUserDataWithMatrix();
+    svc.ensure_user_defaults();
+    expect(svc.user_cache['default_wap']).withContext('what they chose, not the deployment default').toBe('51');
+    expect(svc.user_cache['theme']).toBe('dark');
+    expect(pushed_keys()).withContext('nothing of ours went back over the user room').toEqual([]);
+  });
+
   it('pushes only what differs and takes over what only the user room holds, poll memberships included', async () => {
     fresh({email: 'a@b.c', password: 'Secret-12', language: 'en', 'poll.p1.myvid': 'v1', 'poll.p1.state': 'running'});
     matrix.getAllUserData.and.returnValue(Promise.resolve({

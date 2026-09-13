@@ -277,7 +277,14 @@ export class LoginPage implements OnInit {
     this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
-      this.G.S.default_wap = environment.default_wap;
+      // The default wap is NOT seeded here. This step also runs for someone
+      // who has used vodle before but answered "no" — after a logout this
+      // device knows nothing either way — and the user-data sync is
+      // local-wins: a value put into the cache before it runs is PUSHED over
+      // whatever the user room holds. Seeding 10 here therefore destroyed a
+      // default the person had chosen, every time they logged in through
+      // this step (#327). DataService.ensure_user_defaults does it after the
+      // sync instead, where an absent value really means absent.
       this.G.D.login_submitted();
     }
   }

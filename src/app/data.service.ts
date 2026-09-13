@@ -3071,7 +3071,9 @@ export class DataService implements OnDestroy {
       this.record_consent();
     }
     (this as any).boot_log?.("consent recorded");
-    this.G.S.default_wap = environment.default_wap;
+    // the default wap is not seeded here either: ensure_user_defaults gives
+    // a guest's empty user room the deployment's default after the sync, and
+    // until then SettingsService falls back to the same value anyway
     this.guest_login_in_progress = true;
     this.login_submitted(true);
   }
