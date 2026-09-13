@@ -90,7 +90,11 @@ describe('LoginPage', () => {
       component.step = 'start';
       component.G.S.language = '';
       component.ionViewDidEnter();
-      expect(component.G.S.language).toBe('de');
+      // the DISPLAY language, not the stored preference: the browser's
+      // language is a guess made before the user data has synced, and
+      // writing it to `language` had the sync push it over what the
+      // account already held (#327)
+      expect(component.G.S.display_language).toBe('de');
       expect(String(navigate.calls.mostRecent().args[0][0])).toMatch(/^\/login\/used_before\//);
     });
 

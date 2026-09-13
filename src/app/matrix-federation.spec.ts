@@ -70,6 +70,22 @@ const POLL_PASSWORD = 'federation-poll-password';
  */
 const CROSS_SERVER_TIMEOUT_MS = 120000;
 
+/**
+ * How long a spec waits for the guard bot to join a poll room it has just
+ * been invited to.
+ *
+ * The harness runs the bot with SCAN_INTERVAL_MS=2000, so fifteen seconds
+ * looked like seven chances. But the bot joins on the INVITE, through its
+ * own sync, and retries an invite the homeserver rate-limits — and by the
+ * time the last spec of this file runs, the bot is carrying every room the
+ * earlier ones made. Fifteen seconds was the tightest assumption left here,
+ * and the way it failed was the worst kind: guard_bot_in turns a timeout
+ * into pending(), so the spec SKIPPED itself, and CI (which runs with
+ * --no-skips, because in CI the bot is certainly there) reported a skip with
+ * no reason attached. That is what happened on 2026-09-13.
+ */
+const GUARD_BOT_JOIN_TIMEOUT_MS = 60000;
+
 describe('MatrixService across two federating Synapse homeservers (#293)', () => {
 
   const noop = () => {};
@@ -145,10 +161,16 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
   async function guard_bot_in(svc: any, roomId: string): Promise<boolean> {
     try {
       await until(async () => svc.client.getRoom(roomId)?.getMember(GUARD_BOT)?.membership === 'join',
-        'the guard bot to join the poll room', 15000);
+        'the guard bot to join the poll room', GUARD_BOT_JOIN_TIMEOUT_MS);
       return true;
     } catch (err) {
-      pending('no guard bot running; scripts/test-matrix.sh start starts one when node is available');
+      // Say which it was. "No guard bot running" was asserted for both, and
+      // sent the last reader looking for a bot that was in fact there and
+      // merely slow.
+      pending(GUARD_BOT + ' did not join ' + roomId + ' within '
+        + (GUARD_BOT_JOIN_TIMEOUT_MS / 1000) + ' s. Either no guard bot is running'
+        + ' (scripts/test-matrix.sh start starts one when node is available), or it is'
+        + ' running and did not get there in time — its /healthz says which.');
       return false;
     }
   }

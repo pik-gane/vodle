@@ -96,8 +96,23 @@ export class SettingsService {
     this.G.D.setu('db_password', value); 
   }
 
+  /** the language the person has CHOSEN, which is synced with their account */
   public get language(): string { return this.G.D.getu('language'); }
   public set language(value: string) { this.G.D.setu('language', value); }
+
+  /** The language this device is showing right now.
+   *
+   *  The login page sets this one and not `language`, because before the user
+   *  data has synced its value is a guess — the browser's language, or the
+   *  answer to a question asked of someone the app cannot yet identify. The
+   *  sync is local-wins, so writing that guess to `language` had it pushed
+   *  over the preference the person's account already held, which is how a
+   *  language survived everything except a logout (#327).
+   *  DataService.ensure_user_defaults settles the two afterwards: the stored
+   *  preference is brought to this device, or, if the account has none, this
+   *  device's language becomes the stored one. */
+  public get display_language(): string { return this.G.D.getu('local_language'); }
+  public set display_language(value: string) { this.G.D.setu('local_language', value); }
 
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }

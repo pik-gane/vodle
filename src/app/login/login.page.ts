@@ -210,7 +210,10 @@ export class LoginPage implements OnInit {
 
   set_language() {
     let c = this.languageFormGroup.get('language');
-    if (c.valid) this.G.S.language = c.value;
+    // the DISPLAY language: this is asked (or guessed from the browser)
+    // before the user data has synced, so it must not be written to the
+    // person's stored preference, which the sync would then push over
+    if (c.valid) this.G.S.display_language = c.value;
   }
 
   set_email() {

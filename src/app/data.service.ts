@@ -1337,6 +1337,10 @@ export class DataService implements OnDestroy {
       }).then(changes => {
 
         this.apply_user_bootstrap_changes(changes);
+        // the user database has been read back, so an absent setting means
+        // absent here as well — the same point the Matrix backend reaches
+        // when its user-room sync resolves
+        this.ensure_user_defaults();
         this.mark_user_db_bootstrapped();
         // background pass resolving any pre-existing conflicts (#292):
         this.scan_user_db_for_conflicts();
@@ -6679,6 +6683,21 @@ export class DataService implements OnDestroy {
    */
   private ensure_user_defaults(): void {
     if (!this.user_cache) { return; }
+    // The LANGUAGE, which is two keys: 'language' is the person's stored
+    // preference and travels with the account, 'local_language' is what this
+    // device shows and is local-only. The sync's restore writes the cache
+    // directly rather than through setu(), and setu() is what actually
+    // applies a language, so a preference that came back from the server has
+    // to be applied here. And an account that has none takes this device's,
+    // which is what the login page's question established.
+    const preferred = this.user_cache['language'] || '', showing = this.getu('local_language');
+    if (preferred && preferred !== showing) {
+      this.G.L.info("DataService: showing the language this account prefers", preferred);
+      this.setu('local_language', preferred);
+    } else if (!preferred && showing) {
+      this.G.L.info("DataService: no language is stored for this account, keeping", showing);
+      this.setu('language', showing);
+    }
     if ((this.user_cache['default_wap'] || '') === '') {
       this.G.L.info("DataService: no default wap is stored, using the deployment's",
         environment.default_wap);

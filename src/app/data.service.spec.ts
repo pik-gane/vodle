@@ -4041,6 +4041,32 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(settled).withContext('the page waits for the real sync once there is one').toBeTrue();
   });
 
+  it('keeps the language the account prefers, and takes this device\'s when it has none', () => {
+    const applied: string[] = [];
+    svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
+               get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
+    svc.setu = (key: string, value: string) => { svc.user_cache[key] = value; applied.push(key + '=' + value); return true; };
+    svc.getu = (key: string) => svc.user_cache[key] || '';
+
+    // the account prefers German, this device came up in English: the
+    // preference wins and is APPLIED, since the sync's restore bypasses setu
+    svc.user_cache = {language: 'de', local_language: 'en', default_wap: '10'};
+    svc.ensure_user_defaults();
+    expect(applied).toEqual(['local_language=de']);
+
+    // the account has none: this device's language becomes the stored one
+    applied.length = 0;
+    svc.user_cache = {local_language: 'fi', default_wap: '10'};
+    svc.ensure_user_defaults();
+    expect(applied).toEqual(['language=fi']);
+
+    // they already agree: nothing is written, so nothing is pushed
+    applied.length = 0;
+    svc.user_cache = {language: 'it', local_language: 'it', default_wap: '10'};
+    svc.ensure_user_defaults();
+    expect(applied).toEqual([]);
+  });
+
   it("gives an account with no stored settings the deployment's default wap", () => {
     svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
                get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
