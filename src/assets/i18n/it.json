@@ -199,7 +199,12 @@
         "confirm-button": "Yes, delete my data",
         "success-title": "Your data was deleted.",
         "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
-        "failed": "Could not delete all data for some reason."
+        "failed": "Could not delete all data for some reason.",
+        "progress-votes": "I tuoi Wap vengono azzerati e le tue deleghe revocate…",
+        "progress-polls": "Rimozione dai tuoi sondaggi ({{done}} di {{total}})…",
+        "progress-user": "Cancellazione dei tuoi dati personali dal server…",
+        "progress-local": "Cancellazione dei dati di questo dispositivo…",
+        "progress-note": "Può volerci un minuto: ogni sondaggio a cui hai partecipato ha una stanza propria per ciascuna persona che vota, e vodle le lascia tutte. Per favore non chiudere questa pagina."
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
@@ -447,7 +452,8 @@
         "p4": "If you are unsure about one or more options, you can also <i>delegate</i> those waps to someone you trust.",
         "p5": "You can use the “assist me” button to set your initial waps. After setting your initial waps, it makes sense to switch on “live results” to monitor the pollʼs development over time. Then you can adjust your waps to what you see, give waps to additional options that might get suggested, or add options yourself. That way, you can together find a good compromise or reach consensus. You can change your waps or delegations at any time until the poll ends. They are always stored immediately, you donʼt need to click any “save” button. ",
         "lets-go-button": "OK, letʼs go",
-        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}."
+        "p6": "If you want to know how the waps are used by vodle to determine the results, see {{link_start}}here{{link_end}}.",
+        "still-waiting": "Il server del sondaggio sta ancora rispondendo. La prima volta può volerci un po' di più — la pagina proseguirà da sola."
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -480,7 +486,8 @@
         "confirm-header": "Really log out?",
         "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
-        "failed": "Could not log out for some reason"
+        "failed": "Could not log out for some reason",
+        "confirm-guest": "Stai usando un account ospite il cui indirizzo e-mail e la cui password esistono solo su questo dispositivo. Dopo la disconnessione non potrai più tornare ai suoi sondaggi né ai suoi Wap, a meno che tu non li abbia annotati entrambi dalla pagina delle impostazioni."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -598,7 +605,10 @@
         "explain": "Explain",
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it. Once added, options cannot be edited or removed again, however.",
-        "sorting": "Sorting options by approval..."
+        "sorting": "Sorting options by approval...",
+        "consent-lead": "Prima che i tuoi Wap vengano salvati, conferma per favore: ",
+        "guest-banner": "Stai partecipando con un account ospite. I tuoi Wap e i tuoi sondaggi restano solo su questo dispositivo finché non accedi con un indirizzo e-mail tuo; vodle li sposta allora sul tuo account.",
+        "guest-login-button": "Accedi"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -609,7 +619,8 @@
         "db-label": "Data storage",
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will",
-        "is-in-past": "The end date is in the past by now. Please change it first."
+        "is-in-past": "The end date is in the past by now. Please change it first.",
+        "publishing": "Avvio del sondaggio"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -637,7 +648,8 @@
         "appearance": "Appearance",
         "behaviour": "Behaviour",
         "default-wap": "Default wap",
-        "notifications": "Notifications"
+        "notifications": "Notifications",
+        "guest-note": "Stai usando un account ospite che vodle ha creato su questo dispositivo; il suo indirizzo e-mail e la sua password sono indicati qui sotto, nel caso tu voglia usarlo anche su un altro dispositivo. Per trasformarlo in un account tuo, inserisci qui il tuo indirizzo e-mail e una password: vodle vi sposta allora i tuoi sondaggi e i tuoi Wap."
     },
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",
@@ -660,5 +672,12 @@
         "option-name-required": "A name is required.",
         "option-name-unique": "The option name already exists.",
         "option-url-valid": "Please enter a valid URL."
-    }
+    },
+    "handover": {
+        "successor-title": "I nuovi sondaggi si avviano altrove",
+        "successor-message": "Questo server vodle non avvia più nuovi sondaggi. D'ora in poi usa {{host}}, per favore. I sondaggi a cui partecipi già qui proseguono fino alla loro fine.",
+        "successor-go": "Vai a {{host}}",
+        "predecessor-note": "I sondaggi iniziati prima del trasferimento su questo server si trovano ancora su <a href=\"{{url}}\">{{host}}</a>."
+    },
+    "sync-pending": "Le tue modifiche sono in viaggio verso il server."
 }

@@ -172,7 +172,10 @@
         "my-own": "",
         "add-option": "",
         "explain": "",
-        "add-option-expired": ""
+        "add-option-expired": "",
+        "consent-lead": "在保存你的 wap 之前，请确认： ",
+        "guest-banner": "你正以访客身份参加。你的 wap 和投票只保存在本设备上，直到你用自己的电子邮箱登录；届时 vodle 会把它们转移到你的账户。",
+        "guest-login-button": "登录"
     },
     "invite-email": {
         "body-before-link": "",
@@ -447,7 +450,8 @@
         "header": "",
         "p5": "",
         "p6": "",
-        "p2": ""
+        "p2": "",
+        "still-waiting": "投票的服务器仍在响应。第一次可能会稍久一些——页面会自动继续。"
     },
     "notify_of": {
         "delegation_accepted": "",
@@ -491,7 +495,8 @@
         "closes": "",
         "publish": "",
         "caution1": "",
-        "_COMMENT_SECTION_": ""
+        "_COMMENT_SECTION_": "",
+        "publishing": "正在启动投票"
     },
     "delete-all": {
         "_COMMENT_SECTION_": "",
@@ -501,7 +506,12 @@
         "-page-title": "删除我的数据",
         "failed": "由于某种原因，无法删除所有数据。",
         "confirm-button": "是的，删除我的数据",
-        "confirm-header": "确定要删除你的数据吗？"
+        "confirm-header": "确定要删除你的数据吗？",
+        "progress-votes": "正在把你的 wap 归零，并撤回你的委托…",
+        "progress-polls": "正在把你从投票中移除（{{done}} / {{total}}）…",
+        "progress-user": "正在从服务器上删除你的个人数据…",
+        "progress-local": "正在删除本设备上的数据…",
+        "progress-note": "这可能需要一分钟：你参加过的每个投票，都为每位投票者设有单独的房间，vodle 会逐个退出。请不要关闭本页面。"
     },
     "notifications": {
         "closing-soon-title": "",
@@ -521,7 +531,8 @@
         "data-storage-msg": "",
         "appearance": "",
         "_COMMENT_SECTION_": "",
-        "notifications": ""
+        "notifications": "",
+        "guest-note": "你正在使用 vodle 在本设备上创建的访客账户；它的电子邮箱和密码显示在下方，以便你也能在其他设备上使用。若要把它变成你自己的账户，请在此输入你自己的电子邮箱和密码：vodle 会把你的投票和 wap 转移过去。"
     },
     "_WELCOME_TO_TRANSLATORS_": [
         "",
@@ -634,7 +645,8 @@
         "confirm-button": "",
         "failed": "",
         "_COMMENT_SECTION_": "",
-        "-page-title": ""
+        "-page-title": "",
+        "confirm-guest": "你正在使用访客账户，它的电子邮箱和密码只存在于本设备上。退出登录后，除非你已从设置页面记下这两项，否则无法再回到它的投票和 wap。"
     },
     "select-server": {
         "_COMMENT_SECTION_": "",
@@ -661,5 +673,12 @@
         "_COMMENT_SECTION_": ""
     },
     "_COMMENT_wap": "",
-    "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated."
+    "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
+    "handover": {
+        "successor-title": "新的投票请在别处发起",
+        "successor-message": "此 vodle 服务器不再发起新的投票。今后请使用 {{host}}。你在这里已经参加的投票会继续进行，直到结束。",
+        "successor-go": "前往 {{host}}",
+        "predecessor-note": "在迁移到本服务器之前发起的投票，仍然在 <a href=\"{{url}}\">{{host}}</a>。"
+    },
+    "sync-pending": "你的更改正在发送到服务器。"
 }

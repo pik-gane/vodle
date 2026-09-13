@@ -199,7 +199,12 @@
         "confirm-button": "Sí, borra mis datos",
         "success-title": "Tus datos fueron borrados.",
         "success-body": "vodle espera volver a verte pronto, aunque no sepamos que seas tú de nuevo :-)",
-        "failed": "Por alguna razón no todos tus datos han podido ser borrados."
+        "failed": "Por alguna razón no todos tus datos han podido ser borrados.",
+        "progress-votes": "Poniendo tus waps a cero y retirando tus delegaciones…",
+        "progress-polls": "Retirándote de tus encuestas ({{done}} de {{total}})…",
+        "progress-user": "Borrando tus datos personales del servidor…",
+        "progress-local": "Borrando los datos de este dispositivo…",
+        "progress-note": "Esto puede tardar un minuto: cada encuesta en la que has participado tiene una sala propia para cada persona que vota, y vodle sale de todas ellas. Por favor, no cierres esta página."
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
@@ -447,7 +452,8 @@
         "p4": "Si no estás seguro sobre una o más opciones, también puedes <i>delegar</i> esos waps a alguien en quien confíes.",
         "p5": "Puedes usar el botón “Ayúdame” para determinar tus waps iniciales. Luego de determinarlos, tiene sentido seleccionar “Resultados en vivo” para monitorear el desarrollo de la encuesta a lo largo del tiempo. Entonces puedes ajustar tus waps a lo que ves, agrega waps a opciones adicionales que puedan ser sugeridas, o agrégalas tú mismo. De esta manera, pueden encontrar juntos un compromiso intermedio o alcanzar un consenso. Puedes cambiar tus waps o delegaciones en cualquier momento hasta que la encuesta termine. Son siempre guardados inmediatamente, no necesitas hacer click en ningún botón de “guardar”. ",
         "lets-go-button": "OK, ¡ahí vamos!",
-        "p6": "Si quieres saber cómo los waps son usados por vodle para determinar los resultados, haz click {{link_start}}aquí{{link_end}}."
+        "p6": "Si quieres saber cómo los waps son usados por vodle para determinar los resultados, haz click {{link_start}}aquí{{link_end}}.",
+        "still-waiting": "El servidor de la encuesta todavía está respondiendo. La primera vez puede tardar un poco más — la página seguirá sola."
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -480,7 +486,8 @@
         "confirm-header": "¿Realmente quieres cerrar tu sesión?",
         "confirm-intro": "Cerrar tu sesión es solamente necesario en dispositivos compartidos o que no sean seguros. Cuando cierres sesión tus datos de vodle serán borrados en este dispositivo (pero no de la base de datos remota). Por favor asegúrate de recordar el correo y la contraseña que estás usando con vodle antes de cerrar sesión. Si los olvidas, no podrán ser recuperados ya que no son guardados en ningún lugar.",
         "confirm-button": "Sí, cerrar sesión",
-        "failed": "Por alguna razón tu sesión no pudo ser cerrada"
+        "failed": "Por alguna razón tu sesión no pudo ser cerrada",
+        "confirm-guest": "Estás usando una cuenta de invitado cuya dirección de correo electrónico y contraseña solo existen en este dispositivo. Después de cerrar sesión no podrás volver a sus encuestas ni a sus waps, salvo que hayas anotado ambos desde la página de configuración."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -598,7 +605,10 @@
         "explain": "Explicar",
         "add-option": "Añadir opción",
         "add-option-info": "Si crees que falta alguna opción importante y no está cubierta por ninguna de las anteriores, puedes añadirla. Una vez añadida, las opciones no podrán ser editadas o eliminadas.",
-        "sorting": "Ordenando opciones según su aprobación..."
+        "sorting": "Ordenando opciones según su aprobación...",
+        "consent-lead": "Antes de guardar tus waps, confirma por favor: ",
+        "guest-banner": "Estás participando con una cuenta de invitado. Tus waps y encuestas se quedan solo en este dispositivo hasta que inicies sesión con una dirección de correo electrónico propia; vodle las traslada entonces a tu cuenta.",
+        "guest-login-button": "Iniciar sesión"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -609,7 +619,8 @@
         "db-label": "Base de datos",
         "publish": "Comenzar la encuesta ahora",
         "type-label": "En esta encuesta, el grupo ",
-        "is-in-past": "De momento, la fecha de finalización está en el pasado. Actualízala, por favor."
+        "is-in-past": "De momento, la fecha de finalización está en el pasado. Actualízala, por favor.",
+        "publishing": "Iniciando la encuesta"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -637,7 +648,8 @@
         "appearance": "Apariencia",
         "behaviour": "Comportamiento",
         "default-wap": "Wap inicial",
-        "notifications": "Notificaciones"
+        "notifications": "Notificaciones",
+        "guest-note": "Estás usando una cuenta de invitado que vodle creó en este dispositivo; su dirección de correo electrónico y su contraseña aparecen abajo, por si quieres usarla también en otro dispositivo. Para convertirla en una cuenta propia, introduce aquí tu propia dirección de correo electrónico y una contraseña: vodle traslada entonces tus encuestas y tus waps a ella."
     },
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",
@@ -660,5 +672,12 @@
         "option-name-required": "Debes ingresar un nombre.",
         "option-name-unique": "Una opción con el mismo nombre ya existe.",
         "option-url-valid": "Por favor ingresa una URL válida."
-    }
+    },
+    "handover": {
+        "successor-title": "Las encuestas nuevas se crean en otro sitio",
+        "successor-message": "Este servidor de vodle ya no crea encuestas nuevas. Usa {{host}} a partir de ahora, por favor. Las encuestas en las que ya participas aquí continúan hasta que terminen.",
+        "successor-go": "Ir a {{host}}",
+        "predecessor-note": "Las encuestas que empezaron antes del traslado a este servidor siguen estando en <a href=\"{{url}}\">{{host}}</a>."
+    },
+    "sync-pending": "Tus cambios van de camino al servidor."
 }

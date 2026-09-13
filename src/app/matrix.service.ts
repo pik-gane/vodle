@@ -5641,21 +5641,25 @@ export class MatrixService {
     this.ratingCaches.delete(pollId);
     this.ratingsScanned.delete(pollId);
     await this.storage.remove(this.storageKey(`poll_room_${pollId}`));
-    // Several at a time, and through the rate-limit retry. Serially it was
-    // two round trips per room one after another — about 130 ms each on the
-    // owner's deployment, so a poll of fifty voters took a quarter of a
-    // minute of leaving alone — and a leave the homeserver refused with a
-    // 429 was warned about and dropped, which for "delete my data" means a
-    // room quietly not left. The write pacing still bounds the actual rate.
-    await MatrixService.forEachConcurrently(Array.from(rooms),
-      MatrixService.VOTER_ROOM_JOIN_CONCURRENCY, async (roomId) => {
-        try {
-          await this.retryOnRateLimit(() => this.client.leave(roomId));
-          await this.retryOnRateLimit(() => this.client.forget(roomId));
-        } catch (error) {
-          this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
-        }
-      });
+    // One room at a time. Leaving them sixteen at a time and through the
+    // rate-limit retry is the obvious speed-up — two round trips per room
+    // serially is about 130 ms each, so a poll of fifty voters spends a
+    // quarter of a minute here — and it was tried (5d18e92) and taken back
+    // out: CI went red twice on that commit, in two DIFFERENT places (the
+    // federation convergence spec, then the production click-through),
+    // while the commit before it re-ran green. Nothing else in that commit
+    // can reach a homeserver. A burst of membership events on the shared
+    // test homeservers is the one plausible mechanism, and a faster
+    // deletion is not worth an unstable suite. Worth retrying on its own,
+    // with a modest concurrency, where it can be measured.
+    for (const roomId of rooms) {
+      try {
+        await this.client.leave(roomId);
+        await this.client.forget(roomId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
+      }
+    }
     this.logger?.info("MatrixService.leavePollRooms left", pollId, rooms.size, "rooms");
     this.logger?.exit("MatrixService.leavePollRooms");
   }
