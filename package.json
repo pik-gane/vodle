@@ -17,7 +17,8 @@
     "test:couchdb:stop": "scripts/test-couchdb.sh stop",
     "test:couchdb": "scripts/test-couchdb.sh start && ng test --browsers=ChromeHeadlessNoSandbox --watch=false --include=**/data-service-couchdb-two-client.spec.ts",
     "lint": "ng lint",
-    "e2e": "wdio run test/wdio.conf.js"
+    "e2e": "wdio run test/wdio.conf.js",
+    "e2e:production": "scripts/production-clickthrough.sh"
   },
   "bugs": {
     "url": "https://github.com/pik-gane/vodle/issues"

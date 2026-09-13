@@ -39,8 +39,14 @@ UserInterfaceState.xcuserstate
 secret*
 nohup.out
 
-# Matrix homeserver data (local development only)
+# Matrix homeserver data (local development and deployments: keys, config)
 matrix-data/
+# a deployment's database, secrets, site files and backups (deploy/README.md)
+postgres-data/
+.env
+deploy/site/
+deploy/acme/
+deploy/backups/
 
 # Guard bot dependencies
 guard-bot/node_modules/
@@ -54,3 +60,4 @@ karma-results.json
 
 # screenshots saved by the e2e smoke suite on failure (see test/wdio.conf.js)
 e2e-screenshots/
+clickthrough-result.json

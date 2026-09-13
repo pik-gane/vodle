@@ -25,11 +25,27 @@ import BLAKE2s from 'blake2s-js';
 
 // Import Matrix SDK
 import { createClient } from 'matrix-js-sdk/lib/matrix';
+import { IndexedDBStore } from 'matrix-js-sdk/lib/store/indexeddb';
 import type { MatrixClient } from 'matrix-js-sdk/lib/client';
 import type { ICreateRoomOpts } from 'matrix-js-sdk/lib/@types/requests';
 
 // TextEncoder for hashing
 const textEncoder = new TextEncoder();
+
+/**
+ * Per-item tracing: nothing at all unless environment.show_debug_info.
+ *
+ * The read paths log once per voter room and once per rating event, so a
+ * poll of fifty produced on the order of a thousand console calls per load
+ * — 187 lines for a poll of TWO in the owner's log, 101 of them from
+ * discoverVoterRooms, which also re-runs every fifteen seconds. A console
+ * call with the developer tools open is not free, and none of it was
+ * telling anyone anything: the summaries do that, and they stay
+ * unconditional (#327).
+ */
+const trace: (...args: any[]) => void = environment.show_debug_info
+  ? (...args: any[]) => console.log(...args)
+  : () => { /* nothing */ };
 
 export interface MatrixCredentials {
   accessToken: string;
@@ -64,6 +80,40 @@ export function deriveMatrixPassword(email: string, password: string): string {
   return blake2s.hexDigest();
 }
 
+/**
+ * The account that acts for one voter in one poll — the whole of vodle's
+ * cross-poll privacy.
+ *
+ * The CouchDB backend has always connected to a poll's database as
+ * `vodle.poll.<pid>.voter.<myvid>` (DataService.connect_to_remote_poll_db),
+ * NOT as the person: the server sees a separate account per poll, so two
+ * polls of the same person carry nothing that ties them together. The
+ * Matrix port collapsed that to one account per person, and with it the
+ * guarantee: one `@<hash of e-mail>` joined every poll room, created every
+ * voter room and sent every announcement, so the homeserver — and every
+ * co-participant — could read the person behind two different vids
+ * straight off the sender field (#327).
+ *
+ * So the vid defines the account again. The localpart is a hash because a
+ * Matrix localpart may not carry the upper case a pid does, and the
+ * password is derived rather than reused so that a poll account cannot
+ * hand back the user's own password.
+ */
+export function pollAccountName(pollId: string, vid: string): string {
+  const hashBytes = Math.max(environment.data_service.hash_n_bytes ?? 0, 16);
+  const blake2s = new BLAKE2s(hashBytes);
+  blake2s.update(textEncoder.encode('vodle.poll.' + pollId + '.voter.' + vid));
+  return blake2s.hexDigest();
+}
+
+/** the password of that account, from the user's own (as CouchDB does) */
+export function pollAccountPassword(pollId: string, vid: string, userPassword: string): string {
+  const blake2s = new BLAKE2s(32);
+  blake2s.update(textEncoder.encode(
+    'vodle-matrix-poll:' + pollId + ':' + vid + ':' + userPassword));
+  return blake2s.hexDigest();
+}
+
 export function hashEmail(email: string): string {
   // Normalize email: trim whitespace and convert to lowercase for consistency
   const normalizedEmail = email.trim().toLowerCase();
@@ -73,6 +123,40 @@ export function hashEmail(email: string): string {
   const blake2s = new BLAKE2s(hashBytes);
   blake2s.update(textEncoder.encode(normalizedEmail));
   return blake2s.hexDigest();
+}
+
+/**
+ * Closed poll rooms (#328). A poll room's join rule is `knock`, so knowing
+ * the poll id lets nobody in; the room's state carries the poll's join key
+ * K = SHA-256("vodle-join:" + poll id + ":" + poll password), and a joiner
+ * who holds the magic link knocks with HMAC-SHA-256(K, own user id) as the
+ * knock's reason. The guard bot verifies the proof against K and invites
+ * the knocker (guard-bot/knock.js computes the same values; the test
+ * vectors are shared). Non-members cannot read K, members cannot turn it
+ * back into the password, and a proof seen in transit is bound to one
+ * user id.
+ */
+export const JOIN_KEY_EVENT_TYPE = 'm.room.vodle.poll.join_key';
+export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  return new Uint8Array((hex.match(/../g) || []).map(pair => parseInt(pair, 16)));
+}
+
+/** the join key of a poll (hex), see JOIN_KEY_EVENT_TYPE */
+export async function joinKey(pollId: string, pollPassword: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', textEncoder.encode('vodle-join:' + pollId + ':' + pollPassword));
+  return bytesToHex(new Uint8Array(digest));
+}
+
+/** the proof (hex) that `userId` knows the poll behind the join key `keyHex` */
+export async function joinProof(keyHex: string, userId: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', hexToBytes(keyHex), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+  return bytesToHex(new Uint8Array(await crypto.subtle.sign('HMAC', key, textEncoder.encode(userId))));
 }
 
 /**
@@ -114,6 +198,9 @@ export interface PollEventListener {
   onDelegationRequest?(pollId: string, request: DelegationRequest): void;
   onDelegationResponse?(pollId: string, response: DelegationResponse): void;
   onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
+  /** an option added to the running poll by any participant (a
+   *  m.room.vodle.poll.option timeline event), the own ones included */
+  onOptionAdded?(pollId: string, optionId: string, option: {name: string; description: string; url: string}): void;
   onDataChange?(): void;
   /** Fired once after setupPollEventHandlers has finished restoring the poll's
    *  existing ratings (voter room discovery + retroactive state scan).
@@ -128,7 +215,7 @@ export interface PollEventListener {
  */
 export interface QueuedEvent {
   id: string;
-  type: 'rating' | 'delegation_request' | 'delegation_response' | 'poll_data' | 'voter_data' | 'user_data';
+  type: 'rating' | 'delegation_request' | 'delegation_response' | 'poll_data' | 'voter_data' | 'user_data' | 'voter_announce';
   pollId?: string;
   optionId?: string;
   rating?: number;
@@ -140,6 +227,7 @@ export interface QueuedEvent {
   key?: string;
   value?: any;
   voterId?: string;
+  voterRoomId?: string;
   timestamp: number;
   retryCount: number;
 }
@@ -153,6 +241,14 @@ export interface OfflineQueueStatus {
   isOnline: boolean;
   lastProcessedAt: number | null;
   failedCount: number;
+  /** writes issued but not yet confirmed by the server */
+  inFlight: number;
+  /** when the oldest write still waiting was first attempted */
+  oldestPendingAt: number | null;
+  /** writes the server refused for good (a closed or purged room) */
+  refusedCount: number;
+  /** writes lost because the queue reached its hard limit — normally 0 */
+  droppedCount: number;
 }
 
 /**
@@ -177,7 +273,8 @@ export class MatrixService {
   private accessToken: string | null = null;
   private userId: string | null = null;
   private deviceId: string | null = null;
-  private logger: Logger | null = null;
+  /** not private: a poll's own service shares the person's logger (#327) */
+  logger: Logger | null = null;
   
   // Cache for quick access
   private userRoomId: string | null = null;
@@ -206,6 +303,32 @@ export class MatrixService {
   private pollEventListeners: Map<string, PollEventListener[]> = new Map();
   // Phase 4: Track which polls have event handlers set up
   private pollEventHandlersSetup: Set<string> = new Set();
+  /** polls whose voter rooms this device has started discovering (#327) */
+  private voterSyncStarted: Set<string> = new Set();
+  /**
+   * Polls whose ratings have actually been READ, room by room (#327).
+   *
+   * ratingCaches alone cannot say that: the live rating handlers and the
+   * retroactive scan of the SDK's store both build entries in it through
+   * updateRatingCache, so a poll could have a cache holding only what the
+   * sync happened to carry — and getRatings, seeing a cache, returned it
+   * and never went and looked. A poll of fifty then showed however many
+   * the store had (242 of 260 rating events in the report), for good.
+   */
+  private ratingsScanned: Set<string> = new Set();
+  /**
+   * Ratings that arrive live WHILE a read is in flight, per poll. The read
+   * is a snapshot of a moment already past by the time it finishes, so
+   * these are layered back on top of it: they are strictly newer.
+   */
+  private ratingsDuringScan: Map<string, Map<string, Map<string, number>>> = new Map();
+  /** the last walk of a poll room's timeline, shared by the three readers
+   *  of it during a poll's load (#327) */
+  private pollTimelineCache: Map<string, {at: number, events: Promise<any[]>}> = new Map();
+  /** how old a walk of a poll room's timeline may be to be shared. Long
+   *  enough to cover one poll's load, short enough that nothing a user
+   *  waits for is ever this stale. */
+  static readonly POLL_TIMELINE_MAX_AGE_MS = 15000;
   // Phase 4: Store handler references for proper cleanup (prevent memory leaks)
   private pollEventHandlerRefs: Map<string, Array<{ event: string; handler: (...args: any[]) => void }>> = new Map();
   
@@ -253,8 +376,88 @@ export class MatrixService {
   private static readonly OFFLINE_QUEUE_RETRY_MIN_MS = 1000;
   private static readonly OFFLINE_QUEUE_RETRY_MAX_MS = 30000;
   private static readonly OFFLINE_QUEUE_STORAGE_KEY = 'matrix_offline_queue';
+  // After this many failed attempts a write stops holding up the ones behind
+  // it and goes to the back of the queue; it is NOT given up on.
   private static readonly MAX_RETRY_COUNT = 5;
-  private static readonly MAX_QUEUE_SIZE = 1000;
+  private static readonly MAX_QUEUE_SIZE = 1000;      // a warning, not a limit
+  private static readonly HARD_QUEUE_LIMIT = 10000;   // the only place a write is ever dropped
+  /** after this long a pending write is reported as stuck, not merely slow */
+  private static readonly SYNC_STALLED_AFTER_MS = 30000;
+  /** how long initialisation waits for the first usable sync state (#327) */
+  private static readonly SYNC_WAIT_TIMEOUT_MS = 30000;
+  private offlineQueueDroppedCount: number = 0;
+  private offlineQueueRefusedCount: number = 0;
+  /** writes this session issued that the server has not confirmed yet */
+  private writesInFlight: number = 0;
+  /** whether a login, a registration or a resume is under way. A write made
+   *  while the session is still starting is queued rather than refused: the
+   *  start no longer blocks the app, so writes can now arrive before the
+   *  client exists (#327). */
+  private loginInProgress = false;
+  
+  /*
+  What this device believes it has voted (#327).
+
+  The offline queue holds writes that failed and said so. This holds every
+  rating this device has set, whether or not it was ever acknowledged, and it
+  is what `reconcileOwnRatings` compares against the voter room itself. It
+  therefore also covers a write whose answer never came back at all — the
+  page was closed, the browser killed the request, the server took it and
+  forgot it. Persisted, debounced, so a burst of four hundred ratings costs a
+  handful of writes to storage rather than four hundred.
+  */
+  private ownRatings: Map<string, number> = new Map();   // "pollId\u0000voterId\u0000optionId" -> rating
+  private ownRatingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly OWN_RATINGS_STORAGE_KEY = 'matrix_own_ratings';
+  private static readonly OWN_RATINGS_SAVE_DELAY_MS = 1000;
+
+  /*
+  Write pacing (#327).
+
+  A poll of n voters over m options is published as roughly n*(m+3) writes in
+  one go — a room, a vid, a deadline and an announcement per voter, plus a
+  rating per option — so a 50-voter test poll over 5 options is about 400
+  writes fired within a second. That empties whatever token bucket the
+  homeserver keeps for this user, and then every one of those writes retries
+  at the same moment against a bucket that is still empty: the retries become
+  the load. Synapse's own default is 0.2 events per second, so no deployment
+  setting alone makes such a burst fit (deploy/homeserver.vodle.yaml raises
+  the limit, but vodle also has to behave on a server whose limits it does
+  not own).
+
+  Every write therefore reserves a moment to start in, and the moments are at
+  least writeIntervalMs apart, so writes leave in a stream instead of a
+  burst. A refusal pushes a shared pause out for as long as the server asked
+  and doubles the interval; a run of accepted writes halves it back, down to
+  the floor. The interval is a start-to-start spacing rather than a lock, so
+  a paced call never waits for another to finish and nothing can deadlock
+  behind a write it issued itself.
+
+  The floor is the deployment's own matrix.writes_per_second, so a homeserver
+  whose limits were raised is not held back by the client instead: set it to
+  the server's rc_message.per_second, or to 0 for an account the server does
+  not rate-limit at all.
+  */
+  private static readonly WRITE_INTERVAL_MAX_MS = 2000;
+  private static readonly WRITES_BEFORE_SPEEDUP = 20;
+  /** How many voter rooms a newcomer joins at once (#327). */
+  // A newcomer to a poll of fifty joins fifty-two rooms before it can show
+  // a tally, at a round trip each. Six at a time was chosen against HTTP/1.1's
+  // six-connections-per-host; a deployment behind nginx speaks HTTP/2, where
+  // they share one connection and the limit is the server's willingness (#327).
+  private static readonly VOTER_ROOM_JOIN_CONCURRENCY = 16;
+  /** How many voter rooms are read from the server at once (#327). */
+  private static readonly VOTER_ROOM_READ_CONCURRENCY = 8;
+  /** what the reads cost, for the record and for the benchmark (#327) */
+  ratingsFromStore = 0;
+  ratingsFromServer = 0;
+  private writeIntervalMinMs: number = MatrixService.writeIntervalFloorMs();
+  private writeIntervalMs: number = MatrixService.writeIntervalFloorMs();
+  private writeBurst: number = MatrixService.writeBurstSize();
+  private writeTokens: number = MatrixService.writeBurstSize();
+  private writeTokensAt: number = Date.now();
+  private writesPausedUntil: number = 0;
+  private writesAcceptedInARow: number = 0;
   
   // Phase 5: User data cache for fast synchronous reads
   private userDataCache: Map<string, any> = new Map();
@@ -265,10 +468,78 @@ export class MatrixService {
    *  one page must opt out of persistence. The app keeps the default. */
   e2ee_store_in_memory = false;
   
+  /**
+   * What this instance's storage keys are prefixed with.
+   *
+   * One instance per identity (see forPoll): the personal account keeps the
+   * unprefixed keys it has always used, and a poll account gets its own, so
+   * two identities in one browser profile do not overwrite each other's
+   * credentials or room ids (#327).
+   */
+  private keyPrefix = '';
+  
+  /** whether this instance initialises end-to-end encryption at all. The
+   *  SDK's crypto store is one per browser profile and belongs to ONE
+   *  account, so only the personal one can have it. */
+  private use_e2ee = environment.matrix.enable_e2ee;
+  
+  /** the poll this instance acts for, if it is a poll account */
+  pollAccountFor: {pollId: string, vid: string} | null = null;
+  
   constructor(
     private storage: Storage
   ) {
-    this.homeserverUrl = environment.matrix.homeserver_url;
+    this.homeserverUrl = MatrixService.resolveHomeserverUrl(environment.matrix.homeserver_url);
+  }
+  
+  /**
+   * A service that acts as `vid` in poll `pollId` and nowhere else — the
+   * Matrix counterpart of the CouchDB backend's `vodle.poll.<pid>.voter.<vid>`
+   * database user (see pollAccountName).
+   *
+   * Everything this service does to a poll room or a voter room already
+   * acts "as this.client"; handing it a different client is therefore the
+   * whole of the change, and the 129 places that say `this.client` need not
+   * know which account they are (#327).
+   */
+  static forPoll(storage: Storage, pollId: string, vid: string): MatrixService {
+    const service = new MatrixService(storage);
+    service.keyPrefix = 'poll_account_' + pollId + '_';
+    service.pollAccountFor = {pollId, vid};
+    // no crypto: the profile's one crypto store belongs to the personal
+    // account, and nothing a poll account writes is a timeline event in an
+    // encrypted room anyway
+    service.use_e2ee = false;
+    return service;
+  }
+  
+  /** this instance's name for a stored value */
+  private storageKey(name: string): string {
+    return this.keyPrefix + name;
+  }
+
+  /**
+   * The homeserver's base URL, absolute and without a trailing slash.
+   *
+   * A deployment configures matrix.homeserver_url as "/" — the app's own
+   * origin, where nginx forwards /_matrix/ to Synapse — but nothing may use
+   * that string as it stands: matrix-js-sdk builds every request as
+   * `new URL(baseUrlWithoutTrailingSlash + prefix + path)` with no base, and
+   * "/_matrix/client/v3/login" is not a valid URL on its own; this service's
+   * own raw fetches concatenate too, and "/" + "/_matrix/..." is a
+   * protocol-relative URL naming a host "_matrix". So a relative setting is
+   * resolved against the page's origin here, once.
+   */
+  static resolveHomeserverUrl(configured: string | null | undefined): string {
+    const without_trailing_slashes = (configured || '').trim().replace(/\/+$/, '');
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(without_trailing_slashes)) {
+      return without_trailing_slashes;
+    }
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) || '';
+    const path = without_trailing_slashes.startsWith('/') || without_trailing_slashes === ''
+      ? without_trailing_slashes
+      : '/' + without_trailing_slashes;
+    return origin + path;
   }
 
   /**
@@ -289,13 +560,39 @@ export class MatrixService {
   }
 
   /**
+   * Whether an error means "the server is throttling this user", as opposed
+   * to refusing the write. Synapse answers 429 / M_LIMIT_EXCEEDED with a
+   * retry_after_ms; the write is legitimate and must not be dropped —
+   * publishing a poll of fifty voters writes several hundred state events
+   * at once and runs into this on any deployment (#327).
+   */
+  private is_rate_limit_error(error: any): boolean {
+    return !!error && (error.httpStatus === 429 || error.errcode === 'M_LIMIT_EXCEEDED');
+  }
+
+  /**
+   * Whether the server's answer means "this write will never be accepted",
+   * as opposed to "not now". A closed poll room and a room that has been
+   * purged are the two cases; everything else — a 500, a gateway error, a
+   * write attempted before the room was joined — is temporary and belongs
+   * in the queue, where it is retried until it goes through.
+   *
+   * This is the ONLY reason a write is ever given up on, and even then it
+   * is counted and reported rather than dropped in silence (#327).
+   */
+  private is_permanent_refusal(error: any): boolean {
+    return !!error && (error.httpStatus === 403 || error.httpStatus === 404
+      || error.errcode === 'M_FORBIDDEN' || error.errcode === 'M_NOT_FOUND');
+  }
+
+  /**
    * Validate and return the guard bot user ID from environment config.
    * Returns null if not configured. Throws if configured but invalid.
    * 
    * A valid Matrix user ID must match '@localpart:domain'.
    */
   private getValidatedGuardBotId(): string | null {
-    const botId = environment.matrix?.guard_bot_user_id;
+    const botId = MatrixService.configuredGuardBotId();
     if (!botId) {
       return null;
     }
@@ -305,6 +602,20 @@ export class MatrixService {
     return botId;
   }
 
+  /**
+   * The guard bot's user id as configured: matrix.guard_bot_user_id, or
+   * "@vodle-guard:" + matrix.server_name when that is empty — the account
+   * the deployment scripts register (deploy/deploy.sh). Null without either.
+   */
+  static configuredGuardBotId(): string | null {
+    const explicit = environment.matrix?.guard_bot_user_id;
+    if (explicit) {
+      return explicit;
+    }
+    const serverName = environment.matrix?.server_name;
+    return serverName ? '@vodle-guard:' + serverName : null;
+  }
+  
   /**
    * Initialize the Matrix service with a logger
    * Call this from GlobalService after logger is available
@@ -327,6 +638,58 @@ export class MatrixService {
     this.logger?.exit("MatrixService.init");
   }
 
+  /**
+   * Start from the access token this device already holds, instead of logging
+   * in with the password again.
+   *
+   * A password login on every page load costs a round trip and the key
+   * derivation, and leaves the homeserver a NEW DEVICE each time — a device
+   * list that grows without bound, each entry uploading its own keys. The
+   * token is what a Matrix client is supposed to keep (#327).
+   *
+   * Returns false, having left nothing behind, when there is no usable token
+   * for this address: the caller then logs in with the password as before.
+   * The stored token is only used when it belongs to the account this
+   * address derives, so an account switch never resumes the old one (#330).
+   */
+  async resumeSession(email: string): Promise<boolean> {
+    return this.resumeSessionAs(hashEmail(email));
+  }
+  
+  /** resume a stored session, if it belongs to the account named here —
+   *  the hash of an e-mail for a person, or pollAccountName for the
+   *  account that acts for one voter in one poll (#327) */
+  async resumeSessionAs(expected_localpart: string): Promise<boolean> {
+    this.loginInProgress = true;
+    try {
+      return await this.resumeSessionInner(expected_localpart);
+    } finally {
+      this.loginInProgress = false;
+    }
+  }
+  
+  private async resumeSessionInner(expected_localpart: string): Promise<boolean> {
+    console.log("[vodle boot] reading the stored credentials");
+    const stored = await this.loadCredentials();
+    console.log("[vodle boot] stored credentials read", stored?.userId ? "(a session to resume)" : "(none)");
+    if (!stored || !stored.accessToken || !stored.userId) {
+      return false;
+    }
+    const stored_localpart = stored.userId.replace(/^@/, '').split(':')[0];
+    if (stored_localpart !== expected_localpart) {
+      this.logger?.info("MatrixService.resumeSession: the stored session is another account's, logging in instead");
+      return false;
+    }
+    try {
+      await this.initializeWithToken(stored.accessToken, stored.userId, stored.deviceId);
+      this.logger?.info("MatrixService.resumeSession: resumed the stored session", stored.userId);
+      return true;
+    } catch (error) {
+      this.logger?.warn("MatrixService.resumeSession: the stored session is no longer good, logging in", error);
+      return false;
+    }
+  }
+  
   /**
    * Initialize Matrix client with stored credentials
    */
@@ -360,11 +723,32 @@ export class MatrixService {
     this.logger?.entry("MatrixService.initializeWithToken", userId);
     
     try {
+      // Every stage of the start says so, unconditionally and with the
+      // milliseconds since it began. The app's logger runs at ERROR in a
+      // deployment, so anything logged through it is invisible there —
+      // which is why a start that sat for eighty seconds produced not one
+      // line saying what it was waiting for (#327).
+      const started_at = Date.now();
+      const boot = (stage: string, detail?: any) => {
+        console.log("[vodle boot] +" + (Date.now() - started_at) + "ms", stage,
+          detail === undefined ? "" : detail);
+        MatrixService.noteBootStage(stage);
+      };
+      boot("client setup begins", userId);
+      
+      // A store that survives the page makes the difference between resuming
+      // a sync and doing a full one. Without it every load asks the server
+      // for the complete current state of every joined room — and vodle
+      // joins one room per voter, so a single 50-voter poll puts the account
+      // in 52 rooms (#327).
+      const store = await this.makeSyncStore(userId);
+      boot("sync store ready", store ? "IndexedDB" : "in memory");
       this.client = createClient({
         baseUrl: this.homeserverUrl,
         accessToken: accessToken,
         userId: userId,
         deviceId: deviceId,
+        ...(store ? { store } : {}),
       });
       
       this.accessToken = accessToken;
@@ -380,45 +764,69 @@ export class MatrixService {
       // encryption (encryptWithPassword/submitEncryptedRating), not from
       // this. A crypto-init failure (e.g. missing WASM support) therefore
       // degrades gracefully to an unencrypted-capable session:
-      if (environment.matrix.enable_e2ee) {
+      if (this.use_e2ee) {
         try {
           // The crypto WASM's default loading URL is built from
           // import.meta.url, which Angular's webpack leaves as an unfetchable
-          // file:/// source path — so load the module explicitly from the
-          // copy shipped as an app asset (see angular.json); the loader
-          // memoizes, and initRustCrypto below reuses the loaded module:
-          const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
-          await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+          // file:/// source path (see fetchCryptoWasm). DataService.init
+          // starts that fetch when the app starts, so by here it is usually
+          // already on its way — or done (#327):
+          await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS, "the crypto WASM",
+            () => MatrixService.fetchCryptoWasm());
+          boot("crypto WASM loaded");
           const crypto_options = this.e2ee_store_in_memory ? {useIndexedDB: false} : {};
+          // a store left behind by another account is dropped before the
+          // attempt rather than discovered by its exception (#327):
+          await this.adoptCryptoStore(userId, boot);
           try {
-            await this.client.initRustCrypto(crypto_options);
+            await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
+              "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
           } catch (crypto_error) {
-            // the SDK's persistent crypto store is shared per browser profile
-            // and holds only one account — after logging out and in as a
-            // DIFFERENT user, initialization fails until the old store is
-            // cleared. The client is not started yet, so clearing is safe:
+            // a store this device cannot use at all: clear it and try once
+            // more. Reported loudly — it used to go through the logger,
+            // which a deployment runs at ERROR, so the one line explaining
+            // a 26-second start was invisible (#327).
+            console.warn("[vodle boot] the crypto store was rejected, clearing and retrying:",
+              (crypto_error as any)?.message || crypto_error);
             this.logger?.warn("MatrixService crypto store rejected, clearing and retrying", crypto_error);
             await this.client.clearStores();
-            await this.client.initRustCrypto(crypto_options);
+            await MatrixService.within(MatrixService.CRYPTO_INIT_TIMEOUT_MS,
+              "the end-to-end encryption store", () => this.client!.initRustCrypto(crypto_options));
           }
+          await this.storage.set(this.storageKey('matrix_crypto_account'), userId);
           this.logger?.info("MatrixService end-to-end encryption initialized", userId);
+          boot("end-to-end encryption ready");
         } catch (error) {
+          console.warn("[vodle boot] end-to-end encryption unavailable, carrying on without it:",
+            (error as any)?.message || error);
           this.logger?.warn("MatrixService could not initialize end-to-end encryption, continuing without", error);
         }
+      } else {
+        boot("end-to-end encryption is off");
       }
       
       // Restore any offline-queued writes from a previous session before
       // syncing, so they are replayed once the connection is confirmed by
       // the first successful sync below (rooms are known by then):
       await this.loadOfflineQueue();
+      // what this device voted before, to be compared against the rooms
+      // themselves once a poll is open (#327):
+      await this.loadOwnRatings();
+      boot("queued writes and own ratings restored", this.offlineQueue.length + " queued");
       
       // Start syncing.  Lazy-load room members to reduce initial
       // sync payload and avoid fetching full membership lists for
       // rooms with many participants.
       await this.client.startClient({
-        initialSyncLimit: 10,
+        // vodle reads a room's options and announcements from /messages and
+        // its data from room state, never from the initial timeline, so one
+        // event per room is enough to establish it. Ten of them across 52
+        // rooms is half a megabyte nobody looks at (#327).
+        initialSyncLimit: 1,
         lazyLoadMembers: true,
       });
+      MatrixService.stopMatrixRTC(this.client);
+      boot("syncing started");
       
       // Monitor sync state transitions to detect if sync loop stops
       (this.client as any).on('sync', (state: string, prevState: string | null) => {
@@ -438,7 +846,13 @@ export class MatrixService {
       
       this.logger?.info("MatrixService initialized", this.userId);
     } catch (error) {
+      // Half a client is worse than none: isLoggedIn() would say yes and the
+      // caller would skip the password login that could still have worked
+      // (#327).
       this.logger?.error("Failed to initialize Matrix client", error);
+      try { (this.client as any)?.stopClient?.(); } catch { /* never started */ }
+      this.client = null;
+      this.accessToken = null;
       throw error;
     }
     
@@ -446,220 +860,591 @@ export class MatrixService {
   }
   
   /**
+   * The sync store: IndexedDB when the browser has it, nothing when it does
+   * not (a private window, blocked site data), in which case the SDK's own
+   * memory store applies and the sync starts from scratch as before.
+   *
+   * One database per account. The store holds the rooms of whoever wrote it,
+   * so sharing one across an address change would show the old account's
+   * polls after the switch (#330).
+   */
+  private async makeSyncStore(userId: string): Promise<any> {
+    if (this.e2ee_store_in_memory) {
+      // several clients in one page (the two-client and federation specs)
+      return null;
+    }
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      return null;
+    }
+    try {
+      // `as any`: the SDK's IOpts inherits localStorage from its base type,
+      // which this file's own `Storage` import (Ionic's) shadows here
+      const store = new IndexedDBStore({
+        indexedDB: window.indexedDB,
+        localStorage: window.localStorage,
+        dbName: 'vodle-sync-' + userId.replace(/[^A-Za-z0-9]/g, '_'),
+      } as any);
+      await store.startup();
+      return store;
+    } catch (error) {
+      this.logger?.warn("MatrixService: no persistent sync store, syncing from scratch", error);
+      return null;
+    }
+  }
+  
+  /**
    * Wait for initial sync to complete
    */
-  private waitForSync(): Promise<void> {
+  private waitForSync(timeout_ms = MatrixService.SYNC_WAIT_TIMEOUT_MS): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Sync timeout'));
-      }, 30000); // 30 second timeout
-      
-      let handled = false;
+      /*
+      This used to register with `once`, which unregisters after the FIRST
+      sync event whatever that event is, while only PREPARED resolved the
+      promise. A first event of SYNCING or CATCHUP — what a client with a
+      warm store emits — therefore left the promise with nobody to settle it,
+      and the app sat on the 30-second timeout before saying a word. That is
+      the half minute the owner measured, and it then presented itself as a
+      failed login (#327).
+
+      A sync that is SYNCING or CATCHUP is a sync that works: rooms are
+      arriving. Either resolves, an ERROR rejects, and the listener is removed
+      whichever way it goes.
+      */
+      let settled = false, timer: any = null;
+      const done = (fn: () => void) => {
+        if (settled) { return; }
+        settled = true;
+        if (timer !== null) { clearTimeout(timer); }
+        try { (this.client as any)?.off?.('sync', onSync); } catch { /* no off() */ }
+        fn();
+      };
       const onSync = (state: string) => {
-        if (handled) return;
-        
-        if (state === 'PREPARED') {
-          handled = true;
-          clearTimeout(timeout);
-          resolve();
+        if (state === 'PREPARED' || state === 'SYNCING' || state === 'CATCHUP') {
+          done(resolve);
         } else if (state === 'ERROR') {
-          handled = true;
-          clearTimeout(timeout);
-          reject(new Error('Sync error'));
+          done(() => reject(new Error('Sync error')));
         }
       };
-      
-      // Use once to auto-unregister (if supported) or just track with handled flag
-      try {
-        (this.client as any).once('sync', onSync);
-      } catch {
-        // Fallback to regular listener with handled flag
-        (this.client as any).on('sync', onSync);
+      timer = setTimeout(() => done(() => reject(new Error('Sync timeout'))), timeout_ms);
+      (this.client as any).on('sync', onSync);
+      // The client may already be syncing — a state it reached before this
+      // listener existed emits no further event to wait for:
+      const already = (this.client as any)?.getSyncState?.();
+      if (already === 'PREPARED' || already === 'SYNCING' || already === 'CATCHUP') {
+        done(resolve);
       }
     });
   }
   
   /**
-   * Login to Matrix
+   * Log this user's Matrix account in, registering it first when it does
+   * not exist yet. The account is named by the hash of the e-mail address
+   * and its Matrix password is derived from e-mail and vodle password (the
+   * homeserver never sees the real one, see deriveMatrixPassword).
+   * @param register_if_missing - false: fail instead of registering when
+   *   no account exists (an account switch must not create accounts by
+   *   accident, #330)
    */
-  async login(email: string, password: string): Promise<void> {
+  async login(email: string, password: string, register_if_missing = true,
+              account_is_new = false): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
     const emailHash = hashEmail(email);
     this.logger?.entry("MatrixService.login", emailHash);
     
-    // Create temporary client for login
-    const tempClient = createClient({
-      baseUrl: this.homeserverUrl
-    });
-    
+    this.loginInProgress = true;
     try {
-      // Use hashed email as Matrix username to protect privacy
-      const username = emailHash;
-      // and a derived password, so the server never sees the real one:
-      const matrixPassword = deriveMatrixPassword(email, password);
-      
-      // Try to login first with new hash-based username and derived password
-      try {
-        let response;
-        try {
-          response = await tempClient.loginWithPassword(username, matrixPassword);
-        } catch (derivedError: any) {
-          // an account registered before password derivation existed still
-          // has the plain password:
-          if (derivedError?.errcode !== 'M_FORBIDDEN' && derivedError?.httpStatus !== 403) {
-            throw derivedError;
-          }
-          response = await tempClient.loginWithPassword(username, password);
-          this.logger?.warn("MatrixService.login: account still uses the plain password", response.user_id);
-        }
-        
-        // Store credentials
-        await this.saveCredentials({
-          accessToken: response.access_token,
-          userId: response.user_id,
-          deviceId: response.device_id
-        });
-        
-        // Initialize with new credentials
-        await this.initializeWithToken(
-          response.access_token,
-          response.user_id,
-          response.device_id
-        );
-        
-        this.logger?.info("Login successful", this.userId);
-      } catch (loginError: any) {
-        // If user doesn't exist with new format, try legacy username format for backward compatibility
-        if (loginError?.errcode === 'M_FORBIDDEN' || loginError?.httpStatus === 403) {
-          const legacyUsername = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
-          
-          try {
-            // Try login with old username format
-            const response = await tempClient.loginWithPassword(legacyUsername, password);
-            
-            this.logger?.info("Login successful with legacy username format", response.user_id);
-            
-            // Store credentials
-            await this.saveCredentials({
-              accessToken: response.access_token,
-              userId: response.user_id,
-              deviceId: response.device_id
-            });
-            
-            // Initialize with new credentials
-            await this.initializeWithToken(
-              response.access_token,
-              response.user_id,
-              response.device_id
-            );
-            
-            this.logger?.info("Login successful (legacy format)", this.userId);
-          } catch (legacyLoginError: any) {
-            // Neither format worked, try to register with new hash-based username
-            if (legacyLoginError?.errcode === 'M_FORBIDDEN' || legacyLoginError?.httpStatus === 403) {
-              this.logger?.info("User doesn't exist, attempting registration", username);
-              
-              try {
-                // First call to get the registration flows
-                await tempClient.register(username, matrixPassword);
-              } catch (firstRegError: any) {
-                // Expected: 401 with flows and session
-                if (firstRegError?.httpStatus === 401 && firstRegError?.data?.session) {
-                  this.logger?.info("Got registration flows, completing m.login.dummy");
-                  
-                  // Complete the m.login.dummy authentication
-                  const regResponse = await tempClient.register(
-                    username,
-                    matrixPassword,
-                    firstRegError.data.session,
-                    {
-                      type: 'm.login.dummy'
-                    }
-                  );
-                  
-                  // Store credentials
-                  await this.saveCredentials({
-                    accessToken: regResponse.access_token,
-                    userId: regResponse.user_id,
-                    deviceId: regResponse.device_id
-                  });
-                  
-                  // Initialize with new credentials
-                  await this.initializeWithToken(
-                    regResponse.access_token,
-                    regResponse.user_id,
-                    regResponse.device_id
-                  );
-                  
-                  this.logger?.info("Registration successful", this.userId);
-                } else {
-                  // Registration failed for other reasons
-                  this.logger?.error("Registration failed", firstRegError);
-                  throw firstRegError;
-                }
-              }
-            } else {
-              // Other login error, re-throw
-              throw legacyLoginError;
-            }
-          }
-        } else {
-          // Other login error, re-throw
-          throw loginError;
-        }
+      if (account_is_new) {
+        // The credentials were invented a moment ago (a guest, #193), so
+        // passwordLogin's ladder can only produce three REFUSED logins
+        // before registering anyway: three round trips the visitor waits
+        // through, and three ticks of rc_login.failed_attempts, which is the
+        // one rate limit a vodle homeserver keeps tight (#327).
+        console.log("[vodle boot] registering the new account");
+        await this.register(email, password);
+        this.logger?.exit("MatrixService.login (registered)");
+        return;
       }
+      const tempClient = createClient({ baseUrl: this.homeserverUrl });
+      console.log("[vodle boot] logging in with the password");
+      const response = await this.passwordLogin(tempClient, email, password);
+      console.log("[vodle boot] the homeserver accepted the password");
+      if (!response) {
+        if (!register_if_missing) {
+          throw new Error("MatrixService.login: no account for this e-mail address and password");
+        }
+        // No account in any of the formats: register one. The registration
+        // completes the homeserver's user-interactive-auth flow — with the
+        // registration token when one is configured (#327); until
+        // 2026-09-10 this path sent the dummy stage only, which a server
+        // requiring a token rejects.
+        this.logger?.info("MatrixService.login: no account yet, registering", emailHash);
+        await this.register(email, password);
+        this.logger?.exit("MatrixService.login");
+        return;
+      }
+      
+      await this.saveCredentials({
+        accessToken: response.access_token,
+        userId: response.user_id,
+        deviceId: response.device_id
+      });
+      await this.initializeWithToken(
+        response.access_token,
+        response.user_id,
+        response.device_id
+      );
+      this.logger?.info("Login successful", this.userId);
     } catch (error) {
       this.logger?.error("MatrixService.login/register failed", error);
       throw error;
+    } finally {
+      this.loginInProgress = false;
     }
     
     this.logger?.exit("MatrixService.login");
   }
   
+  /** whether a homeserver error means "wrong credentials or no such account" */
+  private static isForbidden(error: any): boolean {
+    return error?.errcode === 'M_FORBIDDEN' || error?.httpStatus === 403;
+  }
+  
+  /**
+   * A password login of the account for `email`, in the formats the app
+   * has used over time: the hashed e-mail with the derived password, the
+   * same account with the plain password (registered before password
+   * derivation existed), and the legacy plain-e-mail username. Null when
+   * none of them exists; any other error (an unreachable server, a rate
+   * limit) is thrown.
+   */
+  private async passwordLogin(tempClient: MatrixClient, email: string, password: string): Promise<any | null> {
+    const username = hashEmail(email);
+    const legacyUsername = email.replace('@', '_at_').replace(/[^a-z0-9._=-]/gi, '_');
+    const attempts: Array<[string, string, string | null]> = [
+      [username, deriveMatrixPassword(email, password), null],
+      [username, password, 'account still uses the plain password'],
+      [legacyUsername, password, 'account still uses the legacy username'],
+    ];
+    for (const [user, pw, remark] of attempts) {
+      try {
+        // a 429 is not a wrong password: rc_login is counted per IP address
+        // as well as per account, so it can be another user's doing (#327)
+        const response = await this.retryOnRateLimit(() => tempClient.loginWithPassword(user, pw));
+        if (remark) {
+          this.logger?.warn("MatrixService.login: " + remark, response.user_id);
+        }
+        return response;
+      } catch (error: any) {
+        if (!MatrixService.isForbidden(error)) {
+          throw error;
+        }
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * A session of the account for `email` that makes REST calls only (no
+   * sync loop): the OLD account during an account switch (#330, #193),
+   * which hands its voter rooms over to the new account and is retired
+   * afterwards. When this service is logged in as that account, its own
+   * access token is reused — dropSession() keeps it valid.
+   */
+  async sessionFor(email: string, password: string): Promise<MatrixClient> {
+    if (this.client && this.userId && this.accessToken
+        && this.userId.startsWith('@' + hashEmail(email) + ':')) {
+      return createClient({ baseUrl: this.homeserverUrl, accessToken: this.accessToken, userId: this.userId });
+    }
+    const tempClient = createClient({ baseUrl: this.homeserverUrl });
+    const response = await this.passwordLogin(tempClient, email, password);
+    if (!response) {
+      throw new Error("MatrixService.sessionFor: no account for this e-mail address and password");
+    }
+    return createClient({ baseUrl: this.homeserverUrl, accessToken: response.access_token, userId: response.user_id });
+  }
+  
+  /** the user-interactive-auth answer for a password stage */
+  private static passwordAuth(userId: string, password: string): any {
+    return { type: 'm.login.password', identifier: { type: 'm.id.user', user: userId }, password };
+  }
+  
+  /**
+   * Change this account's password on the homeserver after the vodle
+   * password changed (#330): the Matrix password is derived from e-mail
+   * address and vodle password. This session stays logged in. The old
+   * password authenticates the change (user-interactive auth); an account
+   * from before password derivation existed still has the plain old one.
+   */
+  async changePassword(email: string, oldPassword: string, newPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.changePassword");
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    const newMatrixPassword = deriveMatrixPassword(email, newPassword);
+    try {
+      await this.client.setPassword(
+        MatrixService.passwordAuth(this.userId, deriveMatrixPassword(email, oldPassword)), newMatrixPassword, false);
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error) && error?.httpStatus !== 401) {
+        throw error;
+      }
+      await this.client.setPassword(MatrixService.passwordAuth(this.userId, oldPassword), newMatrixPassword, false);
+    }
+    this.logger?.info("MatrixService.changePassword: password changed on the homeserver", this.userId);
+    this.logger?.exit("MatrixService.changePassword");
+  }
+  
+  /**
+   * Change the password of the account that acts for `vid` in `pollId`.
+   *
+   * A poll account's password is derived from the user's (pollAccountPassword),
+   * so a user who changes their password would otherwise be locked out of
+   * every poll they take part in. The account itself does not change — its
+   * name is the poll and the vid, not the e-mail — so the rooms, the
+   * ratings and the tally are untouched (#327).
+   *
+   * Devices stay logged in (logoutDevices false): this very device has a
+   * session for the account, and so may others.
+   */
+  async changePollAccountPassword(pollId: string, vid: string,
+                                  oldUserPassword: string, newUserPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.changePollAccountPassword", pollId);
+    const username = pollAccountName(pollId, vid);
+    const old_matrix_password = pollAccountPassword(pollId, vid, oldUserPassword);
+    const new_matrix_password = pollAccountPassword(pollId, vid, newUserPassword);
+    const probe = createClient({ baseUrl: this.homeserverUrl });
+    let response: any;
+    try {
+      response = await this.retryOnRateLimit(() => probe.loginWithPassword(username, old_matrix_password));
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error)) { throw error; }
+      // either the change already happened (a move resumed after a
+      // restart) or this device never took part in this poll; both are
+      // nothing to do, and neither is a reason to fail the move
+      this.logger?.info("MatrixService.changePollAccountPassword: nothing to change", pollId);
+      this.logger?.exit("MatrixService.changePollAccountPassword");
+      return;
+    }
+    const session = createClient({
+      baseUrl: this.homeserverUrl,
+      accessToken: response.access_token,
+      userId: response.user_id,
+      deviceId: response.device_id,
+    });
+    await this.retryOnRateLimit(() => session.setPassword(
+      MatrixService.passwordAuth(response.user_id, old_matrix_password), new_matrix_password, false));
+    this.logger?.info("MatrixService.changePollAccountPassword: changed", pollId);
+    this.logger?.exit("MatrixService.changePollAccountPassword");
+  }
+  
+  /**
+   * Let this (new) account write into the voter rooms the OLD account owns
+   * for the given (poll, voter id) pairs — an account switch (#330), in
+   * particular a guest logging in with a real account (#193): the new
+   * account joins each room (voter rooms are public) and the old account,
+   * which has power 50 there, grants it the same power. The voter id and
+   * the room stay the same, so the other participants and the tally see
+   * nothing change; the old account's rating events remain the room's
+   * state until the new account overwrites them. A room the guard bot has
+   * closed cannot be granted (its state_default is 100) and is skipped —
+   * it is read-only for everyone anyway. Returns the rooms taken over, per
+   * poll; rooms that could not be taken over are logged.
+   */
+  async takeOverVoterRooms(oldSession: MatrixClient, entries: Array<{pollId: string, vid: string}>): Promise<Record<string, string>> {
+    this.logger?.entry("MatrixService.takeOverVoterRooms", entries.length);
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    const taken: Record<string, string> = {};
+    for (const {pollId, vid} of entries) {
+      let roomId: string | null = null;
+      try {
+        // a voter room admits the poll room's members only (#328):
+        await this.getPollRoom(pollId);
+        roomId = await this.getVoterRoom(pollId, vid);
+        if (!roomId) {
+          this.logger?.info("MatrixService.takeOverVoterRooms: no voter room", pollId, vid);
+          continue;
+        }
+        if (!this.client.getRoom(roomId)) {
+          await this.retryOnRateLimit(() => this.client!.joinRoom(roomId!));
+          await this.waitForRoom(roomId);
+        }
+        const levels: any = await this.retryOnRateLimit(() => oldSession.getStateEvent(roomId!, 'm.room.power_levels', ''));
+        const users = { ...(levels?.users || {}) };
+        if ((users[this.userId] ?? levels?.users_default ?? 0) < 50) {
+          users[this.userId] = 50;
+          await this.retryOnRateLimit(() => oldSession.sendStateEvent(roomId!, 'm.room.power_levels', { ...levels, users }, ''));
+        }
+        // the room carries its vid already (the old account wrote it):
+        this.voterVidStored.add(roomId);
+        taken[pollId] = roomId;
+        this.logger?.info("MatrixService.takeOverVoterRooms: taken over", pollId, vid, roomId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.takeOverVoterRooms: could not take over", pollId, vid, roomId, error);
+      }
+    }
+    this.logger?.exit("MatrixService.takeOverVoterRooms", Object.keys(taken).length);
+    return taken;
+  }
+  
+  /** how often a handover of a poll from before is attempted (takeOverFrom) */
+  static HANDOVER_ATTEMPTS = 3;
+  
+  /**
+   * Let this account write in `pollId`'s POLL room as the `oldSession`
+   * account can — the poll-room half of takeOverFrom below.
+   *
+   * A poll room gives every member power 50 (users_default), which is all
+   * taking part needs; its CREATOR holds 100, which is what locking the
+   * metadata when the poll starts takes. So this grants the old account's
+   * level when it is above what this account has anyway, and does nothing
+   * at all for an account that merely votes. Granting one's own level is
+   * allowed by the Matrix auth rules (raising someone ABOVE the sender is
+   * not), and the poll room lets its creator send m.room.power_levels
+   * before the lock (50) and after it (100) alike.
+   *
+   * Returns whether the poll account can now do what the old one could;
+   * false means try again later, not "nothing to do".
+   */
+  async takeOverPollRoom(oldSession: MatrixClient, pollId: string): Promise<boolean> {
+    this.logger?.entry("MatrixService.takeOverPollRoom", pollId);
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    try {
+      const roomId = await this.getPollRoom(pollId);
+      if (!roomId) {
+        // the poll's room is gone (purged after the retention period, or
+        // never reached this homeserver): nothing to take over
+        this.logger?.exit("MatrixService.takeOverPollRoom (no poll room)");
+        return true;
+      }
+      const levels: any = await this.retryOnRateLimit(
+        () => oldSession.getStateEvent(roomId, 'm.room.power_levels', ''));
+      const users = { ...(levels?.users || {}) };
+      const theirs = users[oldSession.getUserId()!] ?? levels?.users_default ?? 0;
+      const mine = users[this.userId] ?? levels?.users_default ?? 0;
+      if (theirs <= mine) {
+        this.logger?.exit("MatrixService.takeOverPollRoom (nothing to grant)");
+        return true;
+      }
+      users[this.userId] = theirs;
+      await this.retryOnRateLimit(
+        () => oldSession.sendStateEvent(roomId, 'm.room.power_levels', { ...levels, users }, ''));
+      this.logger?.info("MatrixService.takeOverPollRoom: granted", pollId, theirs);
+      this.logger?.exit("MatrixService.takeOverPollRoom");
+      return true;
+    } catch (error) {
+      this.logger?.warn("MatrixService.takeOverPollRoom: could not take over", pollId, error);
+      this.logger?.exit("MatrixService.takeOverPollRoom (failed)");
+      return false;
+    }
+  }
+  
+  /**
+   * Take `pollId`'s rooms over from the account that acted for this device
+   * before it had a poll account (#327) — the person's own account, which
+   * created the voter room (power 50 there) and, if this device created the
+   * poll, holds power 100 in the poll room. Without this the poll account
+   * joins both rooms and can write to neither: every rating comes back 403,
+   * which the offline queue rightly takes for a refusal that will never be
+   * accepted.
+   *
+   * The same handover an account switch does (takeOverVoterRooms), for the
+   * same reason and with the same consequences: the rooms, the voter id and
+   * the ratings already in them do not change, so nobody else sees anything
+   * happen and no tally moves.
+   *
+   * The gate is local and costs no request — unless THIS device stored the
+   * poll's rooms under the previous account, there is nothing of its to take
+   * over — so a poll created or joined after this exists pays one storage
+   * read. Done once per (device, poll); a handover that fails is not
+   * recorded, so the next operation on the poll tries again.
+   *
+   * What this cannot repair is the privacy of a poll from before: the old
+   * account's announcement, with the vid in plain text and its own user id
+   * as the sender, is in the poll room's history for good. Only the polls
+   * from here on are unlinkable.
+   */
+  async takeOverFrom(previous: MatrixService, pollId: string, vid: string): Promise<void> {
+    if (previous === this || !this.pollAccountFor) {
+      return;
+    }
+    const doneKey = this.storageKey(`handover_${pollId}`);
+    if (await this.storage.get(doneKey)) {
+      return;
+    }
+    const hadPollRoom = await previous.storage.get(previous.storageKey(`poll_room_${pollId}`));
+    const hadVoterRoom = await previous.storage.get(previous.storageKey(`voter_room_${pollId}:${vid}`));
+    if (!hadPollRoom && !hadVoterRoom) {
+      await this.storage.set(doneKey, 'nothing to take over');
+      return;
+    }
+    this.logger?.entry("MatrixService.takeOverFrom", pollId);
+    if (!previous.client || !previous.isLoggedIn()) {
+      // the person is not signed in on this device right now; the rooms are
+      // still theirs, so leave the handover for a start that has them
+      this.logger?.exit("MatrixService.takeOverFrom (the previous account is not signed in)");
+      return;
+    }
+    const pollRoomDone = await this.takeOverPollRoom(previous.client, pollId);
+    const taken = await this.takeOverVoterRooms(previous.client, [{pollId, vid}]);
+    const voterRoomDone = !hadVoterRoom || !!taken[pollId];
+    if (pollRoomDone && voterRoomDone) {
+      await this.storage.set(doneKey, previous.userId);
+      this.logger?.info("MatrixService.takeOverFrom: taken over", pollId, previous.userId);
+    } else {
+      const attemptsKey = this.storageKey(`handover_attempts_${pollId}`);
+      const attempts = ((await this.storage.get(attemptsKey)) || 0) + 1;
+      await this.storage.set(attemptsKey, attempts);
+      if (attempts >= MatrixService.HANDOVER_ATTEMPTS) {
+        // Not every handover CAN succeed: a voter room the guard bot has
+        // closed keeps its power levels at 100 and would refuse the grant
+        // for ever, and it is read-only for its owner too, so there is
+        // nothing to take over. After three starts this is not a homeserver
+        // having a bad day, and retrying it at every start costs a 403 each
+        // time.
+        await this.storage.set(doneKey, 'given up after ' + attempts + ' attempts');
+        this.logger?.warn("MatrixService.takeOverFrom: given up", pollId, attempts);
+      } else {
+        this.logger?.warn("MatrixService.takeOverFrom: incomplete, will try again", pollId, attempts);
+      }
+    }
+    this.logger?.exit("MatrixService.takeOverFrom");
+  }
+  
+  /**
+   * Retire the OLD account after an account switch (#330, #193): its user
+   * room's data is cleared (the new account holds the data now) and, for a
+   * guest account whose random credentials are about to be forgotten, the
+   * account is deactivated — Synapse then leaves all its rooms; its rating
+   * events stay the voter rooms' state (no erasure). Best effort: a failure
+   * leaves an unused account behind, nothing worse.
+   */
+  async retireSession(oldSession: MatrixClient, email: string, password: string, deactivate: boolean): Promise<void> {
+    const oldUserId = oldSession.getUserId() || '';
+    this.logger?.entry("MatrixService.retireSession", oldUserId, deactivate);
+    try {
+      const { room_id } = await oldSession.getRoomIdForAlias(this.userRoomAliasFor(oldUserId));
+      const state: any[] = await oldSession.roomState(room_id);
+      for (const event of state) {
+        if (typeof event.type === 'string' && event.type.startsWith('m.room.vodle.user.')
+            && (event.state_key || '') === '' && Object.keys(event.content || {}).length > 0) {
+          await this.retryOnRateLimit(() => oldSession.sendStateEvent(room_id, event.type, {}, ''));
+        }
+      }
+    } catch (error) {
+      this.logger?.warn("MatrixService.retireSession: could not clear the old user room", oldUserId, error);
+    }
+    if (deactivate) {
+      try {
+        try {
+          await oldSession.deactivateAccount(MatrixService.passwordAuth(oldUserId, deriveMatrixPassword(email, password)), false);
+        } catch (error: any) {
+          if (!MatrixService.isForbidden(error) && error?.httpStatus !== 401) {
+            throw error;
+          }
+          await oldSession.deactivateAccount(MatrixService.passwordAuth(oldUserId, password), false);
+        }
+        this.logger?.info("MatrixService.retireSession: guest account deactivated", oldUserId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.retireSession: could not deactivate the old account", oldUserId, error);
+      }
+    }
+    this.logger?.exit("MatrixService.retireSession");
+  }
+  
   /**
    * Register new user
    */
+  /**
+   * The next user-interactive-auth stage to complete for a registration,
+   * or null when the server offers no flow the app can complete. The app
+   * can complete m.login.dummy (open registration) and, when configured
+   * with one, m.login.registration_token; Synapse puts the token stage in
+   * front of the dummy stage, so a registration takes two steps (#327).
+   */
+  static registrationAuth(flows: any[] | undefined, token: string | null | undefined,
+                          session?: string, completed: string[] = []): any | null {
+    const supported = (stage: string) => stage === 'm.login.dummy'
+      || (stage === 'm.login.registration_token' && !!token);
+    let stage: string | null;
+    if (!flows || flows.length === 0) {
+      stage = token ? 'm.login.registration_token' : 'm.login.dummy';
+    } else {
+      const candidates = flows.map((flow: any) => (flow?.stages || []) as string[])
+        .filter(stages => stages.every(supported) && completed.every(done => stages.includes(done)))
+        .sort((a, b) => a.length - b.length);
+      stage = candidates.length ? (candidates[0].find(s => !completed.includes(s)) || null) : null;
+    }
+    if (!stage) {
+      return null;
+    }
+    const auth: any = {type: stage};
+    if (stage === 'm.login.registration_token') {
+      auth.token = token;
+    }
+    if (session) {
+      auth.session = session;
+    }
+    return auth;
+  }
+
   async register(email: string, password: string): Promise<void> {
     // Hash email for privacy - never log or send plain email to Matrix server
-    const emailHash = hashEmail(email);
-    this.logger?.entry("MatrixService.register", emailHash);
+    this.logger?.entry("MatrixService.register", hashEmail(email));
+    // the hashed e-mail as the account name, and a derived password so the
+    // server never sees the real one:
+    await this.registerAs(hashEmail(email), deriveMatrixPassword(email, password));
+    this.logger?.exit("MatrixService.register");
+  }
+  
+  /**
+   * Register one account, by the name it is to have.
+   *
+   * The name is the caller's business: the hash of an e-mail for a person
+   * (register), or the hash of poll and vid for the account that acts for
+   * one voter in one poll (pollAccountName, #327).
+   */
+  async registerAs(username: string, matrixPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.registerAs", username);
     
     const tempClient = createClient({
       baseUrl: this.homeserverUrl
     });
     
     try {
-      // Use hashed email as Matrix username to protect privacy, and a
-      // derived password so the server never sees the real one:
-      const username = emailHash;
-      const matrixPassword = deriveMatrixPassword(email, password);
-      
-      // Registration is user-interactive auth: even with
-      // enable_registration_without_verification, Synapse requires the
-      // m.login.dummy stage, and the SDK's register() does no UIA handling
-      // of its own — an empty auth dict is rejected with a 401. Send the
-      // dummy stage directly, and if the server insists on a session, retry
-      // once with the session it issued:
-      let response;
-      try {
-        response = await tempClient.register(
-          username,
-          matrixPassword,
-          undefined, // sessionId
-          {type: 'm.login.dummy'} // auth
-        );
-      } catch (error: any) {
-        const session = error?.data?.session,
-              flows = error?.data?.flows || [];
-        if (error?.httpStatus === 401 && session
-            && flows.some((flow: any) => (flow.stages || []).includes('m.login.dummy'))) {
-          response = await tempClient.register(
-            username,
-            matrixPassword,
-            session,
-            {type: 'm.login.dummy'}
-          );
-        } else {
+      // Registration is user-interactive auth, and the SDK's register()
+      // does no UIA handling of its own — an empty auth dict is rejected
+      // with a 401. Send the stage the app can complete (the registration
+      // token when one is configured, else m.login.dummy) directly, and if
+      // the server insists on a session, retry once with the session and
+      // the flows it issued (#327):
+      const token = environment.matrix.registration_token || null;
+      let response: any, session: string | undefined, flows: any[] | undefined, completed: string[] = [];
+      for (let attempt = 0; ; attempt++) {
+        const auth = MatrixService.registrationAuth(flows, token, session, completed);
+        if (!auth) {
+          throw new Error("registration: the homeserver requires a stage this app cannot complete "
+            + "(a registration token may be missing from the configuration): " + JSON.stringify(flows));
+        }
+        try {
+          // one account per (poll, voter) means a device registers once per
+          // poll, and rc_registration is counted per IP ADDRESS: a shared
+          // connection makes other people's registrations this one's problem,
+          // so a 429 waits as long as the server asks and tries again (#327)
+          response = await this.retryOnRateLimit(() =>
+            tempClient.register(username, matrixPassword, session, auth));
+          break;
+        } catch (error: any) {
+          // 401 with a session: the server wants (more) stages of the flow
+          if (error?.httpStatus === 401 && error?.data?.session && attempt < 4) {
+            session = error.data.session;
+            flows = error.data.flows;
+            completed = error.data.completed || [];
+            continue;
+          }
           throw error;
         }
       }
@@ -678,11 +1463,115 @@ export class MatrixService {
       
       this.logger?.info("Registration successful", this.userId);
     } catch (error) {
-      this.logger?.error("MatrixService.register failed", error);
+      this.logger?.error("MatrixService.registerAs failed", error);
       throw error;
     }
     
-    this.logger?.exit("MatrixService.register");
+    this.logger?.exit("MatrixService.registerAs");
+  }
+  
+  /**
+   * Whether the homeserver has no account by this name yet.
+   *
+   * Asking is what keeps signing a poll account in from producing a FAILED
+   * login every time a device takes part in a new poll. `rc_login
+   * .failed_attempts` is the one rate limit a vodle homeserver leaves tight,
+   * because it is the one that makes guessing a password expensive, and
+   * vodle should not be spending it on logins it expects to be refused
+   * (#327). `/register/available` costs `rc_registration` instead, which is
+   * sized for a lecture hall arriving at once.
+   *
+   * Null when the homeserver will not say — an older server, registration
+   * closed, a name it rejects for a reason of its own — and the caller then
+   * falls back to trying the login, as it always did.
+   */
+  private async usernameIsFree(username: string): Promise<boolean | null> {
+    try {
+      return await this.retryOnRateLimit(async () => {
+        const response = await fetch(this.homeserverUrl
+          + '/_matrix/client/v3/register/available?username=' + encodeURIComponent(username),
+          {cache: 'no-store'});
+        if (response.ok) {
+          return !!(await response.json())?.available;
+        }
+        const body = await response.json().catch(() => null);
+        if (body?.errcode === 'M_USER_IN_USE') { return false; }
+        // fetch does not throw on a 429, and retryOnRateLimit needs one:
+        if (response.status === 429) { throw {httpStatus: 429, data: body}; }
+        return null;
+      });
+    } catch (error) {
+      this.logger?.info("MatrixService.usernameIsFree: the homeserver would not say", username, error);
+      return null;
+    }
+  }
+
+  /**
+   * Sign one account in by name, registering it if the homeserver has never
+   * seen it. No ladder of historical credential formats (see passwordLogin):
+   * an account named this way was invented by this version of vodle and
+   * cannot exist in an older shape (#327).
+   */
+  async signInAs(username: string, matrixPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.signInAs", username);
+    // A name the homeserver has never seen is registered straight away,
+    // without a refused login first (usernameIsFree); when it will not say,
+    // the login decides, as it always did.
+    const free = await this.usernameIsFree(username);
+    if (free === true) {
+      await this.registerAs(username, matrixPassword);
+      this.logger?.exit("MatrixService.signInAs (registered)");
+      return;
+    }
+    const tempClient = createClient({ baseUrl: this.homeserverUrl });
+    let response: any = null;
+    try {
+      // like registerAs: rc_login.address is counted per IP address, and a
+      // device signs in once per poll it takes part in (#327)
+      response = await this.retryOnRateLimit(() =>
+        tempClient.loginWithPassword(username, matrixPassword));
+    } catch (error: any) {
+      if (!MatrixService.isForbidden(error)) { throw error; }
+      if (free === false) {
+        // the account exists and this password does not open it, so this is
+        // a wrong vodle password rather than a first join: registering would
+        // only turn a clear refusal into M_USER_IN_USE
+        this.logger?.warn("MatrixService.signInAs: the account exists and the password was refused", username);
+        throw error;
+      }
+    }
+    if (!response) {
+      await this.registerAs(username, matrixPassword);
+      this.logger?.exit("MatrixService.signInAs (registered)");
+      return;
+    }
+    await this.saveCredentials({
+      accessToken: response.access_token,
+      userId: response.user_id,
+      deviceId: response.device_id
+    });
+    await this.initializeWithToken(response.access_token, response.user_id, response.device_id);
+    this.logger?.exit("MatrixService.signInAs");
+  }
+  
+  /**
+   * Bring this instance up as the account that acts for `vid` in `pollId` —
+   * the Matrix counterpart of the CouchDB backend's
+   * `vodle.poll.<pid>.voter.<myvid>` database user (#327).
+   *
+   * A session stored under this instance's own prefix is resumed; otherwise
+   * the account is signed in, or registered the first time this device
+   * takes part in this poll.
+   */
+  async signInForPoll(pollId: string, vid: string, userPassword: string): Promise<void> {
+    this.logger?.entry("MatrixService.signInForPoll", pollId);
+    if (await this.resumeSessionAs(pollAccountName(pollId, vid))) {
+      this.logger?.exit("MatrixService.signInForPoll (resumed)");
+      return;
+    }
+    await this.signInAs(pollAccountName(pollId, vid),
+                        pollAccountPassword(pollId, vid, userPassword));
+    this.logger?.exit("MatrixService.signInForPoll");
   }
   
   /**
@@ -693,7 +1582,43 @@ export class MatrixService {
     
     if (this.client) {
       await this.client.logout();
+    }
+    await this.dropSession();
+    
+    this.logger?.exit("MatrixService.logout");
+  }
+  
+  /**
+   * Forget this session locally without logging it out on the server —
+   * before logging in as another account during an account switch (#330,
+   * #193): the old session's access token stays valid for handing its
+   * rooms over (see sessionFor). Everything cached about the old account's
+   * rooms and data is dropped; the persisted room ids are kept, they are
+   * verified against the new session's membership when used.
+   */
+  async dropSession(): Promise<void> {
+    this.logger?.entry("MatrixService.dropSession");
+    
+    if (this.client) {
+      // Unregister Matrix SDK event listeners before clearing tracking
+      // structures to prevent memory leaks from orphaned handlers.
+      for (const [, handlers] of this.pollEventHandlerRefs) {
+        for (const { event, handler } of handlers) {
+          (this.client as any).removeListener(event, handler);
+        }
+      }
       this.client.stopClient();
+      // The sync store now outlives the page (#327), so a session that ends
+      // must take its rooms with it: until this, leaving the app left nothing
+      // of it on the device at all, and it should stay that way.
+      try {
+        await (this.client as any).clearStores();
+        // the crypto store went with them, so the marker must not go on
+        // claiming an account owns one (#327):
+        await this.storage.remove(this.storageKey('matrix_crypto_account'));
+      } catch (error) {
+        this.logger?.warn("MatrixService.dropSession could not clear the sync store", error);
+      }
       this.client = null;
     }
     
@@ -710,15 +1635,12 @@ export class MatrixService {
     this.ratingCaches.clear();
     this.delegationRequestCaches.clear();
     this.delegationResponseCaches.clear();
-    // Unregister Matrix SDK event listeners before clearing tracking structures
-    // to prevent memory leaks from orphaned handlers.
-    for (const [, handlers] of this.pollEventHandlerRefs) {
-      for (const { event, handler } of handlers) {
-        (this.client as any)?.removeListener(event, handler);
-      }
-    }
     this.pollEventListeners.clear();
     this.pollEventHandlersSetup.clear();
+    this.voterSyncStarted.clear();
+    this.pollTimelineCache.clear();
+    this.ratingsScanned.clear();
+    this.ratingsDuringScan.clear();
     this.pollEventHandlerRefs.clear();
     // Stop all periodic voter discovery timers
     for (const [, timer] of this.voterDiscoveryTimers) {
@@ -734,7 +1656,7 @@ export class MatrixService {
     // (e.g., if a different user logs in next).
     await this.storage.remove(MatrixService.OFFLINE_QUEUE_STORAGE_KEY);
     
-    this.logger?.exit("MatrixService.logout");
+    this.logger?.exit("MatrixService.dropSession");
   }
   
   /**
@@ -742,21 +1664,334 @@ export class MatrixService {
    * Uses the server-provided retry_after_ms or falls back to exponential
    * backoff starting at 2 s, up to 3 retries.
    */
-  private async retryOnRateLimit<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  private async retryOnRateLimit<T>(fn: () => Promise<T>, maxRetries = 6): Promise<T> {
     let attempt = 0;
     while (true) {
+      await this.paceWrite();
       try {
-        return await fn();
+        const result = await fn();
+        this.noteWriteAccepted();
+        return result;
       } catch (error: any) {
         attempt++;
-        if (error?.httpStatus !== 429 || attempt >= maxRetries) {
+        if (!this.is_rate_limit_error(error) || attempt >= maxRetries) {
           throw error;
         }
+        // Synapse says how long to wait. Several hundred writes go out
+        // together when a poll is published, so they are all told the same
+        // thing and would come back together: the jitter spreads them. The
+        // wait itself is the shared pause — paceWrite at the top of the loop
+        // sits it out, so it is not slept through here as well (#327).
         const waitMs = error?.data?.retry_after_ms ?? (2000 * Math.pow(2, attempt - 1));
-        this.logger?.info(`Rate limited (429), retrying in ${waitMs}ms (attempt ${attempt}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const jittered = Math.round(waitMs * (1 + Math.random()));
+        this.noteWriteThrottled(jittered);
+        this.logger?.info(`Rate limited (429), retrying in ${jittered}ms (attempt ${attempt}/${maxRetries})`);
       }
     }
+  }
+
+  /** how long the crypto WASM may take before the start goes on without it */
+  static readonly CRYPTO_INIT_TIMEOUT_MS = 20000;
+  /**
+   * How long a page that needs the homeserver waits for the login (#327).
+   *
+   * Below the symptom it is there to catch, not above it: the owner waited
+   * eighty seconds, so a ninety-second ceiling would have let the same
+   * silence happen again in full. The budget on this path is the sync wait
+   * (SYNC_WAIT_TIMEOUT_MS, 30 s) plus a round trip.
+   */
+  static readonly LOGIN_WAIT_TIMEOUT_MS = 35000;
+  
+  /**
+   * Run work with a ceiling on how long it may take. The rejection names
+   * what it was waiting for, so a slow start says so instead of sitting
+   * there in silence (#327).
+   */
+  static within<T>(timeout_ms: number, what: string, work: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(what + " did not arrive within " + Math.round(timeout_ms / 1000) + " s")),
+        timeout_ms);
+      work().then(
+        value => { clearTimeout(timer); resolve(value); },
+        error => { clearTimeout(timer); reject(error); });
+    });
+  }
+  
+  /**
+   * The start stage most recently reached, and when.
+   *
+   * The console says this already, but three times running the owner has
+   * reported a join "stuck without any console message" — and a console
+   * they cannot see is a diagnosis nobody can make. It is a static because
+   * both stopwatches write it (DataService's, from the app starting, and
+   * this service's, from the client being set up) and the joinpoll page
+   * reads it without either of them knowing about the page (#327).
+   */
+  static boot_stage = '';
+  static boot_stage_at = 0;
+  
+  /** what the waiting page shows: the stage and how long it has been there */
+  static bootStageAge(): number {
+    return MatrixService.boot_stage_at ? Date.now() - MatrixService.boot_stage_at : 0;
+  }
+  
+  static noteBootStage(stage: string): void {
+    MatrixService.boot_stage = stage;
+    MatrixService.boot_stage_at = Date.now();
+  }
+  
+  /** the one crypto-WASM fetch, however many times it is asked for.
+   *  Not private so that a test can reset it without fetching 5.4 MB. */
+  static cryptoWasm: Promise<void> | null = null;
+  
+  /** how the WASM is actually loaded; a test replaces this */
+  static loadCryptoWasm: () => Promise<void> = async () => {
+    // The module's own default URL is built from import.meta.url, which
+    // Angular's webpack leaves as an unfetchable file:/// path, so the copy
+    // shipped as an app asset (see angular.json) is named explicitly.
+    const wasm: any = await import('@matrix-org/matrix-sdk-crypto-wasm' as any);
+    await wasm.initAsync('/assets/matrix_sdk_crypto_wasm_bg.wasm');
+  };
+  
+  /**
+   * Fetch and instantiate the Rust crypto WASM, once.
+   *
+   * 5.4 MB of WebAssembly, and it sits on the path between the app starting
+   * and its first sync. The owner's guest start of 2026-09-12 spent 8.9 s of
+   * a 33 s join on it, because it was only ASKED for after the login and the
+   * registration had finished — some five seconds during which the link was
+   * doing nothing else worth the bandwidth. DataService.init calls this at
+   * the start of the start instead, and initializeWithToken awaits the same
+   * promise, so the download overlaps the login rather than following it.
+   *
+   * A failure is not remembered: crypto degrades gracefully, and a second
+   * start should be free to try again.
+   */
+  static fetchCryptoWasm(): Promise<void> {
+    if (!MatrixService.cryptoWasm) {
+      MatrixService.cryptoWasm = MatrixService.loadCryptoWasm().catch(error => {
+        MatrixService.cryptoWasm = null;
+        throw error;
+      });
+    }
+    return MatrixService.cryptoWasm;
+  }
+  
+  /**
+   * Turn off the SDK's MatrixRTC session manager, which vodle has no use for.
+   *
+   * It subscribes to RoomState.events — EVERY state event the client sees —
+   * and vodle's ratings ARE state events, so a poll of fifty voters runs it
+   * some thousands of times a sync, each one looking for voice/video
+   * memberships that are never there. Worse, a state event for a room the
+   * client has not got yet is reported with logger.error, which no log level
+   * suppresses: the click-through of 2026-09-12 collected some hundreds of
+   * "Got room state event for unknown room" lines from a poll of ten (#327).
+   *
+   * `matrixRTC` and the ClientEvent.Sync listener that starts it are the
+   * SDK's own names, so this is written to do nothing quietly if a later
+   * version renames them, rather than to fail the start.
+   */
+  static stopMatrixRTC(client: any): void {
+    try {
+      // the manager is started from a Sync listener once the initial sync
+      // completes, so stopping it now is not enough on its own:
+      if (typeof client?.startMatrixRTC === 'function') {
+        client.off('sync', client.startMatrixRTC);
+      }
+      client?.matrixRTC?.stop?.();
+    } catch (error) {
+      console.warn("[vodle boot] could not turn off MatrixRTC:",
+        (error as any)?.message || error);
+    }
+  }
+  
+  /**
+   * Make sure the Rust crypto store on disk is this account's, before the
+   * SDK opens it.
+   *
+   * The store is one per browser profile and belongs to ONE account. vodle
+   * hands out a fresh account to every silent guest (#193), so a browser
+   * that has been a guest before arrives with a store belonging to somebody
+   * else — and finding that out by exception costs a failed init, a
+   * deleteDatabase that blocks on the connection the failed init left open,
+   * and a full schema migration of the store that is about to be thrown
+   * away: 26 seconds of it in the owner's log and 18.4 s in CI, against
+   * 1.5 s for a device reusing its account (#327).
+   *
+   * Ownership has to be *proved*, not merely not-disproved: a browser with
+   * no marker (storage cleared, or a version older than this check) has not
+   * shown the store is this account's, and paid the 18.4 s.
+   */
+  private async adoptCryptoStore(userId: string, boot: (stage: string, detail?: any) => void): Promise<void> {
+    // (nothing to do when the store is in memory: there is none on disk,
+    // and tests running several clients in one page share the profile)
+    if (this.e2ee_store_in_memory) return;
+    const crypto_account = await this.storage.get(this.storageKey('matrix_crypto_account'));
+    if (crypto_account === userId) return;
+    boot("the crypto store is not this account's, dropping it",
+      crypto_account || "no marker");
+    await MatrixService.dropRustCryptoStore();
+    boot("the old crypto store is gone");
+  }
+  
+  /**
+   * Delete the Rust crypto store, before anything in this tab has opened it.
+   *
+   * `client.clearStores()` would do this too, but it also throws away the
+   * sync store, and by the time it is reached from the catch below the
+   * failed init is holding the store open — so `deleteDatabase` fires
+   * `onblocked` and the start waits for a connection that only closes when
+   * the page does. Dropping the store *before* the attempt costs a
+   * `deleteDatabase` with nothing to block it (#327).
+   */
+  static async dropRustCryptoStore(factory?: IDBFactory | null): Promise<void> {
+    // the factory is a parameter so that a test can hand in its own rather
+    // than overwrite window.indexedDB, which is a getter on Window.prototype
+    // and, once shadowed, takes PouchDB down with it:
+    let databases = factory;
+    if (factory === undefined) {
+      try {
+        databases = globalThis.indexedDB;
+      } catch {
+        return;  // no IndexedDB (private browsing in some browsers): nothing to drop
+      }
+    }
+    if (!databases) return;
+    // by name, so a renamed store is still found; the two literal names are
+    // what matrix-js-sdk 37 uses (RUST_SDK_STORE_PREFIX + "::matrix-sdk-crypto"):
+    let names = ['matrix-js-sdk::matrix-sdk-crypto', 'matrix-js-sdk::matrix-sdk-crypto-meta'];
+    try {
+      const listed = await (databases as any).databases?.();
+      if (Array.isArray(listed)) {
+        names = listed.map((entry: any) => entry?.name)
+                      .filter((name: any) => typeof name === 'string' && name.includes('matrix-sdk-crypto'));
+      }
+    } catch {
+      // databases() is not everywhere; the literal names above still apply
+    }
+    for (const name of names) {
+      await new Promise<void>(resolve => {
+        const request = databases.deleteDatabase(name);
+        request.onsuccess = () => resolve();
+        // a delete that fails or is blocked by another tab must not hold the
+        // start: the init below then fails as it did before, and its catch
+        // clears and retries:
+        request.onerror = () => resolve();
+        request.onblocked = () => resolve();
+      });
+    }
+  }
+  
+  /**
+   * Runs `work` over `items`, at most `limit` of them at a time. Rejections
+   * are the caller's to handle inside `work`: one failure must not stop the
+   * others (a voter room that refuses a newcomer is not the others' fault).
+   */
+  static async forEachConcurrently<T>(
+    items: T[], limit: number, work: (item: T) => Promise<void>
+  ): Promise<void> {
+    let next = 0;
+    const worker = async () => {
+      while (next < items.length) {
+        await work(items[next++]);
+      }
+    };
+    await Promise.all(
+      Array.from({length: Math.max(1, Math.min(limit, items.length))}, worker));
+  }
+
+  /**
+   * The shortest spacing between two writes, from matrix.writes_per_second:
+   * 0 (or an unset value) turns the spacing off, for a homeserver that does
+   * not rate-limit this account.
+   */
+  /**
+   * How many writes may go without any spacing at all, from
+   * matrix.write_burst: the homeserver allows a burst of its own
+   * (rc_message.burst_count) before its limit bites, and vodle has no reason
+   * to be slower than that. Publishing a poll of fifty voters over five
+   * options is some 450 writes, which fits inside the recommended burst of a
+   * thousand and therefore goes at once; the per-second rate only governs
+   * what follows once the burst is spent (#327).
+   */
+  static writeBurstSize(): number {
+    const burst = Number(environment.matrix.write_burst);
+    return Number.isFinite(burst) && burst > 0 ? burst : 1;
+  }
+
+  static writeIntervalFloorMs(): number {
+    const per_second = Number(environment.matrix.writes_per_second);
+    if (!Number.isFinite(per_second) || per_second <= 0) {
+      return 0;
+    }
+    return Math.max(1, Math.round(1000 / per_second));
+  }
+
+  /** Waits for this write's turn in the stream (see writeIntervalMs). */
+  private async paceWrite(): Promise<void> {
+    // A refusal pauses every write for as long as the server asked.
+    const paused = this.writesPausedUntil - Date.now();
+    if (paused > 0) {
+      await new Promise(resolve => setTimeout(resolve, paused));
+    }
+    if (this.writeIntervalMs <= 0) {
+      return;                                   // spacing turned off entirely
+    }
+    
+    // The bucket, refilled at one write per writeIntervalMs and never fuller
+    // than the burst. While it holds tokens a write goes at once — that is
+    // what the homeserver's own burst_count allows, and spacing inside it
+    // would only make vodle slower than its server asked for. Once it is
+    // empty, writes leave one per interval, which is the sustained rate.
+    const now = Date.now();
+    this.writeTokens = Math.min(this.writeBurst,
+      this.writeTokens + (now - this.writeTokensAt) / this.writeIntervalMs);
+    this.writeTokensAt = now;
+    
+    const waitMs = this.writeTokens >= 1 ? 0
+      : Math.ceil((1 - this.writeTokens) * this.writeIntervalMs);
+    // Reserved even when it goes negative: each waiter takes the next slot in
+    // the queue, so concurrent writes leave one interval apart rather than
+    // all waking to the same moment.
+    this.writeTokens -= 1;
+    if (waitMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+    }
+  }
+
+  /**
+   * A refused write slows down every write, not just its own retry: the
+   * bucket it found empty is shared by all of them.
+   */
+  private noteWriteThrottled(retryAfterMs: number): void {
+    this.writesPausedUntil = Math.max(this.writesPausedUntil, Date.now() + retryAfterMs);
+    // The server has just said its own bucket is empty, so ours is wrong.
+    // Emptied rather than put into deficit: the deficit is counted in
+    // intervals, and the interval is about to change below, so carrying one
+    // across would be measured in the wrong unit and compound.
+    this.writeTokens = 0;
+    this.writeTokensAt = Date.now();
+    // a server that refuses writes is rate-limiting after all, so the pace
+    // starts from 20/s even when the deployment turned the spacing off
+    this.writeIntervalMs = Math.min(MatrixService.WRITE_INTERVAL_MAX_MS,
+      Math.max(50, 2 * this.writeIntervalMs));
+    this.writesAcceptedInARow = 0;
+  }
+
+  /** A run of accepted writes wins the pace back, halving at a time. */
+  private noteWriteAccepted(): void {
+    if (this.writeIntervalMs <= this.writeIntervalMinMs) {
+      return;
+    }
+    this.writesAcceptedInARow++;
+    if (this.writesAcceptedInARow < MatrixService.WRITES_BEFORE_SPEEDUP) {
+      return;
+    }
+    this.writesAcceptedInARow = 0;
+    this.writeIntervalMs = Math.max(
+      this.writeIntervalMinMs, Math.round(this.writeIntervalMs / 2));
   }
 
   /**
@@ -806,6 +2041,20 @@ export class MatrixService {
   }
   
   /**
+   * Send a timeline event to a room, paced and retried like a state event:
+   * an option, a delegation request or a delegation response is as easy to
+   * lose to a throttled homeserver as a rating is (#327).
+   */
+  async sendEvent(roomId: string, eventType: string, content: any): Promise<void> {
+    if (!this.client) {
+      throw new Error("Matrix client not initialized");
+    }
+    await this.retryOnRateLimit(() =>
+      this.client!.sendEvent(roomId, eventType as any, content)
+    );
+  }
+
+  /**
    * Get a state event from a room
    */
   getStateEvent(roomId: string, eventType: string, stateKey: string = ''): any {
@@ -849,21 +2098,21 @@ export class MatrixService {
    * Save credentials to storage
    */
   private async saveCredentials(creds: MatrixCredentials): Promise<void> {
-    await this.storage.set('matrix_credentials', creds);
+    await this.storage.set(this.storageKey('matrix_credentials'), creds);
   }
   
   /**
    * Load credentials from storage
    */
   private async loadCredentials(): Promise<MatrixCredentials | null> {
-    return await this.storage.get('matrix_credentials');
+    return await this.storage.get(this.storageKey('matrix_credentials'));
   }
   
   /**
    * Clear credentials from storage
    */
   private async clearCredentials(): Promise<void> {
-    await this.storage.remove('matrix_credentials');
+    await this.storage.remove(this.storageKey('matrix_credentials'));
   }
   
   // ========================================================================
@@ -888,7 +2137,7 @@ export class MatrixService {
     }
     
     // Check if user room already exists in storage
-    const storedRoomId = await this.storage.get('user_room_id');
+    const storedRoomId = await this.storage.get(this.storageKey('user_room_id'));
     if (storedRoomId) {
       // Verify room still exists
       const room = this.client.getRoom(storedRoomId);
@@ -905,9 +2154,9 @@ export class MatrixService {
     
     try {
       // Try to find existing room by alias
-      const aliasResponse = await this.client.getRoomIdForAlias(`#${roomAlias}:${this.getHomeserverDomain()}`);
+      const aliasResponse = await this.client.getRoomIdForAlias(this.userRoomAliasFor(this.userId));
       this.userRoomId = aliasResponse.room_id;
-      await this.storage.set('user_room_id', this.userRoomId);
+      await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
       this.logger?.info("Found user room by alias", this.userRoomId);
       return this.userRoomId;
     } catch (error) {
@@ -919,12 +2168,17 @@ export class MatrixService {
         preset: 'private_chat',
         is_direct: false,
         room_alias_name: roomAlias,
-        initial_state: [{
+        // Only when end-to-end encryption is on at all. It never covered
+        // anything here — user data is written as STATE events (setUserData),
+        // which megolm does not encrypt — and a room advertised as encrypted
+        // to a client that cannot encrypt is a trap for whoever sends the
+        // first timeline event into it (#327).
+        ...(environment.matrix.enable_e2ee ? {initial_state: [{
           type: 'm.room.encryption',
           content: {
             algorithm: 'm.megolm.v1.aes-sha2'
           }
-        }],
+        }]} : {}),
         power_level_content_override: {
           users: {
             [this.userId]: 100
@@ -933,7 +2187,7 @@ export class MatrixService {
       };
       
       this.userRoomId = await this.createRoom(options);
-      await this.storage.set('user_room_id', this.userRoomId);
+      await this.storage.set(this.storageKey('user_room_id'), this.userRoomId);
       this.logger?.info("Created new user room", this.userRoomId);
       return this.userRoomId;
     }
@@ -948,17 +2202,33 @@ export class MatrixService {
   async setUserData(key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setUserData", key);
     
+    // No client and no login under way is a programming error, not a server
+    // that is busy: it must not be queued and quietly retried for ever. A
+    // client that is still starting is a different matter — see below.
+    if (!this.client && !this.loginInProgress) {
+      throw new Error("Matrix client not initialized");
+    }
+    this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       const roomId = await this.getUserRoom();
       const eventType = `m.room.vodle.user.${key}`;
       // encrypted with the user password (see userDataContent):
       await this.sendStateEvent(roomId, eventType, await this.userDataContent(key, value), '');
     } catch (error) {
-      // an unreachable server must not lose the write — queue it for replay
-      // when the sync loop reconnects (#293); server rejections still throw:
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setUserData offline, queueing", key);
+      // a write the server did not take must not be lost — queue it for
+      // replay (#293, #327). Only a refusal that will never be accepted
+      // still throws; everything else is a delay, not a loss:
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setUserData did not reach the server, queueing", key);
       await this.enqueueOfflineEvent({type: 'user_data', key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     this.logger?.exit("MatrixService.setUserData");
@@ -1037,6 +2307,11 @@ export class MatrixService {
     this.logger?.exit("MatrixService.deleteUserData");
   }
   
+  /** the alias of the private user room of `userId` (on that user's server) */
+  private userRoomAliasFor(userId: string): string {
+    return `#vodle_user_${this.hashUserId(userId)}:${MatrixService.serverNameOf(userId) || this.getHomeserverDomain()}`;
+  }
+  
   /**
    * Hash user ID for creating unique room aliases
    * Uses first 16 characters of hex representation
@@ -1064,6 +2339,11 @@ export class MatrixService {
     const from_user_id = MatrixService.serverNameOf(this.userId);
     if (from_user_id) {
       return from_user_id;
+    }
+    // before a login: the configured server name; the URL's host name is
+    // only a guess (a deployment reaches its homeserver at "/")
+    if (environment.matrix?.server_name) {
+      return environment.matrix.server_name;
     }
     try {
       const url = new URL(this.homeserverUrl);
@@ -1107,6 +2387,10 @@ export class MatrixService {
       return;
     }
     this.pollOrigins.set(pollId, serverName);
+    // NOT prefixed by the identity (see storageKey): which homeserver a poll
+    // lives on is a fact about the POLL, the same for every account this
+    // device signs in as, and the poll account must see what the person's
+    // own account learned from the magic link before it existed (#327).
     await this.storage.set(`poll_origin_${pollId}`, serverName);
   }
   
@@ -1135,18 +2419,119 @@ export class MatrixService {
    * intervals and give up after a timeout.
    */
   private waitForRoom(roomId: string, timeoutMs = 30000, intervalMs = 250): Promise<void> {
+    return this.waitFor(() => !!this.client?.getRoom(roomId), `room ${roomId} to appear in local store`, timeoutMs, intervalMs);
+  }
+  
+  /**
+   * Poll `check` every intervalMs until it returns true (resolve), an Error
+   * (reject with it), or timeoutMs have passed (reject, naming `what`).
+   */
+  private waitFor(check: () => boolean | Error, what: string, timeoutMs = 30000, intervalMs = 250): Promise<void> {
     return new Promise((resolve, reject) => {
       const start = Date.now();
-      const check = () => {
-        if (this.client?.getRoom(roomId)) {
+      const tick = () => {
+        const result = check();
+        if (result === true) {
           resolve();
+        } else if (result instanceof Error) {
+          reject(result);
         } else if (Date.now() - start > timeoutMs) {
-          reject(new Error(`Timed out waiting for room ${roomId} to appear in local store`));
+          reject(new Error(`Timed out waiting for ${what}`));
         } else {
-          setTimeout(check, intervalMs);
+          setTimeout(tick, intervalMs);
         }
       };
-      check();
+      tick();
+    });
+  }
+  
+  /**
+   * Join a poll room (#328). Poll rooms are closed: their join rule is
+   * `knock`, so the plain join of a public room fails with 403, and the
+   * joiner knocks with a proof of the poll password (see joinKey/joinProof)
+   * as the knock's reason. The guard bot verifies the proof and invites
+   * the knocker, who then joins. A knock that proves nothing (a wrong
+   * password) is left unanswered by the bot — never declined by a kick,
+   * and never retracted here: a knocker who becomes a "departed" user can
+   * read the room's state as of their leave, members and all (Synapse's
+   * departed-user rule), which is what closed rooms prevent. So without
+   * an invitation the wait simply ends after
+   * environment.matrix.join_timeout_ms, whether the password was wrong or
+   * no bot is running. Rooms from before this (public) are joined
+   * directly, as is a room one is already invited to; a knock left over
+   * from an earlier attempt stands, and its answer is waited for (the bot
+   * looks at pending knocks at every scan).
+   */
+  private async joinPollRoom(pollId: string, roomId: string, viaServers: string[]): Promise<void> {
+    const membership = () => this.client!.getRoom(roomId)?.getMyMembership();
+    if (membership() !== 'invite' && membership() !== 'knock') {
+      try {
+        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
+        return;
+      } catch (error) {
+        if (!MatrixService.isForbidden(error)) {
+          throw error;
+        }
+        const password = this.pollPasswordProvider?.(pollId) || null;
+        if (!password) {
+          this.logger?.warn("MatrixService.joinPollRoom: the room is closed and the poll password is unknown", pollId, roomId);
+          throw error;
+        }
+        console.log("[joinPollRoom] Room is closed: knocking with the poll password's proof", roomId);
+        const proof = await joinProof(await joinKey(pollId, password), this.userId!);
+        await this.retryOnRateLimit(() => this.client!.knockRoom(roomId, {reason: KNOCK_REASON_PREFIX + proof, viaServers}));
+      }
+    }
+    if (membership() !== 'invite') {
+      await this.waitForInvitation(roomId);
+    }
+    await this.joinOnInvitation(roomId, viaServers);
+  }
+  
+  /**
+   * Join a room one is invited to. The invitation of the guard bot reaches
+   * a joiner on ANOTHER homeserver twice: out of band (the bot's server
+   * sends it to the joiner's server directly, and the client sees it at
+   * once) and, a moment later, as an ordinary event inside a federation
+   * transaction. Until the latter lands, the joiner's server holds the
+   * invitation only as an outlier while the room's state still shows the
+   * knock, and a server that already has a member in the room (it builds
+   * the join event itself then) refuses the join with 403 "duplicate
+   * auth_events" (Synapse 1.160). So a refused join after an invitation is
+   * retried for a while; other errors are thrown at once.
+   */
+  private async joinOnInvitation(roomId: string, viaServers: string[]): Promise<void> {
+    const deadline = Date.now() + Math.min(environment.matrix.join_timeout_ms || 60000, 30000);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
+        return;
+      } catch (error) {
+        if (!MatrixService.isForbidden(error) || Date.now() > deadline) {
+          throw error;
+        }
+        this.logger?.info("MatrixService.joinOnInvitation: the join was refused although invited, retrying", roomId, attempt, error);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+  
+  /**
+   * After a knock: resolves once this user is invited to (or in) the room;
+   * rejects when that has not happened within
+   * environment.matrix.join_timeout_ms — the guard bot leaves a knock
+   * that proves nothing unanswered (see joinPollRoom), and without a
+   * running bot nobody answers at all.
+   */
+  private waitForInvitation(roomId: string): Promise<void> {
+    const timeoutMs = environment.matrix.join_timeout_ms || 60000;
+    return new Promise((resolve, reject) => {
+      this.waitFor(() => {
+        const membership = this.client?.getRoom(roomId)?.getMyMembership();
+        return membership === 'invite' || membership === 'join';
+      }, `an invitation to poll room ${roomId}`, timeoutMs).then(resolve, () => reject(new Error(
+        `No invitation to poll room ${roomId} within ${Math.round(timeoutMs / 1000)} s: `
+        + `either the link does not carry the right poll password, or the poll's guard bot is not running`)));
     });
   }
   
@@ -1187,7 +2572,7 @@ export class MatrixService {
       }
       const plContent: any = await resp.json();
       const users: Record<string, number> = plContent?.users || {};
-      console.log("[validatePL] Power levels for room", roomId, "users:", JSON.stringify(users));
+      trace("[validatePL] Power levels for room", roomId, "users:", JSON.stringify(users));
       for (const [userId, level] of Object.entries(users)) {
         if (level >= 100 && userId !== guardBotId) {
           // Warn but do NOT block.  The creator may still be at 100
@@ -1251,26 +2636,41 @@ export class MatrixService {
       users[guardBotId] = 100;
     }
     
+    // Closed rooms (#328): the room is joined by knocking with a proof of
+    // the poll password (see joinPollRoom), and the guard bot lets the
+    // knocker in. The room's join key is a hash of the password: the bot
+    // verifies proofs against it, nobody learns the password from it, and
+    // non-members cannot read it. A poll whose password is unknown here
+    // (test code only) gets a public room, as every poll had before.
+    const pollPassword = this.pollPasswordProvider?.(pollId) || null;
+    const key = pollPassword ? await joinKey(pollId, pollPassword) : null;
+    const joinRules = { join_rule: key ? 'knock' : 'public' };
+    const initialState: Array<{type: string; state_key: string; content: any}> = [
+      // No room encryption for poll rooms: they contain only metadata and
+      // options that all members must read (encrypted at the application
+      // level, see pollDataContent), and the guard bot needs plain-text
+      // access to the deadline. Sensitive voter data lives in per-voter
+      // rooms instead.
+      { type: 'm.room.join_rules', state_key: '', content: joinRules },
+    ];
+    if (key) {
+      initialState.push({ type: JOIN_KEY_EVENT_TYPE, state_key: '', content: { version: 1, key } });
+    }
+    
     const options: ICreateRoomOpts = {
       // the title is confidential poll data (stored encrypted, see
       // pollDataContent); the room's own name and topic are visible to the
       // homeserver, so they carry only the poll id, which the alias shows anyway
       name: `vodle poll ${pollId}`,
       topic: `vodle poll ${pollId}`,
-      // Use public_chat preset so that anyone with the room alias
-      // (distributed via the magic link) can join without an invitation.
-      // The room is NOT listed in the public directory (visibility
-      // defaults to 'private'); security relies on the magic link's
-      // poll password + E2EE.
+      // The public_chat preset's join rule is replaced by initial_state
+      // (knock); the preset still gives shared history, which a joiner
+      // needs to read the options. The room is NOT listed in the public
+      // directory (visibility 'private').
       preset: 'public_chat',
       visibility: 'private',
       room_alias_name: roomAlias,
-      initial_state: [
-        // No encryption for poll rooms: they are public, contain only
-        // metadata and options that all members must read, and the
-        // guard bot needs plain-text access for deadline enforcement.
-        // Sensitive voter data lives in per-voter rooms instead.
-      ],
+      initial_state: initialState,
       power_level_content_override: {
         users,
         events: {
@@ -1284,8 +2684,8 @@ export class MatrixService {
           // (demoted to 50 right after room creation) can still be
           // further adjusted.  lockPollMetadata() raises this to 100.
           'm.room.power_levels': 50,
-          // Allow the creator to set join_rules to public after room
-          // creation if the preset alone didn't suffice.
+          // The creator may still correct the join rule right after the
+          // creation; lockPollMetadata() raises this to 100.
           'm.room.join_rules': 50
         },
         // state_default is 50 so the creator (at power 50 after
@@ -1312,12 +2712,13 @@ export class MatrixService {
     // need the room in the SDK store, especially for encryption setup.
     await this.waitForRoom(roomId);
     
-    // Explicitly set join_rules to public so anyone with the magic link
-    // can join.  We do this after creation rather than relying solely on
-    // the preset, because some Synapse versions may reset join_rules
-    // when other initial_state or power_level_content_override options
-    // are also provided.
-    await this.sendStateEvent(roomId, 'm.room.join_rules', { join_rule: 'public' }, '');
+    // initial_state takes precedence over the preset's join rule; a public
+    // room where a closed one was meant would be #328 again, so make sure:
+    const joinRuleNow = this.client.getRoom(roomId)?.currentState?.getStateEvents('m.room.join_rules', '')?.getContent()?.join_rule;
+    if (joinRuleNow !== joinRules.join_rule) {
+      this.logger?.warn("MatrixService.createPollRoom: join rule after creation is", joinRuleNow, "— setting", joinRules.join_rule);
+      await this.sendStateEvent(roomId, 'm.room.join_rules', joinRules, '');
+    }
     
     // NOTE: Creator stays at power 100 here. Demotion to 50 happens
     // inside lockPollMetadata() AFTER all power-level requirements have
@@ -1339,7 +2740,7 @@ export class MatrixService {
     
     // Cache the mapping
     this.pollRooms.set(pollId, roomId);
-    await this.storage.set(`poll_room_${pollId}`, roomId);
+    await this.storage.set(this.storageKey(`poll_room_${pollId}`), roomId);
     
     this.logger?.info("Poll room created", pollId, roomId);
     this.logger?.exit("MatrixService.createPollRoom");
@@ -1376,7 +2777,7 @@ export class MatrixService {
     );
     plContent.users = { ...(plContent.users || {}) };
     plContent.users[this.userId] = 50;
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', plContent, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', plContent, '');
     this.logger?.info("Creator demoted to power 50 after poll data written", pollId);
     
     this.logger?.exit("MatrixService.demotePollCreator");
@@ -1396,16 +2797,18 @@ export class MatrixService {
     const cached = this.pollRooms.get(pollId);
     if (cached) {
       // Power level validation already passed when we first cached this
-      console.log("[getPollRoom] Cache hit for poll", pollId, "→", cached);
+      trace("[getPollRoom] Cache hit for poll", pollId, "→", cached);
       return cached;
     }
     
     // Check persistent storage
-    const stored = await this.storage.get(`poll_room_${pollId}`);
+    const stored = await this.storage.get(this.storageKey(`poll_room_${pollId}`));
     if (stored) {
+      // the store also holds rooms one is invited to, knocking on or has
+      // left (#328): only a joined one counts, the alias path handles the rest
       const room = this.client.getRoom(stored);
-      if (room) {
-        console.log("[getPollRoom] Storage hit for poll", pollId, "→", stored);
+      if (room && room.getMyMembership() === 'join') {
+        trace("[getPollRoom] Storage hit for poll", pollId, "→", stored);
         await this.validatePollRoomPowerLevels(stored);
         this.pollRooms.set(pollId, stored);
         return stored;
@@ -1423,25 +2826,27 @@ export class MatrixService {
       console.log("[getPollRoom] Alias resolved for poll", pollId, "→", roomId);
       
       // If we resolved the alias but are not yet a member (e.g. joining
-      // via magic link), join the room now.  The poll room is created with
-      // join_rules: public so this will succeed for anyone with the alias.
-      // A room on another homeserver is joined THROUGH a server that is in
-      // it: the alias lookup names candidates, and the origin always is one.
+      // via magic link), join the room now — by knocking with a proof of
+      // the poll password, since poll rooms are closed (#328, see
+      // joinPollRoom). A room on another homeserver is joined THROUGH a
+      // server that is in it: the alias lookup names candidates, and the
+      // origin always is one.
       const room = this.client.getRoom(roomId);
-      if (!room) {
+      if (!room || room.getMyMembership() !== 'join') {
         this.logger?.info("Poll room found by alias but not joined yet, joining", pollId, roomId);
         console.log("[getPollRoom] Joining room", roomId, "...");
         const viaServers = Array.from(new Set([...(aliasResponse.servers || []), origin]));
-        await this.retryOnRateLimit(() => this.client!.joinRoom(roomId, {viaServers}));
-        // Wait for the SDK to sync the room into the local store
+        await this.joinPollRoom(pollId, roomId, viaServers);
+        // Wait for the SDK to sync the membership into the local store
         // so that subsequent calls to client.getRoom() succeed.
-        await this.waitForRoom(roomId);
+        await this.waitFor(() => this.client?.getRoom(roomId)?.getMyMembership() === 'join',
+          `room ${roomId} to appear joined in the local store`);
         console.log("[getPollRoom] Joined and synced room", roomId);
       }
       
       await this.validatePollRoomPowerLevels(roomId);
       this.pollRooms.set(pollId, roomId);
-      await this.storage.set(`poll_room_${pollId}`, roomId);
+      await this.storage.set(this.storageKey(`poll_room_${pollId}`), roomId);
       return roomId;
     } catch (error: any) {
       // Only treat "not found" (404) as "room doesn't exist".
@@ -1542,7 +2947,7 @@ export class MatrixService {
     for (const [cacheKey, voterRoomId] of this.voterRooms.entries()) {
       if (cacheKey.startsWith(`${pollId}:`) && this.client.getRoom(voterRoomId)?.getMyMembership() === 'join') {
         try {
-          await this.client.sendStateEvent(voterRoomId, 'm.room.vodle.poll.deadline' as any, { due, poll_id: pollId }, '');
+          await this.sendStateEvent(voterRoomId, 'm.room.vodle.poll.deadline' as any, { due, poll_id: pollId }, '');
         } catch (error) {
           // not our room (another voter's) — the owner copies it at creation
           this.logger?.info("MatrixService.setPollDeadline: not copied into", voterRoomId);
@@ -1608,7 +3013,7 @@ export class MatrixService {
     // Send as timeline event (immutable by Matrix protocol); the option's
     // texts are encrypted with the poll password, its id stays plain:
     try {
-      await this.client.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
+      await this.sendEvent(roomId, 'm.room.vodle.poll.option' as any, {
         option_id: optionId,
         ...(await this.pollDataContent(pollId, optionData))
       });
@@ -1651,73 +3056,40 @@ export class MatrixService {
     }
     
     const roomId = await this.getPollRoom(pollId);
-    console.log("[ensureOptionCache] pollId=", pollId, "roomId=", roomId);
+    trace("[ensureOptionCache] pollId=", pollId, "roomId=", roomId);
     if (roomId) {
-      // Fetch timeline events from the server REST API.
-      // The local SDK timeline may be empty for freshly-joined rooms.
-      const accessToken = this.client.getAccessToken();
-      const encodedRoomId = encodeURIComponent(roomId);
-      
       try {
-        // Paginate backward through the timeline to find all option events.
-        let from: string | undefined = undefined;
-        let keepGoing = true;
-        
-        while (keepGoing) {
-          let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
-          if (from) {
-            url += `&from=${encodeURIComponent(from)}`;
-          }
-          
-          console.log("[ensureOptionCache] Fetching:", url);
-          const resp = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            cache: 'no-store',
-          });
-          
-          console.log("[ensureOptionCache] Response status:", resp.status, resp.statusText);
-          if (!resp.ok) {
-            const errBody = await resp.text();
-            console.error("[ensureOptionCache] Error body:", errBody);
-            this.logger?.error("Failed to fetch timeline from server", roomId, resp.status);
-            break;
-          }
-          
-          const data: any = await resp.json();
-          const chunk: any[] = data.chunk || [];
-          console.log("[ensureOptionCache] chunk size:", chunk.length, "types:", chunk.map(e => e.type));
-          
-          for (const event of chunk) {
-            if (event.type === 'm.room.vodle.poll.option') {
-              const content = event.content || {};
-              const oid = content.option_id;
-              // Only use the first occurrence (immutable — ignore any duplicates)
-              if (oid && !options.has(oid)) {
-                // the texts are encrypted under the poll password (see
-                // addOption); events from before that are plain:
-                const fields = typeof content.enc === 'string'
-                  ? await this.readPollValue(pollId, content) : content;
-                if (!fields) {
-                  continue;
-                }
-                options.set(oid, {
-                  name: fields.name,
-                  description: fields.description || '',
-                  url: fields.url || ''
-                });
+        // the shared walk of the poll room's timeline, newest first
+        for (const event of await this.pollRoomTimeline(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS)) {
+          if (event.type === 'm.room.vodle.poll.option') {
+            const content = event.content || {};
+            const oid = content.option_id;
+            // Only use the first occurrence (immutable — ignore any duplicates)
+            if (oid && !options.has(oid)) {
+              // the texts are encrypted under the poll password (see
+              // addOption); events from before that are plain:
+              const fields = typeof content.enc === 'string'
+                ? await this.readPollValue(pollId, content) : content;
+              if (!fields) {
+                continue;
               }
+              options.set(oid, {
+                name: fields.name,
+                description: fields.description || '',
+                url: fields.url || ''
+              });
             }
           }
-          
-          from = data.end;
-          // Stop when there are no more events or no pagination token
-          if (chunk.length === 0 || !from || from === data.start) {
-            keepGoing = false;
-          }
         }
-        
-        // Only cache after successful retrieval
-        this.optionCaches.set(pollId, options);
+        console.log("[ensureOptionCache] options found:", options.size);
+        // Only cache a real answer. A poll that is running has options, so
+        // an empty result means the walk found nothing — a room not yet
+        // joined, a request that failed, a timeline not yet backfilled —
+        // and caching it made the poll optionless for the rest of the
+        // session, which is what the creator's log showed (#327).
+        if (options.size > 0) {
+          this.optionCaches.set(pollId, options);
+        }
       } catch (error) {
         this.logger?.error("Failed to fetch options from server", pollId, error);
       }
@@ -1834,7 +3206,7 @@ export class MatrixService {
       if (currentLevel !== undefined && currentLevel > 50) {
         content.users = { ...(content.users || {}) };
         content.users[this.userId] = 50;
-        await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+        await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
         console.log("[ensureCreatorDemoted] Creator demoted to 50 in room", roomId);
       }
     } catch (err) {
@@ -1937,12 +3309,14 @@ export class MatrixService {
     events['m.room.power_levels'] = lockLevel;
     // Poll state transitions are now handled by the guard bot only
     events['m.room.vodle.poll.state'] = lockLevel;
+    // The room stays closed (#328): only the guard bot may change the join rule
+    events['m.room.join_rules'] = lockLevel;
     content.events = events;
     // Raise state_default to 100 so that dynamic state event types
     // (m.room.vodle.poll.data.*) can no longer be written by humans.
     content.state_default = lockLevel;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     console.log("[lockPollMetadata] Power levels locked to", lockLevel);
     
     // NOW demote the creator from 100 → 50. This must happen AFTER
@@ -1963,7 +3337,7 @@ export class MatrixService {
           const plAfter = await plResp.json();
           plAfter.users = { ...(plAfter.users || {}) };
           plAfter.users[this.userId] = 50;
-          await this.client.sendStateEvent(roomId, 'm.room.power_levels', plAfter, '');
+          await this.sendStateEvent(roomId, 'm.room.power_levels', plAfter, '');
           console.log("[lockPollMetadata] Creator demoted to 50 after lock");
         } else {
           console.error("[lockPollMetadata] Failed to re-fetch power levels for demotion:", plResp.status);
@@ -2020,7 +3394,7 @@ export class MatrixService {
     }
     content.users = users;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     
     this.logger?.info("Poll room made read-only", pollId);
     this.logger?.exit("MatrixService.makeRoomReadOnly");
@@ -2033,7 +3407,20 @@ export class MatrixService {
   async setPollData(pollId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setPollData", pollId, key);
     
+    // No client and no login under way is a programming error, not a server
+    // that is busy: it must not be queued and quietly retried for ever. A
+    // client that is still starting is a different matter — see below.
+    if (!this.client && !this.loginInProgress) {
+      throw new Error("Matrix client not initialized");
+    }
+    this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       const roomId = await this.getPollRoom(pollId);
       if (!roomId) {
         throw new Error(`Poll room not found for poll ${pollId}`);
@@ -2042,10 +3429,12 @@ export class MatrixService {
       // encrypted with the poll password (see pollDataContent):
       await this.sendStateEvent(roomId, eventType, await this.pollDataContent(pollId, value), '');
     } catch (error) {
-      // see setUserData — queue writes the server never received (#293):
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setPollData offline, queueing", pollId, key);
+      // see setUserData — queue what the server did not take (#293, #327):
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setPollData did not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'poll_data', pollId, key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     this.logger?.exit("MatrixService.setPollData");
@@ -2142,21 +3531,46 @@ export class MatrixService {
       users[guardBotId] = 100;
     }
     
-    // Voter rooms are PUBLIC (joinable by anyone knowing the room) so that
-    // other voters can discover and join them to read ratings without an
-    // invite. The data they contain is encrypted with the poll password at
-    // the application level (see pollDataContent), so only participants
-    // who know the password — i.e. hold the magic link — can make sense of
-    // the values; the homeserver cannot.
+    // Voter rooms are joinable without an invitation (by the poll room's
+    // members, see below) so that other voters can discover and join them
+    // to read ratings. The data they contain is encrypted with the poll
+    // password at the application level (see pollDataContent), so only
+    // participants who know the password — i.e. hold the magic link — can
+    // make sense of the values; the homeserver cannot.
     // No Matrix-level E2EE: voter data are STATE events, which room
     // encryption never covers (it protects timeline events only).
+    // Closed rooms (#328): a voter room is joinable — without an invitation,
+    // as discovery needs — by the members of the poll room only, who found
+    // it there; nobody else learns who votes. (Room version 8 or later;
+    // Synapse's default has been 10 or later since 2023.) The guard bot is
+    // invited. A voter room without a known poll room (test code only)
+    // stays public.
+    const pollRoomId = this.pollRooms.get(pollId) || await this.getPollRoom(pollId);
+    const initialState = pollRoomId ? [{
+      type: 'm.room.join_rules', state_key: '',
+      content: { join_rule: 'restricted', allow: [{ type: 'm.room_membership', room_id: pollRoomId }] },
+    }] : [];
     const options: ICreateRoomOpts = {
       name: `Vodle Voter: ${pollId}`,
       topic: `Voter data for poll ${pollId}, voter ${voterId}`,
       preset: 'public_chat',
       room_alias_name: roomAlias,
+      initial_state: initialState,
       power_level_content_override: {
         users,
+        // The owner (power 50 after creation) must be able to grant its
+        // power to another account: an account switch hands the room over
+        // (takeOverVoterRooms, #330, #193). Synapse's default for the
+        // power-levels event itself is 100, and an override replaces the
+        // preset's whole `events` map, so the defaults worth keeping are
+        // repeated here (the others fall back to state_default):
+        events: {
+          'm.room.power_levels': 50,
+          'm.room.history_visibility': 100,
+          'm.room.tombstone': 100,
+          'm.room.server_acl': 100,
+          'm.room.encryption': 100
+        },
         // All voter data event types require power level 50 to send
         state_default: 50,
         events_default: 50,
@@ -2204,7 +3618,7 @@ export class MatrixService {
     const cacheKey = `${pollId}:${voterId}`;
     this.voterRooms.set(cacheKey, roomId);
     this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-    await this.storage.set(`voter_room_${cacheKey}`, roomId);
+    await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
     
     this.logger?.info("Voter room created", pollId, voterId, roomId);
     this.logger?.exit("MatrixService.createVoterRoom");
@@ -2242,7 +3656,7 @@ export class MatrixService {
     }
     
     // Check persistent storage
-    const stored = await this.storage.get(`voter_room_${cacheKey}`);
+    const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
     if (stored) {
       const room = this.client.getRoom(stored);
       if (room) {
@@ -2261,7 +3675,7 @@ export class MatrixService {
       const roomId = aliasResponse.room_id;
       this.voterRooms.set(cacheKey, roomId);
       this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-      await this.storage.set(`voter_room_${cacheKey}`, roomId);
+      await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
       return roomId;
     } catch (error) {
       this.logger?.info("Voter room not found", pollId, voterId);
@@ -2292,11 +3706,16 @@ export class MatrixService {
       this.voterVidStored.add(roomId);
       return;
     }
+    // marked BEFORE the write, not after: the state event takes a round trip
+    // to come back through the sync, and until it does every further caller
+    // saw an empty state and wrote it again — 88 writes for 52 voter rooms
+    // in the owner's log (#327). A write that fails un-marks it.
+    this.voterVidStored.add(roomId);
     try {
-      await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
-      this.voterVidStored.add(roomId);
+      await this.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
     } catch (e) {
       // a closed room, or one this account may not write to: nothing to do
+      this.voterVidStored.delete(roomId);
     }
   }
 
@@ -2316,55 +3735,55 @@ export class MatrixService {
       return cachedRoom;
     }
     
-    // Also check persistent storage and alias lookup
-    const stored = await this.storage.get(`voter_room_${cacheKey}`);
-    if (stored && this.client) {
-      const room = this.client.getRoom(stored);
-      if (room) {
+    // Everything below this line asks the homeserver, so the mutex belongs
+    // HERE and not further down: publishing a poll calls this once per key
+    // it writes for a voter — a vid, a deadline and one rating per option —
+    // and they arrive together. With the mutex below the alias lookup, each
+    // of them paid its own 404 before finding out that another was already
+    // creating the room: about five wasted round trips per voter, some two
+    // hundred and sixty when publishing a poll of fifty (#327).
+    const inflight = this.voterRoomCreationMutex.get(cacheKey);
+    if (inflight) {
+      const roomId = await inflight;
+      await this.ensureVoterVidStored(roomId, vodleVid);
+      return roomId;
+    }
+    
+    const resolution = (async () => {
+      // persistent storage: this device has been here before
+      const stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
+      if (stored && this.client?.getRoom(stored)) {
         this.voterRooms.set(cacheKey, stored);
         this.voterRoomReverseLookup.set(stored, { pollId, voterId: vodleVid });
-        await this.ensureVoterVidStored(stored, vodleVid);
         return stored;
       }
-    }
-    
-    // Serialize creation: if another call is already creating this room,
-    // wait for it instead of racing and hitting M_ROOM_IN_USE.
-    const mutexKey = `${pollId}:${vodleVid}`;
-    const inflight = this.voterRoomCreationMutex.get(mutexKey);
-    if (inflight) {
-      return inflight;
-    }
-    
-    const creationPromise = (async () => {
-      try {
-        // createVoterRoom uses vodleVid for the room alias; the actual
-        // Matrix room owner is always this.userId (the creator).
-        const roomId = await this.createVoterRoom(pollId, vodleVid);
-        
-        // Store vodle vid in voter room state for discovery
-        if (this.client) {
-          try {
-            await this.client.sendStateEvent(roomId, 'm.room.vodle.voter.vid' as any, { value: vodleVid }, '');
-            this.voterVidStored.add(roomId);
-            console.log("[getOrCreateVoterRoom] Stored vid", vodleVid, "in voter room", roomId);
-          } catch (e) {
-            console.error("[getOrCreateVoterRoom] Failed to store vid in voter room:", e);
-          }
-        }
-        
-        // Announce the new voter room in the poll room so that other
-        // participants can discover it and join to read ratings.
-        await this.announceVoterRoom(pollId, roomId, vodleVid);
-        
-        return roomId;
-      } finally {
-        this.voterRoomCreationMutex.delete(mutexKey);
+      // A second device of the same account (fresh storage) must write into
+      // the room the account already owns, which its alias names (#333):
+      const existing = await this.getVoterRoom(pollId, vodleVid);
+      if (existing) {
+        return existing;
       }
-    })();
+      // createVoterRoom uses vodleVid for the room alias; the actual
+      // Matrix room owner is always this.userId (the creator).
+      const roomId = await this.createVoterRoom(pollId, vodleVid);
+      
+      // The vid goes into the room's state for discovery — through the one
+      // place that writes it, so a caller arriving behind this one does not
+      // write it again (ensureVoterVidStored).
+      await this.ensureVoterVidStored(roomId, vodleVid);
+      
+      // Announce the new voter room in the poll room so that other
+      // participants can discover it and join to read ratings.
+      await this.announceVoterRoom(pollId, roomId, vodleVid);
+      
+      return roomId;
+    })().finally(() => { this.voterRoomCreationMutex.delete(cacheKey); });
     
-    this.voterRoomCreationMutex.set(mutexKey, creationPromise);
-    return creationPromise;
+    // synchronously, before the first await above can let anyone else in:
+    this.voterRoomCreationMutex.set(cacheKey, resolution);
+    const roomId = await resolution;
+    await this.ensureVoterVidStored(roomId, vodleVid);
+    return roomId;
   }
   
   /**
@@ -2402,11 +3821,18 @@ export class MatrixService {
       if (vodleVid) {
         announceContent.vodle_vid = vodleVid;
       }
-      await this.client.sendEvent(pollRoomId, 'm.room.vodle.voter.announce' as any, announceContent);
+      await this.retryOnRateLimit(() =>
+        this.client!.sendEvent(pollRoomId, 'm.room.vodle.voter.announce' as any, announceContent));
       console.log("[announceVoterRoom] Announced voter room", voterRoomId, "voter_id=", effectiveVoterId, "vid=", vodleVid);
       this.logger?.info("Voter room announced in poll room", pollId, voterRoomId);
     } catch (error) {
-      this.logger?.error("Failed to announce voter room", pollId, error);
+      // This one must not be dropped. A lost rating can be repaired — the
+      // room is known and the guard bot re-reads it — but a lost
+      // announcement makes the whole voter room invisible to everyone else
+      // for good: the vote exists and is never counted. Queue it (#327).
+      this.logger?.error("Failed to announce voter room, queueing", pollId, error);
+      await this.enqueueOfflineEvent({type: 'voter_announce', pollId,
+        voterRoomId, voterId: vodleVid || this.userId});
     }
     
     this.logger?.exit("MatrixService.announceVoterRoom");
@@ -2464,7 +3890,13 @@ export class MatrixService {
     if (this.voterDiscoveryTimers.has(pollId)) return;
     
     const INTERVAL_MS = 15000; // 15 seconds
+    // …and every fourth round, about once a minute, this device's own votes
+    // are compared against the rooms that hold them (#327). Not every round:
+    // it reads the state of every voter room this device writes to, and a
+    // write that is merely in flight or queued needs no help.
+    const RECONCILE_EVERY = 4;
     let running = false;
+    let round = 0;
     
     const timer = setInterval(async () => {
       if (running) return; // skip if previous iteration still running
@@ -2477,6 +3909,10 @@ export class MatrixService {
           console.log("[periodicDiscovery]", pollId, "found", newSize - prevSize, "new voter rooms");
           // Scan the new voter rooms' current state
           this.retroactiveScanVoterRooms(pollId);
+        }
+        if (++round % RECONCILE_EVERY === 0
+            && this.writesInFlight === 0 && this.offlineQueue.length === 0) {
+          await this.reconcileOwnRatings(pollId);
         }
       } catch (err) {
         console.error("[periodicDiscovery] error:", err);
@@ -2494,9 +3930,36 @@ export class MatrixService {
    *
    * This is idempotent — rooms already in cache are skipped.
    */
-  async discoverVoterRooms(pollId: string): Promise<void> {
+  /**
+   * A voter room this device joined in an earlier session, put back into the
+   * in-memory maps.
+   *
+   * True when there is one and this device is still *joined* to it
+   * according to its own sync. Membership, not mere presence: the SDK
+   * keeps a room it has left in the store too, and trusting that would
+   * skip the join for a room whose state this device can no longer read.
+   * Both maps are what the rating handlers look the room up in, so
+   * rehydrating them is what makes the join unnecessary (#327).
+   */
+  private async rememberedVoterRoom(pollId: string, voterId: string, cacheKey: string): Promise<boolean> {
+    let stored: string | null = null;
+    try {
+      stored = await this.storage.get(this.storageKey(`voter_room_${cacheKey}`));
+    } catch (error) {
+      this.logger?.warn("MatrixService could not read a remembered voter room", cacheKey, error);
+      return false;
+    }
+    if (!stored || this.client?.getRoom(stored)?.getMyMembership() !== 'join') {
+      return false;
+    }
+    this.voterRooms.set(cacheKey, stored);
+    this.voterRoomReverseLookup.set(stored, { pollId, voterId });
+    return true;
+  }
+  
+  async discoverVoterRooms(pollId: string, timeline_max_age_ms = 0): Promise<void> {
     this.logger?.entry("MatrixService.discoverVoterRooms", pollId);
-    console.log("[discoverVoterRooms] START pollId=", pollId);
+    trace("[discoverVoterRooms] START pollId=", pollId);
     
     if (!this.client) {
       console.warn("[discoverVoterRooms] BAIL: no client");
@@ -2504,45 +3967,32 @@ export class MatrixService {
     }
     
     const pollRoomId = await this.getPollRoom(pollId);
-    console.log("[discoverVoterRooms] pollRoomId=", pollRoomId);
+    trace("[discoverVoterRooms] pollRoomId=", pollRoomId);
     if (!pollRoomId) {
       console.warn("[discoverVoterRooms] BAIL: no poll room");
       return;
     }
     
-    // Fetch timeline from the server REST API to find announcements.
-    // The local SDK timeline may be empty for freshly-joined rooms.
-    const accessToken = this.client.getAccessToken();
-    const encodedRoomId = encodeURIComponent(pollRoomId);
-    
     let announceCount = 0;
     let totalEvents = 0;
+    const toJoin: {cacheKey: string, effectiveId: string, voterRoomId: string, sender: string}[] = [];
+    const claimed = new Set<string>();
+    
+    // a closed poll (#325): voter rooms announced after the guard bot's
+    // closing event are not part of the poll, so that every client counts
+    // the same voter rooms
+    const closing: any = this.client.getRoom(pollRoomId)?.currentState?.getStateEvents('m.room.vodle.poll.state' as any, '');
+    const closed_ts: number | null = closing?.getContent?.()?.state === 'closed' ? (closing.getTs?.() || null) : null;
     
     try {
-      let from: string | undefined = undefined;
-      let keepGoing = true;
-      
-      while (keepGoing) {
-        let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
-        if (from) {
-          url += `&from=${encodeURIComponent(from)}`;
-        }
-        
-        const resp = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        
-        if (!resp.ok) {
-          console.error("[discoverVoterRooms] Failed to fetch timeline:", resp.status, resp.statusText);
-          this.logger?.error("Failed to fetch timeline for voter discovery", pollRoomId, resp.status);
-          break;
-        }
-        
-        const data: any = await resp.json();
-        const chunk: any[] = data.chunk || [];
+      // The poll room's timeline, newest first. The periodic re-discovery
+      // runs precisely to see what has just arrived, so it leaves
+      // timeline_max_age_ms at 0 and gets a walk of its own; a poll being
+      // opened shares the one its options and delegations also read (#327).
+      {
+        const chunk: any[] = await this.pollRoomTimeline(pollId, timeline_max_age_ms);
         totalEvents += chunk.length;
-        console.log("[discoverVoterRooms] Fetched chunk:", chunk.length, "events, types:", chunk.map(e => e.type));
+        trace("[discoverVoterRooms] Read", chunk.length, "timeline events");
         
         for (const event of chunk) {
           if (event.type === 'm.room.vodle.voter.announce') {
@@ -2551,8 +4001,12 @@ export class MatrixService {
             const voterId = content.voter_id;
             const voterRoomId = content.voter_room_id;
             const vodleVid = content.vodle_vid;
-            console.log("[discoverVoterRooms] Found announce event: voterId=", voterId, "voterRoomId=", voterRoomId, "vodleVid=", vodleVid);
+            trace("[discoverVoterRooms] Found announce event: voterId=", voterId, "voterRoomId=", voterRoomId, "vodleVid=", vodleVid);
             if (!voterId || !voterRoomId) continue;
+            if (closed_ts !== null && event.origin_server_ts > closed_ts) {
+              trace("[discoverVoterRooms] Ignoring voter room announced after the poll was closed:", voterRoomId);
+              continue;
+            }
             
             // Use vodleVid as the primary cache key when available,
             // matching getOrCreateVoterRoom which caches by vodleVid.
@@ -2566,37 +4020,53 @@ export class MatrixService {
             }
             
             const cacheKey = `${pollId}:${effectiveId}`;
-            if (this.voterRooms.has(cacheKey)) {
-              console.log("[discoverVoterRooms] Already cached:", cacheKey);
+            if (this.voterRooms.has(cacheKey) || claimed.has(cacheKey)) {
+              trace("[discoverVoterRooms] Already cached:", cacheKey);
               continue;
             }
-            
-            // Join the voter room (public, so joinRoom works) — through the
-            // announcer's homeserver when it is a different one:
-            try {
-              console.log("[discoverVoterRooms] Joining voter room:", voterRoomId);
-              const viaServers = MatrixService.viaServersFor(event.sender);
-              await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
-              await this.waitForRoom(voterRoomId);
-              
-              this.voterRooms.set(cacheKey, voterRoomId);
-              this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId: effectiveId });
-              await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
-              
-              console.log("[discoverVoterRooms] Joined and cached voter room:", cacheKey, "->", voterRoomId);
-              this.logger?.info("Discovered and joined voter room", pollId, effectiveId, voterRoomId);
-            } catch (error) {
-              console.error("[discoverVoterRooms] Failed to join voter room:", effectiveId, voterRoomId, error);
-              this.logger?.error("Failed to join discovered voter room", pollId, effectiveId, error);
+            claimed.add(cacheKey);
+            if (await this.rememberedVoterRoom(pollId, effectiveId, cacheKey)) {
+              // this device joined that room in an earlier session and the
+              // sync still has it: joining it again is a request per voter
+              // on every load, which for a poll of fifty is most of what a
+              // reload used to cost (#327)
+              continue;
             }
+            // joined below, several at a time: one after the other took a
+            // second each, so a newcomer to a 50-voter poll waited the best
+            // part of a minute before seeing anybody (#327)
+            toJoin.push({ cacheKey, effectiveId, voterRoomId, sender: event.sender });
           }
         }
-        
-        from = data.end;
-        if (chunk.length === 0 || !from || from === data.start) {
-          keepGoing = false;
-        }
       }
+      
+      if (toJoin.length > 0) {
+        // rooms this device did not have: whatever was read before did not
+        // include them, so the next read must happen rather than being
+        // answered from the cache (#327)
+        this.ratingsScanned.delete(pollId);
+      }
+      await MatrixService.forEachConcurrently(toJoin, MatrixService.VOTER_ROOM_JOIN_CONCURRENCY,
+        async ({ cacheKey, effectiveId, voterRoomId, sender }) => {
+          // the room is public within the poll, so joinRoom works — through
+          // the announcer's homeserver when it is a different one:
+          try {
+            console.log("[discoverVoterRooms] Joining voter room:", voterRoomId);
+            const viaServers = MatrixService.viaServersFor(sender);
+            await this.retryOnRateLimit(() => this.client!.joinRoom(voterRoomId, {viaServers}));
+            await this.waitForRoom(voterRoomId);
+            
+            this.voterRooms.set(cacheKey, voterRoomId);
+            this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId: effectiveId });
+            await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), voterRoomId);
+            
+            console.log("[discoverVoterRooms] Joined and cached voter room:", cacheKey, "->", voterRoomId);
+            this.logger?.info("Discovered and joined voter room", pollId, effectiveId, voterRoomId);
+          } catch (error) {
+            console.error("[discoverVoterRooms] Failed to join voter room:", effectiveId, voterRoomId, error);
+            this.logger?.error("Failed to join discovered voter room", pollId, effectiveId, error);
+          }
+        });
     } catch (error) {
       console.error("[discoverVoterRooms] Error:", error);
       this.logger?.error("Failed to discover voter rooms from server", pollId, error);
@@ -2648,7 +4118,7 @@ export class MatrixService {
     content.users = users;
     content.users_default = 0;
     
-    await this.client.sendStateEvent(roomId, 'm.room.power_levels', content, '');
+    await this.sendStateEvent(roomId, 'm.room.power_levels', content, '');
     
     this.logger?.info("Voter room made read-only", pollId, voterId);
     this.logger?.exit("MatrixService.makeVoterRoomReadOnly");
@@ -2671,11 +4141,18 @@ export class MatrixService {
   async setVoterData(pollId: string, voterId: string, key: string, value: any): Promise<void> {
     this.logger?.entry("MatrixService.setVoterData", pollId, key);
     
-    if (!this.client) {
+    if (!this.client && !this.loginInProgress) {
       throw new Error("Matrix client not initialized");
     }
     
+    this.writesInFlight++;
     try {
+      if (!this.client) {
+        // still starting: the catch below queues this write, which is what
+        // keeps it from being lost while the app starts without waiting for
+        // the login (#327)
+        throw new Error("Matrix client is still starting up");
+      }
       // Voter data is stored as state events in the voter's own room.
       // Every voter (real or simulated) has a separate room.
       // The room owner (power 50) can write; everyone else is read-only (power 0).
@@ -2692,14 +4169,18 @@ export class MatrixService {
       // The value is encrypted with the poll password when it is known:
       const eventType = `m.room.vodle.voter.rating.${key}` as any;
       const content = { ...(await this.pollDataContent(pollId, value)), voter_vid: voterId };
-      await this.client.sendStateEvent(roomId, eventType, content, '');
+      // through the wrapper, like setUserData and setPollData: it retries a
+      // throttled write instead of losing the rating (#327)
+      await this.sendStateEvent(roomId, eventType, content, '');
     } catch (error) {
-      // see setUserData — queue writes the server never received (#293). The
-      // local rating cache below is still updated, so the own vote stays
-      // visible while offline (replay makes it durable):
-      if (!this.is_connection_error(error)) { throw error; }
-      this.logger?.warn("MatrixService.setVoterData offline, queueing", pollId, key);
+      // see setUserData — queue what the server did not take (#293, #327).
+      // The local rating cache below is still updated, so the own vote stays
+      // visible meanwhile (replay makes it durable):
+      if (this.is_permanent_refusal(error)) { throw error; }
+      this.logger?.warn("MatrixService.setVoterData did not reach the server, queueing", pollId, key);
       await this.enqueueOfflineEvent({type: 'voter_data', pollId, voterId, key, value});
+    } finally {
+      this.writesInFlight--;
     }
     
     // Update rating cache if this is a rating event
@@ -2708,6 +4189,8 @@ export class MatrixService {
       const numericValue = typeof value === 'number' ? value : Number(value);
       if (Number.isFinite(numericValue)) {
         this.updateRatingCache(pollId, voterId, optionId, numericValue);
+        // what this device believes it voted, for reconcileOwnRatings (#327)
+        this.recordOwnRating(pollId, voterId, optionId, numericValue);
       }
     }
     
@@ -2841,9 +4324,13 @@ export class MatrixService {
       throw new Error("Matrix client not initialized");
     }
     
-    // Check cache — return defensive copy so callers cannot corrupt internal state
+    // Check cache — return defensive copy so callers cannot corrupt internal
+    // state. Only a cache this method itself filled will do: one built by
+    // the live handlers or by the retroactive scan of the SDK store holds
+    // whatever the sync happened to carry, which is not the same thing as
+    // what the voter rooms contain (#327).
     const cached = this.ratingCaches.get(pollId);
-    if (cached) {
+    if (cached && this.ratingsScanned.has(pollId)) {
       console.log("[getRatings] Returning cached ratings for", pollId, "voters:", cached.size);
       const copy = new Map<string, Map<string, number>>();
       for (const [voterId, voterRatings] of cached) {
@@ -2855,9 +4342,22 @@ export class MatrixService {
     // Discover voter rooms from announcement events in the poll room.
     // This populates voterRooms / voterRoomReverseLookup with all
     // announced voter rooms, joining them if needed.
+    //
+    // A FRESH walk, deliberately: this runs when the ratings cache has been
+    // invalidated, which is how a caller asks what the poll room holds
+    // *now*. Sharing a walk up to 15 s old here left a voter room that had
+    // just been announced — a newcomer's, or one arriving across
+    // federation — invisible until that walk aged out, however often it was
+    // asked for (#327).
     await this.discoverVoterRooms(pollId);
     
     const ratings = new Map<string, Map<string, number>>();
+    // from here until the read is done, keep what arrives live as well:
+    this.ratingsDuringScan.set(pollId, new Map());
+    // per read, not cumulative: these two are what say whether a shortfall
+    // is the client's reading or the server's holding (#327)
+    this.ratingsFromStore = 0;
+    this.ratingsFromServer = 0;
     
     // Get all options for this poll to know which rating keys to look for
     const options = await this.getOptions(pollId);
@@ -2878,35 +4378,74 @@ export class MatrixService {
     
     const accessToken = this.client.getAccessToken();
     
-    // For each voter room, fetch state events from server REST API
-    // (SDK sync store may not have state for freshly-joined rooms)
-    for (const { voterId, roomId } of voterRoomEntries) {
+    /*
+    One voter room at a time, each a full GET /state, awaited inside a for-of:
+    fifty serial round trips for a fifty-voter poll, and they ran for every
+    poll the user had while the poll list was still blank (#327).
+
+    The sync has already delivered these rooms' state — the client is IN these
+    rooms — so the first place to look is the SDK's own store, which costs
+    nothing. A room whose vodle state has not arrived there yet (freshly
+    joined, sync still catching up) still goes to the server, and those go
+    several at a time rather than one after the other.
+    */
+    await MatrixService.forEachConcurrently(voterRoomEntries,
+      MatrixService.VOTER_ROOM_READ_CONCURRENCY,
+      async ({ voterId, roomId }) => {
       const voterRatings = new Map<string, number>();
       let discoveredVid: string | null = null;
       
       try {
-        const encodedRoomId = encodeURIComponent(roomId);
-        const stateUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
+        const fromServer = async (): Promise<any[] | null> => {
+          const encodedRoomId = encodeURIComponent(roomId);
+          const stateUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
+          const resp = await fetch(stateUrl, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            cache: 'no-store',
+          });
+          if (!resp.ok) {
+            console.error("[getRatings] Failed to fetch state for voter room:", roomId, "status:", resp.status);
+            return null;
+          }
+          return await resp.json();
+        };
         
-        const resp = await fetch(stateUrl, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
-        });
-        
-        if (!resp.ok) {
-          console.error("[getRatings] Failed to fetch state for voter room:", roomId, "status:", resp.status);
-          continue;
+        // The store first, but only when it holds a COMPLETE answer.
+        //
+        // A room's presence in the store, even with its vid and the poll's
+        // deadline in it, says nothing about whether its rating events
+        // arrived: /sync can deliver a room whose vodle state is partial,
+        // and reading that as authoritative reports a voter as having
+        // fewer ratings than they cast. That is how a poll of fifty came
+        // out at 242 of 260 ratings and showed 50 voters instead of 52
+        // (#327). So the store's answer is checked against the number of
+        // options, and anything short is asked of the server — which costs
+        // a request only for a voter who really has not rated everything.
+        let stateEvents: any[] | null = this.voterRoomStateFromStore(roomId);
+        if (stateEvents && !MatrixService.holdsEveryRating(stateEvents, options)) {
+          stateEvents = null;
         }
-        
-        const stateEvents: any[] = await resp.json();
-        console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
-          "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
+        if (stateEvents) {
+          this.ratingsFromStore++;
+        } else {
+          this.ratingsFromServer++;
+          stateEvents = await fromServer();
+          if (!stateEvents) {
+            return;                     // this room only; the others go on
+          }
+        }
+        if (environment.show_debug_info) {
+          // the filter and the map run per voter room, so they stay inside
+          // the test rather than being handed to a call that discards them
+          console.log("[getRatings] Voter", voterId, "room", roomId, "state events:", stateEvents.length,
+            "vodle events:", stateEvents.filter(e => e.type?.startsWith('m.room.vodle')).map(e => e.type));
+        }
         
         // Extract vodle vid from voter room state (if stored)
         for (const event of stateEvents) {
           if (event.type === 'm.room.vodle.voter.vid') {
             discoveredVid = event.content?.value || null;
-            console.log("[getRatings] Found vid in voter room state:", discoveredVid, "for Matrix user:", voterId);
+            trace("[getRatings] Found vid in voter room state:", discoveredVid, "for Matrix user:", voterId);
           }
         }
         
@@ -2914,7 +4453,7 @@ export class MatrixService {
         if (!discoveredVid) {
           discoveredVid = this.voterVidMap.get(`${pollId}:${voterId}`) || null;
           if (discoveredVid) {
-            console.log("[getRatings] Found vid from announce event:", discoveredVid, "for Matrix user:", voterId);
+            trace("[getRatings] Found vid from announce event:", discoveredVid, "for Matrix user:", voterId);
           }
         }
         
@@ -2941,16 +4480,55 @@ export class MatrixService {
       
       // Use vodle vid as key if available, otherwise fall back to Matrix user ID
       const effectiveVoterId = discoveredVid || voterId;
-      console.log("[getRatings] Voter", voterId, "effectiveVid:", effectiveVoterId, "ratings count:", voterRatings.size);
+      trace("[getRatings] Voter", voterId, "effectiveVid:", effectiveVoterId, "ratings count:", voterRatings.size);
       if (voterRatings.size > 0) {
         ratings.set(effectiveVoterId, voterRatings);
       }
-    }
+    });
     
-    console.log("[getRatings] DONE. Total voters with ratings:", ratings.size);
+    // The read ADDS to what is known; it does not replace it. A rating is
+    // only ever set, never withdrawn, so a union can never under-report —
+    // whereas substituting the read for the cache threw away everything the
+    // live handlers had gathered before it began, which cost a voter in the
+    // click-through the moment the read started happening at all (#327).
+    // In time order: what was already known, then the read, then whatever
+    // arrived while it ran.
+    const known = new Map<string, Map<string, number>>();
+    const layer = (from: Map<string, Map<string, number>> | undefined): number => {
+      let n = 0;
+      for (const [voterId, voterRatings] of (from || new Map())) {
+        let into = known.get(voterId);
+        if (!into) { into = new Map<string, number>(); known.set(voterId, into); }
+        for (const [optionId, rating] of voterRatings) { into.set(optionId, rating); n++; }
+      }
+      return n;
+    };
+    const kept = layer(this.ratingCaches.get(pollId));
+    layer(ratings);
+    const live = this.ratingsDuringScan.get(pollId);
+    this.ratingsDuringScan.delete(pollId);
+    const layered = layer(live);
+    const read_size = ratings.size;
+    ratings.clear();
+    for (const [voterId, voterRatings] of known) { ratings.set(voterId, voterRatings); }
     
-    // Cache the result
+    let total_ratings = 0;
+    for (const voterRatings of ratings.values()) { total_ratings += voterRatings.size; }
+    console.log("[getRatings] DONE.", pollId, "voter rooms:", voterRoomEntries.length,
+      "| voters with ratings:", ratings.size, "| ratings:", total_ratings,
+      // an upper bound, not an expectation: a voter who abstains on an option
+      // has no rating for it, and this device's own room contributes none
+      // here at all — labelling it "expected" made every healthy run look
+      // like a shortfall (#327)
+      "| at most:", voterRoomEntries.length * options.size,
+      "| the read found:", read_size, "voters | already known:", kept,
+      "| from the sync store:", this.ratingsFromStore, "| fetched:", this.ratingsFromServer,
+      "| arrived during the read:", layered);
+    
+    // Cache the result, and record that it was actually read rather than
+    // merely accumulated from whatever the sync delivered (#327):
     this.ratingCaches.set(pollId, ratings);
+    this.ratingsScanned.add(pollId);
     
     // Return a defensive copy so callers cannot mutate the cached map
     const result = new Map<string, Map<string, number>>();
@@ -2963,10 +4541,68 @@ export class MatrixService {
   }
   
   /**
+   * The ratings as the server has them NOW, discovery included, replacing
+   * the cache (the final read before a poll is tallied, #325).
+   */
+  async refreshRatings(pollId: string): Promise<Map<string, Map<string, number>>> {
+    this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
+    return this.getRatings(pollId);
+  }
+  
+  /**
+   * Whether the guard bot has closed the poll on the server (#325): it
+   * closes every voter room first and then writes the poll room's
+   * m.room.vodle.poll.state "closed" event, which only it can write once
+   * the poll runs. From that event on no rating can change, so every client
+   * that reads the ratings afterwards reads the same ones; and the event's
+   * id is the same for every client, which makes it the seed of a winner
+   * poll's final lottery (the CouchDB backend uses the closing document's
+   * revision). A poll room whose power levels were dropped by a guard bot
+   * from before that event existed counts as closed too.
+   */
+  async getPollClosure(pollId: string): Promise<{closed: boolean; event_id: string | null; closed_at: string | null}> {
+    const none = {closed: false, event_id: null, closed_at: null};
+    if (!this.client) {
+      return none;
+    }
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return none;
+    }
+    const resp = await fetch(`${this.homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`, {
+      headers: { 'Authorization': `Bearer ${this.client.getAccessToken()}` },
+      cache: 'no-store',
+    });
+    if (!resp.ok) {
+      throw new Error(`could not read the poll room's state: ${resp.status}`);
+    }
+    const events: any[] = await resp.json();
+    const state = events.find(e => e.type === 'm.room.vodle.poll.state' && e.state_key === '');
+    if (state?.content?.state === 'closed') {
+      return {closed: true, event_id: state.event_id || null, closed_at: state.content.closed_at || null};
+    }
+    const powerLevels = events.find(e => e.type === 'm.room.power_levels' && e.state_key === '');
+    if ((powerLevels?.content?.events_default ?? 0) >= 100) {
+      return {closed: true, event_id: powerLevels.event_id || null, closed_at: null};
+    }
+    return none;
+  }
+  
+  /**
    * Update the rating cache for a single voter/option.
    * Called by real-time event handlers when a rating event arrives.
    */
   updateRatingCache(pollId: string, voterId: string, optionId: string, rating: number): void {
+    // a read in flight gets this too, so that finishing it cannot throw
+    // away a rating that arrived while it ran (#327):
+    const during = this.ratingsDuringScan.get(pollId);
+    if (during) {
+      let voterDuring = during.get(voterId);
+      if (!voterDuring) { voterDuring = new Map(); during.set(voterId, voterDuring); }
+      voterDuring.set(optionId, rating);
+    }
+    
     let pollRatings = this.ratingCaches.get(pollId);
     if (!pollRatings) {
       pollRatings = new Map();
@@ -2987,6 +4623,7 @@ export class MatrixService {
    */
   clearRatingCache(pollId: string): void {
     this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
   }
   
   // ========================================================================
@@ -3037,15 +4674,19 @@ export class MatrixService {
     const delegationId = this.generateId();
     const timestamp = Date.now();
     
-    await this.client.sendEvent(
+    // the id stays plain (responses refer to it); who delegates what to
+    // whom is encrypted under the poll password like the other poll data:
+    await this.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_request' as any,
       {
         delegation_id: delegationId,
-        delegate_id: delegateId,
-        option_ids: optionIds,
-        status: 'pending',
-        timestamp
+        ...(await this.pollDataContent(pollId, {
+          delegate_id: delegateId,
+          option_ids: optionIds,
+          status: 'pending',
+          timestamp
+        }))
       }
     );
     
@@ -3102,14 +4743,16 @@ export class MatrixService {
     const timestamp = Date.now();
     const resolvedStatus: 'accepted' | 'declined' = accept ? 'accepted' : 'declined';
     
-    await this.client.sendEvent(
+    await this.sendEvent(
       roomId,
       'm.room.vodle.vote.delegation_response' as any,
       {
         delegation_id: delegationId,
-        status: resolvedStatus,
-        accepted_options: acceptedOptions || [],
-        timestamp
+        ...(await this.pollDataContent(pollId, {
+          status: resolvedStatus,
+          accepted_options: acceptedOptions || [],
+          timestamp
+        }))
       }
     );
     
@@ -3159,62 +4802,127 @@ export class MatrixService {
     }
     
     const delegations = new Map<string, DelegationRequest>();
-    
+    const responses = new Map<string, DelegationResponse>();
     if (!this.client) {
-      return delegations;
+      return delegations;   // nothing to read yet, and nothing to cache
     }
-    
-    const roomId = await this.getPollRoom(pollId);
-    if (!roomId) {
-      return delegations;
-    }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return delegations;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.vote.delegation_request') {
-        const content = event.getContent();
-        const sender = event.getSender();
-        
-        if (content.delegation_id) {
+    const timeline = await this.pollRoomTimeline(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
+    for (const event of [...timeline].reverse()) {          // oldest first
+      const content = event.content || {};
+      if (!content.delegation_id) {
+        continue;
+      }
+      if (event.type === 'm.room.vodle.vote.delegation_request') {
+        const fields = await this.readDelegationFields(pollId, content);
+        if (fields) {
           delegations.set(content.delegation_id, {
             delegation_id: content.delegation_id,
-            delegator_id: sender,
-            delegate_id: content.delegate_id,
-            option_ids: content.option_ids || [],
-            status: content.status || 'pending',
-            timestamp: content.timestamp || 0
+            delegator_id: event.sender,
+            delegate_id: fields.delegate_id,
+            option_ids: fields.option_ids || [],
+            status: fields.status || 'pending',
+            timestamp: fields.timestamp || 0
+          });
+        }
+      } else if (event.type === 'm.room.vodle.vote.delegation_response') {
+        const fields = await this.readDelegationFields(pollId, content);
+        if (fields && (fields.status === 'accepted' || fields.status === 'declined')) {
+          responses.set(content.delegation_id, {
+            delegation_id: content.delegation_id,
+            responder_id: event.sender,
+            status: fields.status,
+            accepted_options: fields.accepted_options || [],
+            timestamp: fields.timestamp || 0
           });
         }
       }
-      
-      // Update delegation status from responses
-      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
-        const content = event.getContent();
-        
-        if (content.delegation_id && delegations.has(content.delegation_id)) {
-          const request = delegations.get(content.delegation_id);
-          // Only accept valid statuses, to mirror handleDelegationResponse logic
-          if (content.status === 'accepted' || content.status === 'declined') {
-            request.status = content.status;
-          }
-        }
+    }
+    // the responses update the requests' status (the timeline is in order)
+    for (const [delegationId, response] of responses) {
+      const request = delegations.get(delegationId);
+      if (request) {
+        request.status = response.status;
       }
     }
     
-    // Cache the result
+    // Cache the results
     this.delegationRequestCaches.set(pollId, delegations);
+    this.delegationResponseCaches.set(pollId, responses);
     
     this.logger?.exit("MatrixService.getDelegations");
     // Return a defensive copy so callers cannot mutate the cached map.
     // Note: the DelegationRequest objects are shared references — treat as read-only.
     return new Map<string, DelegationRequest>(delegations);
+  }
+  
+  /**
+   * All events of the poll room's timeline, NEWEST FIRST, from the server
+   * (the SDK's timeline holds only a window of a room joined earlier).
+   *
+   * The poll room's timeline carries three different things vodle reads —
+   * the options, the voter-room announcements and the delegations — and
+   * each of the three used to walk it for itself, so opening a poll
+   * paginated the same room three times over. A walk younger than
+   * max_age_ms is shared instead, which during a poll's load means one
+   * (#327). Pass 0 to insist on a fresh one, as the periodic voter
+   * discovery does: its whole purpose is to see what has just arrived.
+   */
+  private async pollRoomTimeline(pollId: string, max_age_ms = 0): Promise<any[]> {
+    const cached = this.pollTimelineCache.get(pollId);
+    // strictly younger, so that max_age_ms 0 never shares a walk — two
+    // calls in the same millisecond otherwise would
+    if (cached && Date.now() - cached.at < max_age_ms) {
+      return cached.events;
+    }
+    const walk = this.walkPollRoomTimeline(pollId);
+    this.pollTimelineCache.set(pollId, {at: Date.now(), events: walk});
+    // a walk that threw must not be handed to the next caller:
+    walk.catch(() => {
+      if (this.pollTimelineCache.get(pollId)?.events === walk) {
+        this.pollTimelineCache.delete(pollId);
+      }
+    });
+    return walk;
+  }
+  
+  private async walkPollRoomTimeline(pollId: string): Promise<any[]> {
+    if (!this.client) {
+      return [];
+    }
+    const roomId = await this.getPollRoom(pollId);
+    if (!roomId) {
+      return [];
+    }
+    const accessToken = this.client.getAccessToken();
+    const encodedRoomId = encodeURIComponent(roomId);
+    const events: any[] = [];
+    let from: string | undefined = undefined;
+    for (let page = 0; page < 100; page++) {
+      let url = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/messages?dir=b&limit=100`;
+      if (from) {
+        url += `&from=${encodeURIComponent(from)}`;
+      }
+      const resp = await fetch(url, {headers: {'Authorization': `Bearer ${accessToken}`}, cache: 'no-store'});
+      if (!resp.ok) {
+        this.logger?.error("MatrixService.pollRoomTimeline could not read the timeline", pollId, resp.status);
+        break;
+      }
+      const data: any = await resp.json();
+      const chunk: any[] = data.chunk || [];
+      events.push(...chunk);
+      from = data.end;
+      if (chunk.length === 0 || !from || from === data.start) {
+        break;
+      }
+    }
+    return events;
+  }
+  
+  /** the fields of a delegation event: decrypted when encrypted (undefined
+   *  without the poll password), as they are for events from before the
+   *  encryption */
+  private async readDelegationFields(pollId: string, content: any): Promise<any> {
+    return typeof content?.enc === 'string' ? this.readPollValue(pollId, content) : content;
   }
   
   /**
@@ -3232,50 +4940,10 @@ export class MatrixService {
     if (cached) {
       return new Map<string, DelegationResponse>(cached);
     }
-    
-    const responses = new Map<string, DelegationResponse>();
-    
-    if (!this.client) {
-      return responses;
-    }
-    
-    const roomId = await this.getPollRoom(pollId);
-    if (!roomId) {
-      return responses;
-    }
-    
-    const room = this.client.getRoom(roomId);
-    if (!room) {
-      return responses;
-    }
-    
-    const timeline = room.getLiveTimeline();
-    const events = timeline.getEvents();
-    
-    for (const event of events) {
-      if (event.getType() === 'm.room.vodle.vote.delegation_response') {
-        const content = event.getContent();
-        const sender = event.getSender();
-        
-        if (content.delegation_id) {
-          responses.set(content.delegation_id, {
-            delegation_id: content.delegation_id,
-            responder_id: sender,
-            status: content.status === 'accepted' ? 'accepted' : 'declined',
-            accepted_options: content.accepted_options || [],
-            timestamp: content.timestamp || 0
-          });
-        }
-      }
-    }
-    
-    // Cache the result
-    this.delegationResponseCaches.set(pollId, responses);
-    
+    // getDelegations reads requests and responses in one pass and caches both
+    await this.getDelegations(pollId);
     this.logger?.exit("MatrixService.getDelegationResponses");
-    // Return a defensive copy so callers cannot mutate the cached map.
-    // Note: the DelegationResponse objects are shared references — treat as read-only.
-    return new Map<string, DelegationResponse>(responses);
+    return new Map<string, DelegationResponse>(this.delegationResponseCaches.get(pollId) || new Map());
   }
   
   // ========================================================================
@@ -3310,7 +4978,19 @@ export class MatrixService {
   }
   
   /**
-   * Set up real-time event handlers for a poll.
+   * Set up real-time event handlers for a poll, and discover its voters.
+   *
+   * The two halves cost very different things, so they are also available
+   * separately: setupPollRoomHandlers only registers listeners, while
+   * startVoterSync walks the poll room and joins a room per voter (#327).
+   */
+  async setupPollEventHandlers(pollId: string): Promise<void> {
+    await this.setupPollRoomHandlers(pollId);
+    await this.startVoterSync(pollId);
+  }
+
+  /**
+   * Register this poll's event handlers.
    * 
    * Listens for:
    * - Rating events in voter rooms (m.room.vodle.voter.rating.*)
@@ -3321,11 +5001,14 @@ export class MatrixService {
    * Uses Matrix's Room.timeline and RoomState.events listeners
    * following the existing DataService pattern for real-time updates.
    * 
+   * One room lookup, no reads: this is the half of a poll's sync that is
+   * cheap enough to do for every poll the user is in at app start.
+   * 
    * Calling this method multiple times for the same poll is safe — it will
    * not register duplicate handlers.
    */
-  async setupPollEventHandlers(pollId: string): Promise<void> {
-    this.logger?.entry("MatrixService.setupPollEventHandlers", pollId);
+  async setupPollRoomHandlers(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.setupPollRoomHandlers", pollId);
     
     if (!this.client) {
       throw new Error("Matrix client not initialized");
@@ -3344,6 +5027,8 @@ export class MatrixService {
     if (!roomId) {
       // Undo the flag if room lookup fails
       this.pollEventHandlersSetup.delete(pollId);
+    this.voterSyncStarted.delete(pollId);
+    this.pollTimelineCache.delete(pollId);
       throw new Error(`Poll room not found for poll ${pollId}`);
     }
     
@@ -3353,21 +5038,27 @@ export class MatrixService {
     // (delegation requests/responses AND voter room announcements)
     const timelineHandler = (event: any, room: any) => {
       if (room.roomId !== roomId) return;
-      console.log("[timelineHandler] poll room event:", event.getType());
+      trace("[timelineHandler] poll room event:", event.getType());
       
       const eventType = event.getType();
       
       switch (eventType) {
         case 'm.room.vodle.vote.delegation_request':
-          this.handleDelegationRequest(pollId, event);
+          this.handleDelegationRequest(pollId, event).catch(error =>
+            this.logger?.error("MatrixService.handleDelegationRequest failed", pollId, error));
           break;
         
         case 'm.room.vodle.vote.delegation_response':
-          this.handleDelegationResponse(pollId, event);
+          this.handleDelegationResponse(pollId, event).catch(error =>
+            this.logger?.error("MatrixService.handleDelegationResponse failed", pollId, error));
           break;
         
         case 'm.room.vodle.voter.announce':
           this.handleVoterAnnounce(pollId, event);
+          break;
+        
+        case 'm.room.vodle.poll.option':
+          this.handleOptionEvent(pollId, event);
           break;
       }
     };
@@ -3399,7 +5090,7 @@ export class MatrixService {
         const lookup = this.voterRoomReverseLookup.get(roomId_ev);
         if (lookup && lookup.pollId === pollId) {
           const optionId = eventType.substring('m.room.vodle.voter.rating.rating.'.length);
-          console.log("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
+          trace("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
           try {
             this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
           } catch (err) {
@@ -3415,13 +5106,39 @@ export class MatrixService {
     this.pollEventHandlerRefs.set(pollId, handlers);
     
     this.logger?.info("Event handlers set up for poll", pollId);
+    this.logger?.exit("MatrixService.setupPollRoomHandlers");
+  }
+
+  /**
+   * Discover this poll's voter rooms, read what they already hold, and keep
+   * watching for new ones.
+   *
+   * This is the expensive half of a poll's sync: a walk of the poll room's
+   * timeline, a join for every voter room this device has not joined yet,
+   * and a state read of each. Doing that for every poll the user is in
+   * before the app shows anything is what made the start take half a
+   * minute, so it happens when a poll is opened instead (#327).
+   *
+   * Calling it more than once for the same poll is safe.
+   */
+  async startVoterSync(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.startVoterSync", pollId);
+    if (this.voterSyncStarted.has(pollId)) {
+      this.logger?.info("Voter sync already running for poll", pollId);
+      this.logger?.exit("MatrixService.startVoterSync");
+      return;
+    }
+    // the handlers must be in place before the rooms are joined, or a rating
+    // arriving during the join would have nowhere to go:
+    await this.setupPollRoomHandlers(pollId);
+    this.voterSyncStarted.add(pollId);
     
     // Discover all voter rooms now (populates voterRoomReverseLookup)
     // so that the stateRatingHandler can match incoming events.
     try {
-      await this.discoverVoterRooms(pollId);
+      await this.discoverVoterRooms(pollId, MatrixService.POLL_TIMELINE_MAX_AGE_MS);
     } catch (err) {
-      console.error("[setupPollEventHandlers] discoverVoterRooms failed:", err);
+      console.error("[startVoterSync] discoverVoterRooms failed:", err);
     }
     
     // Retroactively scan current state of all known voter rooms for this poll.
@@ -3441,7 +5158,7 @@ export class MatrixService {
             listener.onInitialScanComplete(pollId);
           }
         } catch (error) {
-          console.error("[setupPollEventHandlers] onInitialScanComplete listener error:", error);
+          console.error("[startVoterSync] onInitialScanComplete listener error:", error);
         }
       }
     }
@@ -3451,7 +5168,7 @@ export class MatrixService {
     // requests, so it's lightweight.
     this.startPeriodicVoterDiscovery(pollId);
     
-    this.logger?.exit("MatrixService.setupPollEventHandlers");
+    this.logger?.exit("MatrixService.startVoterSync");
   }
   
   /**
@@ -3559,10 +5276,11 @@ export class MatrixService {
       
       this.voterRooms.set(cacheKey, voterRoomId);
       this.voterRoomReverseLookup.set(voterRoomId, { pollId, voterId });
-      await this.storage.set(`voter_room_${cacheKey}`, voterRoomId);
+      await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), voterRoomId);
       
       // Invalidate rating cache so next getRatings() includes this voter
       this.ratingCaches.delete(pollId);
+      this.ratingsScanned.delete(pollId);
       
       // Notify listeners that data changed (new voter discovered)
       const listeners = this.pollEventListeners.get(pollId);
@@ -3585,10 +5303,54 @@ export class MatrixService {
   }
   
   /**
+   * An option added while the poll runs (a m.room.vodle.poll.option timeline
+   * event, see addOption): make sure the option cache has it and tell the
+   * listeners, so the poll page shows it without a reload (#324). Fires for
+   * the own echo too; DataService registers an option only once.
+   */
+  private async handleOptionEvent(pollId: string, event: any): Promise<void> {
+    const content = event.getContent?.() || {};
+    const optionId = content.option_id;
+    if (!optionId) {
+      return;
+    }
+    try {
+      const options = await this.ensureOptionCache(pollId);
+      if (!options.has(optionId)) {
+        // the cache was built before this event reached the server's
+        // timeline: take the fields from the event itself
+        const fields = typeof content.enc === 'string' ? await this.readPollValue(pollId, content) : content;
+        if (!fields) {
+          return;
+        }
+        options.set(optionId, {name: fields.name || '', description: fields.description || '', url: fields.url || ''});
+      }
+      const option = options.get(optionId);
+      const listeners = this.pollEventListeners.get(pollId);
+      if (listeners) {
+        for (const listener of listeners) {
+          try {
+            if (listener.onOptionAdded) {
+              listener.onOptionAdded(pollId, optionId, option);
+            }
+            if (listener.onDataChange) {
+              listener.onDataChange();
+            }
+          } catch (error) {
+            this.logger?.error("Error in poll event listener (option added)", error);
+          }
+        }
+      }
+    } catch (error) {
+      this.logger?.error("MatrixService.handleOptionEvent failed", pollId, optionId, error);
+    }
+  }
+  
+  /**
    * Handle an incoming delegation request event from the poll room.
    * Updates the local cache and notifies listeners.
    */
-  private handleDelegationRequest(pollId: string, event: any): void {
+  private async handleDelegationRequest(pollId: string, event: any): Promise<void> {
     this.logger?.entry("MatrixService.handleDelegationRequest", pollId);
     
     const sender = event.getSender();
@@ -3597,14 +5359,20 @@ export class MatrixService {
     if (!content.delegation_id) {
       return;
     }
+    // encrypted under the poll password (see requestDelegation); a client
+    // without it learns nothing beyond the id:
+    const fields = await this.readDelegationFields(pollId, content);
+    if (!fields) {
+      return;
+    }
     
     const request: DelegationRequest = {
       delegation_id: content.delegation_id,
       delegator_id: sender,
-      delegate_id: content.delegate_id,
-      option_ids: content.option_ids || [],
-      status: content.status || 'pending',
-      timestamp: content.timestamp || 0
+      delegate_id: fields.delegate_id,
+      option_ids: fields.option_ids || [],
+      status: fields.status || 'pending',
+      timestamp: fields.timestamp || 0
     };
     
     // Update cache
@@ -3639,7 +5407,7 @@ export class MatrixService {
    * Handle an incoming delegation response event from the poll room.
    * Updates both the response cache and the request status.
    */
-  private handleDelegationResponse(pollId: string, event: any): void {
+  private async handleDelegationResponse(pollId: string, event: any): Promise<void> {
     this.logger?.entry("MatrixService.handleDelegationResponse", pollId);
     
     const sender = event.getSender();
@@ -3648,17 +5416,21 @@ export class MatrixService {
     if (!content.delegation_id) {
       return;
     }
+    const fields = await this.readDelegationFields(pollId, content);
+    if (!fields) {
+      return;
+    }
     
     // Validate status: must be 'accepted' or 'declined'
     const validStatuses = ['accepted', 'declined'];
-    const status: 'accepted' | 'declined' = validStatuses.includes(content.status) ? content.status : 'declined';
+    const status: 'accepted' | 'declined' = validStatuses.includes(fields.status) ? fields.status : 'declined';
     
     const response: DelegationResponse = {
       delegation_id: content.delegation_id,
       responder_id: sender,
       status,
-      accepted_options: content.accepted_options || [],
-      timestamp: content.timestamp || 0
+      accepted_options: fields.accepted_options || [],
+      timestamp: fields.timestamp || 0
     };
     
     // Update response cache
@@ -3752,6 +5524,58 @@ export class MatrixService {
    * Called when the user navigates away from a poll or when
    * the poll is closed.
    */
+  /**
+   * Leave and forget the poll room and every voter room of a poll this
+   * client has deleted locally (#331), dropping caches and the stored room
+   * ids. Once no local user is left in a room the homeserver may purge it;
+   * the guard bot purges a poll's rooms after the retention period anyway.
+   */
+  async leavePollRooms(pollId: string): Promise<void> {
+    this.logger?.entry("MatrixService.leavePollRooms", pollId);
+    if (!this.client) {
+      return;
+    }
+    this.teardownPollEventHandlers(pollId);
+    const rooms = new Set<string>();
+    const pollRoom = this.pollRooms.get(pollId) || await this.storage.get(this.storageKey(`poll_room_${pollId}`));
+    if (pollRoom) {
+      rooms.add(pollRoom);
+    }
+    for (const [cacheKey, roomId] of Array.from(this.voterRooms.entries())) {
+      if (cacheKey.startsWith(`${pollId}:`)) {
+        rooms.add(roomId);
+        this.voterRooms.delete(cacheKey);
+        this.voterRoomReverseLookup.delete(roomId);
+        this.voterVidStored.delete(roomId);
+        this.voterVidMap.delete(cacheKey);
+        await this.storage.remove(this.storageKey(`voter_room_${cacheKey}`));
+      }
+    }
+    // rooms of the poll this session never opened are known by their alias:
+    for (const room of (this.client.getRooms?.() || [])) {
+      const alias: string = room.getCanonicalAlias?.() || '';
+      if (alias.startsWith(`#vodle_poll_${pollId}:`) || alias.startsWith(`#vodle_voter_${pollId}_`)) {
+        rooms.add(room.roomId);
+      }
+    }
+    this.pollRooms.delete(pollId);
+    this.pollOrigins.delete(pollId);
+    this.optionCaches.delete(pollId);
+    this.ratingCaches.delete(pollId);
+    this.ratingsScanned.delete(pollId);
+    await this.storage.remove(this.storageKey(`poll_room_${pollId}`));
+    for (const roomId of rooms) {
+      try {
+        await this.client.leave(roomId);
+        await this.client.forget(roomId);
+      } catch (error) {
+        this.logger?.warn("MatrixService.leavePollRooms could not leave a room", pollId, roomId, error);
+      }
+    }
+    this.logger?.info("MatrixService.leavePollRooms left", pollId, rooms.size, "rooms");
+    this.logger?.exit("MatrixService.leavePollRooms");
+  }
+
   teardownPollEventHandlers(pollId: string): void {
     this.logger?.entry("MatrixService.teardownPollEventHandlers", pollId);
     
@@ -3804,6 +5628,24 @@ export class MatrixService {
   }
   
   /**
+   * What makes two queued writes the same write. Writes that name a value
+   * (a rating, a data key) are identified by what they set, so a later one
+   * replaces an earlier one; writes that are events in their own right (a
+   * delegation request, an answer to one) have no key and all of them are
+   * kept.
+   */
+  static offlineEventKey(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): string | null {
+    switch (event.type) {
+      case 'rating':          return `rating:${event.pollId}:${event.optionId}`;
+      case 'voter_data':      return `voter_data:${event.pollId}:${event.voterId}:${event.key}`;
+      case 'poll_data':       return `poll_data:${event.pollId}:${event.key}`;
+      case 'user_data':       return `user_data:${event.key}`;
+      case 'voter_announce':  return `voter_announce:${event.pollId}:${event.voterId}`;
+      default:                return null;
+    }
+  }
+  
+  /**
    * Enqueue an event for later processing when offline.
    * The event is persisted to Ionic Storage so it survives app restarts.
    * 
@@ -3812,9 +5654,39 @@ export class MatrixService {
   async enqueueOfflineEvent(event: Omit<QueuedEvent, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
     this.logger?.entry("MatrixService.enqueueOfflineEvent", event.type);
     
-    if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
-      this.logger?.error("Offline queue is full, discarding oldest event");
+    // A queued write is superseded by a later one for the same thing: a voter
+    // who moves one slider five times while the server is busy queues one
+    // rating, not five. This is what keeps the queue bounded by the number of
+    // distinct keys — a poll's voters times its options — rather than by the
+    // number of clicks, so nothing ever has to be thrown away to make room
+    // for something newer (#327).
+    const key = MatrixService.offlineEventKey(event);
+    const superseded = key === null ? -1
+      : this.offlineQueue.findIndex(q => MatrixService.offlineEventKey(q) === key);
+    if (superseded !== -1) {
+      this.offlineQueue[superseded] = {
+        ...event,
+        id: this.offlineQueue[superseded].id,
+        timestamp: Date.now(),
+        retryCount: this.offlineQueue[superseded].retryCount,
+      } as QueuedEvent;
+      await this.saveOfflineQueue();
+      this.scheduleOfflineQueueRetry(true);
+      this.logger?.exit("MatrixService.enqueueOfflineEvent");
+      return;
+    }
+    
+    if (this.offlineQueue.length >= MatrixService.HARD_QUEUE_LIMIT) {
+      // Never reached by a poll of any plausible size, since writes for the
+      // same key coalesce above. If it ever is, the loss is counted and
+      // reported rather than silent: getOfflineQueueStatus().droppedCount
+      // is what the page's sync sign reads.
+      this.offlineQueueDroppedCount++;
+      this.logger?.error("Offline queue is full, a write had to be dropped",
+        this.offlineQueue.length, this.offlineQueueDroppedCount);
       this.offlineQueue.shift();
+    } else if (this.offlineQueue.length >= MatrixService.MAX_QUEUE_SIZE) {
+      this.logger?.warn("Offline queue is unusually long", this.offlineQueue.length);
     }
     
     const queuedEvent: QueuedEvent = {
@@ -3863,38 +5735,73 @@ export class MatrixService {
     let processedCount = 0;
     
     try {
+      // One pass over the queue: an event that fails goes to the back rather
+      // than blocking everything behind it, and `attempted` is what stops the
+      // pass from going round for ever.
+      const attempted = new Set<string>();
       while (this.offlineQueue.length > 0) {
         const event = this.offlineQueue[0];
+        if (attempted.has(event.id)) {
+          this.scheduleOfflineQueueRetry();
+          break;
+        }
+        attempted.add(event.id);
         
         try {
           await this.processQueuedEvent(event);
           this.offlineQueue.shift();
           processedCount++;
           this.offlineQueueFailedCount = 0;
+          // the server is taking writes again, so the next wait starts at
+          // the short end: without this the interval keeps doubling to its
+          // 30 s ceiling and stays there, which is what made a throttled
+          // burst take many minutes to drain rather than seconds (#327)
+          this.offlineQueueRetryDelayMs = 0;
           await this.saveOfflineQueue();
         } catch (error) {
-          if (this.is_connection_error(error)) {
-            // the server is still unreachable: that is not an attempt the
-            // event should be charged for; try again later (#326)
-            this.logger?.warn("Offline queue: server still unreachable, retrying later", event.id);
+          if (this.is_connection_error(error) || this.is_rate_limit_error(error)) {
+            // the server is unreachable, or throttling this user: neither is
+            // an attempt the event should be charged for (#326, #327). The
+            // queue is drained one event at a time, so waiting here is also
+            // what lets a throttled burst through in the server's own time.
+            this.logger?.warn("Offline queue: server unreachable or throttling, retrying later", event.id);
             this.scheduleOfflineQueueRetry();
             break;
           }
           this.logger?.error("Failed to process queued event", event.id, error);
           event.retryCount++;
-          // Persist updated retry count so it survives app restarts
-          await this.saveOfflineQueue();
+          
+          if (this.is_permanent_refusal(error)) {
+            // the room is closed, or gone: no number of retries would make
+            // this write land. It is counted and reported — the one thing it
+            // is never is silently forgotten (#327).
+            this.logger?.error("Queued write refused for good, giving up on it",
+              event.id, event.type, error);
+            this.offlineQueue.shift();
+            this.offlineQueueRefusedCount++;
+            await this.saveOfflineQueue();
+            continue;
+          }
           
           if (event.retryCount >= MatrixService.MAX_RETRY_COUNT) {
-            this.logger?.error("Event exceeded max retries, discarding", event.id);
-            this.offlineQueue.shift();
+            // Not given up on: moved out of the way, so one stubborn write
+            // does not hold up every write behind it. Until 2026-09-11 this
+            // was where a write was DISCARDED after five attempts, which is
+            // exactly the "sync eventually loses things" that the move off
+            // CouchDB was meant to end.
+            this.logger?.warn("Queued write still failing, moving it to the back of the queue",
+              event.id, event.type, event.retryCount);
+            this.offlineQueue.push(this.offlineQueue.shift()!);
             this.offlineQueueFailedCount++;
             await this.saveOfflineQueue();
-          } else {
-            // the server rejected it for now; give it its remaining attempts later
             this.scheduleOfflineQueueRetry();
-            break;
+            continue;
           }
+          
+          // the server did not take it this time; try again shortly
+          await this.saveOfflineQueue();
+          this.scheduleOfflineQueueRetry();
+          break;
         }
       }
       
@@ -3987,6 +5894,14 @@ export class MatrixService {
         }
         break;
       
+      case 'voter_announce':
+        if (event.pollId && event.voterRoomId) {
+          await this.announceVoterRoom(event.pollId, event.voterRoomId, event.voterId);
+        } else {
+          throw new Error(`Malformed voter_announce event: missing required fields (id: ${event.id})`);
+        }
+        break;
+
       case 'user_data':
         if (event.key !== undefined) {
           await this.setUserData(event.key, event.value);
@@ -4008,6 +5923,221 @@ export class MatrixService {
   }
   
   /**
+   * How many of this device's writes the server has not confirmed yet — what
+   * the page's sync sign reads, so it has to stay cheap enough for a change
+   * detection cycle (#327).
+   */
+  get pendingWriteCount(): number {
+    return this.writesInFlight + this.offlineQueue.length;
+  }
+  
+  /**
+   * Whether those writes are not merely on their way but stuck: one has been
+   * waiting longer than SYNC_STALLED_AFTER_MS, or one keeps being refused.
+   * Neither is a loss — the queue goes on retrying — but the voter should be
+   * able to see that what they did has not arrived yet.
+   */
+  get syncIsStalled(): boolean {
+    if (this.offlineQueueFailedCount > 0) { return true; }
+    const oldest = this.offlineQueue.length === 0 ? null : this.offlineQueue[0].timestamp;
+    return oldest !== null && Date.now() - oldest > MatrixService.SYNC_STALLED_AFTER_MS;
+  }
+  
+  private static ownRatingKey(pollId: string, voterId: string, optionId: string): string {
+    return `${pollId}\u0000${voterId}\u0000${optionId}`;
+  }
+  
+  /** Remembers a rating this device set, for reconcileOwnRatings (#327). */
+  private recordOwnRating(pollId: string, voterId: string, optionId: string, rating: number): void {
+    this.ownRatings.set(MatrixService.ownRatingKey(pollId, voterId, optionId), rating);
+    if (this.ownRatingsSaveTimer === null) {
+      this.ownRatingsSaveTimer = setTimeout(() => {
+        this.ownRatingsSaveTimer = null;
+        this.saveOwnRatings().catch(error =>
+          this.logger?.warn("MatrixService could not persist its own ratings", error));
+      }, MatrixService.OWN_RATINGS_SAVE_DELAY_MS);
+    }
+  }
+  
+  private async saveOwnRatings(): Promise<void> {
+    await this.storage.set(MatrixService.OWN_RATINGS_STORAGE_KEY,
+      Array.from(this.ownRatings.entries()));
+  }
+  
+  async loadOwnRatings(): Promise<void> {
+    try {
+      const stored = await this.storage.get(MatrixService.OWN_RATINGS_STORAGE_KEY);
+      if (Array.isArray(stored)) {
+        this.ownRatings = new Map(stored as [string, number][]);
+      }
+    } catch (error) {
+      this.logger?.warn("MatrixService could not restore its own ratings", error);
+    }
+  }
+  
+  /** Forgets a poll's ratings — it ended, or the user removed it. */
+  async forgetOwnRatings(pollId: string): Promise<void> {
+    const prefix = `${pollId}\u0000`;
+    let removed = false;
+    for (const key of Array.from(this.ownRatings.keys())) {
+      if (key.startsWith(prefix)) { this.ownRatings.delete(key); removed = true; }
+    }
+    if (removed) { await this.saveOwnRatings(); }
+  }
+  
+  /**
+   * Re-sends anything this device has voted that its voter room does not
+   * hold, and reports how many that was.
+   *
+   * The offline queue covers a write that failed and said so. This covers
+   * everything else: an answer that never came back because the page went
+   * away, a room created but never filled, a write lost in a way nobody
+   * thought of. Whatever the cause, the next reconciliation finds the
+   * difference and writes it again through the ordinary paced, queued path —
+   * so a write can be delayed, but not lost (#327).
+   *
+   * Only rooms this device wrote to are reconciled: another voter's room is
+   * theirs to repair, and their client does the same for it.
+   */
+  async reconcileOwnRatings(pollId: string): Promise<number> {
+    if (!this.client) { return 0; }
+    const prefix = `${pollId}\u0000`;
+    const byVoter = new Map<string, Map<string, number>>();
+    for (const [key, rating] of this.ownRatings.entries()) {
+      if (!key.startsWith(prefix)) { continue; }
+      const [, voterId, optionId] = key.split('\u0000');
+      if (!byVoter.has(voterId)) { byVoter.set(voterId, new Map()); }
+      byVoter.get(voterId)!.set(optionId, rating);
+    }
+    
+    let rewritten = 0;
+    for (const [voterId, intended] of byVoter.entries()) {
+      const roomId = this.voterRooms.get(`${pollId}:${voterId}`);
+      if (!roomId) {
+        // the room is not known here yet; getOrCreateVoterRoom makes one and
+        // the next round compares against it
+        continue;
+      }
+      let onServer: Map<string, number>;
+      try {
+        onServer = await this.readVoterRoomRatings(pollId, roomId);
+      } catch (error) {
+        this.logger?.info("MatrixService.reconcileOwnRatings could not read a voter room, leaving it for the next round", pollId, error);
+        continue;
+      }
+      for (const [optionId, rating] of intended.entries()) {
+        if (onServer.get(optionId) === rating) { continue; }
+        this.logger?.warn("MatrixService.reconcileOwnRatings the server does not have this rating, writing it again",
+          pollId, voterId, optionId);
+        await this.setVoterData(pollId, voterId, `rating.${optionId}`, rating);
+        rewritten++;
+      }
+    }
+    if (rewritten > 0) {
+      this.logger?.warn("MatrixService.reconcileOwnRatings wrote back", rewritten, "rating(s) the server did not have", pollId);
+    }
+    return rewritten;
+  }
+  
+  /**
+   * A voter room's state as the SDK already holds it, or null when this
+   * client cannot be sure it holds all of it.
+   *
+   * "Cannot be sure" is the whole point: a room the client has joined but
+   * whose sync has not arrived has a Room object with a few events in it, and
+   * reading ratings from that would quietly report a voter as having none.
+   * Every voter room carries the poll's deadline and, since the room was
+   * created, its vid; either is evidence that this room's vodle state has
+   * arrived. Without one, the caller asks the server (#327).
+   */
+  /**
+   * Whether a voter room's state, as read from somewhere, carries a rating
+   * for every option of the poll — i.e. whether it can be believed without
+   * asking the server (#327).
+   */
+  private static holdsEveryRating(stateEvents: any[], options: Map<string, any>): boolean {
+    if (options.size === 0) {
+      return false;                     // nothing to check against
+    }
+    const prefix = 'm.room.vodle.voter.rating.rating.';
+    const rated = new Set<string>();
+    for (const event of stateEvents) {
+      const type = event?.type;
+      if (typeof type === 'string' && type.startsWith(prefix)) {
+        rated.add(type.slice(prefix.length));
+      }
+    }
+    for (const optionId of options.keys()) {
+      if (!rated.has(optionId)) { return false; }
+    }
+    return true;
+  }
+  
+  private voterRoomStateFromStore(roomId: string): any[] | null {
+    return this.roomStateFromStore(roomId, type =>
+      type === 'm.room.vodle.voter.vid' || type === 'm.room.vodle.poll.deadline');
+  }
+  
+  /**
+   * A poll room's state as the SDK already holds it, or null.
+   *
+   * A poll room that has arrived carries its lifecycle state or its deadline
+   * (a draft that has neither is not in a poll room yet). Same reasoning as
+   * voterRoomStateFromStore: an empty answer from a room whose sync has not
+   * arrived would read as a poll without a title or a state (#327).
+   */
+  private pollRoomStateFromStore(roomId: string): any[] | null {
+    return this.roomStateFromStore(roomId, type =>
+      type === 'm.room.vodle.poll.state' || type === 'm.room.vodle.poll.deadline');
+  }
+  
+  /**
+   * The state events of a room as the SDK's store holds them, flattened into
+   * the shape the /state endpoint returns, or null when this client cannot
+   * be sure it holds all of them — which is what has_arrived decides, from
+   * the event types present.
+   */
+  private roomStateFromStore(roomId: string, has_arrived: (type: string) => boolean): any[] | null {
+    const events = (this.client?.getRoom(roomId) as any)?.currentState?.events;
+    if (!events || typeof events.forEach !== 'function') {
+      return null;
+    }
+    const out: any[] = [];
+    let vodle_state_arrived = false;
+    events.forEach((byStateKey: any, eventType: string) => {
+      if (has_arrived(eventType)) {
+        vodle_state_arrived = true;
+      }
+      byStateKey.forEach((event: any, stateKey: string) => {
+        out.push({ type: eventType, state_key: stateKey,
+                   content: event?.getContent ? event.getContent() : event?.content });
+      });
+    });
+    return vodle_state_arrived ? out : null;
+  }
+  
+  /** The ratings a voter room actually holds, read from the server. */
+  private async readVoterRoomRatings(pollId: string, roomId: string): Promise<Map<string, number>> {
+    const ratings = new Map<string, number>();
+    const resp = await fetch(
+      `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`,
+      {headers: {'Authorization': `Bearer ${this.client!.getAccessToken()}`}, cache: 'no-store'});
+    if (!resp.ok) {
+      throw new Error(`could not read the state of ${roomId}: ${resp.status}`);
+    }
+    const prefix = 'm.room.vodle.voter.rating.rating.';
+    for (const event of await resp.json()) {
+      if (!event.type?.startsWith(prefix)) { continue; }
+      const raw = await this.readPollValue(pollId, event.content || {});
+      const value = typeof raw === 'number' ? raw : Number(raw);
+      if (Number.isFinite(value)) {
+        ratings.set(event.type.substring(prefix.length), value);
+      }
+    }
+    return ratings;
+  }
+  
+  /**
    * Get the current status of the offline queue.
    */
   getOfflineQueueStatus(): OfflineQueueStatus {
@@ -4016,7 +6146,12 @@ export class MatrixService {
       isProcessing: this.offlineQueueProcessing,
       isOnline: this.isOnline(),
       lastProcessedAt: this.offlineQueueLastProcessed,
-      failedCount: this.offlineQueueFailedCount
+      failedCount: this.offlineQueueFailedCount,
+      inFlight: this.writesInFlight,
+      oldestPendingAt: this.offlineQueue.length === 0 ? null
+        : this.offlineQueue[0].timestamp,
+      refusedCount: this.offlineQueueRefusedCount,
+      droppedCount: this.offlineQueueDroppedCount,
     };
   }
   
@@ -4028,6 +6163,8 @@ export class MatrixService {
     
     this.offlineQueue = [];
     this.offlineQueueFailedCount = 0;
+    this.offlineQueueRefusedCount = 0;
+    this.offlineQueueDroppedCount = 0;
     this.cancelOfflineQueueRetry();
     await this.saveOfflineQueue();
     
@@ -4456,7 +6593,7 @@ export class MatrixService {
     }
     
     const roomId = this.pollRooms.get(pollId);
-    console.log("[getAllPollData] pollId=", pollId, "roomId=", roomId, "pollRooms keys:", Array.from(this.pollRooms.keys()));
+    trace("[getAllPollData] pollId=", pollId, "roomId=", roomId, "pollRooms keys:", Array.from(this.pollRooms.keys()));
     if (!roomId) {
       this.logger?.info("Poll room not found for getAllPollData", pollId);
       return {};
@@ -4464,30 +6601,35 @@ export class MatrixService {
     
     const result: Record<string, any> = {};
     
-    // Fetch the full room state directly from the server REST API.
-    // The local SDK sync store may not yet have all state events
-    // (especially for freshly-joined rooms).
-    const accessToken = this.client.getAccessToken();
-    const encodedRoomId = encodeURIComponent(roomId);
-    const fetchUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
-    console.log("[getAllPollData] Fetching:", fetchUrl);
+    // The sync this client has already done is the cheapest source there is:
+    // this is one request per poll otherwise, and it is on the path between
+    // the app starting and the poll list appearing (#327). The server is
+    // asked only when the store cannot vouch for the room — a freshly joined
+    // one, or a first load before the sync has arrived.
     try {
-      const resp = await fetch(
-        fetchUrl,
-        {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-          cache: 'no-store',
+      let stateEvents: any[] | null = this.pollRoomStateFromStore(roomId);
+      if (!stateEvents) {
+        const accessToken = this.client.getAccessToken();
+        const encodedRoomId = encodeURIComponent(roomId);
+        const fetchUrl = `${this.homeserverUrl}/_matrix/client/v3/rooms/${encodedRoomId}/state`;
+        trace("[getAllPollData] Fetching:", fetchUrl);
+        const resp = await fetch(
+          fetchUrl,
+          {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            cache: 'no-store',
+          }
+        );
+        trace("[getAllPollData] Response status:", resp.status, resp.statusText);
+        if (!resp.ok) {
+          const errBody = await resp.text();
+          console.error("[getAllPollData] Error body:", errBody);
+          this.logger?.error("Failed to fetch room state", roomId, resp.status);
+          return {};
         }
-      );
-      console.log("[getAllPollData] Response status:", resp.status, resp.statusText);
-      if (!resp.ok) {
-        const errBody = await resp.text();
-        console.error("[getAllPollData] Error body:", errBody);
-        this.logger?.error("Failed to fetch room state", roomId, resp.status);
-        return {};
+        stateEvents = await resp.json();
       }
-      const stateEvents: any[] = await resp.json();
-      console.log("[getAllPollData] Fetched", stateEvents.length, "state events for room", roomId);
+      console.log("[getAllPollData] Read", stateEvents.length, "state events for room", roomId);
       
       const prefix = 'm.room.vodle.poll.data.';
       for (const event of stateEvents) {

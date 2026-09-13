@@ -545,6 +545,12 @@ export class Poll {
      * While a slider is dragged, this will be called with store=false,
      * when the slider is released, it will be called with store=true
      */
+    if (store && this.G.D.consent_pending) {
+      // no rating is stored before the consent (#193); the poll page stores
+      // the current ones once it is given
+      this.G.L.info("Poll.set_my_own_rating: consent pending, rating kept locally", this._pid, oid);
+      store = false;
+    }
     if (store) {
       this.G.D.setv(this._pid, "rating." + oid, value.toString());
     }
@@ -1330,7 +1336,9 @@ export class Poll {
       this.ratings_have_changed = true;
       // store new value:
       rs_map.set(vid, value);
-      this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_own_rating new ratings map", this.pid, oid, [...rs_map.entries()]);
+      }
       // check whether vid has not delegated:
       if (!this.direct_delegation_map.get(oid)) {
         this.direct_delegation_map.set(oid, new Map());
@@ -1386,7 +1394,9 @@ export class Poll {
       const old_max_r = this.max_proxy_ratings_map.get(vid) || 0,
             old_argmax_r_set = this.argmax_proxy_ratings_map.get(vid) || new Set(),
             eff_rating_changes_map = new Map<string, number>();
-      this.G.L.trace("Poll.update_proxy_rating old max, argmax",old_max_r,[...old_argmax_r_set]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_proxy_rating old max, argmax",old_max_r,[...old_argmax_r_set]);
+      }
       var max_r = old_max_r, 
       argmax_r_set = old_argmax_r_set;
       if (old_max_r == 0) {
@@ -1547,7 +1557,9 @@ export class Poll {
           }
         }
       }
-      this.G.L.trace("Poll.update_proxy_rating",n_changed,[...eff_rating_changes_map],old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      if (environment.show_debug_info) {
+        this.G.L.trace("Poll.update_proxy_rating",n_changed,[...eff_rating_changes_map],old_max_r,max_r,[...old_argmax_r_set],[...argmax_r_set]);
+      }
       // store new max, argmax:
       if (max_r > 0) {
         this.max_proxy_ratings_map.set(vid, max_r);
@@ -1578,7 +1590,9 @@ export class Poll {
             return;
           }
         }
-        this.G.L.trace("Poll.update_rating produced consistent shares:", [...my_shares_map], [...this.T.shares_map]);
+        if (environment.show_debug_info) {
+          this.G.L.trace("Poll.update_rating produced consistent shares:", [...my_shares_map], [...this.T.shares_map]);
+        }
       }
     }
   }
@@ -1775,7 +1789,14 @@ export class Poll {
   update_score(oid: string, approval_score: number, total_rating: number, score_factor: number) {
     // TODO: make the following tie-breaker faster by storing i permanently.
     // calculate a tiebreaking value between 0 and 1 based on the hash of the option name:
-    const tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(this.options[oid].name), 16).toString());
+    // by the option's name when there is one: an oid can reach the tally
+    // before its Option object exists, and a tie-breaker is not worth
+    // aborting a tally over (#327).
+    const option = this.options[oid];
+    if (!option) {
+      this.G.L.warn("Poll.update_score option not registered yet, breaking ties by oid", this.pid, oid);
+    }
+    const tie_breaker = parseFloat('0.'+parseInt(this.G.D.hash(option ? option.name : oid), 16).toString());
     this.T.scores_map.set(oid, approval_score * score_factor + total_rating + tie_breaker);
   }
 
@@ -1941,20 +1962,43 @@ export class Poll {
     // 1. disable voting:
     this.allow_voting = false;
     
-    // For Matrix backend, skip PouchDB-specific replication & doc fetch.
-    // Just close the poll, tally, and notify.
+    // Matrix backend (#325): after the first grace period, wait for the guard
+    // bot's closing on the server (every voter room closed, then the poll
+    // room's closed state event), read the final ratings from the server,
+    // and only then tally. The closing event's id seeds a winner poll's
+    // lottery, as the closing document's revision does on CouchDB. Without a
+    // guard bot the wait ends after closing.matrix_closure_timeout_ms and
+    // the poll is closed by convention, with a seed anyone can predict.
     if (environment.useMatrixBackend) {
       window.setTimeout((() => {
         if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
-        window.setTimeout((() => {
-          if (!is_current()) { return; }
+        this.G.D.wait_for_matrix_poll_closure(this.pid, is_current)
+        .then((closure => {
+          if (!is_current()) { return 'abort'; }
+          return this.G.D.reconcile_matrix_ratings(this.pid).then(() => closure);
+        }).bind(this))
+        .then(((closure) => {
+          if (!is_current() || closure === 'abort') { return; }
+          this.G.L.trace("Poll.end (Matrix) final tally", this._pid, closure);
           this.G.D.stop_poll_sync(this.pid);
-          // Final tally
           this.tally_all();
+          if (this.type == 'winner') {
+            const seed = closure.event_id || ('due:' + this.G.D.getp(this._pid, 'due'));
+            if (!closure.event_id) {
+              this.G.L.warn("Poll.end (Matrix) no closing event to seed the lottery with, using the due date", this._pid);
+            }
+            this.make_final_rand(this.pid + seed);
+            this.make_winner();
+          }
           this.notify_of_end();
-        }).bind(this), environment.closing.grace_period_2_ms);
+        }).bind(this))
+        .catch(err => {
+          if (!is_current()) { return; }
+          this.G.L.error("Poll.end (Matrix) closing or final read failed, deferring finalization", this._pid, err);
+          this.schedule_end_retry();
+        });
       }).bind(this), environment.closing.grace_period_1_ms);
       return;
     }

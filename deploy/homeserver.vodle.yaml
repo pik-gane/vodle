@@ -1,0 +1,150 @@
+# >>> vodle deployment settings (deploy/deploy.sh regenerates this block; edit deploy/homeserver.vodle.yaml instead)
+# Appended to the homeserver.yaml that `synapse generate` wrote; a key given
+# again here replaces the generated one (Synapse takes the last occurrence).
+# The same settings, with the reasons, are in documentation/deployment/MATRIX.md.
+
+# the app and the homeserver share the origin: nginx forwards /_matrix/ and
+# /.well-known/matrix/ to Synapse. PUBLIC_ORIGIN (.env) is where browsers
+# reach that origin — the server name over https unless the deployment sits
+# on another port or under another name (deploy/README.md).
+public_baseurl: __PUBLIC_ORIGIN__/
+# /.well-known/matrix/server for other homeservers (federation over 443)
+serve_server_wellknown: true
+
+# PostgreSQL (the postgres service of docker-compose.prod.yml)
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: "__POSTGRES_PASSWORD__"
+    database: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+# registration (#327): vodle registers a Matrix account per user on first
+# use, so registration is open — but only with the token the app carries
+enable_registration: true
+registration_requires_token: true
+suppress_key_server_warning: true
+report_stats: false
+
+# vodle sends no media and needs no presence
+max_upload_size: 1M
+presence:
+  enabled: false
+
+# rate limits: Synapse's defaults are far below what vodle does when a poll
+# starts (one room per voter, every participant joining every voter room,
+# bursts of state events); these run the whole test suite without a 429
+#
+# The account limits need a word of their own, because vodle uses ONE MATRIX
+# ACCOUNT PER (POLL, VOTER) — the privacy guarantee it inherits from the
+# CouchDB backend, where a poll was always joined as vodle.poll.<pid>.voter
+# .<vid> and never as the person (#327). So a device registers or signs in
+# once per poll it takes part in, not once in its life: a person in ten polls
+# is ten accounts — ten registrations on the device that joined the polls,
+# ten logins on every further device of theirs, spread over however long it
+# took them to join ten polls. Synapse counts rc_login.address and
+# rc_registration PER IP ADDRESS, so everyone behind one shared connection —
+# a university, an office, a conference — adds to the same bucket.
+#
+# Synapse's own defaults are a burst of 5 and then one login per 5.5 MINUTES
+# (per_second 0.003), and 3 registrations and then one per 6 seconds. The
+# case these have to fit is a lecture hall, an office or a conference opening
+# the same magic link at the same moment from one NAT: 500 people is 500
+# registrations within seconds from a single address. So the burst holds far
+# more than that and the rate is above what this homeserver can serve anyway,
+# which is the same reasoning as for the bulk limits below.
+#
+# failed_attempts is the ONE limit here deliberately left tight, and it is
+# the one that matters: it counts logins that got the password WRONG, so it
+# is what makes guessing a password expensive. Raising the other two does
+# not help a guesser — every wrong password is still counted here. And vodle
+# does not produce failed logins in normal use: before signing a poll account
+# in, it asks the homeserver whether the name is free
+# (GET /register/available, MatrixService.usernameIsFree) and registers,
+# instead of trying a login it expects to be refused.
+#
+# What raising rc_registration gives up is the server-side brake on somebody
+# who has extracted the registration token from the app bundle and creates
+# accounts in bulk. registration_requires_token (below) is what stands in
+# their way; the limit only ever made that slow, not expensive, and an
+# operator who sees the account table growing can rotate the token.
+rc_login:
+  address: {per_second: 100, burst_count: 1000}
+  account: {per_second: 100, burst_count: 1000}
+  failed_attempts: {per_second: 0.5, burst_count: 10}
+rc_registration: {per_second: 100, burst_count: 1000}
+rc_registration_token_validity: {per_second: 100, burst_count: 1000}
+# The limits below are set high enough that vodle never meets them, on
+# purpose. What follows applies to the bulk work of running polls.
+#
+# Every vodle write is a state event, and publishing a poll writes a burst of
+# them: one vid, one deadline and one rating PER OPTION in each voter's room,
+# plus one announcement each — three events per voter and one per rating, so
+# a poll of 50 voters over 5 options is 400 events in a few seconds and one
+# of 500 voters is 4000, besides one room per voter. Synapse's limit is a leaky
+# bucket — Ratelimiter.can_do_action allows burst_count actions before the
+# rate bites at all, draining at per_second — so the burst is what decides
+# whether a poll appears at once, and it is set to hold a poll far larger
+# than anyone is expected to run. The rate is above what a homeserver of this
+# size can write anyway, which is the point: the database, not the limiter,
+# should be what sets the pace.
+#
+# The risk this accepts is that a runaway client is no longer stopped by the
+# server. vodle's own client paces itself against the same two numbers
+# (matrix.write_burst and matrix.writes_per_second in environment.prod.ts,
+# kept in step with these), retries what is refused and queues what it
+# cannot send, so the protection it gives up was never what kept this
+# deployment honest. Lower them if the homeserver serves anything else.
+rc_message: {per_second: 1000, burst_count: 20000}
+# Room creation: vodle creates one room per voter, so a poll of N needs N+1
+# rooms in short order. Synapse's default is a burst of 10 and then ONE ROOM
+# PER 62 SECONDS (per_second 0.016): a poll of 50 then materialised over the
+# best part of an hour, and until it had, a newcomer saw only the voters
+# whose rooms existed while the creator counted the ones it held locally.
+# Found on the first production poll (#327).
+rc_room_creation: {per_second: 200, burst_count: 5000}
+rc_joins:
+  local: {per_second: 200, burst_count: 5000}
+  remote: {per_second: 50, burst_count: 1000}
+rc_joins_per_room: {per_second: 200, burst_count: 5000}
+rc_invites:
+  per_room: {per_second: 100, burst_count: 1000}
+  per_user: {per_second: 100, burst_count: 1000}
+  per_issuer: {per_second: 200, burst_count: 5000}
+# Incoming federation. This is the only limiter that answers by SLEEPING
+# rather than by refusing: past sleep_limit requests inside window_size,
+# Synapse holds each further request from that server for sleep_delay ms,
+# and past reject_limit it refuses. The defaults are 10 per second, then
+# 500 ms each, at 3 concurrent — and a poll of 500 that federates is 501
+# rooms' worth of joins and events arriving from one server at once, which
+# would have been served at two per second. These are per ORIGIN SERVER, so
+# they are also what protects this homeserver from a talkative one: a
+# deployment that federates with the open network rather than with a known
+# partner should lower them again.
+rc_federation:
+  window_size: 1000
+  sleep_limit: 500
+  sleep_delay: 100
+  reject_limit: 1000
+  concurrent: 20
+# Deliberately left at Synapse's defaults, because vodle never calls them:
+# rc_3pid_validation (no e-mail or phone verification — the address never
+# reaches the homeserver), rc_media_create (no uploads, max_upload_size is
+# 1M above), rc_key_requests (no end-to-end encryption, see enable_e2ee),
+# rc_presence (presence is off), rc_delayed_event_mgmt (no delayed events).
+
+# federation: after a network split Synapse retries a partner only every ten
+# minutes by default; seconds keep a split short for the voters (#329).
+# FEDERATION=off in .env closes the homeserver to other homeservers
+# entirely, which a deployment whose server name nothing resolves has to do
+# (deploy/README.md).
+federation:
+  destination_min_retry_interval: 1s
+  destination_retry_multiplier: 2
+  destination_max_retry_interval: 10s
+__FEDERATION_WHITELIST__
+# <<< vodle deployment settings

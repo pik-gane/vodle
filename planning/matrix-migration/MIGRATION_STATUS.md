@@ -26,28 +26,33 @@ What is still missing, and in which order to do it: [`../WORK_PLAN.md`](../WORK_
 | Register/login, poll rooms, voter rooms, user room; poll, voter and user data; options; poll lifecycle; magic links | `matrix.service.spec.ts`, `matrix-wiring.spec.ts`, `data.service.spec.ts` (unit level) and the real-server suites below |
 | Two clients on one homeserver see each other's ratings in real time; a client that was offline converges after reconnecting | `matrix-two-client.spec.ts` |
 | Server-side deadline enforcement: after the deadline the homeserver rejects ratings and options (guard bot) | `matrix-two-client.spec.ts` |
+| A rating that forked with the close (a partition; the voter's server drops it with its previous value) ends as the bot's re-affirmed pre-close value on both servers | `matrix-federation.spec.ts`, `guard-bot/recheck.test.js` |
 | A poll created on one homeserver is joined and voted on from another (federation); magic links carry the origin server | `matrix-federation.spec.ts` |
 | Poll, voter and user data are stored encrypted (poll password / user password); a client without the password reads nothing; Matrix login with a derived password | `matrix.service.spec.ts` |
+| A password change is followed by the homeserver (derived password) and the user room is re-encrypted; an account switch — a guest logging in with an account of their own, or a changed e-mail address — hands the voter rooms over to the new account, which changes the vote in the same room, and retires a guest account | `matrix.service.spec.ts`, `data.service.spec.ts`, `matrix-two-client.spec.ts` |
+| A second device of an account restores its settings and poll memberships (voter ids, poll passwords, drafts) from the user room | `data.service.spec.ts` (sync/restore), `matrix-two-client.spec.ts` (second session) |
+| A magic link opened without an account takes part as a guest instead of leading to the login flow | `test/specs/guest-join.e2e.js` (built app), `data.service.spec.ts` |
 | CouchDB → Matrix migration of a real poll (options, every voter's ratings under the original voter ids), readable by a fresh Matrix client | `migration-real-backends.spec.ts` |
 | Migration bookkeeping, rollback, persistence across reloads, the `/migration` page | `migration.service.spec.ts`, `migration/migration.page.spec.ts` |
 
-The CI run of 2026-09-10 executed 667 specs.
+The CI run of 2026-09-10 for plan sessions 14 and 15 (run 34523878817) executed 724 specs, none skipped, none failed, plus the guard bot's ten node:test cases.
 
 ## What is missing for production use without syncing issues
 
 Issues filed 2026-09-10; details and the order of work in `../WORK_PLAN.md`:
 
-- [#324](https://github.com/pik-gane/vodle/issues/324) options added to a running poll never reach the other participants (bug, also #163)
-- [#325](https://github.com/pik-gane/vodle/issues/325) the final tally is based on the local cache, not on the server state at the deadline (bug)
+- [#324](https://github.com/pik-gane/vodle/issues/324) options added to a running poll never reached the other participants — fixed 2026-09-10 (plan session 8): the app sends them as timeline events and every client's live handler picks them up
+- [#325](https://github.com/pik-gane/vodle/issues/325) the final tally was based on the local cache — fixed 2026-09-10 (plan session 9): the guard bot closes the voter rooms first, then writes the poll room's `closed` state; clients wait for that event, read the final ratings from the server, tally, and seed a winner poll's lottery with the closing event's id
 - [#326](https://github.com/pik-gane/vodle/issues/326) offline-queued writes were replayed only on the next sync tick (≈ 25–30 s) — fixed on the PR #323 branch on 2026-09-10 (retry with backoff plus the browser's `online` event)
-- [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver: domain, registration policy, rate limits, guard bot deployment (`environment.prod.ts` still holds placeholders)
-- [#328](https://github.com/pik-gane/vodle/issues/328) participation in a poll is visible to anyone who learns the poll id (rooms are joinable by alias)
-- [#329](https://github.com/pik-gane/vodle/issues/329) no federation partition/merge test yet
-- [#330](https://github.com/pik-gane/vodle/issues/330) user data is not re-encrypted when the password changes
-- [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are never cleaned up
-- [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the guard bot's closing power-level event is dropped by state resolution (mitigated 2026-09-10 by a grace and a quiet period in the bot; a clock-skewed client can still hit it)
-- [#333](https://github.com/pik-gane/vodle/issues/333) delegation (disabled on the Matrix path) and multi-device use are untested against a real homeserver
+- [#327](https://github.com/pik-gane/vodle/issues/327) production homeserver — since 2026-09-10 (plan session 10) the app supports registration tokens, the harness validates the recommended rate limits, the guard bot has a health endpoint, and `documentation/deployment/MATRIX.md` is the deployment guide; since 2026-09-11 (plan session 16) the deployment is scripted (`deploy/`: the server name from `environment.prod.ts`, generated secrets, Synapse with PostgreSQL configured and its accounts and token created by the script, TLS from the host's certificate files, the privacy statement and the imprint served by the web container, backups); still the owner's: running the scripts on the host and a rehearsal poll of the intended size. The move of the production deployment is a parallel run under a new name followed by a redirect (`documentation/deployment/MATRIX.md` §6); since 2026-09-11 (plan session 17) `environment.handover` lets the retired CouchDB build point new polls to the successor and the successor point to the older polls
+- [#328](https://github.com/pik-gane/vodle/issues/328) participation in a poll was visible to anyone who learned the poll id — closed 2026-09-10 (plan session 14): poll rooms are joined by knocking with a proof of the poll password, which the guard bot verifies against the room's join key before it invites; voter rooms admit the poll room's members only. A client with the poll id alone gets neither the membership nor the ciphertext (two-client spec), a wrong password leaves the knocker at the door, seeing neither members nor state, and the knock works across federation (federation spec). Polls created before stay public
+- [#329](https://github.com/pik-gane/vodle/issues/329) federation partition/merge test — done 2026-09-10 (plan session 9b): a TCP proxy in the harness cuts and heals the link, the spec checks that both sides keep voting and converge after the heal
+- [#330](https://github.com/pik-gane/vodle/issues/330) credential changes — fixed 2026-09-10 (plan session 12): a changed password is changed on the homeserver and the user room re-encrypted, a changed address hands the voter rooms and the data over to the new account (on CouchDB the user documents are re-written under the new identity); an interrupted move resumes at the next start. Found on the way and fixed: the poll membership keys were never written to the user room, so a second device of an account knew none of its polls
+- [#331](https://github.com/pik-gane/vodle/issues/331) rooms of expired polls are cleaned up since 2026-09-10 (plan session 10): the guard bot purges them `RETENTION_DAYS` after the deadline, clients leave the rooms of polls they delete
+- [#334](https://github.com/pik-gane/vodle/issues/334) a rating written in the same instant as the closing power-level event is dropped by state resolution, with the previous value of its key — mitigated by the bot's grace and quiet periods and the two-phase close, and repaired since 2026-09-10 (plan session 13): the bot snapshots a voter room's state before closing it, writes a remote voter room's state again right after the close (a fork on the voter's own server is soft-failed on the bot's, so only re-affirming wins the resolution everywhere), re-reads every closed voter room afterwards and writes back what was dropped; the federation spec reproduces the fork with the partition proxy, shows the voter's server dropping the rating, and both servers ending with the bot's pre-close value
+- [#333](https://github.com/pik-gane/vodle/issues/333) delegation events and two devices of one account are proven against a real homeserver since 2026-09-10 (plan session 11): delegation events encrypted, a second device finds the account's voter room; delegation itself stays disabled in both environments (product decision)
 - [#332](https://github.com/pik-gane/vodle/issues/332) Phase 17, the removal of the CouchDB code, waits for production confidence
+- [#193](https://github.com/pik-gane/vodle/issues/193) guest voting — done 2026-09-10 (plan sessions 12 and 15): a magic link opened without an account takes part as a guest account with random credentials right away, without a question; with a privacy statement the consent checkbox waits at the bottom of the poll page and no rating is stored before it is checked; a later login moves the guest's votes and polls to the account (the #330 machinery) and deactivates the guest account
 
 ## How it was built
 
@@ -84,7 +89,7 @@ tooling's fidelity.
 ## Test harness
 
 - `scripts/test-couchdb.sh start|provision|stop|status` — a throw-away CouchDB with the real validator.
-- `scripts/test-matrix.sh start|stop|status` — two federating Synapse homeservers (`localhost:8449` on client port 8009, `localhost:8450` on 8010) and the guard bot.
+- `scripts/test-matrix.sh start|stop|status` — two federating Synapse homeservers (`localhost:8449` on client port 8009, `localhost:8450` on 8010), the federation proxy that lets the partition spec cut the link between them (`scripts/federation-proxy.js`, control endpoint on port 8011), and the guard bot.
 - Without the servers the real-server specs report themselves pending; CI runs with `--no-skips`, so there they must run.
 - `npm run e2e` drives the built app through the first-run flow (`test/`).
 

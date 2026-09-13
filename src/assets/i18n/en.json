@@ -67,6 +67,7 @@
     "show": "Show",
     "skip": "Skip",
     "start": "Start",
+    "sync-pending": "Your changes are on their way to the server.",
     "sync-stalled": "Synchronization with the server is stuck; vodle keeps retrying it.",
     "step-i-of-n": "Step {{i}} of {{n}}",
     "test": "Test",
@@ -439,6 +440,7 @@
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Join A Poll page:",
         "-page-title": "Join a poll",
         "fetching": "Just a moment please, Iʼm fetching this pollʼs data...<br/><br/>(Since I'm still a test version, this may take a minute. If after a minute nothing shows, please reload this page. If it then takes again more than one minute, please log out and in again via the menu on the top left.)<br/><br/>",
+        "still-waiting": "The poll's server is still answering. This can take a little longer the first time — the page will continue by itself.",
         "initializing": "Just a moment please, Iʼm initializing the poll...",
         "header": "Welcome to the interactive poll<br/><i>“{{poll_title}}”!</i>",
         "p1-winner": "This poll is about deciding between a number of options until <b>{{due}}.</b> In the end, exactly one option will win.",
@@ -481,7 +483,8 @@
         "confirm-header": "Really log out?",
         "confirm-intro": "Logging out is only necessary on unsafe or shared devices. Logging out will erase all of vodleʼs data from this device (but not from the remote database). Please be sure to remember the e-mail address and password you are using with vodle before logging out. If you forget them, they cannot be recovered because we don't store them anywhere.",
         "confirm-button": "Yes, log out",
-        "failed": "Could not log out for some reason"
+        "failed": "Could not log out for some reason",
+        "confirm-guest": "You are using a guest account whose e-mail address and password exist only on this device. After logging out you cannot get back to its polls and votes unless you have noted both from the settings page."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -505,6 +508,13 @@
         "drafts": "Drafts",
         "no-draft-polls-1": "Currently, you have no polls drafted.",
         "no-draft-polls-2": "To start or draft a new poll, click the ‘+‘ button below!"
+    },
+    "handover": {
+        "_COMMENT_SECTION_": "[COMMENT] strings shown when a vodle server hands over to another one (a retired server starts no new polls):",
+        "successor-title": "New polls are started elsewhere",
+        "successor-message": "This vodle server does not start new polls any more. Please use {{host}} from now on. The polls you already take part in here continue until they end.",
+        "successor-go": "Go to {{host}}",
+        "predecessor-note": "Polls that started before the move to this server are still at <a href=\"{{url}}\">{{host}}</a>."
     },
     "news-title": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as titles of News items:",
@@ -535,6 +545,9 @@
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
         "-page-title": "Poll",
+        "guest-banner": "You are taking part as a guest. Your votes and polls stay on this device only until you log in with an e-mail address of your own; vodle then moves them to your account.",
+        "guest-login-button": "Log in",
+        "consent-lead": "Before your waps are stored, please confirm: ",
         "-page-title-running": "Running poll",
         "checkmark-clicked": "Your changes are always sent immediately if you are online. You don't need to click anything to achieve this. The checkmark shows that your changes have been transmitted successfully.",
         "delegate-button": "Delegate",
@@ -640,6 +653,7 @@
         "-page-title": "Settings",
         "data-storage": "Personal data",
         "data-storage-msg": "To be able to store your data between sessions and access it safely from different devices, please give an e-mail address and set a password.",
+        "guest-note": "You are using a guest account that vodle created on this device; its e-mail address and password are shown below, in case you want to use it on another device too. To turn it into an account of your own, enter your own e-mail address and a password here: vodle moves your polls and votes to it.",
         "email-placeholder": "Please specify the e-mail address you want to use with vodle",
         "edit": "Edit",
         "db-label": "Where shall vodle store your encrypted data?",

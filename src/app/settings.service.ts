@@ -38,7 +38,10 @@ export class SettingsService {
 
   private G: GlobalService;
 
-  use_guest = false;
+  /** whether this device takes part with a guest account vodle created
+   *  (#193); user data, so a second device of the guest knows it too */
+  public get use_guest(): boolean { return this.G.D.getu('guest') == '1'; }
+  public set use_guest(value: boolean) { this.G.D.setu('guest', value ? '1' : ''); }
 
   constructor() { }
 

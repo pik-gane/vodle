@@ -85,9 +85,20 @@ services:
       # event has arrived in it for QUIET_PERIOD_MS (see guard-bot/index.js):
       - CLOSE_GRACE_MS=10000
       - QUIET_PERIOD_MS=5000
+      # a poll's rooms are removed this many days after its deadline (#331);
+      # ADMIN_PURGE needs the bot registered with --admin (see INSTALL.md):
+      - RETENTION_DAYS=365
+      - ADMIN_PURGE=true
+      # GET /healthz for the healthcheck below and for monitoring (#327):
+      - HEALTH_PORT=8012
     depends_on:
       - synapse
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8012/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
     networks:
       - vodle-net
 

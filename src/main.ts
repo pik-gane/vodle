@@ -23,6 +23,14 @@ import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { AppModule } from './app/app.module';
 import { environment } from './environments/environment';
 
+// the second half of the stopwatch index.html starts: how long the browser
+// took to fetch, parse and run the bundle — everything above has already
+// been evaluated when this line runs. Printed raw, because a deployment
+// runs the logger at ERROR and would swallow it (#327).
+console.log('[vodle boot] +'
+  + (Date.now() - ((window as any).vodle_page_start || Date.now()))
+  + 'ms the app bundle ran');
+
 if (environment.production) {
   enableProdMode();
 }

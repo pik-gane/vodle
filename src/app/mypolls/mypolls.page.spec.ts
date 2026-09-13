@@ -80,4 +80,35 @@ describe('MypollsPage', () => {
       expect(component.archived_polls).toEqual([]);
     });
   });
+  // a deployment being retired starts no new polls; its successor says
+  // where the older polls live on (environment.handover, deployment guide §6)
+  describe('the handover of a deployment', () => {
+    function new_poll_button(): HTMLElement {
+      component.ready = true;
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector('[data-vodle="create-new-poll-button"]');
+    }
+
+    it('opens a new draft with the "+" button as long as there is no successor', () => {
+      expect(component.G.successor_url).toBe('');
+      expect(new_poll_button().getAttribute('ng-reflect-router-link')).toBe('/draftpoll');
+      expect(fixture.nativeElement.querySelector('[data-vodle="predecessor-note"]')).toBeNull();
+    });
+
+    it('shows the successor notice from the "+" button on a retired deployment', () => {
+      (component.G as any).successor_url = 'https://matrix.vodle.it/#/';
+      component.G.show_successor_notice = jasmine.createSpy('show_successor_notice').and.returnValue(Promise.resolve(true));
+      const button = new_poll_button();
+      expect(button.getAttribute('ng-reflect-router-link')).toBeNull();
+      button.click();
+      expect(component.G.show_successor_notice).toHaveBeenCalled();
+    });
+
+    it('points to the predecessor when there is one', () => {
+      (component.G as any).predecessor_url = 'https://app.vodle.it/#/';
+      new_poll_button();
+      expect(fixture.nativeElement.querySelector('[data-vodle="predecessor-note"]')).toBeTruthy();
+      expect(component.host_of('https://app.vodle.it/#/')).toBe('app.vodle.it');
+    });
+  });
 });

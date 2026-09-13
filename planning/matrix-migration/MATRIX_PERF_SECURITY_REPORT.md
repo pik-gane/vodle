@@ -46,7 +46,8 @@ any more (it remains as a safety net for announcements missed while offline).
 
 | metric | sandbox | CI |
 | --- | --- | --- |
-| join a poll room on another homeserver (alias lookup over federation, remote join, power-level check) | 524 ms | see §6 |
+| join a closed poll room on the same homeserver (alias lookup, knock, the guard bot's invitation, join, power-level check; #328) | 618 ms | see §6 |
+| join a poll room on another homeserver (alias lookup over federation, remote join, power-level check; since 2026-09-10 the join is a knock, the guard bot's invitation across federation and the join, #328) | 524 ms before #328, 871 ms with the knock | see §6 |
 | first vote from the other homeserver visible to the creator (voter room creation on hs2, announcement federating into the poll room, hs1 joining the voter room through hs2, state fetch) | 975 ms | see §6 |
 | offline-queued rating visible to the other client after the connection is back | 24.6 to 29.1 s before #326; 1.2 s after | see §6 |
 
@@ -103,13 +104,13 @@ every document is encrypted with a password the server never holds:
 
 | data | Matrix representation | protection | who can read it |
 | --- | --- | --- | --- |
-| user settings, poll memberships (poll passwords, voter ids, keys) | state events `m.room.vodle.user.*` in the private user room | AES-GCM under the vodle **user password** (`consent` and `last_access` plain, as on CouchDB) | the user's devices |
+| user settings, poll memberships (poll passwords, voter ids, keys) | state events `m.room.vodle.user.*` in the private user room | AES-GCM under the vodle **user password** (`consent` and `last_access` plain, as on CouchDB) | the user's devices — but the key is part of the event *type*, so `poll.<pid>.myvid` tells the homeserver which polls the person is in; see PRIVACY.md §3 |
 | poll data (title, description, type, language, …) and poll metadata | state events `m.room.vodle.poll.data.*`, `m.room.vodle.poll.meta` | AES-GCM under the **poll password** | holders of the magic link |
 | options | timeline events `m.room.vodle.poll.option` (immutable) | texts under the poll password, option id plain | holders of the magic link |
 | ratings and other voter data | state events `m.room.vodle.voter.rating.*` in the voter's room | under the poll password; `voter_vid` (pseudonymous id) plain | holders of the magic link |
 | deadline, lifecycle state | `m.room.vodle.poll.deadline`, `m.room.vodle.poll.state` | plain — the guard bot enforces the deadline server-side | homeserver, room members |
 | voter-room announcements, voter ids | timeline `m.room.vodle.voter.announce`, state `m.room.vodle.voter.vid` | plain — needed for discovery | homeserver, room members |
-| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*` | plain (delegation is disabled in both environments) | homeserver, room members |
+| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*`; records as poll and voter data | the delegation id plain, the rest under the poll password (#333); the id in the *event type* of the records names the two vids involved, see PRIVACY.md §6 (delegation is disabled in both environments) | homeserver, room members |
 | room names and topics | `vodle poll <id>` | plain, carry only the poll id | homeserver, room members |
 
 The specs check the wire format: what the homeserver stores for a rating,
@@ -127,15 +128,51 @@ ciphertext.
   operator could learn the very secret that encrypts the user's data.
   Accounts registered before this existed still log in with the plain
   password (fallback on `M_FORBIDDEN`), which the log flags.
+- **A poll is not joined as the person** (#327, §3.8): the account that
+  joins a poll room, owns a voter room and sends every event of that poll
+  is derived from the poll id and the voter id —
+  `pollAccountName(pid, vid)` = BLAKE2s("vodle.poll." + pid + ".voter." +
+  vid), the CouchDB user name in Matrix clothing — and its password from
+  the poll, the vid and the user's password, so it can never hand the
+  user's own password back. The account named after the e-mail hash above
+  holds the user room and joins no poll.
 - The poll password never reaches any homeserver: it travels in the magic
   link and stays in the (encrypted) user room and the local cache.
 
 ### 3.3 Server-side enforcement
 
 - Voter rooms: only the voter (power 50) can write state; everybody else is
-  read-only (0); the guard bot holds 100.
+  read-only (0); the guard bot holds 100. Since 2026-09-10 the power-levels
+  event itself needs 50 in a voter room (Synapse's default is 100), so that
+  the voter can hand the room over to another account of theirs — a guest
+  logging in with an account, a changed e-mail address (#330, #193): the new
+  account joins (it is in the poll room, which a voter room requires since
+  #328) and is granted 50. The auth rules
+  cap what a voter can do with that: nobody can be raised above 50, the
+  bot cannot be touched, and history visibility, tombstone, server ACL and
+  encryption keep their default of 100. Rooms created before this change
+  cannot be handed over (only test data exists from before).
 - Options are timeline events and thus immutable; redaction needs power 100.
-- Poll metadata is locked when the poll starts (`lockPollMetadata`).
+- Poll metadata is locked when the poll starts (`lockPollMetadata`), the
+  join rule with it.
+- Closed rooms (#328, 2026-09-10): a poll room's join rule is `knock`, and
+  its state carries K = SHA-256("vodle-join:" + poll id + ":" + poll
+  password). A joiner knocks with HMAC-SHA-256(K, own user id) as the
+  knock's reason; the guard bot verifies the proof against K and invites,
+  and leaves any other knock unanswered — never kicks: Synapse lets a
+  "departed" user (membership `leave`, however it came about, a kicked
+  knocker included) read the room's state as of their leave event, members
+  and all, which the two-client spec found out the hard way. A knocker
+  whose knock stands sees only the stripped state (join rule, name,
+  alias), as the spec checks. Non-members cannot read K, members
+  cannot turn it back into the password, a proof seen in transit (the
+  knocker's own homeserver; a remote server holds the knock event before
+  the room's state) admits one user id only, and the homeserver that
+  holds K holds the poll anyway. Voter rooms are `restricted` to the poll
+  room's members. Room versions: knock needs 7, restricted 8 (Synapse's
+  default is 10 or later since 2023). The bot is thereby required for
+  joining as well as for closing: without it a join fails after
+  `matrix.join_timeout_ms` (60 s).
 - Deadline: the guard bot closes every room whose deadline has passed by
   dropping all power levels to 0. The bot scaffold watched an event type the
   app never wrote (`it.vodle.deadline` vs `m.room.vodle.poll.deadline`), so
@@ -143,7 +180,8 @@ ciphertext.
   deadline into each voter room (the bot looks for it per room), and the
   two-client spec proves the server rejects a rating and an option after the
   deadline (`M_FORBIDDEN`), with the data staying readable.
-- Closing by a power-level change has a hazard of its own (#334): a rating
+- Closing by a power-level change has a hazard of its own (#334, repaired
+  in plan session 13 — see below): a rating
   created in the same instant forks with the power-level event, and state
   resolution then re-checks it against the new power levels and drops it,
   together with the previous value of that key. Seen once in CI and once in
@@ -153,11 +191,34 @@ ciphertext.
   the deadline and once the room has been quiet for `QUIET_PERIOD_MS` (5 s);
   clients stop writing at the deadline, so only a client whose clock is off
   by more than the grace period can still lose its last write on an option.
-- The app never writes the lifecycle state `closed` on the Matrix backend
-  (`change_poll_state` only stores it locally after the draft phase); ending
-  a poll is decided by clients' clocks and enforced by the guard bot. This is
-  consistent, but it means a poll without a reachable guard bot is closed by
-  convention only.
+  Since 2026-09-10 the bot repairs this. It snapshots a voter room's vodle
+  state right before the close. A voter room on another homeserver it
+  writes again as itself right after the close: the federation spec, which
+  makes the fork deterministic (the voter writes on hs2 while the bot
+  closes the room on hs1 during a partition), showed that the bot's server
+  never sees such a fork — the late write is *soft-failed* there, failing
+  the auth check against the current state — while the voter's server
+  resolves it and drops the rating with its previous value; the two servers
+  disagree until something merges the branches, and then both drop it. An
+  event of the bot written after the close wins the resolution on every
+  server, so both end with the pre-close value (hs2 in the spec: 41, then
+  nothing, then the bot's 40). Every closed voter room is also re-read at
+  `RECHECK_DELAYS_MS` (5 s, 1 min, 10 min by default) and when a late event
+  arrives, and what it lost is written back — the same-server fork of the
+  original evidence. A forked post-deadline write is still lost, by
+  design; the previous value no longer is.
+- The shared "closed" fact is the guard bot's (#325, 2026-09-10): it closes
+  a poll's voter rooms first, then writes the poll room's
+  `m.room.vodle.poll.state` = closed (only power 100 may, once the poll
+  runs) and drops the room's power levels last. A client ending a poll
+  waits for that event (`closing.matrix_closure_timeout_ms`, 2 min by
+  default), reads the final ratings from the server, tallies, and — for a
+  winner poll — seeds the lottery with the closing event's id, which every
+  client sees alike (the CouchDB backend uses the closing document's
+  revision). Voter rooms announced after the closing event are ignored.
+  Without a guard bot the wait times out and the poll is closed by
+  convention, with a seed that is predictable; a production deployment
+  needs the bot (#327).
 
 ### 3.4 Federation
 
@@ -173,15 +234,26 @@ same across federation: the second homeserver holds the same ciphertext.
 
 ### 3.5 Remaining gaps and recommendations
 
-1. **Membership is visible.** Anyone who learns a poll id can join the poll
-   room (it is joinable by alias so that magic links work without invites)
-   and see who is a member, and the homeserver sees all membership. Voter
-   identities are pseudonymous hashes, but participation itself is not
-   hidden. Invite-only rooms with a bot handing out invites on presentation
-   of the poll password would close this at the cost of a server component.
-2. **Delegation events are plain.** They carry delegate ids and option ids.
-   Encrypting them under the poll password is the same change as for the
-   other data; not done because delegation is disabled in both environments.
+1. **Membership was visible** — closed 2026-09-10 (#328, §3.3): until
+   then anyone who learned a poll id could join the poll room (joinable by
+   alias so that magic links worked without invites) and see who is a
+   member. Now the guard bot hands out the invitations on proof of the
+   poll password, and voter rooms admit the poll room's members only. What
+   remains: the homeserver sees all membership (voter identities are
+   pseudonymous hashes), and every member sees the other members' hashed
+   ids, as on the CouchDB backend — and since #327 (§3.8) those ids are per
+   (poll, voter), so they say who takes part in *this* poll and nothing
+   about any other. A wrong password (or no guard bot) means
+   a knock nobody answers and a join that gives up after
+   `matrix.join_timeout_ms` (60 s); the two cases are indistinguishable to
+   the knocker by design, since any answer would have to be a membership
+   change.
+2. **Delegation events** carried delegate ids and option ids in plain text
+   until 2026-09-10 (#333); now only the delegation id is plain, the rest
+   is encrypted under the poll password like the other poll data, and the
+   two-client spec shows a client without the password reads nothing.
+   Delegation stays disabled in both environments (`delegation.enabled`),
+   a product decision.
 3. **The guard bot is fully trusted** (power 100 in every room). A malicious
    bot could rewrite power levels but not read encrypted data.
 4. **No re-encryption on password change.** Changing the vodle password
@@ -193,10 +265,133 @@ same across federation: the second homeserver holds the same ciphertext.
 6. **Hashed usernames are deterministic.** The homeserver can confirm a
    guessed email address by hashing it. A salted, per-deployment hash would
    need the salt to be known to every client.
-7. **Federation partition** (both servers keep accepting votes while
-   disconnected, then merge) is not exercised; per-voter rooms with a single
-   writer each make the merge trivially conflict-free in principle, but a
-   test would need the harness to cut the link mid-run.
+7. **Federation partition** — tested since 2026-09-10 (#329):
+   `scripts/federation-proxy.js` fronts the test servers' federation ports,
+   and `matrix-federation.spec.ts` cuts the link, lets both sides vote, and
+   checks that neither sees the other's vote until the link heals and that
+   both converge afterwards (`federation_partition_heal_ms`: 20 s in the
+   sandbox, CI figure in §6). Per-voter
+   rooms with a single writer each make the merge conflict-free; the
+   recovery time is Synapse's destination retry interval, which the harness
+   sets to 1–5 s (the default is 10 minutes — a production deployment
+   should set `federation.destination_min_retry_interval` to a few seconds
+   as well, #327).
+
+### 3.6 Settled in plan session 10 (2026-09-10, #327, #331)
+
+- **Registration** needs no longer be open: the app completes Synapse's
+  `m.login.registration_token` stage when `matrix.registration_token` is
+  configured, and the test harness requires the token (the specs register
+  through it). The token travels in the app bundle, so it deters drive-by
+  registration bots only; an application service registering on the app's
+  behalf remains the stronger option.
+- **Rate limits**: the harness no longer disables them; it runs the suite
+  under the limits recommended in `documentation/deployment/MATRIX.md`
+  (logins, registrations, messages, joins, invites), so a burst the app
+  makes that would exceed them shows up in CI as a 429. Validated at the
+  suite's scale (polls of up to ~10 voters).
+- **Retention**: the guard bot removes a poll's rooms `RETENTION_DAYS` after
+  the deadline (through the admin API when it is an admin), and a client
+  leaves the rooms of a poll it deletes locally; the two-client spec sees
+  the rooms disappear.
+- **Monitoring**: the bot's `GET /healthz`; deployment guide and checklist in
+  `documentation/deployment/MATRIX.md`.
+
+### 3.7 Settled in plan session 11 (2026-09-10, #333)
+
+- **Two devices of one account**: a second session wrote its ratings
+  into a *new* voter room when its storage did not know the account's room
+  (`getOrCreateVoterRoom` created before looking); it now finds the room
+  by its alias, and the two-client spec has the second device vote and the
+  first one see it, with the voter count unchanged.
+- **Delegation over Matrix**: request and response events are encrypted
+  (above), listeners get them decrypted, and `getDelegations` reads the
+  whole poll-room timeline from the server instead of the SDK's window.
+  Spec: request, live receipt, acceptance, a late reader with and without
+  the password. The tally effect of delegations is on the voter-data path
+  (unchanged) and covered by the tally-pipeline suite.
+
+### 3.8 Settled in plan sessions 25 and 26 (2026-09-12, #327)
+
+- **One Matrix account per (poll, voter)**, which is what the CouchDB
+  backend has always done (`vodle.poll.<pid>.voter.<myvid>`) and what the
+  port had lost. Until this, one `@<hash of e-mail>` joined every poll
+  room, created every voter room and sent every
+  `m.room.vodle.voter.announce` — and that event carries the vid in plain
+  text, so the homeserver and every co-participant could read the person
+  behind two different vids straight off the sender field. Now a poll is
+  joined by an account derived from the poll and the vid alone (§3.2), and
+  two polls of one person share no user id, no device and no password.
+  What the protocol still cannot hide, here as on CouchDB: the IP address
+  and the timing of the requests.
+- **End-to-end encryption is off** in both environments. For poll accounts
+  it could not be on — the SDK's crypto store is one per browser profile
+  and belongs to one account — and for the person's own account it would
+  protect nothing: every payload vodle writes is a *state* event, which
+  megolm never encrypts, and the only room ever created with
+  `m.room.encryption` was the user room, whose payloads are state events
+  too. Confidentiality is and was vodle's own AES-GCM under the poll
+  password and the user password. The flag remains, and a spec against a
+  real Synapse still proves that turning it on brings the Rust crypto
+  backend up and encrypts a timeline event.
+- **A poll from before keeps working**: its rooms belong to the person's
+  own account, which created them, so the poll account would join a voter
+  room it may not write to. The first time such a poll is opened, the
+  person's account grants the poll account its own power in both rooms
+  (`takeOverFrom`, the same handover an account switch does), once per
+  device and poll, gated on a local record so a poll from after costs one
+  storage read. What it cannot repair is the past: the announcements the
+  old account made are in the poll room's history for good, so the
+  unlinkability is a property of polls from here on.
+- **Rate limits are an account matter now.** A device registers or signs in
+  once per poll it takes part in rather than once in its life, and Synapse
+  counts `rc_login.address` and `rc_registration` per IP address, so a
+  shared connection makes other people's logins this one's problem — a
+  lecture hall opening one magic link at the same moment is 500
+  registrations from a single address. Every login, registration and
+  password change waits a 429 out and tries again, and the recommended
+  settings size those two for that case (burst 1000, then 100 per second)
+  while leaving `rc_login.failed_attempts` tight: it counts only logins that
+  got the password *wrong*, which is what makes guessing one expensive, and
+  raising the other two does not help a guesser. vodle also stops producing
+  failed logins at all — before signing a poll account in it asks
+  `/register/available` and registers instead of trying a login it expects
+  to be refused (`usernameIsFree`), which also tells a wrong vodle password
+  apart from a first join.
+- **`rc_federation` was the one limiter still left at its defaults**, and it
+  is the only one that answers by *sleeping*: past 10 requests per second
+  from one server, each further one waits 500 ms, at 3 concurrent. A poll of
+  500 joined across federation is 501 rooms' worth of traffic from one
+  origin, which that paces at about two rooms a second. Now 500 per second
+  before any sleep, 20 concurrent — still per origin server, so still a
+  brake on a talkative one, and a deployment federating with the open
+  network should lower it again. The limiters vodle never calls
+  (`rc_3pid_validation`, `rc_media_create`, `rc_key_requests`, `rc_presence`,
+  `rc_delayed_event_mgmt`) stay at their defaults, and the template says why.
+
+### 3.9 Who sees what, written out
+
+`documentation/PRIVACY.md` is the standing version of §3 for a reader who
+wants the whole picture rather than the history: every actor, every store,
+what is encrypted and what is only metadata, delegations included, and a
+list of the known weaknesses ordered by what they would cost to exploit.
+Two of those are worth repeating here, because §3.8's account work does not
+touch them and neither did the CouchDB backend:
+
+- **A person's user room names the polls they take part in.** User data is
+  keyed `poll.<pid>.myvid`, `poll.<pid>.password`, `poll.<pid>.state`, and a
+  vodle data key becomes part of the Matrix *event type*, which is never
+  encrypted. So the per-poll accounts make two of a person's polls
+  unlinkable to co-participants and to anyone reading the poll rooms — not
+  to the operator of the homeserver that holds the user room. The CouchDB
+  user database has the same thing in its document ids
+  (`~<hash>§poll.<pid>.state`). Closing it means an opaque per-user key with
+  the pid inside the encrypted value, on both backends, with a migration.
+- **The login password is a fast derivation.** `deriveMatrixPassword` is one
+  BLAKE2s, so an operator who records login requests can dictionary-attack a
+  human-chosen vodle password cheaply and then read the user room. The
+  derivation keeps the password from arriving in the clear; it does not make
+  guessing it expensive. A slow KDF would, at the cost of a migration.
 
 ## 4. Migration (CouchDB → Matrix)
 
@@ -275,8 +470,9 @@ a migrated user can open the migrated poll.
 | metric | status |
 | --- | --- |
 | full poll lifecycle with 3 clients on the Matrix backend | create, join, vote, converge: 3 users in the two-client spec (alice, bob, carol) and across two homeservers; delegation is disabled in both environments; closing is enforced by the guard bot (spec) |
-| user data sync/restore across 2 devices | a second session of the same user restores its data from the user room (`getAllUserData`, spec); the app does this on every Matrix login (`restoreUserDataFromMatrix`) |
-| resilience to offline mode, partitions, federation splits | offline reconvergence and offline-queued writes: spec; federation with two homeservers: spec; partition of the federation link: not tested (§3.5) |
+| user data sync/restore across 2 devices | a second session of the same user restores its data from the user room (`getAllUserData`, spec); the app does this on every Matrix login (`syncUserDataWithMatrix`: pushes what differs, takes over what only the room holds — since 2026-09-10 including the poll membership keys, which were never written to the room before, so a second device knew none of the user's polls) |
+| password change / account switch | `changePassword` on the homeserver (user-interactive auth with the derived old password) and a forced re-sync re-encrypt the user room; an account switch (`takeOverVoterRooms`) lets the new account write into the old account's voter rooms — the two-client spec has an account change a guest's vote in the same room and proves the guest's credentials dead afterwards (#330, #193) |
+| resilience to offline mode, partitions, federation splits | offline reconvergence and offline-queued writes: spec; federation with two homeservers: spec; partition of the federation link: spec (§3.5) |
 | performance report | §2 |
 | security | §3 |
 | migration report | §4 |
@@ -288,17 +484,44 @@ run 34462199208 (2026-09-10, commit fa5a1cb; 669 specs, 0 skipped). The
 json-result reporter (`karma.conf.js`) records those lines in
 `karma-results.json` (field `perf`, uploaded as the `karma-results`
 artifact) and `scripts/check-test-results.js` prints them at the end of the
-job log. Medians are over five ratings. Compared with the sandbox figures
-of §2, the CI runner took longer for the cross-server join (1327 ms vs
-524 ms) and was similar otherwise. The offline replay figure is the one
-after #326; the previous green run (34457237560, before the change)
-measured 28087 ms for it.
+job log. Medians are over five ratings; the figures below are from run
+34484622912 (2026-09-10, the Plan 2 sessions 8–11 branch). Compared with
+the sandbox figures of §2, the CI runner took longer for the cross-server
+join (about 1.1 s vs 0.5 s) and was similar otherwise. The offline replay
+figure is the one after #326; the last green run before that change
+(34457237560) measured 28087 ms for it. The partition heal time is
+dominated by the servers' federation retry interval (1–5 s in the harness)
+and the sync long-poll, not by vodle.
 
 | metric | CI |
 | --- | --- |
-| same_server_rating_propagation_ms (median) | 84 |
-| federation_poll_join_ms | 1327 |
-| federation_first_vote_visible_ms | 907 |
-| federation_rating_propagation_hs1_to_hs2_ms (median) | 108 |
-| federation_rating_propagation_hs2_to_hs1_ms (median) | 131 |
-| offline_queue_replay_visible_ms | 1110 |
+| same_server_rating_propagation_ms (median) | 38 |
+| federation_poll_join_ms (a remote join; since #328 a knock, the bot's invitation across federation and the join, see the table below) | 1065 |
+| federation_first_vote_visible_ms | 857 |
+| federation_rating_propagation_hs1_to_hs2_ms (median) | 110 |
+| federation_rating_propagation_hs2_to_hs1_ms (median) | 102 |
+| offline_queue_replay_visible_ms | 1066 |
+| federation_partition_heal_ms | 19907 |
+
+After the closed rooms of #328 (plan session 14) the joins changed: a poll
+room is entered by a knock, the guard bot's invitation and the join, and a
+voter room by a restricted join that the room's homeserver authorises. The
+green CI run 34523878817 (2026-09-10, commit dae20b8; 724 specs) measured:
+
+| metric | CI |
+| --- | --- |
+| closed_room_join_ms (same homeserver: alias lookup, knock, the bot's invitation, join, power-level check) | 595 |
+| federation_poll_join_ms (the knock and the invitation cross the federation link once each) | 828 |
+| federation_first_vote_visible_ms (hs1 joins the voter room on hs2 through a restricted join now) | 1373 |
+| same_server_rating_propagation_ms (median) | 52 |
+| federation_rating_propagation_hs1_to_hs2_ms (median) | 123 |
+| federation_rating_propagation_hs2_to_hs1_ms (median) | 118 |
+| offline_queue_replay_visible_ms | 1083 |
+| federation_partition_heal_ms | 20136 |
+| federation_send_recovery_after_partition_ms (a fresh cross-server vote after the partition of the #334 scenario) | 2188 |
+
+The rating propagation, replay and heal figures are unchanged within the
+run-to-run noise; the cross-server join got faster than in the earlier run
+despite the extra round trips, and the first remote vote slower — both
+figures move by hundreds of milliseconds between runs on the shared CI
+runner, so neither is a measured cost of #328.

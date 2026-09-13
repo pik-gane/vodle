@@ -21,8 +21,8 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
 */
 ({
     production: true,
-    imprint_url: "./assets/impressum.html", // ADJUST!
-    privacy_statement_url: "./assets/privacy.html", // ADJUST!
+    imprint_url: "./site/impressum.html", // ADJUST! the file named in .env, served by the web container (deploy/README.md)
+    privacy_statement_url: "./site/privacy.html", // ADJUST! with a privacy statement the app asks for consent before storing a vote
     privacy_statement_headline: "Formal Privacy Policy and Terms of Use",
     logging: {
       logLevels: [
@@ -33,6 +33,15 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
       ]  
     },
     show_debug_info: false, // must be false in production!
+    useMatrixBackend: true,
+    matrix: {
+      homeserver_url: "/", // the nginx reverse proxy forwards /_matrix/ to Synapse; or "https://matrix.YOURDOMAIN"
+      server_name: "YOURDOMAIN", // ADJUST! the homeserver's server_name, forever (deploy/deploy.sh takes it from here)
+      enable_e2ee: true,
+      guard_bot_user_id: "", // empty: "@vodle-guard:" + server_name, the account deploy/deploy.sh registers
+      registration_token: "", // empty: the scripted deployment builds the token from .env in; else the homeserver's token
+      join_timeout_ms: 60000,
+    },
     data_service: {
       central_db_server_url: "https://sandstorm.pik-potsdam.de/couch/", // ADJUST!
       central_db_password: "none",
@@ -71,5 +80,10 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
     polls: {
       max_duration_days: 31,
       delete_after_days: 31
-    }  
+    },
+    // handing a deployment over to another one (documentation/deployment/MATRIX.md §6):
+    handover: {
+      successor_url: "",   // on the deployment being retired: where new polls are started from now on, e.g. "https://matrix.YOURDOMAIN/#/"
+      predecessor_url: "", // on the successor: where the polls started before the move live on, e.g. "https://app.YOURDOMAIN/#/"
+    }
 })

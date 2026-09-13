@@ -47,7 +47,7 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 import * as Sodium from 'libsodium-wrappers';
 
-import { MatrixService } from './matrix.service';
+import { MatrixService, hashEmail } from './matrix.service';
 
 
 /** DATA STORAGE DESIGN
@@ -165,7 +165,9 @@ function make_consistency_failure_error(message: string): Error {
 // sudo docker run -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password -p 5984:5984 -d --name test-couchdb couchdb
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
-const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password'];
+// (pending_user_data_move: a credential change whose data move has not
+// completed yet, see move_user_data / perform_user_data_move, #330)
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -190,6 +192,7 @@ const poll_keystarts_in_user_db = [
   'have_seen', 'have_acted', 'has_been_notified_of_end', 'has_results', 'have_seen_results',
   'is_archived',
   'is_test',
+  'origin_server',
   'poll_page',
   'simulated_ratings',
   'start_date',
@@ -239,6 +242,13 @@ function myhash(what): string {
 }
 
 // TYPES:
+
+/** the credentials a device used until a change of e-mail address or
+ *  password — what a pending user data move starts from (#330) */
+export type credentials_t = {email: string, password: string, guest?: boolean, attempts?: number};
+
+/** the consent recorded when a user logs in or takes part as a guest */
+export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
 export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
@@ -296,10 +306,34 @@ export class DataService implements OnDestroy {
   private G: GlobalService;
   
   private restored_user_cache = false;
+  /** whether after_local_only_user_cache_is_filled has run */
+  private user_cache_ready = false;
   private restored_poll_caches = false;
+  /** resolves once the background Matrix login has finished; the start does
+   *  not wait for it, everything that needs the homeserver does (#327) */
+  private matrix_ready: Promise<void> = Promise.resolve();
+  /** resolves once this device's user data and the user room agree. A POLL
+   *  does not wait for this — it needs a logged-in client and nothing else,
+   *  and on a magic link the vid and the password come from the link and
+   *  this device's own storage, never from the user room. Waiting for it
+   *  cost a guest with no polls at all 12.8 s before the poll page began
+   *  (#327). */
+  private matrix_user_data_ready: Promise<void> = Promise.resolve();
 
   // current page, used for notifying of changes method:
   page: any;
+
+  /** a magic link was opened on a device without credentials: the joinpoll
+   *  page offers to take part as a guest (#193), see
+   *  after_local_only_user_cache_is_filled */
+  guest_login_pending = false;
+
+  /** the credentials whose data this session uses (after the login, after a
+   *  completed move): a change away from them records a pending move (#330) */
+  private committed_credentials: credentials_t | null = null;
+
+  /** a guest login (#193) is under way, started by the app rather than the user */
+  private guest_login_in_progress = false;
 
   private loadingElement: HTMLIonLoadingElement;
 
@@ -309,7 +343,30 @@ export class DataService implements OnDestroy {
 
   user_cache: {}; // temporary storage of user data
   private local_only_user_DB: PouchDB.Database; // persistent storage of local-only user data
-  private local_synced_user_db: PouchDB.Database; // persistent local copy of synced user data
+  private _local_synced_user_db: PouchDB.Database = null; // see local_synced_user_db
+  /**
+   * The persistent local copy of the synced user data — CouchDB's, and made
+   * only when something asks for it (#327).
+   *
+   * On the Matrix backend nothing does, by design: setu() sends everything
+   * but the local-only keys (the credentials and the language, which live
+   * in local_only_user_DB) to the homeserver instead, and the restore path
+   * says so in as many words. Yet it was opened at every start regardless,
+   * against a database that on a device of long standing has a CouchDB era
+   * behind it. Opening a PouchDB is not free — auto_compaction is on — and
+   * this one was pure cost there.
+   */
+  private get local_synced_user_db(): PouchDB.Database {
+    if (!this._local_synced_user_db) {
+      this._local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
+      this.G.L.info("DataService opened the local synced user database");
+    }
+    return this._local_synced_user_db;
+  }
+  /** assignable, so a test (or a reset) can put its own database there */
+  private set local_synced_user_db(db: PouchDB.Database) {
+    this._local_synced_user_db = db;
+  }
 
   private remote_user_db: PouchDB.Database; // persistent remote copy of synced user data
   private user_db_sync_handler;
@@ -325,6 +382,8 @@ export class DataService implements OnDestroy {
   private poll_db_sync_handlers: Record<string, any>;
   // Phase 14: Track Matrix poll event listeners per pid to prevent duplicates
   private _matrixPollListeners: Record<string, any> = {};
+  /** the in-flight or finished full load of a poll's contents, per pid (#327) */
+  private poll_load_promises: Record<string, Promise<void>> = {};
   // Promise for the async Matrix state-change work (draft→running).
   // Callers (e.g. publish_button_clicked) can await this to ensure all
   // poll data, options, and state have been committed to Matrix before
@@ -421,6 +480,23 @@ export class DataService implements OnDestroy {
      *  shown as a warning sign in the page headers (#292, #159) */
     return Object.values(this.replication_stalled).some(stalled => !!stalled);
   }
+
+  get sync_pending(): boolean {
+    /** whether changes of this device's are still on their way to the
+     *  server: the page shows a turning sign while they are (#327). On the
+     *  Matrix backend this counts the writes in flight and the ones queued
+     *  for another try; the CouchDB backend replicates continuously and has
+     *  no such count, so it reports only the stall below. */
+    return environment.useMatrixBackend && this.matrixService.pendingWriteCount > 0;
+  }
+
+  get sync_is_stalled(): boolean {
+    /** whether those changes are not merely on their way but stuck. Nothing
+     *  is lost either way — vodle keeps retrying, and compares its own votes
+     *  against the server once a minute — but the voter gets to see it. */
+    return this.replication_is_stalled
+      || (environment.useMatrixBackend && this.matrixService.syncIsStalled);
+  }
   private replication_restart_pending: Record<string, boolean> = {};
   private user_sync_start_pending = false;
   private user_sync_start_generation = 0;
@@ -450,6 +526,68 @@ export class DataService implements OnDestroy {
     }
   }
 
+  /**
+   * One Matrix account per (poll, voter) — vodle's cross-poll privacy.
+   *
+   * The CouchDB backend connects to a poll's database as
+   * `vodle.poll.<pid>.voter.<myvid>` (see connect_to_remote_poll_db), never
+   * as the person, so the server can tie no two polls of one person
+   * together. These are the Matrix counterpart: a service of its own per
+   * poll, signed in as that poll's vid, which does every poll-room and
+   * voter-room operation. The injected service keeps the person's own
+   * account and does the user room and nothing else (#327).
+   */
+  private poll_matrix_promises: {[pid: string]: Promise<MatrixService>} = {};
+  
+  /** the service that acts for this device in poll `pid` */
+  poll_matrix(pid: string): Promise<MatrixService> {
+    if (!environment.useMatrixBackend) {
+      return Promise.resolve(this.matrixService);
+    }
+    if (!this.poll_matrix_promises[pid]) {
+      this.poll_matrix_promises[pid] = this.open_poll_matrix(pid).catch(error => {
+        // not remembered: a poll whose account could not be signed in must
+        // be free to try again on the next operation
+        delete this.poll_matrix_promises[pid];
+        throw error;
+      });
+    }
+    return this.poll_matrix_promises[pid];
+  }
+  
+  private async open_poll_matrix(pid: string): Promise<MatrixService> {
+    const vid = this.getp(pid, 'myvid');
+    if (!vid) {
+      // previewpoll (creator) and joinpoll (everyone else) both call
+      // init_myvid before the poll is ever connected to, exactly as the
+      // CouchDB user name needs it
+      throw new Error("DataService.poll_matrix: poll " + pid + " has no vid yet");
+    }
+    const service = MatrixService.forPoll(this.storage, pid, vid);
+    service.pollPasswordProvider = this.matrixService.pollPasswordProvider;
+    service.userPasswordProvider = this.matrixService.userPasswordProvider;
+    service.logger = this.matrixService.logger;
+    this.G.L.info("DataService.poll_matrix signing in as this poll's voter", pid);
+    await service.signInForPoll(pid, vid, this.user_cache?.['password'] || '');
+    // a poll this device took part in BEFORE it had poll accounts has its
+    // rooms owned by the person's own account, which must hand them over
+    // once or the poll account can write nothing (#327). Costs one local
+    // read for every poll that came after.
+    await service.takeOverFrom(this.matrixService, pid, vid);
+    return service;
+  }
+  
+  /** let go of a poll's account, e.g. when its data is deleted */
+  private async close_poll_matrix(pid: string): Promise<void> {
+    const pending = this.poll_matrix_promises[pid];
+    delete this.poll_matrix_promises[pid];
+    if (!pending) { return; }
+    try {
+      const service = await pending;
+      if (service !== this.matrixService) { await service.dropSession(); }
+    } catch { /* it never came up; nothing to let go of */ }
+  }
+  
   ionViewWillLeave() {
     this.save_state();
   }
@@ -595,6 +733,12 @@ export class DataService implements OnDestroy {
     // called by GlobalService
     G.L.entry("DataService.init");
     this.G = G;
+    // MatrixService.init was never called from the app: its logger stayed
+    // undefined — which is why nothing it logs through this.logger ever
+    // reached a console — and, worse, the 'online' listener it registers was
+    // never registered, so a queued write waited for the next sync tick
+    // instead of going out the moment the connection came back (#326, #327).
+    this.matrixService?.init(G.L);
     const mutations_finished = this.cancel_voter_mutations();
     // a deliberate new initialization begins, so clear any teardown state
     // left over from a previous logout/destruction (#292):
@@ -624,10 +768,36 @@ export class DataService implements OnDestroy {
     this.effective_ratings_map_caches = {};
     this.news_keys = new Set();
     // make sure storage exists:
+    // Everything below hangs off this read, and a start that sat for
+    // eighty seconds before it had even attempted a login had to have sat
+    // here — in IndexedDB, through Ionic Storage — with nothing said. So
+    // it says something (#327).
+    const boot_started_at = Date.now();
+    const boot = (stage: string, detail?: any) => {
+      console.log("[vodle boot] +" + (Date.now() - boot_started_at) + "ms", stage,
+        detail === undefined ? "" : detail);
+      // ...and where a waiting page can show it, since a console the owner
+      // cannot see is a diagnosis nobody can make (#327):
+      MatrixService.noteBootStage(stage);
+    };
+    (this as any).boot_log = boot;
+    boot("data service init");
+    // 5.4 MB of crypto WebAssembly the start cannot finish without. Asking
+    // for it here rather than after the login lets it download WHILE the
+    // login and the registration happen: in the owner's guest start of
+    // 2026-09-12 those took 4.9 s and the WASM 8.9 s, one after the other
+    // (#327). The fetch is memoised, so the await in initializeWithToken is
+    // the same promise, and a failure here is nobody's to handle — crypto
+    // reports and degrades on its own path.
+    if (environment.useMatrixBackend && environment.matrix.enable_e2ee) {
+      MatrixService.fetchCryptoWasm().catch(() => { /* reported where it is awaited */ });
+    }
     this.storage.create();
+    boot("local storage created");
     // restore state from storage:
     mutations_finished.then(() => this.storage.get('state'))
     .then((state) => {
+      boot("restored from local storage", state ? "state found" : "nothing stored yet");
       if (!!state) {
         G.L.debug('DataService got state from storage');
         for (const a of state_attributes) {
@@ -644,17 +814,22 @@ export class DataService implements OnDestroy {
         if (('_pids' in state) && ('poll_caches' in state)) {
           this.restored_poll_caches = true;
         }
-        this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
-        this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
-        for (const pid in this._pid_oids) {
-          this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid]]);
-        }  
+        boot("state restored into the caches",
+          this._pids ? this._pids.size + " polls" : "no polls");
+        if (environment.show_debug_info) {
+          this.G.L.trace("DataService.init _pids", JSON.stringify(this._pids));
+          this.G.L.trace("DataService.init _pid_oids", JSON.stringify(this._pid_oids));
+          for (const pid in this._pid_oids) {
+            this.G.L.trace("DataService.init _pid_oids", pid, [...this._pid_oids[pid]]);
+          }
+        }
       } else {
         G.L.warn('DataService could not get state from storage (empty)', state);
       }
     }).catch((error) => {
       G.L.warn('DataService could not get state from storage:', error);
     }).finally(() => {
+      boot("opening the local databases");
       this.init_databases();
     });
     this.init_notifications(false);
@@ -686,7 +861,10 @@ export class DataService implements OnDestroy {
     });
     */
 
-    this.local_synced_user_db = new PouchDB('local_synced_user', {auto_compaction: true});
+    // the synced user database is opened by its getter, when something
+    // actually wants it — which on the Matrix backend is never (#327)
+    this._local_synced_user_db = null;
+    (this as any).boot_log?.("local databases open");
 
     /* deactivated for performance:
     this.local_synced_user_db.info()
@@ -721,9 +899,11 @@ export class DataService implements OnDestroy {
     if (this.restored_user_cache) {
       // user_cache was restored from storage.
 
+      (this as any).boot_log?.("the user cache came from storage");
       this.after_local_only_user_cache_is_filled();
 
     } else {
+      (this as any).boot_log?.("no stored user cache: reading every local-only document");
       // try restoring from local PouchDB:
 
       this.user_cache = {};
@@ -766,15 +946,83 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.process_local_only_user_docs");
   }
 
+  /**
+   * Where the app is, as the BROWSER knows it rather than as the router does.
+   *
+   * DataService.init runs during the app's bootstrap, and `router.url` is
+   * "/" until the router's own initial navigation has finished. The two race,
+   * and the loser decides whether a magic link opened on a device with no
+   * credentials takes part as a guest or is redirected to the login page — a
+   * redirect the in-flight navigation to the join page then cancels, leaving
+   * the join page on screen with nothing behind it and no further log line.
+   * That is the freeze the owner reported after using the logout button
+   * (#193, #327). The location hash is set before any of this app's code
+   * runs, so it cannot race with it.
+   */
+  private current_route(): string {
+    const hash = this.location_hash();
+    if (hash.startsWith('#')) { return hash.substring(1); }
+    return this.router?.url || '';
+  }
+
+  /** the browser's URL fragment; its own method so that a spec can say what
+   *  the browser shows without navigating the test page */
+  private location_hash(): string {
+    try {
+      return (typeof window !== 'undefined' && window.location && window.location.hash) || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  /**
+   * Make sure a magic link on a device without credentials gets its guest.
+   *
+   * The start normally decides this (below); this is the second line of
+   * defence, called by the join page when it has been waiting a few seconds,
+   * for the case where the start could not see the route or the page arrived
+   * after the decision (#193, #327). Idempotent and cheap: it does nothing
+   * unless the user cache is ready, there are no credentials, and no guest
+   * is already on its way.
+   */
+  ensure_guest_for_magic_link(): void {
+    if (!this.user_cache_ready || this.guest_login_pending || this.guest_login_in_progress) {
+      return;
+    }
+    if ((this.user_cache['email']||'') != '' && (this.user_cache['password']||'') != '') {
+      return;
+    }
+    this.G.L.warn("DataService.ensure_guest_for_magic_link: the join page is waiting and there are no credentials, creating a guest");
+    (this as any).boot_log?.("the join page asked for a guest");
+    this.guest_login_pending = true;
+    this.login_as_guest();
+  }
+
   private after_local_only_user_cache_is_filled() {
+    (this as any).boot_log?.("the user cache is ready");
+    this.user_cache_ready = true;
     this.G.L.entry("DataService.after_user_cache_is_filled");
     // check if email and password are set:
     if ((this.user_cache['email']||'')=='' || (this.user_cache['password']||'')=='') {
-      this.G.L.info("DataService found empty email or password, redirecting to login page.");
       this.hide_loading();
-      if (!this.router.url.includes('/login')) {
-        const current_url = encodeURIComponent(this.router.url);
-        this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
+      const route = this.current_route();
+      (this as any).boot_log?.("no credentials; the page is", route || "(not known yet)");
+      if (route.includes('/joinpoll/')) {
+        // the first visit of a magic link on this device (#193): take part
+        // as a guest right away instead of asking for a login first — the
+        // visitor votes before registering anything. When the deployment
+        // has a privacy statement, the consent question waits on the poll
+        // page (consent_pending); a later login moves the guest's data to
+        // the account (#330).
+        this.G.L.info("DataService found no credentials on a magic link, taking part as a guest");
+        this.guest_login_pending = true;
+        this.login_as_guest();
+      } else {
+        this.G.L.info("DataService found empty email or password, redirecting to login page.");
+        if (!route.includes('/login')) {
+          const current_url = encodeURIComponent(route);
+          this.router.navigate([(this.user_cache['local_language']||'')==''?'/login/start/'+current_url:'/login/used_before/'+current_url]);
+        }
       }
     } else {
       this.email_and_password_exist();
@@ -783,21 +1031,86 @@ export class DataService implements OnDestroy {
   }
 
   private async email_and_password_exist() {
+    (this as any).boot_log?.("credentials found, starting the backend");
     this.G.L.entry("DataService.email_and_password_exist: email", 
-      this.user_cache['email'], ", password", this.user_cache['password']);
+      this.user_cache['email']);
 
-    // Phase 2: Login to Matrix if flag is set (SYNCHRONOUS/BLOCKING)
+    // a change of the credentials whose data move did not complete (#330):
+    // on the CouchDB backend it is completed before the local user db is
+    // read below, since the documents' ids carry the identity
+    const pending_move = this.pending_user_data_move();
+    if (pending_move && !environment.useMatrixBackend) {
+      try {
+        await this.perform_user_data_move(pending_move);
+      } catch (err) {
+        this.G.L.error("DataService: the pending user data move failed, continuing with the new credentials", err);
+      }
+    }
+
+    /*
+    The Matrix login no longer stands between the user and their polls
+    (#327).
+
+    Everything the poll list shows — the polls, their titles, their state,
+    the ratings and even the computed tallies — was restored from this
+    device's own storage a few lines above (state_attributes). The app
+    nevertheless waited here for a login, a sync of every room and a read of
+    every poll before it would clear the spinner, which is how showing a list
+    that was already in hand came to take half a minute.
+
+    So: the login runs, and the rest of the start does not wait for it.
+    Anything that needs the homeserver awaits `matrix_ready` instead — see
+    connect_to_remote_poll_db and the write paths — and a write made before
+    it resolves is queued by the offline queue rather than lost.
+    */
     if (environment.useMatrixBackend) {
       const email = this.user_cache['email'];
       const password = this.user_cache['password'];
       if (email && password) {
-        this.G.L.info("DataService: Logging into Matrix backend (blocking)");
-        this.G.add_spinning_reason("matrix-login");
+        this.G.L.info("DataService: logging into the Matrix backend in the background");
+        this.matrix_ready = (async () => {
         try {
-          await this.matrixService.login(email, password);
+          if (pending_move) {
+            // the move logs in as the new account itself (#330, #193):
+            try {
+              await this.perform_user_data_move(pending_move);
+            } catch (err) {
+              this.G.L.error("DataService: the pending user data move failed, logging in without it", err);
+            }
+          }
+          if (!this.matrixService.isLoggedIn()) {
+            // The access token this device already holds is enough: a
+            // password login on every page load costs a round trip and the
+            // key derivation, and leaves a new device on the homeserver each
+            // time. It falls back to the password when there is no usable
+            // token for this address (#327).
+            (this as any).boot_log?.("resuming the stored session");
+            if (!await this.matrixService.resumeSession(email)) {
+              (this as any).boot_log?.("no stored session, logging in with the password");
+              // a guest's credentials were invented a moment ago, so the
+              // account cannot exist yet and the login ladder would only
+              // produce refusals (#193, #327):
+              await this.matrixService.login(email, password, true,
+                this.guest_login_in_progress);
+            }
+          }
+          (this as any).boot_log?.("logged in to the homeserver");
+          this.committed_credentials = this.credentials_snapshot();
           this.G.L.info("DataService: Matrix login successful, syncing user data");
-          await this.syncUserCacheToMatrix();
-          await this.restoreUserDataFromMatrix();
+          // NOT awaited here: the client is usable now, and that is all a
+          // poll needs. The sync writes one state event per user-data key
+          // and reads the user room back, which for a fresh guest means
+          // creating the room first — 12.8 s in the owner's measurement,
+          // every millisecond of it in front of a poll page that needed
+          // none of it (#327).
+          this.matrix_user_data_ready = this.syncUserDataWithMatrix()
+            .then(() => {
+              (this as any).boot_log?.("user data synced");
+              this.G.L.info("DataService: Matrix user data synced");
+            });
+          this.matrix_user_data_ready.catch(err =>
+            this.G.L.error("DataService: the user data sync failed", err));
+          (this as any).boot_log?.("the backend is ready");
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
           this.G.L.error("DataService: Matrix login failed", err?.errcode || err?.message || err);
@@ -818,10 +1131,13 @@ export class DataService implements OnDestroy {
               "./start-matrix-server.sh";
           }
           
-          alert(errorMessage);
-        } finally {
-          this.G.remove_spinning_reason("matrix-login");
+          this.report_login_failure(errorMessage);
         }
+        })();
+        // the start does not wait for it, but a failure must not become an
+        // unhandled rejection either:
+        this.matrix_ready.catch(err =>
+          this.G.L.error("DataService: the background Matrix login failed", err));
       }
     }
 
@@ -949,6 +1265,7 @@ export class DataService implements OnDestroy {
     // check if db credentials are set:
     if (this.has_user_db_credentials()) {
 
+      this.committed_credentials = this.credentials_snapshot();
       // ASYNC:
       // connect to remote and start sync:
       this.connect_to_remote_user_db()
@@ -974,34 +1291,73 @@ export class DataService implements OnDestroy {
   }
 
   /**
-   * Phase 2: Sync user_cache data to Matrix backend
-   * Called after successful Matrix login to sync existing user data
+   * Reconcile the local user cache with this account's Matrix user room
+   * (#293, #330): local values are pushed where the room's value differs
+   * (all of them with `force`, which re-encrypts everything after a
+   * password change or an account switch), and keys only the room holds
+   * are taken over — the restore of settings and poll memberships (voter
+   * ids, poll passwords, drafts) on a second device. Local values win:
+   * they are what the user sees. The device-local keys (credentials,
+   * database settings) never leave the device. Until 2026-09-10 the poll
+   * membership keys were not synced at all, so a second device knew none
+   * of the user's polls.
    */
-  private async syncUserCacheToMatrix(): Promise<void> {
-    this.G.L.entry("DataService.syncUserCacheToMatrix");
-    
+  private async syncUserDataWithMatrix(force = false): Promise<void> {
+    this.G.L.entry("DataService.syncUserDataWithMatrix", force);
+    let remote: Record<string, any> = {};
     try {
-      // Sync all non-sensitive user data to Matrix
-      const keysToSync = Object.keys(this.user_cache).filter(key => 
-        !local_only_user_keys.includes(key) && // Don't sync local-only keys like password
-        !key.startsWith('poll.') // Don't sync poll data (Phase 3)
-      );
-      
-      for (const key of keysToSync) {
-        const value = this.user_cache[key];
-        if (value !== undefined && value !== null && value !== '') {
-          await this.matrixService.setUserData(key, value);
-          this.G.L.trace("DataService.syncUserCacheToMatrix synced", key);
-        }
-      }
-      
-      this.G.L.info("DataService.syncUserCacheToMatrix completed successfully");
+      remote = await this.matrixService.getAllUserData();
     } catch (err) {
-      this.G.L.error("DataService.syncUserCacheToMatrix failed", err);
-      throw err;
+      this.G.L.error("DataService.syncUserDataWithMatrix could not read the user room, pushing everything", err);
+      force = true;
     }
-    
-    this.G.L.exit("DataService.syncUserCacheToMatrix");
+    let restored = 0;
+    const to_push = Object.keys(this.user_cache).filter(key => {
+      if (local_only_user_keys.includes(key) || key == 'user_last_seq') { return false; }
+      const value = this.user_cache[key];
+      if (value === undefined || value === null || value === '') { return false; }
+      return force || remote[key] !== value;
+    });
+    // One state event per key, and they used to go out one after another: a
+    // published poll of fifty writes about thirty-five of them into the user
+    // room, which at a round trip each is most of a minute on a slow link
+    // (#327). They do not depend on one another, so they go together, as far
+    // apart as the client's own write pacing says (matrix.write_burst).
+    const pushed = to_push.length;
+    await MatrixService.forEachConcurrently(to_push,
+      environment.data_service.matrix_user_data_concurrency ?? 8,
+      async key => { await this.matrixService.setUserData(key, this.user_cache[key]); });
+    for (const [key, value] of Object.entries(remote)) {
+      if (local_only_user_keys.includes(key) || value === '') {
+        continue;
+      }
+      const local = this.user_cache[key];
+      if (local === undefined || local === null || local === '') {
+        this.user_cache[key] = value;
+        restored++;
+        // a poll this device did not know yet:
+        this.check_whether_poll_or_option(key, value);
+      }
+    }
+    this.G.L.info("DataService.syncUserDataWithMatrix pushed", pushed, "and restored", restored, "keys");
+    this.G.L.exit("DataService.syncUserDataWithMatrix");
+  }
+
+  /** the message of the last login failure, for a page that enters later
+   *  (the joinpoll page of a guest whose account could not be created, #193) */
+  login_failure: string | null = null;
+
+  /** a login failure goes to the page when it can show it, else — for a
+   *  login the user asked for — to an alert; a guest login started on the
+   *  user's behalf must not block the app with an alert, the joinpoll page
+   *  shows the failure when it enters */
+  private report_login_failure(message: string) {
+    this.login_failure = message;
+    if (this.page && this.page.onLoginFailed) {
+      this.page.onLoginFailed(message);
+    } else if (!this.guest_login_in_progress) {
+      alert(message);
+    }
   }
 
   private init_poll_data() {
@@ -1023,7 +1379,23 @@ export class DataService implements OnDestroy {
           this.ensure_local_poll_data(pid);
         }
       }
-    }    
+    } else {
+      // Matrix: the restored caches ARE the poll data — there is no local
+      // PouchDB to reconcile them against, so the branch above does not run
+      // and, until 2026-09-11, nothing else started these polls' lifecycles
+      // either. A poll restored from the cache therefore kept the state it
+      // had when the app was last closed: one whose deadline had passed in
+      // the meantime stayed "running" for ever — listed under Running polls,
+      // never tallied, never showing its result — and one that was still
+      // running got no timer, so it did not close while the app was open
+      // either. start_lifecycle() ends a poll that is past due and sets the
+      // timer for one that is not; it is idempotent (#327).
+      for (const pid of this._pids) {
+        if (this.pid_is_draft(pid)) { continue; }
+        const p = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+        p.start_lifecycle();
+      }
+    }
     if (this.uninitialized_pids.size == 0) {
       this.local_docs2cache_finished();
     }
@@ -1094,9 +1466,10 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private connect_to_remote_user_db() {
+  private connect_to_remote_user_db(quiet = false) {
     // called at initialization and whenever db credentials were changed
-    this.G.L.entry("DataService.connect_to_remote_user_db");
+    // (quiet: a failure is only logged, the login page is not shown)
+    this.G.L.entry("DataService.connect_to_remote_user_db", quiet);
     const user_password = this.user_cache['password'];
     const user_db_private_username = "vodle.user." + this.get_email_and_pw_hash();
 
@@ -1121,9 +1494,11 @@ export class DataService implements OnDestroy {
 
       }).catch(err => {
 
-        this.G.L.warn("DataService.connect_to_remote_user_db failed, redirecting to login page", err);
+        this.G.L.warn("DataService.connect_to_remote_user_db failed" + (quiet ? "" : ", redirecting to login page"), err);
         // TODO: if no network, notify and try again when network available. if wrong url or password, ask again for credentials. if wrong permissions, notify to contact db admin. also set 'ready' to false?
-        this.router.navigate(['/login/db_credentials/failed']);
+        if (!quiet) {
+          this.router.navigate(['/login/db_credentials/failed']);
+        }
         // TODO: make that page
 
         // REJECT:
@@ -1146,6 +1521,23 @@ export class DataService implements OnDestroy {
       this.need_poll_db_replication[pid] = true;
     } 
     return this.local_poll_dbs[pid];
+  }
+
+  /** What a poll needs on the Matrix backend when it first shows up in the
+   *  user cache: to be listed, to have a cache to be filled into, and to
+   *  have its lifecycle running, so that one whose deadline passed while
+   *  the app was closed is ended rather than left "running" for ever
+   *  (the same thing init_poll_data does for restored caches, #327). */
+  private ensure_matrix_poll_known(pid: string) {
+    this.G.L.entry("DataService.ensure_matrix_poll_known", pid);
+    this._pids.add(pid);
+    this.ensure_poll_cache(pid);
+    const poll = this.G.P.polls[pid] || new Poll(this.G, pid, false);
+    for (const oid of this._pid_oids[pid] || []) {
+      if (!(oid in poll.options)) { new Option(this.G, poll, oid); }
+    }
+    poll.start_lifecycle();
+    this.G.L.exit("DataService.ensure_matrix_poll_known", pid);
   }
 
   private ensure_local_poll_data(pid:string) {
@@ -1377,6 +1769,83 @@ export class DataService implements OnDestroy {
     }
   }
 
+  ensure_poll_loaded(pid: string): Promise<void> {
+    /** Everything of a Matrix poll that the poll list does not need: this
+     *  device's own voter room, the options, the other voters' ratings and
+     *  the delegations.
+     *
+     *  That is a join and a state read per voter room, so for a 50-voter
+     *  poll it is on the order of a hundred round trips — which the app
+     *  used to make for every poll the user is in before showing anything.
+     *  It happens when a poll is opened instead (#327).
+     *
+     *  Idempotent: every later call gets the first one's promise. A failed
+     *  load is not remembered, so opening the poll again retries it. */
+    if (!environment.useMatrixBackend) {
+      return Promise.resolve();
+    }
+    if (!(pid in this.poll_load_promises)) {
+      this.poll_load_promises[pid] = this.load_poll_contents(pid).catch(err => {
+        delete this.poll_load_promises[pid];
+        throw err;
+      });
+    }
+    return this.poll_load_promises[pid];
+  }
+
+  private async load_poll_contents(pid: string): Promise<void> {
+    this.G.L.entry("DataService.load_poll_contents", pid);
+    await this.matrix_ready.catch(() => { /* reported where it failed */ });
+    const myVid = this.getp(pid, 'myvid');
+    // this device's own voter room is where its ratings are written, so it
+    // is needed before the page can be rated on, but not before the poll
+    // list can be shown:
+    await (await this.poll_matrix(pid)).getOrCreateMyVoterRoom(pid, myVid);
+    // join and read the other voters' rooms, and keep watching them:
+    await (await this.poll_matrix(pid)).startVoterSync(pid);
+    // options, ratings and delegations into the service's caches:
+    await (await this.poll_matrix(pid)).warmupCache(pid);
+
+    // Load options from timeline events (immutable) and register
+    // their oids + data in poll_caches so Option objects get created.
+    const options = await (await this.poll_matrix(pid)).getOptions(pid);
+    if (!(pid in this._pid_oids)) {
+      this._pid_oids[pid] = new Set();
+    }
+    this.ensure_poll_cache(pid);
+    for (const [oid, opt] of options) {
+      this._pid_oids[pid].add(oid);
+      this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
+      this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
+      this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
+      this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
+    }
+
+    // Bridge other voters' ratings from Matrix into poll_caches and tally system.
+    // getRatings() returns cached results (already fetched during warmupCache).
+    // Keys are vodle vids when available, or Matrix user IDs as fallback.
+    const ratings = await (await this.poll_matrix(pid)).getRatings(pid);
+    let bridgedVoters = 0;
+    let bridgedRatings = 0;
+    for (const [vid, voterRatings] of ratings) {
+      if (vid === myVid) continue; // Skip own ratings — already handled locally
+      bridgedVoters++;
+      for (const [oid, rating] of voterRatings) {
+        // Store in poll_caches in the format expected by getv():
+        //   voter.<vid>§rating.<oid> = stringified rating
+        const pkey = this.get_voter_key_prefix(pid, vid) + 'rating.' + oid;
+        this.poll_caches[pid][pkey] = String(rating);
+        // Register in the tally system's own_ratings_map so tally_all() finds it
+        this.G.P.update_own_rating(pid, vid, oid, rating, false);
+        bridgedRatings++;
+      }
+    }
+    this.G.L.info("DataService.load_poll_contents", pid,
+                   "options:", options.size,
+                   "voters:", bridgedVoters, "ratings:", bridgedRatings);
+    this.G.L.exit("DataService.load_poll_contents", pid);
+  }
+
   connect_to_remote_poll_db(pid: string, wait_for_replication=false, origin_server?: string): Promise<any> {
     // called at poll initialization or when joining a poll.
     // origin_server (Matrix backend only): the server_name of the homeserver
@@ -1386,102 +1855,62 @@ export class DataService implements OnDestroy {
 
     // Phase 12: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
+      // The start no longer waits for the login (#327), so this does: it is
+      // the first thing here that needs a homeserver.
+      //
+      // Bounded, because a magic link that is being followed shows a
+      // spinner until this resolves: a login that never settles left the
+      // join page fetching for ever, saying nothing, which is exactly what
+      // the owner saw. A ceiling turns that into an error the page can
+      // show.
+      (this as any).boot_log?.("this poll needs the homeserver; waiting for the login");
+      const after_login = MatrixService.within(
+        MatrixService.LOGIN_WAIT_TIMEOUT_MS, "the connection to the homeserver",
+        () => this.matrix_ready)
+        .catch(err => {
+          console.warn("[vodle] the poll cannot be opened yet:", err?.message || err);
+          if (wait_for_replication) {
+            throw err;                  // the join page shows this
+          }
+          // a poll being reconnected in the background: reported where it
+          // failed, and the periodic retry will come back to it
+        });
       // For Matrix backend, join the poll room and create voter room instead of PouchDB replication.
       // A poll joined via a magic link is only ever joined, never created
       // here: a link to a poll that cannot be found must fail, not silently
       // produce an empty poll room on this user's homeserver.
-      const room_promise: Promise<string> = origin_server
-        ? this.matrixService.setPollOrigin(pid, origin_server)
-            .then(() => this.matrixService.getPollRoom(pid))
+      // The origin server named by the link is kept as user data, so that
+      // another device of this account (which restores the poll membership
+      // from the user room) finds the room too (#330):
+      if (origin_server && this.getp(pid, 'origin_server') != origin_server) {
+        this.setp(pid, 'origin_server', origin_server);
+      }
+      origin_server = origin_server || this.getp(pid, 'origin_server') || undefined;
+      const room_promise: Promise<string> = after_login.then(() => origin_server
+        ? this.poll_matrix(pid)
+            .then(m => m.setPollOrigin(pid, origin_server).then(() => m.getPollRoom(pid)))
             .then(roomId => {
               if (!roomId) {
                 throw new Error("poll " + pid + " not found on homeserver " + origin_server);
               }
               return roomId;
             })
-        : this.matrixService.getOrCreatePollRoom(pid, '');
+        : this.poll_matrix(pid).then(m => m.getOrCreatePollRoom(pid, '')));
       return room_promise.then(async (roomId) => {
-        console.log("[connect_to_remote_poll_db] getOrCreatePollRoom returned roomId:", roomId, "for pid:", pid);
+        this.G.L.info("DataService.connect_to_remote_poll_db poll room", pid, roomId);
 
-        // DIAGNOSTIC: Direct fetch test to verify API connectivity from browser
-        try {
-          const diagToken = (this.matrixService as any).client?.getAccessToken();
-          const diagUrl = `${(this.matrixService as any).homeserverUrl}/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/state`;
-          console.log("[DIAG] Direct fetch test: url=", diagUrl, "token=", diagToken ? diagToken.substring(0, 15) + "..." : "NULL");
-          const diagResp = await fetch(diagUrl, {
-            headers: { 'Authorization': `Bearer ${diagToken}` },
-            cache: 'no-store',
-          });
-          console.log("[DIAG] Direct fetch response:", diagResp.status, diagResp.statusText);
-          if (diagResp.ok) {
-            const diagData = await diagResp.json();
-            const vodleEvents = diagData.filter((e: any) => (e.type || '').includes('vodle'));
-            console.log("[DIAG] Direct fetch got", diagData.length, "total events,", vodleEvents.length, "vodle events");
-            vodleEvents.forEach((e: any) => console.log("[DIAG]  ", e.type, "=", JSON.stringify(e.content).substring(0, 100)));
-          } else {
-            const errText = await diagResp.text();
-            console.error("[DIAG] Direct fetch FAILED:", errText.substring(0, 200));
-          }
-        } catch (diagErr) {
-          console.error("[DIAG] Direct fetch ERROR:", diagErr);
-        }
-
-        // Create voter room (pass vodle vid so it gets stored in the room + announce event)
-        const myVid = this.getp(pid, 'myvid');
-        await this.matrixService.getOrCreateMyVoterRoom(pid, myVid);
-
-        // Sync poll data from Matrix to local cache
-        await this.matrixService.warmupCache(pid);
-
-        // Load poll metadata (state, title, due, type, etc.) into poll_caches
-        const pollData = await this.matrixService.getAllPollData(pid);
+        // Only what the poll list needs — title, state, due, type — which
+        // the client's own sync usually already holds. The contents of the
+        // poll (its options, the other voters' ratings, the delegations)
+        // are a room per voter to join and read, and doing that for every
+        // poll the user is in is what kept the start waiting; they are
+        // fetched when the poll is opened (#327), see ensure_poll_loaded.
+        const pollData = await (await this.poll_matrix(pid)).getAllPollData(pid);
         this.ensure_poll_cache(pid);
         for (const [key, value] of Object.entries(pollData)) {
           this.poll_caches[pid][key] = value;
         }
-
-        // Load options from timeline events (immutable) and register
-        // their oids + data in poll_caches so Option objects get created.
-        const options = await this.matrixService.getOptions(pid);
-        if (!(pid in this._pid_oids)) {
-          this._pid_oids[pid] = new Set();
-        }
-        for (const [oid, opt] of options) {
-          this._pid_oids[pid].add(oid);
-          this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
-          this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
-          this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
-          this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
-        }
-        
-        // Bridge other voters' ratings from Matrix into poll_caches and tally system.
-        // getRatings() returns cached results (already fetched during warmupCache).
-        // Keys are vodle vids when available, or Matrix user IDs as fallback.
-        const ratings = await this.matrixService.getRatings(pid);
-        let bridgedVoters = 0;
-        let bridgedRatings = 0;
-        for (const [vid, voterRatings] of ratings) {
-          if (vid === myVid) continue; // Skip own ratings — already handled locally
-          bridgedVoters++;
-          for (const [oid, rating] of voterRatings) {
-            // Store in poll_caches in the format expected by getv():
-            //   voter.<vid>§rating.<oid> = stringified rating
-            const pkey = this.get_voter_key_prefix(pid, vid) + 'rating.' + oid;
-            this.poll_caches[pid][pkey] = String(rating);
-            // Register in the tally system's own_ratings_map so tally_all() finds it
-            this.G.P.update_own_rating(pid, vid, oid, rating, false);
-            bridgedRatings++;
-          }
-        }
-        
-        console.log("[connect_to_remote_poll_db] poll:", pid,
-                     "pollData keys:", Object.keys(pollData),
-                     "options:", options.size,
-                     "state:", pollData['state'],
-                     "bridgedVoters:", bridgedVoters,
-                     "bridgedRatings:", bridgedRatings);
-        this.G.L.info("DataService.connect_to_remote_poll_db loaded poll data keys:", Object.keys(pollData),
-                       "options:", options.size);
+        this.G.L.info("DataService.connect_to_remote_poll_db loaded poll data keys:", Object.keys(pollData));
 
         // Persist poll state in user_cache so the app remembers this poll after refresh
         if (pollData['state']) {
@@ -1489,8 +1918,15 @@ export class DataService implements OnDestroy {
           this.setu(prefix + 'state', pollData['state']);
         }
 
-        // Phase 14: Start real-time sync via Matrix event handlers
+        // Phase 14: the poll room's own listeners. The voter rooms are the
+        // expensive half and wait for the poll to be opened (#327).
         this.start_poll_sync(pid);
+
+        if (wait_for_replication) {
+          // the caller is following a magic link and needs the poll itself,
+          // not just its name:
+          await this.ensure_poll_loaded(pid);
+        }
 
         this.G.L.exit("DataService.connect_to_remote_poll_db (Matrix)", pid);
       });
@@ -1697,10 +2133,11 @@ export class DataService implements OnDestroy {
 
         // Create Matrix poll room and move data from user cache to Matrix
         const title = this.getp(pid, 'title');
-        this._matrixStateChangePromises[pid] = this.matrixService.createPollRoom(pid, title).then(async () => {
+        this._matrixStateChangePromises[pid] = this.poll_matrix(pid)
+          .then(m => m.createPollRoom(pid, title)).then(async () => {
           // Set deadline (if present)
           if (p.due) {
-            await this.matrixService.setPollDeadline(pid, p.due.toISOString());
+            await (await this.poll_matrix(pid)).setPollDeadline(pid, p.due.toISOString());
           }
 
           // Move data from user cache to Matrix poll room.
@@ -1739,7 +2176,7 @@ export class DataService implements OnDestroy {
                   // events exist. The delu() is called below after addOption()
                   // succeeds for each option.
                 } else {
-                  await this.matrixService.setPollData(pid, key, value as string);
+                  await (await this.poll_matrix(pid)).setPollData(pid, key, value as string);
                   // Also store in poll_caches so getp() finds it immediately
                   this.ensure_poll_cache(pid);
                   this.poll_caches[pid][key] = value as string;
@@ -1755,7 +2192,7 @@ export class DataService implements OnDestroy {
           for (const [oid, fields] of Object.entries(optionData)) {
             console.error("OPTION_DEBUG change_poll_state: sending option oid=" + oid + " fields=" + JSON.stringify(fields));
             if (fields['name']) {
-              await this.matrixService.addOption(pid, oid, {
+              await (await this.poll_matrix(pid)).addOption(pid, oid, {
                 name: fields['name'],
                 description: fields['desc'] || '',
                 url: fields['url'] || ''
@@ -1784,7 +2221,7 @@ export class DataService implements OnDestroy {
           // because lockPollMetadata raises m.room.vodle.poll.state to
           // power 100 so the creator (50) can no longer send it.
           if (new_state != 'draft' && new_state != 'closing') {
-            await this.matrixService.changePollState(pid, new_state);
+            await (await this.poll_matrix(pid)).changePollState(pid, new_state);
           }
           
           // Start real-time sync so the creator receives rating updates
@@ -1846,12 +2283,68 @@ export class DataService implements OnDestroy {
       // poll-cache synchronously so local reads see the new state immediately.
       if (old_state == 'draft') {
         this.ensure_poll_cache(pid)['state'] = new_state;
+      } else if (environment.useMatrixBackend && new_state == 'closed') {
+        // the shared "closed" fact is the guard bot's to write on the Matrix
+        // backend (#325): the room's state is locked for participants once
+        // the poll runs, so this is only recorded locally
+        this.ensure_poll_cache(pid)['state'] = new_state;
       } else {
         this._setp_in_polldb(pid, 'state', new_state);
       }
     }
     this.setu(prefix + 'state', new_state);
     this.G.L.exit("DataService.change_poll_state");
+  }
+
+  /**
+   * Wait for the guard bot to close the poll on the server (#325). It closes
+   * every voter room first and then writes the poll room's closed state, so
+   * from that event on the ratings cannot change and every client reads
+   * the same ones. Resolves with the closing event's id — or, without a
+   * guard bot, with closed=false after closing.matrix_closure_timeout_ms:
+   * the poll is then closed by convention, as it was before.
+   */
+  async wait_for_matrix_poll_closure(pid: string, is_current: () => boolean = () => true):
+      Promise<{closed: boolean; event_id: string | null}> {
+    const started = Date.now();
+    for (;;) {
+      if (this.shutting_down || !is_current()) {
+        throw new Error("poll finalization cancelled");
+      }
+      try {
+        const closure = await (await this.poll_matrix(pid)).getPollClosure(pid);
+        if (closure.closed) {
+          this.G.L.info("DataService.wait_for_matrix_poll_closure: the poll is closed on the server", pid, closure.event_id);
+          return closure;
+        }
+      } catch (err) {
+        this.G.L.warn("DataService.wait_for_matrix_poll_closure could not read the poll room's state", pid, err);
+      }
+      if (Date.now() - started >= environment.closing.matrix_closure_timeout_ms) {
+        this.G.L.warn("DataService.wait_for_matrix_poll_closure: no guard bot closed the poll within the timeout, closing by convention", pid);
+        return {closed: false, event_id: null};
+      }
+      await new Promise(resolve => window.setTimeout(resolve, environment.closing.matrix_closure_poll_ms));
+    }
+  }
+
+  /**
+   * The final ratings as the server has them, bridged into the caches the
+   * tally works from (#325): what the live handlers did while the poll ran,
+   * once more and completely, before the final tally.
+   */
+  async reconcile_matrix_ratings(pid: string): Promise<void> {
+    const ratings = await (await this.poll_matrix(pid)).refreshRatings(pid);
+    const cache = this.ensure_poll_cache(pid);
+    let count = 0;
+    for (const [vid, per_option] of ratings) {
+      for (const [oid, rating] of per_option) {
+        cache[this.get_voter_key_prefix(pid, vid) + 'rating.' + oid] = String(rating);
+        this.G.P.update_own_rating(pid, vid, oid, rating, false);
+        count++;
+      }
+    }
+    this.G.L.info("DataService.reconcile_matrix_ratings", pid, ratings.size, "voters,", count, "ratings");
   }
 
   private async confirm_draft_migration_marker(pid: string, state: string): Promise<void> {
@@ -2252,35 +2745,11 @@ export class DataService implements OnDestroy {
     }
   }
 
-  private async restoreUserDataFromMatrix(): Promise<void> {
-    /** Take over what this user's Matrix user room holds and the local cache
-     *  lacks — the restore of settings, poll memberships (their passwords and
-     *  voter ids) and keys on a second device, or after clearing the browser
-     *  (#293). Local values win: they are what the user currently sees, and
-     *  the push in syncUserCacheToMatrix has just made them the newest. */
-    let restored = 0;
-    try {
-      const remote = await this.matrixService.getAllUserData();
-      for (const [key, value] of Object.entries(remote)) {
-        if (local_only_user_keys.includes(key)) { continue; }
-        const local = this.user_cache[key];
-        if (local === undefined || local === null || local === '') {
-          this.user_cache[key] = value;
-          restored++;
-        }
-      }
-    } catch (err) {
-      this.G.L.error("DataService.restoreUserDataFromMatrix failed, continuing with local data", err);
-      return;
-    }
-    this.G.L.info("DataService.restoreUserDataFromMatrix restored", restored, "keys");
-  }
-
   get_poll_origin_server(pid: string): Promise<string> {
     /** Matrix backend: the server_name of the homeserver this poll's room
      *  lives on, which a magic link must name so that users of OTHER
      *  homeservers can join the poll (#293). */
-    return this.matrixService.getPollOrigin(pid);
+    return this.poll_matrix(pid).then(m => m.getPollOrigin(pid));
   }
 
   replicate_once(pid: string): Promise<boolean> {
@@ -2432,22 +2901,139 @@ export class DataService implements OnDestroy {
 
   // HOOKS FOR PAGES:
 
-  login_submitted() {
+  login_submitted(as_guest = false) {
     // called by login page when all necessary login information was submitted on the login page
-    this.G.L.entry("DataService.login_submitted");
+    this.G.L.entry("DataService.login_submitted", as_guest);
     this.show_loading();
     if ((this.user_cache['db']||'')=='') {
       this.G.S.db = 'central';
     }
     this.G.add_spinning_reason("login");
+    this.guest_login_pending = false;
+    // (the setters are cleared and re-set so that they fire even for
+    // unchanged values; the intermediate empty credentials are no identity.
+    // When the credentials differ from the ones this device used until now
+    // — a guest's (#193), an earlier account's — the first change already
+    // recorded those as the origin of a data move, see
+    // note_credentials_change; email_and_password_exist performs it, #330)
     const language = this.G.S.language,
           email = this.G.S.email,
           password = this.G.S.password;
+    (this as any).boot_log?.("re-setting the credentials");
     this.G.S.language = this.G.S.email = this.G.S.password = "";
+    (this as any).boot_log?.("credentials cleared");
     this.G.S.language = language;
+    (this as any).boot_log?.("language set");
     this.G.S.email = email;
     this.G.S.password = password;
+    (this as any).boot_log?.("credentials set");
+    this.setu('guest', as_guest ? '1' : '');
     this.email_and_password_exist();
+  }
+
+  login_as_guest() {
+    /** Take part with a throw-away account whose credentials only this
+     *  device knows (#193): from the login page's guest button, and on the
+     *  first visit of a magic link. A later login with a real account moves
+     *  the guest's data and voter rooms to it (perform_user_data_move).
+     *
+     *  Logged step by step, because this is where a magic link opened on a
+     *  fresh device spent nine seconds with no network traffic at all in the
+     *  owner's report, and the code below reads as if none of it could cost
+     *  anything: the next log says which line does (#327). */
+    this.G.L.entry("DataService.login_as_guest");
+    (this as any).boot_log?.("creating a guest for this magic link");
+    const {email, password} = DataService.guest_credentials();
+    (this as any).boot_log?.("guest credentials generated");
+    this.G.S.password = password;
+    this.G.S.email = email;
+    (this as any).boot_log?.("guest credentials recorded");
+    if (environment.privacy_statement_url) {
+      // nobody has consented to anything yet: the poll page asks before
+      // the first rating is stored (consent_pending)
+      this.setu('consent', '0');
+    } else {
+      this.record_consent();
+    }
+    (this as any).boot_log?.("consent recorded");
+    this.G.S.default_wap = 10;
+    this.guest_login_in_progress = true;
+    this.login_submitted(true);
+  }
+
+  static guest_credentials(): {email: string, password: string} {
+    /** Random credentials for a guest account (#193): about 115 bits in the
+     *  password, 50 in the address. (Until 2026-09-10 a guest was "Guest"
+     *  plus a number below a million, used as password AND address, so every
+     *  guest account could be enumerated.) The password satisfies the app's
+     *  password pattern, and the alphabet leaves out 0/O/1/l/I, since the
+     *  credentials may have to be typed on another device. */
+    const alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const random_string = (length: number): string => {
+      let result = '';
+      while (result.length < length) {
+        const bytes = new Uint8Array(2 * length);
+        crypto.getRandomValues(bytes);
+        for (const byte of bytes) {
+          // rejection sampling keeps the letters equally likely:
+          if (byte < 4 * alphabet.length && result.length < length) {
+            result += alphabet[byte % alphabet.length];
+          }
+        }
+      }
+      return result;
+    };
+    let password = random_string(20);
+    while (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+      password = random_string(20);
+    }
+    return {email: 'guest-' + random_string(10).toLowerCase() + '@vodle.it', password};
+  }
+
+  record_consent() {
+    // store privacy consent in database:
+    this.setu('consent', consent_statement);
+  }
+
+  /** Whether the consent to the privacy statement is still to be given
+   *  (#193): a guest is created silently when a magic link is opened, and
+   *  the poll page then shows the consent question and stores no rating
+   *  until it is answered. Nothing is pending when the deployment has no
+   *  privacy statement; a user who withdrew the consent in the settings is
+   *  asked the same way. */
+  get consent_pending(): boolean {
+    return !!environment.privacy_statement_url && this.getu('consent') == '0';
+  }
+
+  change_credentials(changes: {email?: string, password?: string}): Promise<void> {
+    /** The settings page's way of changing e-mail address or password
+     *  (#330): what the old credentials own moves to the new ones — on the
+     *  Matrix backend a new password is set on the homeserver and the user
+     *  room re-encrypted, a new address means another account, which takes
+     *  over the voter rooms and the data; on CouchDB the user documents are
+     *  re-written under the new identity and the user db connected anew. */
+    this.G.L.entry("DataService.change_credentials");
+    if (changes.email !== undefined) {
+      this.G.S.email = changes.email;
+    }
+    if (changes.password !== undefined) {
+      this.G.S.password = changes.password;
+    }
+    const move = this.pending_user_data_move();   // recorded by note_credentials_change
+    if (!move || !this.credentials_snapshot()) {
+      return Promise.resolve();
+    }
+    // a guest who gives an address of their own becomes a regular user:
+    this.setu('guest', '');
+    return this.perform_user_data_move(move)
+      .then(() => {
+        if (!environment.useMatrixBackend) {
+          return this.reconnect_user_db().then(() => {});
+        }
+      })
+      .catch(err => {
+        this.G.L.error("DataService.change_credentials: the move failed, it is retried at the next start", err);
+      });
   }
 
   // REMOTE CONNECTION METHODS:
@@ -2686,7 +3272,7 @@ export class DataService implements OnDestroy {
           this.user_sync_start_pending = false;
           return;
         }
-        if (!this.local_synced_user_db) {
+        if (!this._local_synced_user_db) {
           this.user_sync_start_pending = false;
           return;
         }
@@ -2816,12 +3402,48 @@ export class DataService implements OnDestroy {
               }
               const pkey = this.get_voter_key_prefix(pollId, vid) + 'rating.' + optionId;
               this.poll_caches[pollId][pkey] = String(rating);
+              const poll = this.G.P.polls[pollId];
+              if (poll && !(optionId in poll.options)) {
+                // A rating can arrive before this poll's Option objects
+                // exist — the live handlers are registered before
+                // load_poll_contents has read the options. Tallying it then
+                // throws on the missing Option and aborts the whole tally
+                // (#327). The value is in poll_caches above, and
+                // load_poll_contents bridges every rating into the tally
+                // once the options are there, so it is not lost:
+                this.G.L.info("DataService Matrix onRatingUpdate before the option exists",
+                  pollId, optionId);
+                return;
+              }
               // Feed the tally system — update_own_rating is idempotent (no-op if
               // the value hasn't changed) and with update_tally=true it calls
               // tally_all() which recomputes scores and updates the UI.
               this.G.P.update_own_rating(pollId, vid, optionId, rating, true);
             } catch (err) {
               this.G.L.error("DataService Matrix onRatingUpdate callback failed", pollId, err);
+            }
+          },
+          onOptionAdded: (pollId: string, oid: string, option: {name: string; description: string; url: string}) => {
+            // an option another participant added while the poll runs
+            // (#324): register it like doc2poll_cache does for CouchDB, so
+            // the Poll object gets an Option and the page (onDataChange
+            // follows) shows it
+            try {
+              this.G.L.info("DataService Matrix onOptionAdded", pollId, oid);
+              const cache = this.ensure_poll_cache(pollId);
+              cache['option.' + oid + '.oid'] = oid;
+              cache['option.' + oid + '.name'] = option.name || '';
+              cache['option.' + oid + '.desc'] = option.description || '';
+              cache['option.' + oid + '.url'] = option.url || '';
+              if (!(pollId in this._pid_oids)) {
+                this._pid_oids[pollId] = new Set();
+              }
+              this._pid_oids[pollId].add(oid);
+              if (pollId in this.G.P.polls && !(oid in this.G.P.polls[pollId].options)) {
+                new Option(this.G, this.G.P.polls[pollId], oid);
+              }
+            } catch (err) {
+              this.G.L.error("DataService Matrix onOptionAdded callback failed", pollId, oid, err);
             }
           },
           onDataChange: () => {
@@ -2844,9 +3466,13 @@ export class DataService implements OnDestroy {
           }
         };
         this._matrixPollListeners[pid] = listener;
-        this.matrixService.addPollEventListener(pid, listener);
+        this.poll_matrix(pid).then(m => m.addPollEventListener(pid, listener)).catch(err => {
+          this.G.L.error("DataService could not register the poll's listeners", pid, err);
+        });
       }
-      this.matrixService.setupPollEventHandlers(pid).catch(err => {
+      // only the poll room's handlers: discovering and joining this poll's
+      // voter rooms waits until the poll is opened (#327, ensure_poll_loaded)
+      this.poll_matrix(pid).then(m => m.setupPollRoomHandlers(pid)).catch(err => {
         this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
       });
       result = true;
@@ -3017,7 +3643,7 @@ export class DataService implements OnDestroy {
     // Phase 14: Tear down Matrix event handlers
     if (environment.useMatrixBackend) {
       delete this._matrixPollListeners[pid];
-      this.matrixService.teardownPollEventHandlers(pid);
+      this.poll_matrix_promises[pid]?.then(m => m.teardownPollEventHandlers(pid)).catch(() => {});
       return;
     }
     if (pid in this.G.D.poll_db_sync_handlers && !!this.G.D.poll_db_sync_handlers[pid]) {
@@ -3193,18 +3819,26 @@ export class DataService implements OnDestroy {
     }
     this.user_cache[key] = value;
     this.G.L.trace("DataService.setu", key, value);
+    if (key == 'email' || key == 'password') {
+      this.note_credentials_change();
+    }
     
     // Phase 2: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      if (this.matrixService.isLoggedIn()) {
+      if (local_only_user_keys.includes(key)) {
+        // credentials and database settings never leave the device
+        // (syncUserDataWithMatrix and its restore skip them alike):
+        this.store_user_data(key, this.user_cache, key);
+      } else if (this.matrixService.isLoggedIn()) {
         // Sync to Matrix immediately
         this.G.L.info("DataService.setu syncing to Matrix:", key);
         this.matrixService.setUserData(key, value).catch(err => {
           this.G.L.error("DataService.setu Matrix sync failed", key, err);
         });
       } else {
-        // Should not happen - login is now blocking
-        this.G.L.error("DataService.setu Matrix not logged in, cannot sync:", key);
+        // before the login (the consent, the guest flag): pushed by
+        // syncUserDataWithMatrix right after it
+        this.G.L.trace("DataService.setu Matrix not logged in yet, synced after login:", key);
       }
       
       // Skip CouchDB storage when using Matrix backend
@@ -3328,7 +3962,17 @@ export class DataService implements OnDestroy {
       // Non-draft, non-userdb key: store in local cache and sync to Matrix
       this.ensure_poll_cache(pid);
       this.poll_caches[pid][key] = value;
-      this.matrixService.setPollData(pid, key, value).catch(err => {
+      if (key.startsWith('option.')) {
+        // an option added while the poll runs. Not a state event: the room's
+        // state is locked once the poll runs (lockPollMetadata), and the
+        // other clients read options from the timeline only. One
+        // m.room.vodle.poll.option timeline event carries all of the
+        // option's fields, sent once the Option constructor has set them
+        // all (#324, the Matrix side of #163):
+        this.schedule_matrix_option_event(pid, key);
+        return true;
+      }
+      this.poll_matrix(pid).then(m => m.setPollData(pid, key, value)).catch(err => {
         this.G.L.error("DataService.setp Matrix sync failed", pid, key, err);
       });
       return true;
@@ -3345,6 +3989,38 @@ export class DataService implements OnDestroy {
     } else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
+  }
+
+  /** timers of options whose fields are still being set, by "<pid>:<oid>" */
+  private pending_matrix_options: Record<string, ReturnType<typeof setTimeout>> = {};
+
+  /**
+   * Send an option added to a running poll to Matrix as ONE timeline event
+   * (MatrixService.addOption) once the current task has set all of its
+   * fields: the Option constructor calls setp for oid, name, desc and url in
+   * a row, and the event is immutable, so it must carry all of them (#324).
+   */
+  private schedule_matrix_option_event(pid: string, key: string) {
+    const keyend = key.slice('option.'.length), oid = keyend.slice(0, keyend.indexOf('.')),
+          mkey = pid + ':' + oid;
+    if (!oid || mkey in this.pending_matrix_options) {
+      return;
+    }
+    this.pending_matrix_options[mkey] = setTimeout(() => {
+      delete this.pending_matrix_options[mkey];
+      const cache = this.poll_caches[pid] || {}, name = cache['option.' + oid + '.name'];
+      if (!name) {
+        this.G.L.warn("DataService: option without a name not sent to Matrix", pid, oid);
+        return;
+      }
+      this.poll_matrix(pid).then(m => m.addOption(pid, oid, {
+        name,
+        description: cache['option.' + oid + '.desc'] || '',
+        url: cache['option.' + oid + '.url'] || ''
+      })).catch(err => {
+        this.G.L.error("DataService: sending the new option to Matrix failed", pid, oid, err);
+      });
+    }, 0);
   }
 
   delp(pid:string, key:string) {
@@ -3370,7 +4046,7 @@ export class DataService implements OnDestroy {
       } else {
         this.ensure_poll_cache(pid);
         delete this.poll_caches[pid][key];
-        this.matrixService.deletePollData(pid, key).catch(err => {
+        this.poll_matrix(pid).then(m => m.deletePollData(pid, key)).catch(err => {
           this.G.L.warn("DataService.delp Matrix delete failed", pid, key, err);
         });
       }
@@ -3566,7 +4242,7 @@ export class DataService implements OnDestroy {
         const pkey = this.get_voter_key_prefix(pid) + key;
         this.ensure_poll_cache(pid);
         const vid = this.getp(pid, 'myvid');
-        await this.matrixService.deleteVoterData(pid, vid, key);
+        await (await this.poll_matrix(pid)).deleteVoterData(pid, vid, key);
         delete this.poll_caches[pid][pkey];
       }
       return;
@@ -3628,6 +4304,9 @@ export class DataService implements OnDestroy {
     const ukey = get_poll_key_prefix(pid) + key;
     this.G.L.trace("DataService._setp_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
+    if (environment.useMatrixBackend) {
+      this.schedule_matrix_user_data_write(ukey);
+    }
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
 
@@ -3643,7 +4322,7 @@ export class DataService implements OnDestroy {
 
     // Phase 10: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
-      this.matrixService.setPollData(pid, key, value).catch(err => {
+      this.poll_matrix(pid).then(m => m.setPollData(pid, key, value)).catch(err => {
         this.G.L.error("DataService._setp_in_polldb Matrix sync failed", pid, key, err);
       });
       return true;
@@ -3661,6 +4340,9 @@ export class DataService implements OnDestroy {
     const ukey = get_poll_key_prefix(pid) + this.get_voter_key_prefix(pid) + key;
     this.G.L.trace("DataService._setv_in_userdb", pid, key, value);
     this.user_cache[ukey] = value;
+    if (environment.useMatrixBackend) {
+      this.schedule_matrix_user_data_write(ukey);
+    }
     return this.store_user_data(ukey, this.user_cache, ukey);
   }
 
@@ -3679,7 +4361,7 @@ export class DataService implements OnDestroy {
     // Phase 11: Delegate to Matrix if flag is set
     if (environment.useMatrixBackend) {
       const effectiveVid = vid || this.getp(pid, 'myvid');
-      this.matrixService.setVoterData(pid, effectiveVid, key, value).catch(err => {
+      this.poll_matrix(pid).then(m => m.setVoterData(pid, effectiveVid, key, value)).catch(err => {
         this.G.L.error("DataService.setv_in_polldb Matrix sync failed", pid, key, err);
       });
       return true;
@@ -4246,6 +4928,13 @@ export class DataService implements OnDestroy {
         // poll data shall be deleted locally
         this.G.L.debug("DataService.after_changes deleting old poll data", pid, due_str);
         this.stop_poll_sync(pid);
+        if (environment.useMatrixBackend) {
+          // and its rooms on the homeserver are left (#331):
+          this.poll_matrix(pid).then(m => m.leavePollRooms(pid))
+            .then(() => this.close_poll_matrix(pid)).catch(err => {
+            this.G.L.warn("DataService.after_changes could not leave the poll's rooms", pid, err);
+          });
+        }
         const expired_poll = this.G.P.polls[pid];
         if (!!expired_poll) {
           // cancel any pending deferred-finalization retry timer and remove
@@ -4435,6 +5124,15 @@ export class DataService implements OnDestroy {
         this.G.L.trace("DataService.check_whether_poll_or_option found new poll", pid);
         if (state == 'draft') {
           this._pids.add(pid);
+        } else if (environment.useMatrixBackend) {
+          // no local PouchDB on this backend: the poll's data lives in its
+          // Matrix room and the cache is filled from there. Going through
+          // ensure_local_poll_data would create a `local_poll_<pid>`
+          // database per poll, read it three times (info, allDocs, changes)
+          // and hold `_ready` false until those reads of an always-empty
+          // database came back — every start, for every poll the user room
+          // names (#327).
+          this.ensure_matrix_poll_known(pid);
         } else {
           this.ensure_local_poll_data(pid);
           initializing_poll = true;
@@ -5350,7 +6048,364 @@ export class DataService implements OnDestroy {
         this.G.L.error("DataService.move_user_data could not reconcile retired voter sources", err);
       });
     this.voter_mutation_admission = admission;
-    // TODO: move the remaining user data to the new database as well!
+    // The user data itself moves when new credentials are COMMITTED — by
+    // login_submitted() and change_credentials() (#330) — not on every
+    // keystroke in a credentials field, which also arrives here. A change
+    // of the database settings alone keeps the identity, so the existing
+    // documents stay valid; the user db is connected anew (CouchDB):
+    if (!environment.useMatrixBackend && this.credentials_snapshot() && !!this.remote_user_db
+        && old_values['email'] == this.user_cache['email'] && old_values['password'] == this.user_cache['password']) {
+      this.schedule_user_db_reconnection();
+    }
+    this.G.L.exit("DataService.move_user_data");
+  }
+
+  // Credential changes (#330). The credentials a device used until a change
+  // are recorded as a pending move (a device-local key) until the move has
+  // completed, so that an interrupted move — a closed browser, an
+  // unreachable server — is resumed at the next start; every step of a
+  // move is idempotent.
+
+  private credentials_snapshot(): credentials_t | null {
+    const email = this.user_cache['email'] || '', password = this.user_cache['password'] || '';
+    if (!email || !password) {
+      return null;
+    }
+    return {email, password, guest: this.user_cache['guest'] == '1'};
+  }
+
+  private note_credentials_change() {
+    /** The credentials differ from the ones in use: remember the latter as
+     *  the origin of a data move — once, at the first change, so that
+     *  typing new credentials into the login or settings page records the
+     *  credentials the data is owned by, not an intermediate value. */
+    const committed = this.committed_credentials;
+    if (!committed || this.pending_user_data_move()) {
+      return;
+    }
+    const now = this.credentials_snapshot();
+    if (now && (now.email != committed.email || now.password != committed.password)) {
+      this.G.L.info("DataService.note_credentials_change: the credentials change, recording a data move");
+      this.record_pending_user_data_move(committed);
+    }
+  }
+
+  private record_pending_user_data_move(previous: credentials_t) {
+    this.user_cache['pending_user_data_move'] = JSON.stringify({...previous, attempts: 0});
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    this.save_state();
+  }
+
+  pending_user_data_move(): credentials_t | null {
+    const stored = this.user_cache['pending_user_data_move'];
+    if (!stored) {
+      return null;
+    }
+    try {
+      const move = JSON.parse(stored);
+      return (move && move.email && move.password) ? move : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  private clear_pending_user_data_move() {
+    this.user_cache['pending_user_data_move'] = '';
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    delete this.user_cache['pending_user_data_move'];
+    this.save_state();
+  }
+
+  async perform_user_data_move(from: credentials_t): Promise<void> {
+    /** Move the user's data from the credentials `from` to the current ones
+     *  (#330). Matrix: a changed password is changed on the homeserver and
+     *  the user room re-encrypted; a changed e-mail address names another
+     *  Matrix account, so the voter rooms are handed over to it and the
+     *  user data written to its user room (which is also how a guest's data
+     *  reaches the account the guest logs in with later, #193). CouchDB:
+     *  the user documents are re-written under the new identity. The
+     *  pending record is cleared only once the move has completed; a move
+     *  that keeps failing is given up after three attempts. */
+    const to = this.credentials_snapshot();
+    if (!to) {
+      // logged out meanwhile; the record stays for the next login
+      return;
+    }
+    if (from.email == to.email && from.password == to.password) {
+      this.clear_pending_user_data_move();
+      this.committed_credentials = to;
+      return;
+    }
+    const attempts = (from.attempts || 0) + 1;
+    if (attempts > 3) {
+      this.G.L.error("DataService.perform_user_data_move giving up after", attempts - 1, "failed attempts");
+      this.clear_pending_user_data_move();
+      return;
+    }
+    this.user_cache['pending_user_data_move'] = JSON.stringify({...from, attempts});
+    this.store_user_data('pending_user_data_move', this.user_cache, 'pending_user_data_move');
+    this.G.L.info("DataService.perform_user_data_move attempt", attempts, from.guest ? "(from a guest account)" : "");
+    this.G.add_spinning_reason("user-data-move");
+    try {
+      if (environment.useMatrixBackend) {
+        await this.move_matrix_user_data(from, to);
+      } else {
+        await this.move_couchdb_user_data(from, to);
+      }
+      this.clear_pending_user_data_move();
+      this.committed_credentials = to;
+      this.G.L.info("DataService.perform_user_data_move completed");
+    } finally {
+      this.G.remove_spinning_reason("user-data-move");
+    }
+  }
+
+  /** every poll account's password follows the user's own (#327) */
+  private async change_poll_account_passwords(
+      matrix: MatrixService, from_password: string, to_password: string): Promise<void> {
+    for (const pid of this._pids) {
+      const vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
+      if (!vid) { continue; }
+      try {
+        await matrix.changePollAccountPassword(pid, vid, from_password, to_password);
+      } catch (error) {
+        // one poll that cannot be reached must not strand the whole move;
+        // the account keeps the old password and says so in the log
+        this.G.L.error("DataService: a poll account's password did not change", pid, error);
+      }
+    }
+  }
+  
+  private async move_matrix_user_data(from: credentials_t, to: credentials_t): Promise<void> {
+    const matrix = this.matrixService;
+    // First, before anything can leave the old password behind: every poll
+    // account's password is derived from the user's (pollAccountPassword),
+    // so a password change locks the user out of every poll they take part
+    // in unless the accounts follow. The accounts themselves do not change
+    // — they are named after poll and vid, not the e-mail — so the rooms,
+    // the ratings and the tally are untouched, and an e-mail change alone
+    // needs nothing here at all (#327).
+    if (from.password !== to.password) {
+      await this.change_poll_account_passwords(matrix, from.password, to.password);
+    }
+    if (hashEmail(from.email) == hashEmail(to.email)) {
+      // the same account, only the password changed — from which the
+      // homeserver password is derived and under which the user room's
+      // data is encrypted:
+      if (!matrix.isLoggedIn()) {
+        // resuming after a restart: the homeserver has the new password
+        // when the interrupted attempt got that far, else still the old one
+        let has_new_password = true;
+        try {
+          await matrix.login(to.email, to.password, false);
+        } catch (err) {
+          has_new_password = false;
+          await matrix.login(to.email, from.password, false);
+        }
+        if (!has_new_password) {
+          await matrix.changePassword(to.email, from.password, to.password);
+        }
+      } else {
+        await matrix.changePassword(to.email, from.password, to.password);
+      }
+      await this.syncUserDataWithMatrix(true);
+      return;
+    }
+    // another account, named by the new address: it takes over the voter
+    // rooms (same voter ids, so the tally does not change) and the data;
+    // a guest account is deactivated afterwards
+    const old_session = await matrix.sessionFor(from.email, from.password);
+    await matrix.dropSession();
+    await matrix.login(to.email, to.password);
+    await matrix.takeOverVoterRooms(old_session, this.my_voter_room_entries());
+    await this.syncUserDataWithMatrix(true);
+    if (from.guest) {
+      await matrix.retireSession(old_session, from.email, from.password, true);
+    }
+    await this.reconnect_matrix_polls();
+  }
+
+  private my_voter_room_entries(): Array<{pollId: string, vid: string}> {
+    /** the (poll, own voter id) pairs of the running polls this user takes
+     *  part in, whose voter rooms an account switch hands over */
+    const entries: Array<{pollId: string, vid: string}> = [];
+    for (const key of Object.keys(this.user_cache)) {
+      const match = /^poll\.([^.]+)\.myvid$/.exec(key);
+      if (!match) {
+        continue;
+      }
+      const pid = match[1], vid = this.user_cache[key];
+      if (!vid || this.pid_is_draft(pid) || this.getp(pid, 'state') == 'closed') {
+        continue;
+      }
+      entries.push({pollId: pid, vid});
+    }
+    return entries;
+  }
+
+  private async reconnect_matrix_polls(): Promise<void> {
+    /** after an account switch mid-session: the polls' Matrix wiring
+     *  belonged to the old session, so every connected poll is joined and
+     *  wired anew */
+    for (const pid of Array.from(this._pids)) {
+      if (!this._matrixPollListeners[pid]) {
+        continue;
+      }
+      this.stop_poll_sync(pid);
+      try {
+        await this.connect_to_remote_poll_db(pid, false);
+      } catch (err) {
+        this.G.L.error("DataService.reconnect_matrix_polls could not reconnect", pid, err);
+      }
+    }
+  }
+
+  private async move_couchdb_user_data(from: credentials_t, to: credentials_t): Promise<void> {
+    /** The user documents' ids carry the hash of e-mail address and
+     *  password and their values are encrypted with the password, so they
+     *  are re-written under the new identity: from the cache, which holds
+     *  the decrypted data, or from the old documents where the cache lacks
+     *  a key. The copies under the old identity leave this device; the old
+     *  remote database keeps its copies, which the old credentials still
+     *  open on another device. Documents of voter sources with mutations
+     *  in flight are left to migrate_retired_voter_sources (#292). */
+    const old_hash = this.get_email_and_pw_hash(from.email, from.password),
+          new_hash = this.get_email_and_pw_hash(to.email, to.password);
+    if (!old_hash || !new_hash || old_hash == new_hash) {
+      return;
+    }
+    // nothing written below may still reach the old remote db:
+    this.user_sync_start_pending = false;
+    this.user_sync_start_generation += 1;
+    if (this.user_db_sync_handler) {
+      try {
+        this.user_db_sync_handler.cancel();
+      } catch (err) {
+        this.G.L.warn("DataService.move_couchdb_user_data could not cancel the user data sync", err);
+      }
+      this.user_db_sync_handler = null;
+    }
+    this.remote_user_db = null;
+    const db = this.local_synced_user_db;
+    const old_prefix = user_doc_id_prefix + old_hash + '§', new_prefix = user_doc_id_prefix + new_hash + '§';
+    const old_docs = await db.allDocs({include_docs: true, startkey: old_prefix, endkey: user_doc_id_prefix + old_hash + '¨'});
+    const values: Record<string, string> = {};
+    for (const row of old_docs.rows) {
+      const key = row.id.slice(old_prefix.length);
+      try {
+        values[key] = user_keys_unencrypted.includes(key) ? row.doc.value : decrypt(row.doc.value, from.password);
+      } catch (err) {
+        this.G.L.warn("DataService.move_couchdb_user_data could not decrypt an old document", key);
+      }
+    }
+    const in_flight = new Set(Object.keys(this.voter_mutation_tails));
+    for (const key of Object.keys(this.user_cache)) {
+      if (!local_only_user_keys.includes(key) && key != 'user_last_seq' && (this.user_cache[key] ?? '') !== '') {
+        values[key] = this.user_cache[key];
+      }
+    }
+    const keys = Object.keys(values).filter(key => !in_flight.has(key) && (values[key] ?? '') !== '');
+    const existing = keys.length ? await db.allDocs({keys: keys.map(key => new_prefix + key)}) : {rows: []};
+    const revs: Record<string, string> = {};
+    for (const row of existing.rows) {
+      if (row.value && row.value.rev && !row.value.deleted) {
+        revs[row.id] = row.value.rev;
+      }
+    }
+    const docs = keys.map(key => ({
+      _id: new_prefix + key,
+      ...(revs[new_prefix + key] ? {_rev: revs[new_prefix + key]} : {}),
+      value: user_keys_unencrypted.includes(key) ? values[key] : encrypt(values[key], to.password),
+    }));
+    if (docs.length) {
+      await db.bulkDocs(docs);
+    }
+    const deletions = old_docs.rows
+      .filter(row => !in_flight.has(row.id.slice(old_prefix.length)))
+      .map(row => ({_id: row.id, _rev: row.value.rev, _deleted: true}));
+    if (deletions.length) {
+      await db.bulkDocs(deletions);
+    }
+    this.G.L.info("DataService.move_couchdb_user_data re-wrote", docs.length, "documents, removed", deletions.length);
+  }
+
+  private user_db_reconnection_timer: any = null;
+
+  private schedule_user_db_reconnection() {
+    if (this.user_db_reconnection_timer) {
+      clearTimeout(this.user_db_reconnection_timer);
+    }
+    this.user_db_reconnection_timer = setTimeout(() => {
+      this.user_db_reconnection_timer = null;
+      this.reconnect_user_db().catch(err => {
+        this.G.L.warn("DataService.schedule_user_db_reconnection failed", err);
+      });
+    }, 1000);
+  }
+
+  private reconnect_user_db(): Promise<any> {
+    /** CouchDB: connect the user db anew after the credentials or the
+     *  database settings changed (#330). Quiet: a failure is logged, the
+     *  next start asks for credentials as usual. */
+    if (environment.useMatrixBackend || this.shutting_down) {
+      return Promise.resolve(false);
+    }
+    this.user_sync_start_pending = false;
+    this.user_sync_start_generation += 1;
+    if (this.user_db_sync_handler) {
+      try {
+        this.user_db_sync_handler.cancel();
+      } catch (err) {
+        this.G.L.warn("DataService.reconnect_user_db could not cancel the user data sync", err);
+      }
+      this.user_db_sync_handler = null;
+    }
+    this.remote_user_db = null;
+    if (!this.has_user_db_credentials()) {
+      return Promise.resolve(false);
+    }
+    return this.connect_to_remote_user_db(true);
+  }
+
+  // Matrix: the poll membership keys (voter id, poll password, drafts…)
+  // are written to the user room like the settings, coalesced so that
+  // editing a draft does not send a state event per keystroke (#330):
+
+  private pending_matrix_user_data: Set<string> = new Set();
+  private matrix_user_data_timer: any = null;
+
+  private schedule_matrix_user_data_write(key: string) {
+    this.pending_matrix_user_data.add(key);
+    if (this.matrix_user_data_timer) {
+      return;
+    }
+    this.matrix_user_data_timer = setTimeout(() => {
+      this.matrix_user_data_timer = null;
+      this.flush_matrix_user_data().catch(err => {
+        this.G.L.warn("DataService.flush_matrix_user_data failed", err);
+      });
+    }, environment.data_service?.matrix_user_data_delay_ms ?? 1000);
+  }
+
+  private async flush_matrix_user_data(): Promise<void> {
+    if (this.shutting_down || !this.matrixService?.isLoggedIn()) {
+      // pushed by syncUserDataWithMatrix at the next login
+      return;
+    }
+    const keys = Array.from(this.pending_matrix_user_data);
+    this.pending_matrix_user_data.clear();
+    for (const key of keys) {
+      const value = this.user_cache[key];
+      try {
+        if (value === undefined || value === null || value === '') {
+          await this.matrixService.deleteUserData(key);
+        } else {
+          await this.matrixService.setUserData(key, value);
+        }
+      } catch (err) {
+        this.G.L.warn("DataService.flush_matrix_user_data could not write", key, err);
+      }
+    }
   }
 
   private async migrate_retired_voter_sources(keys: string[], old_hash: string | null): Promise<void> {
@@ -5452,7 +6507,9 @@ export class DataService implements OnDestroy {
       // TODO: wait for all syncs to finish
       // delete all local dbs:
       this.G.L.info("Deleting local databases...");
-      mutations_finished.then(() => this.local_synced_user_db.destroy())
+      // only if it was ever opened: asking for it would open it to destroy it
+      mutations_finished.then(() => this._local_synced_user_db
+          ? this._local_synced_user_db.destroy() : Promise.resolve())
       .then(() => {
         this.local_only_user_DB.destroy()
         .then(() => {

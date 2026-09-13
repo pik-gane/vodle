@@ -52,6 +52,10 @@ export function global_service_stub(): any {
     map2str: (map: any) => '' + map,
     go_home: () => {},
     go_fullscreen_on_mobile: () => {},
+    // the handover of a deployment (environment.handover): none by default
+    successor_url: '',
+    predecessor_url: '',
+    show_successor_notice: async () => false,
     S: {
       language: 'en',
       email: '',
@@ -79,6 +83,8 @@ export function global_service_stub(): any {
     D: {
       ready: false,
       replication_is_stalled: false,
+      sync_pending: false,
+      sync_is_stalled: false,
       save_state: () => {},
       fix_url: (url: string) => url,
       format_date: () => '',
@@ -87,6 +93,8 @@ export function global_service_stub(): any {
       getv: () => '',
       email_is_valid: () => false,
       pid_is_draft: () => false,
+      // the join page asks for a guest when it has been waiting (#193, #327)
+      ensure_guest_for_magic_link: () => {},
     },
     P: {
       polls: {},
@@ -99,6 +107,7 @@ export function global_service_stub(): any {
     N: {
       dismiss: () => {},
       unseen: () => [],
+      filter: () => [],
     },
     Del: {},
   };

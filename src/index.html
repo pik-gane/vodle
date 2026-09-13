@@ -41,6 +41,15 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- add to homescreen for ios -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <!-- The start's first stopwatch, before any bundle has run. A join that
+       sat there for a minute with an empty console left no way to tell a
+       slow bundle from a slow app (#327); main.ts prints the second line
+       against this one. -->
+  <script>
+    window.vodle_page_start = Date.now();
+    console.log('[vodle boot] +0ms the page arrived');
+  </script>
 </head>
 
 <body>

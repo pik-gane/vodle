@@ -73,6 +73,8 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
       addPollEventListener: jasmine.createSpy('addPollEventListener'),
       removePollEventListener: jasmine.createSpy('removePollEventListener'),
       setupPollEventHandlers: jasmine.createSpy('setupPollEventHandlers').and.returnValue(Promise.resolve()),
+      setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers').and.returnValue(Promise.resolve()),
+      startVoterSync: jasmine.createSpy('startVoterSync').and.returnValue(Promise.resolve()),
       teardownPollEventHandlers: jasmine.createSpy('teardownPollEventHandlers'),
       // Phase 15: Delegation methods
       requestDelegation: jasmine.createSpy('requestDelegation').and.returnValue(Promise.resolve('del-id-123')),
@@ -800,7 +802,7 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
               this._matrixPollListeners[pid] = listener;
               this.matrixService.addPollEventListener(pid, listener);
             }
-            this.matrixService.setupPollEventHandlers(pid).catch((err: any) => {
+            this.matrixService.setupPollRoomHandlers(pid).catch((err: any) => {
               this.G.L.error("DataService Matrix poll sync setup failed", pid, err);
             });
             return true;
@@ -834,11 +836,11 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
         );
       });
 
-      it('should call setupPollEventHandlers for the poll', () => {
+      it('should call setupPollRoomHandlers for the poll', () => {
         const pid = 'test-poll-sync';
         syncHarness.start_poll_sync(pid);
 
-        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledWith(pid);
+        expect(mockMatrixService.setupPollRoomHandlers).toHaveBeenCalledWith(pid);
       });
 
       it('should register a listener whose onDataChange triggers page.onDataChange', () => {
@@ -867,8 +869,8 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
 
         // addPollEventListener should only be called once for the same pid
         expect(mockMatrixService.addPollEventListener).toHaveBeenCalledTimes(1);
-        // setupPollEventHandlers is safe to call repeatedly (idempotent)
-        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledTimes(3);
+        // setupPollRoomHandlers is safe to call repeatedly (idempotent)
+        expect(mockMatrixService.setupPollRoomHandlers).toHaveBeenCalledTimes(3);
       });
 
       it('should not set up PouchDB sync handlers when Matrix is active', () => {
@@ -920,17 +922,17 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
         const result = syncHarness.start_poll_sync(pid);
         expect(result).toBeTrue();
         expect(mockMatrixService.addPollEventListener).toHaveBeenCalledTimes(1);
-        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledWith(pid);
+        expect(mockMatrixService.setupPollRoomHandlers).toHaveBeenCalledWith(pid);
 
         syncHarness.stop_poll_sync(pid);
         expect(mockMatrixService.teardownPollEventHandlers).toHaveBeenCalledWith(pid);
       });
 
-      it('should handle setupPollEventHandlers failure gracefully', async () => {
+      it('should handle setupPollRoomHandlers failure gracefully', async () => {
         const pid = 'test-poll-fail';
         const errorSpy = jasmine.createSpy('error');
         syncHarness.G = { L: { ...mockDataService.G.L, error: errorSpy } };
-        mockMatrixService.setupPollEventHandlers.and.returnValue(
+        mockMatrixService.setupPollRoomHandlers.and.returnValue(
           Promise.reject(new Error('Room not found'))
         );
 
@@ -961,7 +963,7 @@ describe('DataService Matrix Wiring (Phases 10-16)', () => {
         expect(mockMatrixService.warmupCache).toHaveBeenCalledWith(pid);
         expect(result).toBeTrue();
         expect(mockMatrixService.addPollEventListener).toHaveBeenCalled();
-        expect(mockMatrixService.setupPollEventHandlers).toHaveBeenCalledWith(pid);
+        expect(mockMatrixService.setupPollRoomHandlers).toHaveBeenCalledWith(pid);
       });
     });
   });

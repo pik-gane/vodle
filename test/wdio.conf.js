@@ -70,7 +70,15 @@ exports.config = {
     'goog:chromeOptions': {
       binary: chrome_binary(),
       headless: true,
-      args: ['--headless=new', '--no-sandbox', '--disable-gpu', '--window-size=1280,900'],
+      // --disable-dev-shm-usage: Chrome's default shared-memory segment is
+      // small in a container and a browser that runs out of it dies at
+      // launch, which reaches wdio as "connect ECONNREFUSED" against the
+      // debugging port and no test body at all — what the run of 8707570
+      // showed. That is NOT a proven diagnosis of that run; the flag is
+      // the standard hardening for it, costs nothing, and is what the
+      // production click-through has always passed (#327).
+      args: ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage',
+             '--disable-gpu', '--window-size=1280,900'],
     },
   }],
   logLevel: 'warn',

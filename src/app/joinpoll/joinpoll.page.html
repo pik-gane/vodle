@@ -47,11 +47,26 @@ TODO:
   </ion-toolbar>
 </ion-header>
 
+<!-- a first visit of a magic link on a device without credentials takes
+     part as a guest silently (#193, DataService.login_as_guest); the
+     consent question, if any, waits on the poll page -->
+
 <ion-content *ngIf="!ready && !join_error">
   <ion-item class="ion-text-center" lines="none">
     <h3>
       <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
     </h3>
+  </ion-item>
+  <ion-item *ngIf="slow" class="ion-text-center" lines="none" data-vodle="join-poll-slow">
+    <h4>
+      <i [innerHtml]="'joinpoll.still-waiting'|translate"></i>&nbsp;
+    </h4>
+  </ion-item>
+  <!-- what it is doing, for a visitor with no console open (#327) -->
+  <ion-item *ngIf="slow && boot_stage" class="ion-text-center" lines="none" data-vodle="join-poll-stage">
+    <h4>
+      <i>{{boot_stage}} ({{boot_stage_seconds}}s)</i>&nbsp;
+    </h4>
   </ion-item>
   <ion-item class="ion-text-center" lines="none">
     <h1>
@@ -60,7 +75,7 @@ TODO:
   </ion-item>
 </ion-content>
 
-<ion-content *ngIf="join_error">
+<ion-content *ngIf="join_error" data-vodle="join-poll-error">
   <ion-item class="ion-text-center" color="danger" lines="none">
     <ion-col>
       <h3>Failed to join this poll</h3>

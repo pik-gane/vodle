@@ -1,0 +1,27 @@
+# vodle — TLS for the web container, added to docker-compose.prod.yml when
+# the host holds certificate files (.env: TLS_DIR, TLS_CERT, TLS_KEY):
+#
+#   docker compose --env-file .env -f docker-compose.prod.yml -f docker-compose.tls.yml up --build -d
+#
+# TLS_DIR is mounted as a whole (Let's Encrypt keeps symlinks in live/ that
+# point into archive/; a single mounted file would not follow them), and
+# nginx renders deploy/nginx-tls.conf.template with the two paths at start.
+# Renewed files are picked up by deploy/reload-tls.sh.
+
+services:
+  vodle-web:
+    ports:
+      - "${WEB_HTTP_PORT:-80}:80"
+      - "${WEB_HTTPS_PORT:-443}:443"
+    volumes:
+      - ${TLS_DIR:?TLS_DIR missing in .env}:/etc/nginx/tls:ro
+      - ./deploy/nginx-tls.conf.template:/etc/nginx/templates/vodle.conf.template:ro
+      - ${ACME_WEBROOT:-./deploy/acme}:/var/www/acme:ro
+    environment:
+      - TLS_CERT=${TLS_CERT:?TLS_CERT missing in .env}
+      - TLS_KEY=${TLS_KEY:?TLS_KEY missing in .env}
+      # where browsers reach this deployment, for the redirect from port 80;
+      # deploy/deploy.sh writes it into .env (the server name over https
+      # unless the deployment sits on another port or under another name)
+      - "TLS_PUBLIC_ORIGIN=${PUBLIC_ORIGIN:?PUBLIC_ORIGIN missing in .env (deploy/deploy.sh up writes it)}"
+      - NGINX_ENVSUBST_FILTER=^TLS_

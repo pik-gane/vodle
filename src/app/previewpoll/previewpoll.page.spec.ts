@@ -43,4 +43,13 @@ describe('PreviewpollPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+  // a deployment being retired starts no poll (environment.handover): the
+  // notice is shown and the draft stays a draft
+  it('does not start a poll on a retired deployment', async () => {
+    component.G.show_successor_notice = jasmine.createSpy('show_successor_notice').and.returnValue(Promise.resolve(true));
+    (component as any).p = jasmine.createSpyObj('Poll', ['set_db_credentials', 'init_password', 'init_myvid']);
+    await component.publish_button_clicked();
+    expect(component.G.show_successor_notice).toHaveBeenCalled();
+    expect((component as any).p.set_db_credentials).not.toHaveBeenCalled();
+  });
 });

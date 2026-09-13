@@ -82,8 +82,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
-      <!-- SYNC STALLED SIGN: the replication watchdog found a sync without progress and is restarting it (#292) -->
-      <ion-icon *ngIf="G.D.replication_is_stalled" name="warning-outline" color="warning"
+      <!-- SYNC PENDING SIGN: changes of ours that the server has not confirmed yet (#327) -->
+      <ion-spinner *ngIf="G.D.sync_pending && !G.D.sync_is_stalled" name="circular" color="medium"
+        style="width: 18px; height: 18px; vertical-align: middle;"
+        [title]="'sync-pending'|translate" data-vodle="sync-pending-sign"></ion-spinner>
+
+      <!-- SYNC STALLED SIGN: a replication without progress (#292), or writes
+           the Matrix homeserver has not taken for a while (#327). Neither is a
+           loss: both are retried until they go through. -->
+      <ion-icon *ngIf="G.D.sync_is_stalled" name="warning-outline" color="warning"
         [title]="'sync-stalled'|translate" data-vodle="sync-stalled-sign"></ion-icon>
 
       <!-- TRANSMITTED SIGN -->
@@ -98,7 +105,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
         </span><ion-button class="ion-no-margin ion-no-padding"
-            [disabled]="!E.delegation.enabled"
+            [disabled]="!E.delegation.enabled || consent_pending"
             style="position: relative; right: -4px;"
             shape="round" fill="solid" color="primary">
           <ion-icon class="ion-no-margin ion-no-padding" src="./assets/icon/delegate-simple.svg">
@@ -111,6 +118,21 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 </ion-header>
 
 <!-- SCROLLABLE CONTENT: -->
+
+<!-- a poll opened on a device that holds nothing of it yet (#327): its
+     contents are being fetched -->
+<ion-content *ngIf="loading_contents" data-vodle="poll-loading-contents">
+  <ion-item class="ion-text-center" lines="none">
+    <h3>
+      <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
+    </h3>
+  </ion-item>
+  <ion-item class="ion-text-center" lines="none">
+    <h1>
+      <ion-spinner name="crescent" size="large"></ion-spinner>
+    </h1>
+  </ion-item>
+</ion-content>
 
 <ion-content *ngIf="ready && !!p" 
     (pointerup)="onBodyPointerup($event)"
@@ -144,6 +166,18 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-item>
       </ion-card-content>
     </ion-card>
+
+    <!-- GUEST ACCOUNT (#193): -->
+
+    <ion-item *ngIf="G.S.use_guest" color="warning" class="ion-no-margin item-text-wrap" lines="none" data-vodle="guest-banner">
+      <ion-label class="ion-text-wrap">
+        <small [innerHtml]="'poll.guest-banner'|translate"></small>
+      </ion-label>
+      <ion-button slot="end" size="small" fill="solid" color="primary" shape="round" data-vodle="guest-login-button"
+          (click)="login_clicked()">
+        <span [innerHtml]="'poll.guest-login-button'|translate"></span>
+      </ion-button>
+    </ion-item>
 
     <!-- GENERAL POLL INFORMATION -->
 
@@ -207,7 +241,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <!-- ASSIST BUTTON: -->
 
-            <ion-button *ngIf="p.allow_voting"
+            <ion-button *ngIf="p.allow_voting" [disabled]="consent_pending"
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px; margin-bottom:5px!important;">
@@ -723,7 +757,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                     <!-- TODO: sometimes looks strange in Chrome (white shadowed large knob, bar displaced too low)-->
                     <ion-range 
-                        [disabled]="!p.allow_voting"
+                        [disabled]="!p.allow_voting || consent_pending"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                         [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
                         [value]="p.get_my_proxy_rating(oidsorted[i])" 
@@ -942,14 +976,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         <ion-item lines="none" class="ion-no-padding" style="padding-left: 10px; padding-top: 10px;">
           <ion-fab-button 
             size="small" (click)="add_option($event)" fill="clear" color="primary"
-            [disabled]="!p.can_add_option()" data-vodle="add-option-button">
+            [disabled]="!p.can_add_option() || consent_pending" data-vodle="add-option-button">
             <ion-icon name="add"></ion-icon>
 
           </ion-fab-button>
           <ion-button
             class="ion-no-padding ion-no-margin" fill="clear" (click)="add_option($event)"
             [innerHtml]="'poll.add-option' | translate"
-            [disabled]="!p.can_add_option()">
+            [disabled]="!p.can_add_option() || consent_pending">
           </ion-button>
         </ion-item>
         <ion-item lines="none" style="padding-bottom: 10px!important;" [disabled]="!p.can_add_option()">
@@ -979,6 +1013,19 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
   </ion-list>
 </ion-content>
+
+<!-- CONSENT TO THE PRIVACY STATEMENT (#193): a guest votes before registering
+     anything, but nothing is stored before this is checked -->
+
+<ion-footer *ngIf="consent_pending" data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
+  <ion-item color="warning" lines="none" class="item-text-wrap">
+    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($any($event).detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
+    <small><p>
+      <b [innerHtml]="'poll.consent-lead'|translate"></b>
+      <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+    </p></small>
+  </ion-item>
+</ion-footer>
 
 <!-- OPTIONAL GLOSSARY: -->
 

@@ -119,6 +119,10 @@ export class MypollsPage implements OnInit {
 
   // helper methods:
 
+  host_of(url: string): string {
+    return GlobalService.host_of(url);
+  }
+
   get running_polls(): Poll[] {
     // return polls sorted by what part of their time is left:
     return Object.values(this.G.P.polls)

@@ -99,7 +99,7 @@ export class LoginPage implements OnInit {
       }
       if (step == 'connected') {
         // store privacy consent in database:
-        this.G.D.setu('consent', 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.');
+        this.G.D.record_consent();
       }
 
     });
@@ -262,11 +262,9 @@ export class LoginPage implements OnInit {
   }
 
   login_as_guest() {
-    this.G.S.password = "Guest" + Math.round(Math.random()*1000000);
-    this.G.S.email = this.G.S.password + "@vodle.it";
-    this.G.S.default_wap = 10;
-    this.G.S.use_guest = true;
-    this.G.D.login_submitted();
+    // a throw-away account with random credentials (#193); a later login
+    // with an account of one's own takes the guest's data over
+    this.G.D.login_as_guest();
   }
 
   blur_password() {

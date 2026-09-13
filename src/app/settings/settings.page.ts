@@ -143,13 +143,47 @@ export class SettingsPage implements OnInit {
 
   // for form actions:
 
+  // The e-mail address and the password are committed when editing ends
+  // (the OK button, enter or tab), not on every change: a change moves the
+  // user's data to the new credentials — on the Matrix backend a password
+  // change is a homeserver password change, an address change an account
+  // switch (#330) — which must not happen per keystroke.
+
   set_email() {
     let c = this.formGroup.get('email');
-    if (c.valid) this.G.S.email = c.value; // will trigger data move
+    if (c.valid && c.value != this.G.S.email) {
+      this.G.D.change_credentials({email: c.value});
+    }
   }
   set_password() {
     let fg = this.formGroup.get('pw');
-    if (fg.valid) this.G.S.password = fg.get('password').value; // will trigger data move
+    if (fg.valid && fg.get('password').value != this.G.S.password) {
+      this.G.D.change_credentials({password: fg.get('password').value});
+    }
+  }
+  toggle_editing_email() {
+    if (this.editing_email) {
+      this.set_email();
+    }
+    this.editing_email = !this.editing_email;
+  }
+  finish_editing_email() {
+    if (this.formGroup.get('email').valid) {
+      this.set_email();
+      this.editing_email = false;
+    }
+  }
+  toggle_editing_password() {
+    if (this.editing_password) {
+      this.set_password();
+    }
+    this.editing_password = !this.editing_password;
+  }
+  finish_editing_password() {
+    if (this.formGroup.get('pw').valid) {
+      this.set_password();
+      this.editing_password = false;
+    }
   }
   set_language() {
     let c = this.formGroup.get('language');
