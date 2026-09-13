@@ -4011,6 +4011,17 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(Object.keys(svc.poll_matrix_sessions)).toEqual([]);
   });
 
+  it('publishes when the settings have been read back, for whoever would write a default', async () => {
+    // CouchDB, and before the Matrix login: already resolved, so nothing waits
+    await expectAsync(svc.user_data_ready).toBeResolved();
+    let settled = false;
+    svc.matrix_user_data_ready = new Promise<void>(resolve => {
+      window.setTimeout(() => { settled = true; resolve(); }, 10);
+    });
+    await svc.user_data_ready;
+    expect(settled).withContext('the page waits for the real sync once there is one').toBeTrue();
+  });
+
   it("gives an account with no stored settings the deployment's default wap", () => {
     svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
                get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};

@@ -334,6 +334,15 @@ export class DataService implements OnDestroy {
    *  (#327). */
   private matrix_user_data_ready: Promise<void> = Promise.resolve();
 
+  /** Resolves once this device has read the person's own settings back from
+   *  the server, so that the ABSENCE of one means they have none rather than
+   *  "not here yet". Whoever would WRITE a default rather than merely show
+   *  one waits for this. On the CouchDB backend, and before the Matrix login
+   *  has replaced it, this is an already-resolved promise: the user data is
+   *  local there, and a caller that gets in ahead of the login is no worse
+   *  off than it was before this existed. */
+  get user_data_ready(): Promise<void> { return this.matrix_user_data_ready; }
+
   // current page, used for notifying of changes method:
   page: any;
 

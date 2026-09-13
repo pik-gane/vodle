@@ -193,7 +193,15 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.onDataReady");
   }
 
-  private seed_default_ratings() {
+  private async seed_default_ratings() {
+    // Not before this device knows the voter's OWN default. default_wap
+    // lives in the user room on the Matrix backend, so until that has synced
+    // SettingsService falls back to the deployment's default — and writing
+    // that into every option they have not rated would cast approvals they
+    // never gave, over a setting of their own that was still on its way
+    // (#327). Already resolved on CouchDB, where the settings are local.
+    await this.G.D.user_data_ready.catch(() => {});
+    if (!this.p) { return; }              // the page was left while we waited
     if (this.p.allow_voting && !this.consent_pending) {
       this.G.L.info("PollPage checking if default waps are needed", this.pid);
       for (let oid of this.p.oids) {

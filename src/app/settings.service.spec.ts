@@ -20,6 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { TestBed } from '@angular/core/testing';
 
 import { SettingsService } from './settings.service';
+import { environment } from '../environments/environment';
 
 describe('SettingsService', () => {
   let service: SettingsService;
@@ -31,5 +32,26 @@ describe('SettingsService', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
+  });
+
+  describe('default_wap (#327)', () => {
+    /** a SettingsService reading a user cache we control */
+    function reading(stored: string | undefined): any {
+      const svc: any = new (SettingsService as any)();
+      svc.G = {D: {getu: (key: string) => (key === 'default_wap' ? stored : undefined),
+                   setu: () => true}};
+      return svc;
+    }
+
+    it("falls back to the deployment's setting when the voter has none", () => {
+      expect(reading(undefined).default_wap).toBe(environment.default_wap);
+      expect(reading('').default_wap).withContext('an empty value is no value')
+        .toBe(environment.default_wap);
+    });
+
+    it('keeps a value the voter chose, zero included', () => {
+      expect(reading('0').default_wap).withContext('someone chose to approve nothing by default').toBe(0);
+      expect(reading('55').default_wap).toBe(55);
+    });
   });
 });

@@ -102,19 +102,19 @@ export class SettingsService {
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
-  /** The wap an option gets when this voter has not rated it.
+  /** The wap an option gets when this voter has not rated it, falling back
+   *  to the deployment's setting when they have none of their own.
    *
-   * The DEFAULT default is `environment.default_wap`, and it is applied
-   * where a default is genuinely being established: when an account is
-   * created (the login page, the guest) and, for an account whose settings
-   * turn out to be empty, once the user data has been read back
-   * (DataService.ensure_user_defaults). The zero below is not that default —
-   * it is "this device does not know the setting yet", which on the Matrix
-   * backend is the window before the user room has synced, and staying at
-   * zero there is the conservative answer: a wap of zero is no approval,
-   * where the deployment's default could be an approval the voter never
-   * gave (#327). */
-  public get default_wap(): number { return Number.parseInt(this.G.D.getu('default_wap')||'0'); }
+   *  On the Matrix backend default_wap lives in the user room rather than on
+   *  the device, so on a device that has not synced it yet this fallback is
+   *  also what a voter WITH a setting of their own sees for a moment. That
+   *  is fine for display, and PollPage.seed_default_ratings — the one place
+   *  that WRITES this into a poll — waits for DataService.user_data_ready
+   *  first, so the deployment's default can never be stored over a setting
+   *  that was merely still on its way (#327). */
+  public get default_wap(): number {
+    return Number.parseInt(this.G.D.getu('default_wap') || String(environment.default_wap));
+  }
   public set default_wap(value: number) { this.G.D.setu('default_wap', value.toString()); }
 
   get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls) != "0"; } // by default, all notifications are on
