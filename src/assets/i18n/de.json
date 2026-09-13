@@ -573,7 +573,7 @@
         "hint-only1approved-2-wap": "Wap",
         "hint-only1approved-2-after-wap": " bekommen hat oder Dein Wap in den Balken ragt.",
         "hint-mostapproved-1": "Du stimmst der momentan aussichtsreichsten Option nicht zu.",
-        "wait-for-results": "Das Ergebnis wird ermittelt...",
+        "wait-for-results": "Das Ergebnis wird ermittelt. Das kann einige Minuten dauern: zuerst werden alle vor dem Stichtag abgegebenen Stimmen eingesammelt, damit alle dasselbe Ergebnis sehen.",
         "results": "Ergebnis:",
         "winner-is": "Es gewinnt <i>{{winner}}</i>",
         "reason": "Warum?",
@@ -621,6 +621,7 @@
         "closes": "Schließt",
         "db-label": "Datenspeicherung",
         "publish": "Abstimmung starten",
+        "publishing": "Abstimmung wird gestartet",
         "type-label": "In dieser Abstimmung wird die Gruppe",
         "is-in-past": "Das Enddatum liegt mittlerweile in der Vergangenheit. Bitte ändere es erst."
     },

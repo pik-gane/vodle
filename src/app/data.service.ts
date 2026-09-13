@@ -540,6 +540,13 @@ export class DataService implements OnDestroy {
   private poll_matrix_promises: {[pid: string]: Promise<MatrixService>} = {};
   
   /** the service that acts for this device in poll `pid` */
+  /** Drop the memoised Matrix session for a poll, so that the next
+   *  operation on it signs in again. For a token the homeserver no longer
+   *  accepts (#327): everything else is worth retrying with. */
+  forget_poll_matrix(pid: string): void {
+    delete this.poll_matrix_promises[pid];
+  }
+
   poll_matrix(pid: string): Promise<MatrixService> {
     if (!environment.useMatrixBackend) {
       return Promise.resolve(this.matrixService);
@@ -2307,6 +2314,9 @@ export class DataService implements OnDestroy {
   async wait_for_matrix_poll_closure(pid: string, is_current: () => boolean = () => true):
       Promise<{closed: boolean; event_id: string | null}> {
     const started = Date.now();
+    // the same failure every second for two minutes is one fact, not a
+    // hundred and twenty of them:
+    let reported = false;
     for (;;) {
       if (this.shutting_down || !is_current()) {
         throw new Error("poll finalization cancelled");
@@ -2318,7 +2328,18 @@ export class DataService implements OnDestroy {
           return closure;
         }
       } catch (err) {
-        this.G.L.warn("DataService.wait_for_matrix_poll_closure could not read the poll room's state", pid, err);
+        if (MatrixService.isInvalidToken(err)) {
+          // this poll account's token is not accepted any more — after an
+          // account switch, or a session the homeserver has forgotten.
+          // Asking again with it is what put a hundred and forty 401s in
+          // the console while the results were determined; signing in
+          // again is the only thing that can help (#327).
+          this.G.L.warn("DataService.wait_for_matrix_poll_closure: the session is no longer valid, signing in again", pid);
+          this.forget_poll_matrix(pid);
+        } else if (!reported) {
+          reported = true;
+          this.G.L.warn("DataService.wait_for_matrix_poll_closure could not read the poll room's state", pid, err);
+        }
       }
       if (Date.now() - started >= environment.closing.matrix_closure_timeout_ms) {
         this.G.L.warn("DataService.wait_for_matrix_poll_closure: no guard bot closed the poll within the timeout, closing by convention", pid);

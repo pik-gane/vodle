@@ -3290,6 +3290,25 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     expect(svc.user_cache['email']).toBe('a@b.c');
   });
 
+  it('signs in again when the homeserver stops accepting the poll session', async () => {
+    // after an account switch a token can be rejected, and asking again with
+    // it filled the owner's console with a hundred and forty 401s while the
+    // results were being determined (#327)
+    fresh({email: 'a@b.c', password: 'Secret-12', 'poll.p1.state': 'running', 'poll.p1.myvid': 'v1'});
+    (environment as any).closing = {...(environment as any).closing,
+      matrix_closure_timeout_ms: 0, matrix_closure_poll_ms: 0};
+    let opened = 0;
+    svc.poll_matrix_promises = {};
+    svc.open_poll_matrix = async () => {
+      opened++;
+      return {getPollClosure: async () => { throw {httpStatus: 401, errcode: 'M_UNKNOWN_TOKEN'}; }};
+    };
+    const closure = await svc.wait_for_matrix_poll_closure('p1');
+    expect(closure.closed).withContext('closed by convention after the ceiling').toBeFalse();
+    expect(opened).withContext('the dead session was not reused').toBeGreaterThan(0);
+    expect(svc.poll_matrix_promises['p1']).withContext('and is not kept').toBeUndefined();
+  });
+
   it('takes a magic link for a magic link even before the router has navigated', () => {
     // DataService.init runs during the app's bootstrap, where router.url is
     // still "/". Losing that race sent a magic link to the login page, and

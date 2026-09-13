@@ -83,6 +83,15 @@ export class PollPage implements OnInit {
   needs_refresh = false;
 
   scroll_position = 0;
+
+  /** the poll has ended and its results are not in yet: the last votes are
+   *  still being collected, which is up to two minutes of waiting for the
+   *  closing event and reading the voter rooms one final time. It reads as
+   *  a frozen page unless something says so, so the notice carries a
+   *  spinner and the header's own in-progress sign turns as well (#327). */
+  get results_pending(): boolean {
+    return !!this.p && !this.p.allow_voting && !this.p.has_results;
+  }
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
 

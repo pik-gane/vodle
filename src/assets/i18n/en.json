@@ -581,7 +581,7 @@
         "hint-only1approved-2-wap": "wap",
         "hint-only1approved-2-after-wap": " or your wap overlaps with the bar.",
         "hint-mostapproved-1": "You are not approving the top-most option.",
-        "wait-for-results": "The results are being determined...",
+        "wait-for-results": "The results are being determined. This can take a few minutes: every vote cast before the deadline is collected first, so that everyone sees the same result.",
         "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
         "reason": "Why?",
@@ -630,6 +630,7 @@
         "closes": "Ends",
         "db-label": "Data storage",
         "publish": "Start the poll now",
+        "publishing": "Starting the poll",
         "type-label": "In this poll, the group will",
         "is-in-past": "The end date is in the past by now. Please change it first."
     },

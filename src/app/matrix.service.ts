@@ -1009,6 +1009,12 @@ export class MatrixService {
     return error?.errcode === 'M_FORBIDDEN' || error?.httpStatus === 403;
   }
   
+  /** whether the homeserver rejected the access token itself, so that no
+   *  number of retries with it can succeed — only a new sign-in can (#327) */
+  static isInvalidToken(error: any): boolean {
+    return error?.errcode === 'M_UNKNOWN_TOKEN' || error?.httpStatus === 401;
+  }
+  
   /**
    * A password login of the account for `email`, in the formats the app
    * has used over time: the hashed e-mail with the derived password, the
@@ -4575,7 +4581,13 @@ export class MatrixService {
       cache: 'no-store',
     });
     if (!resp.ok) {
-      throw new Error(`could not read the poll room's state: ${resp.status}`);
+      // A 401 is not a busy server: this access token is not accepted any
+      // more, and asking again with it cannot help. It is marked so that
+      // the caller signs in again instead of repeating the question for two
+      // minutes, which is what filled the owner's console with a hundred
+      // and forty of these while the results were being determined (#327).
+      throw Object.assign(new Error(`could not read the poll room's state: ${resp.status}`),
+                          {httpStatus: resp.status});
     }
     const events: any[] = await resp.json();
     const state = events.find(e => e.type === 'm.room.vodle.poll.state' && e.state_key === '');

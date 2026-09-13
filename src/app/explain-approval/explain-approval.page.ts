@@ -232,7 +232,14 @@ export class ExplainApprovalPage implements OnInit {
     this.tab = tab;
     if (!this.seen_tabs.has(tab)) {
       this.seen_tabs.add(tab);
-      this.restart();
+      // NOT straight away: the tab's own <g> is put into the SVG only when
+      // Angular next renders, and an SMIL animation inserted at a document
+      // time that is already past its begin jumps to its end state. That is
+      // why the second page showed everything at once and then drew it
+      // again, while the replay button — pressed when the <g> is long since
+      // there — played it properly. ionViewDidEnter waits for the same
+      // reason for the first page (#327).
+      window.setTimeout(this.restart, 100);
     }
   }
 

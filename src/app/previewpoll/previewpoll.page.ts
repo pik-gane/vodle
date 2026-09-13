@@ -37,6 +37,10 @@ export class PreviewpollPage implements OnInit {
   pid: string;
   p: Poll;
 
+  /** the poll is being started: the button says so and refuses a second
+   *  press, since the work takes seconds and used to look like nothing */
+  publishing = false;
+
   // LIFECYCLE:
 
   ready = false;  
@@ -101,14 +105,21 @@ export class PreviewpollPage implements OnInit {
 
   async publish_button_clicked() {
     this.G.L.entry("PreviewpollPage.publish_button_clicked");
+    if (this.publishing) {
+      return;
+    }
     if (await this.G.show_successor_notice()) {
       // this deployment is being retired: the poll is started elsewhere
       // (environment.handover); the draft stays
       return;
     }
+    // Starting a poll creates its room, writes its data and — for a test
+    // poll — a room and a rating per simulated voter, which is seconds of
+    // work the owner could not see: the button did nothing, twice, until
+    // the page moved on. It now says so and cannot be pressed again (#327).
+    this.publishing = true;
     // TODO: 
     // - again check that due is in future!
-    // - show spinner while busy!
     // fix db credentials:
     this.p.set_db_credentials();
     // generate a random poll password:
@@ -167,6 +178,10 @@ export class PreviewpollPage implements OnInit {
       // go to invitation page:
       this.router.navigate(['/inviteto/'+this.pid]);
       this.G.L.exit("PreviewpollPage.publish_button_clicked");
+    }).catch(error => {
+      // the page stays, so the button must work again
+      this.publishing = false;
+      this.G.L.error("PreviewpollPage.publish_button_clicked failed", error);
     });
   }
 

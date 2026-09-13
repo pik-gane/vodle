@@ -82,8 +82,9 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <!-- SYNCING SIGN -->
       <ion-spinner *ngIf="!!p && p.syncing && window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
 
-      <!-- SYNC PENDING SIGN: changes of ours that the server has not confirmed yet (#327) -->
-      <ion-spinner *ngIf="G.D.sync_pending && !G.D.sync_is_stalled" name="circular" color="medium"
+      <!-- SYNC PENDING SIGN: changes of ours that the server has not confirmed
+           yet, or the poll's results still being determined (#327) -->
+      <ion-spinner *ngIf="(G.D.sync_pending || results_pending) && !G.D.sync_is_stalled" name="circular" color="medium"
         style="width: 18px; height: 18px; vertical-align: middle;"
         [title]="'sync-pending'|translate" data-vodle="sync-pending-sign"></ion-spinner>
 
@@ -476,9 +477,12 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-item>
     </ng-container>
 
-    <!-- results not ready yet: -->
-    <ng-container *ngIf="!p.allow_voting && !p.has_results">
-      <ion-item color="warning">
+    <!-- results not ready yet: the poll has ended and the last votes are
+         still being collected, which takes as long as the closing event and
+         the final read take — up to two minutes (#327) -->
+    <ng-container *ngIf="results_pending">
+      <ion-item color="warning" data-vodle="determining-results">
+        <ion-spinner name="dots" slot="start" color="dark"></ion-spinner>
         <p [innerHtml]="'poll.wait-for-results'|translate">
         </p>
       </ion-item>
