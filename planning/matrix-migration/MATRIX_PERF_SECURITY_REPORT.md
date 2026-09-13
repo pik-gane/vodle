@@ -110,7 +110,7 @@ every document is encrypted with a password the server never holds:
 | ratings and other voter data | state events `m.room.vodle.voter.rating.*` in the voter's room | under the poll password; `voter_vid` (pseudonymous id) plain | holders of the magic link |
 | deadline, lifecycle state | `m.room.vodle.poll.deadline`, `m.room.vodle.poll.state` | plain — the guard bot enforces the deadline server-side | homeserver, room members |
 | voter-room announcements, voter ids | timeline `m.room.vodle.voter.announce`, state `m.room.vodle.voter.vid` | plain — needed for discovery | homeserver, room members |
-| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*`; records as poll and voter data | the delegation id plain, the rest under the poll password (#333); the id in the *event type* of the records names the two vids involved, see PRIVACY.md §6 (delegation is disabled in both environments) | homeserver, room members |
+| delegation requests and responses | timeline `m.room.vodle.vote.delegation_*`; records as poll and voter data | the delegation id plain, the rest under the poll password (#333); the id in the *event type* of the records names the two vids involved, see PRIVACY.md §6 (delegation is ON in both environments since 2026-09-13) | homeserver, room members |
 | room names and topics | `vodle poll <id>` | plain, carry only the poll id | homeserver, room members |
 
 The specs check the wire format: what the homeserver stores for a rating,
@@ -252,8 +252,9 @@ same across federation: the second homeserver holds the same ciphertext.
    until 2026-09-10 (#333); now only the delegation id is plain, the rest
    is encrypted under the poll password like the other poll data, and the
    two-client spec shows a client without the password reads nothing.
-   Delegation stays disabled in both environments (`delegation.enabled`),
-   a product decision.
+   Delegation was disabled in both environments until 2026-09-13, when the
+   owner switched it on so that it can be tested on the deployment; what
+   that costs is §3.9 and PRIVACY.md §6.
 3. **The guard bot is fully trusted** (power 100 in every room). A malicious
    bot could rewrite power levels but not read encrypted data.
 4. **No re-encryption on password change.** Changing the vodle password

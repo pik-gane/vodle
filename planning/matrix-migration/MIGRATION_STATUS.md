@@ -82,7 +82,7 @@ tooling's fidelity.
 | 12 | Wire poll lifecycle (change_poll_state, connect_to_remote) | done |
 | 13 | Wire poll joining (magic links) to Matrix | done |
 | 14 | Wire real-time sync to Matrix | done |
-| 15 | Wire ratings & delegation to Matrix | done (delegation disabled on the Matrix path, #333) |
+| 15 | Wire ratings & delegation to Matrix | done (#333; delegation switched ON in both environments 2026-09-13, see documentation/PRIVACY.md §6) |
 | 16 | Enable Matrix backend (development environment) | done (both environments) |
 | 17 | Remove the CouchDB code | not started (#332) |
 

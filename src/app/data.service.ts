@@ -540,6 +540,20 @@ export class DataService implements OnDestroy {
   private poll_matrix_promises: {[pid: string]: Promise<MatrixService>} = {};
   
   /** the service that acts for this device in poll `pid` */
+  /* Delegation on the Matrix backend goes to the POLL room, so it goes
+   * through the poll's own account like every other poll operation (#327).
+   * DelegationService held the injected service — the person's own — which
+   * was invisible while delegation was disabled in both environments, and
+   * would have written the person's user id into the poll room the moment
+   * it was switched on, if the homeserver had taken the write at all. */
+  request_delegation(pid: string, did: string, oids: string[]): Promise<string> {
+    return this.poll_matrix(pid).then(m => m.requestDelegation(pid, did, oids));
+  }
+
+  respond_to_delegation(pid: string, did: string, accept: boolean): Promise<void> {
+    return this.poll_matrix(pid).then(m => m.respondToDelegation(pid, did, accept));
+  }
+
   /** Drop the memoised Matrix session for a poll, so that the next
    *  operation on it signs in again. For a token the homeserver no longer
    *  accepts (#327): everything else is worth retrying with. */

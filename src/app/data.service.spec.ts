@@ -2816,7 +2816,7 @@ describe('DataService consistency hardening (#292)', () => {
         svc.delegation_agreements_caches = {prun: new Map([
           ['d1', {client_vid: 'v1', active_oids: new Set()}],
         ])};
-        const delegation: any = new DelegationService(null, null);
+        const delegation: any = new DelegationService(null);
         delegation.G = svc.G;
         svc.G.Del = delegation;
         spyOn(delegation, 'process_deleted_request_from_db').and.callThrough();
@@ -3732,6 +3732,8 @@ describe('one Matrix account per (poll, voter) (#327)', () => {
     addPollEventListener: jasmine.createSpy('addPollEventListener_' + pid),
     setupPollRoomHandlers: jasmine.createSpy('setupPollRoomHandlers_' + pid)
       .and.returnValue(Promise.resolve()),
+    requestDelegation: jasmine.createSpy('requestDelegation_' + pid).and.returnValue(Promise.resolve('d1')),
+    respondToDelegation: jasmine.createSpy('respondToDelegation_' + pid).and.returnValue(Promise.resolve()),
   });
 
   beforeEach(() => {
@@ -3764,6 +3766,19 @@ describe('one Matrix account per (poll, voter) (#327)', () => {
     const for_poll = await svc.poll_matrix('p1');
     expect(for_poll.setPollData).toHaveBeenCalledWith('p1', 'title', 'Lunch');
     expect(personal.setPollData).withContext('the person never writes poll data').not.toHaveBeenCalled();
+  });
+
+  it('sends a delegation with the poll\'s own account too', async () => {
+    // delegation events go into the POLL room, so they belong to the poll's
+    // account like every other poll operation. DelegationService held the
+    // injected service — the person's own — which stayed invisible while
+    // delegation was disabled in both environments (#327)
+    await svc.request_delegation('p1', 'd1', ['o1']);
+    await svc.respond_to_delegation('p1', 'd1', true);
+    const for_poll = await svc.poll_matrix('p1');
+    expect(for_poll.requestDelegation).toHaveBeenCalledWith('p1', 'd1', ['o1']);
+    expect(for_poll.respondToDelegation).toHaveBeenCalledWith('p1', 'd1', true);
+    expect(personal.setPollData).withContext('the person writes nothing into the poll room').not.toHaveBeenCalled();
   });
 
   it('gives two polls two different accounts', async () => {

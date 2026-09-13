@@ -135,7 +135,17 @@ export const environment = {
     matrix_user_data_concurrency: 8,
   },
   delegation: {
-    enabled: false,
+    // ON since 2026-09-13, at the owner's request, so that the feature can
+    // be tested on the deployment. What it costs is written down rather
+    // than waved away: documentation/PRIVACY.md §6.3 — the delegation id is
+    // part of the (unencrypted) event TYPE of the records at both ends, so
+    // the homeserver reads the delegation graph BY VID for free, and
+    // `del_incoming.<did>` in the delegate's own user room ties their
+    // personal account to that poll. Today that adds nothing the user room
+    // does not already say (§3), which is why the two have to be fixed
+    // together; a deployment that cares must weigh that before turning
+    // this on for real users.
+    enabled: true,
     max_weight: 10
   },
   no_more_options_time_fraction: 1/2,

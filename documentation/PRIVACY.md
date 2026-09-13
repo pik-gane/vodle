@@ -110,7 +110,9 @@ Two things can still unmask a vid, and neither is the protocol's doing:
 
 ## 6. Delegations
 
-Delegation is **disabled in both environments** (`environment.delegation.enabled`). What follows is what it would expose if it were switched on. Read §6.3 before switching it on.
+Delegation is **on** in both environments since 2026-09-13 (`environment.delegation.enabled`), so what follows is live. §6.3 is the part a deployment has to weigh.
+
+The authoritative delegation data travels the ordinary vodle data path — poll data, voter data and user data, encrypted like everything else. The two timeline events in the poll room are a live notification on top of it; nothing consumes them yet.
 
 ### 6.1 How a delegation is recorded
 
@@ -136,11 +138,11 @@ A delegator generates a delegation id `did` and a keypair, sends a magic link `.
 
 So the operator gets the delegation graph by vid for free. Not the option sets, not accept-versus-decline (both are inside the encrypted value), not who the vids are.
 
-### 6.3 The part that must be fixed before delegation is enabled
+### 6.3 The part that delegation being on brings with it
 
 `del_incoming.<did>` sits in the **delegate's user room**, which belongs to their *personal* account, while `del_request.<did>` sits in the delegator's voter room inside poll `pid`. The `did` is plaintext in both event types. Matching them tells the operator that the person behind that personal account takes part in that poll — a link from a real identity to a poll, established by the delegation alone.
 
-As it happens this changes nothing today, because §3 already gives the operator the same fact from `poll.<pid>.myvid` in the same room. But the two should be fixed together: whatever makes the user room stop naming polls must also make it stop naming delegation ids, or the leak simply moves. The same holds on CouchDB, where `del_incoming.<did>` is a document id in the user database.
+As it happens this changes nothing today, because §3 already gives the operator the same fact from `poll.<pid>.myvid` in the same room. That is the reason delegation could be switched on without making the operator's view any worse than it already was — but it is also the reason the two have to be fixed together: whatever makes the user room stop naming polls must also make it stop naming delegation ids, or the leak simply moves. The same holds on CouchDB, where `del_incoming.<did>` is a document id in the user database.
 
 ---
 
@@ -161,7 +163,7 @@ Ordered by how hard they are to exploit, hardest last.
 
 1. **The user room names a person's polls** (§3). No attack required — it is plaintext metadata in the operator's own database. This is the largest single gap between what vodle promises and what it delivers against the operator. Fixing it means taking the poll id out of the user-data key: store the entries under an opaque per-user key (a keyed hash of the pid) and keep the pid inside the encrypted value, so a second device can still enumerate its polls by decrypting rather than by reading key names. It is a change to both backends and to the second-device restore path, and it needs a migration for existing accounts, which is why it is written down here rather than done in passing.
 
-2. **A delegation links a personal account to a poll** (§6.3). Same shape, same fix.
+2. **A delegation links a personal account to a poll** (§6.3). Same shape, same fix — and live since delegation was switched on, where before it was hypothetical.
 
 3. **The vodle password, against an operator who records login requests.** `deriveMatrixPassword` is a single BLAKE2s. Synapse stores bcrypt of what the client sends, so the stored form is not the problem — but the request body is the fast-hashed password, and an operator who logs it can run a dictionary attack at one BLAKE2s per guess and recover a human-chosen password. With the password they can decrypt the user room. The derivation exists so the operator does not get the password *directly*; it does not make guessing it expensive. Making the login password a slow derivation (PBKDF2 or argon2 over the same input) would close this, at the cost of a migration for every existing account.
 
