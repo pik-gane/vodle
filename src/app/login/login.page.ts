@@ -277,7 +277,7 @@ export class LoginPage implements OnInit {
     this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
-      this.G.S.default_wap = 10;
+      this.G.S.default_wap = environment.default_wap;
       this.G.D.login_submitted();
     }
   }

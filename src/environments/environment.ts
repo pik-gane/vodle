@@ -143,6 +143,11 @@ export const environment = {
   },
   no_more_options_time_fraction: 1/2,
   db_put_retry_delay_ms: 100,
+  // The wap an option gets when the voter has not rated it, and the
+  // setting a new account starts with (the settings page can change it).
+  // A deployment whose polls are more about finding what everyone can
+  // live with than about picking favourites may want this higher.
+  default_wap: 10,
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle/",
   magic_link_base_url: "http://localhost:4200/#/",

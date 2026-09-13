@@ -4011,13 +4011,14 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(Object.keys(svc.poll_matrix_sessions)).toEqual([]);
   });
 
-  it('gives an account with no stored settings the default wap a new one gets', () => {
+  it("gives an account with no stored settings the deployment's default wap", () => {
     svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
                get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
     // absent after the sync: nothing ever set it, so use what registration uses
     delete svc.user_cache['default_wap'];
     svc.ensure_user_defaults();
-    expect(svc.user_cache['default_wap']).toBe('10');
+    expect(svc.user_cache['default_wap']).withContext("the deployment's setting, not a number in the code")
+      .toBe(String(environment.default_wap));
     // a deliberate zero is stored as '0' and must survive
     svc.user_cache['default_wap'] = '0';
     svc.ensure_user_defaults();

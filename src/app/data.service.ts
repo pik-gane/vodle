@@ -3062,7 +3062,7 @@ export class DataService implements OnDestroy {
       this.record_consent();
     }
     (this as any).boot_log?.("consent recorded");
-    this.G.S.default_wap = 10;
+    this.G.S.default_wap = environment.default_wap;
     this.guest_login_in_progress = true;
     this.login_submitted(true);
   }
@@ -6669,8 +6669,9 @@ export class DataService implements OnDestroy {
   private ensure_user_defaults(): void {
     if (!this.user_cache) { return; }
     if ((this.user_cache['default_wap'] || '') === '') {
-      this.G.L.info("DataService: no default wap is stored, using the one a new account gets");
-      this.G.S.default_wap = 10;
+      this.G.L.info("DataService: no default wap is stored, using the deployment's",
+        environment.default_wap);
+      this.G.S.default_wap = environment.default_wap;
     }
   }
 
