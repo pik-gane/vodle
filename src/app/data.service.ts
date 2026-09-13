@@ -168,6 +168,25 @@ function make_consistency_failure_error(message: string): Error {
 // (pending_user_data_move: a credential change whose data move has not
 // completed yet, see move_user_data / perform_user_data_move, #330)
 const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move'];
+/** Keys the ACCOUNT owns rather than the device: on these the user room wins
+ *  the sync, where every other key is local-wins.
+ *
+ *  Only the language is one, and it is one because it is the only user-data
+ *  key a device invents a value for entirely on its own — on a first start
+ *  the language question is not even asked and the browser's language is
+ *  taken silently (#193). Every device therefore carries a language it was
+ *  never told, save_state persists it with the rest of the cache, and under
+ *  local-wins the first device to sync afterwards pushed that guess over the
+ *  language the person had actually chosen somewhere else. Which is what the
+ *  owner reported twice: chosen in the settings, gone at the next start and
+ *  never seen by their second device (#327).
+ *
+ *  A choice made on THIS device does not need the sync to carry it: setu
+ *  writes it to the user room the moment it is made, and queues and retries
+ *  it if the server is not there. The one thing the account can win wrongly
+ *  is a choice made while offline and still in that queue at the next start,
+ *  which shows the old language until the queued write lands. */
+const account_wins_user_keys = ['language'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -1203,12 +1222,7 @@ export class DataService implements OnDestroy {
           // creating the room first — 12.8 s in the owner's measurement,
           // every millisecond of it in front of a poll page that needed
           // none of it (#327).
-          this.matrix_user_data_ready = this.syncUserDataWithMatrix()
-            .then(() => {
-              (this as any).boot_log?.("user data synced");
-              this.ensure_user_defaults();
-              this.G.L.info("DataService: Matrix user data synced");
-            });
+          this.matrix_user_data_ready = this.sync_and_settle_user_data();
           this.matrix_user_data_ready.catch(err =>
             this.G.L.error("DataService: the user data sync failed", err));
           (this as any).boot_log?.("the backend is ready");
@@ -1395,14 +1409,33 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.email_and_password_exist"); 
   }
 
+  /** Signing in, from the user data's point of view: read the user room and
+   *  reconcile it with this device, then settle the values that only make
+   *  sense once that has happened.
+   *
+   *  The two belong together and their ORDER is the whole of their meaning —
+   *  ensure_user_defaults exists to act on an absence, and before the sync
+   *  an absent value only means not-here-yet. They are one method so that a
+   *  spec cannot drive them in an order the app never uses, which is how a
+   *  language that no device ever showed passed its specs twice (#327).
+   */
+  private async sync_and_settle_user_data(force = false): Promise<void> {
+    await this.syncUserDataWithMatrix(force);
+    (this as any).boot_log?.("user data synced");
+    this.ensure_user_defaults();
+    this.G.L.info("DataService: Matrix user data synced");
+  }
+
   /**
    * Reconcile the local user cache with this account's Matrix user room
    * (#293, #330): local values are pushed where the room's value differs
    * (all of them with `force`, which re-encrypts everything after a
    * password change or an account switch), and keys only the room holds
    * are taken over — the restore of settings and poll memberships (voter
-   * ids, poll passwords, drafts) on a second device. Local values win:
-   * they are what the user sees. The device-local keys (credentials,
+   * ids, poll passwords, drafts) on a second device. Local values win,
+   * because they are what the user sees — EXCEPT for the keys the account
+   * owns rather than the device (account_wins_user_keys), where a device's
+   * copy is at best a stale echo. The device-local keys (credentials,
    * database settings) never leave the device. Until 2026-09-10 the poll
    * membership keys were not synced at all, so a second device knew none
    * of the user's polls.
@@ -1419,6 +1452,12 @@ export class DataService implements OnDestroy {
     let restored = 0;
     const to_push = Object.keys(this.user_cache).filter(key => {
       if (local_only_user_keys.includes(key) || key == 'user_last_seq') { return false; }
+      if (!force && account_wins_user_keys.includes(key)
+          && remote[key] !== undefined && remote[key] !== '') {
+        // the account has one of its own, and this device's copy is at best
+        // a stale echo of it (see account_wins_user_keys)
+        return false;
+      }
       const value = this.user_cache[key];
       if (value === undefined || value === null || value === '') { return false; }
       return force || remote[key] !== value;
@@ -1437,7 +1476,9 @@ export class DataService implements OnDestroy {
         continue;
       }
       const local = this.user_cache[key];
-      if (local === undefined || local === null || local === '') {
+      const account_wins = !force && account_wins_user_keys.includes(key);
+      if (local === undefined || local === null || local === '' || account_wins) {
+        if (this.user_cache[key] === value) { continue; }
         this.user_cache[key] = value;
         restored++;
         // a poll this device did not know yet:
@@ -3035,13 +3076,18 @@ export class DataService implements OnDestroy {
     // — a guest's (#193), an earlier account's — the first change already
     // recorded those as the origin of a data move, see
     // note_credentials_change; email_and_password_exist performs it, #330)
-    const language = this.G.S.language,
+    // the DISPLAY language, never the account's: clearing `language` here
+    // wrote an empty value into the user room of anyone whose client was
+    // still signed in — a guest on their way to an account — and emptying
+    // the key is how the room forgets it (#327)
+    const language = this.G.S.display_language,
           email = this.G.S.email,
           password = this.G.S.password;
     (this as any).boot_log?.("re-setting the credentials");
-    this.G.S.language = this.G.S.email = this.G.S.password = "";
+    this.G.S.display_language = "";
+    this.G.S.email = this.G.S.password = "";
     (this as any).boot_log?.("credentials cleared");
-    this.G.S.language = language;
+    this.G.S.display_language = language;
     (this as any).boot_log?.("language set");
     this.G.S.email = email;
     this.G.S.password = password;
@@ -6694,10 +6740,14 @@ export class DataService implements OnDestroy {
     if (preferred && preferred !== showing) {
       this.G.L.info("DataService: showing the language this account prefers", preferred);
       this.setu('local_language', preferred);
-    } else if (!preferred && showing) {
-      this.G.L.info("DataService: no language is stored for this account, keeping", showing);
-      this.setu('language', showing);
     }
+    // and NOTHING when the account has none. This used to make this device's
+    // language the account's, which reads as helpful and is not: that value
+    // is a guess (the browser's language, taken without asking, #193), and
+    // storing it gave every other device of the person a language they never
+    // chose — and, once stored, it was pushed over the one they later chose
+    // in the settings. The account gets a language when the person picks one
+    // on the settings page, and not before (#327).
     if ((this.user_cache['default_wap'] || '') === '') {
       this.G.L.info("DataService: no default wap is stored, using the deployment's",
         environment.default_wap);

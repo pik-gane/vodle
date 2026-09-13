@@ -151,7 +151,9 @@ export class LoginPage implements OnInit {
     // note that navigator.language may be undefined in rare environments,
     // and a stored language might no longer be among the registered ones:
     const default_lang = (navigator.language || 'en').slice(0,2),
-          stored_lang = this.G.S.language;
+          // what this device shows, which is the question being asked here;
+          // the account's preference is not known until it has synced:
+          stored_lang = this.G.S.display_language;
     this.languageFormGroup.get('language').setValue(
       (!!stored_lang && this.translate.langs.includes(stored_lang)) ? stored_lang
       : (this.translate.langs.includes(default_lang) ? default_lang : 'en'));

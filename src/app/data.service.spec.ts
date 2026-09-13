@@ -3301,8 +3301,11 @@ describe('credential changes and guest accounts (#330, #193)', () => {
       language: 'de', 'poll.p1.myvid': 'v1', 'poll.p9.state': 'running', 'poll.p9.myvid': 'v9', 'poll.p9.password': 'pw9'}));
     const registered = spyOn(svc, 'check_whether_poll_or_option').and.returnValue(false);
     await svc.syncUserDataWithMatrix();
-    expect(pushed_keys()).withContext('the equal voter id is not re-sent, the credentials never').toEqual(['language', 'poll.p1.state']);
-    expect(svc.user_cache['language']).withContext('local wins').toBe('en');
+    expect(pushed_keys()).withContext('the equal voter id is not re-sent, the credentials never, the language never from here').toEqual(['poll.p1.state']);
+    // the language is the one key the ACCOUNT owns: this device's copy is at
+    // best a stale echo of a choice made elsewhere, and until #327 it was
+    // pushed over that choice (account_wins_user_keys)
+    expect(svc.user_cache['language']).withContext('the account wins').toBe('de');
     expect(svc.user_cache['poll.p9.myvid']).toBe('v9');
     expect(svc.user_cache['poll.p9.password']).toBe('pw9');
     expect(registered).toHaveBeenCalledWith('poll.p9.state', 'running');
@@ -4041,7 +4044,7 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(settled).withContext('the page waits for the real sync once there is one').toBeTrue();
   });
 
-  it('keeps the language the account prefers, and takes this device\'s when it has none', () => {
+  it('applies the language the account prefers, and stores nothing when it has none', () => {
     const applied: string[] = [];
     svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
                get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
@@ -4054,11 +4057,14 @@ describe('deleting all of a person\'s data (#327)', () => {
     svc.ensure_user_defaults();
     expect(applied).toEqual(['local_language=de']);
 
-    // the account has none: this device's language becomes the stored one
+    // the account has none: nothing is stored for it. This device's language
+    // is a guess — on a first start the question is not even asked (#193) —
+    // and storing a guess gave the person's other devices a language they
+    // never chose, and was then pushed over the one they did choose (#327)
     applied.length = 0;
     svc.user_cache = {local_language: 'fi', default_wap: '10'};
     svc.ensure_user_defaults();
-    expect(applied).toEqual(['language=fi']);
+    expect(applied).withContext('a guess is not a preference').toEqual([]);
 
     // they already agree: nothing is written, so nothing is pushed
     applied.length = 0;

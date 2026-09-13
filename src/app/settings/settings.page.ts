@@ -225,7 +225,12 @@ export class SettingsPage implements OnInit {
         password: this.G.S.password||'',
         confirm_password: this.G.S.password||'',
       },
-      language: this.G.S.language||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
+      // what the account stores, else what this device is actually showing,
+      // else the browser's language. Falling straight through to the browser
+      // showed a language the app was not in, for someone who answered the
+      // login page's language question against their browser (#327):
+      language: this.G.S.language||this.G.S.display_language
+                ||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
       theme: this.G.S.theme||'light',
       default_wap: this.G.S.default_wap||0
     });
