@@ -171,22 +171,29 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
 /** Keys the ACCOUNT owns rather than the device: on these the user room wins
  *  the sync, where every other key is local-wins.
  *
- *  Only the language is one, and it is one because it is the only user-data
- *  key a device invents a value for entirely on its own — on a first start
- *  the language question is not even asked and the browser's language is
- *  taken silently (#193). Every device therefore carries a language it was
- *  never told, save_state persists it with the rest of the cache, and under
- *  local-wins the first device to sync afterwards pushed that guess over the
- *  language the person had actually chosen somewhere else. Which is what the
- *  owner reported twice: chosen in the settings, gone at the next start and
- *  never seen by their second device (#327).
+ *  They are the person's SETTINGS — what the settings page writes. A device
+ *  has no business holding an opinion about any of them, and yet each one
+ *  arrives on a device with a value nobody chose: the language is taken from
+ *  the browser without asking on a first start (#193), and the default wap
+ *  used to be seeded from the deployment's setting. save_state persists the
+ *  whole cache, so a device that has merely been STARTED once carried those
+ *  values into its next login, and under local-wins the first device to sync
+ *  pushed them over what the person had actually chosen somewhere else. The
+ *  owner reported it twice, once for the language and then, with that fixed,
+ *  for the default wap — the same defect, one key along, which is why this
+ *  is now the rule for the settings rather than an exception for one of them
+ *  (#327).
  *
- *  A choice made on THIS device does not need the sync to carry it: setu
- *  writes it to the user room the moment it is made, and queues and retries
- *  it if the server is not there. The one thing the account can win wrongly
- *  is a choice made while offline and still in that queue at the next start,
- *  which shows the old language until the queued write lands. */
-const account_wins_user_keys = ['language'];
+ *  The poll memberships are NOT here and must not be: a device that has just
+ *  created or joined a poll is the only one that knows, and its push is how
+ *  the account finds out.
+ *
+ *  A choice made on THIS device does not need the sync to carry it either:
+ *  setu writes it to the user room the moment it is made, and queues and
+ *  retries it if the server is not there. The one thing the account can win
+ *  wrongly is a choice made while offline and still in that queue at the next
+ *  start, which shows the old value until the queued write lands. */
+const account_wins_user_keys = ['language', 'theme', 'default_wap'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -6748,11 +6755,16 @@ export class DataService implements OnDestroy {
     // chose — and, once stored, it was pushed over the one they later chose
     // in the settings. The account gets a language when the person picks one
     // on the settings page, and not before (#327).
-    if ((this.user_cache['default_wap'] || '') === '') {
-      this.G.L.info("DataService: no default wap is stored, using the deployment's",
-        environment.default_wap);
-      this.G.S.default_wap = environment.default_wap;
-    }
+    // The DEFAULT WAP is not settled here at all any more, and nothing else
+    // is either. Storing the deployment's setting for an account that has
+    // none looks like the same kindness as storing a guessed language, and
+    // costs the same: it is a value the person did not choose, so it can be
+    // pushed over one they did, and it freezes the deployment's default at
+    // the moment of their first login. SettingsService.default_wap falls
+    // back to environment.default_wap for display, and the one place that
+    // WRITES a wap into a poll waits for user_data_ready first, so nothing
+    // needs it in the account until the person picks a wap of their own
+    // (#327).
   }
 
   /** What deleting all of a person's data is doing right now, for the page

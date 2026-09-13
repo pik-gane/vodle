@@ -4073,15 +4073,21 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(applied).toEqual([]);
   });
 
-  it("gives an account with no stored settings the deployment's default wap", () => {
+  it("stores nothing for an account that has chosen no default wap", () => {
+    // It used to store the deployment's setting, which reads as helpful and
+    // is the same mistake as storing a guessed language: a value the person
+    // did not choose, sitting in their account where a device can push it
+    // over one they did — which is exactly what happened to a wap of 51 on
+    // the owner's second device (#327). The deployment's setting reaches the
+    // screen through SettingsService.default_wap's fallback instead, and the
+    // journeys in user-settings-sync.spec.ts hold both ends of that.
     svc.G.S = {set default_wap(v: number) { svc.user_cache['default_wap'] = String(v); },
                get default_wap() { return Number.parseInt(svc.user_cache['default_wap'] || '0'); }};
-    // absent after the sync: nothing ever set it, so use what registration uses
     delete svc.user_cache['default_wap'];
     svc.ensure_user_defaults();
-    expect(svc.user_cache['default_wap']).withContext("the deployment's setting, not a number in the code")
-      .toBe(String(environment.default_wap));
-    // a deliberate zero is stored as '0' and must survive
+    expect(svc.user_cache['default_wap']).withContext('not the deployment default, not anything')
+      .toBeUndefined();
+    // and a deliberate zero is left exactly as it was
     svc.user_cache['default_wap'] = '0';
     svc.ensure_user_defaults();
     expect(svc.user_cache['default_wap']).withContext('someone chose zero').toBe('0');

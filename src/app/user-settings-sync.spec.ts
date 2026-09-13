@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { DataService } from './data.service';
 import { environment } from '../environments/environment';
 
-/** The language a person CHOSE, across devices and across a logout (#327).
+/** The settings a person CHOSE, across devices and across a logout (#327).
  *
  *  The owner reported twice that a language chosen in the settings did not
  *  reach a second device and did not survive a logout, the second time after
@@ -36,7 +36,7 @@ import { environment } from '../environments/environment';
  *  the person actually sees — the argument translate.use was called with —
  *  rather than the contents of a cache.
  */
-describe('the language a person chose (#327)', () => {
+describe('the settings a person chose (#327)', () => {
 
   /** the person's user room on the homeserver. It outlives every device,
    *  every logout and this device's storage, which is the whole point. */
@@ -233,9 +233,7 @@ describe('the language a person chose (#327)', () => {
     expect(laptop.showing()).withContext('and so does the other one').toBe('fr');
   });
 
-  it('keeps the other settings the person chose, on every device', async () => {
-    // the same journey for the keys that are not guessed anywhere, which is
-    // why they were never lost the way the language was (#327)
+  it('keeps the other settings the person chose, on a device that is new', async () => {
     const phone = device({}, 'en');
     await log_in(phone);
     phone.S.default_wap = 51;
@@ -246,6 +244,54 @@ describe('the language a person chose (#327)', () => {
     expect(laptop.S.default_wap).toBe(51);
     expect(laptop.S.theme).toBe('dark');
     expect(room['default_wap']).toBe(51);
+  });
+
+  it('keeps the other settings the person chose, on a device used before', async () => {
+    // The owner's report after the language was fixed: the default wap was
+    // not. Same mechanism, one key along — and the spec above could not see
+    // it, because a device that has NEVER been used has nothing of its own
+    // to push. A device that has been started once has been given the
+    // deployment's default wap, save_state persists it, and the local-wins
+    // sync then pushes that over the 51.
+    const laptop_first_start = device({}, 'en');
+    await log_in(laptop_first_start);
+    const laptop_storage = laptop_first_start.storage();
+
+    const phone = device({}, 'en');
+    await log_in(phone);
+    phone.S.default_wap = 51;
+    phone.S.theme = 'dark';
+
+    const laptop = device(laptop_storage, 'en');
+    await log_in(laptop);
+    expect(room['default_wap']).withContext('the account still holds the choice').toBe(51);
+    expect(laptop.S.default_wap).withContext('and the second device shows it').toBe(51);
+    expect(laptop.S.theme).withContext('and the theme with it').toBe('dark');
+  });
+
+  it('keeps the other settings across a logout that left the storage behind', async () => {
+    const phone = device({}, 'en');
+    await log_in(phone);
+    phone.S.default_wap = 51;
+    phone.S.theme = 'dark';
+    const stored = phone.storage();
+
+    const again = device(stored, 'en');
+    await log_in(again);
+    expect(again.S.default_wap).toBe(51);
+    expect(again.S.theme).toBe('dark');
+    expect(room['default_wap']).toBe(51);
+  });
+
+  it('does not store the deployment default in the account', async () => {
+    // a deployment default is not a choice either: stored, it is something a
+    // device can push over a real one, and it freezes the deployment's
+    // setting at the moment of the first login. SettingsService.default_wap
+    // falls back to it for display, so nothing needs it stored (#327).
+    const phone = device({}, 'en');
+    await log_in(phone);
+    expect(phone.S.default_wap).withContext('shown').toBe(environment.default_wap);
+    expect(room['default_wap']).withContext('not stored').toBeUndefined();
   });
 
   it('gives a person with no setting of their own the deployment default wap', async () => {
