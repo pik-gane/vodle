@@ -247,6 +247,20 @@ function myhash(what): string {
  *  password — what a pending user data move starts from (#330) */
 export type credentials_t = {email: string, password: string, guest?: boolean, attempts?: number};
 
+/** Start the app over at its first page, as the end of a session must.
+ *
+ * Not a plain window.location.reload(): that comes back to the page it was
+ * on, and both pages that end a session — logout and delete-all — are then
+ * handed to the login page as the place to return to afterwards, so signing
+ * in again landed the person straight back on "do you really want to log
+ * out?" / "do you really want to delete everything?". The hash goes to the
+ * root first, so the login sends them to their polls instead.
+ */
+export function restart_at_the_beginning() {
+  window.location.hash = '#/';
+  window.location.reload();
+}
+
 /** the consent recorded when a user logs in or takes part as a guest */
 export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
@@ -487,7 +501,21 @@ export class DataService implements OnDestroy {
      *  Matrix backend this counts the writes in flight and the ones queued
      *  for another try; the CouchDB backend replicates continuously and has
      *  no such count, so it reports only the stall below. */
-    return environment.useMatrixBackend && this.matrixService.pendingWriteCount > 0;
+    return environment.useMatrixBackend
+      && this.matrix_sessions().some(service => service.pendingWriteCount > 0);
+  }
+
+  /** every Matrix account this device is signed in as: the person's own and
+   *  one per poll (#327). A VOTE is written by the poll's account, so
+   *  anything asking "is this device up to date" has to ask them all — the
+   *  injected service alone only ever sees the user room, which is why the
+   *  header's sign stopped turning for votes when the accounts were split. */
+  private matrix_sessions(): MatrixService[] {
+    const sessions = Object.values(this.poll_matrix_sessions);
+    if (this.matrixService && !sessions.includes(this.matrixService)) {
+      sessions.push(this.matrixService);
+    }
+    return sessions.filter(service => !!service);
   }
 
   get sync_is_stalled(): boolean {
@@ -495,7 +523,8 @@ export class DataService implements OnDestroy {
      *  is lost either way — vodle keeps retrying, and compares its own votes
      *  against the server once a minute — but the voter gets to see it. */
     return this.replication_is_stalled
-      || (environment.useMatrixBackend && this.matrixService.syncIsStalled);
+      || (environment.useMatrixBackend
+          && this.matrix_sessions().some(service => service.syncIsStalled));
   }
   private replication_restart_pending: Record<string, boolean> = {};
   private user_sync_start_pending = false;
@@ -538,7 +567,11 @@ export class DataService implements OnDestroy {
    * account and does the user room and nothing else (#327).
    */
   private poll_matrix_promises: {[pid: string]: Promise<MatrixService>} = {};
-  
+  /** the same services once they are up, for the callers that cannot wait:
+   *  the page asks whether anything is still on its way several times a
+   *  second, and a getter may not await a login */
+  private poll_matrix_sessions: {[pid: string]: MatrixService} = {};
+
   /** the service that acts for this device in poll `pid` */
   /* Delegation on the Matrix backend goes to the POLL room, so it goes
    * through the poll's own account like every other poll operation (#327).
@@ -559,6 +592,7 @@ export class DataService implements OnDestroy {
    *  accepts (#327): everything else is worth retrying with. */
   forget_poll_matrix(pid: string): void {
     delete this.poll_matrix_promises[pid];
+    delete this.poll_matrix_sessions[pid];
   }
 
   poll_matrix(pid: string): Promise<MatrixService> {
@@ -566,7 +600,10 @@ export class DataService implements OnDestroy {
       return Promise.resolve(this.matrixService);
     }
     if (!this.poll_matrix_promises[pid]) {
-      this.poll_matrix_promises[pid] = this.open_poll_matrix(pid).catch(error => {
+      this.poll_matrix_promises[pid] = this.open_poll_matrix(pid).then(service => {
+        this.poll_matrix_sessions[pid] = service;
+        return service;
+      }).catch(error => {
         // not remembered: a poll whose account could not be signed in must
         // be free to try again on the next operation
         delete this.poll_matrix_promises[pid];
@@ -602,13 +639,46 @@ export class DataService implements OnDestroy {
   private async close_poll_matrix(pid: string): Promise<void> {
     const pending = this.poll_matrix_promises[pid];
     delete this.poll_matrix_promises[pid];
+    delete this.poll_matrix_sessions[pid];
     if (!pending) { return; }
     try {
       const service = await pending;
       if (service !== this.matrixService) { await service.dropSession(); }
     } catch { /* it never came up; nothing to let go of */ }
   }
-  
+
+  /** let go of every poll account this device signed in. Each has a sync
+   *  store of its own, so leaving the app has to close them all or the
+   *  poll accounts' rooms outlive the session that opened them (#327). */
+  private async close_all_poll_matrix(): Promise<void> {
+    await Promise.all(Object.keys(this.poll_matrix_promises)
+      .map(pid => this.close_poll_matrix(pid)));
+  }
+
+  /** log this device out of the person's own account and of every poll
+   *  account it signed in */
+  private async logout_matrix_everywhere(): Promise<void> {
+    await this.close_all_poll_matrix();
+    if (this.matrixService?.isLoggedIn()) {
+      this.G.L.info("Logging out of Matrix...");
+      await this.matrixService.logout();
+    }
+  }
+
+  /** how long leaving the app waits for the homeserver to be told */
+  private static readonly LOGOUT_TIMEOUT_MS = 15000;
+
+  /** Await `what`, but never let leaving the app wait on it for ever: a
+   *  poll account whose sign-in is still in flight would otherwise hold the
+   *  logout open, and the local side of it — the storage this device holds —
+   *  matters more than the server's side and must happen regardless. */
+  private static within(ms: number, what: Promise<any>): Promise<void> {
+    return Promise.race([
+      what.then(() => {}),
+      new Promise<void>(resolve => window.setTimeout(resolve, ms)),
+    ]);
+  }
+
   ionViewWillLeave() {
     this.save_state();
   }
@@ -6501,14 +6571,19 @@ export class DataService implements OnDestroy {
     this.shutting_down = true;
     const mutations_finished = this.cancel_voter_mutations();
     return new Promise((resolve, reject) => {
-      // Logout from Matrix if using Matrix backend
-      if (environment.useMatrixBackend && this.matrixService?.isLoggedIn()) {
-        this.G.L.info("Logging out of Matrix...");
-        this.matrixService.logout().catch((err) => {
-          this.G.L.warn("Matrix logout failed (continuing anyway)", err);
-        });
-      }
-      
+      // Log out of Matrix — the person's own account and every poll account
+      // this device signed in (#327). It is AWAITED below, before the local
+      // storage is cleared and dropped: dropSession writes the same storage
+      // that clear_all_local is about to empty and set to null, and a
+      // fire-and-forget logout raced it, which could leave a credential
+      // behind the clear or throw on a storage that was no longer there.
+      const matrix_logged_out = environment.useMatrixBackend
+        ? DataService.within(DataService.LOGOUT_TIMEOUT_MS,
+            this.logout_matrix_everywhere().catch(err => {
+              this.G.L.warn("Matrix logout failed (continuing anyway)", err);
+            }))
+        : Promise.resolve();
+
       // stop all syncs:
       this.G.L.info("Stopping database synchronisation...");
       // cancel any pending deferred poll-finalization retry timers, so no
@@ -6543,7 +6618,9 @@ export class DataService implements OnDestroy {
       // delete all local dbs:
       this.G.L.info("Deleting local databases...");
       // only if it was ever opened: asking for it would open it to destroy it
-      mutations_finished.then(() => this._local_synced_user_db
+      mutations_finished
+      .then(() => matrix_logged_out)
+      .then(() => this._local_synced_user_db
           ? this._local_synced_user_db.destroy() : Promise.resolve())
       .then(() => {
         this.local_only_user_DB.destroy()
@@ -6602,7 +6679,13 @@ export class DataService implements OnDestroy {
           p.set_my_own_rating(oid, 0, true);
         }
       }
-      await Promise.all(Object.keys(this.G.P.polls).map(pid => this.await_poll_mutations(pid)));
+      await Promise.all(Object.keys(this.G.P.polls).map(pid =>
+        this.await_poll_mutations(pid).catch(error => {
+          // a write that could not be finished must not keep the person's
+          // data on the server: of the two, the deletion is what they asked
+          // for, and it is the one that cannot simply be tried again
+          this.G.L.warn("DataService.delete_all could not finish the writes of", pid, error);
+        })));
       this.shutting_down = true;
       // stop syncing:
       if (!!this.user_db_sync_handler) {
@@ -6617,6 +6700,69 @@ export class DataService implements OnDestroy {
   }
 
   delete_remote(): Promise<any> {
+    /** Everything this person has on the server, removed.
+     *
+     * The Matrix backend has no remote_user_db — it is a PouchDB, and on
+     * Matrix it is never connected — so this walked straight into a
+     * TypeError on null and rejected, which the delete-all page reported as
+     * a failure and answered by going back to the page the person came
+     * from, with every last byte of their data still in place (#327). */
+    return environment.useMatrixBackend
+      ? this.delete_remote_matrix() : this.delete_remote_couchdb();
+  }
+
+  /** how long delete_all waits for what an account still owes the server
+   *  before leaving its rooms anyway */
+  private static readonly DELETE_DRAIN_MS = 10000;
+
+  private async delete_remote_matrix(): Promise<void> {
+    this.G.L.entry("DataService.delete_remote_matrix");
+    // The polls first, each through its own account, which since the
+    // accounts were split is the only one that is a member of its rooms
+    // (#327). The zeroed ratings written a moment ago may still be on their
+    // way, and a write into a room the account has left is refused for
+    // good, so each queue is given a bounded chance to drain first.
+    // every poll this device knows, not only the ones whose objects are
+    // loaded: a poll the person never opened this session still has their
+    // rooms, and its account is the only member that can leave them
+    const pids = new Set([...Object.keys(this.G.P.polls || {}), ...(this._pids || [])]);
+    for (const pid of pids) {
+      try {
+        const service = await this.poll_matrix(pid);
+        await this.drain_pending_writes(service);
+        await service.leavePollRooms(pid);
+      } catch (error) {
+        this.G.L.warn("DataService.delete_remote_matrix could not clear the poll", pid, error);
+      }
+      await this.close_poll_matrix(pid);
+    }
+    // then the person's own account, whose user room is what the CouchDB
+    // user database held: the settings, the poll memberships, the vids and
+    // the poll passwords
+    if (this.matrixService?.isLoggedIn()) {
+      await this.drain_pending_writes(this.matrixService);
+      await this.matrixService.deleteAllUserData(Object.keys(this.user_cache || {}));
+    }
+    this.G.L.exit("DataService.delete_remote_matrix");
+  }
+
+  /** wait, for a bounded time, for what an account still owes the server */
+  private async drain_pending_writes(service: MatrixService): Promise<void> {
+    const deadline = Date.now() + DataService.DELETE_DRAIN_MS;
+    while (service.pendingWriteCount > 0 && Date.now() < deadline) {
+      // nudge it: a queue waiting out a retry delay would otherwise just
+      // sit there for the whole of the deadline
+      await service.processOfflineQueue().catch(() => 0);
+      if (service.pendingWriteCount == 0) { break; }
+      await new Promise(resolve => window.setTimeout(resolve, 200));
+    }
+    if (service.pendingWriteCount > 0) {
+      this.G.L.warn("DataService.drain_pending_writes giving up with",
+        service.pendingWriteCount, "writes outstanding");
+    }
+  }
+
+  private delete_remote_couchdb(): Promise<any> {
     const email_and_pw_hash = this.get_email_and_pw_hash();
     return new Promise((resolve, reject) => {
       this.remote_user_db.allDocs({
@@ -6629,14 +6775,14 @@ export class DataService implements OnDestroy {
         for (const row of res.rows) {
           bulkDocs.push({_id: row.id, _rev: row.value.rev, _deleted: true})
         }
-        this.G.L.trace("DataService.delete_remote trying to delete", bulkDocs);
+        this.G.L.trace("DataService.delete_remote_couchdb trying to delete", bulkDocs);
         this.remote_user_db.bulkDocs(bulkDocs)
         .then(res => {
-          this.G.L.trace("DataService.delete_remote succeeded", res);
+          this.G.L.trace("DataService.delete_remote_couchdb succeeded", res);
           resolve(true);
         })
         .catch(err => {
-          this.G.L.error("DataService.delete_remote failed", err);
+          this.G.L.error("DataService.delete_remote_couchdb failed", err);
           reject(err);
         });
       })

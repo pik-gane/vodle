@@ -610,6 +610,42 @@ describe('MatrixService', () => {
         (service as any).client = null;
       });
       
+      it("clears the user room's every key and leaves it, and never creates one (#327)", async () => {
+        storageSpy.get.and.callFake((key: string) => Promise.resolve(key === 'user_room_id' ? '!user:hs' : null));
+        storageSpy.remove.and.returnValue(Promise.resolve());
+        const cleared: string[] = [], left: string[] = [], forgotten: string[] = [];
+        (service as any).client = {
+          sendStateEvent: (roomId: string, type: string) => { cleared.push(type); return Promise.resolve({}); },
+          leave: (roomId: string) => { left.push(roomId); return Promise.resolve({}); },
+          forget: (roomId: string) => { forgotten.push(roomId); return Promise.resolve({}); },
+        };
+        (service as any).userRoomId = null;
+        await service.deleteAllUserData(['email', 'poll.p1.myvid']);
+        expect(cleared).toEqual(['m.room.vodle.user.email', 'm.room.vodle.user.poll.p1.myvid']);
+        expect(left).toEqual(['!user:hs']);
+        expect(forgotten).withContext('left AND forgotten, so the server may purge it').toEqual(['!user:hs']);
+        expect((service as any).userRoomId).toBeNull();
+        expect(storageSpy.remove).toHaveBeenCalledWith('user_room_id');
+        (service as any).client = null;
+      });
+
+      it('deletes nothing and creates nothing when there is no user room (#327)', async () => {
+        storageSpy.get.and.returnValue(Promise.resolve(null));
+        const createRoom = jasmine.createSpy('createRoom');
+        (service as any).client = {
+          createRoom,
+          sendStateEvent: jasmine.createSpy('sendStateEvent'),
+          getRoomIdForAlias: () => Promise.reject(new Error('M_NOT_FOUND')),
+          leave: jasmine.createSpy('leave'),
+        };
+        (service as any).userRoomId = null;
+        await service.deleteAllUserData(['email']);
+        expect(createRoom).not.toHaveBeenCalled();
+        expect((service as any).client.sendStateEvent).not.toHaveBeenCalled();
+        expect((service as any).client.leave).not.toHaveBeenCalled();
+        (service as any).client = null;
+      });
+
       it('should clean up all listeners on teardown', () => {
         const listener: PollEventListener = { onDataChange: () => {} };
         service.addPollEventListener('test-poll', listener);

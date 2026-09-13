@@ -2312,7 +2312,72 @@ export class MatrixService {
     
     this.logger?.exit("MatrixService.deleteUserData");
   }
-  
+
+  /**
+   * Everything this account's user room holds, removed: every vodle state
+   * event is overwritten with empty content and the room is then left and
+   * forgotten. This is the Matrix counterpart of CouchDB's
+   * DataService.delete_remote, which deletes the user database's documents,
+   * with the one difference Matrix imposes — a state event's TYPE outlives
+   * its content, and the types name the polls (PRIVACY.md §8) — so the room
+   * is left rather than merely emptied. Once no local member is left in it
+   * the homeserver may purge it.
+   *
+   * The ACCOUNT is deliberately not deactivated. Synapse never releases a
+   * deactivated localpart, and vodle derives the localpart from the e-mail
+   * address, so deactivating would bar the person from ever signing up
+   * again with the same address. CouchDB's "delete all my data" leaves the
+   * account alone too.
+   */
+  async deleteAllUserData(keys: string[]): Promise<void> {
+    this.logger?.entry("MatrixService.deleteAllUserData", keys.length);
+    if (!this.client) {
+      return;
+    }
+    const roomId = await this.findUserRoom();
+    if (!roomId) {
+      this.logger?.info("MatrixService.deleteAllUserData there is no user room to delete");
+      return;
+    }
+    for (const key of keys) {
+      try {
+        await this.sendStateEvent(roomId, `m.room.vodle.user.${key}`, {}, '');
+      } catch (error) {
+        // one key that cannot be cleared must not keep the rest of the
+        // person's data on the server
+        this.logger?.warn("MatrixService.deleteAllUserData could not clear", key, error);
+      }
+    }
+    this.userDataCache.clear();
+    try {
+      await this.client.leave(roomId);
+      await this.client.forget(roomId);
+    } catch (error) {
+      this.logger?.warn("MatrixService.deleteAllUserData could not leave the user room", roomId, error);
+    }
+    this.userRoomId = null;
+    await this.storage.remove(this.storageKey('user_room_id'));
+    this.logger?.info("MatrixService.deleteAllUserData cleared", keys.length, "keys and left", roomId);
+    this.logger?.exit("MatrixService.deleteAllUserData");
+  }
+
+  /** this account's user room if it has one — unlike getUserRoom, never
+   *  creating one, which deleting the data plainly must not do */
+  private async findUserRoom(): Promise<string | null> {
+    if (this.userRoomId) {
+      return this.userRoomId;
+    }
+    const stored = await this.storage.get(this.storageKey('user_room_id'));
+    if (stored) {
+      return stored;
+    }
+    try {
+      return (await this.client.getRoomIdForAlias(this.userRoomAliasFor(this.userId))).room_id;
+    } catch (error) {
+      return null;
+    }
+  }
+
   /** the alias of the private user room of `userId` (on that user's server) */
   private userRoomAliasFor(userId: string): string {
     return `#vodle_user_${this.hashUserId(userId)}:${MatrixService.serverNameOf(userId) || this.getHomeserverDomain()}`;

@@ -25,6 +25,7 @@ import { AlertController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { GlobalService } from "../global.service";
+import { restart_at_the_beginning } from "../data.service";
 
 // PAGE:
 
@@ -100,7 +101,10 @@ export class LogoutPage implements OnInit {
                 body: null
               }]});
 */
-              window.location.reload();
+              // back to the first page, not to this one: a plain reload
+              // comes back to /logout, which the login page is then told to
+              // return to, so signing in again asked "log out?" again.
+              restart_at_the_beginning();
             }).catch(error => {
               LocalNotifications.schedule({ notifications: [{ id: null,
                   title: this.translate.instant("logout.failed"),

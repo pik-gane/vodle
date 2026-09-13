@@ -3866,3 +3866,132 @@ describe('a password change carries the poll accounts (#327)', () => {
     expect(changed).withContext('the other poll still followed').toEqual([['p2']]);
   });
 });
+
+describe('deleting all of a person\'s data (#327)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, matrix: any, poll_matrix: any, previous_flag: boolean;
+
+  function fresh(): void {
+    (environment as any).useMatrixBackend = true;
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.user_cache = {email: 'a@b.c', password: 'pw', 'poll.p1.myvid': 'v1', 'poll.p1.state': 'running'};
+    svc.poll_caches = {};
+    svc.local_poll_dbs = {};
+    svc.remote_poll_dbs = {};
+    svc.poll_db_sync_handlers = {};
+    svc.incoming_dids_caches = {};
+    svc.outgoing_dids_caches = {};
+    // the CouchDB remote is exactly what the Matrix backend never connects:
+    // leaving it unset is the point of these specs
+    matrix = {
+      isLoggedIn: () => true,
+      pendingWriteCount: 0,
+      syncIsStalled: false,
+      processOfflineQueue: jasmine.createSpy('processOfflineQueue').and.returnValue(Promise.resolve(0)),
+      deleteAllUserData: jasmine.createSpy('deleteAllUserData').and.returnValue(Promise.resolve()),
+      logout: jasmine.createSpy('logout').and.returnValue(Promise.resolve()),
+      dropSession: jasmine.createSpy('dropSession').and.returnValue(Promise.resolve()),
+    };
+    poll_matrix = {
+      pendingWriteCount: 0,
+      syncIsStalled: false,
+      processOfflineQueue: jasmine.createSpy('processOfflineQueue').and.callFake(() => {
+        poll_matrix.pendingWriteCount = 0;
+        return Promise.resolve(1);
+      }),
+      leavePollRooms: jasmine.createSpy('leavePollRooms').and.callFake(() => {
+        poll_matrix.outstanding_when_left = poll_matrix.pendingWriteCount;
+        return Promise.resolve();
+      }),
+      dropSession: jasmine.createSpy('dropSession').and.returnValue(Promise.resolve()),
+      outstanding_when_left: -1,
+    };
+    svc.matrixService = matrix;
+    svc.open_poll_matrix = async () => poll_matrix;
+    svc.G = {
+      L: L, D: svc, Del: {decline: noop, revoke_delegation: () => Promise.resolve()},
+      P: {polls: {p1: {oids: ['o1', 'o2'], set_my_own_rating: jasmine.createSpy('set_my_own_rating'),
+                       cancel_end_retry: noop}}},
+    };
+    svc.await_poll_mutations = jasmine.createSpy('await_poll_mutations').and.returnValue(Promise.resolve());
+    svc.clear_all_local = jasmine.createSpy('clear_all_local').and.returnValue(Promise.resolve(true));
+  }
+
+  beforeEach(() => {
+    previous_flag = environment.useMatrixBackend;
+    fresh();
+  });
+
+  afterEach(() => { (environment as any).useMatrixBackend = previous_flag; });
+
+  it('goes nowhere near the CouchDB user database, which Matrix never connects', async () => {
+    // the regression: delete_remote read remote_user_db.allDocs on a
+    // remote_user_db that is null here, so the whole deletion rejected and
+    // the person kept every byte of their data
+    expect(svc.remote_user_db).toBeUndefined();
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(poll_matrix.leavePollRooms).toHaveBeenCalledWith('p1');
+    expect(matrix.deleteAllUserData).toHaveBeenCalledTimes(1);
+    expect(matrix.deleteAllUserData.calls.mostRecent().args[0].sort())
+      .toEqual(['email', 'password', 'poll.p1.myvid', 'poll.p1.state']);
+    expect(svc.clear_all_local).toHaveBeenCalled();
+  });
+
+  it('zeroes the ratings and lets them out before it leaves the rooms', async () => {
+    poll_matrix.pendingWriteCount = 2;
+    await svc.delete_all();
+    expect(svc.G.P.polls.p1.set_my_own_rating).toHaveBeenCalledWith('o1', 0, true);
+    expect(svc.G.P.polls.p1.set_my_own_rating).toHaveBeenCalledWith('o2', 0, true);
+    expect(poll_matrix.processOfflineQueue).toHaveBeenCalled();
+    expect(poll_matrix.outstanding_when_left)
+      .withContext('a write into a room the account has left is refused for good').toBe(0);
+  });
+
+  it("lets go of each poll's account once its rooms are gone", async () => {
+    await svc.delete_all();
+    expect(poll_matrix.dropSession).toHaveBeenCalled();
+    expect(Object.keys(svc.poll_matrix_promises)).toEqual([]);
+    expect(Object.keys(svc.poll_matrix_sessions)).toEqual([]);
+  });
+
+  it('leaves the rooms of a poll this session never opened, too', async () => {
+    svc._pids = new Set(['p1', 'p2']);
+    const left: string[] = [];
+    poll_matrix.leavePollRooms.and.callFake((pid: string) => { left.push(pid); return Promise.resolve(); });
+    await svc.delete_all();
+    expect(left.sort()).withContext('p2 is known but its Poll object was never built').toEqual(['p1', 'p2']);
+  });
+
+  it('deletes even when a poll\'s own writes could not be finished', async () => {
+    svc.await_poll_mutations.and.returnValue(Promise.reject(new Error('incomplete')));
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(matrix.deleteAllUserData).toHaveBeenCalled();
+  });
+
+  it('carries on with the user room when a poll cannot be reached at all', async () => {
+    svc.open_poll_matrix = async () => { throw new Error('no homeserver'); };
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(matrix.deleteAllUserData).toHaveBeenCalled();
+  });
+
+  it('logs out of the poll accounts as well as the person\'s own', async () => {
+    await svc.poll_matrix('p1');
+    await svc.logout_matrix_everywhere();
+    expect(poll_matrix.dropSession).withContext('its sync store must not outlive the session').toHaveBeenCalled();
+    expect(matrix.logout).toHaveBeenCalled();
+    expect(Object.keys(svc.poll_matrix_sessions)).toEqual([]);
+  });
+
+  it("counts a poll account's writes in the header's in-progress sign", async () => {
+    expect(svc.sync_pending).withContext('nothing outstanding').toBeFalse();
+    await svc.poll_matrix('p1');
+    poll_matrix.pendingWriteCount = 3;
+    expect(svc.sync_pending)
+      .withContext('a VOTE is written by the poll account, not the person\'s own').toBeTrue();
+    poll_matrix.pendingWriteCount = 0;
+    poll_matrix.syncIsStalled = true;
+    svc.replication_stalled = {};
+    expect(svc.sync_is_stalled).toBeTrue();
+  });
+});
