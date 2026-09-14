@@ -1294,7 +1294,8 @@ export class PollPage implements OnInit {
         cssClass: 'explain-approval',
         showBackdrop: true,
         componentProps: {parent: this, oid: oid},
-        swipeToClose: true,
+        // Ionic 7 removed swipeToClose: a modal with presentingElement set is
+        // a card modal, and card modals get the swipe gesture unconditionally
         presentingElement: this.routerOutlet.nativeEl
     })
     .then((modalElement)=>{

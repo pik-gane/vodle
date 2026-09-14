@@ -51,7 +51,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-input 
         style="font-size: smaller;" type="text" [maxlength]="E.max_len.url"
         formControlName="db_custom_server_url" required
-        (ionChange)="set_db_custom_server_url()" debounce="100">
+        (ionInput)="set_db_custom_server_url()" debounce="100">
       </ion-input>
     </ion-item>
     <div class="validation-errors">
@@ -69,7 +69,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         clearOnEdit="false" clearInput="true"
         (keydown.enter)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
         (keydown.tab)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
-        (ionChange)="set_db_custom_password()" debounce="100">
+        (ionInput)="set_db_custom_password()" debounce="100">
       </ion-input>
       <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_custom_password=!showing_db_custom_password">
         <ion-icon tabindex="-1" [name]="showing_db_custom_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;<span [innerHtml]="(showing_db_custom_password?'hide':'show')|translate"></span>

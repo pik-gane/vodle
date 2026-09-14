@@ -145,7 +145,7 @@ TODO:
                   formControlName="email" [maxlength]="E.max_len.name"
                   type="text" inputmode="email" [autofocus]="step=='old_email'"
                   data-vodle="email-input"
-                  (ionChange)="set_email()" debounce="100"
+                  (ionInput)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
               </ion-item>
@@ -225,7 +225,7 @@ TODO:
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   data-vodle="new-password-input"
-                  (ionChange)="set_password()" debounce="100"
+                  (ionInput)="set_password()" debounce="100"
                   (ionBlur)="blur_password()">
                 </ion-input>
               </ion-item>
@@ -256,7 +256,7 @@ TODO:
                 [type]="showing_password?'text':'password'" required
                 autocomplete="off" autocorrect="off"
                 data-vodle="confirm-password-input"
-                (ionChange)="set_password()" debounce="100"
+                (ionInput)="set_password()" debounce="100"
                 (keydown.enter)="submit_new_password()">
               </ion-input>
             </ion-item>
@@ -307,7 +307,7 @@ TODO:
                   [type]="showing_password?'text':'password'" required autofocus="true"
                   autocomplete="off" autocorrect="off"
                   data-vodle="old-password-input"
-                  (ionChange)="set_old_password()" debounce="100"
+                  (ionInput)="set_old_password()" debounce="100"
                   (keydown.enter)="submit_old_password()">
                 </ion-input>
               </ion-item>
