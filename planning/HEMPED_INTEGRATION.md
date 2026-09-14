@@ -100,26 +100,47 @@ So the integration has a hard requirement:
 A test that would catch this: extend `delegation-matrix-path.spec.ts` with a
 case per key, asserting each reaches the delegation service.
 
+## We proceed without the author
+
+Decided by the owner, 2026-09-14: this is to be done independently of HEMPED.
+Nothing in the plan depends on them, and one fact makes that easy —
+
+> **`6cdcda1` is already in this repository.** It is on `pik-gane/vodle:hemped`,
+> not on the fork. Only PR #285's 13 further commits live on
+> `HEMPED/vodle:test`, and those are the ones written after the Angular 19
+> migration, which we are not taking anyway.
+
+So Part A needs no fork access, no branch of theirs to be rewritten, and no
+cooperation. What we owe them is credit, not coordination: the work is AGPL
+and their commits carry their `Author:` line. Merge, do not squash, and the 27
+commits keep it. Where a change has to be rewritten rather than merged —
+which is what the 11 conflicts amount to — say so in the commit message and
+name them.
+
+PR #285 itself is then not the vehicle. It can be left as it is, or closed
+with a note saying where its Angular 14 half went; that is the owner's call
+and not a technical one.
+
 ## Recommended order
 
 1. **Merge #335 first.** It is green and in final testing. Part A is +3282
    lines through the delegation core; it does not belong in the same PR.
-2. **Ask HEMPED to split**, if they are available: Part A is already a
-   coherent branch ending at `6cdcda1`, and a PR of `6cdcda1` against current
-   `main` would be reviewable on its own terms. This is much the best outcome
-   — it keeps their authorship and their commit history.
-3. Failing that, **a new PR merging `6cdcda1` into `main`** after #335 lands,
-   resolving the 11 conflicts above, with HEMPED credited as author on the
-   merged commits (`git merge`, not squash, so the 27 commits keep their
-   `Author:`).
-4. **Then the Matrix delivery for the new keys**, with specs, before the
+2. **A new PR merging `6cdcda1` into `main`** once #335 lands, resolving the
+   11 conflicts above. `git merge`, not squash, so HEMPED stays the author of
+   their 27 commits.
+3. **Then the Matrix delivery for the new keys**, with specs, before the
    feature is switched on for a Matrix deployment. `environment.delegation`
-   already gates it.
-5. **Part B (Angular 19 / Ionic 8) separately, or not at all yet.** The
-   author's own commit message asks for it to be checked carefully. It is
-   orthogonal to the feature and would be far easier to judge on its own —
-   and our CI (real CouchDB, two Synapse servers, a production click-through)
-   is exactly what should judge it.
+   already gates it, so it can land dark.
+4. **The post-migration delegation work in #285 (13 commits) is a separate,
+   later judgement.** It is Angular 19 code; anything worth having from it is
+   a hand port of the idea, not a cherry-pick of the commit. Read it for what
+   it fixed — the commit subjects name real bugs (vote splitting, the
+   some/all/none control logic, a slider left enabled) — and check whether
+   Part A has those bugs here.
+5. **Part B (Angular 19 / Ionic 8) is ours to decide separately, or not yet.**
+   If we ever migrate, we migrate our own tree with our own CI (real CouchDB,
+   two Synapse servers, a production click-through) judging it — not by
+   taking a migration commit whose own message asks to be checked carefully.
 
 ## What was measured, and what was not
 
