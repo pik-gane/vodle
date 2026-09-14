@@ -60,7 +60,7 @@
     "libsodium-wrappers": "^0.7.9",
     "matrix-js-sdk": "^37.5.0",
     "pouchdb": "^7.2.2",
-    "rxjs": "~6.6.0",
+    "rxjs": "^7.8.2",
     "venn.js": "^0.2.20",
     "zone.js": "~0.15.1"
   },

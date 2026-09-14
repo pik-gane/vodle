@@ -30,6 +30,9 @@ import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
 import { DOCUMENT } from '@angular/common';
+// rxjs 7 deprecates toPromise(); firstValueFrom is its replacement for a
+// source that emits once and completes, which is what HttpClient.get does
+import { firstValueFrom } from 'rxjs';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -4525,12 +4528,12 @@ export class DataService implements OnDestroy {
   get_example_docs(): Promise<any> {
     if (environment.useMatrixBackend) {
       // For Matrix backend, fetch example polls from static JSON assets
-      return this.G.http.get<any[]>('assets/examples/index.json').toPromise()
+      return firstValueFrom(this.G.http.get<any[]>('assets/examples/index.json'))
         .then(async (index: any[]) => {
           const rows = [];
           for (const entry of index) {
             try {
-              const doc = await this.G.http.get<any>('assets/examples/' + entry.file).toPromise();
+              const doc = await firstValueFrom(this.G.http.get<any>('assets/examples/' + entry.file));
               doc._id = 'examples§' + entry.file.replace('.json', '');
               rows.push({ doc });
             } catch (e) {

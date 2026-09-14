@@ -36,7 +36,6 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
 import { Poll } from './poll.service';
-import { min } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
