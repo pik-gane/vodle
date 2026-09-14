@@ -427,6 +427,49 @@ describe('delegation without a shared document (#285)', () => {
       expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(99);
     });
 
+    it('lets one option override the general shares', () => {
+      const w = make_world(['o1', 'o2'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 20, 'o2');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v1', 'o2', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      w.poll.update_own_rating('v2', 'o2', 80, true);
+      // o1 takes the general 50%, o2 the 20% set against it
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      expect(w.poll.proxy_ratings_map.get('o2').get('v1')).toBe(48);
+    });
+
+    it('takes an option back to the voter alone when every share there is nil', () => {
+      const w = make_world(['o1', 'o2'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 0, 'o2');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v1', 'o2', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      w.poll.update_own_rating('v2', 'o2', 80, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      expect(w.poll.proxy_ratings_map.get('o2').get('v1'))
+        .withContext('nothing shared here, so the voter\'s own wap stands').toBe(40);
+    });
+
+    it('gives the general share back when the option\'s own is cleared', () => {
+      const w = make_world(['o1'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 0, 'o1');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(40);
+      expect(w.Del.option_has_own_trusts(pid, 'v1', 'o1')).toBeTrue();
+      w.Del.clear_delegate_trust(pid, did, 'o1');
+      expect(w.Del.option_has_own_trusts(pid, 'v1', 'o1')).toBeFalse();
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1'))
+        .withContext('back to the general 50%').toBe(60);
+    });
+
     it('lets go of a delegate whose request is revoked', () => {
       const w = make_world(['o1'], {weighted: true});
       const did = trust(w, 'v1', 'v2', 50);

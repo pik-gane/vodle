@@ -302,6 +302,11 @@ export type del_request_t = {
   // client's own request rather than in a poll-wide document.
   rank?: number,
   trust?: number,
+  // ... and per option, where the client wants this delegate to carry a
+  // different share there than the one they gave them in general. An option
+  // with no entry uses `trust`; one where every delegate's entry is 0 is one
+  // the client has taken back to rating alone.
+  trusts?: {[oid: string]: number},
 };
 export type del_response_t = {option_spec: del_option_spec_t, status: "agreed" | "declined" | "revoked", "decline_cycle", "decline_self"};
 export type del_signed_response_t = string;

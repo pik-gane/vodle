@@ -667,7 +667,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                  not handed their ratings over but divided them up: -->
             <ion-col *ngIf="get_weighted_delegation_allowed()" class="ion-no-margin ion-padding-right">
               <small>
-                <p [innerHtml]="'poll.wap-shared-out' | translate: {kept: my_share_kept()}"></p>
+                <p *ngIf="share_kept_range()[0] == share_kept_range()[1]"
+                   [innerHtml]="'poll.wap-shared-out' | translate: {kept: my_share_kept()}"></p>
+                <p *ngIf="share_kept_range()[0] != share_kept_range()[1]"
+                   [innerHtml]="'poll.wap-shared-out-varying' | translate: {
+                     least: share_kept_range()[0], most: share_kept_range()[1]}"></p>
               </small>
             </ion-col>
             
@@ -837,7 +841,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"
                         mode="md" pin="true"
-                        [class.own-wap-shared]="wap_is_shared()"
+                        [class.own-wap-shared]="wap_is_shared(oidsorted[i])"
                         min="0" max="100" step="1" snaps="true" ticks="false"
                         data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
                         [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
@@ -900,7 +904,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <!-- anchored like the approval bar above, whose dashed
                              centre line at y=17 is the slider's own bar line -->
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: -8; width: 100%; padding-left: 11px"
-                            [style.display]="wap_is_shared() ? 'inline' : 'none'">
+                            [style.display]="wap_is_shared(oidsorted[i]) ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
                             <line [id]="'eff_rest_' + oidsorted[i]" x1="50%" y1="17" x2="100%" y2="17" fill="none"
                               [attr.stroke]="slider_colour(oidsorted[i])" stroke-opacity="0.26" stroke-width="7" />
@@ -928,9 +932,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <!-- DELEGATION TOGGLE: -->
 
-                  <!-- not in a weighted poll: there a delegation is a share
-                       of the voter's wap, not something to switch on or off,
-                       and the voter always speaks for the rest of it. -->
+                  <!-- In a weighted poll the switch beside it does the work:
+                       there it does not choose between two people's waps but
+                       between the voter's shares applying to this option and
+                       the voter rating it alone. -->
                   <ion-col *ngIf="!get_weighted_delegation_allowed() && ((delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != ''))" 
                       class="ion-no-margin ion-no-padding" 
                       size="auto">&nbsp;&nbsp;&nbsp;
@@ -950,6 +955,31 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       </small>
                     </div>
                   </ion-col>  
+
+                  <!-- WEIGHTED: does this option use the voter's shares, or do
+                       they rate it alone? -->
+
+                  <ion-col *ngIf="get_weighted_delegation_allowed() && my_share_kept() < 100"
+                      class="ion-no-margin ion-no-padding" 
+                      size="auto">&nbsp;&nbsp;&nbsp;
+                    <ion-toggle [id]="'share_toggle_' + oidsorted[i]"
+                      [disabled]="!p.allow_voting"
+                      (ionChange)="on_share_toggle_change(oidsorted[i])"
+                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
+                      style="position:relative; top:-8px;" 
+                      [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
+                    </ion-toggle>
+                    <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+                      <small [innerHtml]="
+                        rate_yourself_toggle[oidsorted[i]] 
+                        ? ('poll.my-own' | translate) 
+                        : (option_has_own_shares(oidsorted[i])
+                            ? ('poll.own-shares' | translate: {kept: my_share_kept(oidsorted[i])})
+                            : ('poll.shared' | translate: {kept: my_share_kept(oidsorted[i])}))
+                        " >
+                      </small>
+                    </div>
+                  </ion-col>
 
                 </ion-row>
               </ion-grid>

@@ -78,15 +78,50 @@ export class DelegationDialogRankedPage implements OnInit {
     return this.G.D.get_weighted_delegation_allowed(this.parent.pid);
   }
 
+  /** which option's shares are being looked at: '' for the voter's general
+   *  ones, which stand wherever they have said nothing more particular */
+  for_oid = '';
+
   ionViewWillEnter() {
+    this.read_delegations();
+    this.ready = true;
+  }
+
+  read_delegations() {
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
     this.delegation_list = [];
     for (const [did, weight] of ddm.get(this.parent.p.myvid) || []) {
       const a = this.G.Del.get_agreement(this.parent.pid, did);
       const nickname = this.G.Del.get_delegate_nickname(this.parent.pid, did);
-      this.delegation_list.push({nickname: nickname, weight: weight, did: did, status: a.status});
+      this.delegation_list.push({
+        nickname: nickname, did: did, status: a.status,
+        weight: (this.weighted && this.for_oid)
+          ? this.G.Del.get_delegate_trust(this.parent.pid, did, this.for_oid)
+          : weight,
+      });
     }
-    this.ready = true;
+  }
+
+  for_oid_changed() {
+    this.reorder_disabled = true;
+    this.read_delegations();
+  }
+
+  /** whether this option's shares are the voter's general ones or something
+   *  they have said about this option in particular */
+  has_own_shares(): boolean {
+    return !!this.for_oid && this.G.Del.option_has_own_trusts(
+      this.parent.pid, this.parent.p.myvid, this.for_oid);
+  }
+
+  /** take this option's shares back to the voter's general ones */
+  use_general_shares() {
+    for (const item of this.delegation_list) {
+      this.G.Del.clear_delegate_trust(this.parent.pid, item.did, this.for_oid);
+    }
+    this.G.Del.resolve_weighted_delegations(this.parent.pid);
+    this.parent.update_delegation_info();
+    this.read_delegations();
   }
 
   @ViewChild('focus_element', { static: false }) focus_element: IonInput;
@@ -125,11 +160,13 @@ export class DelegationDialogRankedPage implements OnInit {
     }
 
     // A rank and a share are both the client's own statement about their own
-    // delegation, so they go into their own request.
+    // delegation, so they go into their own request — against one option if
+    // that is what the voter is looking at, and otherwise in general.
     for (const item of this.delegation_list) {
       if (this.weighted) {
         this.G.Del.set_delegate_trust(this.parent.pid, item.did,
-                                      this.a_possible_share(item.weight));
+                                      this.a_possible_share(item.weight),
+                                      this.for_oid || undefined);
       } else {
         this.G.Del.set_delegate_rank(this.parent.pid, item.did, Number(item.weight));
       }

@@ -72,14 +72,34 @@ describe('PollPage', () => {
       component.weighted_delegation_allowed = true;
       component.p = {
         myvid: 'v1',
+        oids: ['o1', 'o2'],
         proxy_ratings_map: new Map([['o1', new Map([['v1', 62]])]]),
         get_my_own_rating: (oid: string) => oid == 'o1' ? 40 : 0,
       } as any;
+      (component as any).G.D.save_state = () => {};
       (component as any).G.D.get_direct_delegation_map = () => new Map([
         // [did, share, status]: accepted 30%, accepted 20%, and one still
         // waiting for an answer, which is not given away yet
         ['v1', [['d1', '30', '2'], ['d2', '20', '2'], ['d3', '40', '0']]],
       ]);
+      // o2 is one the voter has said something of their own about: nothing
+      // to d1 there, d2's general 20% left alone
+      const per_option: any = {d1: {o2: 0}};
+      (component as any).G.Del = {
+        get_delegate_trust: (_pid: string, did: string, oid?: string) => {
+          const own = oid && per_option[did] && per_option[did][oid];
+          if (own !== undefined && own !== false) { return own; }
+          return {d1: 30, d2: 20, d3: 40}[did] || 0;
+        },
+        set_delegate_trust: (_pid: string, did: string, value: number, oid?: string) => {
+          if (oid) { (per_option[did] = per_option[did] || {})[oid] = value; }
+        },
+        clear_delegate_trust: (_pid: string, did: string, oid: string) => {
+          if (per_option[did]) { delete per_option[did][oid]; }
+        },
+        option_has_own_trusts: (_pid: string, _vid: string, oid: string) =>
+          Object.values(per_option).some((by_oid: any) => by_oid[oid] !== undefined),
+      };
     });
 
     it('counts what the voter still speaks for themselves', () => {
@@ -107,6 +127,29 @@ describe('PollPage', () => {
     it('and never in a poll that does not weight delegations', () => {
       component.weighted_delegation_allowed = false;
       expect(component.wap_is_shared()).toBeFalse();
+    });
+
+    it('counts an option\'s own shares where the voter has set them', () => {
+      expect(component.my_share_kept('o1'))
+        .withContext('the general 30 and 20').toBe(50);
+      expect(component.my_share_kept('o2'))
+        .withContext('nothing to d1 here, so only d2\'s 20 is out').toBe(80);
+      expect(component.option_has_own_shares('o1')).toBeFalse();
+      expect(component.option_has_own_shares('o2')).toBeTrue();
+    });
+
+    it('reports the range across the options for the summary line', () => {
+      expect(component.share_kept_range()).toEqual([50, 80]);
+    });
+
+    it('switches an option to the voter alone and back', () => {
+      component.set_option_shared('o1', false);
+      expect(component.my_share_kept('o1'))
+        .withContext('every share here set to nothing').toBe(100);
+      expect(component.wap_is_shared('o1')).toBeFalse();
+      component.set_option_shared('o1', true);
+      expect(component.my_share_kept('o1'))
+        .withContext('back to the general shares, which were never touched').toBe(50);
     });
 
     // the slider under an option is the voter's own wap, and stays theirs to

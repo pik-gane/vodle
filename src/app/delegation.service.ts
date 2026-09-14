@@ -621,20 +621,55 @@ export class DelegationService {
   }
 
   /** How much of the client's wap this delegate carries, in percent.
-   *  Stored alongside the rank, and for the same reason. */
-  get_delegate_trust(pid: string, did: string): number {
+   *  Stored alongside the rank, and for the same reason.
+   *
+   *  With an oid, the share for that option: the client's per-option figure
+   *  if they set one there, and otherwise the share they gave in general.
+   *  An option where every delegate's share is 0 is one the client has taken
+   *  back to rating alone. */
+  get_delegate_trust(pid: string, did: string, oid?: string): number {
     const request = this.get_request(pid, did);
-    return (request && request.trust !== undefined) ? Number(request.trust) : 0;
+    if (!request) { return 0; }
+    if (oid && request.trusts && request.trusts[oid] !== undefined) {
+      return Number(request.trusts[oid]);
+    }
+    return (request.trust !== undefined) ? Number(request.trust) : 0;
   }
 
-  set_delegate_trust(pid: string, did: string, value: number) {
+  set_delegate_trust(pid: string, did: string, value: number, oid?: string) {
     const request = this.get_request(pid, did);
     if (!request) {
       this.G.L.error("DelegationService.set_delegate_trust before the request exists", pid, did);
       return;
     }
-    request.trust = value;
+    if (oid) {
+      if (!request.trusts) { request.trusts = {}; }
+      request.trusts[oid] = value;
+    } else {
+      request.trust = value;
+    }
     this.set_my_request(pid, did, request);
+  }
+
+  /** Take an option's share back to the one the client gave in general. */
+  clear_delegate_trust(pid: string, did: string, oid: string) {
+    const request = this.get_request(pid, did);
+    if (!request || !request.trusts || request.trusts[oid] === undefined) { return; }
+    delete request.trusts[oid];
+    this.set_my_request(pid, did, request);
+  }
+
+  /** Whether the client has said anything of their own about this option's
+   *  shares, rather than letting their general ones stand. */
+  option_has_own_trusts(pid: string, client_vid: string, oid: string): boolean {
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || a.client_vid != client_vid) { continue; }
+      const request = this.get_request(pid, did, client_vid);
+      if (request && request.trusts && request.trusts[oid] !== undefined) {
+        return true;
+      }
+    }
+    return false;
   }
 
   get_request(pid: string, did: string, client_vid?: string): del_request_t {
@@ -1043,7 +1078,7 @@ export class DelegationService {
     for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
       if (!a || !a.client_vid || !a.delegate_vid || a.status != "agreed") { continue; }
       if (!a.active_oids || !a.active_oids.has(oid)) { continue; }
-      const trust = Math.max(0, Math.min(100, this.get_delegate_trust(pid, did))) / 100;
+      const trust = Math.max(0, Math.min(100, this.get_delegate_trust(pid, did, oid))) / 100;
       if (trust <= 0) { continue; }
       const row = result.get(a.client_vid) || new Map<string, number>();
       row.set(a.delegate_vid, (row.get(a.delegate_vid) || 0) + trust);

@@ -492,6 +492,13 @@ export class PollPage implements OnInit {
 
   update_delegation_toggles() {
     for (let oid of this.oidsorted) {
+      if (this.weighted_delegation_allowed) {
+        // the switch here does not choose between two people's waps but
+        // between the voter's shares applying to this option or the voter
+        // rating it alone:
+        this.rate_yourself_toggle[oid] = !this.wap_is_shared(oid);
+        continue;
+      }
       // let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
       // if (!did) {
       //   did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
@@ -594,7 +601,7 @@ export class PollPage implements OnInit {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, p.get_my_proxy_rating(oid));
-      if (this.wap_is_shared()) {
+      if (this.wap_is_shared(oid)) {
         // the blend, drawn the way an undelegated wap is drawn — the option's
         // colour, the bar's usual thickness — but ending in a dot, since it
         // is a result and not something to drag. (#285 pointed the dashed
@@ -1032,19 +1039,69 @@ export class PollPage implements OnInit {
    *  and what is left over is the voter's own voice. That number is the one
    *  thing the person needs to see, and #285's screen never showed it.
    */
-  my_share_kept(): number {
+  my_share_kept(oid?: string): number {
     let given = 0;
     for (const [did, share, status] of
          this.G.D.get_direct_delegation_map(this.pid).get(this.p.myvid) || []) {
-      if (status != '0') { given += Number(share) || 0; }
+      if (status == '0') { continue; }
+      given += (oid ? this.G.Del.get_delegate_trust(this.pid, did, oid)
+                    : Number(share)) || 0;
     }
     return Math.max(0, 100 - given);
   }
 
+  /** The range of what the voter keeps across the options, as the summary
+   *  line needs it: one figure when every option is the same, two when the
+   *  voter has said something of their own about some of them. */
+  share_kept_range(): [number, number] {
+    let least = 100, most = 0;
+    for (const oid of this.p.oids) {
+      const kept = this.my_share_kept(oid);
+      least = Math.min(least, kept);
+      most = Math.max(most, kept);
+    }
+    return [least, most];
+  }
+
   /** Whether the voter has given part of their wap away, so that the knob
-   *  under their hand is no longer the number that counts. */
-  wap_is_shared(): boolean {
-    return this.weighted_delegation_allowed && this.my_share_kept() < 100;
+   *  under their hand is no longer the number that counts.
+   *
+   *  Given an option, whether that holds for that option: a voter can take a
+   *  single option back to rating it alone, and can give a delegate a
+   *  different share there than they gave them in general. */
+  wap_is_shared(oid?: string): boolean {
+    return this.weighted_delegation_allowed && this.my_share_kept(oid) < 100;
+  }
+
+  /** Whether this option's shares are the voter's general ones or something
+   *  they have said about this option in particular. */
+  option_has_own_shares(oid: string): boolean {
+    return this.weighted_delegation_allowed
+        && this.G.Del.option_has_own_trusts(this.pid, this.p.myvid, oid);
+  }
+
+  /** Switch an option between the voter's shares and rating it alone.
+   *
+   *  Off sets every delegate's share for this option to nothing, which is
+   *  what "alone" means arithmetically; on takes the option back to the
+   *  voter's general shares. Neither touches those general shares, so the
+   *  switch is reversible. */
+  set_option_shared(oid: string, shared: boolean) {
+    for (const [did, , status] of
+         this.G.D.get_direct_delegation_map(this.pid).get(this.p.myvid) || []) {
+      if (status == '0') { continue; }
+      if (shared) {
+        this.G.Del.clear_delegate_trust(this.pid, did, oid);
+      } else {
+        this.G.Del.set_delegate_trust(this.pid, did, 0, oid);
+      }
+    }
+    this.G.D.save_state();
+  }
+
+  on_share_toggle_change(oid: string) {
+    this.set_option_shared(oid, !!this.rate_yourself_toggle[oid] === false);
+    this.show_stats();
   }
 
   /** The colour this option's bar is drawn in. ion-range takes the name of a
