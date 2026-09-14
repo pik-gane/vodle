@@ -34,7 +34,6 @@ import { AssistPage } from '../assist/assist.module';
 import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
-import { waitForAsync } from '@angular/core/testing';
 
 @Component({
   selector: 'app-poll',
