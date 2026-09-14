@@ -182,7 +182,13 @@ TODO:
           &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
         </ion-button>
       </ion-item>
-      <ng-container *ngIf="step=='fresh_email'">
+      <!-- The guest offer is for a visitor who has NO account yet. Someone
+           who is already taking part as a guest came here from the poll
+           page's "log in" button to stop being one, and offering them a
+           guest login there reads as if that were a way of logging in —
+           they press it, nothing about their situation changes, and the
+           banner is still there (#193). -->
+      <ng-container *ngIf="step=='fresh_email' && !G.S.use_guest">
         <ion-item>
         </ion-item>
         <ion-item class="item-text-wrap" lines="none">

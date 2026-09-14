@@ -57,29 +57,33 @@ describe('LoginPage', () => {
 
     it('falls back to English when the browser language is not offered and nothing is stored', () => {
       spyOnProperty(navigator, 'language', 'get').and.returnValue('xx-XX');
-      component.G.S.language = '';
+      component.G.S.language = component.G.S.display_language = '';
       component.ionViewDidEnter();
       expect(language()).toBe('en');
       expect(component.languageFormGroup.valid).toBeTrue();
     });
 
-    it('takes a supported browser language, and a supported stored language over that', () => {
+    it('takes a supported browser language, and the one this device shows over that', () => {
+      // the DEVICE's language, which is what this question is about: the
+      // account's preference is not known until the user data has synced,
+      // and is applied then (DataService.ensure_user_defaults, #327)
       spyOnProperty(navigator, 'language', 'get').and.returnValue('de-DE');
-      component.G.S.language = '';
+      component.G.S.display_language = '';
       component.ionViewDidEnter();
       expect(language()).toBe('de');
-      component.G.S.language = 'en';
+      component.G.S.display_language = 'en';
       component.ionViewDidEnter();
       expect(language()).toBe('en');
-      // a stored language that is no longer offered must not stick either:
-      component.G.S.language = 'xx';
+      // a language that is no longer offered must not stick either:
+      component.G.S.display_language = 'xx';
       component.ionViewDidEnter();
       expect(language()).toBe('de');
+      component.G.S.display_language = '';
     });
 
     it('survives an undefined navigator.language', () => {
       spyOnProperty(navigator, 'language', 'get').and.returnValue(undefined);
-      component.G.S.language = '';
+      component.G.S.language = component.G.S.display_language = '';
       component.ionViewDidEnter();
       expect(language()).toBe('en');
     });
@@ -88,9 +92,13 @@ describe('LoginPage', () => {
       const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
       spyOnProperty(navigator, 'language', 'get').and.returnValue('de-DE');
       component.step = 'start';
-      component.G.S.language = '';
+      component.G.S.language = component.G.S.display_language = '';
       component.ionViewDidEnter();
-      expect(component.G.S.language).toBe('de');
+      // the DISPLAY language, not the stored preference: the browser's
+      // language is a guess made before the user data has synced, and
+      // writing it to `language` had the sync push it over what the
+      // account already held (#327)
+      expect(component.G.S.display_language).toBe('de');
       expect(String(navigate.calls.mostRecent().args[0][0])).toMatch(/^\/login\/used_before\//);
     });
 
@@ -98,7 +106,7 @@ describe('LoginPage', () => {
       const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
       const browser_language = spyOnProperty(navigator, 'language', 'get').and.returnValue('xx-XX');
       component.step = 'start';
-      component.G.S.language = '';
+      component.G.S.language = component.G.S.display_language = '';
       component.ionViewDidEnter();
       expect(navigate).not.toHaveBeenCalled();
       expect(language()).toBe('en');

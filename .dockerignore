@@ -12,6 +12,13 @@ platforms/
 plugins/
 www/
 matrix-data/
+# a deployment's database, secrets, site files and backups (deploy/README.md)
+postgres-data/
+.env
+deploy/site/
+deploy/acme/
+deploy/backups/
+e2e-screenshots/
 guard-bot/node_modules/
 screenshots/
 *.md

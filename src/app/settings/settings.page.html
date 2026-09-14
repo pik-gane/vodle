@@ -44,6 +44,9 @@ TODO:
     <ion-item>
       <small [innerHtml]="'settings.data-storage-msg'|translate"></small>
     </ion-item>
+    <ion-item *ngIf="G.S.use_guest" color="warning" class="item-text-wrap" data-vodle="settings-guest-note">
+      <small [innerHtml]="'settings.guest-note'|translate"></small>
+    </ion-item>
 
     <ion-grid class="ion-no-padding">
       <ion-row class="ion-no-padding">
@@ -58,9 +61,8 @@ TODO:
               [style]="editing_email
                     ?'pointer-events:;'
                     :'pointer-events:none;font-size:smaller;'"
-              (keydown.enter)="editing_email=!formGroup.get('email').valid"
-              (keydown.tab)="editing_email=!formGroup.get('email').valid"
-              (ionChange)="set_email()" debounce="100">
+              (keydown.enter)="finish_editing_email()"
+              (keydown.tab)="finish_editing_email()">
             </ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
@@ -68,7 +70,7 @@ TODO:
         <ion-button fill="clear"
             tabindex="-1" style="padding-top: 10px;"
             [disabled]="editing_email && !formGroup.get('email').valid"
-            (click)="editing_email=!editing_email">
+            (click)="toggle_editing_email()">
           <!--TODO: give focus to field-->
           <ion-icon [name]="editing_email?'checkmark-outline':'pencil-outline'"></ion-icon>
           <span [innerHtml]="(editing_email?'OK':'settings.edit')|translate"></span>
@@ -99,7 +101,7 @@ TODO:
                 [style]="editing_password
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
-                (ionChange)="set_password()" debounce="100">
+                (keydown.enter)="finish_editing_password()">
               </ion-input>
             </ion-item>
           </ion-col>
@@ -112,7 +114,7 @@ TODO:
             </ion-button>
             <ion-button fill="clear"
                 tabindex="-1" style="padding-top: 10px;" color="primary" 
-                (click)="editing_password=!editing_password" 
+                (click)="toggle_editing_password()" 
                 [disabled]="editing_password && !formGroup.get('pw').valid">
               <ion-icon [name]="editing_password?'checkmark-outline':'pencil-outline'"></ion-icon>
               <!--<span [innerHtml]="(editing_password?'OK':'settings.edit')|translate"></span>-->
@@ -141,9 +143,8 @@ TODO:
             [style]="editing_password
               ?'pointer-events:;'
               :'pointer-events:none;font-size:smaller;'"
-            (keydown.enter)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
-            (keydown.tab)="editing_password=!formGroup.get('pw').valid;showing_password=formGroup.get('pw').valid?false:showing_password"
-            (ionChange)="set_password()" debounce="100">
+            (keydown.enter)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password"
+            (keydown.tab)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password">
           </ion-input>
         </ion-item>
         <div class="validation-errors">

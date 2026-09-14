@@ -25,6 +25,7 @@ import { AlertController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { GlobalService } from "../global.service";
+import { restart_at_the_beginning } from "../data.service";
 
 @Component({
   selector: 'app-delete-all',
@@ -32,6 +33,10 @@ import { GlobalService } from "../global.service";
   styleUrls: ['./delete-all.page.scss'],
 })
 export class DeleteAllPage implements OnInit {
+
+  /** whether the deletion is under way, so that the page can say so rather
+   *  than showing an empty screen for the tens of seconds it takes (#327) */
+  deleting = false;
 
   constructor(
     private location: Location,
@@ -87,15 +92,22 @@ export class DeleteAllPage implements OnInit {
           handler: () => {
             this.G.L.trace('DeleteAllPage.confirm_dialog delete');
             // clear all local storage:
+            this.deleting = true;
             this.G.D.delete_all().then(() => {
-              // now reload page, which will reinit the app and redirect us to the login page
-              // (at least in browsers – what about native apps?):
               LocalNotifications.schedule({ notifications: [{ id: null,
                 title: this.translate.instant("delete-all.success-title"),
                 body: this.translate.instant("delete-all.success-body"),
               }]});
-              window.location.assign("http://www.vodle.it");
+              // and log out, which deleting the data has in effect already
+              // done — clear_all_local() ended every Matrix session and
+              // destroyed this device's storage — so all that is left is to
+              // start the app afresh, with no credentials, i.e. at the
+              // login page. Sending the browser to www.vodle.it instead, as
+              // this did, left a self-hosted deployment altogether.
+              restart_at_the_beginning();
             }).catch(error => {
+              this.deleting = false;
+              this.G.D.deletion_progress = null;
               LocalNotifications.schedule({ notifications: [{ id: null,
                   title: this.translate.instant("delete-all.failed"),
                   body: null

@@ -98,11 +98,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
     <ion-item 
         lines="none" class="ion-text-end" text-wrap>
-      <ion-button size="large" color="primary" slot="end" [disabled]="p.due < G.P.ref_date" 
+      <ion-button size="large" color="primary" slot="end" [disabled]="publishing || p.due < G.P.ref_date" data-vodle="publish-poll-button" 
           shape="round"
           (click)="publish_button_clicked()">
-        <span [innerHtml]="'previewpoll.publish'|translate"></span>&nbsp;
-        <ion-icon name="paper-plane"></ion-icon>
+        <span *ngIf="!publishing" [innerHtml]="'previewpoll.publish'|translate"></span>
+        <span *ngIf="publishing" [innerHtml]="'previewpoll.publishing'|translate"></span>&nbsp;
+        <ion-icon *ngIf="!publishing" name="paper-plane"></ion-icon>
+        <ion-spinner *ngIf="publishing" name="dots"></ion-spinner>
       </ion-button>
     </ion-item>
   </ion-list>

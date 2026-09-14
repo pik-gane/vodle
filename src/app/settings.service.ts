@@ -38,7 +38,10 @@ export class SettingsService {
 
   private G: GlobalService;
 
-  use_guest = false;
+  /** whether this device takes part with a guest account vodle created
+   *  (#193); user data, so a second device of the guest knows it too */
+  public get use_guest(): boolean { return this.G.D.getu('guest') == '1'; }
+  public set use_guest(value: boolean) { this.G.D.setu('guest', value ? '1' : ''); }
 
   constructor() { }
 
@@ -93,13 +96,40 @@ export class SettingsService {
     this.G.D.setu('db_password', value); 
   }
 
+  /** the language the person has CHOSEN, which is synced with their account */
   public get language(): string { return this.G.D.getu('language'); }
   public set language(value: string) { this.G.D.setu('language', value); }
+
+  /** The language this device is showing right now.
+   *
+   *  The login page sets this one and not `language`, because before the user
+   *  data has synced its value is a guess — the browser's language, or the
+   *  answer to a question asked of someone the app cannot yet identify. The
+   *  sync is local-wins, so writing that guess to `language` had it pushed
+   *  over the preference the person's account already held, which is how a
+   *  language survived everything except a logout (#327).
+   *  DataService.ensure_user_defaults settles the two afterwards: the stored
+   *  preference is brought to this device, or, if the account has none, this
+   *  device's language becomes the stored one. */
+  public get display_language(): string { return this.G.D.getu('local_language'); }
+  public set display_language(value: string) { this.G.D.setu('local_language', value); }
 
   public get theme(): string { return this.G.D.getu('theme'); }
   public set theme(value: string) { this.G.D.setu('theme', value); }
 
-  public get default_wap(): number { return Number.parseInt(this.G.D.getu('default_wap')||'0'); }
+  /** The wap an option gets when this voter has not rated it, falling back
+   *  to the deployment's setting when they have none of their own.
+   *
+   *  On the Matrix backend default_wap lives in the user room rather than on
+   *  the device, so on a device that has not synced it yet this fallback is
+   *  also what a voter WITH a setting of their own sees for a moment. That
+   *  is fine for display, and PollPage.seed_default_ratings — the one place
+   *  that WRITES this into a poll — waits for DataService.user_data_ready
+   *  first, so the deployment's default can never be stored over a setting
+   *  that was merely still on its way (#327). */
+  public get default_wap(): number {
+    return Number.parseInt(this.G.D.getu('default_wap') || String(environment.default_wap));
+  }
   public set default_wap(value: number) { this.G.D.setu('default_wap', value.toString()); }
 
   get_notify_of(cls: string): boolean { return this.G.D.getu('notify_of_'+cls) != "0"; } // by default, all notifications are on

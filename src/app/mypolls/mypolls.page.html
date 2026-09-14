@@ -87,6 +87,14 @@ TODO:
       </ion-card-content>
     </ion-card>
 
+    <!-- THE PREDECESSOR OF THIS DEPLOYMENT (environment.handover) -->
+
+    <ion-item *ngIf="G.predecessor_url" lines="full" class="item-text-wrap" data-vodle="predecessor-note">
+      <ion-label class="ion-text-wrap">
+        <small [innerHtml]="'handover.predecessor-note'|translate:{url:G.predecessor_url, host:host_of(G.predecessor_url)}"></small>
+      </ion-label>
+    </ion-item>
+
     <!-- UNANSWERED REQUESTS -->
 
     <ng-container *ngIf="unanswered_requests.length > 0">
@@ -105,9 +113,6 @@ TODO:
           </ion-buttons>
         </ion-item>
       </ng-container>
-      <ng-container *ngIf="Object.keys(G.P.running_polls).length==0 && !G.show_spinner">
-        <ion-item><p [innerHtml] ="'mypolls.no-running-polls'|translate"></p></ion-item>
-      </ng-container>  
     </ng-container>
 
     <!--RUNNING-->
@@ -285,9 +290,15 @@ TODO:
   </ion-list>
 
   <ion-fab vertical="bottom" horizontal="end" slot="fixed" class="ion-margin">
-    <ion-fab-button routerLink="/draftpoll" data-vodle="create-new-poll-button">
+    <!-- a deployment being retired starts no new polls: the notice instead (environment.handover) -->
+    <ion-fab-button *ngIf="G.successor_url; else new_poll_button" (click)="G.show_successor_notice()" data-vodle="create-new-poll-button">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
+    <ng-template #new_poll_button>
+      <ion-fab-button routerLink="/draftpoll" data-vodle="create-new-poll-button">
+        <ion-icon name="add"></ion-icon>
+      </ion-fab-button>
+    </ng-template>
   </ion-fab>
 
 </ion-content>

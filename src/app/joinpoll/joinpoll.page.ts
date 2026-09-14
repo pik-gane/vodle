@@ -24,6 +24,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { Poll, Option } from '../poll.service';
+import { MatrixService } from '../matrix.service';
 
 @Component({
   selector: 'app-join',
@@ -33,6 +34,7 @@ import { Poll, Option } from '../poll.service';
 export class JoinpollPage implements OnInit {
 
   window = window;
+  E = environment;
 
   help_link_start = '<a href="/help">';
   help_link_end = '</a>';
@@ -47,6 +49,19 @@ export class JoinpollPage implements OnInit {
 
   ready = false;  
   join_error: string = null;
+  /** the homeserver is taking its time, but has not given up (#327) */
+  slow = false;
+  private slow_timer: any = null;
+  /** how long a magic link may look like nothing before it says what it is
+   *  doing. Eight seconds of blank page is not a wait, it is a failure that
+   *  has not been reported yet (#327). */
+  static SLOW_AFTER_MS = 3000;
+
+  /** What the start is doing right now, for the page that is waiting on it.
+   *  A spinner for half a minute says nothing; the stage says where the
+   *  time is going, and says it to someone with no console open (#327). */
+  get boot_stage(): string { return MatrixService.boot_stage; }
+  get boot_stage_seconds(): number { return Math.round(MatrixService.bootStageAge() / 1000); }
 
   constructor(
     public router: Router,
@@ -64,6 +79,25 @@ export class JoinpollPage implements OnInit {
 
   ngOnInit() {
     this.G.L.entry("JoinpollPage.ngOnInit");
+    // From HERE, not from the moment the poll is asked for: a magic link
+    // opened on a device with no credentials creates a guest first, and the
+    // owner reported nine seconds of blank page before anything at all
+    // happened — the join had not even been attempted yet, so the timer
+    // that was started there could not fire (#327).
+    this.start_waiting();
+  }
+
+  private start_waiting() {
+    if (this.slow_timer) { return; }
+    this.slow_timer = window.setTimeout(() => {
+      this.slow = true;
+      // ...and while we are here: a magic link on a device with no
+      // credentials should have had a guest created for it during the start.
+      // If the start could not see which page this is, it did not, and this
+      // page would sit here for ever — which is exactly what the owner saw
+      // after using the logout button (#193, #327). Idempotent.
+      this.G.D.ensure_guest_for_magic_link();
+    }, JoinpollPage.SLOW_AFTER_MS);
   }
 
   ionViewWillEnter() {
@@ -74,11 +108,27 @@ export class JoinpollPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("JoinpollPage.ionViewDidEnter");
+    if (this.G.D.login_failure && !this.G.D.ready) {
+      // the guest login started before this page was there (#193):
+      this.onLoginFailed(this.G.D.login_failure);
+    }
     if (this.G.D.ready) {
       this.onDataReady();
     }
     this.G.L.debug("JoinpollPage.ready:", this.ready);
     // TODO: either go to voting page directly or show some kind of welcome page?
+  }
+
+  onLoginFailed(message: string) {
+    // the guest account that a first visit of a magic link creates silently
+    // (#193) could not be created or logged in
+    this.G.L.warn("JoinpollPage.onLoginFailed", message);
+    this.join_error = message;
+  }
+
+  private stop_waiting() {
+    if (this.slow_timer) { window.clearTimeout(this.slow_timer); this.slow_timer = null; }
+    this.slow = false;
   }
 
   onDataReady() {
@@ -107,7 +157,11 @@ export class JoinpollPage implements OnInit {
         // federation support, meaning: this user's own homeserver); the
         // CouchDB db_password segment is meaningless here.
         const origin_server = (this.db_server_url && this.db_server_url != '_') ? this.db_server_url : undefined;
+        // a join that takes longer than a few seconds says so, rather than
+        // showing the same "just a moment" until the ceiling runs out (#327)
+        this.start_waiting();
         this.G.D.connect_to_remote_poll_db(this.pid, true, origin_server).then(() => {
+          this.stop_waiting();
           // Re-read state from poll_caches now that it has been populated
           this.p._state = (this.G.D.getp(this.pid, 'state') as any) || 'running';
           this.ready = true;
@@ -128,6 +182,7 @@ export class JoinpollPage implements OnInit {
           this.p.tally_all();
           this.router.navigate(['/poll/' + this.pid]);
         }).catch(err => {
+          this.stop_waiting();
           this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
           this.join_error = String(err?.message || err);
         });

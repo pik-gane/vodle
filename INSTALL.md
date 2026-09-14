@@ -120,7 +120,11 @@ $ docker compose up synapse guard-bot -d
 
 The dev environment (`src/environments/environment.ts`) has
 `useMatrixBackend: true` by default, so the app will connect to the
-Matrix homeserver at `localhost:8008`.
+Matrix homeserver at `localhost:8008`. (The homeserver of this development
+setup registers accounts freely; a production homeserver should require a
+registration token instead, which the app supports — see
+[documentation/deployment/MATRIX.md](documentation/deployment/MATRIX.md),
+which also covers rate limits, the guard bot and retention.)
 
 #### Option 2: CouchDB (legacy)
 
@@ -282,6 +286,27 @@ $ scripts/test-matrix.sh start
 ```
 
 and remove them including all their data with `scripts/test-matrix.sh stop`.
+
+A further suite drives the **production build** rather than the development
+one, because they differ in ways that have hidden real defects: templates
+compiled ahead of time, `environment.prod.ts`, and the app served at its own
+origin with `/_matrix/` forwarded to the homeserver.
+
+```
+$ scripts/test-matrix.sh start
+$ npm run e2e:production
+```
+
+It builds the production configuration, serves it the way the deployment's
+nginx does, and drives a real browser through registration, publishing a
+poll, joining it from a fresh browser profile by magic link, voting, and
+checking that both sides count the same voters. CI runs it in place of the
+plain production build.
+
+`VODLE_SIMULATED_VOTERS=50 npm run e2e:production` publishes a poll of that
+size instead, which is the rehearsal the deployment guide's go-live
+checklist asks for: it writes several hundred state events in a burst and so
+exercises the homeserver's rate limits, where a poll of two never does.
 These specs also skip themselves when no Synapse is reachable. The guard bot
 runs as a node process from `guard-bot/index.js`; without it the deadline
 enforcement spec reports itself pending.
@@ -362,71 +387,48 @@ A failing spec saves a screenshot of the browser to `e2e-screenshots/`
 
 ## Setting up a production environment
 
-### Option A: Docker Compose (recommended)
+### Option A: Docker Compose, scripted (recommended)
 
-The repository includes a production Docker Compose setup that builds
-an optimised Angular bundle, serves it via nginx, and runs the Matrix
-homeserver and guard bot — all in containers.
+`deploy/` holds the scripts for one docker host: the web app (nginx), the
+Synapse homeserver, its PostgreSQL database and the guard bot as containers,
+TLS from certificate files on the host, and the privacy statement and the
+imprint served by the web container. The runbook is
+[deploy/README.md](./deploy/README.md); in short:
 
 ```bash
-git clone https://github.com/pik-gane/vodle.git
-cd vodle
-
-# 1. Generate Synapse config for your domain
-docker run --rm -v "$(pwd)/matrix-data:/data" \
-  -e SYNAPSE_SERVER_NAME=vodle.example.com \
-  -e SYNAPSE_REPORT_STATS=no \
-  matrixdotorg/synapse:latest generate
-
-# 2. Edit matrix-data/homeserver.yaml:
-#    enable_registration: true
-#    enable_registration_without_verification: true
-
-# 3. Start Synapse to register the guard bot
-docker compose -f docker-compose.prod.yml up synapse -d
-docker exec vodle-matrix-synapse register_new_matrix_user \
-  -c /data/homeserver.yaml \
-  -u vodle-guard -p YOUR_STRONG_PASSWORD --admin
-
-# 4. Create a .env file with your secrets
-echo 'BOT_PASSWORD=YOUR_STRONG_PASSWORD' > .env
-echo 'SYNAPSE_SERVER_NAME=vodle.example.com' >> .env
-echo 'BOT_USER=@vodle-guard:vodle.example.com' >> .env
-
-# 5. Customise src/environments/environment.prod.ts:
-#    - matrix.guard_bot_user_id: "@vodle-guard:vodle.example.com"
-#    - magic_link_base_url: "https://vodle.example.com/#/"
-
-# 6. Build and start everything
-docker compose -f docker-compose.prod.yml up --build -d
+git clone https://github.com/pik-gane/vodle.git /opt/vodle && cd /opt/vodle
+# 1. the server name (permanent!) and the app's URLs:
+#    matrix.server_name, magic_link_base_url, privacy_statement_url, imprint_url
+$EDITOR src/environments/environment.prod.ts
+# 2. the secrets (generated), then the host settings: certificate files,
+#    privacy statement, imprint
+deploy/generate-secrets.sh && $EDITOR .env
+# 3. everything else: Synapse configuration, accounts, registration token,
+#    the image build, the containers, the checks
+deploy/deploy.sh up
 ```
 
-The app is available at **http://localhost** (port 80). For HTTPS,
-put a TLS-terminating reverse proxy in front (e.g. Caddy, Traefik,
-or nginx on the host). See
-[MATRIX_TESTING_GUIDE.md](./MATRIX_TESTING_GUIDE.md) for details.
+Afterwards `deploy/deploy.sh status`, `update`, `backup`, `logs`, `down`.
+The decisions behind the settings are in
+[documentation/deployment/MATRIX.md](./documentation/deployment/MATRIX.md);
+its §6 describes how a running CouchDB deployment hands over to a Matrix
+one (`environment.handover` in both builds).
 
 #### Architecture
 
 ```
-Browser ──► nginx (:80) ─┬─► static SPA (Angular build)
-                         └─► /_matrix/* ──► Synapse (:8008, internal)
-                                               ▲
-                                           guard-bot
+Browser ──► nginx (:443, :80) ─┬─► static SPA (Angular build), /site/ (privacy, imprint)
+                               └─► /_matrix/*, /.well-known/matrix/* ──► Synapse (:8008, internal) ──► PostgreSQL
+                                                                            ▲
+                                                                        guard-bot
 ```
 
 - **nginx** serves the compiled Angular app and reverse-proxies Matrix
-  API requests to Synapse (no CORS issues)
-- **Synapse** runs on the internal Docker network only
-- **guard-bot** monitors poll deadlines and closes rooms when they expire
-
-#### Start / Stop / Restart
-
-```bash
-docker compose -f docker-compose.prod.yml up -d       # start
-docker compose -f docker-compose.prod.yml down         # stop
-docker compose -f docker-compose.prod.yml up --build -d  # rebuild after code changes
-```
+  API requests to Synapse (no CORS issues); with `docker-compose.tls.yml`
+  it terminates TLS with the host's certificate files
+- **Synapse** and **PostgreSQL** run on the internal Docker network only
+- **guard-bot** closes polls at their deadline, lets participants into the
+  closed poll rooms and removes the rooms of expired polls
 
 ### Option B: Manual setup with CouchDB (legacy)
 

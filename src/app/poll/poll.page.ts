@@ -83,6 +83,15 @@ export class PollPage implements OnInit {
   needs_refresh = false;
 
   scroll_position = 0;
+
+  /** the poll has ended and its results are not in yet: the last votes are
+   *  still being collected, which is up to two minutes of waiting for the
+   *  closing event and reading the voter rooms one final time. It reads as
+   *  a frozen page unless something says so, so the notice carries a
+   *  spinner and the header's own in-progress sign turns as well (#327). */
+  get results_pending(): boolean {
+    return !!this.p && !this.p.allow_voting && !this.p.has_results;
+  }
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
 
@@ -93,6 +102,8 @@ export class PollPage implements OnInit {
   // LIFECYCLE:
 
   ready = false;  
+  /** a poll opened on a device that holds nothing of it yet (#327) */
+  loading_contents = false;
 
   constructor(
       private changeDetector: ChangeDetectorRef,
@@ -156,7 +167,42 @@ export class PollPage implements OnInit {
       this.router.navigate(["/mypolls"]);
       return;
     }
-    if (this.p.allow_voting) {
+    /* The Matrix backend fetches a poll's contents when the poll is opened
+       rather than for every poll at app start (#327). What this device
+       already has is shown at once and the rest follows; only a poll this
+       device knows nothing about yet has to wait for it. */
+    const loaded = this.G.D.ensure_poll_loaded(this.pid);
+    if (this.p.oids.length == 0) {
+      this.G.L.info("PollPage waiting for the poll's contents", this.pid);
+      this.loading_contents = true;
+      loaded.catch(err => {
+        this.G.L.error("PollPage could not load the poll", this.pid, err);
+      }).then(() => {
+        this.loading_contents = false;
+        this.show_poll();
+        this.changeDetector.detectChanges();
+      });
+    } else {
+      this.show_poll();
+      loaded.then(() => {
+        // whatever arrived beyond what this device had:
+        this.seed_default_ratings();
+        this.onInitialScanComplete();
+      }).catch(err => this.G.L.error("PollPage could not load the poll", this.pid, err));
+    }
+    this.G.L.exit("PollPage.onDataReady");
+  }
+
+  private async seed_default_ratings() {
+    // Not before this device knows the voter's OWN default. default_wap
+    // lives in the user room on the Matrix backend, so until that has synced
+    // SettingsService falls back to the deployment's default — and writing
+    // that into every option they have not rated would cast approvals they
+    // never gave, over a setting of their own that was still on its way
+    // (#327). Already resolved on CouchDB, where the settings are local.
+    await this.G.D.user_data_ready.catch(() => {});
+    if (!this.p) { return; }              // the page was left while we waited
+    if (this.p.allow_voting && !this.consent_pending) {
       this.G.L.info("PollPage checking if default waps are needed", this.pid);
       for (let oid of this.p.oids) {
         const orm = this.p.own_ratings_map.get(oid);
@@ -166,6 +212,10 @@ export class PollPage implements OnInit {
         }
       }  
     }
+  }
+
+  private show_poll() {
+    this.seed_default_ratings();
     this.p.tally_all();
     // TODO: optimize sorting performance:
     this.oidsorted = [...this.p.T.oids_descending]; 
@@ -186,11 +236,18 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
-    this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
     this.G.L.entry("PollPage.onDataChange");
+    if (!this.ready || !this.p) {
+      // the Matrix backend reports data as it arrives, which on a fresh
+      // device starts before this page has its poll (onDataReady); there is
+      // nothing to tally yet, and onDataReady tallies once it has (#327 —
+      // this threw once per arriving voter room on a newcomer's first load)
+      this.G.L.trace("PollPage.onDataChange before the poll is ready, nothing to do");
+      return;
+    }
     this.p.tally_all();
     this.update_order();
     this.update_delegation_info();
@@ -226,10 +283,13 @@ export class PollPage implements OnInit {
       // register that results have been seen:
       this.p.have_seen_results = true;
     }
-    // make sure current slider values are really stored in database:
-    for (let oid of this.oidsorted) {
-      if (!this.delegate || this.rate_yourself_toggle[oid]) {
-        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+    // make sure current slider values are really stored in database
+    // (unless the consent is still pending, #193: nothing is stored then):
+    if (!this.consent_pending) {
+      for (let oid of this.oidsorted) {
+        if (!this.delegate || this.rate_yourself_toggle[oid]) {
+          this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
+        }
       }
     }
     // dismiss auto-dismissing news:
@@ -247,6 +307,37 @@ export class PollPage implements OnInit {
     }
     this.G.D.setp(this.pid, "poll_page", JSON.stringify(specs));
     this.G.L.exit("PollPage.ionViewWillLeave", specs);
+  }
+
+  login_clicked() {
+    // a guest (#193) logs in with an account of their own; the login page
+    // returns here, and the guest's votes and polls move to the account
+    this.G.L.entry("PollPage.login_clicked");
+    this.router.navigate(['/login/used_before/' + encodeURIComponent('/poll/' + this.pid)]);
+  }
+
+  /** whether the consent to the privacy statement is still to be given
+   *  (#193): the page then shows the question at its bottom, keeps the
+   *  sliders, "add option" and "delegate" disabled, and stores no rating */
+  get consent_pending(): boolean {
+    return this.G.D.consent_pending;
+  }
+
+  consent_given(checked: boolean) {
+    // the consent checkbox at the bottom of the page (#193): recorded like
+    // the login page does, then the ratings the page holds are stored
+    this.G.L.entry("PollPage.consent_given", checked);
+    if (!checked || !this.consent_pending) {
+      return;
+    }
+    this.G.D.record_consent();
+    if (this.p && this.p.allow_voting) {
+      for (let oid of this.p.oids) {
+        const orm = this.p.own_ratings_map.get(oid);
+        const rating = orm && orm.has(this.p.myvid) ? orm.get(this.p.myvid) : this.G.S.default_wap;
+        this.p.set_my_own_rating(oid, rating, true);
+      }
+    }
   }
 
   ionViewDidLeave() {
@@ -838,7 +929,7 @@ export class PollPage implements OnInit {
   } 
 
   add_option(event: Event) {
-    if(!this.p.can_add_option()){
+    if(!this.p.can_add_option() || this.consent_pending){
       return;
     }
     /** open the add option dialog popover */

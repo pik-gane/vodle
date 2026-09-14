@@ -169,4 +169,28 @@ describe('PollPage', () => {
       expect(component.needs_refresh).toBeTrue();
     });
   });
+  // the Matrix backend reports data as it arrives, before this page has its
+  // poll; that threw once per arriving voter room on a newcomer's first
+  // load (#327)
+  describe('data arriving before the page is ready', () => {
+    it('does nothing instead of throwing', () => {
+      component.ready = false;
+      (component as any).p = undefined;
+      expect(() => component.onDataChange()).not.toThrow();
+    });
+
+    it('tallies once the poll is there', () => {
+      const poll: any = jasmine.createSpyObj('Poll', ['tally_all']);
+      poll.oids = [];
+      (component as any).p = poll;
+      component.ready = true;
+      spyOn(component, 'update_order');
+      spyOn(component, 'update_delegation_info');
+      // the spy poll carries none of the fields the template reads, and
+      // rendering is not what this asserts:
+      spyOn((component as any).changeDetector, 'detectChanges');
+      component.onDataChange();
+      expect(poll.tally_all).toHaveBeenCalled();
+    });
+  });
 });

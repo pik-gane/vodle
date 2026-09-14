@@ -1,0 +1,117 @@
+# vodle — nginx configuration of the web container WITH TLS (docker-compose.tls.yml)
+#
+# The nginx image renders this template at container start, substituting
+# only the TLS_* variables (NGINX_ENVSUBST_FILTER); everything else is nginx's
+# own syntax. Keep the location blocks in step with nginx.conf, the plain
+# HTTP configuration built into the image.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# plain HTTP: certbot's webroot challenges, everything else to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/acme;
+    }
+    location / {
+        # TLS_PUBLIC_ORIGIN carries the port when it is not 443
+        return 301 ${TLS_PUBLIC_ORIGIN}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/tls/${TLS_CERT};
+    ssl_certificate_key /etc/nginx/tls/${TLS_KEY};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:vodle:10m;
+    ssl_session_timeout 1d;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 4m;
+
+    # ---------- SPA routing ----------
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ---------- Matrix API reverse proxy ----------
+    # The app talks to Matrix on its own origin; federation partners reach
+    # the homeserver here too (.well-known/matrix/server names port 443).
+    location /_matrix/ {
+        proxy_pass http://synapse:8008;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        # the sync long-poll (30 s) plus a margin
+        proxy_read_timeout 120s;
+    }
+
+    # ---------- Matrix well-known (client and server discovery) ----------
+    location /.well-known/matrix/ {
+        proxy_pass http://synapse:8008;
+        proxy_set_header Host $host;
+    }
+
+    # ---------- the privacy statement and the imprint (deploy/site) ----------
+    location /site/ {
+        alias /usr/share/nginx/html/site/;
+    }
+
+    # ---------- Static asset caching ----------
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # The shell is the one file that is not content-hashed, and it names the
+    # hashed chunks of the build it came from. A browser that keeps a cached
+    # copy across a redeployment asks for chunks this server no longer has,
+    # and the app dies with a ChunkLoadError on the first lazy route. So it
+    # is revalidated on every load (a 304 when nothing changed), while the
+    # hashed files above stay immutable for a year.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Assets that are NOT content-hashed: the translations, the poll-type
+    # icons' data and anything else under assets/ that keeps its name across
+    # releases. A browser that cached one before a deployment would go on
+    # serving it afterwards — a translation added in the new release then
+    # renders as its raw key ("mypolls.archived") — so these revalidate like
+    # the shell above (#327).
+    location ~* \.json$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    # The crypto WASM is 5.4 MB and, like the translations, keeps its name
+    # across releases — so it revalidates rather than being immutable for a
+    # year, which makes a repeat load a 304 instead of five megabytes, and
+    # an SDK upgrade that ships a different binary under the same name still
+    # reaches the browser (#327).
+    location ~* \.wasm$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript application/wasm;
+    gzip_min_length 1000;
+}

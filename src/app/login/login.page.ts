@@ -99,7 +99,7 @@ export class LoginPage implements OnInit {
       }
       if (step == 'connected') {
         // store privacy consent in database:
-        this.G.D.setu('consent', 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.');
+        this.G.D.record_consent();
       }
 
     });
@@ -151,7 +151,9 @@ export class LoginPage implements OnInit {
     // note that navigator.language may be undefined in rare environments,
     // and a stored language might no longer be among the registered ones:
     const default_lang = (navigator.language || 'en').slice(0,2),
-          stored_lang = this.G.S.language;
+          // what this device shows, which is the question being asked here;
+          // the account's preference is not known until it has synced:
+          stored_lang = this.G.S.display_language;
     this.languageFormGroup.get('language').setValue(
       (!!stored_lang && this.translate.langs.includes(stored_lang)) ? stored_lang
       : (this.translate.langs.includes(default_lang) ? default_lang : 'en'));
@@ -210,7 +212,10 @@ export class LoginPage implements OnInit {
 
   set_language() {
     let c = this.languageFormGroup.get('language');
-    if (c.valid) this.G.S.language = c.value;
+    // the DISPLAY language: this is asked (or guessed from the browser)
+    // before the user data has synced, so it must not be written to the
+    // person's stored preference, which the sync would then push over
+    if (c.valid) this.G.S.display_language = c.value;
   }
 
   set_email() {
@@ -262,11 +267,9 @@ export class LoginPage implements OnInit {
   }
 
   login_as_guest() {
-    this.G.S.password = "Guest" + Math.round(Math.random()*1000000);
-    this.G.S.email = this.G.S.password + "@vodle.it";
-    this.G.S.default_wap = 10;
-    this.G.S.use_guest = true;
-    this.G.D.login_submitted();
+    // a throw-away account with random credentials (#193); a later login
+    // with an account of one's own takes the guest's data over
+    this.G.D.login_as_guest();
   }
 
   blur_password() {
@@ -279,7 +282,14 @@ export class LoginPage implements OnInit {
     this.set_password();
     // TODO: test connection to vodle central. if fails, ask for different server or correct password?
     if (this.passwordFormGroup.get('pw').valid) {
-      this.G.S.default_wap = 10;
+      // The default wap is NOT seeded here. This step also runs for someone
+      // who has used vodle before but answered "no" — after a logout this
+      // device knows nothing either way — and the user-data sync is
+      // local-wins: a value put into the cache before it runs is PUSHED over
+      // whatever the user room holds. Seeding 10 here therefore destroyed a
+      // default the person had chosen, every time they logged in through
+      // this step (#327). DataService.ensure_user_defaults does it after the
+      // sync instead, where an absent value really means absent.
       this.G.D.login_submitted();
     }
   }

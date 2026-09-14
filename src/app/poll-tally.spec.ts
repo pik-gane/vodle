@@ -97,6 +97,34 @@ describe('Poll tally pipeline (MaxParC)', () => {
     poll.tally_all();
   }
 
+  describe('an option the poll does not know yet (#327)', () => {
+
+    it('scores it by its oid instead of throwing on the missing Option', () => {
+      // A rating can reach the tally before the Option object exists (the
+      // live Matrix handlers run while the options are still being read).
+      // update_proxy_rating then scores the oid it was handed — not one of
+      // this.oids — and update_score used to read this.options[oid].name,
+      // throwing a TypeError that aborted the tally and left the poll's
+      // scores half-updated.
+      // as production runs it: with verify_updates on, every incremental
+      // update is followed by a full tally_all(), which scores this.oids
+      // only and so never reaches the unknown option
+      environment.tallying.verify_updates = false;
+      const poll = make_poll({o1: 'Apple'});
+      // the voter is already non-abstaining, so the new rating takes the
+      // incremental path (n_changed false) rather than the full re-tally:
+      poll.update_own_rating('v1', 'o1', 80, true);
+      expect(poll.T.n_not_abstaining).toBe(1);
+      expect(() => poll.update_own_rating('v1', 'o2', 60, true)).not.toThrow();
+      // and it is scored, breaking ties by the hash of the oid:
+      const by_oid = parseFloat('0.' + parseInt(poll.G.D.hash('o2'), 16).toString());
+      expect(poll.T.scores_map.get('o2')).toBeCloseTo(
+        (poll.T.approval_scores_map.get('o2') || 0) * poll.T.n_not_abstaining * 128
+        + (poll.T.total_effective_ratings_map.get('o2') || 0) + by_oid, 6);
+    });
+
+  });
+
   describe('approval thresholds (tally_all)', () => {
 
     it('approves everyone at the minimum rating when all non-abstaining voters rate the option', () => {

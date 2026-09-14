@@ -30,7 +30,8 @@
         "declined-intro": "Vos évaluations ne sont donc pas <i>actuellement</i> contrôlant les évaluations de cette personne dans le sondage <i>«{{poll_title}}».</i>",
         "weight-exceeded-revoke-first": "Si vous souhaitez toujours accepter la demande, veuillez envisager de refuser d'autres demandes que vous avez acceptées, ou de révoquer votre propre délégation, puis de revenir ici.",
         "cycle-intro": "Cependant, votre propre délégué pour ce sondage a délégué directement ou indirectement vos évaluations à {{from}}. Tant que c'est le cas, vous ne pouvez pas accepter cette demande.",
-        "declined-header": "Vous avez refusé cette demande de {{from}}."
+        "declined-header": "Vous avez refusé cette demande de {{from}}.",
+        "checking": "Vérification de cette demande…"
     },
     "draftpoll": {
         "option-url-placeholder": "Un lien vers une page web contenant plus de détails sur «{{name}}»",
@@ -327,7 +328,12 @@
         "confirm-header": "Vraiment supprimer vos données ?",
         "success-body": "Vodle espère vous revoir bientôt, même si elle ne se souviendra pas de vous :-)",
         "confirm-button": "Oui, supprimez mes données",
-        "_COMMENT_SECTION_": ""
+        "_COMMENT_SECTION_": "",
+        "progress-votes": "Vos Waps sont mis à zéro et vos délégations retirées…",
+        "progress-polls": "Retrait de vos sondages ({{done}} sur {{total}})…",
+        "progress-user": "Suppression de vos données personnelles sur le serveur…",
+        "progress-local": "Suppression des données de cet appareil…",
+        "progress-note": "Cela peut prendre une minute : chaque sondage auquel vous avez participé dispose d'un salon propre à chaque personne qui vote, et vodle les quitte tous. Merci de ne pas fermer cette page."
     },
     "_COMMENTS_": "[COMMENT] Comments are marked in this way and don't need to be translated.",
     "validation": {
@@ -385,7 +391,8 @@
         "initializing": "",
         "p1-share": "",
         "p2": "",
-        "p5": ""
+        "p5": "",
+        "still-waiting": "Le serveur du sondage répond encore. La première fois, cela peut prendre un peu plus de temps — la page continuera d'elle-même."
     },
     "notify_of": {
         "new_option": "",
@@ -540,7 +547,10 @@
         "revoke_delegation": "",
         "type-share": "",
         "_COMMENT_HINTS": "",
-        "delegate-button": ""
+        "delegate-button": "",
+        "consent-lead": "Avant que vos Waps soient enregistrés, veuillez confirmer : ",
+        "guest-banner": "Vous participez avec un compte invité. Vos Waps et vos sondages restent uniquement sur cet appareil jusqu'à ce que vous vous connectiez avec votre propre adresse e-mail ; vodle les transfère alors vers votre compte.",
+        "guest-login-button": "Se connecter"
     },
     "select-server": {
         "same-as-personal": "",
@@ -593,7 +603,8 @@
         "db-label": "",
         "_COMMENT_SECTION_": "",
         "is-in-past": "",
-        "publish": ""
+        "publish": "",
+        "publishing": "Démarrage du sondage"
     },
     "settings": {
         "db-label": "",
@@ -606,7 +617,8 @@
         "-page-title": "",
         "appearance": "",
         "_COMMENT_SECTION_": "",
-        "edit": ""
+        "edit": "",
+        "guest-note": "Vous utilisez un compte invité que vodle a créé sur cet appareil ; son adresse e-mail et son mot de passe figurent ci-dessous, au cas où vous voudriez l'utiliser sur un autre appareil également. Pour en faire votre propre compte, saisissez ici votre propre adresse e-mail et un mot de passe : vodle y transfère alors vos sondages et vos Waps."
     },
     "news-title": {
         "_COMMENT_SECTION_": "",
@@ -621,7 +633,8 @@
         "failed": "",
         "-page-title": "",
         "confirm-intro": "",
-        "_COMMENT_SECTION_": ""
+        "_COMMENT_SECTION_": "",
+        "confirm-guest": "Vous utilisez un compte invité dont l'adresse e-mail et le mot de passe n'existent que sur cet appareil. Après la déconnexion, vous ne pourrez plus revenir à ses sondages ni à ses Waps, sauf si vous avez noté les deux depuis la page des paramètres."
     },
     "_WELCOME_TO_TRANSLATORS_": [
         "",
@@ -661,5 +674,12 @@
     "news-body": {
         "_COMMENT_SECTION_": "",
         "delegation_declined": ""
-    }
+    },
+    "handover": {
+        "successor-title": "Les nouveaux sondages sont créés ailleurs",
+        "successor-message": "Ce serveur vodle ne crée plus de nouveaux sondages. Merci d'utiliser {{host}} désormais. Les sondages auxquels vous participez déjà ici se poursuivent jusqu'à leur fin.",
+        "successor-go": "Aller à {{host}}",
+        "predecessor-note": "Les sondages commencés avant le déménagement vers ce serveur se trouvent toujours sur <a href=\"{{url}}\">{{host}}</a>."
+    },
+    "sync-pending": "Vos modifications sont en route vers le serveur."
 }

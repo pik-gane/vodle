@@ -137,9 +137,27 @@ export class DraftpollPage implements OnInit {
     if (this.G.D.ready && !this.ready) this.onDataReady();
   }
 
+  /** On a deployment being retired (environment.handover.successor_url) a
+   *  draft that exists may still be edited, but no new one is started
+   *  here — not from the "+" button, not from a template, not from an
+   *  ended poll. */
+  new_draft_refused(): boolean {
+    if (!this.G.successor_url) {
+      return false;
+    }
+    const existing_draft = !!this.pid && this.pid in this.G.P.polls && this.G.P.polls[this.pid].state == 'draft';
+    return !existing_draft;
+  }
+
   onDataReady() {
     this.G.L.entry("DraftpollPage.onDataReady");
     this.deleted = false;
+    if (this.new_draft_refused()) {
+      this.G.L.info("DraftpollPage: no new drafts on a retired deployment, showing the successor notice");
+      this.G.show_successor_notice();
+      this.router.navigate(['/mypolls']);
+      return;
+    }
     if (!this.pid) {
       this.stage = 0;
       if (!this.pd) {

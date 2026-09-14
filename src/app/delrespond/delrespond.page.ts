@@ -79,14 +79,70 @@ export class DelrespondPage implements OnInit {
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
-    if (this.pid in this.G.P.polls) {
-      this.p = this.G.P.polls[this.pid];    
-    }
-    this.G.L.entry("DelrespondPage.onDataReady", this.pid, this.p.state);
-    this.status = this.G.Del.get_incoming_request_status(this.pid, this.did);
-    this.G.Del.store_incoming_request(this.pid, this.did, this.from, this.url, this.status[0]);
-    this.ready = true;
+    this.G.L.entry("DelrespondPage.onDataReady", this.pid);
+    this.decide();
+    /** And FETCH the request, which nothing else here does.
+     *
+     *  A delegation request is voter data: it lives in the requester's voter
+     *  room. On the Matrix backend a poll's voter rooms are read when the
+     *  poll is OPENED (#327, ensure_poll_loaded) — a hundred round trips for
+     *  a fifty-voter poll, which is why the poll list does not do it. This
+     *  page is not the poll page, so nobody was fetching the one room the
+     *  request is in, and the page's honest "still waiting for some data"
+     *  was permanent: nothing was coming. */
+    this.G.D.ensure_poll_loaded(this.pid)
+      .then(() => this.decide())
+      .catch(err => this.G.L.error("DelrespondPage could not load the poll", this.pid, err));
     this.G.L.exit("DelrespondPage.onDataReady");
+  }
+
+  onDataChange() {
+    /** The request's own data can arrive after this page did: the delegation
+     *  agreement lives in the poll room and this device may still be reading
+     *  it, and the poll itself may not be registered yet when a link is
+     *  opened. Both of those decide the status as "impossible", and nothing
+     *  used to look again — so a link that would have worked a second later
+     *  was answered with "try again later", or with nothing at all (#327). */
+    if (!this.ready || this.undecided()) {
+      this.decide();
+    }
+  }
+
+  /** Read the status of this request and show it. Safe to run again. */
+  private decide(): void {
+    // may be undefined: a link for a poll this device does not know. Reading
+    // this.p.state here threw, and `ready` is set after it, so the page
+    // stayed blank for ever — nothing calls onDataReady a second time (#327).
+    this.p = this.G.P.polls[this.pid];
+    const status = this.G.Del.get_incoming_request_status(this.pid, this.did);
+    const changed = !this.status || this.status.join('\u0000') != status.join('\u0000');
+    this.status = status;
+    this.G.L.debug("DelrespondPage.decide", this.pid, this.p ? this.p.state : 'poll unknown here', status);
+    if (changed) {
+      this.G.Del.store_incoming_request(this.pid, this.did, this.from, this.url, status[0]);
+    }
+    this.ready = true;
+  }
+
+  /** whether the status may still turn into a different one as data arrives */
+  private undecided(): boolean {
+    const second = (this.status || [])[1];
+    return second == 'not-in-db' || second == 'poll-unknown';
+  }
+
+  /** Whether the template has a block for this status.
+   *
+   *  One that it does not know must still put something on the screen: four
+   *  of those blocks used to compare `status == ['impossible','not-in-db']`,
+   *  an array against a fresh array, which is false in JavaScript for ever,
+   *  and so rendered nothing at all under the page's title (#327). */
+  handled(): boolean {
+    const [first, second] = this.status || [];
+    return first == 'possible' || first == 'accepted' || first == 'closed'
+        || first == 'declined, possible' || first == 'declined, impossible'
+        || (first == 'impossible'
+            && (second == 'weight-exceeded' || second == 'not-in-db'
+                || second == 'poll-unknown' || second == 'is-self'));
   }
 
   ionViewDidLeave() {

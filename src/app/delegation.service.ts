@@ -36,7 +36,6 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
 import { Poll } from './poll.service';
-import { MatrixService } from './matrix.service';
 
 @Injectable({
   providedIn: 'root'
@@ -46,8 +45,7 @@ export class DelegationService {
   private G: GlobalService;
 
   constructor(
-    public translate: TranslateService,
-    private matrixService: MatrixService
+    public translate: TranslateService
   ) { }
 
 
@@ -118,7 +116,7 @@ export class DelegationService {
       const optionIds = request.option_spec
         ? (request.option_spec.type === '-' ? [] : request.option_spec.oids)
         : [];
-      this.matrixService.requestDelegation(pid, did, optionIds).catch(err => {
+      this.G.D.request_delegation(pid, did, optionIds).catch(err => {
         this.G.L.error("DelegationService.after_request_was_sent Matrix sync failed", pid, did, err);
       });
     }
@@ -306,7 +304,7 @@ export class DelegationService {
 
     // Phase 15: Also fire Matrix delegation response for real-time notification
     if (environment.useMatrixBackend) {
-      this.matrixService.respondToDelegation(pid, did, true).catch(err => {
+      this.G.D.respond_to_delegation(pid, did, true).catch(err => {
         this.G.L.error("DelegationService.accept Matrix sync failed", pid, did, err);
       });
     }
@@ -324,7 +322,7 @@ export class DelegationService {
 
     // Phase 15: Also fire Matrix delegation response for real-time notification
     if (environment.useMatrixBackend) {
-      this.matrixService.respondToDelegation(pid, did, false).catch(err => {
+      this.G.D.respond_to_delegation(pid, did, false).catch(err => {
         this.G.L.error("DelegationService.decline Matrix sync failed", pid, did, err);
       });
     }

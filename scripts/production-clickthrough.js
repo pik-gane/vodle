@@ -1,0 +1,482 @@
+/*
+ * A click-through of the PRODUCTION build of the app (plan session 18, #327).
+ *
+ *   scripts/test-matrix.sh start          # two homeservers and the guard bot
+ *   scripts/production-clickthrough.sh    # builds, serves and drives this
+ *
+ * The production configuration differs from every configuration the rest of
+ * the suite uses: templates compiled ahead of time, environment.prod.ts, and
+ * the app served at its own origin with /_matrix/ forwarded to the
+ * homeserver. Five defects reached the first real deployment through that
+ * gap, none of them visible to the unit, two-client, federation or e2e
+ * suites. This drives the real bundle end to end: register against the
+ * homeserver, create and publish a poll, take the invitation link into a
+ * fresh browser profile, let that newcomer knock its way into the closed
+ * poll room, consent and vote, and check that both sides count the same
+ * voters.
+ *
+ * Selectors are the app's own data-vodle attributes. Two habits matter when
+ * driving Ionic: focus a field explicitly before typing (a click settles
+ * focus asynchronously, so the first characters land in the previous field),
+ * and blur it afterwards (Ionic hands the value to Angular's form control on
+ * blur, which a person does by clicking the next thing).
+ */
+const puppeteer = require('puppeteer-core');
+const fs = require('fs');
+const path = require('path');
+
+const BASE = process.env.VODLE_BASE || 'http://localhost:8100';
+const STEP_TIMEOUT = 60000;
+// VODLE_SIMULATED_VOTERS publishes a *test* poll carrying that many
+// simulated voters, which is how a poll of real size is reproduced: the
+// creator writes one room and a rating per option for each of them, several
+// hundred state events in a burst, which is where Synapse starts throttling
+// (#327). 0 means an ordinary two-person poll.
+const SIMULATED = parseInt(process.env.VODLE_SIMULATED_VOTERS || '0', 10);
+const CONVERGE_TRIES = parseInt(process.env.VODLE_CONVERGE_TRIES || '30', 10);
+const stamp = Date.now();
+const EMAIL = `prodtest${stamp}@example.org`;
+const PASSWORD = 'ProdTest!' + stamp;
+
+const console_errors = [], page_errors = [], failed_requests = [], diagnostics = [];
+// every "[vodle boot] +Nms <stage>" line, per browser, in order
+const boot_lines = {creator: [], guest: [], returning: []};
+// which of the guest's two starts its boot lines belong to
+let guest_boot_target = 'guest';
+const guest_boot = () => boot_lines[guest_boot_target];
+
+/* the report helpers and the boot-log parsing live in their own modules so
+   they can be tested without a browser: each takes --self-test (#327) */
+const { digest, console_tail } = require('./clickthrough-report');
+
+/** The report goes to stdout AND to a file. In CI the click-through's output
+ *  sits ahead of some hundreds of thousands of lines of karma, past what the
+ *  log API will hand back, so the run that proves a timing cannot be read
+ *  for the timing itself. The file is uploaded as an artifact (#327). */
+const REPORT_FILE = process.env.VODLE_REPORT_FILE || 'clickthrough-result.json';
+function report(payload) {
+  const text = JSON.stringify(payload, null, 1);
+  console.log(text);
+  try {
+    require('fs').writeFileSync(REPORT_FILE, text);
+  } catch (err) {
+    console.log('(could not write ' + REPORT_FILE + ': ' + err.message + ')');
+  }
+}
+/* the parsing lives in its own module so it can be tested without a browser:
+   node scripts/boot-stages.js --self-test (#327) */
+const { boot_stages, slowest_stage } = require('./boot-stages');
+
+/** where to put a screenshot; the directory is gitignored, so on a fresh
+ *  checkout it does not exist and page.screenshot() would throw ENOENT
+ *  after a run that otherwise succeeded */
+function shot(suffix) {
+  const file = (process.env.SHOT || '/tmp/production-clickthrough.png').replace(/\.png$/, suffix + '.png');
+  fs.mkdirSync(path.dirname(path.resolve(file)), {recursive: true});
+  return file;
+}
+
+function log(...a) { console.log('[clickthrough]', ...a); }
+
+async function visible(page, selector) {
+  return page.waitForFunction((sel) => {
+    const nodes = Array.from(document.querySelectorAll(sel));
+    return nodes.some(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0) || null;
+  }, {timeout: STEP_TIMEOUT, polling: 200}, selector);
+}
+
+async function click(page, selector) {
+  await visible(page, selector);
+  await page.evaluate((sel) => {
+    const node = Array.from(document.querySelectorAll(sel))
+      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
+    node.click();
+  }, selector);
+}
+
+async function type_into(page, selector, text) {
+  await visible(page, selector);
+  const handle = await page.evaluateHandle((sel) => {
+    const host = Array.from(document.querySelectorAll(sel))
+      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
+    return host.tagName === 'INPUT' ? host : host.querySelector('input');
+  }, selector);
+  const input = handle.asElement();
+  // Ionic settles focus asynchronously after a click, and typing before it
+  // has landed puts the first characters into whichever field still holds
+  // focus. Focus explicitly, let it settle, then select all and type.
+  await input.focus();
+  await new Promise(r => setTimeout(r, 250));
+  await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control');
+  await input.type(text, {delay: 20});
+  const got = await page.evaluate(el => el.value, input);
+  if (got !== text) { throw new Error('typing into ' + selector + ' produced ' + JSON.stringify(got) + ', wanted ' + JSON.stringify(text)); }
+  // Ionic hands the value to Angular's form control on blur; a person blurs
+  // the field by clicking the next thing, a programmatic click does not
+  await page.keyboard.press('Tab');
+  await new Promise(r => setTimeout(r, 200));
+  // Ionic listens on its own events; a blur commits the value
+  await page.evaluate(el => el.dispatchEvent(new Event('change', {bubbles: true})), input);
+}
+
+/** drag the first option's slider up with the keyboard and let it settle */
+async function rate_first_option(p) {
+  await visible(p, '[data-vodle="rating-slider"]');
+  await p.evaluate(() => {
+    const slider = document.querySelector('[data-vodle="rating-slider"]');
+    slider.scrollIntoView({block: 'center'});
+    const knob = slider.shadowRoot && slider.shadowRoot.querySelector('.range-knob-handle');
+    (knob || slider).focus();
+  });
+  for (let i = 0; i < 15; i++) { await p.keyboard.press('ArrowRight'); }
+  await new Promise(r => setTimeout(r, 5000));
+}
+
+/** the "N non-abstaining" the poll page shows */
+async function voters(p) {
+  return p.evaluate(() => {
+    const m = document.body.innerText.match(/(\d+)\s+non-abstaining/);
+    return m ? parseInt(m[1], 10) : null;
+  });
+}
+
+(async () => {
+  const browser = await puppeteer.launch({
+    executablePath: process.env.CHROME_BIN,
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--window-size=1280,900'],
+  });
+  await browser.defaultBrowserContext().overridePermissions(BASE, ['clipboard-read', 'clipboard-write']);
+  const page = await browser.newPage();
+  await page.setViewport({width: 1280, height: 900});
+  const console_all = [], matrix_requests = [];
+  // the lines that say where a shortfall comes from, kept for the report:
+  // the boot stopwatch and getRatings' own summary (#327)
+  const is_diagnostic = (t) => /\[vodle boot\]|\[getRatings\] DONE|\[discoverVoterRooms\] DONE/.test(t);
+  page.on('console', m => { const t = m.text(); console_all.push(m.type() + ': ' + t);
+    if (m.type() === 'error' || /fail|error|exception/i.test(t)) { console_errors.push(t); }
+    if (is_diagnostic(t)) { diagnostics.push('creator: ' + t); }
+    if (t.includes('[vodle boot]')) { boot_lines.creator.push(t); } });
+  page.on('response', r => { if (r.url().includes('/_matrix/')) { matrix_requests.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(BASE, '')); } });
+  page.on('pageerror', e => page_errors.push(String(e)));
+  page.on('requestfailed', r => failed_requests.push(r.url() + ' ' + (r.failure() || {}).errorText));
+  page.on('response', r => { if (r.status() >= 400) { failed_requests.push(r.status() + ' ' + r.url()); } });
+
+  try {
+    log('1. open the app');
+    await page.goto(BASE + '/', {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
+
+    log('2. first run: "have you used vodle before?" -> no');
+    await click(page, '[data-vodle="used-before-no-button"]');
+
+    log('3. e-mail address:', EMAIL);
+    await type_into(page, '[data-vodle="email-input"]', EMAIL);
+    // with a privacy statement configured, this step also asks for consent
+    await click(page, '[data-vodle="accept-privacy-checkbox"]');
+    await page.waitForFunction(() => {
+      const b = Array.from(document.querySelectorAll('[data-vodle="submit-email-button"]'))
+        .find(n => n.getBoundingClientRect().width > 0);
+      return b && !b.hasAttribute('disabled');
+    }, {timeout: STEP_TIMEOUT, polling: 200});
+    await click(page, '[data-vodle="submit-email-button"]');
+
+    log('4. password');
+    await type_into(page, '[data-vodle="new-password-input"]', PASSWORD);
+    await type_into(page, '[data-vodle="confirm-password-input"]', PASSWORD);
+    const typed = await page.evaluate(() => {
+      const value = sel => {
+        const host = Array.from(document.querySelectorAll(sel)).find(n => n.getBoundingClientRect().width > 0);
+        const input = host && (host.tagName === 'INPUT' ? host : host.querySelector('input'));
+        return input ? input.value.length : null;
+      };
+      return {password: value('[data-vodle="new-password-input"]'), confirm: value('[data-vodle="confirm-password-input"]')};
+    });
+    log('   password fields hold', JSON.stringify(typed), 'of', PASSWORD.length, 'characters');
+    // Angular marks form-bound elements ng-valid/ng-invalid, which says
+    // whether the FormControl actually received what was typed
+    log('   form state:', JSON.stringify(await page.evaluate(() =>
+      ['[data-vodle="new-password-input"]', '[data-vodle="confirm-password-input"]'].map(sel => {
+        const host = Array.from(document.querySelectorAll(sel)).find(n => n.getBoundingClientRect().width > 0);
+        if (!host) { return {sel, missing: true}; }
+        const input = host.tagName === 'INPUT' ? host : host.querySelector('input');
+        return {sel, host_class: host.className, host_value: host.value,
+                input_value_length: input ? input.value.length : null};
+      }))));
+    log('   errors on the page:', JSON.stringify(await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.error-message'))
+        .filter(n => n.getBoundingClientRect().height > 0).map(n => n.innerText.trim()))));
+    const button_state = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('[data-vodle="submit-new-password-button"]')).map(n => {
+        const r = n.getBoundingClientRect();
+        return {w: Math.round(r.width), h: Math.round(r.height), disabled: n.hasAttribute('disabled'),
+                aria: n.getAttribute('aria-disabled'), cls: n.className};
+      }));
+    log('   submit button(s):', JSON.stringify(button_state));
+    await click(page, '[data-vodle="submit-new-password-button"]');
+    await new Promise(r => setTimeout(r, 3000));
+    log('   after the click, visible step:', await page.evaluate(() => {
+      const steps = Array.from(document.querySelectorAll('ion-content[data-vodle-step]'))
+        .filter(n => n.getBoundingClientRect().width > 0);
+      return steps.map(n => n.getAttribute('data-vodle-step')).join(',') || '(none)';
+    }));
+
+    log('5. registration + login against the homeserver');
+    await visible(page, '[data-vodle="start-button"]');
+    log('   the homeserver accepted the account; "ready to start" shown');
+    await click(page, '[data-vodle="start-button"]');
+    await visible(page, '[data-vodle="my-polls-page"]');
+    const user_id = await page.evaluate(async () => {
+      // the app stores its Matrix identity; read it from the page for the report
+      return (window.localStorage && window.localStorage.getItem('mx_user_id')) || null;
+    });
+    log('   logged in, my polls shown; mx_user_id =', user_id);
+
+    log('6. a draft poll, pre-filled through the draftpoll/use route');
+    const ratings = (seed) => Array.from({length: SIMULATED}, (_, i) => (seed * 17 + i * 7) % 101);
+    const option = (name, seed) => SIMULATED > 0
+      ? {name, desc: '', url: '', ratings: ratings(seed)}
+      : {name, desc: '', url: ''};
+    const pd = {type: 'winner', language: 'en', title: 'Internal production test ' + stamp,
+      desc: '', url: '', due_type: '10min', db: 'default', is_test: SIMULATED > 0,
+      options: [option('Apples', 1), option('Oranges', 2), option('Pears', 3)]};
+    if (SIMULATED > 0) { log('   a test poll with', SIMULATED, 'simulated voters'); }
+    await page.goto(BASE + '/#/draftpoll/use/' + encodeURIComponent(JSON.stringify(pd)), {waitUntil: 'networkidle2'});
+    await page.reload({waitUntil: 'networkidle2'});
+    await visible(page, '[data-vodle="draft-poll-page"]');
+    log('   draft page shown');
+    await click(page, '[data-vodle="start-poll-button"]');
+
+    log('7. preview -> publish (this creates the Matrix rooms)');
+    await click(page, '[data-vodle="publish-poll-button"]');
+
+    log('8. the invitation page');
+    await visible(page, '[data-vodle="invite-to-poll-page"]');
+    // the link itself is only in the component; the page's "compose an
+    // e-mail" anchor carries it inside the mailto body
+    const invite_link = await page.evaluate(() => {
+      const a = Array.from(document.querySelectorAll('a[href^="mailto:"]'))
+        .find(n => n.getBoundingClientRect().width > 0) || document.querySelector('a[href^="mailto:"]');
+      if (!a) { return null; }
+      const body = decodeURIComponent((a.getAttribute('href').split('&body=')[1] || ''));
+      const m = body.match(/https?:\/\/\S+/);
+      return m ? m[0] : null;
+    });
+    log('   invitation link:', invite_link);
+    if (!invite_link || !/joinpoll/.test(invite_link)) { throw new Error('no invitation link on the clipboard'); }
+
+    log('9. the poll page as the creator');
+    await click(page, '[data-vodle="go-to-poll-button"]');
+    await visible(page, '[data-vodle="poll-voting-page"]');
+    const host_consent = await page.$('[data-vodle="consent-footer"]');
+    log('   consent footer for the registered creator:', host_consent ? 'shown' : 'not shown (consented while registering)');
+
+    log('10. rate an option with the keyboard');
+    await rate_first_option(page);
+    log('   creator sees:', await voters(page));
+
+    log('11. a newcomer opens the invitation link in a fresh browser profile');
+    const guest_context = await browser.createIncognitoBrowserContext();
+    await guest_context.overridePermissions(BASE, ['clipboard-read']);
+    const guest = await guest_context.newPage();
+    await guest.setViewport({width: 1280, height: 900});
+    guest.on('pageerror', e => page_errors.push('guest: ' + String(e)));
+    guest.on('console', m => {
+      const t = m.text();
+      if (m.type() === 'error') { console_errors.push('guest: ' + t); }
+      if (is_diagnostic(t)) { diagnostics.push('guest: ' + t); }
+      // one listener, one target: step 16 points guest_boot at the returning
+      // load so the two starts are reported apart rather than merged
+      if (t.includes('[vodle boot]')) { guest_boot().push(t); }
+    });
+    await guest.goto(invite_link, {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
+    await visible(guest, '[data-vodle="poll-voting-page"]');
+    log('   the guest is on the poll page without being asked anything');
+
+    log('12. the guest consents and rates');
+    await visible(guest, '[data-vodle="consent-footer"]');
+    await click(guest, '[data-vodle="consent-checkbox"]');
+    await guest.waitForFunction(() => !document.querySelector('[data-vodle="consent-footer"]'),
+      {timeout: STEP_TIMEOUT, polling: 200});
+    await rate_first_option(guest);
+    let guest_voters = await voters(guest);
+    log('   guest sees:', guest_voters);
+
+    log('13. both sides should count the same voters');
+    const expected = SIMULATED + 2;                 // the simulated ones, the creator, the newcomer
+    let host_voters = null, seen_guest = guest_voters;
+    for (let i = 0; i < CONVERGE_TRIES; i++) {
+      host_voters = await voters(page);
+      seen_guest = await voters(guest);
+      if (host_voters === seen_guest && host_voters === expected) { break; }
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    guest_voters = seen_guest;
+    log('   creator sees:', host_voters, '| guest sees:', guest_voters, '| expected:', expected);
+    await guest.screenshot({path: shot('-guest')});
+    if (host_voters !== expected || guest_voters !== expected) {
+      throw new Error('the two sides disagree or a vote is missing: creator ' + host_voters
+        + ', guest ' + guest_voters + ', expected ' + expected);
+    }
+
+    log('14. reload: how long until the poll list is there, and what it costs');
+    // The number the complaint was about: a reload of a device that already
+    // has the polls. Both halves are measured — the list, which must not
+    // wait for the homeserver at all, and opening the poll, which is where
+    // the voter rooms are read (#327).
+    const before_reload = matrix_requests.length;
+    const reload_start = Date.now();
+    await page.goto(BASE + '/', {waitUntil: 'domcontentloaded', timeout: STEP_TIMEOUT});
+    await visible(page, '[data-vodle="my-polls-page"]');
+    await page.waitForFunction((title) =>
+      Array.from(document.querySelectorAll('[data-vodle="running-poll-item"]'))
+        .some(n => n.getAttribute('data-vodle-poll-title') === title),
+      {timeout: STEP_TIMEOUT, polling: 50}, pd.title);
+    const list_ms = Date.now() - reload_start;
+    const list_requests = matrix_requests.length - before_reload;
+    log('   the poll list was there after', list_ms, 'ms and', list_requests, '/_matrix/ requests');
+
+    log('15. and how long until the poll itself shows every vote');
+    const before_open = matrix_requests.length;
+    const open_start = Date.now();
+    // the link is the label inside the item, not the item itself
+    await click(page, '[data-vodle="running-poll-item"] ion-label');
+    await visible(page, '[data-vodle="poll-voting-page"]');
+    const shown_ms = Date.now() - open_start;
+    await page.waitForFunction((n) => {
+      const m = document.body.innerText.match(/(\d+)\s+non-abstaining/);
+      return m && parseInt(m[1], 10) === n;
+    }, {timeout: STEP_TIMEOUT, polling: 200}, expected).catch(() => {});
+    const open_ms = Date.now() - open_start;
+    const open_requests = matrix_requests.length - before_open;
+    const reload_voters = await voters(page);
+    log('   the poll page appeared after', shown_ms, 'ms, all', reload_voters, 'voters after',
+        open_ms, 'ms and', open_requests, '/_matrix/ requests');
+    const reload = {list_ms, list_requests, shown_ms, open_ms, open_requests, voters: reload_voters};
+    if (reload_voters !== expected) {
+      throw new Error('after a reload the poll shows ' + reload_voters + ' voters, expected ' + expected);
+    }
+    // a ceiling, not a target: what this is here to catch is the poll list
+    // going back to waiting for the homeserver
+    const LIST_MS_MAX = parseInt(process.env.VODLE_LIST_MS_MAX || '10000', 10);
+    if (list_ms > LIST_MS_MAX) {
+      throw new Error('the poll list took ' + list_ms + ' ms (' + list_requests
+        + ' /_matrix/ requests), more than the ' + LIST_MS_MAX + ' ms this may take');
+    }
+
+    log('16. a browser that has ALREADY been a guest joins again');
+    // The scenario every one of the owner's start-up bugs came from, and the
+    // one a pristine profile can never show: the browser still holds the
+    // matrix-js-sdk crypto store of the PREVIOUS guest account while vodle's
+    // own credentials are gone, so the next login finds a store belonging to
+    // somebody else. Discovering that by exception cost 25.9 s of a 29.5 s
+    // start on the owner's device (#327).
+    // the app holds these databases open, and deleteDatabase on an open one
+    // fires onblocked and does nothing — so take the page down first, to the
+    // app's own origin (same origin, no app)
+    await guest.goto(BASE + '/assets/icon/favicon.ico', {waitUntil: 'domcontentloaded'});
+    const kept = await guest.evaluate(async () => {
+      // everything of vodle's own goes; the SDK's crypto store stays
+      const names = (await indexedDB.databases()).map(d => d.name).filter(Boolean);
+      const removed = [], blocked = [], left = [];
+      for (const name of names) {
+        if (/matrix-sdk-crypto/.test(name)) { left.push(name); continue; }
+        const outcome = await new Promise(resolve => {
+          const request = indexedDB.deleteDatabase(name);
+          request.onsuccess = () => resolve('removed');
+          request.onerror = () => resolve('error');
+          request.onblocked = () => resolve('blocked');
+          setTimeout(() => resolve('timeout'), 5000);
+        });
+        (outcome === 'removed' ? removed : blocked).push(name + ':' + outcome);
+      }
+      try { localStorage.clear(); } catch (e) { /* nothing */ }
+      const after = (await indexedDB.databases()).map(d => d.name).filter(Boolean);
+      return {removed, blocked, left, after};
+    });
+    log('   wiped', kept.removed.length, 'databases, kept', JSON.stringify(kept.left),
+        kept.blocked.length ? '(blocked: ' + JSON.stringify(kept.blocked) + ')' : '');
+    // A crypto store is left behind only when the app has one: vodle gives
+    // every (poll, voter) its own Matrix account, and the SDK's crypto
+    // store is one per browser profile and belongs to ONE account, so
+    // matrix.enable_e2ee is off and there is no store to keep. When it IS
+    // on, keeping it is the whole point of this step — it is how the
+    // 18.4 s crypto stage was caught (#327).
+    const crypto_is_on = boot_lines.guest.concat(boot_lines.creator)
+      .some(line => /end-to-end encryption ready/.test(line));
+    if (crypto_is_on && kept.left.length === 0) {
+      throw new Error('no crypto store was left behind, so this cannot test what it is for');
+    }
+    if (!crypto_is_on && kept.left.length) {
+      throw new Error('a crypto store exists although end-to-end encryption is off: '
+        + JSON.stringify(kept.left));
+    }
+    if (kept.blocked.length) {
+      throw new Error('vodle\'s own databases could not be deleted (' + kept.blocked.join(', ')
+        + '), so the returning guest would just resume its old session');
+    }
+    if (kept.after.some(n => !/matrix-sdk-crypto/.test(n))) {
+      throw new Error('databases of vodle\'s own survived the wipe: ' + JSON.stringify(kept.after));
+    }
+    guest_boot_target = 'returning';
+    const returning_started = Date.now();
+    await guest.goto(invite_link, {waitUntil: 'domcontentloaded', timeout: STEP_TIMEOUT});
+    await visible(guest, '[data-vodle="poll-voting-page"]');
+    const returning_ms = Date.now() - returning_started;
+    const returning_worst = slowest_stage(boot_lines.returning);
+    log('   the returning guest reached the poll in', returning_ms, 'ms; slowest stage:',
+        returning_worst.stage, returning_worst.took + 'ms');
+
+    log('17. no stage of any start may take longer than it should');
+    // The gap BETWEEN two stages is the thing: a total hides a single stage
+    // that has gone wrong, and an average hides it twice over.
+    const STAGE_MS_MAX = parseInt(process.env.VODLE_BOOT_STAGE_MS_MAX || '15000', 10);
+    const boots = {};
+    for (const who of ['creator', 'guest', 'returning']) {
+      const worst = slowest_stage(boot_lines[who]);
+      boots[who] = {slowest_stage: worst.stage, slowest_ms: worst.took,
+                    stages: boot_stages(boot_lines[who])};
+      log('   ' + who + ': slowest stage "' + worst.stage + '" took ' + worst.took + 'ms');
+    }
+    const over = Object.entries(boots).filter(([, b]) => b.slowest_ms > STAGE_MS_MAX);
+    if (over.length) {
+      throw new Error('a start stage took too long: '
+        + over.map(([who, b]) => `${who} spent ${b.slowest_ms} ms in "${b.slowest_stage}"`).join('; ')
+        + ` (the ceiling is ${STAGE_MS_MAX} ms, VODLE_BOOT_STAGE_MS_MAX)`);
+    }
+    // index.html prints "the page arrived" before any bundle has run, so
+    // the app's own first stage is what says the boot log is still there:
+    if (!boot_lines.creator.some(line => /data service init/.test(line))) {
+      throw new Error('no "[vodle boot] data service init" line — an old bundle, or the boot log is gone');
+    }
+    if (!boot_lines.creator.some(line => /the app bundle ran/.test(line))) {
+      throw new Error('no "[vodle boot] the app bundle ran" line — index.html or main.ts lost its stopwatch');
+    }
+
+    await page.screenshot({path: shot(''), fullPage: false});
+    log('RESULT: the flow completed');
+    report({ok: true, email: EMAIL, user_id, invite_link,
+      host_voters, guest_voters, reload, boots, returning_ms,
+      diagnostics: diagnostics.slice(-12),
+      console_errors: digest(console_errors), page_errors: digest(page_errors),
+      failed_requests: digest(failed_requests.filter(r => !/(login|register|room_keys|directory)/.test(r)))});
+  } catch (err) {
+    await page.screenshot({path: shot('-failed')}).catch(() => {});
+    const step = await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '');
+    const alerts = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('ion-alert, ion-toast')).map(a => a.innerText.trim())).catch(() => []);
+    report({ok: false, error: String(err), visible_text: step, alerts,
+      boot: {creator: boot_stages(boot_lines.creator),
+             guest: boot_stages(boot_lines.guest),
+             returning: boot_stages(boot_lines.returning)},
+      diagnostics: diagnostics.slice(-30),
+      // digested, not dumped: what is wrong shows up as the line with the
+      // biggest count, and the report stays a page instead of 300 KB (#327)
+      matrix_requests: digest(matrix_requests.map(r => r.replace(/\?.*$/, '')), 20),
+      console_errors: digest(console_errors), page_errors: digest(page_errors),
+      failed_requests: digest(failed_requests),
+      console_tail: console_tail(console_all)});
+    process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
+})();

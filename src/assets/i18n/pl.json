@@ -199,7 +199,12 @@
         "confirm-button": "Tak, usuń moje dane",
         "success-title": "Twoje dane zostały usunięte.",
         "success-body": "Choć Cię nie zapamięta, vodle ma nadzieję, że wkrótce zobaczycie się ponownie :-)",
-        "failed": "Z jakiegoś powodu nie udało się usunąć wszystkich danych."
+        "failed": "Z jakiegoś powodu nie udało się usunąć wszystkich danych.",
+        "progress-votes": "Twoje wapy są ustawiane na zero, a Twoje delegacje wycofywane…",
+        "progress-polls": "Usuwanie Cię z Twoich ankiet ({{done}} z {{total}})…",
+        "progress-user": "Usuwanie Twoich danych osobowych z serwera…",
+        "progress-local": "Usuwanie danych tego urządzenia…",
+        "progress-note": "To może potrwać minutę: każda ankieta z Twoim udziałem ma osobny pokój dla każdej osoby głosującej, a vodle opuszcza każdy z nich. Prosimy nie zamykać tej strony."
     },
     "delrespond": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Act As Delegate? page:",
@@ -232,7 +237,8 @@
         "poll-unknown": "Jeszcze nie uczestniczyłaś w tej ankiecie. Sprawdź, czy otrzymałaś link z zaproszeniem do tej ankiety. Jeśli tak, najpierw użyj tego linku, a następnie spróbuj ponownie.",
         "try-again": "Przepraszamy, vodle wciąż czeka na niektóre dane dotyczące tego żądania. Spróbuj ponownie później.",
         "closed": "Niestety ta ankieta już się zakończyła.",
-        "is-self": "Ta prośba została stworzona przez Ciebie :-) Proszę wyślij ten link do osoby, którą chcesz poprosić o delegację!"
+        "is-self": "Ta prośba została stworzona przez Ciebie :-) Proszę wyślij ten link do osoby, którą chcesz poprosić o delegację!",
+        "checking": "Sprawdzanie tej prośby…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
@@ -447,7 +453,8 @@
         "p4": "Jeśli nie jesteś pewien co do jednej lub więcej opcji, możesz również <i>delegować</i> te wapy do kogoś, komu ufasz.",
         "p5": "Możesz użyć przycisku \"Asystuj mi\", aby ustawić swoje początkowe wapy. Możesz zmienić swoje wapy lub delegację w dowolnym momencie, dopóki ankieta się nie zakończy. Zawsze są one zapamiętywane natychmiast, nie musisz klikać żadnego przycisku \"Zapisz\". Monitorowanie rozwoju ankiety wydaje się sensowne, możesz dostosowywać wapy do tego, co widzisz, dać wapy dodatkowym opcjom, które mogą zostać zasugerowane, lub samemu dodać nowe opcje. W ten sposób wspólnie można znaleźć dobry kompromis lub osiągnąć konsensus.",
         "lets-go-button": "OK, zaczynamy",
-        "p6": "Jeśli chcesz wiedzieć, jak wapy są używane przez vodle do określania wyników, zobacz {{link_start}}tutaj{{link_end}}."
+        "p6": "Jeśli chcesz wiedzieć, jak wapy są używane przez vodle do określania wyników, zobacz {{link_start}}tutaj{{link_end}}.",
+        "still-waiting": "Serwer ankiety jeszcze odpowiada. Za pierwszym razem może to potrwać nieco dłużej — strona sama przejdzie dalej."
     },
     "login": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Login page:",
@@ -480,7 +487,8 @@
         "confirm-header": "Czy napewno chcesz się wylogować?",
         "confirm-intro": "Wylogowanie jest konieczne tylko na niebezpiecznych lub współdzielonych urządzeniach. Wylogowanie usunie wszystkie dane z tego urządzenia (ale nie ze zdalnej bazy danych). Pamiętaj, aby zapamiętać adres e-mail i hasło, którego używasz z vodle przed wylogowaniem. Jeśli je zapomnisz, nie można ich odzyskać, ponieważ nigdzie ich nie przechowujemy.",
         "confirm-button": "Tak, wyloguj mnie",
-        "failed": "Z jakiegoś powodu nie udało się wylogować"
+        "failed": "Z jakiegoś powodu nie udało się wylogować",
+        "confirm-guest": "Korzystasz z konta gościa, którego adres e-mail i hasło istnieją tylko na tym urządzeniu. Po wylogowaniu nie wrócisz już do jego ankiet ani wapów, chyba że masz oba zapisane ze strony ustawień."
     },
     "mypolls": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the My Polls page:",
@@ -598,7 +606,10 @@
         "explain": "Wyjaśnij",
         "add-option": "Dodaj opcję",
         "add-option-info": "Jeśli uważasz, że brakuje jakiejś ważnej opcji i nie pokrywa się ona z żadną z już wymienionych, możesz ją dodać. Jednak po dodaniu opcji nie można jej ponownie edytować ani usunąć.",
-        "sorting": "Sortowanie opcji według poziomu akceptacji..."
+        "sorting": "Sortowanie opcji według poziomu akceptacji...",
+        "consent-lead": "Zanim Twoje wapy zostaną zapisane, potwierdź proszę: ",
+        "guest-banner": "Bierzesz udział jako gość. Twoje wapy i ankiety pozostają tylko na tym urządzeniu, dopóki nie zalogujesz się własnym adresem e-mail; vodle przeniesie je wtedy na Twoje konto.",
+        "guest-login-button": "Zaloguj się"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -609,7 +620,8 @@
         "db-label": "Przechowywanie danych",
         "publish": "Rozpocznij ankietę teraz",
         "type-label": "W tej ankiecie grupa będzie",
-        "is-in-past": "Data końcowa jest w przeszłości. Proszę najpierw ją zmienić."
+        "is-in-past": "Data końcowa jest w przeszłości. Proszę najpierw ją zmienić.",
+        "publishing": "Uruchamianie ankiety"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -637,7 +649,8 @@
         "appearance": "Wygląd",
         "behaviour": "Behaviour",
         "default-wap": "Default wap",
-        "notifications": "Powiadomienia"
+        "notifications": "Powiadomienia",
+        "guest-note": "Korzystasz z konta gościa, które vodle założyło na tym urządzeniu; jego adres e-mail i hasło znajdziesz poniżej, na wypadek używania go także na innym urządzeniu. Aby zmienić je we własne konto, podaj tutaj swój adres e-mail i hasło: vodle przeniesie wtedy tam Twoje ankiety i wapy."
     },
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",
@@ -660,5 +673,12 @@
         "option-name-required": "Nazwa jest wymagana.",
         "option-name-unique": "The option name already exists.",
         "option-url-valid": "Proszę wprowadzić prawidłowy adres URL."
-    }
+    },
+    "handover": {
+        "successor-title": "Nowe ankiety zakłada się gdzie indziej",
+        "successor-message": "Ten serwer vodle nie zakłada już nowych ankiet. Od teraz korzystaj z {{host}}. Ankiety, w których już tutaj uczestniczysz, trwają do swojego końca.",
+        "successor-go": "Przejdź do {{host}}",
+        "predecessor-note": "Ankiety założone przed przeprowadzką na ten serwer nadal znajdziesz pod adresem <a href=\"{{url}}\">{{host}}</a>."
+    },
+    "sync-pending": "Twoje zmiany są w drodze na serwer."
 }
