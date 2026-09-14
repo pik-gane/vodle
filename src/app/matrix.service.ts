@@ -195,6 +195,15 @@ export interface DelegationResponse {
  */
 export interface PollEventListener {
   onRatingUpdate?(pollId: string, voterId: string, optionId: string, rating: number): void;
+  /** Voter data that is NOT a rating: a delegation request or response.
+   *
+   *  DelegationService writes these with setv, exactly like a rating, and the
+   *  CouchDB backend routes them to process_request_from_db in doc2poll_cache.
+   *  The Matrix backend had no way to deliver them at all, so a delegation
+   *  request reached the requester's voter room and was then read by nobody —
+   *  which the delegate's page reported, correctly and for ever, as still
+   *  waiting for data about the request (#327). */
+  onVoterDataChange?(pollId: string, voterId: string, key: string, value: any): void;
   onDelegationRequest?(pollId: string, request: DelegationRequest): void;
   onDelegationResponse?(pollId: string, response: DelegationResponse): void;
   onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
@@ -4574,8 +4583,10 @@ export class MatrixService {
         // Each voter room belongs to exactly one voter (real or simulated).
         // All rating events use state_key=''.
         for (const event of stateEvents) {
-          if (event.type?.startsWith('m.room.vodle.voter.rating.rating.')) {
-            const optionId = event.type.replace('m.room.vodle.voter.rating.rating.', '');
+          const key = MatrixService.voterDataKeyOf(event.type);
+          if (!key) { continue; }
+          if (key.startsWith('rating.')) {
+            const optionId = key.slice('rating.'.length);
             const content = event.content || {};
             // decrypts poll-password-encrypted values (see pollDataContent):
             const rawValue = await this.readPollValue(pollId, content);
@@ -4585,6 +4596,13 @@ export class MatrixService {
                 voterRatings.set(optionId, numericValue);
               }
             }
+          } else {
+            // Delegation requests and responses, which were written before
+            // this device ever looked. Without this a delegation link could
+            // only ever work if the request happened to arrive while the page
+            // was open — and reloading, which is what one does, read the
+            // ratings and nothing else (#327).
+            await this.handleVoterDataEvent(pollId, voterId, key, event);
           }
         }
       } catch (error) {
@@ -5108,6 +5126,55 @@ export class MatrixService {
     await this.startVoterSync(pollId);
   }
 
+  /** The vodle voter-data key a voter room state event carries, or null if
+   *  the event is not voter data at all.
+   *
+   *  setVoterData writes `m.room.vodle.voter.rating.${key}` for EVERY voter
+   *  key, so a rating doubles the word (rating.rating.o1) and a delegation
+   *  request does not (rating.del_request.d1). Matching the doubled form was
+   *  how everything that is not a rating stopped being delivered (#327). */
+  static voterDataKeyOf(eventType: string): string | null {
+    const prefix = 'm.room.vodle.voter.rating.';
+    if (typeof eventType !== 'string' || !eventType.startsWith(prefix)) {
+      return null;
+    }
+    return eventType.slice(prefix.length) || null;
+  }
+
+  /** Deliver one piece of non-rating voter data to this poll's listeners.
+   *  Mirrors handleRatingEvent, including resolving the vodle vid, which is
+   *  what the delegation service keys its requests by. */
+  private async handleVoterDataEvent(pollId: string, voterId: string, key: string, event: any): Promise<void> {
+    try {
+      const content = (event && event.getContent) ? event.getContent() : (event?.content || {});
+      const value = await this.readPollValue(pollId, content);
+      if (value === undefined || value === null) {
+        return;
+      }
+      const vodleVid = content?.voter_vid
+        || this.voterVidMap.get(`${pollId}:${voterId}`)
+        || voterId;
+      const listeners = this.pollEventListeners.get(pollId);
+      if (!listeners) {
+        return;
+      }
+      for (const listener of listeners) {
+        try {
+          if (listener.onVoterDataChange) {
+            listener.onVoterDataChange(pollId, vodleVid, key, value);
+          }
+          if (listener.onDataChange) {
+            listener.onDataChange();
+          }
+        } catch (error) {
+          this.logger?.error("MatrixService.handleVoterDataEvent listener failed", pollId, key, error);
+        }
+      }
+    } catch (error) {
+      this.logger?.error("MatrixService.handleVoterDataEvent failed", pollId, key, error);
+    }
+  }
+
   /**
    * Register this poll's event handlers.
    * 
@@ -5203,19 +5270,26 @@ export class MatrixService {
       const eventType = event.getType() as string;
       const roomId_ev = state.roomId;
       
-      // Match rating events: m.room.vodle.voter.rating.rating.{optionId}
-      if (eventType.startsWith('m.room.vodle.voter.rating.rating.')) {
-        // O(1) lookup via reverse map
-        const lookup = this.voterRoomReverseLookup.get(roomId_ev);
-        if (lookup && lookup.pollId === pollId) {
-          const optionId = eventType.substring('m.room.vodle.voter.rating.rating.'.length);
-          trace("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
-          try {
-            this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
-          } catch (err) {
-            console.error("[stateRatingHandler] handleRatingEvent threw:", err);
-          }
+      // Any voter data, not only the ratings: a delegation request is written
+      // with the same setv and had nowhere to arrive (#327).
+      const key = MatrixService.voterDataKeyOf(eventType);
+      if (!key) { return; }
+      // O(1) lookup via reverse map
+      const lookup = this.voterRoomReverseLookup.get(roomId_ev);
+      if (!lookup || lookup.pollId !== pollId) { return; }
+      if (key.startsWith('rating.')) {
+        const optionId = key.slice('rating.'.length);
+        trace("[stateRatingHandler] Dispatching:", pollId, lookup.voterId, optionId);
+        try {
+          this.handleRatingEvent(pollId, lookup.voterId, optionId, event);
+        } catch (err) {
+          console.error("[stateRatingHandler] handleRatingEvent threw:", err);
         }
+      } else {
+        trace("[stateRatingHandler] Dispatching voter data:", pollId, lookup.voterId, key);
+        this.handleVoterDataEvent(pollId, lookup.voterId, key, event).catch(err => {
+          console.error("[stateRatingHandler] handleVoterDataEvent threw:", err);
+        });
       }
     };
     (this.client as any).on("RoomState.events", stateRatingHandler);

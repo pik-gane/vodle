@@ -116,6 +116,7 @@ describe('DelrespondPage', () => {
     // a not-yet — and nothing used to look a second time
     component.pid = 'p1';
     component.did = 'd1';
+    component.G.D.ensure_poll_loaded = () => Promise.resolve();
     let known = false;
     component.G.P.polls = {p1: {pid: 'p1', title: 'A poll', state: 'running'} as any};
     component.G.Del.get_incoming_request_status = () =>
@@ -131,6 +132,7 @@ describe('DelrespondPage', () => {
   it('leaves a decided status alone when other data changes (#327)', () => {
     component.pid = 'p1';
     component.did = 'd1';
+    component.G.D.ensure_poll_loaded = () => Promise.resolve();
     component.G.P.polls = {p1: {pid: 'p1', title: 'A poll', state: 'running'} as any};
     let asked = 0;
     component.G.Del.get_incoming_request_status = () => { asked++; return ['accepted']; };
@@ -141,6 +143,29 @@ describe('DelrespondPage', () => {
     expect(asked).withContext('asked once, since the answer cannot change here').toBe(1);
   });
 
+  it('fetches the poll, since the request lives in a room nobody else reads here (#327)', async () => {
+    // the request is voter data, and a poll's voter rooms are only read when
+    // the poll is opened — which this page does not do
+    component.pid = 'p1';
+    component.did = 'd1';
+    let loaded = false;
+    component.G.P.polls = {p1: {pid: 'p1', title: 'A poll', state: 'running'} as any};
+    component.G.D.ensure_poll_loaded = (pid: string) => {
+      loaded = (pid == 'p1');
+      return Promise.resolve();
+    };
+    let known = false;
+    component.G.Del.get_incoming_request_status = () =>
+      known ? ['possible', 'acyclic'] : ['impossible', 'not-in-db'];
+    component.G.Del.store_incoming_request = () => { known = true; };
+    component.onDataReady();
+    expect(loaded).withContext('the poll is asked for').toBeTrue();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(component.status).withContext('and the answer is read again once it is there')
+      .toEqual(['possible', 'acyclic']);
+  });
+
   it('does not fall over when the poll is not known (#327)', () => {
     // onDataReady read this.p.state before checking that this.p exists, so a
     // delegation link for a poll this device has not registered yet threw
@@ -148,6 +173,7 @@ describe('DelrespondPage', () => {
     // with no second chance: nothing calls onDataReady twice.
     component.pid = 'nosuchpoll';
     component.did = 'd1';
+    component.G.D.ensure_poll_loaded = () => Promise.resolve();
     (component.G.D as any).ready = true;
     component.G.Del.get_incoming_request_status = () => ['impossible', 'poll-unknown'];
     component.G.Del.store_incoming_request = () => {};

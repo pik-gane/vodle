@@ -3597,6 +3597,16 @@ export class DataService implements OnDestroy {
               this.G.L.error("DataService Matrix onRatingUpdate callback failed", pollId, err);
             }
           },
+          onVoterDataChange: (pollId: string, vid: string, key: string, value: any) => {
+            // a delegation request or response, which until #327 had no way
+            // of reaching this device at all
+            try {
+              this.G.L.info("DataService Matrix onVoterDataChange", pollId, vid, key);
+              this.matrix_voter_data_arrived(pollId, vid, key, value);
+            } catch (err) {
+              this.G.L.error("DataService Matrix onVoterDataChange callback failed", pollId, key, err);
+            }
+          },
           onOptionAdded: (pollId: string, oid: string, option: {name: string; description: string; url: string}) => {
             // an option another participant added while the poll runs
             // (#324): register it like doc2poll_cache does for CouchDB, so
@@ -6962,6 +6972,36 @@ export class DataService implements OnDestroy {
       console.warn("DataService.init_notifications failed:", err);
     });
     // TODO: test this!
+  }
+
+  /** Voter data that arrived from a voter room and is not a rating: store it
+   *  where getv finds it and let the delegation service act on it.
+   *
+   *  This is what doc2poll_cache does for CouchDB, and what the Matrix
+   *  backend did not do at all: a delegation request was written into the
+   *  requester's voter room and read by nobody, so the delegate's page said
+   *  it was still waiting for data about the request — correctly, and for
+   *  ever, since nothing was coming (#327).
+   *
+   *  The value is stored BEFORE the delegation service is told, and stays
+   *  stored if that throws: the poll may not be loaded yet, and the next
+   *  read of the same room (or the page's own re-decide) must find the
+   *  value rather than a hole where doc2poll_cache would have rolled back.
+   */
+  matrix_voter_data_arrived(pollId: string, vid: string, key: string, value: any): void {
+    if (!this.poll_caches[pollId]) {
+      this.poll_caches[pollId] = {};
+    }
+    this.poll_caches[pollId][this.get_voter_key_prefix(pollId, vid) + key] = String(value);
+    try {
+      if (key.startsWith('del_request.')) {
+        this.G.Del.process_request_from_db(pollId, key.slice('del_request.'.length), vid);
+      } else if (key.startsWith('del_response.')) {
+        this.G.Del.process_signed_response_from_db(pollId, key.slice('del_response.'.length), vid);
+      }
+    } catch (err) {
+      this.G.L.error("DataService.matrix_voter_data_arrived could not process", pollId, key, err);
+    }
   }
 
   get_voter_key_prefix(pid: string, vid?: string): string {

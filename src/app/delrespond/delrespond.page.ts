@@ -81,6 +81,18 @@ export class DelrespondPage implements OnInit {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("DelrespondPage.onDataReady", this.pid);
     this.decide();
+    /** And FETCH the request, which nothing else here does.
+     *
+     *  A delegation request is voter data: it lives in the requester's voter
+     *  room. On the Matrix backend a poll's voter rooms are read when the
+     *  poll is OPENED (#327, ensure_poll_loaded) — a hundred round trips for
+     *  a fifty-voter poll, which is why the poll list does not do it. This
+     *  page is not the poll page, so nobody was fetching the one room the
+     *  request is in, and the page's honest "still waiting for some data"
+     *  was permanent: nothing was coming. */
+    this.G.D.ensure_poll_loaded(this.pid)
+      .then(() => this.decide())
+      .catch(err => this.G.L.error("DelrespondPage could not load the poll", this.pid, err));
     this.G.L.exit("DelrespondPage.onDataReady");
   }
 
