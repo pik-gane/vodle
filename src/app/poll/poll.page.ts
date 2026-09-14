@@ -1258,7 +1258,7 @@ export class PollPage implements OnInit {
   //        cssClass: 'assist',
   //        showBackdrop: true,
           componentProps: {P: this},
-          backdropDismiss​: false
+          backdropDismiss: false
   //        swipeToClose: true,
   //        presentingElement: this.routerOutlet.nativeEl
       });
@@ -1277,7 +1277,7 @@ export class PollPage implements OnInit {
         cssClass: 'analysis',
 //        showBackdrop: true,
         componentProps: {P: this},
-        backdropDismiss​: true
+        backdropDismiss: true
 //        swipeToClose: true,
 //        presentingElement: this.routerOutlet.nativeEl
     });
