@@ -42,6 +42,7 @@ interface Option {
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog.page.html',
   styleUrls: ['./delegation-dialog.page.scss'],
+  standalone: false,
 })
 export class DelegationDialogPage implements OnInit {
 

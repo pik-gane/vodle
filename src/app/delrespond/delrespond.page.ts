@@ -29,6 +29,7 @@ import { Poll } from '../poll.service';
   selector: 'app-join',
   templateUrl: './delrespond.page.html',
   styleUrls: ['./delrespond.page.scss'],
+  standalone: false,
 })
 export class DelrespondPage implements OnInit {
 

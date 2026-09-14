@@ -40,6 +40,7 @@ import { waitForAsync } from '@angular/core/testing';
   selector: 'app-poll',
   templateUrl: './poll.page.html',
   styleUrls: ['./poll.page.scss'],
+  standalone: false,
 })
 export class PollPage implements OnInit {
 

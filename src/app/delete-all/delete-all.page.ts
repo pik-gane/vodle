@@ -31,6 +31,7 @@ import { restart_at_the_beginning } from "../data.service";
   selector: 'app-delete-all',
   templateUrl: './delete-all.page.html',
   styleUrls: ['./delete-all.page.scss'],
+  standalone: false,
 })
 export class DeleteAllPage implements OnInit {
 

@@ -29,6 +29,7 @@ import { PollPage } from '../poll/poll.module';
   selector: 'app-assist',
   templateUrl: './assist.page.html',
   styleUrls: ['./assist.page.scss'],
+  standalone: false,
 })
 export class AssistPage implements OnInit {
 

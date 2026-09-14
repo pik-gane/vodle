@@ -34,6 +34,7 @@ import { environment } from '../../environments/environment';
   selector: 'app-inviteto',
   templateUrl: './inviteto.page.html',
   styleUrls: ['./inviteto.page.scss'],
+  standalone: false,
 })
 export class InvitetoPage implements OnInit {
 

@@ -55,6 +55,7 @@ function is_forward_key(ev: KeyboardEvent) {
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
   styleUrls: ['./draftpoll.page.scss'],
+  standalone: false,
 })
 export class DraftpollPage implements OnInit {
 

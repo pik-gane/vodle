@@ -7,7 +7,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 
 import { TranslateService } from '@ngx-translate/core';
 
-@Pipe({ name: 'safe' })
+@Pipe({ name: 'safe', standalone: false })
 export class SafePipe implements PipeTransform {
   constructor(private domSanitizer: DomSanitizer) {}
   transform(url) {
@@ -19,6 +19,7 @@ export class SafePipe implements PipeTransform {
   selector: 'app-privacy',
   templateUrl: './privacy.page.html',
   styleUrls: ['./privacy.page.scss'],
+  standalone: false,
 })
 export class PrivacyPage implements OnInit {
 

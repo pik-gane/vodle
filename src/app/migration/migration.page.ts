@@ -41,6 +41,7 @@ import { MatrixBackend } from '../matrix-backend';
   selector: 'app-migration',
   templateUrl: './migration.page.html',
   styleUrls: ['./migration.page.scss'],
+  standalone: false,
 })
 export class MigrationPage implements OnInit {
 

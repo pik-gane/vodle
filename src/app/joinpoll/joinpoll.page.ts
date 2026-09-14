@@ -30,6 +30,7 @@ import { MatrixService } from '../matrix.service';
   selector: 'app-join',
   templateUrl: './joinpoll.page.html',
   styleUrls: ['./joinpoll.page.scss'],
+  standalone: false,
 })
 export class JoinpollPage implements OnInit {
 

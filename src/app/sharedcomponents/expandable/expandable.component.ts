@@ -3,7 +3,8 @@ import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild } from '@ang
 @Component({
   selector: 'app-expandable',
   templateUrl: './expandable.component.html',
-  styleUrls: ['./expandable.component.scss']
+  styleUrls: ['./expandable.component.scss'],
+  standalone: false,
 })
 export class ExpandableComponent implements OnInit {
 
