@@ -56,7 +56,12 @@ PLEASE ADJUST BEFORE USAGE AND REMOVE ALL COMMENTS!
     },
     delegation: {
       enabled: false,
-      max_weight: 10
+      // "simple", "different", "ranked" or "weighted" — which delegation this
+      // deployment offers; see src/environments/environment.ts. Left out, it
+      // is "simple": one delegate at a time, for all of a poll's options.
+      mode: "weighted",
+      max_weight: 10,
+      max_delegations: 3
     },
     db_put_retry_delay_ms: 100,
     default_lang: "en",

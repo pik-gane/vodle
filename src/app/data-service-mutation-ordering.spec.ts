@@ -17,6 +17,7 @@ describe('DataService ordered voter mutations', () => {
     CryptoES.AES.decrypt(doc.value, password).toString(CryptoES.enc.Utf8);
   let service: any;
   let retry_delay: number;
+  let delegation_mode: string;
   let matrix_backend: boolean;
   const database_names: string[] = [];
 
@@ -150,14 +151,19 @@ describe('DataService ordered voter mutations', () => {
   beforeEach(() => {
     retry_delay = environment.db_put_retry_delay_ms;
     matrix_backend = environment.useMatrixBackend;
+    delegation_mode = environment.delegation.mode;
     environment.db_put_retry_delay_ms = 0;
     environment.useMatrixBackend = false;
+    // one delegate carrying the whole of a voter's wap, which is what these
+    // reconcile against; the deployment's own setting is "weighted"
+    environment.delegation.mode = 'simple';
     service = make_service();
   });
 
   afterEach(async () => {
     environment.db_put_retry_delay_ms = retry_delay;
     environment.useMatrixBackend = matrix_backend;
+    environment.delegation.mode = delegation_mode;
     await service.cancel_voter_mutations();
     for (const name of database_names.splice(0)) {
       await new PouchDB(name).destroy();

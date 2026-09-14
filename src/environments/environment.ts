@@ -139,11 +139,21 @@ export const environment = {
     // together; a deployment that cares must weigh that before turning
     // this on for real users.
     enabled: true,
-    // HEMPED's weighted/ranked delegation (#285) needs two settings of its
-    // own. max_weight stays at this deployment's value rather than theirs:
-    // it caps how many people's waps one delegate may end up controlling,
-    // which is a policy choice and not a detail of the feature, so raising
-    // it is the owner's to make deliberately.
+    // Which kind of delegation this deployment offers (#285):
+    //   "simple"    one delegate at a time, for all of the poll's options
+    //   "different" a different delegate for different options
+    //   "ranked"    several delegates in the voter's order of preference,
+    //               the best-ranked of those who accept carrying the wap
+    //   "weighted"  several delegates at once, each carrying a share of the
+    //               voter's wap, the rest of it still the voter's own
+    // It belongs to the deployment and not to the poll: how one voter's wap
+    // may reach another is a rule of the vote itself, and whoever writes a
+    // poll would otherwise be picking the rule they expect to win under.
+    mode: "weighted",
+    // max_weight stays at this deployment's value rather than the
+    // contributed branch's: it caps how many people's waps one delegate may
+    // end up controlling, which is a policy choice and not a detail of the
+    // feature, so raising it is the owner's to make deliberately.
     max_weight: 3,
     max_delegations: 3
   },

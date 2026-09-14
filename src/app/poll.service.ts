@@ -439,20 +439,18 @@ export class Poll {
   set type(value: poll_type_t) { this.G.D.setp(this._pid, 'type', value); }
 
   get language(): string { return this.G.D.getp(this._pid, 'language'); }
-
-  /** Which kinds of delegation this poll allows (#285). Stored like any
-   *  other poll datum, so they are locked with the rest of the metadata when
-   *  the poll starts. DataService.get_*_delegation_allowed reads the same
-   *  three keys straight from the poll cache for code that has no Poll. */
-  get allow_ranked(): boolean { return this.G.D.getp(this._pid, 'allow_ranked') == 'true'; }
-  set allow_ranked(value: boolean) { this.G.D.setp(this._pid, 'allow_ranked', value ? 'true' : 'false'); }
-
-  get allow_different(): boolean { return this.G.D.getp(this._pid, 'allow_different') == 'true'; }
-  set allow_different(value: boolean) { this.G.D.setp(this._pid, 'allow_different', value ? 'true' : 'false'); }
-
-  get allow_weighted(): boolean { return this.G.D.getp(this._pid, 'allow_weighted') == 'true'; }
-  set allow_weighted(value: boolean) { this.G.D.setp(this._pid, 'allow_weighted', value ? 'true' : 'false'); }
   set language(value: string) { this.G.D.setp(this._pid, 'language', value); }
+
+  /** Which kind of delegation is in force (#285). It was three per-poll
+   *  keys, written into the poll by whoever drafted it; see delegation_mode
+   *  in data.service.ts for why that is not theirs to choose. (Read from the
+   *  environment here rather than through that function, because
+   *  data.service imports this file and the two would import each other.) */
+  get allow_ranked(): boolean { return environment.delegation.mode == 'ranked'; }
+
+  get allow_different(): boolean { return environment.delegation.mode == 'different'; }
+
+  get allow_weighted(): boolean { return environment.delegation.mode == 'weighted'; }
 
   get title(): string { return this.G.D.getp(this._pid, 'title'); }
   set title(value: string) { this.G.D.setp(this._pid, 'title', value); }

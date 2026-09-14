@@ -45,15 +45,22 @@ describe('Poll tally pipeline (MaxParC)', () => {
   ];
   let previous_verify: boolean;
   let previous_delegation: boolean;
+  let previous_mode: string;
 
   beforeEach(() => {
     previous_verify = environment.tallying.verify_updates;
     previous_delegation = environment.delegation.enabled;
+    previous_mode = environment.delegation.mode;
+    // these describe the single-delegate pipeline — one delegate carrying the
+    // whole of a voter's wap. The deployment's own setting is "weighted",
+    // whose blend is tested in delegation-part-a.spec.ts instead.
+    environment.delegation.mode = 'simple';
   });
 
   afterEach(() => {
     environment.tallying.verify_updates = previous_verify;
     environment.delegation.enabled = previous_delegation;
+    environment.delegation.mode = previous_mode;
   });
 
   function make_poll(option_names: Record<string, string>): any {

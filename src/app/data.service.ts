@@ -291,6 +291,23 @@ export function restart_at_the_beginning() {
 /** the consent recorded when a user logs in or takes part as a guest */
 export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
+/** Which delegation this deployment offers — environment.delegation.mode.
+ *
+ *  #285 made it three per-poll settings that whoever wrote the poll switched
+ *  on in the draft. How a voter's wap may reach another voter is a rule of
+ *  the vote, though, not a property of the question being asked, and an
+ *  author free to pick the rule can pick the one they expect to win under.
+ *  So it belongs to the deployment, beside the weight limit.
+ *
+ *    "simple"     one delegate at a time, for all of the poll's options
+ *    "different"  a different delegate for different options
+ *    "ranked"     several delegates in the voter's order of preference
+ *    "weighted"   several at once, each carrying a share of the voter's wap
+ */
+export function delegation_mode(): string {
+  return environment.delegation.mode || 'simple';
+}
+
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
 export type del_request_t = {
   option_spec: del_option_spec_t,
@@ -4488,16 +4505,19 @@ export class DataService implements OnDestroy {
   // holds, so that document is gone too, and with it the last reason for
   // a voter to be able to write a shared poll document.
 
-  get_ranked_delegation_allowed(pid: string): boolean {
-    return (this.poll_caches[pid]['allow_ranked'] ?? 'false') == 'true';
+  /** Which delegation this deployment offers (see delegation_mode above).
+   *  The pid these still take is for the callers, which have one to hand and
+   *  need not know that the answer no longer depends on it. */
+  get_ranked_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'ranked';
   }
 
-  get_different_delegation_allowed(pid:string): boolean {
-    return (this.poll_caches[pid]['allow_different'] ?? 'false') == 'true';
+  get_different_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'different';
   }
 
-  get_weighted_delegation_allowed(pid:string): boolean {
-    return (this.poll_caches[pid]['allow_weighted'] ?? 'false') == 'true';
+  get_weighted_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'weighted';
   }
 
   // TODO: delv!
