@@ -38,7 +38,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-row class="table-header">
       <!-- Rank Header -->
       <ion-col size="2" class="ion-text-start">
-        <span><strong>{{ 'delegation-request.trust-level' | translate }}</strong></span>
+        <span><strong>{{ 'delegation-request.share' | translate }}</strong></span>
       </ion-col>
       <ion-col size="3" class="ion-text-center">
         <span><strong>{{ 'delegation-request.nickname' | translate }}</strong></span>
@@ -50,14 +50,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-grid>
 
   <!-- Reorderable Items -->
-  <ion-reorder-group [disabled]="reorder_disabled" (ionItemReorder)="handle_reorder($any($event))">
+  <ion-reorder-group [disabled]="reorder_disabled || weighted" (ionItemReorder)="handle_reorder($any($event))">
     <ion-reorder *ngFor="let item of delegation_list" lines="full">
       <ion-item>
       <ion-grid>
         <ion-row class="ion-align-items-center">
-          <!-- Rank (Left-Aligned) -->
+          <!-- Rank, or share of one's wap (Left-Aligned) -->
           <ion-col size="2" class="ion-text-start">
-            <strong>{{ item.rank }}</strong>
+            <strong *ngIf="reorder_disabled || !weighted">{{ item.weight }}<span *ngIf="weighted">%</span></strong>
+            <ion-input *ngIf="!reorder_disabled && weighted" type="number"
+                min="0" max="99" [(ngModel)]="item.weight"></ion-input>
           </ion-col>
           <!-- Nickname (Centered) -->
           <ion-col size="3" class="ion-text-center">
@@ -81,11 +83,21 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-reorder>
   </ion-reorder-group>
 
+  <!-- What is left is the voter's own voice, which is the part of a weighted
+       delegation that is easiest to lose sight of: -->
+  <ion-row *ngIf="weighted" class="ion-justify-content-center ion-align-items-center button-row">
+    <ion-col size="auto">
+      <small [innerHtml]="'delegation-request.you-keep'|translate:{kept: share_kept()}"></small>
+    </ion-col>
+  </ion-row>
+
   <!-- Buttons -->
-  <ion-row *ngIf="this.parent.get_ranked_delegation_allowed()" class="ion-justify-content-center ion-align-items-center button-row">
+  <ion-row *ngIf="this.parent.get_ranked_delegation_allowed() || weighted"
+      class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
       <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
-        <span [innerHtml]="reorder_disabled ? 'Reorder Delegations' : 'Save'"> </span>
+        <span *ngIf="reorder_disabled" [innerHtml]="(weighted ? 'delegation-request.edit-shares' : 'delegation-request.reorder')|translate"></span>
+        <span *ngIf="!reorder_disabled" [innerHtml]="'save'|translate"></span>
       </ion-button>
     </ion-col>
   </ion-row>
@@ -93,7 +105,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
       <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
-        <span [innerHtml]="'Exit'"></span>
+        <span [innerHtml]="'close'|translate"></span>
       </ion-button>
     </ion-col>
   </ion-row>

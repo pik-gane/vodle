@@ -72,20 +72,19 @@ export class DelegationDialogRankedPage implements OnInit {
   ngOnInit() {
   }
 
+  /** whether the second column is a share of the voter's wap rather than a
+   *  place in their order of preference */
+  get weighted(): boolean {
+    return this.G.D.get_weighted_delegation_allowed(this.parent.pid);
+  }
+
   ionViewWillEnter() {
     const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    for (const [uid, dels] of ddm) {
-      for (const del of dels) {
-      }
-    }
-    
-    const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
-
-    for (const [did, rank] of ddm.get(this.parent.p.myvid) || []) {
-      // fetch nickname
+    this.delegation_list = [];
+    for (const [did, weight] of ddm.get(this.parent.p.myvid) || []) {
       const a = this.G.Del.get_agreement(this.parent.pid, did);
       const nickname = this.G.Del.get_delegate_nickname(this.parent.pid, did);
-      this.delegation_list.push({nickname: nickname, rank: rank, did: did, status: a.status});
+      this.delegation_list.push({nickname: nickname, weight: weight, did: did, status: a.status});
     }
     this.ready = true;
   }
@@ -109,38 +108,51 @@ export class DelegationDialogRankedPage implements OnInit {
     event.detail.complete();
   }
 
+  /** what the voter still speaks for themselves, in percent */
+  share_kept(): number {
+    let given = 0;
+    for (const item of this.delegation_list) {
+      if (item.status != 'declined') { given += this.a_possible_share(item.weight); }
+    }
+    return Math.max(1, 100 - given);
+  }
+
+  /** first press opens the list for editing, second one saves it */
   reorder_button_clicked() {
     if (this.reorder_disabled) {
       this.reorder_disabled = false;
       return;
     }
 
-    // Save new order. A rank is the client's own statement about their own
-    // delegation, so it goes into their own request.
+    // A rank and a share are both the client's own statement about their own
+    // delegation, so they go into their own request.
     for (const item of this.delegation_list) {
-      this.G.Del.set_delegate_rank(this.parent.pid, item.did, Number(item.rank));
+      if (this.weighted) {
+        this.G.Del.set_delegate_trust(this.parent.pid, item.did,
+                                      this.a_possible_share(item.weight));
+      } else {
+        this.G.Del.set_delegate_rank(this.parent.pid, item.did, Number(item.weight));
+      }
     }
     this.G.Del.resolve_ranked_delegations(this.parent.pid);
+    this.G.Del.resolve_weighted_delegations(this.parent.pid);
     this.parent.update_delegation_info();
     this.order_changed = true;
     this.reorder_disabled = true;
   }
 
-  check_order_changed() {
-    const list = this.G.D.get_direct_delegation_map(this.parent.pid).get(this.parent.p.myvid) || [];
-    for (let i = 0; i < list.length; i++) {
-      const new_rank = this.delegation_list.find(x => x.did === list[i][0]).rank;
-      if (list[i][1] !== new_rank) {
-        this.order_changed = true;
-        break;
-      }
-    }
-    this.order_changed = false;
+  /** a share of one's wap is a whole number of percent, and one cannot give
+   *  away all of it — a voter always speaks for themselves a little */
+  a_possible_share(value: any): number {
+    const share = Math.round(Number(value));
+    if (!isFinite(share) || share < 0) { return 0; }
+    return Math.min(share, 99);
   }
 
   updateRanks() {
+    if (this.weighted) { return; }
     this.delegation_list.forEach((item, index) => {
-      item.rank = index + 1;
+      item.weight = index + 1;
     });
   }
 

@@ -101,7 +101,10 @@ export class DelegationDialogPage implements OnInit {
         }
         weight_used += Number(entry[1]);
       }
+      // a voter can never give away all of their wap; what is left over is
+      // the voice they keep, and the dialog says so while they choose
       this.weight_left = 99 - weight_used;
+      this.formGroup.get('trustLevel').setValue(Math.min(50, this.weight_left));
     }
 
     // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
@@ -254,6 +257,13 @@ export class DelegationDialogPage implements OnInit {
     this.set_delegation_link(this.formGroup.get('from').value);
     this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
     this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
+  }
+
+  /** what the voter would still speak for themselves, in percent, if they
+   *  gave this delegate the share the slider is on */
+  share_kept(): number {
+    const share = Number(this.formGroup.get('trustLevel').value) || 0;
+    return Math.max(1, this.weight_left + 1 - share);
   }
 
   /** Record what this delegation is worth to the client: where the delegate

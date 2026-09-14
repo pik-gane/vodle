@@ -647,7 +647,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             -->
 
             <!-- Info about how many of user's ratings the delegate controls: -->
-            <ion-col class="ion-no-margin ion-padding-right">
+            <ion-col *ngIf="!get_weighted_delegation_allowed()" class="ion-no-margin ion-padding-right">
               <small>
                 <p>
                   <span style="font-size: medium;">{{get_delegate()}}</span>&nbsp;
@@ -660,6 +660,14 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     ">
                   </span>
                 </p>
+              </small>
+            </ion-col>
+
+            <!-- ... which says nothing in a weighted poll, where the voter has
+                 not handed their ratings over but divided them up: -->
+            <ion-col *ngIf="get_weighted_delegation_allowed()" class="ion-no-margin ion-padding-right">
+              <small>
+                <p [innerHtml]="'poll.wap-shared-out' | translate: {kept: my_share_kept()}"></p>
               </small>
             </ion-col>
             
@@ -682,7 +690,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
             <!-- Help text for delegation toggles: -->
 
-            <ion-col 
+            <ion-col *ngIf="!get_weighted_delegation_allowed()"
                 size="auto" 
                 class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
                 style="padding-bottom:3px;">
@@ -896,7 +904,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <!-- DELEGATION TOGGLE: -->
 
-                  <ion-col *ngIf="(delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != '')" 
+                  <!-- not in a weighted poll: there a delegation is a share
+                       of the voter's wap, not something to switch on or off,
+                       and the voter always speaks for the rest of it. -->
+                  <ion-col *ngIf="!get_weighted_delegation_allowed() && ((delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != ''))" 
                       class="ion-no-margin ion-no-padding" 
                       size="auto">&nbsp;&nbsp;&nbsp;
                     <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
@@ -915,6 +926,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       </small>
                     </div>
                   </ion-col>  
+
+                  <!-- what the blend makes of the voter's own wap: -->
+                  <ion-col *ngIf="blend_is_visible(oidsorted[i])"
+                      class="ion-no-margin ion-no-padding" size="auto">
+                    <small [innerHtml]="'poll.weighted-blend' | translate: {
+                        own: p.get_my_own_rating(oidsorted[i]),
+                        blended: blended_wap(oidsorted[i])
+                      }"></small>
+                  </ion-col>
                 </ion-row>
               </ion-grid>
             </ion-col>

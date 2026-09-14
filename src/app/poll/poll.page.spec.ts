@@ -61,6 +61,53 @@ describe('PollPage', () => {
     };
   }
 
+  // In a poll with weighted delegation (#285) a delegation is a share of the
+  // voter's wap, not a switch: the voter always speaks for whatever they kept,
+  // and their wap on an option is a blend. The page has to say so, since the
+  // number the tally uses is then not the one under the voter's own knob.
+  describe('what a weighted poll shows about a voter\'s waps', () => {
+
+    beforeEach(() => {
+      component.pid = 'p1';
+      component.weighted_delegation_allowed = true;
+      component.p = {
+        myvid: 'v1',
+        proxy_ratings_map: new Map([['o1', new Map([['v1', 62]])]]),
+        get_my_own_rating: (oid: string) => oid == 'o1' ? 40 : 0,
+      } as any;
+      (component as any).G.D.get_direct_delegation_map = () => new Map([
+        // [did, share, status]: accepted 30%, accepted 20%, and one still
+        // waiting for an answer, which is not given away yet
+        ['v1', [['d1', '30', '2'], ['d2', '20', '2'], ['d3', '40', '0']]],
+      ]);
+    });
+
+    it('counts what the voter still speaks for themselves', () => {
+      expect(component.my_share_kept()).toBe(50);
+    });
+
+    it('keeps the whole wap when nothing has been accepted', () => {
+      (component as any).G.D.get_direct_delegation_map = () => new Map([
+        ['v1', [['d1', '30', '0']]],
+      ]);
+      expect(component.my_share_kept()).toBe(100);
+    });
+
+    it('says what the blend makes of an option, and only when it differs', () => {
+      expect(component.blended_wap('o1')).toBe(62);
+      expect(component.blend_is_visible('o1')).toBeTrue();
+      // an option where the blend lands on the voter's own number says nothing
+      (component.p as any).proxy_ratings_map = new Map([['o1', new Map([['v1', 40]])]]);
+      expect(component.blend_is_visible('o1')).toBeFalse();
+    });
+
+    it('says nothing in a poll that does not weight delegations', () => {
+      component.weighted_delegation_allowed = false;
+      expect(component.blend_is_visible('o1')).toBeFalse();
+    });
+
+  });
+
   // Regression tests for issue #98 ("Sorting options refresh"): changing a
   // rating with the keyboard fires no pointer-up event, so the change used
   // to be applied to the slider but never persisted or re-sorted. It is now

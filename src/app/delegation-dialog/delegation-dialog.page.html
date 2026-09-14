@@ -94,9 +94,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </ng-container>
 
         <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
+          <ion-item lines="none">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small><p [innerHtml]="'delegation-request.share-intro'|translate:{left:weight_left}"></p></small>
+            </ion-col>
+          </ion-item>
           <ion-item>
-            <ion-label>Trust Level</ion-label>
-            <ion-range formControlName="trustLevel" min="0" [max]="this.weight_left" pin="true"></ion-range>
+            <ion-label position="stacked"
+              [innerHtml]="'delegation-request.share-label'|translate:{
+                share: formGroup.get('trustLevel').value, kept: share_kept()
+              }"></ion-label>
+            <ion-range formControlName="trustLevel" min="0" [max]="weight_left" pin="true"></ion-range>
           </ion-item>
         </ng-container>
         

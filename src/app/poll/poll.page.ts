@@ -28,7 +28,6 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
-import { DelegationDialogWeightedPage } from '../delegation-dialog-weighted/delegation-dialog-weighted.page';
 import { DelegationDialogRankedPage } from '../delegation-dialog-ranked/delegation-dialog-ranked.module';
 import { DelegationDialogDifferentPage } from '../delegation-dialog-different/delegation-dialog-different.module';
 import { AssistPage } from '../assist/assist.module';  
@@ -1003,6 +1002,34 @@ export class PollPage implements OnInit {
     return this.different_delegation_allowed;
   }
 
+  /** How much of their own wap the voter still speaks for, in percent.
+   *
+   *  In a weighted poll a delegation is not on or off: it carries a share,
+   *  and what is left over is the voter's own voice. That number is the one
+   *  thing the person needs to see, and #285's screen never showed it.
+   */
+  my_share_kept(): number {
+    let given = 0;
+    for (const [did, share, status] of
+         this.G.D.get_direct_delegation_map(this.pid).get(this.p.myvid) || []) {
+      if (status != '0') { given += Number(share) || 0; }
+    }
+    return Math.max(0, 100 - given);
+  }
+
+  /** What the voter's own wap for an option amounts to once their delegates'
+   *  shares are blended in — the number the tally actually uses. */
+  blended_wap(oid: string): number {
+    return (this.p.proxy_ratings_map.get(oid) || new Map()).get(this.p.myvid) || 0;
+  }
+
+  /** whether saying so would tell the voter anything they cannot already see */
+  blend_is_visible(oid: string): boolean {
+    return this.weighted_delegation_allowed
+        && this.my_share_kept() < 100
+        && this.blended_wap(oid) != this.p.get_my_own_rating(oid);
+  }
+
   get_weighted_delegation_allowed(): boolean {
     return this.weighted_delegation_allowed;
   }
@@ -1073,17 +1100,13 @@ export class PollPage implements OnInit {
       this.open_delegation_info_dialog_different(event);
       return;
     }
+    // the same dialog lists a voter's delegations in a ranked and in a
+    // weighted poll; what differs is whether the second column is a place in
+    // an order or a share of the voter's wap. (#285 had a third page for the
+    // weighted case, which never got past a placeholder and which nothing
+    // opened.)
     this.modalController.create({
       component: DelegationDialogRankedPage, 
-      showBackdrop: true,
-      componentProps: {parent: this}
-    })
-    .then((modalElement)=>{modalElement.present();});
-  }
-
-  delegate_dialog_weighted(event: Event) {
-    this.modalController.create({
-      component: DelegationDialogWeightedPage, 
       showBackdrop: true,
       componentProps: {parent: this}
     })
