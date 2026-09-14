@@ -23,7 +23,7 @@ import { RouteReuseStrategy } from '@angular/router';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
-import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
@@ -54,7 +54,6 @@ export function configureLogging(loggingService: LoggingService): () => void {
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),
         AppRoutingModule,
-        HttpClientModule,
         TranslateModule.forRoot({
             defaultLanguage: DEFAULT_LANG,
             loader: {
@@ -73,7 +72,9 @@ export function configureLogging(loggingService: LoggingService): () => void {
             multi: true,
             provide: APP_INITIALIZER,
             useFactory: configureLogging
-        }
+        },
+        // HttpClientModule is deprecated as of Angular 18; this is its replacement
+        provideHttpClient(withInterceptorsFromDi())
     ],
     bootstrap: [AppComponent]
 })
