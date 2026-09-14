@@ -316,10 +316,7 @@ export class PollPage implements OnInit {
     // Nothing is stored while the consent is still pending (#193), which is
     // expressed in the loop header so that the brace depth stays HEMPED's:
     for (let oid of (this.consent_pending ? [] : this.oidsorted)) {
-      if (!this.delegate || this.rate_yourself_toggle[oid]
-        || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))
-        ) 
-      {
+      if (this.i_set_this_wap(oid)) {
         this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
       }
     }
@@ -597,21 +594,28 @@ export class PollPage implements OnInit {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, p.get_my_proxy_rating(oid));
-      if (this.rate_yourself_toggle[oid]) {
+      if (this.weighted_delegation_allowed) {
+        // the dashed mark carries the blend: the voter's own wap is under
+        // their knob, and this is what it counts as once their delegates'
+        // shares are added in. (#285 pointed it at the effective rating,
+        // which is the blend after the favourite adjustment, so it sat at
+        // 100 for the voter's top option whatever the shares were — and it
+        // only ran while the delegation was switched off, so never.)
+        const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
+              knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
+              rating = this.p.get_my_proxy_rating(oid);
+        if (needle) {
+          needle.x2.baseVal.valueAsString = (rating).toString() + '%';
+        }
+        if (knob) {
+          knob.cx.baseVal.valueAsString = (rating).toString() + '%';
+        }
+      } else if (this.rate_yourself_toggle[oid]) {
         // update dashed needle showing delegate's rating
         const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
               knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
-//        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
-        if (this.weighted_delegation_allowed && this.G.Del.get_my_outgoing_dids_cache(this.pid).get('*')) {
-            const rating = this.p.get_my_effective_rating(oid);
-          if (needle) {
-            needle.x2.baseVal.valueAsString = (rating).toString() + '%';
-          }
-          if (knob) {
-            knob.cx.baseVal.valueAsString = (rating).toString() + '%';
-          }
-        }else if (delegate_vid) {
+        if (delegate_vid) {
           // const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
           const rating = this.G.D.getv(this.pid, "rating."+oid, this.my_delegate_vid(oid))||0;
           this.G.L.trace("PollPage.show_stats rating", rating);
@@ -766,9 +770,7 @@ export class PollPage implements OnInit {
     /** update own rating in cache on basis of slider knob position,
      *  but don't store it in the database yet (see also rating_change_ended()).
      */
-    if ((!this.delegate || this.rate_yourself_toggle[oid]) 
-      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == ''
-      || this.option_delegated.get(oid) == null))) {
+    if (this.i_set_this_wap(oid)) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
     this.show_stats();
@@ -824,8 +826,7 @@ export class PollPage implements OnInit {
     }
 
     this.p.have_acted = true;
-    if (!this.delegate || this.rate_yourself_toggle[oid]
-      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))){
+    if (this.i_set_this_wap(oid)) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
     this.update_order();
@@ -952,10 +953,9 @@ export class PollPage implements OnInit {
       return this.p.get_my_own_rating(oid);
     }
     
-    if (this.weighted_delegation_allowed){
-      if (!this.rate_yourself_toggle[oid]){
-        return this.p.get_my_effective_rating(oid);
-      }
+    if (this.weighted_delegation_allowed) {
+      // the voter's own wap, whatever share of it they have given away: the
+      // blend is shown beside the knob, not under it
       return this.p.get_my_own_rating(oid) || this.G.S.default_wap;
     }
 
@@ -1000,6 +1000,23 @@ export class PollPage implements OnInit {
 
   get_different_delegation_allowed() : boolean {
     return this.different_delegation_allowed;
+  }
+
+  /** Whether the slider under an option is the voter's own wap to set.
+   *
+   *  In a weighted poll it always is: a share is not a handover, and what
+   *  the voter keeps is exactly what their own wap is for. #285 left the
+   *  single-delegate test in all three places that write a rating, so once a
+   *  weighted delegation had been accepted the slider showed the blend
+   *  instead of the voter's own wap, ignored every drag, and was rendered
+   *  small and untouchable — which leaves the share they kept with nothing
+   *  to say.
+   */
+  i_set_this_wap(oid: string): boolean {
+    return this.weighted_delegation_allowed
+        || !this.delegate || this.rate_yourself_toggle[oid]
+        || (this.get_different_delegation_allowed()
+            && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null));
   }
 
   /** How much of their own wap the voter still speaks for, in percent.

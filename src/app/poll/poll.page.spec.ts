@@ -106,6 +106,25 @@ describe('PollPage', () => {
       expect(component.blend_is_visible('o1')).toBeFalse();
     });
 
+    // the slider under an option is the voter's own wap, and stays theirs to
+    // move: what they kept is exactly what it is for. #285 tested for a
+    // single delegate here, so an accepted weighted delegation made the
+    // slider show the blend and ignore every drag.
+    it('leaves the wap the voter\'s to set even once a delegation is accepted', () => {
+      component.delegate = 'Ada';
+      component.rate_yourself_toggle = {o1: false};
+      expect(component.i_set_this_wap('o1')).toBeTrue();
+    });
+
+    it('and does not, in a poll where a delegate takes the option over', () => {
+      component.weighted_delegation_allowed = false;
+      component.delegate = 'Ada';
+      component.rate_yourself_toggle = {o1: false};
+      expect(component.i_set_this_wap('o1')).toBeFalse();
+      component.rate_yourself_toggle = {o1: true};
+      expect(component.i_set_this_wap('o1')).toBeTrue();
+    });
+
   });
 
   // Regression tests for issue #98 ("Sorting options refresh"): changing a

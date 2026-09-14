@@ -841,7 +841,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
                         [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
                         [style]="''
-                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed' || (get_different_delegation_allowed() && (option_delegated.get(oidsorted[i]) == null || option_delegated.get(oidsorted[i]) == ''))
+                          + (get_weighted_delegation_allowed() || rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed' || (get_different_delegation_allowed() && (option_delegated.get(oidsorted[i]) == null || option_delegated.get(oidsorted[i]) == ''))
                           ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                           : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
                         class="ion-no-padding ion-no-margin">
@@ -890,7 +890,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <!-- DELEGATE'S RATING -->
 
                         <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
-                            [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
+                            [style.display]="(get_weighted_delegation_allowed() ? blend_is_visible(oidsorted[i]) : (delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]])) ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
                             <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="var(--vodle-dark)" stroke-width="2" stroke-dasharray="3 2" />
                             <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="var(--vodle-dark)" stroke="none"/>
