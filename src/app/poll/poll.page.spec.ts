@@ -180,7 +180,7 @@ describe('PollPage', () => {
     });
 
     it('tallies once the poll is there', () => {
-      const poll: any = jasmine.createSpyObj('Poll', ['tally_all']);
+      const poll: any = jasmine.createSpyObj('Poll', ['tally_all', 'have_been_delegated']);
       poll.oids = [];
       (component as any).p = poll;
       component.ready = true;

@@ -42,6 +42,79 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
 
   <!-- Acceptance is possible: -->
+  <ng-container *ngIf="status[0]=='ranked'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
+        <p [innerHtml]="'delrespond.intro'|translate"></p> 
+        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="warning"
+            shape="round"
+            (click)="decline()">
+          <ion-icon name="ban"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.decline'|translate"></span>
+        </ion-button>&nbsp;&nbsp;
+        <ion-button size="large" color="primary"
+            shape="round"
+            (click)="accept()">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.accept'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>
+  </ng-container>
+
+  <ng-container *ngIf="status[0]=='weighted'">
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
+        <p [innerHtml]="'delrespond.intro'|translate"></p> 
+        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+      </ion-col>
+    </ion-item>  
+    <ion-item lines="none" class="ion-text-center">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" color="warning"
+            shape="round"
+            (click)="decline()">
+          <ion-icon name="ban"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.decline'|translate"></span>
+        </ion-button>&nbsp;&nbsp;
+        <ion-button size="large" color="primary"
+            shape="round"
+            (click)="accept()">
+          <ion-icon name="checkmark"></ion-icon>&nbsp;
+          <span [innerHtml]="'delrespond.accept'|translate"></span>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label class="ion-no-padding ion-no-margin">
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
+        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+        </ion-button>  
+      </ion-label>
+    </ion-item>
+  </ng-container>
 
   <ng-container *ngIf="status[0]=='possible'">
     <ion-item lines="none" class="ion-text-center">
@@ -81,9 +154,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Acceptance would lead to cycle: - ->
     (We do no longer disallow this. 
-     TODO: We should however tell the user that a cycle is created)
+     TODO: We should however tell the user that a cycle is created) -->
 
-  <ng-container *ngIf="(status[1]=='cycle')||(status[1]=='two-way')">
+  <ng-container *ngIf="(status[1]=='cycle'||status[1]=='two-way') && status[0]=='impossible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4> 
@@ -122,7 +195,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-col>
     </ion-item>  
   </ng-container>
-  -->
+
   <!--
   <ng-container *ngIf="status=='cycle'">
     <ion-item lines="none" class="ion-text-center">
@@ -213,7 +286,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
             shape="round"
-            (click)="decline()">
+            (click)="revoke()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.revoke'|translate"></span>
         </ion-button>&nbsp;&nbsp;
@@ -276,8 +349,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ng-container>
 
   <!-- Request was already declined and cannot be accepted: -->
-
-  <ng-container *ngIf="(status[0]=='declined, impossible')">
+  <ng-container *ngIf="status[0]=='declined, impossible'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -397,6 +469,25 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         shape="round"
         (click)="dismiss()">
       <span [innerHtml]="'OK'|translate"></span>&nbsp;
+    </ion-button>
+  </ng-container>
+
+  <!-- Already accepted a different delegation from user-->
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='accepted-diff')">
+    <ion-item [innerHtml]="'delrespond.accepted-diff'|translate">      
+    </ion-item>  
+    <ion-button size="large" color="primary" slot="end"
+        shape="round"
+        (click)="dismiss()">
+      <span [innerHtml]="'OK'|translate"></span>&nbsp;
+    </ion-button>
+  </ng-container>
+
+  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='revoked')">
+    <ion-item [innerHtml]="'delrespond.been-revoked'|translate">      
+    </ion-item>
+    <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+      <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
     </ion-button>
   </ng-container>
   

@@ -439,6 +439,19 @@ export class Poll {
   set type(value: poll_type_t) { this.G.D.setp(this._pid, 'type', value); }
 
   get language(): string { return this.G.D.getp(this._pid, 'language'); }
+
+  /** Which kinds of delegation this poll allows (#285). Stored like any
+   *  other poll datum, so they are locked with the rest of the metadata when
+   *  the poll starts. DataService.get_*_delegation_allowed reads the same
+   *  three keys straight from the poll cache for code that has no Poll. */
+  get allow_ranked(): boolean { return this.G.D.getp(this._pid, 'allow_ranked') == 'true'; }
+  set allow_ranked(value: boolean) { this.G.D.setp(this._pid, 'allow_ranked', value ? 'true' : 'false'); }
+
+  get allow_different(): boolean { return this.G.D.getp(this._pid, 'allow_different') == 'true'; }
+  set allow_different(value: boolean) { this.G.D.setp(this._pid, 'allow_different', value ? 'true' : 'false'); }
+
+  get allow_weighted(): boolean { return this.G.D.getp(this._pid, 'allow_weighted') == 'true'; }
+  set allow_weighted(value: boolean) { this.G.D.setp(this._pid, 'allow_weighted', value ? 'true' : 'false'); }
   set language(value: string) { this.G.D.setp(this._pid, 'language', value); }
 
   get title(): string { return this.G.D.getp(this._pid, 'title'); }
@@ -942,6 +955,21 @@ export class Poll {
   }
 
   // Methods dealing with changes to the delegation graph:
+
+  /** Whether anyone has delegated to this voter, for any option (#285).
+   *
+   *  HEMPED's version of this returned a hardcoded `false`, so the UI it
+   *  gates was never finished. We hold the answer already: the inverse
+   *  effective delegation map is exactly "who ends up voting through me". */
+  have_been_delegated(vid: string): boolean {
+    for (const per_voter of this.inv_effective_delegation_map.values()) {
+      const delegators = per_voter.get(vid);
+      if (delegators && delegators.size > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {
     if (!environment.delegation.enabled) {

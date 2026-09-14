@@ -36,6 +36,7 @@ export class DelrespondPage implements OnInit {
   pid: string;
   p: Poll;
   did: string;
+  oids: string[];
   from: string;
   private_key: string;
   agreement: del_agreement_t;
@@ -58,6 +59,9 @@ export class DelrespondPage implements OnInit {
       this.from = decodeURIComponent(params['from']);
       this.private_key = params['private_key'];
     } );
+    this.route.queryParamMap.subscribe(queryParams => {
+      this.oids = queryParams.getAll('oids'); // Extract all `oids` values as an array
+    });
   }
 
   ngOnInit() {
@@ -139,10 +143,13 @@ export class DelrespondPage implements OnInit {
   handled(): boolean {
     const [first, second] = this.status || [];
     return first == 'possible' || first == 'accepted' || first == 'closed'
+        || first == 'ranked' || first == 'weighted'
         || first == 'declined, possible' || first == 'declined, impossible'
         || (first == 'impossible'
             && (second == 'weight-exceeded' || second == 'not-in-db'
-                || second == 'poll-unknown' || second == 'is-self'));
+                || second == 'poll-unknown' || second == 'is-self'
+                || second == 'two-way' || second == 'cycle'
+                || second == 'accepted-diff' || second == 'revoked'));
   }
 
   ionViewDidLeave() {
@@ -153,7 +160,13 @@ export class DelrespondPage implements OnInit {
 
   // GUI callbacks:
 
+  // TODO: verify that it is still possible to accept the request
   accept() {
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      this.G.Del.accept_different(this.pid, this.did, this.private_key, this.oids);
+      this.router.navigate(["/poll/" + this.pid]);
+      return;
+    }
     /** store positive response and go to poll page */
     this.G.Del.accept(this.pid, this.did, this.private_key);
     // TODO: notify that response has been sent
@@ -164,6 +177,20 @@ export class DelrespondPage implements OnInit {
     /** store negative response and go to poll page */
     this.G.Del.decline(this.pid, this.did, this.private_key);
     // TODO: notify that response has been sent
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
+  // TODO: use to send a different message to the delegator
+  decline_due_to_error() {
+    /** store negative response and go to poll page */
+    this.G.Del.decline_due_to_error(this.pid, this.did, this.private_key);
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
+  revoke() {
+    /** store negative response and go to poll page */
+    this.G.Del.set_delegation_pending(this.pid, this.did);
+    this.G.Del.decline(this.pid, this.did, this.private_key);
     this.router.navigate(["/poll/" + this.pid]);
   }
 

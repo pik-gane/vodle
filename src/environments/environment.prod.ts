@@ -146,7 +146,14 @@ export const environment = {
     // together; a deployment that cares must weigh that before turning
     // this on for real users.
     enabled: true,
-    max_weight: 10
+    // HEMPED's weighted/ranked delegation (#285) needs two settings of its
+    // own. max_weight stays at this deployment's value rather than theirs:
+    // it caps how many people's waps one delegate may end up controlling,
+    // which is a policy choice and not a detail of the feature, so raising
+    // it is the owner's to make deliberately.
+    max_weight: 10,
+    max_delegations: 3,
+    weighted_epsilon: 1
   },
   no_more_options_time_fraction: 1/2,
   db_put_retry_delay_ms: 100,

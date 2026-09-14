@@ -28,10 +28,14 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { DelegationDialogWeightedPage } from '../delegation-dialog-weighted/delegation-dialog-weighted.page';
+import { DelegationDialogRankedPage } from '../delegation-dialog-ranked/delegation-dialog-ranked.module';
+import { DelegationDialogDifferentPage } from '../delegation-dialog-different/delegation-dialog-different.module';
 import { AssistPage } from '../assist/assist.module';  
 import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
+import { waitForAsync } from '@angular/core/testing';
 
 @Component({
   selector: 'app-poll',
@@ -55,7 +59,9 @@ export class PollPage implements OnInit {
 
   delegate: string;
   delegation_status = "none";
+  option_delegated: Map<string, string> = null;
 
+  have_been_delegated = false;
   n_indirect_clients = 1;
   accepted_requests = [];
   declined_requests = [];
@@ -97,6 +103,10 @@ export class PollPage implements OnInit {
 
   news: Set<news_t> = new Set();
 
+  // type of delegation:
+  ranked_delegation_allowed = false;
+  weighted_delegation_allowed = false;
+  different_delegation_allowed = false;
   rating_update_timeout: any = null; // debounces resorting while rating via keyboard (see issue #98, PR #298)
 
   // LIFECYCLE:
@@ -125,6 +135,14 @@ export class PollPage implements OnInit {
 
   ngOnInit() {
     this.G.L.entry("PollsPage.ngOnInit");
+  }
+
+  /** The voter id my rating for this option comes from: my effective
+   *  delegate, or me. Replaces HEMPED's Poll.delegate_id, which was a single
+   *  delegation id for the whole poll; our delegation is per option. */
+  my_delegate_vid(oid: string): string {
+    const per_option = this.p.effective_delegation_map.get(oid);
+    return (per_option && per_option.get(this.p.myvid)) || this.p.myvid;
   }
 
   ionViewWillEnter() {
@@ -212,6 +230,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
+    this.update_vote_maps();
   }
 
   private show_poll() {
@@ -236,9 +255,17 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
+
+    // get type of delegation:
+    this.ranked_delegation_allowed = this.G.D.get_ranked_delegation_allowed(this.pid);
+    this.weighted_delegation_allowed = this.G.D.get_weighted_delegation_allowed(this.pid);
+    this.different_delegation_allowed = this.G.D.get_different_delegation_allowed(this.pid);
+
+    this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
+    this.G.L.entry("PollPage.onDataChangeshared");
     this.G.L.entry("PollPage.onDataChange");
     if (!this.ready || !this.p) {
       // the Matrix backend reports data as it arrives, which on a fresh
@@ -250,9 +277,12 @@ export class PollPage implements OnInit {
     }
     this.p.tally_all();
     this.update_order();
+    this.have_been_delegated = this.p.have_been_delegated(this.p.myvid);
     this.update_delegation_info();
     this.news = this.G.N.filter({pid: this.pid});
+    this.update_vote_maps();
     this.changeDetector.detectChanges();
+
     this.G.L.exit("PollPage.onDataChange");
   }
 
@@ -283,13 +313,15 @@ export class PollPage implements OnInit {
       // register that results have been seen:
       this.p.have_seen_results = true;
     }
-    // make sure current slider values are really stored in database
-    // (unless the consent is still pending, #193: nothing is stored then):
-    if (!this.consent_pending) {
-      for (let oid of this.oidsorted) {
-        if (!this.delegate || this.rate_yourself_toggle[oid]) {
-          this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
-        }
+    // make sure current slider values are really stored in database.
+    // Nothing is stored while the consent is still pending (#193), which is
+    // expressed in the loop header so that the brace depth stays HEMPED's:
+    for (let oid of (this.consent_pending ? [] : this.oidsorted)) {
+      if (!this.delegate || this.rate_yourself_toggle[oid]
+        || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))
+        ) 
+      {
+        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
       }
     }
     // dismiss auto-dismissing news:
@@ -346,7 +378,65 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.ionViewDidLeave");
   }
 
+  update_options_delegated() {
+    if (this.option_delegated == null) {
+      this.option_delegated = new Map<string, string>();
+    }
+    for (const oid of this.p.oids) {
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, status, _] of list) {
+        if (status === '2' || status === '0' || status === '1') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+        this.delegation_status = "agreed";
+      }else{
+        this.option_delegated.set(oid, '');
+      }
+    }
+    // change status
+    this.set_delegate();
+    return;
+    for (const oid of this.p.oids) {
+      // const val = this.G.D.getv(this.pid, "del_oid." + oid);
+      // if (val == "null") {
+      //   this.option_delegated.set(oid, null);
+      // } else {
+      //   this.option_delegated.set(oid, val);
+      // }
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, rank, status] of list) {
+        if (status == '2') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+      }else{
+        this.option_delegated.set(oid, null);
+      }
+    }
+  }
+
+  update_vote_maps() {
+    // (the self and effective ratings are not read from a shared `waps`
+    //  document any more: our Poll derives them in the tally, from the own
+    //  ratings and the delegation maps)
+  }
+
   update_delegation_info() {
+    this.G.L.entry("PollPage.update_delegation_info");
+    if (this.get_different_delegation_allowed()) {
+      this.update_options_delegated();
+      this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
+      return;
+    }
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -355,30 +445,80 @@ export class PollPage implements OnInit {
     this.declined_requests = [];
     if (cache) {
       for (const [did, [from, url, status]] of cache) {
-        if (status == 'agreed') {
-          this.accepted_requests.push({from:from, url:url});
-        } else if (status.startsWith('declined')) {
-          this.declined_requests.push({from:from, url:url});
-        } 
+        const st = this.G.D.getv(this.pid, "del_status."+did);
+        if (st && st != status) {
+          if (status == 'agreed') {
+            if (st == 'revoked') {
+              this.G.N.add({
+                class: 'delegation_declined', 
+                pid: this.pid,
+                title: this.translate.instant('news-title.delegation_revoked', {nickname: from}),
+              });
+              cache.delete(did);
+            }
+          }
+        }else{
+          if (status == 'agreed') {
+            this.accepted_requests.push({from:from, url:url});
+          } else if (status.startsWith('declined')) {
+            this.declined_requests.push({from:from, url:url});
+          } 
+        }
       }
     }
     // find outgoing delegation:
-    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
-    this.G.L.trace("PollPage.update_delegation_info did", did);
+    if (this.get_different_delegation_allowed()) {
+      
+    }
+
+    var did;
+    var pendingSet = new Set<string>();
+    const dir_del_map = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dir_del_map.get(this.p.myvid) || [];
+    for (const [did_, rank, status] of list) {
+      if (status == '2') {
+        did = did_;
+      } else if (status == '0') {
+        pendingSet.add(did_);
+      }
+    }
     if (did) {
-      this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      // this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      this.set_delegate();
       const agreement = this.G.Del.get_agreement(this.pid, did);
       this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
-      this.delegation_status = agreement.status;
+      var st = "null";
+      const list = dir_del_map.get(this.p.myvid) || [];
+      for (const [,, status] of list) {
+        if (status == '2') {
+          st = "agreed";
+          break;
+        }
+      }
+      this.delegation_status = st == "agreed" ? "agreed" : agreement.status;
+    } else if (pendingSet.size > 0) {
+      this.delegation_status = "pending";
+      this.delegate = this.G.Del.get_delegate_nickname(this.pid, pendingSet.values().next().value);
+    } else {
+      this.delegation_status = "none";
     }
     this.update_delegation_toggles();
   }
 
   update_delegation_toggles() {
     for (let oid of this.oidsorted) {
-      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
-      if (!did) {
-        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      // let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
+      // if (!did) {
+      //   did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      // }
+      var did;
+      const dm = this.G.D.get_direct_delegation_map(this.pid);
+      const list = dm.get(this.p.myvid) || [];
+      for (const [did_, rank, status] of list) {
+        if (status == '2') {
+          did = did_;
+          break;
+        }
       }
       if (did) {
         const a = this.G.Del.get_agreement(this.pid, did);
@@ -410,19 +550,45 @@ export class PollPage implements OnInit {
   }
 
   on_rate_yourself_toggle_change(oid:string) {
-//    const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
+  //const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
     // update delegation data:
-    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
+    var did = null;
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [];
+    for (const [did_, _, status] of list) {
+      if (status == '2') {
+        did = did_;
+        break;
+      }
+    }
+
+    // set rating
+    if (this.rate_yourself_toggle[oid]) {
+      const rm = this.G.D.get_self_waps(this.pid).get(this.p.myvid);
+      this.p.set_my_own_rating(oid, rm.get(oid), true);
+      this.show_stats();
+    } else {
+      var d = this.G.Del.get_my_outgoing_dids_cache(this.pid).get('*');
+      if (this.get_different_delegation_allowed()) {
+        d = this.option_delegated.get(oid);
+      }
+      this.p.set_my_own_rating(oid, +this.G.D.getv(this.pid, "rating."+oid, d)||0, true);
+    }
+
+    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid], did);
     // update slider value:
 //    this.get_slider(oid).value = new_rating.toString();
     this.on_delegate_toggle_change();
+    this.G.D.save_state();
   }
 
   on_delegate_toggle_change() {
     // update n_delegated: // TODO: make more efficient
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
-      if (!b) sum++;
+      if (!b) {
+        sum++;
+      }
     }
     this.n_delegated = sum;
   }
@@ -470,8 +636,17 @@ export class PollPage implements OnInit {
               knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
 //        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
-        if (delegate_vid) {
-          const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+        if (this.weighted_delegation_allowed && this.G.Del.get_my_outgoing_dids_cache(this.pid).get('*')) {
+            const rating = this.p.get_my_effective_rating(oid);
+          if (needle) {
+            needle.x2.baseVal.valueAsString = (rating).toString() + '%';
+          }
+          if (knob) {
+            knob.cx.baseVal.valueAsString = (rating).toString() + '%';
+          }
+        }else if (delegate_vid) {
+          // const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          const rating = this.G.D.getv(this.pid, "rating."+oid, this.my_delegate_vid(oid))||0;
           this.G.L.trace("PollPage.show_stats rating", rating);
           if (needle) {
             needle.x2.baseVal.valueAsString = (rating).toString() + '%';
@@ -557,6 +732,35 @@ export class PollPage implements OnInit {
       'vodlegreen';
   }
 
+  set_delegate() {
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [[]];
+    var d = null;
+    // list.sort((a, b) => Number(a[1]) - Number(b[1]));
+    d = list[0] ? list[0][0] : null;
+
+    for (const [did, rank, status] of list) {
+      if (status == '2') {
+        d = did;
+        break;
+      }
+    }
+    this.delegate = d ? this.G.Del.get_delegate_nickname(this.pid, d) : null;
+  }
+
+  get_delegate(oid?: string) {
+    if (this.weighted_delegation_allowed){
+      return "Delegate";
+    }
+    if (!this.get_different_delegation_allowed()) {
+      return this.delegate;
+    }
+    if (oid) {
+      return this.G.Del.get_delegate_nickname(this.pid, this.option_delegated.get(oid));
+    }
+    return this.delegate;
+  }
+
   // CONTROLS:
 
   toggle_show_live() {
@@ -595,7 +799,9 @@ export class PollPage implements OnInit {
     /** update own rating in cache on basis of slider knob position,
      *  but don't store it in the database yet (see also rating_change_ended()).
      */
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if ((!this.delegate || this.rate_yourself_toggle[oid]) 
+      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == ''
+      || this.option_delegated.get(oid) == null))) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
     this.show_stats();
@@ -651,10 +857,12 @@ export class PollPage implements OnInit {
     }
 
     this.p.have_acted = true;
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if (!this.delegate || this.rate_yourself_toggle[oid]
+      || (this.get_different_delegation_allowed() && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null))){
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
     this.update_order();
+    this.show_stats();
     this.G.D.save_state();
   }
 
@@ -766,6 +974,71 @@ export class PollPage implements OnInit {
     return true;
   }
 
+  get_my_rating(oid: string) {
+    if (this.get_different_delegation_allowed()) {
+      const did = this.option_delegated.get(oid);
+      if (did && did != "" && !this.rate_yourself_toggle[oid]) {
+        const agr = this.G.Del.get_agreement(this.pid, did);
+        this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+        return this.G.D.getv(this.pid, "rating."+oid, agr.delegate_vid);
+      }
+      return this.p.get_my_own_rating(oid);
+    }
+    
+    if (this.weighted_delegation_allowed){
+      if (!this.rate_yourself_toggle[oid]){
+        return this.p.get_my_effective_rating(oid);
+      }
+      return this.p.get_my_own_rating(oid) || this.G.S.default_wap;
+    }
+
+    if (this.delegate && !this.rate_yourself_toggle[oid]) {
+      this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+      return this.G.D.getv(this.pid, "rating."+oid, this.my_delegate_vid(oid));
+    }
+    return this.p.get_my_own_rating(oid);
+  }
+
+  get_allowed_to_delegate() : boolean {
+    if (!this.get_ranked_delegation_allowed() && this.delegation_status == 'agreed' && !this.get_different_delegation_allowed() && !this.weighted_delegation_allowed) {
+      return false;
+    }
+    if (this.weighted_delegation_allowed){
+      const ddm = this.G.D.get_direct_delegation_map(this.pid);
+      const lst = ddm.get(this.p.myvid) || [];
+      var weight_left = 99;
+      for (let [, weight, _] of lst){
+        weight_left -= parseInt(weight);
+      }
+      return weight_left > 0;
+    }
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      var c = 0;
+      for (let key of this.option_delegated.keys()) {
+        const did = this.option_delegated.get(key) || '';
+        if (did != '') {
+          c++;
+        }
+      }
+      return c < this.p.oids.length;
+    }
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [];
+    return list.length < environment.delegation.max_delegations;
+  }
+
+  get_ranked_delegation_allowed() : boolean {
+    return this.ranked_delegation_allowed;
+  }
+
+  get_different_delegation_allowed() : boolean {
+    return this.different_delegation_allowed;
+  }
+
+  get_weighted_delegation_allowed(): boolean {
+    return this.weighted_delegation_allowed;
+  }
+
   get_knob_pos(oid: string) {
     /** get the slider knob position (left and right pixel coordinates)
      *  to be able to compare with click/touch coordinate:
@@ -816,6 +1089,37 @@ export class PollPage implements OnInit {
       ] 
     }); 
     await confirm.present(); 
+  }
+
+  open_delegation_info_dialog_different(event: Event) {
+    this.modalController.create({
+      component: DelegationDialogDifferentPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
+  }
+
+  delegation_info_dialog(event: Event) {
+    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+      this.open_delegation_info_dialog_different(event);
+      return;
+    }
+    this.modalController.create({
+      component: DelegationDialogRankedPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
+  }
+
+  delegate_dialog_weighted(event: Event) {
+    this.modalController.create({
+      component: DelegationDialogWeightedPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
   }
 
   delegate_dialog(event: Event) {
@@ -889,44 +1193,106 @@ export class PollPage implements OnInit {
     })
   }
 
-  async revoke_delegation_dialog() { 
+  async revoke_delegation_dialog(dId?: string) : Promise<boolean> { 
     /** open the delegation revokation confirmation dialog alert */
     this.p.end_if_past_due();
     if (this.p.allow_voting) {
-      const confirm = await this.alertCtrl.create({ 
-        message: this.translate.instant(
-          'poll.revoke_delegation', {nickname: this.delegate}), 
-        buttons: [
-          { 
-            text: this.translate.instant('cancel'), 
-            role: 'Cancel',
-            handler: () => { 
-              console.log('Confirm Cancel.');  
-            } 
-          },
-          { 
-            text: this.translate.instant('OK'),
-            role: 'Ok', 
-            handler: async () => {
-              try {
-                await this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
-                if (!this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*")) {
-                  this.delegate = null;
-                  this.delegation_status = 'none';
+      return new Promise(async (resolve) => {
+        const confirm = await this.alertCtrl.create({ 
+          message: this.translate.instant(
+            'poll.revoke_delegation', {nickname: this.delegate}), 
+          buttons: [
+            { 
+              text: this.translate.instant('cancel'), 
+              role: 'Cancel',
+              handler: () => { 
+                resolve(false);
+              } 
+            },
+            { 
+              text: this.translate.instant('OK'),
+              role: 'Ok', 
+              handler: () => {
+                const dm = this.G.D.get_direct_delegation_map(this.pid);
+                const list = dm.get(this.p.myvid) || [];
+                var did;
+                if (dId){
+                  did = dId;
+                }else{
+                  did = list[0][0] || null;
+                  for (const [did_, _, status] of list) {
+                    if (status == '2') {
+                      did = did_;
+                      break;
+                    }
+                  }
                 }
+                this.G.Del.revoke_delegation(this.pid, did, "*");
+                // this.delegate = null;
+                this.set_delegate();
+                this.delegation_status = this.delegate ? 'agreed' : 'none';
                 this.update_delegation_info();
-                await this.G.D.save_state();
-              } catch (err) {
-                this.G.L.error("PollPage could not revoke delegation", this.pid, err);
-                return false;
-              }
+                this.G.D.save_state();
+
+                resolve(true);
+              } 
             } 
-          } 
-        ] 
-      }); 
-      await confirm.present(); 
+          ] 
+        }); 
+        await confirm.present(); 
+      });
     }
-  } 
+    return false; // Return false if `allow_voting` is not true
+  }
+
+  async revoke_delegation_different_dialog(oids: string[]): Promise<boolean> {
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      return new Promise(async (resolve) => {
+        const confirm = await this.alertCtrl.create({
+          message: this.translate.instant(
+            'poll.revoke_delegation', { nickname: this.get_delegate(oids[0]) }
+          ),
+          buttons: [
+            {
+              text: this.translate.instant('cancel'),
+              role: 'Cancel',
+              handler: () => {
+                resolve(false); // Resolve with false on cancel
+              },
+            },
+            {
+              text: this.translate.instant('OK'),
+              role: 'Ok',
+              handler: () => {
+                const dm = this.G.D.get_direct_delegation_map(this.pid);
+                const list = dm.get(this.p.myvid) || [];
+                var did = list[0][0] || null;
+                for (const [did_, _, status] of list) {
+                  if (status == '2') {
+                    did = did_;
+                    break;
+                  }
+                }
+                for (let oid of oids) {
+                  this.G.Del.revoke_delegation(this.pid, did, oid);
+                }
+                this.set_delegate();
+                this.delegation_status = this.delegate ? 'agreed' : 'none';
+                this.update_delegation_info();
+                this.G.D.save_state();
+  
+                resolve(true); // Resolve with true on confirm
+              },
+            },
+          ],
+        });
+        await confirm.present();
+      });
+    }
+    return false; // Return false if `allow_voting` is not true
+  }
+  
 
   add_option(event: Event) {
     if(!this.p.can_add_option() || this.consent_pending){

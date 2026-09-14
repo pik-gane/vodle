@@ -100,8 +100,8 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       </ion-button>
 
       <!-- DELEGATE BUTTON: -->
-      <ion-button *ngIf="!!p && delegation_status!='agreed' && p.allow_voting"
-          (click)="delegate_dialog($event)" data-vodle="delegate-button"
+      <ion-button *ngIf="!!p && get_allowed_to_delegate() && p.allow_voting"
+          (click)="delegate_dialog($event)" 
           shape="round" size="large" color="primary" class="ion-no-padding ion-no-margin">
         <span *ngIf="scroll_position < 70"
           [innerHtml]="'poll.delegate-button' | translate">
@@ -194,7 +194,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </small>
 
             <!-- POLL TITLE -->
-
             <h3><b><i [lang]="p.language" [innerHtml]="p.title"></i></b></h3>
           </ion-col>
         </ion-row>
@@ -207,7 +206,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
       <ion-grid class="ion-no-padding ion-padding-bottom ion-no-margin" style="width: 100%;">
         <ion-row class="ion-no-padding ion-no-margin">
           <ion-col class="ion-no-padding ion-no-margin">
-
             <!-- POLL DESCRIPTION, "READ MORE" LINK -->
 
             <div [style]="
@@ -380,7 +378,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
           </p>
         </small>
       </ion-item>
-      <ion-item *ngIf="p.my_n_rated_positive == 1" color="warning">
+      <ion-item *ngIf="p.my_n_rated_positive == 1 && !p.have_delegated" color="warning">
         <small>
           <p>
             <span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-before-wap'|translate"></span><wbr/><span (click)="glossary('wap')" style="cursor: pointer; white-space: nowrap"><span style="font-size: medium" class="externallink" [innerHtml]="'poll.hint-only1positive-1-wap'|translate"></span><ion-icon name="help-circle-outline" style="font-size: 16px; position: relative; top:3px;"></ion-icon></span><span style="font-size: medium" [innerHtml]="'poll.hint-only1positive-1-after-wap'|translate"></span>&nbsp;<wbr/>
@@ -508,7 +506,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
       <!-- INCOMING DELEGATIONS BANNER: -->
 
-      <ion-item *ngIf="(accepted_requests.length > 0) || (declined_requests.length > 0)"
+      <ion-item *ngIf="n_indirect_clients > 0 || declined_requests.length > 0"
           color="light">
         <ion-grid class="ion-no-padding ion-no-margin">
 
@@ -525,7 +523,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                   size="smaller" class="ion-no-margin" 
                   style="position: relative; left: -2px; top: 2px;">
                 </ion-icon>
-                <span *ngIf="accepted_requests.length > 0" 
+                <span *ngIf="n_indirect_clients > 0"
                   [innerHtml]="
                     ((n_indirect_clients == 1 ? 'poll.also-for-other' : 'poll.also-for-others' )
                     | translate: {n_others: n_indirect_clients})
@@ -601,6 +599,23 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 </p>
               </small>
             </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-item *ngIf="get_ranked_delegation_allowed() || get_weighted_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
+              <ion-col size="auto" class="ion-no-margin">
+                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                  <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+                </ion-button>
+              </ion-col>
+            </ion-item>
+
+            <ion-item *ngIf="get_different_delegation_allowed()" class="ion-no-margin ion-padding-left" color="warning">
+              <ion-col size="auto" class="ion-no-margin">
+                <ion-button fill="clear" (click)="delegation_info_dialog()">
+                  <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+                </ion-button>
+              </ion-col>
+            </ion-item>
 
             <!-- Revoke delegation button: -->
 
@@ -616,7 +631,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-grid>
       </ion-item>
 
-      <ion-item *ngIf="delegation_status=='agreed'" 
+      <ion-item *ngIf="delegation_status=='agreed' && !get_different_delegation_allowed()" 
           color="warning"> 
         <ion-grid class="ion-no-padding ion-no-margin">
           <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
@@ -632,11 +647,10 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             -->
 
             <!-- Info about how many of user's ratings the delegate controls: -->
-
             <ion-col class="ion-no-margin ion-padding-right">
               <small>
                 <p>
-                  <span style="font-size: medium;">{{delegate}}</span>&nbsp;
+                  <span style="font-size: medium;">{{get_delegate()}}</span>&nbsp;
                   <span [innerHtml]="
                     'poll.delegate-controls-' 
                     + (n_delegated == oidsorted.length ? 'all' 
@@ -648,7 +662,16 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 </p>
               </small>
             </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-col *ngIf="get_ranked_delegation_allowed() || get_weighted_delegation_allowed()" size="auto" class="ion-no-margin">
+              <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+              </ion-button>
+            </ion-col>
+            
 
+            
             <!-- Revoke delegation button: -->
 
             <ion-col size="auto" class="ion-no-margin">
@@ -658,6 +681,43 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
             </ion-col>
 
             <!-- Help text for delegation toggles: -->
+
+            <ion-col 
+                size="auto" 
+                class="ion-no-padding ion-no-margin ion-padding-left ion-text-right" 
+                style="padding-bottom:3px;">
+              <small>
+                <p>
+                  <span [innerHtml]="'poll.choose-whose-ratings' | translate"></span>&nbsp;
+                  <ion-icon 
+                    name="arrow-down-outline" 
+                    style="position:relative;top:3px;">
+                  </ion-icon>
+                </p>
+              </small>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-item>
+
+      <ion-item *ngIf="delegation_status=='agreed' && get_different_delegation_allowed()" color="warning">
+        <ion-grid class="ion-no-padding ion-no-margin">
+          <ion-row class="ion-no-padding ion-no-margin ion-align-items-center">
+            <!-- Info about how many of user's ratings the delegate controls: -->
+            <ion-col class="ion-no-margin ion-padding-right">
+              <small>
+                <p>
+                  <span [innerHtml]="'poll.delegate-different-info' | translate"></span>
+                </p>
+              </small>
+            </ion-col>
+            
+            <!-- More Information Button-->
+            <ion-col size="auto" class="ion-no-margin">
+              <ion-button fill="clear" (click)="delegation_info_dialog()">
+                <ion-icon name="information-circle-outline" style="color:black"></ion-icon>
+              </ion-button>
+            </ion-col>
 
             <ion-col 
                 size="auto" 
@@ -764,7 +824,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         [disabled]="!p.allow_voting || consent_pending"
                         [id]="'slider_'+oidsorted[i]+'_'+sortingcounter" 
                         [color]="show_live?slidercolor[oidsorted[i]]:'vodleblue'"
-                        [value]="p.get_my_proxy_rating(oidsorted[i])" 
+                        [value]="get_my_rating(oidsorted[i])" 
                         (ionFocus)="onRatingSliderFocus(oidsorted[i])" 
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"
@@ -773,7 +833,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
                         [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
                         [style]="''
-                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed'
+                          + (rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed' || (get_different_delegation_allowed() && (option_delegated.get(oidsorted[i]) == null || option_delegated.get(oidsorted[i]) == ''))
                           ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
                           : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
                         class="ion-no-padding ion-no-margin">
@@ -836,7 +896,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <!-- DELEGATION TOGGLE: -->
 
-                  <ion-col *ngIf="delegation_status=='agreed'" 
+                  <ion-col *ngIf="(delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != '')" 
                       class="ion-no-margin ion-no-padding" 
                       size="auto">&nbsp;&nbsp;&nbsp;
                     <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
@@ -850,7 +910,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                       <small [innerHtml]="
                         rate_yourself_toggle[oidsorted[i]] 
                         ? ('poll.my-own' | translate) 
-                        : ('poll.delegate-s' | translate: {delegate: delegate})
+                        : ('poll.delegate-s' | translate: {delegate: get_delegate(oidsorted[i])})
                         " >
                       </small>
                     </div>
