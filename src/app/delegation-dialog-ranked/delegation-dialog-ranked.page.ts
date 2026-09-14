@@ -115,16 +115,12 @@ export class DelegationDialogRankedPage implements OnInit {
       return;
     }
 
-    // Save new order
-    var ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
-    var list = ddm.get(this.parent.p.myvid);
-    for (var entry of list){
-      entry[1] = this.delegation_list.find(x => x.did === entry[0]).rank;
+    // Save new order. A rank is the client's own statement about their own
+    // delegation, so it goes into their own request.
+    for (const item of this.delegation_list) {
+      this.G.Del.set_delegate_rank(this.parent.pid, item.did, Number(item.rank));
     }
-    // Sort by rank
-    list.sort((a, b) => Number(a[1]) - Number(b[1]));
-    ddm.set(this.parent.p.myvid, list);
-    this.G.D.set_direct_delegation_map(this.parent.pid, ddm);
+    this.G.Del.resolve_ranked_delegations(this.parent.pid);
     this.parent.update_delegation_info();
     this.order_changed = true;
     this.reorder_disabled = true;
@@ -151,7 +147,7 @@ export class DelegationDialogRankedPage implements OnInit {
   close_button_clicked() {
     this.G.L.entry("DelegationDialogRankedPage.close_button_clicked");
     if (this.order_changed) {
-      this.G.Del.recalculate_delegation_map(this.parent.pid);
+      this.G.Del.resolve_ranked_delegations(this.parent.pid);
       this.parent.update_delegation_info();
     }
     this.modal.dismiss();

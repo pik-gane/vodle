@@ -208,7 +208,7 @@ export class DelegationDialogDifferentPage implements OnInit {
   close_button_clicked() {
     this.G.L.entry("DelegationDialogDifferentPage.close_button_clicked");
     if (this.order_changed) {
-      this.G.Del.recalculate_delegation_map(this.parent.pid);
+      this.G.Del.resolve_ranked_delegations(this.parent.pid);
       this.parent.update_delegation_info();
     }
     this.modal.dismiss();

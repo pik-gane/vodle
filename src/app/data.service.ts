@@ -292,7 +292,17 @@ export function restart_at_the_beginning() {
 export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
-export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
+export type del_request_t = {
+  option_spec: del_option_spec_t,
+  public_key: string,
+  // #285: in a poll with ranked delegation, where this delegate stands in the
+  // client's order of preference (1 = first choice); in one with weighted
+  // delegation, the percentage of trust the client gives them. Both are the
+  // client's own statement about their own delegation, so they ride in the
+  // client's own request rather than in a poll-wide document.
+  rank?: number,
+  trust?: number,
+};
 export type del_response_t = {option_spec: del_option_spec_t, status: "agreed" | "declined" | "revoked", "decline_cycle", "decline_self"};
 export type del_signed_response_t = string;
 export type del_agreement_t = { // by pid, did
@@ -4171,9 +4181,7 @@ export class DataService implements OnDestroy {
       } else {
         this.G.L.error("DataService.setp change option attempted for existing entry", pid, key, value);
       }
-    } else if (key == 'inverse_indirect_map') {
-      return this._setp_in_polldb(pid, key, value);
-    }else {
+    } else {
       this.G.L.error("DataService.setp non-local attempted for non-draft poll", pid, key, value);
     }
   }
@@ -4452,121 +4460,21 @@ export class DataService implements OnDestroy {
     });
   }
 
-  // inverse_indirect_map:- key: voterid, value: [voterid1, voterid2, voterid3] voterids that have effectively delegated to the voterid
-  set_inverse_indirect_map(pid: string, val: Map<string, string>) {
-    const mapKey = `poll.${pid}.inverse_indirect_map`;
-    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
-  }
+  // #285 kept the delegation graph in two poll-wide documents that every
+  // voter had to be able to rewrite. Both are derivable from what each
+  // client already holds, so they are views now, not storage: see
+  // DelegationService.get_direct_delegations and .get_inverse_delegations.
 
-  set_effective_delegation(pid: string, vid: string, val: string[]) {
-    const mapKey = `poll.${pid}.inverse_indirect_map`;
-    const currentMap = this.get_inverse_indirect_map(pid);
-
-    currentMap.set(vid, JSON.stringify(val)); // Add or update the key-value pair
-    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(currentMap.entries())));
-  }
-
+  // key: voter id, value: JSON list of the voter ids that have effectively
+  // delegated to them, directly or through a chain.
   get_inverse_indirect_map(pid: string, option_map?: string): Map<string, string> {
-    if (option_map) {
-      const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
-      const ps = cache ? JSON.parse(cache) : [];
-      const mp = new Map<string, Map<string, string>>();
-    
-      ps.forEach((outerEntry: [string, Array<[string, string]>]) => {
-        const innerMap = new Map<string, string>();
-        outerEntry[1].forEach((innerEntry: [string, string]) => {
-          innerMap.set(innerEntry[0], innerEntry[1]);
-        });
-        mp.set(outerEntry[0], innerMap);
-      });
-    
-      const option_delegation = mp.get(option_map) || new Map<string, string>();
-      return option_delegation;
-    }
-
-    const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
-    const ps = cache ? JSON.parse(cache) : {};
-    const mp = new Map<string, string>(ps);
-    return mp;
+    return this.G.Del.get_inverse_delegations(pid, option_map);
   }
 
-  save_inverse_indirect_map(pid: string, oid: string, val: Map<string, string>) {
-    // Retrieve the cached inverse indirect map from poll storage
-    const cache = this.poll_caches[pid]['poll.' + pid + '.inverse_indirect_map'] || '[]';
-    const ps = cache ? JSON.parse(cache) : [];
-    const mp = new Map<string, Map<string, string>>();
-
-    // Convert parsed JSON back into Map structure
-    ps.forEach(([key, value]) => {
-      mp.set(key, new Map(value));
-    });
-
-    // Update the map with the new delegation entry
-    mp.set(oid, val);
-    
-    const jsonData = JSON.stringify(Array.from(mp.entries(), ([k, v]) => [k, Array.from(v.entries())]));
-    this._setp_in_polldb(pid, `poll.${pid}.inverse_indirect_map`, jsonData);
-  }
-
-  // direct_delegation_map:- key: voterid, value: [[voterid, rank, is_current_delegation], [voterid2, rank, is_current_delegate]] of the voter that the key has delegated to.
-  // When ranked delegation is not allowed, the rank is always 0 and the size of the value is 1.
-  set_direct_delegation_map(pid: string, val: Map<string, Array<[string, string, string]>>) {
-    const mapKey = `poll.${pid}.direct_delegation_map`;
-    this._setp_in_polldb(pid, mapKey, JSON.stringify(Array.from(val.entries())));
-  }
-
-  save_direct_delegation_map(pid: string, oid: string, val: Map<string, Array<[string, string, string]>>) {
-    // Retrieve the cached delegation map from poll storage
-    const cache = this.poll_caches[pid]?.[`poll.${pid}.direct_delegation_map`];
-
-    // Parse cache into a Map<string, Map<string, Array<[string, string, string]>>>
-    const ps = cache ? JSON.parse(cache) : [];
-    const mp = new Map<string, Map<string, Array<[string, string, string]>>>();
-
-    // Convert parsed JSON back into Map structure
-    ps.forEach(([key, value]) => {
-      mp.set(key, new Map(value));
-    });
-
-    // Update the map with the new delegation entry
-    mp.set(oid, val);
-
-    // Convert the Map back into a JSON-compatible structure (array of entries)
-    const jsonData = JSON.stringify(Array.from(mp.entries(), ([k, v]) => [k, Array.from(v.entries())]));
-
-    // Save to poll database
-    this._setp_in_polldb(pid, `poll.${pid}.direct_delegation_map`, jsonData);
-  }
-
-
+  // key: voter id, value: their delegations as [did, rank or trust, status],
+  // most preferred first.
   get_direct_delegation_map(pid: string, option_map?: string): Map<string, Array<[string, string, string]>> {
-    // used when options are delegated to different users
-    if (option_map) {
-      const cache = this.poll_caches[pid]['poll.' + pid + '.direct_delegation_map'] || '[]';
-      const ps = cache ? JSON.parse(cache) : [];
-      const mp = new Map<string, Map<string, Array<[string, string, string]>>>();
-    
-      ps.forEach((outerEntry: [string, Array<[string, Array<[string, string, string]>]>]) => {
-        const innerMap = new Map<string, Array<[string, string, string]>>();
-        outerEntry[1].forEach((innerEntry: [string, Array<[string, string, string]>]) => {
-          innerMap.set(innerEntry[0], innerEntry[1]);
-        });
-        mp.set(outerEntry[0], innerMap);
-      });
-    
-      const option_delegation = mp.get(option_map) || new Map<string, Array<[string, string, string]>>();
-      return option_delegation;
-    }
-
-    const cache = this.poll_caches[pid]['poll.' + pid + '.direct_delegation_map'] || '[]';
-    const ps = cache ? JSON.parse(cache) : {};
-    const mp = new Map<string, Array<[string, string, string]>>(ps);
-    return mp;
-  }
-
-  clear_direct_delegation_map(pid: string) {
-    const mapKey = `poll.${pid}.direct_delegation_map`;
-    this._setp_in_polldb(pid, mapKey, JSON.stringify([]));
+    return this.G.Del.get_direct_delegations(pid, option_map);
   }
 
   // stored as key -> self, effective -> map of voter -> value
@@ -6012,7 +5920,7 @@ export class DataService implements OnDestroy {
         // key existed in poll db, check whether update is allowed.
         const value = dict[dict_key];
         const enc_value = encrypt(value, poll_pw);
-        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value) && (key.indexOf("inverse_indirect_map") == -1) && (key.indexOf("direct_delegation_map") == -1) && (key.indexOf("waps") == -1)) {
+        if ((key != 'due') && (key != 'state') && (decrypt(doc.value, poll_pw) != value) && (key.indexOf("waps") == -1)) {
           // this is not allowed for poll docs!
           this.G.L.error("DataService.store_poll_data tried changing an existing poll data item", pid, key, value);
         } else if ((key == 'due') && (doc.due != value)) {
@@ -6074,7 +5982,7 @@ export class DataService implements OnDestroy {
       // check which voter's data this is:
       const vid_prefix = key.slice(0, key.indexOf("§")),
             vid = this.user_cache[get_poll_key_prefix(pid) + 'myvid'];
-      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true' && key.indexOf("inverse_indirect_map") == -1) {
+      if (vid_prefix != 'voter.' + vid && this.poll_caches[pid]['is_test']!='true') {
           // it is not allowed to alter other voters' data!
           this.G.L.error("DataService.store_poll_data tried changing another voter's data item", pid, key);
 

@@ -189,7 +189,9 @@ export class DelrespondPage implements OnInit {
 
   revoke() {
     /** store negative response and go to poll page */
-    this.G.Del.set_delegation_pending(this.pid, this.did);
+    // declining is what withdraws an acceptance: the response says "no
+    // options", and update_agreement takes the delegation out of the poll's
+    // maps wherever it was in effect.
     this.G.Del.decline(this.pid, this.did, this.private_key);
     this.router.navigate(["/poll/" + this.pid]);
   }

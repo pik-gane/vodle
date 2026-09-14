@@ -47,17 +47,14 @@ function (newDoc, savedDoc, userCtx) {
                     // immutable shared poll metadata. Client-side conflict
                     // cleanup (#292) therefore only deletes losing revisions
                     // of documents the client's credentials own.)
-                    // The three exceptions are the shared delegation state of
-                    // #285: the direct and inverse-indirect delegation maps
-                    // and the waps are poll-wide documents that every voter
-                    // must be able to amend as delegations change. They are
-                    // therefore NOT immutable shared metadata, and a voter can
-                    // damage them — which the client has to survive rather
-                    // than assume away.
-                    if (savedDoc
-                        && !_id.endsWith("inverse_indirect_map")
-                        && !_id.endsWith("direct_delegation_map")
-                        && !_id.endsWith("waps")) {
+                    // The one exception left from #285 is the waps document,
+                    // which its weighted delegation still keeps poll-wide and
+                    // every voter must be able to amend. It is therefore NOT
+                    // immutable shared metadata, and a voter can damage it —
+                    // which the client has to survive rather than assume away.
+                    // The delegation maps no longer need one: each client
+                    // derives them from the requests and responses it can see.
+                    if (savedDoc && !_id.endsWith("waps")) {
                         throw ({forbidden: 'Noone may update or delete existing poll documents.'})
                     }
                     // let only the voters create it:
