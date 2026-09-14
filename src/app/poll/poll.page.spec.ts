@@ -151,6 +151,20 @@ describe('PollPage', () => {
         .toBe('var(--vodle-grey)');
     });
 
+    // Ionic paints .range-bar-active straight from the colour class
+    // (`:host(.ion-color) .range-bar-active { background: var(--ion-color-base) }`),
+    // which is why the bar has to be thinned here rather than only in the
+    // stylesheet: the variable never reached it.
+    it('draws the voter\'s own wap as a thin line, and an undelegated one full thickness', () => {
+      component.delegation_status = 'none';
+      expect(component.slider_style('o1')).toContain('--bar-height: 2px');
+      expect(component.slider_style('o1')).toContain('--knob-size: 35px');
+      (component as any).G.D.get_direct_delegation_map = () => new Map();
+      expect(component.slider_style('o1'))
+        .withContext('nothing given away, so the bar is the wap itself')
+        .toContain('--bar-height: 7px');
+    });
+
     it('reports the range across the options for the summary line', () => {
       expect(component.share_kept_range()).toEqual([50, 80]);
     });
@@ -182,6 +196,32 @@ describe('PollPage', () => {
       expect(component.i_set_this_wap('o1')).toBeFalse();
       component.rate_yourself_toggle = {o1: true};
       expect(component.i_set_this_wap('o1')).toBeTrue();
+    });
+
+  });
+
+  // Taking a delegation back changes whose waps count, so it changes the
+  // scores and the order the options are shown in. The page used not to
+  // redo either, and did its redraw before the revocation had even happened,
+  // since DelegationService.revoke_delegation is asynchronous — the durable
+  // deletion comes first and the poll's maps are only updated after it.
+  describe('after revoking a delegation', () => {
+
+    it('recounts the tally and re-sorts the options', () => {
+      component.p = stand_in_poll();
+      component.ready = true;
+      spyOn(component, 'set_delegate').and.stub();
+      spyOn(component, 'update_delegation_info').and.stub();
+      spyOn(component, 'update_order').and.stub();
+      spyOn(component, 'show_stats').and.stub();
+      (component as any).G.D.save_state = jasmine.createSpy('save_state');
+
+      component.after_revocation();
+
+      expect(component.p.tally_all).toHaveBeenCalled();
+      expect(component.update_order).toHaveBeenCalledWith(true);
+      expect(component.show_stats).toHaveBeenCalled();
+      expect(component.update_delegation_info).toHaveBeenCalled();
     });
 
   });

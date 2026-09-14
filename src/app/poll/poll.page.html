@@ -842,13 +842,11 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"
                         mode="md" pin="true"
                         [class.own-wap-shared]="wap_is_shared(oidsorted[i])"
+                        [class.own-wap-ended]="!p.allow_voting"
                         min="0" max="100" step="1" snaps="true" ticks="false"
                         data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
                         [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
-                        [style]="''
-                          + (get_weighted_delegation_allowed() || rate_yourself_toggle[oidsorted[i]] || delegation_status!='agreed' || (get_different_delegation_allowed() && (option_delegated.get(oidsorted[i]) == null || option_delegated.get(oidsorted[i]) == ''))
-                          ? 'pointer-events:; --bar-height: 7px; --knob-size: 35px'
-                          : 'pointer-events: none; --bar-height: 5px; --knob-size: 17px')" 
+                        [style]="slider_style(oidsorted[i])"
                         class="ion-no-padding ion-no-margin">
 
                       <ion-label 

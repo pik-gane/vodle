@@ -1106,6 +1106,26 @@ export class PollPage implements OnInit {
     this.show_stats();
   }
 
+  /** The slider's own geometry, which the template used to carry as an
+   *  inline ternary.
+   *
+   *  In a weighted poll the voter's own wap is a control and not the number
+   *  that counts, so its bar is drawn thin, to match the hollow knob on it
+   *  and to stay clearly apart from the blend above; the blend is the one
+   *  drawn at a bar's usual thickness. Where a delegate has taken the option
+   *  over, the slider is shrunk and frozen, as before. */
+  slider_style(oid: string): string {
+    const mine = this.get_weighted_delegation_allowed() || this.rate_yourself_toggle[oid]
+              || this.delegation_status != 'agreed'
+              || (this.get_different_delegation_allowed()
+                  && (this.option_delegated.get(oid) == null || this.option_delegated.get(oid) == ''));
+    if (!mine) {
+      return 'pointer-events: none; --bar-height: 5px; --knob-size: 17px';
+    }
+    return 'pointer-events: ; --bar-height: '
+         + (this.wap_is_shared(oid) ? '2px' : '7px') + '; --knob-size: 35px';
+  }
+
   /** The colour this option's bar is drawn in. ion-range takes the name of a
    *  vodle colour; an svg overlay needs the colour itself.
    *
@@ -1282,6 +1302,23 @@ export class PollPage implements OnInit {
     })
   }
 
+  /** What a revocation leaves to do on this page.
+   *
+   *  Taking a delegation back changes whose waps count, so it changes the
+   *  scores and with them the order the options are shown in — which is the
+   *  whole point of the act and was the one thing the page did not redo.
+   *  The tally is recounted rather than patched, because a revocation is a
+   *  deliberate, rare act and a full recount cannot be out of step with it. */
+  after_revocation() {
+    this.set_delegate();
+    this.delegation_status = this.delegate ? 'agreed' : 'none';
+    this.update_delegation_info();
+    this.p.tally_all();
+    this.update_order(true);
+    this.show_stats();
+    this.G.D.save_state();
+  }
+
   async revoke_delegation_dialog(dId?: string) : Promise<boolean> { 
     /** open the delegation revokation confirmation dialog alert */
     this.p.end_if_past_due();
@@ -1316,14 +1353,16 @@ export class PollPage implements OnInit {
                     }
                   }
                 }
-                this.G.Del.revoke_delegation(this.pid, did, "*");
-                // this.delegate = null;
-                this.set_delegate();
-                this.delegation_status = this.delegate ? 'agreed' : 'none';
-                this.update_delegation_info();
-                this.G.D.save_state();
-
-                resolve(true);
+                // awaited: the durable deletion comes first and only then is
+                // the delegation taken out of the poll's maps, so everything
+                // below would otherwise read the poll as it was
+                this.G.Del.revoke_delegation(this.pid, did, "*").then(() => {
+                  this.after_revocation();
+                  resolve(true);
+                }).catch(err => {
+                  this.G.L.error("PollPage.revoke_delegation_dialog failed", this.pid, did, err);
+                  resolve(false);
+                });
               } 
             } 
           ] 
@@ -1363,15 +1402,15 @@ export class PollPage implements OnInit {
                     break;
                   }
                 }
-                for (let oid of oids) {
-                  this.G.Del.revoke_delegation(this.pid, did, oid);
-                }
-                this.set_delegate();
-                this.delegation_status = this.delegate ? 'agreed' : 'none';
-                this.update_delegation_info();
-                this.G.D.save_state();
-  
-                resolve(true); // Resolve with true on confirm
+                Promise.all(oids.map(oid => this.G.Del.revoke_delegation(this.pid, did, oid)))
+                  .then(() => {
+                    this.after_revocation();
+                    resolve(true); // Resolve with true on confirm
+                  }).catch(err => {
+                    this.G.L.error("PollPage.revoke_delegation_different_dialog failed",
+                                   this.pid, did, err);
+                    resolve(false);
+                  });
               },
             },
           ],

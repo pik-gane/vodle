@@ -30,17 +30,36 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
    and white on a dark one, where a black line on a near-black page is a line
    one cannot see. */
 
+/* Painted through ::part rather than through --bar-background-active and
+   --knob-background: the slider always carries a vodle colour, and Ionic's
+   own `:host(.ion-color) .range-bar-active { background: var(--ion-color-base) }`
+   sets those backgrounds directly, so the variables never reached the bar.
+   A ::part rule is in the outer tree's cascade and does. */
+
 ion-range.own-wap-shared {
+  --own-wap-ink: var(--ion-text-color, #000);
   --bar-background: transparent;
-  --bar-background-active: var(--ion-text-color, #000);
-  --bar-height: 2px;
+  --bar-background-active: var(--own-wap-ink);
   --knob-background: transparent;
   --knob-box-shadow: none;
+}
+
+/* an ended poll is drawn grey, and this mark greys with it, like the blend */
+ion-range.own-wap-shared.own-wap-ended {
+  --own-wap-ink: var(--vodle-grey);
+}
+
+ion-range.own-wap-shared::part(bar) {
+  background: transparent;
+}
+
+ion-range.own-wap-shared::part(bar-active) {
+  background: var(--own-wap-ink);
 }
 
 ion-range.own-wap-shared::part(knob) {
   box-sizing: border-box;
   background: transparent;
-  border: 2px solid var(--ion-text-color, #000);
+  border: 2px solid var(--own-wap-ink);
   box-shadow: none;
 }
