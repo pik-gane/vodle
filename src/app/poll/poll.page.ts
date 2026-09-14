@@ -594,21 +594,28 @@ export class PollPage implements OnInit {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, p.get_my_proxy_rating(oid));
-      if (this.weighted_delegation_allowed) {
-        // the dashed mark carries the blend: the voter's own wap is under
-        // their knob, and this is what it counts as once their delegates'
-        // shares are added in. (#285 pointed it at the effective rating,
-        // which is the blend after the favourite adjustment, so it sat at
-        // 100 for the voter's top option whatever the shares were — and it
-        // only ran while the delegation was switched off, so never.)
-        const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
-              knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
+      if (this.wap_is_shared()) {
+        // the blend, drawn the way an undelegated wap is drawn — the option's
+        // colour, the bar's usual thickness — but ending in a dot, since it
+        // is a result and not something to drag. (#285 pointed the dashed
+        // mark at the effective rating instead, which is the blend after the
+        // favourite adjustment, so it would have sat at 100 on the voter's
+        // top option whatever the shares were — and it only ran while the
+        // delegation was switched off, so never.)
+        const bar = <SVGLineElement><unknown>document.getElementById('eff_bar_'+oid),
+              rest = <SVGLineElement><unknown>document.getElementById('eff_rest_'+oid),
+              dot = <SVGCircleElement><unknown>document.getElementById('eff_dot_'+oid),
               rating = this.p.get_my_proxy_rating(oid);
-        if (needle) {
-          needle.x2.baseVal.valueAsString = (rating).toString() + '%';
+        if (bar) {
+          bar.x2.baseVal.valueAsString = (rating).toString() + '%';
         }
-        if (knob) {
-          knob.cx.baseVal.valueAsString = (rating).toString() + '%';
+        if (rest) {
+          // the pale remainder starts where the bar ends, so that the two do
+          // not overlap and darken the colour where they do
+          rest.x1.baseVal.valueAsString = (rating).toString() + '%';
+        }
+        if (dot) {
+          dot.cx.baseVal.valueAsString = (rating).toString() + '%';
         }
       } else if (this.rate_yourself_toggle[oid]) {
         // update dashed needle showing delegate's rating
@@ -1034,17 +1041,27 @@ export class PollPage implements OnInit {
     return Math.max(0, 100 - given);
   }
 
+  /** Whether the voter has given part of their wap away, so that the knob
+   *  under their hand is no longer the number that counts. */
+  wap_is_shared(): boolean {
+    return this.weighted_delegation_allowed && this.my_share_kept() < 100;
+  }
+
+  /** The colour this option's bar is drawn in. ion-range takes the name of a
+   *  vodle colour; an svg overlay needs the colour itself. */
+  slider_colour(oid: string): string {
+    const name = this.show_live ? this.slidercolor[oid] : 'vodleblue';
+    return 'var(--' + ({
+      vodlered: 'vodle-red',
+      vodlegreen: 'vodle-green',
+      vodledarkgreen: 'vodle-darkgreen',
+    }[name] || 'vodle-blue') + ')';
+  }
+
   /** What the voter's own wap for an option amounts to once their delegates'
    *  shares are blended in — the number the tally actually uses. */
   blended_wap(oid: string): number {
     return (this.p.proxy_ratings_map.get(oid) || new Map()).get(this.p.myvid) || 0;
-  }
-
-  /** whether saying so would tell the voter anything they cannot already see */
-  blend_is_visible(oid: string): boolean {
-    return this.weighted_delegation_allowed
-        && this.my_share_kept() < 100
-        && this.blended_wap(oid) != this.p.get_my_own_rating(oid);
   }
 
   get_weighted_delegation_allowed(): boolean {

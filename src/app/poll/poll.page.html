@@ -837,6 +837,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         (ionChange)="onRatingSliderChange(oidsorted[i])" 
                         (ionBlur)="onRatingSliderBlur(oidsorted[i])"
                         mode="md" pin="true"
+                        [class.own-wap-shared]="wap_is_shared()"
                         min="0" max="100" step="1" snaps="true" ticks="false"
                         data-vodle="rating-slider" [attr.data-vodle-option-name]="p.options[oidsorted[i]].name"
                         [attr.data-vodle-current-rating]="p.get_my_proxy_rating(oidsorted[i])"
@@ -887,10 +888,33 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                           </svg>
                         </div>
 
+                        <!-- THE BLEND (weighted poll): what the voter's own wap
+                             counts as once their delegates' shares are in. Drawn
+                             as an undelegated wap is drawn, at the bar's usual
+                             thickness and in the option's colour, but ending in a
+                             dot: it is a result, not something to drag. The knob
+                             in front of it is outlined and hollow on a thin black
+                             line, so the two never read as the same kind of
+                             thing. -->
+
+                        <!-- anchored like the approval bar above, whose dashed
+                             centre line at y=17 is the slider's own bar line -->
+                        <div style="position: absolute; bottom: 0px; right: 11px; z-index: -8; width: 100%; padding-left: 11px"
+                            [style.display]="wap_is_shared() ? 'inline' : 'none'">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
+                            <line [id]="'eff_rest_' + oidsorted[i]" x1="50%" y1="17" x2="100%" y2="17" fill="none"
+                              [attr.stroke]="slider_colour(oidsorted[i])" stroke-opacity="0.26" stroke-width="7" />
+                            <line [id]="'eff_bar_' + oidsorted[i]" x1="0" y1="17" x2="50%" y2="17" fill="none"
+                              [attr.stroke]="slider_colour(oidsorted[i])" stroke-width="7" />
+                            <circle [id]="'eff_dot_' + oidsorted[i]" cx="50%" cy="17" r="7"
+                              [attr.fill]="slider_colour(oidsorted[i])" stroke="none"/>
+                          </svg>
+                        </div>
+
                         <!-- DELEGATE'S RATING -->
 
                         <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
-                            [style.display]="(get_weighted_delegation_allowed() ? blend_is_visible(oidsorted[i]) : (delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]])) ? 'inline' : 'none'">
+                            [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
                             <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="var(--vodle-dark)" stroke-width="2" stroke-dasharray="3 2" />
                             <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="var(--vodle-dark)" stroke="none"/>
@@ -927,14 +951,6 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                     </div>
                   </ion-col>  
 
-                  <!-- what the blend makes of the voter's own wap: -->
-                  <ion-col *ngIf="blend_is_visible(oidsorted[i])"
-                      class="ion-no-margin ion-no-padding" size="auto">
-                    <small [innerHtml]="'poll.weighted-blend' | translate: {
-                        own: p.get_my_own_rating(oidsorted[i]),
-                        blended: blended_wap(oidsorted[i])
-                      }"></small>
-                  </ion-col>
                 </ion-row>
               </ion-grid>
             </ion-col>

@@ -639,7 +639,6 @@
         "delegate-different-info": "Your waps are controlled by a delegate.",
         "_COMMENT_weighted_": "[COMMENT] In a poll with weighted delegation, a participant does not hand their waps over: they give each delegate a share of them, in percent, and keep the rest. Their wap on an option is then a blend of their own and their delegatesʼ.",
         "wap-shared-out": "You have shared out your waps. <b>{{kept}}%</b> of each of them is still your own.",
-        "weighted-blend": "counts as <b>{{blended}}</b>",
         "revoke_delegation": "Do you really want to revoke your delegation to {{nickname}}? If you do, you can later send a new delegation request to someone else or again to {{nickname}}. If you donʼt, you can still take control of some of your waps via the toggles to the right.",
         "choose-whose-ratings": "Choose<br/>whose wap<br/>to use",
         "my-own": "my own",

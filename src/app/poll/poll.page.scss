@@ -17,3 +17,25 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+
+/* In a poll with weighted delegation the knob under the voter's hand is
+   their OWN wap, which is no longer what counts: their delegates' shares are
+   blended into it. So the knob is drawn as a control rather than a result —
+   outlined, hollow, on a thin black line — and the blend is drawn behind it
+   in the ordinary way, a coloured bar of the usual thickness ending in a dot
+   rather than a knob, because it is a result and not something to drag. */
+
+ion-range.own-wap-shared {
+  --bar-background: transparent;
+  --bar-background-active: #000;
+  --bar-height: 2px;
+  --knob-background: transparent;
+  --knob-box-shadow: none;
+}
+
+ion-range.own-wap-shared::part(knob) {
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid #000;
+  box-shadow: none;
+}

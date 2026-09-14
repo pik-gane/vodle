@@ -93,17 +93,20 @@ describe('PollPage', () => {
       expect(component.my_share_kept()).toBe(100);
     });
 
-    it('says what the blend makes of an option, and only when it differs', () => {
+    it('reads the blend off the poll, which is what the tally uses', () => {
       expect(component.blended_wap('o1')).toBe(62);
-      expect(component.blend_is_visible('o1')).toBeTrue();
-      // an option where the blend lands on the voter's own number says nothing
-      (component.p as any).proxy_ratings_map = new Map([['o1', new Map([['v1', 40]])]]);
-      expect(component.blend_is_visible('o1')).toBeFalse();
     });
 
-    it('says nothing in a poll that does not weight delegations', () => {
+    it('draws the blend separately only once a share is actually out', () => {
+      expect(component.wap_is_shared()).toBeTrue();
+      (component as any).G.D.get_direct_delegation_map = () => new Map();
+      expect(component.wap_is_shared())
+        .withContext('nothing given away, so the knob is the whole story').toBeFalse();
+    });
+
+    it('and never in a poll that does not weight delegations', () => {
       component.weighted_delegation_allowed = false;
-      expect(component.blend_is_visible('o1')).toBeFalse();
+      expect(component.wap_is_shared()).toBeFalse();
     });
 
     // the slider under an option is the voter's own wap, and stays theirs to
