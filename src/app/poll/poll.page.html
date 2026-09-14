@@ -902,15 +902,20 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                              thing. -->
 
                         <!-- anchored like the approval bar above, whose dashed
-                             centre line at y=17 is the slider's own bar line -->
+                             centre line at y=17 is the slider's own bar line —
+                             and drawn at y=7, a bar's width above it, because
+                             on the line itself the two marks sat exactly on top
+                             of one another and only one of them could be seen.
+                             The delegate's dashed mark stands clear of the bar
+                             for the same reason. -->
                         <div style="position: absolute; bottom: 0px; right: 11px; z-index: -8; width: 100%; padding-left: 11px"
                             [style.display]="wap_is_shared(oidsorted[i]) ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="35px">
-                            <line [id]="'eff_rest_' + oidsorted[i]" x1="50%" y1="17" x2="100%" y2="17" fill="none"
+                            <line [id]="'eff_rest_' + oidsorted[i]" x1="50%" y1="7" x2="100%" y2="7" fill="none"
                               [attr.stroke]="slider_colour(oidsorted[i])" stroke-opacity="0.26" stroke-width="7" />
-                            <line [id]="'eff_bar_' + oidsorted[i]" x1="0" y1="17" x2="50%" y2="17" fill="none"
+                            <line [id]="'eff_bar_' + oidsorted[i]" x1="0" y1="7" x2="50%" y2="7" fill="none"
                               [attr.stroke]="slider_colour(oidsorted[i])" stroke-width="7" />
-                            <circle [id]="'eff_dot_' + oidsorted[i]" cx="50%" cy="17" r="7"
+                            <circle [id]="'eff_dot_' + oidsorted[i]" cx="50%" cy="7" r="6"
                               [attr.fill]="slider_colour(oidsorted[i])" stroke="none"/>
                           </svg>
                         </div>
@@ -918,7 +923,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                         <!-- DELEGATE'S RATING -->
 
                         <div style="position: absolute; top: -2px; right: 11px; z-index: -5; width: 100%; padding-left: 11px"
-                            [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] ? 'inline' : 'none'">
+                            [style.display]="delegation_status=='agreed' && rate_yourself_toggle[oidsorted[i]] && !get_weighted_delegation_allowed() ? 'inline' : 'none'">
                           <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="15px">
                             <line [id]="'del_needle_' + oidsorted[i]" x1="0" y1="8" x2="50%" y2="8" fill="none" stroke="var(--vodle-dark)" stroke-width="2" stroke-dasharray="3 2" />
                             <circle [id]="'del_knob_' + oidsorted[i]" cx="50%" cy="8" r="5" fill="var(--vodle-dark)" stroke="none"/>

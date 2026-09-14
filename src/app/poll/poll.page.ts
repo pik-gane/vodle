@@ -624,8 +624,10 @@ export class PollPage implements OnInit {
         if (dot) {
           dot.cx.baseVal.valueAsString = (rating).toString() + '%';
         }
-      } else if (this.rate_yourself_toggle[oid]) {
-        // update dashed needle showing delegate's rating
+      } else if (this.rate_yourself_toggle[oid] && !this.weighted_delegation_allowed) {
+        // update dashed needle showing delegate's rating. A weighted poll has
+        // no single delegate whose wap this could be, so it has no such mark:
+        // there the marks are the voter's own wap and the blend.
         const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
               knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
@@ -1105,8 +1107,13 @@ export class PollPage implements OnInit {
   }
 
   /** The colour this option's bar is drawn in. ion-range takes the name of a
-   *  vodle colour; an svg overlay needs the colour itself. */
+   *  vodle colour; an svg overlay needs the colour itself.
+   *
+   *  Once the poll is over the slider is disabled and drawn grey, so a mark
+   *  that kept the option's colour would be the one bright thing left on the
+   *  row, and would look like something one could still move. */
   slider_colour(oid: string): string {
+    if (!this.p.allow_voting) { return 'var(--vodle-grey)'; }
     const name = this.show_live ? this.slidercolor[oid] : 'vodleblue';
     return 'var(--' + ({
       vodlered: 'vodle-red',

@@ -73,6 +73,7 @@ describe('PollPage', () => {
       component.p = {
         myvid: 'v1',
         oids: ['o1', 'o2'],
+        allow_voting: true,
         proxy_ratings_map: new Map([['o1', new Map([['v1', 62]])]]),
         get_my_own_rating: (oid: string) => oid == 'o1' ? 40 : 0,
       } as any;
@@ -136,6 +137,18 @@ describe('PollPage', () => {
         .withContext('nothing to d1 here, so only d2\'s 20 is out').toBe(80);
       expect(component.option_has_own_shares('o1')).toBeFalse();
       expect(component.option_has_own_shares('o2')).toBeTrue();
+    });
+
+    // the blend is drawn by an svg overlay, which needs the colour itself
+    // rather than the name of a vodle colour that ion-range takes
+    it('draws the blend in the option\'s colour, and in grey once the poll is over', () => {
+      component.show_live = true;
+      (component as any).slidercolor = {o1: 'vodlegreen'};
+      expect(component.slider_colour('o1')).toBe('var(--vodle-green)');
+      (component.p as any).allow_voting = false;
+      expect(component.slider_colour('o1'))
+        .withContext('the slider goes grey when it can no longer be moved, and so does its mark')
+        .toBe('var(--vodle-grey)');
     });
 
     it('reports the range across the options for the summary line', () => {
