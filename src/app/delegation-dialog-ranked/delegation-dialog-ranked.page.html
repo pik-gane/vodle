@@ -118,7 +118,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <ion-row *ngIf="this.parent.get_ranked_delegation_allowed() || weighted"
       class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="reorder_button_clicked($event)">
+      <ion-button color="primary" shape="round" (click)="reorder_button_clicked()">
         <span *ngIf="reorder_disabled" [innerHtml]="(weighted ? 'delegation-request.edit-shares' : 'delegation-request.reorder')|translate"></span>
         <span *ngIf="!reorder_disabled" [innerHtml]="'save'|translate"></span>
       </ion-button>
@@ -127,7 +127,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <ion-row class="ion-justify-content-center ion-align-items-center button-row">
     <ion-col size="auto">
-      <ion-button color="primary" shape="round" (click)="close_button_clicked($event)">
+      <ion-button color="primary" shape="round" (click)="close_button_clicked()">
         <span [innerHtml]="'close'|translate"></span>
       </ion-button>
     </ion-col>

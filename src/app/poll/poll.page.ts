@@ -1177,7 +1177,7 @@ export class PollPage implements OnInit {
     await confirm.present(); 
   }
 
-  open_delegation_info_dialog_different(event: Event) {
+  open_delegation_info_dialog_different() {
     this.modalController.create({
       component: DelegationDialogDifferentPage, 
       showBackdrop: true,
@@ -1186,9 +1186,9 @@ export class PollPage implements OnInit {
     .then((modalElement)=>{modalElement.present();});
   }
 
-  delegation_info_dialog(event: Event) {
+  delegation_info_dialog() {
     if (this.G.D.get_different_delegation_allowed(this.pid)) {
-      this.open_delegation_info_dialog_different(event);
+      this.open_delegation_info_dialog_different();
       return;
     }
     // the same dialog lists a voter's delegations in a ranked and in a
