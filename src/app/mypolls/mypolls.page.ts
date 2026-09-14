@@ -88,6 +88,7 @@ export class MypollsPage implements OnInit {
     this.unanswered_requests = [];
     for (const pid in this.G.P.polls) {
       const cache = this.G.D.incoming_dids_caches[pid];
+      var newcache = this.G.D.incoming_dids_caches[pid];
       if (cache) {
         for (let [did, [from, url, status]] of cache) {
           if (["possible","two-way","cycle"].includes(status)) {
@@ -96,6 +97,7 @@ export class MypollsPage implements OnInit {
           }
         }  
       }
+      this.G.D.incoming_dids_caches[pid] = newcache; // update cache to remove revoked requests
     }
   }
 

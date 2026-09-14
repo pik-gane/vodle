@@ -36,6 +36,7 @@ export class DelrespondPage implements OnInit {
   pid: string;
   p: Poll;
   did: string;
+  oids: string[];
   from: string;
   private_key: string;
   agreement: del_agreement_t;
@@ -58,6 +59,9 @@ export class DelrespondPage implements OnInit {
       this.from = decodeURIComponent(params['from']);
       this.private_key = params['private_key'];
     } );
+    this.route.queryParamMap.subscribe(queryParams => {
+      this.oids = queryParams.getAll('oids'); // Extract all `oids` values as an array
+    });
   }
 
   ngOnInit() {
@@ -130,6 +134,15 @@ export class DelrespondPage implements OnInit {
     return second == 'not-in-db' || second == 'poll-unknown';
   }
 
+  /** The delegate said no to this request once, but could still say yes.
+   *  Which of the three answerable shapes it is does not matter here: the
+   *  page says the same thing about all of them. */
+  declined_but_possible(): boolean {
+    const first = (this.status || [])[0];
+    return first == 'declined, possible' || first == 'declined, ranked'
+        || first == 'declined, weighted';
+  }
+
   /** Whether the template has a block for this status.
    *
    *  One that it does not know must still put something on the screen: four
@@ -139,7 +152,9 @@ export class DelrespondPage implements OnInit {
   handled(): boolean {
     const [first, second] = this.status || [];
     return first == 'possible' || first == 'accepted' || first == 'closed'
-        || first == 'declined, possible' || first == 'declined, impossible'
+        || first == 'ranked' || first == 'weighted'
+        || first == 'declined, possible' || first == 'declined, ranked'
+        || first == 'declined, weighted' || first == 'declined, impossible'
         || (first == 'impossible'
             && (second == 'weight-exceeded' || second == 'not-in-db'
                 || second == 'poll-unknown' || second == 'is-self'));
@@ -153,7 +168,13 @@ export class DelrespondPage implements OnInit {
 
   // GUI callbacks:
 
+  // TODO: verify that it is still possible to accept the request
   accept() {
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      this.G.Del.accept_different(this.pid, this.did, this.private_key, this.oids);
+      this.router.navigate(["/poll/" + this.pid]);
+      return;
+    }
     /** store positive response and go to poll page */
     this.G.Del.accept(this.pid, this.did, this.private_key);
     // TODO: notify that response has been sent
@@ -164,6 +185,22 @@ export class DelrespondPage implements OnInit {
     /** store negative response and go to poll page */
     this.G.Del.decline(this.pid, this.did, this.private_key);
     // TODO: notify that response has been sent
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
+  // TODO: use to send a different message to the delegator
+  decline_due_to_error() {
+    /** store negative response and go to poll page */
+    this.G.Del.decline_due_to_error(this.pid, this.did, this.private_key);
+    this.router.navigate(["/poll/" + this.pid]);
+  }
+
+  revoke() {
+    /** store negative response and go to poll page */
+    // declining is what withdraws an acceptance: the response says "no
+    // options", and update_agreement takes the delegation out of the poll's
+    // maps wherever it was in effect.
+    this.G.Del.decline(this.pid, this.did, this.private_key);
     this.router.navigate(["/poll/" + this.pid]);
   }
 

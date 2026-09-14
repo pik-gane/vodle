@@ -36,6 +36,7 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { del_request_t, del_signed_response_t, del_response_t, del_option_spec_t, del_agreement_t } from './data.service';
 import { Poll } from './poll.service';
+import { min } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -94,9 +95,35 @@ export class DelegationService {
     return [p, did, request, keypair.private, agreement];
   }
 
-  get_delegation_link(pid: string, did: string, from: string, privkey: string): string {
+  prepare_delegation_for_options(pid: string, oid_list: string[]): [Poll, string, del_request_t, string, del_agreement_t] {
+    /** Generate did, key pair, and cache entries; store request data item in poll DB; compose and return link */
+    this.G.L.entry("DelegationService.prepare_delegation_for_options", pid, oid_list);
+    const p = this.G.P.polls[pid],
+          did = this.generate_did(),
+          keypair = this.G.D.generate_sign_keypair(),
+          request = {
+            option_spec: { type: "+", oids: oid_list }, // Request delegation for specified options
+            public_key: keypair.public
+          } as del_request_t,
+          agreement = {
+            client_vid: p.myvid,
+            status: "pending",
+            accepted_oids: new Set(),
+            active_oids: new Set()
+          } as del_agreement_t;
+    this.G.L.exit("DelegationService.prepare_delegation_for_options");
+    return [p, did, request, keypair.private, agreement];
+  }
+
+  get_delegation_link(pid: string, did: string, from: string, privkey: string, oids?: string[]): string {
     /** generate magic link to be sent to delegate */
-    const link = environment.magic_link_base_url + "delrespond/" + pid + "/" + did + "/" + encodeURIComponent(from) + "/" + privkey;
+    let link = `${environment.magic_link_base_url}delrespond/${pid}/${did}/${encodeURIComponent(from)}/${privkey}`;
+    
+    if (oids && oids.length > 0) {
+      const params = new URLSearchParams();
+      oids.forEach(value => params.append('oids', value));
+      link = `${link}?${params.toString()}`;
+    }
     this.G.L.debug("DelegationService.get_delegation_link", link);
     return link;
   }
@@ -104,7 +131,17 @@ export class DelegationService {
   after_request_was_sent(pid: string, did: string, request: del_request_t, private_key: string, agreement: del_agreement_t) {
     // store request and private key in poll db:
     this.set_private_key(pid, did, private_key);
-    this.get_my_outgoing_dids_cache(pid).set("*", did);
+    const spec = request.option_spec;
+    if (spec && spec.type == "+") {
+      // a request for named options is remembered per option, so that a
+      // second delegate can hold the others (#285's per-option delegation);
+      // one for the whole poll keeps the "*" entry it always had
+      for (const oid of spec.oids) {
+        this.get_my_outgoing_dids_cache(pid).set(oid, did);
+      }
+    } else {
+      this.get_my_outgoing_dids_cache(pid).set("*", did);
+    }
     this.set_my_request(pid, did, request);
     // store redundant data only in cache:
     this.get_delegation_agreements_cache(pid).set(did, agreement);
@@ -136,13 +173,16 @@ export class DelegationService {
     return a.delegate_vid;
   }
 
-  update_my_delegation(pid: string, oid: string, activate: boolean) {
+  update_my_delegation(pid: string, oid: string, activate: boolean, did? :string) {
     /** Called when voter toggles an option's delegation switch.
      * (De)activate an option's delegation */
     const p = this.G.P.polls[pid];
-    let did = this.get_my_outgoing_dids_cache(pid).get(oid);
+
     if (!did) {
-      did = this.get_my_outgoing_dids_cache(pid).get("*");
+      // the caller need not know it: this option's own delegation if it has
+      // one, else the one that covers the whole poll
+      did = this.get_my_outgoing_dids_cache(pid).get(oid)
+         || this.get_my_outgoing_dids_cache(pid).get("*");
     }
     if (!did) {
       this.G.L.error("DelegationService.update_my_delegation without existing did", pid, oid, activate);
@@ -152,7 +192,7 @@ export class DelegationService {
       if ((a.client_vid != p.myvid) 
           || (a.status != "agreed") 
           || !a.accepted_oids.has(oid)) {
-        this.G.L.error("DelegationService.update_my_delegation without agreed delegation from me", pid, oid, activate, did);
+        this.G.L.error("DelegationService.update_my_delegation without agreed delegation from me", pid, oid, activate, did, a);
       } else if (activate) {
         if (a.active_oids.has(oid)) {
           this.G.L.warn("DelegationService.update_my_delegation oid already active", pid, oid, did);
@@ -198,82 +238,192 @@ export class DelegationService {
     this.G.L.entry("DelegationService.revoke_delegation", pid, did);
     const a = this.get_delegation_agreements_cache(pid).get(did);
     const p = this.G.P.polls[pid];
-    if (!p?.myvid || (a && a.client_vid !== p.myvid)) {
+    if (!p?.myvid || (a && a.client_vid !== p.myvid && a.status != "pending")) {
+      // #327: the poll or its voter id can be missing entirely here,
+      // and every branch below dereferences them
       throw new Error("Cannot revoke a delegation without its owner's poll");
     }
+    // the durable deletion has to succeed before any cache is touched, so that a
+    // failed revocation leaves the delegation whole rather than half-removed:
     await this.G.D.delv(pid, "del_request." + did);
     if (this.G.D.getv(pid, "del_request." + did)) { return; }
     // CouchDB deletion already invokes this handler; Matrix and retries may not.
+    // It is what takes the delegation out of the poll's own maps, which is
+    // what every view of the delegation graph is derived from.
     this.process_deleted_request_from_db(pid, did, p.myvid);
     const dcache = this.get_my_outgoing_dids_cache(pid);
     if (dcache?.get(oid) === did) {
       dcache.delete(oid);
     }
+    this.G.L.exit("DelegationService.revoke_delegation");
+  }
+
+  /** In a poll with weighted delegation there is no single delegate to
+   *  choose: every accepted delegation carries the share of the client's
+   *  wap that they gave it, and several of them hold the same option at
+   *  once. So all this settles is which options each accepted delegation
+   *  covers — the blend itself is the poll's to compute, which is why the
+   *  single-delegate maps stay out of it here.
+   */
+  resolve_weighted_delegations(pid: string) {
+    const p = this.G.P.polls[pid];
+    if (!p || !p.allow_weighted) { return; }
+    this.G.L.entry("DelegationService.resolve_weighted_delegations", pid);
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || !a.client_vid) { continue; }
+      if (!a.accepted_oids) { a.accepted_oids = new Set(); }
+      if (!a.active_oids) { a.active_oids = new Set(); }
+      const request = this.get_request(pid, did, a.client_vid);
+      for (const oid of p.oids) {
+        if ((a.status == "agreed") && a.accepted_oids.has(oid)
+            && this.request_covers_option(request, oid)) {
+          a.active_oids.add(oid);
+        } else {
+          a.active_oids.delete(oid);
+        }
+      }
+    }
+    p.update_weighted_proxy_ratings(true);
+    this.G.L.exit("DelegationService.resolve_weighted_delegations");
+  }
+
+  /** In a poll with ranked delegation, decide which of a voter's accepted
+   *  delegations is the one in effect, and put that decision into the poll's
+   *  own delegation maps.
+   *
+   *  The rule is #285's: among the chains that lead from a voter to someone
+   *  who casts their own vote, take the one whose ranks sum to least; every
+   *  delegation on that chain is in effect. What changes here is where the
+   *  answer goes — through add_delegation/del_delegation into the maps the
+   *  tally, the cycle check and the weight check already read, instead of
+   *  into a status column of a document shared by all voters.
+   */
+  resolve_ranked_delegations(pid: string) {
+    const p = this.G.P.polls[pid];
+    if (!p || !p.allow_ranked) { return; }
+    this.G.L.entry("DelegationService.resolve_ranked_delegations", pid);
+    // the delegation each voter ends up using, if any:
+    const in_effect = new Map<string, string>();
+    for (const vid of this.delegating_voters(pid)) {
+      for (const did of this.min_sum(pid, vid)) {
+        const a = this.get_agreement(pid, did);
+        if (a && a.client_vid) { in_effect.set(a.client_vid, did); }
+      }
+    }
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || !a.client_vid) { continue; }
+      if (!a.accepted_oids) { a.accepted_oids = new Set(); }
+      if (!a.active_oids) { a.active_oids = new Set(); }
+      // every agreement is reconciled, not only the chosen one: a delegate
+      // who withdraws has to be taken out of the poll's maps here too,
+      // because in a ranked poll update_agreement leaves that to us.
+      const chosen = (a.status == "agreed") && (in_effect.get(a.client_vid) == did),
+            request = this.get_request(pid, did, a.client_vid);
+      for (const oid of p.oids) {
+        const wanted = chosen && a.accepted_oids.has(oid)
+                    && this.request_covers_option(request, oid),
+              active = a.active_oids.has(oid);
+        if (wanted && !active) {
+          if (p.add_delegation(a.client_vid, oid, a.delegate_vid)) {
+            a.active_oids.add(oid);
+          }
+        } else if (active && !wanted) {
+          a.active_oids.delete(oid);
+          p.del_delegation(a.client_vid, oid);
+        }
+      }
+    }
+    this.G.L.exit("DelegationService.resolve_ranked_delegations", [...in_effect]);
   }
 
   // RESPONDING TO A DELEGATION REQUEST:
 
+  /** What the delegate's page can offer to do about an incoming request.
+   *
+   *  The impossibilities come first, then the shape of the answer the poll's
+   *  settings ask for. #285 returned "ranked" and "weighted" before any of
+   *  the checks, so in such a poll a request from oneself, or one that would
+   *  put more waps in one pair of hands than the deployment allows, was
+   *  offered for acceptance anyway; and it left weight_exceeded as a
+   *  variable nothing ever set, so environment.delegation.max_weight went
+   *  unenforced everywhere.
+   */
   get_incoming_request_status(pid: string, did: string): Array<string> {
-    if (pid in this.G.P.polls) {
-      const p = this.G.P.polls[pid];
-      if (p.state != 'running') {
-        return ["closed"];
-      } else {
-        // check if request has been retrieved from db:
-        const agreement = this.G.Del.get_delegation_agreements_cache(pid).get(did);
-        if (agreement) {
-          // check if already answered:
-          if (agreement.status == 'agreed') {
-            return ["accepted"];
-          } 
-          // check if already delegating (in)directly back to client_vid for at least one option:
-          var status: Array<any>;
-          const dirdelmap = this.G.D.direct_delegation_map_caches[pid],
-                effdelmap = this.G.D.effective_delegation_map_caches[pid],
-                inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid],
-                myvid = p.myvid,
-                client_vid = agreement.client_vid;
-          if (client_vid == myvid) {
-            return ["impossible", "is-self"];
-          }
-          let two_way = false, cycle = false, weight_exceeded = false;
-          for (let oid of p.oids) {
-            const effdel_vid = effdelmap.get(oid).get(myvid) || myvid;
-            const thisinveffdelmap = inveffdelmap.get(oid) || new Map();
-            if (1 + (thisinveffdelmap.get(client_vid)||new Set([client_vid])).size
-                + (thisinveffdelmap.get(effdel_vid)||new Set([effdel_vid])).size
-                > environment.delegation.max_weight) {
-              weight_exceeded = true;
-              break;
-            }
-            if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
-              two_way = true;
-            } else if (effdel_vid == client_vid) {
-              cycle = true;
-            }
-          }
-          if (weight_exceeded) {
-            status = ["impossible", "weight-exceeded"];
-          } else if (two_way) {
-            status = ["possible", "two-way"];
-          } else if (cycle) {
-            status = ["possible", "cycle"];
-          } else {
-            status = ["possible", "acyclic"];
-          }
-          if (agreement.status == 'declined') {
-            status[0] = "declined, " + status[0];
-            return status;
-          } else {
-            return status;
-          }
-        } else {
-          return ["impossible", "not-in-db"];
-        }
-      }
-    } else {
+    if (!(pid in this.G.P.polls)) {
       return ["impossible", "poll-unknown"];
     }
+    const p = this.G.P.polls[pid];
+    if (p.state != 'running') {
+      return ["closed"];
+    }
+    // check if request has been retrieved from db:
+    const agreement = this.get_delegation_agreements_cache(pid).get(did);
+    if (!agreement) {
+      return ["impossible", "not-in-db"];
+    }
+    // check if already answered:
+    if (agreement.status == 'agreed') {
+      return ["accepted"];
+    }
+    const myvid = p.myvid,
+          client_vid = agreement.client_vid;
+    if (client_vid == myvid) {
+      return ["impossible", "is-self"];
+    }
+
+    // would accepting put too many waps in one pair of hands?
+    const inveffdelmap = this.G.D.inv_effective_delegation_map_caches[pid] || new Map();
+    let weight_exceeded = false;
+    for (const oid of p.oids) {
+      const thisinveffdelmap = inveffdelmap.get(oid) || new Map(),
+            effdelmap = (this.G.D.effective_delegation_map_caches[pid] || new Map()).get(oid) || new Map(),
+            effdel_vid = effdelmap.get(myvid) || myvid;
+      if (1 + (thisinveffdelmap.get(client_vid) || new Set([client_vid])).size
+            + (thisinveffdelmap.get(effdel_vid) || new Set([effdel_vid])).size
+          > environment.delegation.max_weight) {
+        weight_exceeded = true;
+        break;
+      }
+    }
+    if (weight_exceeded) {
+      return this.declined_before(agreement, ["impossible", "weight-exceeded"]);
+    }
+
+    // a ranked poll sorts out for itself which of a voter's delegations ends
+    // up in effect, and a weighted one blends them all, so in neither does a
+    // cycle have to be refused here:
+    if (p.allow_ranked) {
+      return this.declined_before(agreement, ["ranked"]);
+    }
+    if (p.allow_weighted) {
+      return this.declined_before(agreement, ["weighted"]);
+    }
+
+    // check if already delegating (in)directly back to client_vid for at
+    // least one option:
+    const dirdelmap = this.G.D.direct_delegation_map_caches[pid] || new Map(),
+          effdelmaps = this.G.D.effective_delegation_map_caches[pid] || new Map();
+    let two_way = false, cycle = false;
+    for (const oid of p.oids) {
+      const effdel_vid = (effdelmaps.get(oid) || new Map()).get(myvid) || myvid;
+      if ((dirdelmap.get(oid) || new Map()).get(myvid) == client_vid) {
+        two_way = true;
+      } else if (effdel_vid == client_vid) {
+        cycle = true;
+      }
+    }
+    return this.declined_before(agreement,
+        two_way ? ["possible", "two-way"]
+      : cycle ? ["possible", "cycle"]
+      : ["possible", "acyclic"]);
+  }
+
+  /** mark a status as one the delegate has already said no to once */
+  private declined_before(agreement: del_agreement_t, status: Array<string>): Array<string> {
+    if (agreement.status == 'declined') {
+      status[0] = "declined, " + status[0];
+    }
+    return status;
   }
 
   store_incoming_request(pid: string, did: string, from: string, url: string, status: string) {
@@ -288,10 +438,32 @@ export class DelegationService {
   }
 
   update_incoming_request_status(pid: string, did: string, status: string) {
-    const cache = this.G.D.incoming_dids_caches[pid],
-          [from, url, old_status] = cache.get(did);
+    const cache = this.G.D.incoming_dids_caches[pid];
+    if (!cache){
+      return;
+    }
+    const [from, url, old_status] = cache.get(did);
     if (status != old_status[0]) {
       this.store_incoming_request(pid, did, from, url, status);
+    }
+  }
+
+  accept_different(pid: string, did: string, private_key: string, oids: string[]) {
+    /** accept a delegation request for some of the options only,
+     *  store the response in the db */
+    const response = {option_spec: {type: "+", oids: oids}} as del_response_t,
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.accept_different", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+    // the response coming back is what activates the delegation, option by
+    // option, through update_agreement — the same path a whole-poll
+    // acceptance takes.
+
+    // Phase 15: Also fire Matrix delegation response for real-time notification
+    if (environment.useMatrixBackend) {
+      this.G.D.respond_to_delegation(pid, did, true).catch(err => {
+        this.G.L.error("DelegationService.accept_different Matrix sync failed", pid, did, err);
+      });
     }
   }
 
@@ -319,6 +491,9 @@ export class DelegationService {
           signed_response = this.sign_response(response, private_key);
     this.G.L.info("DelegationService.decline", pid, did, response);
     this.set_my_signed_response(pid, did, signed_response);
+    
+    // in a ranked poll, declining can hand the delegation to the next choice:
+    this.resolve_ranked_delegations(pid);
 
     // Phase 15: Also fire Matrix delegation response for real-time notification
     if (environment.useMatrixBackend) {
@@ -326,6 +501,84 @@ export class DelegationService {
         this.G.L.error("DelegationService.decline Matrix sync failed", pid, did, err);
       });
     }
+  }
+
+  // todo: make this give a different news item to the client
+  decline_due_to_error(pid: string, did: string, private_key?: string) {
+    if (!private_key) {
+      private_key = this.get_private_key(pid, did);
+    }
+    const response = {option_spec: {type: "+", oids: []}} as del_response_t, // i.e., accept NO oids
+          signed_response = this.sign_response(response, private_key);
+    this.G.L.info("DelegationService.decline_due_to_error", pid, did, response);
+    this.set_my_signed_response(pid, did, signed_response);
+  }
+
+  private delegating_voters(pid: string) : Set<string> {
+    // from the delegations themselves, not from the tally's set of voters:
+    // someone who has delegated without rating anything yet is not in that
+    // set, and their delegation still has to be resolved.
+    const del_voters = new Set<string>();
+    for (const [vid, dels] of this.get_direct_delegations(pid)) {
+      for (const [did, rank, active] of dels) {
+        if (active != '0') {
+          del_voters.add(vid);
+          break;
+        }
+      }
+    }
+    return del_voters;
+  }
+
+  private is_casting_voter(pid: string, vid: string) {
+    const dir_del_map = this.G.D.get_direct_delegation_map(pid);
+    for (const [did, rank, active] of dir_del_map.get(vid) || []) {
+      if (active == '0') {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private find_all_paths(pid: string, vid: string, current_path: string[], paths: string[][]) {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    for (const [did, _, active] of dm.get(vid) || []) {
+      if (active == '0') {
+        continue;
+      }
+      const a = this.get_agreement(pid, did);
+      let new_path: string[] = [...current_path, did];
+      if (this.is_casting_voter(pid, a.delegate_vid)) {
+        paths.push(new_path);
+      } else if (!current_path.includes(did)) {
+        this.find_all_paths(pid, a.delegate_vid, new_path, paths);
+      }
+    }
+  }
+
+  private min_sum(pid: string, vid: string) : Array<string> {
+    const dm = this.G.D.get_direct_delegation_map(pid);
+    let paths: string[][] = [[]];
+    this.find_all_paths(pid, vid, [], paths);
+
+    let minSumPath: string[] = [];
+    let minSum = Number.MAX_VALUE;
+
+    for (const path of paths) {
+      if (path.length == 0) {
+        continue;
+      }
+      let pathSum = 0;
+      for (const did of path) {
+        pathSum += this.get_delegate_rank(pid, did);
+      }
+      if (pathSum < minSum) {
+        minSum = pathSum;
+        minSumPath = path;
+      }
+    }
+    return minSumPath;
   }
 
   // DATA HANDLING:
@@ -344,6 +597,79 @@ export class DelegationService {
 
   set_private_key(pid: string, did: string, value: string) {
     this.G.D.setp(pid, "del_private_key." + did, value);
+  }
+
+  /** Where a delegate stands in the client's order of preference, 1 first.
+   *
+   *  #285 kept this in a poll-wide document that every voter could rewrite.
+   *  It is the client's own statement about their own delegation, so it
+   *  lives in their own request, which is already the one document only
+   *  they can write and which every backend already delivers. */
+  get_delegate_rank(pid: string, did: string): number {
+    const request = this.get_request(pid, did);
+    return (request && request.rank !== undefined) ? Number(request.rank) : 0;
+  }
+
+  set_delegate_rank(pid: string, did: string, value: number) {
+    const request = this.get_request(pid, did);
+    if (!request) {
+      this.G.L.error("DelegationService.set_delegate_rank before the request exists", pid, did);
+      return;
+    }
+    request.rank = value;
+    this.set_my_request(pid, did, request);
+  }
+
+  /** How much of the client's wap this delegate carries, in percent.
+   *  Stored alongside the rank, and for the same reason.
+   *
+   *  With an oid, the share for that option: the client's per-option figure
+   *  if they set one there, and otherwise the share they gave in general.
+   *  An option where every delegate's share is 0 is one the client has taken
+   *  back to rating alone. */
+  get_delegate_trust(pid: string, did: string, oid?: string): number {
+    const request = this.get_request(pid, did);
+    if (!request) { return 0; }
+    if (oid && request.trusts && request.trusts[oid] !== undefined) {
+      return Number(request.trusts[oid]);
+    }
+    return (request.trust !== undefined) ? Number(request.trust) : 0;
+  }
+
+  set_delegate_trust(pid: string, did: string, value: number, oid?: string) {
+    const request = this.get_request(pid, did);
+    if (!request) {
+      this.G.L.error("DelegationService.set_delegate_trust before the request exists", pid, did);
+      return;
+    }
+    if (oid) {
+      if (!request.trusts) { request.trusts = {}; }
+      request.trusts[oid] = value;
+    } else {
+      request.trust = value;
+    }
+    this.set_my_request(pid, did, request);
+  }
+
+  /** Take an option's share back to the one the client gave in general. */
+  clear_delegate_trust(pid: string, did: string, oid: string) {
+    const request = this.get_request(pid, did);
+    if (!request || !request.trusts || request.trusts[oid] === undefined) { return; }
+    delete request.trusts[oid];
+    this.set_my_request(pid, did, request);
+  }
+
+  /** Whether the client has said anything of their own about this option's
+   *  shares, rather than letting their general ones stand. */
+  option_has_own_trusts(pid: string, client_vid: string, oid: string): boolean {
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || a.client_vid != client_vid) { continue; }
+      const request = this.get_request(pid, did, client_vid);
+      if (request && request.trusts && request.trusts[oid] !== undefined) {
+        return true;
+      }
+    }
+    return false;
   }
 
   get_request(pid: string, did: string, client_vid?: string): del_request_t {
@@ -381,7 +707,7 @@ export class DelegationService {
   get_agreement(pid: string, did: string): del_agreement_t {
     const cache = this.get_delegation_agreements_cache(pid);
     let a = cache.get(did);
-    this.G.L.entry("DelegationService.get_agreement", pid, did, a);
+    // this.G.L.entry("DelegationService.get_agreement", pid, did, a);
     if (!a) {
       a = {
         status: "pending",
@@ -422,11 +748,40 @@ export class DelegationService {
         const oids = acache.get(did).active_oids;
         if (oids) {
           for (const oid of oids) {
-            p.del_delegation(client_vid, oid);
+            // in a weighted poll the delegation was never one of these: the
+            // trust matrix carries it, and losing the agreement is enough
+            if (!p.allow_weighted) { p.del_delegation(client_vid, oid); }
           }
         }
         acache.delete(did);
+        if (p.allow_weighted) { p.update_weighted_proxy_ratings(true); }
+        this.forget_revoked_incoming_request(pid, did);
       }
+    }
+  }
+
+  /** A request that has been deleted was revoked by the person who sent it.
+   *
+   *  On the delegate's side that has to take it off the list of requests
+   *  waiting for an answer, and say so once if they had accepted it. #285
+   *  looked for a del_status key on the pages instead, which nothing ever
+   *  wrote — and which could not have been read reliably anyway, since a
+   *  request whose data has simply not arrived yet looks the same. The
+   *  deletion arriving is the one moment that does not. */
+  private forget_revoked_incoming_request(pid: string, did: string) {
+    const incoming = this.get_my_incoming_dids_cache(pid),
+          entry = incoming.get(did);
+    if (!entry) { return; }
+    const [from, , status] = entry;
+    incoming.delete(did);
+    this.G.D.delu("del_incoming." + did);
+    if (status == 'agreed') {
+      this.G.N.add({
+        class: 'delegation_declined',
+        pid: pid,
+        title: this.translate.instant('news-title.delegation_revoked', {nickname: from}),
+        auto_dismiss: false,
+      });
     }
   }
 
@@ -448,8 +803,7 @@ export class DelegationService {
     this.update_agreement(pid, did, a, request, signed_response);
   }
 
-  update_agreement(pid: string, did: string, agreement: del_agreement_t,
-        request: del_request_t, signed_response: del_signed_response_t) {
+  update_agreement(pid: string, did: string, agreement: del_agreement_t, request: del_request_t, signed_response: del_signed_response_t) {
     /** after changes to request or response,
      * compare request and response, set status, extract accepted and active oids */
     this.G.L.entry("DelegationService.update_agreement", pid, did, agreement, request, signed_response);
@@ -480,8 +834,11 @@ export class DelegationService {
       }
       const pair = JSON.parse(this.G.D.open_signed(signed_response, request.public_key));
       const response = {option_spec: {type: pair[0], oids: pair[1]}} as del_response_t;
-      if (!response.option_spec) {
-        a.status = "declined";
+      if (pair.status == "revoked") {
+        a.status = "revoked";
+        return;
+      } else if (!response.option_spec) {
+        a.status = "declined"
       } else {
         if (response.option_spec.type == "+") {
           // oids specifies accepted options
@@ -527,7 +884,15 @@ export class DelegationService {
       if (!a.active_oids) {
         a.active_oids = new Set();
       }
-      if (request.option_spec) {
+      if (request.option_spec && (p.allow_ranked || p.allow_weighted)) {
+        // in a ranked poll this agreement does not decide whether it is in
+        // effect: only one of the client's ranked delegations may be, and
+        // which one depends on all of them. In a weighted poll several of
+        // them are in effect at once, which the single-delegate maps below
+        // cannot express. Either way the resolvers settle it further down,
+        // once every agreement is known.
+        a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined";
+      } else if (request.option_spec) {
         if (request.option_spec.type == "+") {
           // oids specifies accepted options
           for (const oid of a.active_oids) {
@@ -573,9 +938,7 @@ export class DelegationService {
         }
         a.status = (a.accepted_oids.size > 0) ? "agreed" : "declined"; 
       }
-    
     }
-
     // if voter affected directly, add news item:
     if (a.client_vid == p.myvid) {
       if ((old_status=="pending") && (a.status=="agreed")) {
@@ -607,8 +970,10 @@ export class DelegationService {
         });
       }
     }
-
     // TODO: update tally!
+
+    this.resolve_ranked_delegations(pid);
+    this.resolve_weighted_delegations(pid);
 
     this.G.L.exit("DelegationService.update_agreement", a.status, [...a.accepted_oids], [...a.active_oids]);
   }
@@ -629,6 +994,10 @@ export class DelegationService {
 
   response2string(response: del_response_t): string {
     /** turn response data without signature deterministically into a string message that can be signed: */
+    // if response is a status message, return it as is:
+    if (response.status) {
+      return JSON.stringify(response);
+    }
     return JSON.stringify([response.option_spec.type, response.option_spec.oids]);
   }
 
@@ -639,11 +1008,127 @@ export class DelegationService {
     return this.G.D.outgoing_dids_caches[pid];
   }
 
+  get_my_incoming_dids_cache(pid:string) {
+    if (!this.G.D.incoming_dids_caches) {
+      this.G.D.incoming_dids_caches = {};
+    }
+    if (!this.G.D.incoming_dids_caches[pid]) {
+      this.G.D.incoming_dids_caches[pid] = new Map();
+    }
+    return this.G.D.incoming_dids_caches[pid];
+  }
+
+  /** Whether a request asks for this option. */
+  private request_covers_option(request: del_request_t, oid: string): boolean {
+    if (!request || !request.option_spec) { return false; }
+    const spec = request.option_spec;
+    return (spec.type == "+") ? spec.oids.includes(oid) : !spec.oids.includes(oid);
+  }
+
+  /** Every voter's own delegations, most preferred first.
+   *
+   *  #285 kept this as a single poll-wide document that every voter had to
+   *  be able to rewrite — which is what forced the exception into the
+   *  CouchDB validation function, and what let one voter overwrite another
+   *  voter's delegations. Nothing has to be shared: each client already
+   *  builds an agreement per delegation id out of the requests and
+   *  responses it can see, and every part of the triple comes from there —
+   *  the rank or the trust from the client's own request, the status from
+   *  the agreement.
+   *
+   *  The triple is the one the ported code reads: [did, rank or trust,
+   *  status], where the status is '2' in effect, '1' accepted but not in
+   *  effect and '0' neither. Given an oid, only the delegations that ask
+   *  for that option.
+   */
+  get_direct_delegations(pid: string, oid?: string): Map<string, Array<[string, string, string]>> {
+    const result = new Map<string, Array<[string, string, string]>>();
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || !a.client_vid) { continue; }
+      const request = this.get_request(pid, did, a.client_vid);
+      if (oid && !this.request_covers_option(request, oid)) { continue; }
+      const weight = (request && request.rank !== undefined) ? request.rank
+                   : (request && request.trust !== undefined) ? request.trust
+                   : 0;
+      const active_oids = a.active_oids || new Set<string>();
+      const in_effect = oid ? active_oids.has(oid) : (active_oids.size > 0);
+      const status = in_effect ? '2' : ((a.status == 'agreed') ? '1' : '0');
+      const list = result.get(a.client_vid) || [];
+      list.push([did, String(weight), status]);
+      result.set(a.client_vid, list);
+    }
+    for (const list of result.values()) {
+      list.sort((x, y) => Number(x[1]) - Number(y[1]));
+    }
+    return result;
+  }
+
+  /** Who a voter trusts with what share of their wap for an option:
+   *  client -> delegate -> share in [0, 1].
+   *
+   *  Only an accepted delegation carries a share, and a voter's shares are
+   *  scaled down if they add up to more than they have. A voter therefore
+   *  always keeps a little of their own wap, which is what makes the blend
+   *  in Poll.update_weighted_proxy_ratings contract: a cycle of delegations
+   *  converges instead of being something that has to be forbidden.
+   */
+  get_trust_matrix(pid: string, oid: string): Map<string, Map<string, number>> {
+    const most_that_can_be_given_away = 0.99;
+    const result = new Map<string, Map<string, number>>();
+    for (const [did, a] of this.get_delegation_agreements_cache(pid)) {
+      if (!a || !a.client_vid || !a.delegate_vid || a.status != "agreed") { continue; }
+      if (!a.active_oids || !a.active_oids.has(oid)) { continue; }
+      const trust = Math.max(0, Math.min(100, this.get_delegate_trust(pid, did, oid))) / 100;
+      if (trust <= 0) { continue; }
+      const row = result.get(a.client_vid) || new Map<string, number>();
+      row.set(a.delegate_vid, (row.get(a.delegate_vid) || 0) + trust);
+      result.set(a.client_vid, row);
+    }
+    for (const row of result.values()) {
+      let total = 0;
+      for (const share of row.values()) { total += share; }
+      if (total > most_that_can_be_given_away) {
+        for (const [vid, share] of row) {
+          row.set(vid, share * most_that_can_be_given_away / total);
+        }
+      }
+    }
+    return result;
+  }
+
+  /** Who effectively delegates to whom, as #285's readers expect it:
+   *  delegate vid -> JSON list of the vids delegating to them, directly or
+   *  through a chain.
+   *
+   *  The poll keeps exactly this, per option, in inv_effective_delegation_map,
+   *  and keeps it up to date as delegations come and go — so this is a view
+   *  of it rather than a second copy in a shared document. Without an oid,
+   *  the union over the options, which is what a cycle check wants.
+   */
+  get_inverse_delegations(pid: string, oid?: string): Map<string, string> {
+    const p = this.G.P.polls[pid];
+    const per_delegate = new Map<string, Set<string>>();
+    if (p) {
+      for (const [this_oid, delegators_of] of p.inv_effective_delegation_map) {
+        if (oid && this_oid != oid) { continue; }
+        for (const [delegate_vid, delegators] of delegators_of) {
+          const set = per_delegate.get(delegate_vid) || new Set<string>();
+          for (const vid of delegators) { set.add(vid); }
+          per_delegate.set(delegate_vid, set);
+        }
+      }
+    }
+    const result = new Map<string, string>();
+    for (const [vid, set] of per_delegate) {
+      result.set(vid, JSON.stringify([...set]));
+    }
+    return result;
+  }
+
   get_delegation_agreements_cache(pid:string) {
     if (!this.G.D.delegation_agreements_caches[pid]) {
       this.G.D.delegation_agreements_caches[pid] = new Map();
     }
     return this.G.D.delegation_agreements_caches[pid];
   }
-
 }

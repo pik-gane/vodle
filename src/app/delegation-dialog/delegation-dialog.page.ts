@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ViewChild } from '@angular/core';
-import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
+import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl, Form } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -31,6 +31,12 @@ import { PollPage } from '../poll/poll.module';
 import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
 import { environment } from 'src/environments/environment';
+
+interface Option {
+  id: string;
+  name: string;
+}
+
 
 @Component({
   selector: 'app-delegation-dialog',
@@ -59,6 +65,11 @@ export class DelegationDialogPage implements OnInit {
   message_title: string;
   message_body: string;
   mailto_url: string;
+  rank: number;
+  rank_options: number[];
+  option_names: Option[];
+  options_selected: Set<string>;
+  weight_left: number;
 
   constructor(
     private popover: PopoverController,
@@ -75,11 +86,70 @@ export class DelegationDialogPage implements OnInit {
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
-      from: new UntypedFormControl(this.G.S.email)
+      from: new UntypedFormControl(this.G.S.email),
+      trustLevel: new UntypedFormControl(1),
     });
+
+    if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
+      const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+      const uid = this.parent.p.myvid;
+      const dir_del = ddm.get(uid) || [];
+      var weight_used = 0;
+      for (const entry of dir_del) {
+        if (entry === undefined) {
+          continue;
+        }
+        weight_used += Number(entry[1]);
+      }
+      // a voter can never give away all of their wap; what is left over is
+      // the voice they keep, and the dialog says so while they choose
+      this.weight_left = 99 - weight_used;
+      this.formGroup.get('trustLevel').setValue(Math.min(50, this.weight_left));
+    }
+
+    // checks if ranked delegation is allowed and if so, initialises the values needed for the drop-down menu
+    if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
+      this.initialise_rank_values();
+    }
+    
+    // checks if delegation of specific options is allowed and if so, initialises the values needed for the check-boxes
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.option_names = [];
+      this.options_selected = new Set<string>();
+
+      for (const id of this.parent.p.oids) {
+        if (this.parent.option_delegated.has(id)) {
+          if (this.parent.option_delegated.get(id) !== '') {
+            continue;
+          }
+        }
+        this.option_names.push({id: id, name: this.parent.p.options[id].name});
+        this.options_selected.add(id);
+      }
+    }
+
+    const ddm = this.G.D.get_direct_delegation_map(this.parent.pid);
+    for (const [uid, dels] of ddm) {
+      for (const del of dels) {
+      }
+    }
+    
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      for (const oid of this.parent.p.oids) {
+        const iim = this.G.D.get_inverse_indirect_map(this.parent.pid, oid);
+      }
+    }else{
+      const iim = this.G.D.get_inverse_indirect_map(this.parent.pid);
+    }
+
     // TODO: what if already some delegation active or pending?
-    // prepare a new delegation:
-    [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    
+    if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.p = this.G.P.polls[this.parent.pid];
+    } else {
+      [this.p, this.did, this.request, this.private_key, this.agreement] = this.G.Del.prepare_delegation(this.parent.pid);
+    }
+    
     // TODO: make indentation in body work:
     this.message_title = this.translate.instant('delegation-request.message-subject', {due: this.G.D.format_date(this.p.due)});
     this.update_request();
@@ -92,6 +162,24 @@ export class DelegationDialogPage implements OnInit {
     setTimeout(() => this.focus_element.setFocus(), 100);
   }
 
+  initialise_rank_values() {
+    const uid = this.parent.p.myvid;
+    const dir_del_map = this.G.D.get_direct_delegation_map(this.parent.pid);
+    const dir_del = dir_del_map.get(uid) || [];
+    var ranks = Array.from({ length: environment.delegation.max_delegations }, (_, i) => i + 1);
+    for (const entry of dir_del) {
+      if (entry === undefined) {
+        continue;
+      }
+      const indexToRemove: number = ranks.indexOf(Number(entry[1]));
+      if (indexToRemove !== -1) {
+        ranks.splice(indexToRemove, 1);
+      }
+    }
+    this.rank = ranks[0];
+    this.rank_options = ranks;
+  }
+
   delegate_nickname_changed() {
     const delegate_nickname = this.formGroup.get('delegate_nickname').value;
     this.G.D.setp(this.p.pid, "del_nickname." + this.did, delegate_nickname);
@@ -101,8 +189,27 @@ export class DelegationDialogPage implements OnInit {
   from_changed() {
     const from = this.formGroup.get('from').value;
     this.G.D.setp(this.p.pid, "del_from." + this.did, from);
-    this.set_delegation_link(from);
+    if (!this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      this.set_delegation_link(from);
+    }
     this.update_request();
+  }
+
+  rank_changed(e) {
+    this.rank = e.detail.value;
+  }
+
+  options_changed(event: Event){
+    const target = event.target as HTMLIonSelectElement;
+    var ns = new Set<string>();
+    for (const option of target.value) {
+      ns.add(option.id);
+    }
+    this.options_selected = new Set(ns);
+  }
+
+  get_option_names() {
+    return Array.from(this.option_names.entries());
   }
 
   update_request() {
@@ -135,8 +242,68 @@ export class DelegationDialogPage implements OnInit {
                 + this.translate.instant('delegation-request.message-body-regards'));
   }
 
+  prepare_if_different_allowed() {
+    if (!this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+      return;
+    }
+
+    // the request itself names the options, so the delegation reaches the
+    // poll's per-option maps through update_agreement like any other. #285
+    // sent a whole-poll request and remembered the options in a separate
+    // del_oid key, which nothing ever read back.
+    const options = Array.from(this.options_selected);
+    [this.p, this.did, this.request, this.private_key, this.agreement] =
+        this.G.Del.prepare_delegation_for_options(this.parent.pid, options);
+    this.set_delegation_link(this.formGroup.get('from').value);
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
+    this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
+  }
+
+  /** the share the slider is on */
+  share(): number {
+    return Number(this.formGroup.get('trustLevel').value) || 0;
+  }
+
+  /** what the voter would still speak for themselves, in percent, if they
+   *  gave this delegate the share the slider is on */
+  share_kept(): number {
+    return Math.max(1, this.weight_left + 1 - this.share());
+  }
+
+  /** and what they could still give to a further delegate after this one.
+   *  It is one less than what they keep: a voter can never give away all of
+   *  their wap, so a percent of it always stays with them. */
+  share_left(): number {
+    return Math.max(0, this.weight_left - this.share());
+  }
+
+  /** Record what this delegation is worth to the client — where the delegate
+   *  stands in their order of preference, or how much of their wap the
+   *  delegate carries — in the request itself, before it goes out.
+   *
+   *  It has to be in the request that is sent rather than written after it.
+   *  Both are the same key in the same document, so writing it afterwards is
+   *  a second write of `del_request.<did>`, and on the Matrix backend that is
+   *  a second state event of the same type racing the first: when the first
+   *  one landed last, the share was lost and the delegate appeared to carry
+   *  0% of the voter's wap — which in turn hid the per-option switches and
+   *  the shared-wap slider, both of which ask whether anything was given
+   *  away at all. */
+  stamp_rank_or_trust() {
+    if (!this.request) {
+      this.G.L.error("DelegationDialogPage.stamp_rank_or_trust without a request");
+      return;
+    }
+    if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
+      this.request.trust = Number(this.formGroup.get('trustLevel').value);
+    } else if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
+      this.request.rank = this.rank;
+    }
+  }
+
   share_button_clicked() {
     this.G.L.entry("DelegationDialogPage.share_button_clicked");
+    this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
     Share.share({
@@ -146,7 +313,9 @@ export class DelegationDialogPage implements OnInit {
       dialogTitle: 'Share vodle delegation link',
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
+      this.stamp_rank_or_trust();
       this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
+      this.parent.update_delegation_info();
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
@@ -157,7 +326,9 @@ export class DelegationDialogPage implements OnInit {
     this.G.L.entry("DelegationDialogPage.copy_button_clicked");
     this.delegate_nickname_changed();
     this.from_changed();
+    this.prepare_if_different_allowed();
     window.navigator.clipboard.writeText(this.delegation_link);
+    this.stamp_rank_or_trust();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     LocalNotifications.schedule({
       notifications: [{
@@ -179,8 +350,10 @@ export class DelegationDialogPage implements OnInit {
 
   email_button_clicked(ev: MouseEvent) {
     this.G.L.entry("DelegationDialogPage.email_button_clicked");
+    this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
+    this.stamp_rank_or_trust();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
     this.parent.update_delegation_info();
     this.popover.dismiss();

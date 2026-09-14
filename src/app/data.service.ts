@@ -46,6 +46,7 @@ const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this n
 
 
 import * as Sodium from 'libsodium-wrappers';
+import { PasswordBasedCipher } from 'crypto-es/lib/cipher-core';
 
 import { MatrixService, hashEmail } from './matrix.service';
 
@@ -290,14 +291,46 @@ export function restart_at_the_beginning() {
 /** the consent recorded when a user logs in or takes part as a guest */
 export const consent_statement = 'Yes, I have read the data protection declaration and terms of use. I consent to the processing of my data on user devices and database servers in the described manner, in order to participate in polls. I agree that some of my data will be transmitted to other participants in pseudonymized form. I am aware that my right to have my data deleted is hence constrained insofar as these copies may not be deleted on all user devices. I can revoke this consent by e-mail.';
 
+/** Which delegation this deployment offers — environment.delegation.mode.
+ *
+ *  #285 made it three per-poll settings that whoever wrote the poll switched
+ *  on in the draft. How a voter's wap may reach another voter is a rule of
+ *  the vote, though, not a property of the question being asked, and an
+ *  author free to pick the rule can pick the one they expect to win under.
+ *  So it belongs to the deployment, beside the weight limit.
+ *
+ *    "simple"     one delegate at a time, for all of the poll's options
+ *    "different"  a different delegate for different options
+ *    "ranked"     several delegates in the voter's order of preference
+ *    "weighted"   several at once, each carrying a share of the voter's wap
+ */
+export function delegation_mode(): string {
+  return environment.delegation.mode || 'simple';
+}
+
 export type del_option_spec_t = {type: "+" | "-", oids: Array<string>};
-export type del_request_t = {option_spec: del_option_spec_t, public_key: string};
-export type del_response_t = {option_spec: del_option_spec_t};
+export type del_request_t = {
+  option_spec: del_option_spec_t,
+  public_key: string,
+  // #285: in a poll with ranked delegation, where this delegate stands in the
+  // client's order of preference (1 = first choice); in one with weighted
+  // delegation, the percentage of trust the client gives them. Both are the
+  // client's own statement about their own delegation, so they ride in the
+  // client's own request rather than in a poll-wide document.
+  rank?: number,
+  trust?: number,
+  // ... and per option, where the client wants this delegate to carry a
+  // different share there than the one they gave them in general. An option
+  // with no entry uses `trust`; one where every delegate's entry is 0 is one
+  // the client has taken back to rating alone.
+  trusts?: {[oid: string]: number},
+};
+export type del_response_t = {option_spec: del_option_spec_t, status: "agreed" | "declined" | "revoked", "decline_cycle", "decline_self"};
 export type del_signed_response_t = string;
 export type del_agreement_t = { // by pid, did
   client_vid?: string,
   delegate_vid?: string,
-  status?: "pending" | "agreed" | "declined" | "revoked",
+  status?: "pending" | "agreed" | "declined" | "revoked" | "declined_cycle" | "declined_self",
   accepted_oids?: Set<string>, // oids accepted for delegation by delegate
   active_oids?: Set<string> // among those, oids currently activated for delegation by client
 };
@@ -4275,7 +4308,7 @@ export class DataService implements OnDestroy {
       // other polls' data is stored in poll's own database.
       // construct key for poll db:
       const pkey = this.get_voter_key_prefix(pid, vid) + key;
-//      this.G.L.trace("getv", pid, key, vid, pkey)
+    //  this.G.L.trace("getv", pid, key, vid, pkey)
       this.ensure_poll_cache(pid);
       value = (pkey in this.poll_caches[pid])
         ? this.poll_caches[pid][pkey] || ''
@@ -4449,6 +4482,44 @@ export class DataService implements OnDestroy {
     });
   }
 
+  // #285 kept the delegation graph in two poll-wide documents that every
+  // voter had to be able to rewrite. Both are derivable from what each
+  // client already holds, so they are views now, not storage: see
+  // DelegationService.get_direct_delegations and .get_inverse_delegations.
+
+  // key: voter id, value: JSON list of the voter ids that have effectively
+  // delegated to them, directly or through a chain.
+  get_inverse_indirect_map(pid: string, option_map?: string): Map<string, string> {
+    return this.G.Del.get_inverse_delegations(pid, option_map);
+  }
+
+  // key: voter id, value: their delegations as [did, rank or trust, status],
+  // most preferred first.
+  get_direct_delegation_map(pid: string, option_map?: string): Map<string, Array<[string, string, string]>> {
+    return this.G.Del.get_direct_delegations(pid, option_map);
+  }
+
+  // #285 kept every voter's own and effective waps in one poll-wide
+  // document as well. The blend they were for is computed by
+  // Poll.update_weighted_proxy_ratings out of what each client already
+  // holds, so that document is gone too, and with it the last reason for
+  // a voter to be able to write a shared poll document.
+
+  /** Which delegation this deployment offers (see delegation_mode above).
+   *  The pid these still take is for the callers, which have one to hand and
+   *  need not know that the answer no longer depends on it. */
+  get_ranked_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'ranked';
+  }
+
+  get_different_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'different';
+  }
+
+  get_weighted_delegation_allowed(_pid?: string): boolean {
+    return delegation_mode() == 'weighted';
+  }
+
   // TODO: delv!
 
   get_example_docs(): Promise<any> {
@@ -4528,6 +4599,18 @@ export class DataService implements OnDestroy {
       this.schedule_matrix_user_data_write(ukey);
     }
     return this.store_user_data(ukey, this.user_cache, ukey);
+  }
+
+  setv_global_for_poll(pid: string, key: string, value: string): boolean {
+    // set global voter data item in poll db:
+    value = value || '';
+    // construct key for poll db:
+    // return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + "§";
+    const pkey = "§";
+    this.ensure_poll_cache(pid);
+    this.G.L.trace("DataService.setv_global_for_poll", pid, key, value);
+    this.poll_caches[pid][pkey] = value;
+    return this.store_poll_data(pid, pkey, this.poll_caches[pid], pkey, false);
   }
 
   setv_in_polldb(pid: string, key: string, value: string, vid?: string): boolean {
@@ -6987,16 +7070,35 @@ export class DataService implements OnDestroy {
    *  stored if that throws: the poll may not be loaded yet, and the next
    *  read of the same room (or the page's own re-decide) must find the
    *  value rather than a hole where doc2poll_cache would have rolled back.
+   *
+   *  A voter deletes data on Matrix by overwriting the state event with an
+   *  empty content, so an empty value here is a deletion — which is how a
+   *  revoked delegation reaches the delegate. doc2poll_cache routes that to
+   *  process_deleted_request_from_db; this used to hand it to
+   *  process_request_from_db instead, where an empty request only made the
+   *  agreement look unfinished, so the revoked request stayed on the
+   *  delegate's screen.
    */
   matrix_voter_data_arrived(pollId: string, vid: string, key: string, value: any): void {
     if (!this.poll_caches[pollId]) {
       this.poll_caches[pollId] = {};
     }
-    this.poll_caches[pollId][this.get_voter_key_prefix(pollId, vid) + key] = String(value);
+    const gone = (value === null || value === undefined || value === '');
+    const cache_key = this.get_voter_key_prefix(pollId, vid) + key;
+    if (gone) {
+      delete this.poll_caches[pollId][cache_key];
+    } else {
+      this.poll_caches[pollId][cache_key] = String(value);
+    }
     try {
       if (key.startsWith('del_request.')) {
-        this.G.Del.process_request_from_db(pollId, key.slice('del_request.'.length), vid);
-      } else if (key.startsWith('del_response.')) {
+        const did = key.slice('del_request.'.length);
+        if (gone) {
+          this.G.Del.process_deleted_request_from_db(pollId, did, vid);
+        } else {
+          this.G.Del.process_request_from_db(pollId, did, vid);
+        }
+      } else if (key.startsWith('del_response.') && !gone) {
         this.G.Del.process_signed_response_from_db(pollId, key.slice('del_response.'.length), vid);
       }
     } catch (err) {

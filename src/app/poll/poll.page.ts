@@ -28,10 +28,13 @@ import { Poll } from '../poll.service';
 import { news_t } from '../data.service';
 
 import { DelegationDialogPage } from '../delegation-dialog/delegation-dialog.module';  
+import { DelegationDialogRankedPage } from '../delegation-dialog-ranked/delegation-dialog-ranked.module';
+import { DelegationDialogDifferentPage } from '../delegation-dialog-different/delegation-dialog-different.module';
 import { AssistPage } from '../assist/assist.module';  
 import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
+import { waitForAsync } from '@angular/core/testing';
 
 @Component({
   selector: 'app-poll',
@@ -55,7 +58,9 @@ export class PollPage implements OnInit {
 
   delegate: string;
   delegation_status = "none";
+  option_delegated: Map<string, string> = null;
 
+  have_been_delegated = false;
   n_indirect_clients = 1;
   accepted_requests = [];
   declined_requests = [];
@@ -97,6 +102,10 @@ export class PollPage implements OnInit {
 
   news: Set<news_t> = new Set();
 
+  // type of delegation:
+  ranked_delegation_allowed = false;
+  weighted_delegation_allowed = false;
+  different_delegation_allowed = false;
   rating_update_timeout: any = null; // debounces resorting while rating via keyboard (see issue #98, PR #298)
 
   // LIFECYCLE:
@@ -125,6 +134,14 @@ export class PollPage implements OnInit {
 
   ngOnInit() {
     this.G.L.entry("PollsPage.ngOnInit");
+  }
+
+  /** The voter id my rating for this option comes from: my effective
+   *  delegate, or me. Replaces HEMPED's Poll.delegate_id, which was a single
+   *  delegation id for the whole poll; our delegation is per option. */
+  my_delegate_vid(oid: string): string {
+    const per_option = this.p.effective_delegation_map.get(oid);
+    return (per_option && per_option.get(this.p.myvid)) || this.p.myvid;
   }
 
   ionViewWillEnter() {
@@ -212,6 +229,7 @@ export class PollPage implements OnInit {
         }
       }  
     }
+    this.update_vote_maps();
   }
 
   private show_poll() {
@@ -236,9 +254,17 @@ export class PollPage implements OnInit {
     if (this.p.has_results) {
       this.p.have_seen_results = true;
     }
+
+    // get type of delegation:
+    this.ranked_delegation_allowed = this.G.D.get_ranked_delegation_allowed(this.pid);
+    this.weighted_delegation_allowed = this.G.D.get_weighted_delegation_allowed(this.pid);
+    this.different_delegation_allowed = this.G.D.get_different_delegation_allowed(this.pid);
+
+    this.G.L.exit("PollPage.onDataReady");
   }
 
   onDataChange() {
+    this.G.L.entry("PollPage.onDataChangeshared");
     this.G.L.entry("PollPage.onDataChange");
     if (!this.ready || !this.p) {
       // the Matrix backend reports data as it arrives, which on a fresh
@@ -250,9 +276,12 @@ export class PollPage implements OnInit {
     }
     this.p.tally_all();
     this.update_order();
+    this.have_been_delegated = this.p.have_been_delegated(this.p.myvid);
     this.update_delegation_info();
     this.news = this.G.N.filter({pid: this.pid});
+    this.update_vote_maps();
     this.changeDetector.detectChanges();
+
     this.G.L.exit("PollPage.onDataChange");
   }
 
@@ -283,13 +312,12 @@ export class PollPage implements OnInit {
       // register that results have been seen:
       this.p.have_seen_results = true;
     }
-    // make sure current slider values are really stored in database
-    // (unless the consent is still pending, #193: nothing is stored then):
-    if (!this.consent_pending) {
-      for (let oid of this.oidsorted) {
-        if (!this.delegate || this.rate_yourself_toggle[oid]) {
-          this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
-        }
+    // make sure current slider values are really stored in database.
+    // Nothing is stored while the consent is still pending (#193), which is
+    // expressed in the loop header so that the brace depth stays HEMPED's:
+    for (let oid of (this.consent_pending ? [] : this.oidsorted)) {
+      if (this.i_set_this_wap(oid)) {
+        this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
       }
     }
     // dismiss auto-dismissing news:
@@ -346,7 +374,65 @@ export class PollPage implements OnInit {
     this.G.L.exit("PollPage.ionViewDidLeave");
   }
 
+  update_options_delegated() {
+    if (this.option_delegated == null) {
+      this.option_delegated = new Map<string, string>();
+    }
+    for (const oid of this.p.oids) {
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, status, _] of list) {
+        if (status === '2' || status === '0' || status === '1') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+        this.delegation_status = "agreed";
+      }else{
+        this.option_delegated.set(oid, '');
+      }
+    }
+    // change status
+    this.set_delegate();
+    return;
+    for (const oid of this.p.oids) {
+      // const val = this.G.D.getv(this.pid, "del_oid." + oid);
+      // if (val == "null") {
+      //   this.option_delegated.set(oid, null);
+      // } else {
+      //   this.option_delegated.set(oid, val);
+      // }
+      const ddm = this.G.D.get_direct_delegation_map(this.pid, oid);
+      const list = ddm.get(this.p.myvid) || [];
+      var did2 = null;
+      for (const [did, rank, status] of list) {
+        if (status == '2') {
+          did2 = did; 
+        }
+      }
+      if (did2) {
+        this.option_delegated.set(oid, did2);
+      }else{
+        this.option_delegated.set(oid, null);
+      }
+    }
+  }
+
+  update_vote_maps() {
+    // (the self and effective ratings are not read from a shared `waps`
+    //  document any more: our Poll derives them in the tally, from the own
+    //  ratings and the delegation maps)
+  }
+
   update_delegation_info() {
+    this.G.L.entry("PollPage.update_delegation_info");
+    if (this.get_different_delegation_allowed()) {
+      this.update_options_delegated();
+      this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
+      return;
+    }
     // determine own weight:
     this.n_indirect_clients = this.p.get_n_indirect_clients(this.p.myvid);
     // find incoming delegations:
@@ -355,30 +441,76 @@ export class PollPage implements OnInit {
     this.declined_requests = [];
     if (cache) {
       for (const [did, [from, url, status]] of cache) {
+        // a revoked request takes itself off this list when the deletion
+        // arrives (DelegationService.process_deleted_request_from_db); #285
+        // looked for a del_status key here that nothing ever wrote.
         if (status == 'agreed') {
           this.accepted_requests.push({from:from, url:url});
         } else if (status.startsWith('declined')) {
           this.declined_requests.push({from:from, url:url});
-        } 
+        }
       }
     }
     // find outgoing delegation:
-    const did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
-    this.G.L.trace("PollPage.update_delegation_info did", did);
+    if (this.get_different_delegation_allowed()) {
+      
+    }
+
+    var did;
+    var pendingSet = new Set<string>();
+    const dir_del_map = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dir_del_map.get(this.p.myvid) || [];
+    for (const [did_, rank, status] of list) {
+      if (status == '2') {
+        did = did_;
+      } else if (status == '0') {
+        pendingSet.add(did_);
+      }
+    }
     if (did) {
-      this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      // this.delegate = this.G.Del.get_delegate_nickname(this.pid, did);
+      this.set_delegate();
       const agreement = this.G.Del.get_agreement(this.pid, did);
       this.G.L.trace("PollPage.update_delegation_info agreement", agreement);
-      this.delegation_status = agreement.status;
+      var st = "null";
+      const list = dir_del_map.get(this.p.myvid) || [];
+      for (const [,, status] of list) {
+        if (status == '2') {
+          st = "agreed";
+          break;
+        }
+      }
+      this.delegation_status = st == "agreed" ? "agreed" : agreement.status;
+    } else if (pendingSet.size > 0) {
+      this.delegation_status = "pending";
+      this.delegate = this.G.Del.get_delegate_nickname(this.pid, pendingSet.values().next().value);
+    } else {
+      this.delegation_status = "none";
     }
     this.update_delegation_toggles();
   }
 
   update_delegation_toggles() {
     for (let oid of this.oidsorted) {
-      let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
-      if (!did) {
-        did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      if (this.weighted_delegation_allowed) {
+        // the switch here does not choose between two people's waps but
+        // between the voter's shares applying to this option or the voter
+        // rating it alone:
+        this.rate_yourself_toggle[oid] = !this.wap_is_shared(oid);
+        continue;
+      }
+      // let did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get(oid);
+      // if (!did) {
+      //   did = this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*");
+      // }
+      var did;
+      const dm = this.G.D.get_direct_delegation_map(this.pid);
+      const list = dm.get(this.p.myvid) || [];
+      for (const [did_, rank, status] of list) {
+        if (status == '2') {
+          did = did_;
+          break;
+        }
       }
       if (did) {
         const a = this.G.Del.get_agreement(this.pid, did);
@@ -410,19 +542,24 @@ export class PollPage implements OnInit {
   }
 
   on_rate_yourself_toggle_change(oid:string) {
-//    const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
-    // update delegation data:
+    // #285 restored the voter's own rating from a poll-wide waps document
+    // here, and took the delegate's rating as their own when switching the
+    // other way. Neither is needed: a delegation never overwrites a voter's
+    // own rating in the first place — the poll keeps it in own_ratings_map
+    // and the delegate's in the effective one — so toggling the switch only
+    // has to (de)activate the delegation.
     this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
-    // update slider value:
-//    this.get_slider(oid).value = new_rating.toString();
     this.on_delegate_toggle_change();
+    this.G.D.save_state();
   }
 
   on_delegate_toggle_change() {
     // update n_delegated: // TODO: make more efficient
     let sum = 0;
     for (let [oid, b] of Object.entries(this.rate_yourself_toggle)) {
-      if (!b) sum++;
+      if (!b) {
+        sum++;
+      }
     }
     this.n_delegated = sum;
   }
@@ -464,14 +601,39 @@ export class PollPage implements OnInit {
         this.G.L.warn("PollPage.show_stats couldn't change pie piece", oid);
       }
       this.set_slider_color(oid, p.get_my_proxy_rating(oid));
-      if (this.rate_yourself_toggle[oid]) {
-        // update dashed needle showing delegate's rating
+      if (this.wap_is_shared(oid)) {
+        // the blend, drawn the way an undelegated wap is drawn — the option's
+        // colour, the bar's usual thickness — but ending in a dot, since it
+        // is a result and not something to drag. (#285 pointed the dashed
+        // mark at the effective rating instead, which is the blend after the
+        // favourite adjustment, so it would have sat at 100 on the voter's
+        // top option whatever the shares were — and it only ran while the
+        // delegation was switched off, so never.)
+        const bar = <SVGLineElement><unknown>document.getElementById('eff_bar_'+oid),
+              rest = <SVGLineElement><unknown>document.getElementById('eff_rest_'+oid),
+              dot = <SVGCircleElement><unknown>document.getElementById('eff_dot_'+oid),
+              rating = this.p.get_my_proxy_rating(oid);
+        if (bar) {
+          bar.x2.baseVal.valueAsString = (rating).toString() + '%';
+        }
+        if (rest) {
+          // the pale remainder starts where the bar ends, so that the two do
+          // not overlap and darken the colour where they do
+          rest.x1.baseVal.valueAsString = (rating).toString() + '%';
+        }
+        if (dot) {
+          dot.cx.baseVal.valueAsString = (rating).toString() + '%';
+        }
+      } else if (this.rate_yourself_toggle[oid] && !this.weighted_delegation_allowed) {
+        // update dashed needle showing delegate's rating. A weighted poll has
+        // no single delegate whose wap this could be, so it has no such mark:
+        // there the marks are the voter's own wap and the blend.
         const needle = <SVGLineElement><unknown>document.getElementById('del_needle_'+oid),
               knob = <SVGCircleElement><unknown>document.getElementById('del_knob_'+oid),
               delegate_vid = this.G.Del.get_potential_effective_delegate(this.pid, oid);
-//        this.G.L.trace("PollPage.show_stats needle know delegate_vid", needle, knob, delegate_vid);
         if (delegate_vid) {
-          const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          // const rating = (this.p.proxy_ratings_map.get(oid)||new Map()).get(delegate_vid)||0;
+          const rating = this.G.D.getv(this.pid, "rating."+oid, this.my_delegate_vid(oid))||0;
           this.G.L.trace("PollPage.show_stats rating", rating);
           if (needle) {
             needle.x2.baseVal.valueAsString = (rating).toString() + '%';
@@ -557,6 +719,35 @@ export class PollPage implements OnInit {
       'vodlegreen';
   }
 
+  set_delegate() {
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [[]];
+    var d = null;
+    // list.sort((a, b) => Number(a[1]) - Number(b[1]));
+    d = list[0] ? list[0][0] : null;
+
+    for (const [did, rank, status] of list) {
+      if (status == '2') {
+        d = did;
+        break;
+      }
+    }
+    this.delegate = d ? this.G.Del.get_delegate_nickname(this.pid, d) : null;
+  }
+
+  get_delegate(oid?: string) {
+    if (this.weighted_delegation_allowed){
+      return "Delegate";
+    }
+    if (!this.get_different_delegation_allowed()) {
+      return this.delegate;
+    }
+    if (oid) {
+      return this.G.Del.get_delegate_nickname(this.pid, this.option_delegated.get(oid));
+    }
+    return this.delegate;
+  }
+
   // CONTROLS:
 
   toggle_show_live() {
@@ -595,7 +786,7 @@ export class PollPage implements OnInit {
     /** update own rating in cache on basis of slider knob position,
      *  but don't store it in the database yet (see also rating_change_ended()).
      */
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if (this.i_set_this_wap(oid)) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), false);
     }
     this.show_stats();
@@ -651,10 +842,11 @@ export class PollPage implements OnInit {
     }
 
     this.p.have_acted = true;
-    if (!this.delegate || this.rate_yourself_toggle[oid]) {
+    if (this.i_set_this_wap(oid)) {
       this.p.set_my_own_rating(oid, Math.round(this.get_slider_value(oid)), true);
     }
     this.update_order();
+    this.show_stats();
     this.G.D.save_state();
   }
 
@@ -766,6 +958,200 @@ export class PollPage implements OnInit {
     return true;
   }
 
+  get_my_rating(oid: string) {
+    if (this.get_different_delegation_allowed()) {
+      const did = this.option_delegated.get(oid);
+      if (did && did != "" && !this.rate_yourself_toggle[oid]) {
+        const agr = this.G.Del.get_agreement(this.pid, did);
+        this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+        return this.G.D.getv(this.pid, "rating."+oid, agr.delegate_vid);
+      }
+      return this.p.get_my_own_rating(oid);
+    }
+    
+    if (this.weighted_delegation_allowed) {
+      // the voter's own wap, whatever share of it they have given away: the
+      // blend is shown beside the knob, not under it
+      return this.p.get_my_own_rating(oid) || this.G.S.default_wap;
+    }
+
+    if (this.delegate && !this.rate_yourself_toggle[oid]) {
+      this.G.D.setv(this.pid, "rating."+oid, "" + this.get_slider_value(oid));
+      return this.G.D.getv(this.pid, "rating."+oid, this.my_delegate_vid(oid));
+    }
+    return this.p.get_my_own_rating(oid);
+  }
+
+  get_allowed_to_delegate() : boolean {
+    if (!this.get_ranked_delegation_allowed() && this.delegation_status == 'agreed' && !this.get_different_delegation_allowed() && !this.weighted_delegation_allowed) {
+      return false;
+    }
+    if (this.weighted_delegation_allowed){
+      const ddm = this.G.D.get_direct_delegation_map(this.pid);
+      const lst = ddm.get(this.p.myvid) || [];
+      var weight_left = 99;
+      for (let [, weight, _] of lst){
+        weight_left -= parseInt(weight);
+      }
+      return weight_left > 0;
+    }
+    if (this.G.D.get_different_delegation_allowed(this.pid)){
+      var c = 0;
+      for (let key of this.option_delegated.keys()) {
+        const did = this.option_delegated.get(key) || '';
+        if (did != '') {
+          c++;
+        }
+      }
+      return c < this.p.oids.length;
+    }
+    const dm = this.G.D.get_direct_delegation_map(this.pid);
+    const list = dm.get(this.p.myvid) || [];
+    return list.length < environment.delegation.max_delegations;
+  }
+
+  get_ranked_delegation_allowed() : boolean {
+    return this.ranked_delegation_allowed;
+  }
+
+  get_different_delegation_allowed() : boolean {
+    return this.different_delegation_allowed;
+  }
+
+  /** Whether the slider under an option is the voter's own wap to set.
+   *
+   *  In a weighted poll it always is: a share is not a handover, and what
+   *  the voter keeps is exactly what their own wap is for. #285 left the
+   *  single-delegate test in all three places that write a rating, so once a
+   *  weighted delegation had been accepted the slider showed the blend
+   *  instead of the voter's own wap, ignored every drag, and was rendered
+   *  small and untouchable — which leaves the share they kept with nothing
+   *  to say.
+   */
+  i_set_this_wap(oid: string): boolean {
+    return this.weighted_delegation_allowed
+        || !this.delegate || this.rate_yourself_toggle[oid]
+        || (this.get_different_delegation_allowed()
+            && (this.option_delegated.get(oid) == '' || this.option_delegated.get(oid) == null));
+  }
+
+  /** How much of their own wap the voter still speaks for, in percent.
+   *
+   *  In a weighted poll a delegation is not on or off: it carries a share,
+   *  and what is left over is the voter's own voice. That number is the one
+   *  thing the person needs to see, and #285's screen never showed it.
+   */
+  my_share_kept(oid?: string): number {
+    let given = 0;
+    for (const [did, share, status] of
+         this.G.D.get_direct_delegation_map(this.pid).get(this.p.myvid) || []) {
+      if (status == '0') { continue; }
+      given += (oid ? this.G.Del.get_delegate_trust(this.pid, did, oid)
+                    : Number(share)) || 0;
+    }
+    return Math.max(0, 100 - given);
+  }
+
+  /** The range of what the voter keeps across the options, as the summary
+   *  line needs it: one figure when every option is the same, two when the
+   *  voter has said something of their own about some of them. */
+  share_kept_range(): [number, number] {
+    let least = 100, most = 0;
+    for (const oid of this.p.oids) {
+      const kept = this.my_share_kept(oid);
+      least = Math.min(least, kept);
+      most = Math.max(most, kept);
+    }
+    return [least, most];
+  }
+
+  /** Whether the voter has given part of their wap away, so that the knob
+   *  under their hand is no longer the number that counts.
+   *
+   *  Given an option, whether that holds for that option: a voter can take a
+   *  single option back to rating it alone, and can give a delegate a
+   *  different share there than they gave them in general. */
+  wap_is_shared(oid?: string): boolean {
+    return this.weighted_delegation_allowed && this.my_share_kept(oid) < 100;
+  }
+
+  /** Whether this option's shares are the voter's general ones or something
+   *  they have said about this option in particular. */
+  option_has_own_shares(oid: string): boolean {
+    return this.weighted_delegation_allowed
+        && this.G.Del.option_has_own_trusts(this.pid, this.p.myvid, oid);
+  }
+
+  /** Switch an option between the voter's shares and rating it alone.
+   *
+   *  Off sets every delegate's share for this option to nothing, which is
+   *  what "alone" means arithmetically; on takes the option back to the
+   *  voter's general shares. Neither touches those general shares, so the
+   *  switch is reversible. */
+  set_option_shared(oid: string, shared: boolean) {
+    for (const [did, , status] of
+         this.G.D.get_direct_delegation_map(this.pid).get(this.p.myvid) || []) {
+      if (status == '0') { continue; }
+      if (shared) {
+        this.G.Del.clear_delegate_trust(this.pid, did, oid);
+      } else {
+        this.G.Del.set_delegate_trust(this.pid, did, 0, oid);
+      }
+    }
+    this.G.D.save_state();
+  }
+
+  on_share_toggle_change(oid: string) {
+    this.set_option_shared(oid, !!this.rate_yourself_toggle[oid] === false);
+    this.show_stats();
+  }
+
+  /** The slider's own geometry, which the template used to carry as an
+   *  inline ternary.
+   *
+   *  In a weighted poll the voter's own wap is a control and not the number
+   *  that counts, so its bar is drawn thin, to match the hollow knob on it
+   *  and to stay clearly apart from the blend above; the blend is the one
+   *  drawn at a bar's usual thickness. Where a delegate has taken the option
+   *  over, the slider is shrunk and frozen, as before. */
+  slider_style(oid: string): string {
+    const mine = this.get_weighted_delegation_allowed() || this.rate_yourself_toggle[oid]
+              || this.delegation_status != 'agreed'
+              || (this.get_different_delegation_allowed()
+                  && (this.option_delegated.get(oid) == null || this.option_delegated.get(oid) == ''));
+    if (!mine) {
+      return 'pointer-events: none; --bar-height: 5px; --knob-size: 17px';
+    }
+    return 'pointer-events: ; --bar-height: '
+         + (this.wap_is_shared(oid) ? '2px' : '7px') + '; --knob-size: 35px';
+  }
+
+  /** The colour this option's bar is drawn in. ion-range takes the name of a
+   *  vodle colour; an svg overlay needs the colour itself.
+   *
+   *  Once the poll is over the slider is disabled and drawn grey, so a mark
+   *  that kept the option's colour would be the one bright thing left on the
+   *  row, and would look like something one could still move. */
+  slider_colour(oid: string): string {
+    if (!this.p.allow_voting) { return 'var(--vodle-grey)'; }
+    const name = this.show_live ? this.slidercolor[oid] : 'vodleblue';
+    return 'var(--' + ({
+      vodlered: 'vodle-red',
+      vodlegreen: 'vodle-green',
+      vodledarkgreen: 'vodle-darkgreen',
+    }[name] || 'vodle-blue') + ')';
+  }
+
+  /** What the voter's own wap for an option amounts to once their delegates'
+   *  shares are blended in — the number the tally actually uses. */
+  blended_wap(oid: string): number {
+    return (this.p.proxy_ratings_map.get(oid) || new Map()).get(this.p.myvid) || 0;
+  }
+
+  get_weighted_delegation_allowed(): boolean {
+    return this.weighted_delegation_allowed;
+  }
+
   get_knob_pos(oid: string) {
     /** get the slider knob position (left and right pixel coordinates)
      *  to be able to compare with click/touch coordinate:
@@ -816,6 +1202,33 @@ export class PollPage implements OnInit {
       ] 
     }); 
     await confirm.present(); 
+  }
+
+  open_delegation_info_dialog_different() {
+    this.modalController.create({
+      component: DelegationDialogDifferentPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
+  }
+
+  delegation_info_dialog() {
+    if (this.G.D.get_different_delegation_allowed(this.pid)) {
+      this.open_delegation_info_dialog_different();
+      return;
+    }
+    // the same dialog lists a voter's delegations in a ranked and in a
+    // weighted poll; what differs is whether the second column is a place in
+    // an order or a share of the voter's wap. (#285 had a third page for the
+    // weighted case, which never got past a placeholder and which nothing
+    // opened.)
+    this.modalController.create({
+      component: DelegationDialogRankedPage, 
+      showBackdrop: true,
+      componentProps: {parent: this}
+    })
+    .then((modalElement)=>{modalElement.present();});
   }
 
   delegate_dialog(event: Event) {
@@ -889,44 +1302,125 @@ export class PollPage implements OnInit {
     })
   }
 
-  async revoke_delegation_dialog() { 
+  /** What a revocation leaves to do on this page.
+   *
+   *  Taking a delegation back changes whose waps count, so it changes the
+   *  scores and with them the order the options are shown in — which is the
+   *  whole point of the act and was the one thing the page did not redo.
+   *  The tally is recounted rather than patched, because a revocation is a
+   *  deliberate, rare act and a full recount cannot be out of step with it. */
+  after_revocation() {
+    this.set_delegate();
+    this.delegation_status = this.delegate ? 'agreed' : 'none';
+    this.update_delegation_info();
+    this.p.tally_all();
+    this.update_order(true);
+    this.show_stats();
+    this.G.D.save_state();
+  }
+
+  async revoke_delegation_dialog(dId?: string) : Promise<boolean> { 
     /** open the delegation revokation confirmation dialog alert */
     this.p.end_if_past_due();
     if (this.p.allow_voting) {
-      const confirm = await this.alertCtrl.create({ 
-        message: this.translate.instant(
-          'poll.revoke_delegation', {nickname: this.delegate}), 
-        buttons: [
-          { 
-            text: this.translate.instant('cancel'), 
-            role: 'Cancel',
-            handler: () => { 
-              console.log('Confirm Cancel.');  
-            } 
-          },
-          { 
-            text: this.translate.instant('OK'),
-            role: 'Ok', 
-            handler: async () => {
-              try {
-                await this.G.Del.revoke_delegation(this.pid, this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*"), '*');
-                if (!this.G.Del.get_my_outgoing_dids_cache(this.pid).get("*")) {
-                  this.delegate = null;
-                  this.delegation_status = 'none';
+      return new Promise(async (resolve) => {
+        const confirm = await this.alertCtrl.create({ 
+          message: this.translate.instant(
+            'poll.revoke_delegation', {nickname: this.delegate}), 
+          buttons: [
+            { 
+              text: this.translate.instant('cancel'), 
+              role: 'Cancel',
+              handler: () => { 
+                resolve(false);
+              } 
+            },
+            { 
+              text: this.translate.instant('OK'),
+              role: 'Ok', 
+              handler: () => {
+                const dm = this.G.D.get_direct_delegation_map(this.pid);
+                const list = dm.get(this.p.myvid) || [];
+                var did;
+                if (dId){
+                  did = dId;
+                }else{
+                  did = list[0][0] || null;
+                  for (const [did_, _, status] of list) {
+                    if (status == '2') {
+                      did = did_;
+                      break;
+                    }
+                  }
                 }
-                this.update_delegation_info();
-                await this.G.D.save_state();
-              } catch (err) {
-                this.G.L.error("PollPage could not revoke delegation", this.pid, err);
-                return false;
-              }
+                // awaited: the durable deletion comes first and only then is
+                // the delegation taken out of the poll's maps, so everything
+                // below would otherwise read the poll as it was
+                this.G.Del.revoke_delegation(this.pid, did, "*").then(() => {
+                  this.after_revocation();
+                  resolve(true);
+                }).catch(err => {
+                  this.G.L.error("PollPage.revoke_delegation_dialog failed", this.pid, did, err);
+                  resolve(false);
+                });
+              } 
             } 
-          } 
-        ] 
-      }); 
-      await confirm.present(); 
+          ] 
+        }); 
+        await confirm.present(); 
+      });
     }
-  } 
+    return false; // Return false if `allow_voting` is not true
+  }
+
+  async revoke_delegation_different_dialog(oids: string[]): Promise<boolean> {
+    this.p.end_if_past_due();
+    if (this.p.allow_voting) {
+      return new Promise(async (resolve) => {
+        const confirm = await this.alertCtrl.create({
+          message: this.translate.instant(
+            'poll.revoke_delegation', { nickname: this.get_delegate(oids[0]) }
+          ),
+          buttons: [
+            {
+              text: this.translate.instant('cancel'),
+              role: 'Cancel',
+              handler: () => {
+                resolve(false); // Resolve with false on cancel
+              },
+            },
+            {
+              text: this.translate.instant('OK'),
+              role: 'Ok',
+              handler: () => {
+                const dm = this.G.D.get_direct_delegation_map(this.pid);
+                const list = dm.get(this.p.myvid) || [];
+                var did = list[0][0] || null;
+                for (const [did_, _, status] of list) {
+                  if (status == '2') {
+                    did = did_;
+                    break;
+                  }
+                }
+                Promise.all(oids.map(oid => this.G.Del.revoke_delegation(this.pid, did, oid)))
+                  .then(() => {
+                    this.after_revocation();
+                    resolve(true); // Resolve with true on confirm
+                  }).catch(err => {
+                    this.G.L.error("PollPage.revoke_delegation_different_dialog failed",
+                                   this.pid, did, err);
+                    resolve(false);
+                  });
+              },
+            },
+          ],
+        });
+        await confirm.present();
+      });
+    }
+    return false; // Return false if `allow_voting` is not true
+  }
+  
 
   add_option(event: Event) {
     if(!this.p.can_add_option() || this.consent_pending){

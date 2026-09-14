@@ -61,6 +61,60 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </ion-input>
           </small>
         </ion-item>
+
+        <ng-container *ngIf="this.G.D.get_ranked_delegation_allowed(this.parent.pid)">
+        <ion-item>
+          <small>
+            <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.rank-label'|translate"></ion-label>
+            <ion-select aria-label="Rank" interface="popover" [placeholder]="rank"
+              (ionChange)="rank_changed($event)"
+              >
+              <ion-select-option *ngFor="let i of rank_options" [value]="i">{{i}}</ion-select-option>
+            </ion-select>
+          </small>
+        </ion-item>
+        </ng-container>
+
+        <ng-container *ngIf="this.G.D.get_different_delegation_allowed(this.parent.pid)">
+          <ion-item>
+            <small>
+              <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.different-label'|translate"></ion-label>
+              <ion-select aria-label="Options"
+              [placeholder]=""
+              [multiple]="true"
+              (ionChange)="options_changed($event)"
+              >
+                <ion-select-option *ngFor="let x of option_names" [value]="x">
+                  {{ x.name }}
+                </ion-select-option>
+              </ion-select>
+            </small>
+          </ion-item>
+        </ng-container>
+
+        <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
+          <ion-item lines="none">
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small><p [innerHtml]="'delegation-request.share-intro'|translate"></p></small>
+            </ion-col>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-label position="stacked"
+              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></ion-label>
+            <ion-range formControlName="trustLevel" min="0" [max]="weight_left" pin="true"></ion-range>
+          </ion-item>
+          <!-- both figures follow the slider: what is left to give is the
+               point of the whole screen, and a fixed "99% left to give" said
+               the opposite of the truth as soon as the voter moved it -->
+          <ion-item>
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small [innerHtml]="'delegation-request.share-balance'|translate:{
+                kept: share_kept(), left: share_left()
+              }"></small>
+            </ion-col>
+          </ion-item>
+        </ng-container>
+        
         <ng-container *ngIf="can_share">
           <ion-item lines="none">
             <ion-col class="ion-no-padding ion-no-margin">

@@ -80,9 +80,15 @@ describe('DataService consistency hardening (#292)', () => {
     return jasmine.createSpy('sync').and.returnValue(handler);
   };
 
+  let previous_mode: string;
   beforeEach(() => {
+    previous_mode = environment.delegation.mode;
+    // these reconcile a poll's single-delegate maps; the deployment's own
+    // setting is "weighted", whose blend is tested elsewhere
+    environment.delegation.mode = 'simple';
     svc = make_service();
   });
+  afterEach(() => { environment.delegation.mode = previous_mode; });
 
   describe('change-event coalescing', () => {
     beforeEach(() => {

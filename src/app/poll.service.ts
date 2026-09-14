@@ -441,6 +441,17 @@ export class Poll {
   get language(): string { return this.G.D.getp(this._pid, 'language'); }
   set language(value: string) { this.G.D.setp(this._pid, 'language', value); }
 
+  /** Which kind of delegation is in force (#285). It was three per-poll
+   *  keys, written into the poll by whoever drafted it; see delegation_mode
+   *  in data.service.ts for why that is not theirs to choose. (Read from the
+   *  environment here rather than through that function, because
+   *  data.service imports this file and the two would import each other.) */
+  get allow_ranked(): boolean { return environment.delegation.mode == 'ranked'; }
+
+  get allow_different(): boolean { return environment.delegation.mode == 'different'; }
+
+  get allow_weighted(): boolean { return environment.delegation.mode == 'weighted'; }
+
   get title(): string { return this.G.D.getp(this._pid, 'title'); }
   set title(value: string) { this.G.D.setp(this._pid, 'title', value); }
 
@@ -943,6 +954,21 @@ export class Poll {
 
   // Methods dealing with changes to the delegation graph:
 
+  /** Whether anyone has delegated to this voter, for any option (#285).
+   *
+   *  HEMPED's version of this returned a hardcoded `false`, so the UI it
+   *  gates was never finished. We hold the answer already: the inverse
+   *  effective delegation map is exactly "who ends up voting through me". */
+  have_been_delegated(vid: string): boolean {
+    for (const per_voter of this.inv_effective_delegation_map.values()) {
+      const delegators = per_voter.get(vid);
+      if (delegators && delegators.size > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   add_delegation(client_vid:string, oid:string, delegate_vid:string): boolean {
     if (!environment.delegation.enabled) {
       this.G.L.error("PollService.add_delegation when delegation is disabled", this._pid, client_vid, oid, delegate_vid);
@@ -1343,7 +1369,12 @@ export class Poll {
       if (!this.direct_delegation_map.get(oid)) {
         this.direct_delegation_map.set(oid, new Map());
       }
-      if (!this.direct_delegation_map.get(oid).has(vid)) {
+      if (this.allow_weighted) {
+        // a rating feeds into everyone who trusts this voter, in a share
+        // rather than whole, so the blend is recomputed, not copied along
+        // one edge:
+        this.update_weighted_proxy_ratings(update_tally);
+      } else if (!this.direct_delegation_map.get(oid).has(vid)) {
         this.G.L.trace("Poll.update_own_rating voter has not delegated", this.pid, vid, oid);
 
         // vid has not delegated this rating,
@@ -1359,6 +1390,72 @@ export class Poll {
         }
       }
     }
+  }
+
+  /** In a poll with weighted delegation, a voter's rating of an option is a
+   *  blend: what each of their delegates rates it, in the proportion of the
+   *  wap they were trusted with, plus what the voter rates it themselves
+   *  with whatever they kept —
+   *
+   *      w_i(o) = SUM_j t_ij w_j(o) + (1 - SUM_j t_ij) s_i(o)
+   *
+   *  a linear system in w, solved by iterating from everyone's own rating.
+   *  Since a voter cannot give all their wap away (get_trust_matrix scales
+   *  the shares so), the map is a contraction and the iteration converges —
+   *  which is why a cycle of delegations needs no forbidding here, and is
+   *  what the note at the top of delegation.service.ts proposed years ago.
+   *
+   *  #285 solved the same system, but capped the iteration at 15 rounds
+   *  with a tolerance of one wap point, which for a long chain of trust
+   *  stops well short of the answer. This runs until it has settled.
+   */
+  update_weighted_proxy_ratings(update_tally = false) {
+    if (!this.allow_weighted) { return; }
+    this.G.L.entry("Poll.update_weighted_proxy_ratings", this._pid);
+    const settled = 0.01, most_rounds = 1000;
+    for (const oid of this.oids) {
+      const own = this.own_ratings_map.get(oid) || new Map<string, number>(),
+            trusts = this.G.Del.get_trust_matrix(this._pid, oid);
+      // everyone the blend covers: whoever has rated, and whoever trusts or
+      // is trusted for this option
+      const vids = new Set<string>(this.T.all_vids_set);
+      for (const vid of own.keys()) { vids.add(vid); }
+      for (const [client_vid, row] of trusts) {
+        vids.add(client_vid);
+        for (const delegate_vid of row.keys()) { vids.add(delegate_vid); }
+      }
+      let w = new Map<string, number>();
+      for (const vid of vids) { w.set(vid, own.get(vid) || 0); }
+      let rounds = 0, change = Infinity;
+      while (change >= settled && rounds < most_rounds) {
+        const next = new Map<string, number>();
+        change = 0;
+        for (const vid of vids) {
+          const row = trusts.get(vid);
+          let value = own.get(vid) || 0;
+          if (row) {
+            let kept = 1;
+            value = 0;
+            for (const [delegate_vid, share] of row) {
+              value += share * (w.get(delegate_vid) || 0);
+              kept -= share;
+            }
+            value += kept * (own.get(vid) || 0);
+          }
+          change = Math.max(change, Math.abs(value - (w.get(vid) || 0)));
+          next.set(vid, value);
+        }
+        w = next;
+        rounds++;
+      }
+      if (change >= settled) {
+        this.G.L.warn("Poll.update_weighted_proxy_ratings did not settle", this._pid, oid, change, rounds);
+      }
+      for (const [vid, value] of w) {
+        this.update_proxy_rating(vid, oid, Math.round(value), update_tally);
+      }
+    }
+    this.G.L.exit("Poll.update_weighted_proxy_ratings");
   }
 
   update_proxy_rating(vid: string, oid: string, value: number, update_tally=false) {

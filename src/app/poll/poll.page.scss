@@ -17,3 +17,49 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+
+/* In a poll with weighted delegation the knob under the voter's hand is
+   their OWN wap, which is no longer what counts: their delegates' shares are
+   blended into it. So the knob is drawn as a control rather than a result —
+   outlined, hollow, on a thin ink-coloured line — and the blend is drawn
+   above it in the ordinary way, a coloured bar of the usual thickness ending
+   in a dot rather than a knob, because it is a result and not something to
+   drag.
+
+   The ink is --ion-text-color: black on a light background, as asked for,
+   and white on a dark one, where a black line on a near-black page is a line
+   one cannot see. */
+
+/* Painted through ::part rather than through --bar-background-active and
+   --knob-background: the slider always carries a vodle colour, and Ionic's
+   own `:host(.ion-color) .range-bar-active { background: var(--ion-color-base) }`
+   sets those backgrounds directly, so the variables never reached the bar.
+   A ::part rule is in the outer tree's cascade and does. */
+
+ion-range.own-wap-shared {
+  --own-wap-ink: var(--ion-text-color, #000);
+  --bar-background: transparent;
+  --bar-background-active: var(--own-wap-ink);
+  --knob-background: transparent;
+  --knob-box-shadow: none;
+}
+
+/* an ended poll is drawn grey, and this mark greys with it, like the blend */
+ion-range.own-wap-shared.own-wap-ended {
+  --own-wap-ink: var(--vodle-grey);
+}
+
+ion-range.own-wap-shared::part(bar) {
+  background: transparent;
+}
+
+ion-range.own-wap-shared::part(bar-active) {
+  background: var(--own-wap-ink);
+}
+
+ion-range.own-wap-shared::part(knob) {
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid var(--own-wap-ink);
+  box-shadow: none;
+}

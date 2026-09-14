@@ -290,6 +290,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         style="font-size: smaller">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
+      <!-- #285 put three delegation switches here, unlabelled (a floating
+           label inside an item that already holds a select does not show)
+           and untranslated. Which delegation a poll uses is now the
+           deployment's setting, environment.delegation.mode: see
+           DataService.get_delegation_mode. -->
     </ion-item>
 
     <!-- Server: -->

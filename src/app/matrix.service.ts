@@ -5147,8 +5147,12 @@ export class MatrixService {
   private async handleVoterDataEvent(pollId: string, voterId: string, key: string, event: any): Promise<void> {
     try {
       const content = (event && event.getContent) ? event.getContent() : (event?.content || {});
-      const value = await this.readPollValue(pollId, content);
-      if (value === undefined || value === null) {
+      // deleteVoterData overwrites the state event with an empty content, so
+      // that is how a deletion arrives — and the listeners have to hear about
+      // it, or a revoked delegation never reaches the delegate's device.
+      const deleted = !content || Object.keys(content).length === 0;
+      const value = deleted ? null : await this.readPollValue(pollId, content);
+      if (!deleted && (value === undefined || value === null)) {
         return;
       }
       const vodleVid = content?.voter_vid

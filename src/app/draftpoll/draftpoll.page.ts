@@ -85,7 +85,7 @@ export class DraftpollPage implements OnInit {
     is_test?,
     type?, language?, 
     title?, desc?, url?, 
-    due_type?, due_custom?, 
+    due_type?, due_custom?,
     db?, db_from_pid?, db_custom_server_url?, db_custom_password?,
     options?: option_data_t[] 
   };
@@ -178,7 +178,7 @@ export class DraftpollPage implements OnInit {
           pid:p.pid,
           type:p.type, language:p.language,
           title:p.title, desc:p.desc, url:p.url, 
-          due_type:p.due_type, due_custom:p.due_custom, 
+          due_type:p.due_type, due_custom:p.due_custom,
           db:p.db, db_from_pid:p.db_from_pid, db_custom_server_url:p.db_custom_server_url, db_custom_password:p.db_custom_password,
           options: [] 
         };

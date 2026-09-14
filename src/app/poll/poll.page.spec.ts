@@ -61,6 +61,171 @@ describe('PollPage', () => {
     };
   }
 
+  // In a poll with weighted delegation (#285) a delegation is a share of the
+  // voter's wap, not a switch: the voter always speaks for whatever they kept,
+  // and their wap on an option is a blend. The page has to say so, since the
+  // number the tally uses is then not the one under the voter's own knob.
+  describe('what a weighted poll shows about a voter\'s waps', () => {
+
+    beforeEach(() => {
+      component.pid = 'p1';
+      component.weighted_delegation_allowed = true;
+      component.p = {
+        myvid: 'v1',
+        oids: ['o1', 'o2'],
+        allow_voting: true,
+        proxy_ratings_map: new Map([['o1', new Map([['v1', 62]])]]),
+        get_my_own_rating: (oid: string) => oid == 'o1' ? 40 : 0,
+      } as any;
+      (component as any).G.D.save_state = () => {};
+      (component as any).G.D.get_direct_delegation_map = () => new Map([
+        // [did, share, status]: accepted 30%, accepted 20%, and one still
+        // waiting for an answer, which is not given away yet
+        ['v1', [['d1', '30', '2'], ['d2', '20', '2'], ['d3', '40', '0']]],
+      ]);
+      // o2 is one the voter has said something of their own about: nothing
+      // to d1 there, d2's general 20% left alone
+      const per_option: any = {d1: {o2: 0}};
+      (component as any).G.Del = {
+        get_delegate_trust: (_pid: string, did: string, oid?: string) => {
+          const own = oid && per_option[did] && per_option[did][oid];
+          if (own !== undefined && own !== false) { return own; }
+          return {d1: 30, d2: 20, d3: 40}[did] || 0;
+        },
+        set_delegate_trust: (_pid: string, did: string, value: number, oid?: string) => {
+          if (oid) { (per_option[did] = per_option[did] || {})[oid] = value; }
+        },
+        clear_delegate_trust: (_pid: string, did: string, oid: string) => {
+          if (per_option[did]) { delete per_option[did][oid]; }
+        },
+        option_has_own_trusts: (_pid: string, _vid: string, oid: string) =>
+          Object.values(per_option).some((by_oid: any) => by_oid[oid] !== undefined),
+      };
+    });
+
+    it('counts what the voter still speaks for themselves', () => {
+      expect(component.my_share_kept()).toBe(50);
+    });
+
+    it('keeps the whole wap when nothing has been accepted', () => {
+      (component as any).G.D.get_direct_delegation_map = () => new Map([
+        ['v1', [['d1', '30', '0']]],
+      ]);
+      expect(component.my_share_kept()).toBe(100);
+    });
+
+    it('reads the blend off the poll, which is what the tally uses', () => {
+      expect(component.blended_wap('o1')).toBe(62);
+    });
+
+    it('draws the blend separately only once a share is actually out', () => {
+      expect(component.wap_is_shared()).toBeTrue();
+      (component as any).G.D.get_direct_delegation_map = () => new Map();
+      expect(component.wap_is_shared())
+        .withContext('nothing given away, so the knob is the whole story').toBeFalse();
+    });
+
+    it('and never in a poll that does not weight delegations', () => {
+      component.weighted_delegation_allowed = false;
+      expect(component.wap_is_shared()).toBeFalse();
+    });
+
+    it('counts an option\'s own shares where the voter has set them', () => {
+      expect(component.my_share_kept('o1'))
+        .withContext('the general 30 and 20').toBe(50);
+      expect(component.my_share_kept('o2'))
+        .withContext('nothing to d1 here, so only d2\'s 20 is out').toBe(80);
+      expect(component.option_has_own_shares('o1')).toBeFalse();
+      expect(component.option_has_own_shares('o2')).toBeTrue();
+    });
+
+    // the blend is drawn by an svg overlay, which needs the colour itself
+    // rather than the name of a vodle colour that ion-range takes
+    it('draws the blend in the option\'s colour, and in grey once the poll is over', () => {
+      component.show_live = true;
+      (component as any).slidercolor = {o1: 'vodlegreen'};
+      expect(component.slider_colour('o1')).toBe('var(--vodle-green)');
+      (component.p as any).allow_voting = false;
+      expect(component.slider_colour('o1'))
+        .withContext('the slider goes grey when it can no longer be moved, and so does its mark')
+        .toBe('var(--vodle-grey)');
+    });
+
+    // Ionic paints .range-bar-active straight from the colour class
+    // (`:host(.ion-color) .range-bar-active { background: var(--ion-color-base) }`),
+    // which is why the bar has to be thinned here rather than only in the
+    // stylesheet: the variable never reached it.
+    it('draws the voter\'s own wap as a thin line, and an undelegated one full thickness', () => {
+      component.delegation_status = 'none';
+      expect(component.slider_style('o1')).toContain('--bar-height: 2px');
+      expect(component.slider_style('o1')).toContain('--knob-size: 35px');
+      (component as any).G.D.get_direct_delegation_map = () => new Map();
+      expect(component.slider_style('o1'))
+        .withContext('nothing given away, so the bar is the wap itself')
+        .toContain('--bar-height: 7px');
+    });
+
+    it('reports the range across the options for the summary line', () => {
+      expect(component.share_kept_range()).toEqual([50, 80]);
+    });
+
+    it('switches an option to the voter alone and back', () => {
+      component.set_option_shared('o1', false);
+      expect(component.my_share_kept('o1'))
+        .withContext('every share here set to nothing').toBe(100);
+      expect(component.wap_is_shared('o1')).toBeFalse();
+      component.set_option_shared('o1', true);
+      expect(component.my_share_kept('o1'))
+        .withContext('back to the general shares, which were never touched').toBe(50);
+    });
+
+    // the slider under an option is the voter's own wap, and stays theirs to
+    // move: what they kept is exactly what it is for. #285 tested for a
+    // single delegate here, so an accepted weighted delegation made the
+    // slider show the blend and ignore every drag.
+    it('leaves the wap the voter\'s to set even once a delegation is accepted', () => {
+      component.delegate = 'Ada';
+      component.rate_yourself_toggle = {o1: false};
+      expect(component.i_set_this_wap('o1')).toBeTrue();
+    });
+
+    it('and does not, in a poll where a delegate takes the option over', () => {
+      component.weighted_delegation_allowed = false;
+      component.delegate = 'Ada';
+      component.rate_yourself_toggle = {o1: false};
+      expect(component.i_set_this_wap('o1')).toBeFalse();
+      component.rate_yourself_toggle = {o1: true};
+      expect(component.i_set_this_wap('o1')).toBeTrue();
+    });
+
+  });
+
+  // Taking a delegation back changes whose waps count, so it changes the
+  // scores and the order the options are shown in. The page used not to
+  // redo either, and did its redraw before the revocation had even happened,
+  // since DelegationService.revoke_delegation is asynchronous — the durable
+  // deletion comes first and the poll's maps are only updated after it.
+  describe('after revoking a delegation', () => {
+
+    it('recounts the tally and re-sorts the options', () => {
+      component.p = stand_in_poll();
+      component.ready = true;
+      spyOn(component, 'set_delegate').and.stub();
+      spyOn(component, 'update_delegation_info').and.stub();
+      spyOn(component, 'update_order').and.stub();
+      spyOn(component, 'show_stats').and.stub();
+      (component as any).G.D.save_state = jasmine.createSpy('save_state');
+
+      component.after_revocation();
+
+      expect(component.p.tally_all).toHaveBeenCalled();
+      expect(component.update_order).toHaveBeenCalledWith(true);
+      expect(component.show_stats).toHaveBeenCalled();
+      expect(component.update_delegation_info).toHaveBeenCalled();
+    });
+
+  });
+
   // Regression tests for issue #98 ("Sorting options refresh"): changing a
   // rating with the keyboard fires no pointer-up event, so the change used
   // to be applied to the slider but never persisted or re-sorted. It is now
@@ -180,7 +345,7 @@ describe('PollPage', () => {
     });
 
     it('tallies once the poll is there', () => {
-      const poll: any = jasmine.createSpyObj('Poll', ['tally_all']);
+      const poll: any = jasmine.createSpyObj('Poll', ['tally_all', 'have_been_delegated']);
       poll.oids = [];
       (component as any).p = poll;
       component.ready = true;

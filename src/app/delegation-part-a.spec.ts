@@ -1,0 +1,575 @@
+/*
+(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.
+
+This file is part of vodle.
+
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { DelegationService } from './delegation.service';
+import { Poll } from './poll.service';
+import { environment } from '../environments/environment';
+
+/** Ranked and per-option delegation on the poll's own maps (#285).
+ *
+ *  The contributed branch kept the delegation graph, the ranks and the
+ *  trusts in two poll-wide documents that every voter had to be able to
+ *  rewrite — which is why the CouchDB validation function needed an
+ *  exception for them, and why one voter could have overwritten another
+ *  voter's delegations.
+ *
+ *  None of it has to be shared. A rank is the client's own statement about
+ *  their own delegation, so it rides in their own request; the graph is
+ *  what the poll already derives from the agreements every client builds
+ *  out of the requests and responses it can see. These tests drive the real
+ *  service against a database that routes a write back to the handlers the
+ *  way CouchDB's change feed does, and assert on the poll's maps — the ones
+ *  the tally, the cycle check and the weight check all read.
+ */
+describe('delegation without a shared document (#285)', () => {
+
+  const noop = () => {};
+  const L = {entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop};
+  const MAP_CACHES = [
+    'tally_caches', 'own_ratings_map_caches', 'direct_delegation_map_caches',
+    'inv_direct_delegation_map_caches', 'indirect_delegation_map_caches',
+    'inv_indirect_delegation_map_caches', 'effective_delegation_map_caches',
+    'inv_effective_delegation_map_caches', 'proxy_ratings_map_caches',
+    'max_proxy_ratings_map_caches', 'argmax_proxy_ratings_map_caches',
+    'effective_ratings_map_caches',
+  ];
+  const pid = 'part-a-test';
+
+  let previous_delegation: boolean;
+  let previous_mode: string;
+  beforeEach(() => {
+    previous_delegation = environment.delegation.enabled;
+    previous_mode = environment.delegation.mode;
+  });
+  afterEach(() => {
+    environment.delegation.enabled = previous_delegation;
+    environment.delegation.mode = previous_mode;
+  });
+
+  /** a poll, a delegation service, and a database that behaves like the
+   *  CouchDB one: a voter's write of a delegation key is routed back to the
+   *  handler that processes it, for every client, which is what makes the
+   *  agreements identical on all of them. */
+  function make_world(oids: string[], flags: {ranked?: boolean, different?: boolean, weighted?: boolean} = {}) {
+    // vid -> key -> value, i.e. one voter document per voter:
+    const voter_data = new Map<string, Map<string, string>>();
+    const poll_data = new Map<string, string>();
+    // how often each voter key has been written, for the specs that care
+    // that a value goes to the server once rather than twice:
+    const writes = new Map<string, number>();
+    let acting_vid = 'v1';
+    let ids = 0;
+
+    const own = (vid: string) => {
+      if (!voter_data.has(vid)) { voter_data.set(vid, new Map()); }
+      return voter_data.get(vid);
+    };
+
+    const D: any = {
+      // what doc2poll_cache does when a delegation key arrives:
+      route: (key: string, writer: string) => {
+        if (key.startsWith('del_request.')) {
+          Del.process_request_from_db(pid, key.substring('del_request.'.length), writer);
+        } else if (key.startsWith('del_response.')) {
+          Del.process_signed_response_from_db(pid, key.substring('del_response.'.length), writer);
+        }
+      },
+      getv: (_pid: string, key: string, vid?: string) => own(vid || acting_vid).get(key) || '',
+      setv: (_pid: string, key: string, value: string) => {
+        writes.set(key, (writes.get(key) || 0) + 1);
+        own(acting_vid).set(key, value);
+        D.route(key, acting_vid);
+        return true;
+      },
+      delv: async (_pid: string, key: string) => {
+        const writer = acting_vid;
+        own(writer).delete(key);
+        if (key.startsWith('del_request.')) {
+          Del.process_deleted_request_from_db(pid, key.substring('del_request.'.length), writer);
+        }
+      },
+      getp: (_pid: string, key: string) => (key == 'myvid') ? acting_vid : (poll_data.get(key) || ''),
+      setp: (_pid: string, key: string, value: string) => { poll_data.set(key, value); return true; },
+      get_ranked_delegation_allowed: () => !!flags.ranked,
+      get_different_delegation_allowed: () => !!flags.different,
+      get_weighted_delegation_allowed: () => !!flags.weighted,
+      // the signature machinery, kept honest enough for the checks that use it:
+      generate_id: () => 'd' + (++ids),
+      generate_sign_keypair: () => ({public: 'pub' + ids, private: 'priv' + ids}),
+      sign: (message: string, private_key: string) => private_key + '|' + message,
+      open_signed: (signed: string, public_key: string) =>
+        signed.startsWith(public_key.replace('pub', 'priv') + '|')
+          ? signed.substring(signed.indexOf('|') + 1) : null,
+      hash: (name: string) => Array.from(name as string)
+        .reduce((a, c) => a + c.charCodeAt(0), 7).toString(16),
+      setu: (_key: string, _value: string) => true,
+      delu: (_key: string) => true,
+      save_state: noop,
+      // the Matrix backend's extra real-time notifications; the authoritative
+      // write is the voter key above, which this world already routes:
+      request_delegation: () => Promise.resolve(),
+      respond_to_delegation: () => Promise.resolve(),
+      outgoing_dids_caches: {}, incoming_dids_caches: {}, delegation_agreements_caches: {},
+      page: null,
+    };
+    for (const cache of MAP_CACHES) { D[cache] = {}; }
+    D.get_direct_delegation_map = (p: string, oid?: string) => Del.get_direct_delegations(p, oid);
+    D.get_inverse_indirect_map = (p: string, oid?: string) => Del.get_inverse_delegations(p, oid);
+
+    const poll: any = Object.create(Poll.prototype);
+    const news: any[] = [];
+    const G: any = {L, D, P: {polls: {}},
+                    N: {add: (item: any) => news.push(item), filter: () => []}};
+    poll.G = G;
+    poll._pid = pid;
+    poll._state = 'running';
+    poll._options = {};
+    for (const oid of oids) { poll._options[oid] = {name: oid}; }
+    G.P.polls[pid] = poll;
+    // the delegation in force is the deployment's setting now, not the
+    // poll's, and Poll reads it straight from the environment:
+    environment.delegation.mode = flags.weighted ? 'weighted'
+                                : flags.ranked ? 'ranked'
+                                : flags.different ? 'different' : 'simple';
+    poll.tally_all();
+
+    const Del: any = new (DelegationService as any)({instant: (k: string) => k});
+    Del.G = G;
+    G.Del = Del;
+    environment.delegation.enabled = true;
+
+    /** who the client is for the calls that follow */
+    const as = (vid: string) => { acting_vid = vid; };
+
+    /** client_vid asks delegate_vid, for these options (all of them if none
+     *  are named), and the delegate answers. `stamp` is what the dialog puts
+     *  on the request before sending it — a rank or a share. Returns the
+     *  did. */
+    function request(client_vid: string, oids_wanted?: string[],
+                     stamp?: {rank?: number, trust?: number}): string {
+      as(client_vid);
+      const [, did, req, private_key, agreement] = oids_wanted
+        ? Del.prepare_delegation_for_options(pid, oids_wanted)
+        : Del.prepare_delegation(pid);
+      if (stamp) { Object.assign(req, stamp); }
+      Del.after_request_was_sent(pid, did, req, private_key, agreement);
+      // the private key travels in the link, not in the database:
+      keys.set(did, private_key);
+      return did;
+    }
+    const keys = new Map<string, string>();
+
+    function accept(delegate_vid: string, did: string, oids_accepted?: string[]) {
+      as(delegate_vid);
+      if (oids_accepted) {
+        Del.accept_different(pid, did, keys.get(did), oids_accepted);
+      } else {
+        Del.accept(pid, did, keys.get(did));
+      }
+    }
+
+    function decline(delegate_vid: string, did: string) {
+      as(delegate_vid);
+      Del.decline(pid, did, keys.get(did));
+    }
+
+    return {poll, Del, D, as, request, accept, decline, voter_data, news, writes};
+  }
+
+  describe('a rank lives in the client\'s own request', () => {
+
+    it('is stored there and read back from there', () => {
+      const w = make_world(['o1'], {ranked: true});
+      const did = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_rank(pid, did, 2);
+      expect(w.Del.get_delegate_rank(pid, did)).toBe(2);
+      const stored = JSON.parse(w.voter_data.get('v1').get('del_request.' + did));
+      expect(stored.rank).withContext('in the requester\'s own document').toBe(2);
+      // and nowhere else: no poll-wide document was written
+      expect(w.voter_data.get('v2')).toBeUndefined();
+    });
+
+    it('travels in the request that is sent, in a single write', () => {
+      // The share used to be written after the request, in a second write of
+      // the same key. On the Matrix backend those are two state events of the
+      // same type racing each other, and when the first one landed last the
+      // share was gone: the delegate showed as carrying 0% of the voter's
+      // wap, which in turn hid the per-option switches and the shared-wap
+      // slider, both of which ask whether anything was given away at all.
+      const w = make_world(['o1'], {weighted: true});
+      const did = w.request('v1', undefined, {trust: 80});
+      expect(w.writes.get('del_request.' + did))
+        .withContext('one write, so there is no second one to lose').toBe(1);
+      expect(w.Del.get_delegate_trust(pid, did)).toBe(80);
+      w.accept('v2', did);
+      expect(w.Del.get_direct_delegations(pid).get('v1'))
+        .withContext('and the shares list reads it back').toEqual([[did, '80', '2']]);
+    });
+
+    it('keeps a trust the same way, and the two do not collide', () => {
+      const w = make_world(['o1'], {weighted: true});
+      const did = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 40);
+      expect(w.Del.get_delegate_trust(pid, did)).toBe(40);
+      expect(w.Del.get_delegate_rank(pid, did)).withContext('no rank was set').toBe(0);
+      const stored = JSON.parse(w.voter_data.get('v1').get('del_request.' + did));
+      expect(stored.trust).toBe(40);
+      expect(stored.option_spec).withContext('the request is otherwise untouched')
+        .toEqual({type: '-', oids: []});
+    });
+
+  });
+
+  describe('the delegation graph is derived, not stored', () => {
+
+    it('reports a pending request, an accepted one and one in effect', () => {
+      const w = make_world(['o1']);
+      const did = w.request('v1');
+      expect(w.Del.get_direct_delegations(pid).get('v1'))
+        .withContext('pending').toEqual([[did, '0', '0']]);
+      w.accept('v2', did);
+      expect(w.Del.get_direct_delegations(pid).get('v1'))
+        .withContext('accepted and in effect').toEqual([[did, '0', '2']]);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+    });
+
+    it('orders a voter\'s delegations by rank', () => {
+      const w = make_world(['o1'], {ranked: true});
+      const first = w.request('v1'), second = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_rank(pid, first, 3);
+      w.Del.set_delegate_rank(pid, second, 1);
+      expect(w.Del.get_direct_delegations(pid).get('v1').map(e => e[0]))
+        .toEqual([second, first]);
+    });
+
+    it('leaves out the delegations that do not ask for the option', () => {
+      const w = make_world(['o1', 'o2'], {different: true});
+      const did = w.request('v1', ['o1']);
+      expect(w.Del.get_direct_delegations(pid, 'o1').has('v1')).toBeTrue();
+      expect(w.Del.get_direct_delegations(pid, 'o2').has('v1')).toBeFalse();
+    });
+
+    it('mirrors the poll\'s own inverse map, over all options at once', () => {
+      const w = make_world(['o1', 'o2'], {different: true});
+      w.accept('v2', w.request('v1', ['o1']));
+      w.accept('v3', w.request('v1', ['o2']));
+      expect(JSON.parse(w.Del.get_inverse_delegations(pid, 'o1').get('v2') || '[]'))
+        .toEqual(['v1']);
+      expect(w.Del.get_inverse_delegations(pid, 'o2').get('v2'))
+        .withContext('v2 carries nothing for o2').toBeUndefined();
+      expect(JSON.parse(w.Del.get_inverse_delegations(pid).get('v3') || '[]'))
+        .withContext('the union over the options').toEqual(['v1']);
+    });
+
+  });
+
+  describe('per-option delegation reaches the poll\'s per-option maps', () => {
+
+    it('delegates only the options the request asks for', () => {
+      const w = make_world(['o1', 'o2', 'o3'], {different: true});
+      w.accept('v2', w.request('v1', ['o1', 'o3']));
+      expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      expect(w.poll.effective_delegation_map.get('o2').get('v1')).toBeUndefined();
+      expect(w.poll.effective_delegation_map.get('o3').get('v1')).toBe('v2');
+    });
+
+    it('lets a delegate accept fewer options than were asked for', () => {
+      const w = make_world(['o1', 'o2'], {different: true});
+      w.accept('v2', w.request('v1', ['o1', 'o2']), ['o1']);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      expect(w.poll.effective_delegation_map.get('o2').get('v1')).toBeUndefined();
+    });
+
+    it('lets two delegates hold different options of the same voter', () => {
+      const w = make_world(['o1', 'o2'], {different: true});
+      w.accept('v2', w.request('v1', ['o1']));
+      w.accept('v3', w.request('v1', ['o2']));
+      expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      expect(w.poll.effective_delegation_map.get('o2').get('v1')).toBe('v3');
+    });
+
+  });
+
+  describe('what the delegate is offered', () => {
+
+    it('refuses a request from oneself even in a ranked poll', () => {
+      // #285 answered "ranked" before any of the checks, so a poll with
+      // ranked delegation offered a request from oneself for acceptance
+      const w = make_world(['o1'], {ranked: true});
+      const did = w.request('v1');
+      w.as('v1');
+      expect(w.Del.get_incoming_request_status(pid, did)).toEqual(['impossible', 'is-self']);
+    });
+
+    it('enforces the deployment\'s weight limit', () => {
+      // max_weight is 3 in the development environment: with two voters
+      // already delegating to v1, a third would put four waps in one pair
+      // of hands
+      const w = make_world(['o1']);
+      w.accept('v1', w.request('v2'));
+      w.accept('v1', w.request('v3'));
+      const did = w.request('v4');
+      w.as('v1');
+      const status = w.Del.get_incoming_request_status(pid, did);
+      expect(environment.delegation.max_weight).toBe(3);
+      expect(status).toEqual(['impossible', 'weight-exceeded']);
+    });
+
+    it('offers an ordinary request, and says when it would make a cycle', () => {
+      const w = make_world(['o1']);
+      const asked_of_v2 = w.request('v1');
+      w.as('v2');
+      expect(w.Del.get_incoming_request_status(pid, asked_of_v2))
+        .toEqual(['possible', 'acyclic']);
+      // now v2 delegates to v1, so accepting would close a loop
+      w.accept('v1', w.request('v2'));
+      w.as('v2');
+      expect(w.Del.get_incoming_request_status(pid, asked_of_v2))
+        .withContext('still possible, and the page warns').toEqual(['possible', 'two-way']);
+    });
+
+    it('marks a request the delegate has already turned down', () => {
+      const w = make_world(['o1']);
+      const did = w.request('v1');
+      w.decline('v2', did);
+      w.as('v2');
+      expect(w.Del.get_incoming_request_status(pid, did))
+        .toEqual(['declined, possible', 'acyclic']);
+    });
+
+  });
+
+  describe('a revoked request reaches the delegate', () => {
+
+    it('takes it off the delegate\'s list when the deletion arrives', () => {
+      const w = make_world(['o1']);
+      const did = w.request('v1');
+      w.accept('v2', did);
+      // the delegate's own record of the request, as the delrespond page
+      // stores it:
+      w.as('v2');
+      w.Del.get_my_incoming_dids_cache(pid).set(did, ['someone', 'a-link', 'agreed']);
+      w.as('v1');
+      return w.Del.revoke_delegation(pid, did, '*').then(() => {
+        expect(w.Del.get_my_incoming_dids_cache(pid).has(did))
+          .withContext('no longer waiting for an answer').toBeFalse();
+        expect(w.news.length).withContext('and said so once').toBe(1);
+        expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBeUndefined();
+      });
+    });
+
+    it('says nothing about one the delegate never accepted', () => {
+      const w = make_world(['o1']);
+      const did = w.request('v1');
+      w.as('v2');
+      w.Del.get_my_incoming_dids_cache(pid).set(did, ['someone', 'a-link', 'possible']);
+      w.as('v1');
+      return w.Del.revoke_delegation(pid, did, '*').then(() => {
+        expect(w.Del.get_my_incoming_dids_cache(pid).has(did)).toBeFalse();
+        expect(w.news.length).toBe(0);
+      });
+    });
+
+  });
+
+  describe('weighted delegation blends the ratings', () => {
+
+    /** give a delegate a share of the client's wap, accepted */
+    function trust(w: any, client_vid: string, delegate_vid: string, percent: number): string {
+      const did = w.request(client_vid);
+      w.as(client_vid);
+      w.Del.set_delegate_trust(pid, did, percent);
+      w.accept(delegate_vid, did);
+      return did;
+    }
+
+    it('takes half of the delegate\'s rating and half of one\'s own', () => {
+      const w = make_world(['o1'], {weighted: true});
+      trust(w, 'v1', 'v2', 50);
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      // 0.5 * 80 + 0.5 * 40
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v2'))
+        .withContext('the delegate rates for themselves').toBe(80);
+    });
+
+    it('adds up the shares of several delegates', () => {
+      const w = make_world(['o1'], {weighted: true});
+      trust(w, 'v1', 'v2', 30);
+      trust(w, 'v1', 'v3', 20);
+      w.poll.update_own_rating('v1', 'o1', 0, true);
+      w.poll.update_own_rating('v2', 'o1', 100, true);
+      w.poll.update_own_rating('v3', 'o1', 50, true);
+      // 0.3 * 100 + 0.2 * 50 + 0.5 * 0
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(40);
+    });
+
+    it('carries trust along a chain', () => {
+      const w = make_world(['o1'], {weighted: true});
+      trust(w, 'v1', 'v2', 50);
+      trust(w, 'v2', 'v3', 50);
+      w.poll.update_own_rating('v3', 'o1', 100, true);
+      // v2: 0.5 * 100 + 0.5 * 0; v1: 0.5 * 50 + 0.5 * 0
+      expect(w.poll.proxy_ratings_map.get('o1').get('v2')).toBe(50);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(25);
+    });
+
+    it('settles a cycle instead of forbidding it', () => {
+      // the bug the note at the top of delegation.service.ts describes:
+      // two voters delegating to each other. With shares it is a linear
+      // system with one solution, not a contradiction:
+      //   w1 = 0.5 w2 + 0.5 * 100,  w2 = 0.5 w1 + 0.5 * 0
+      //   => w1 = 0.25 w1 + 50 => w1 = 200/3, w2 = 100/3
+      const w = make_world(['o1'], {weighted: true});
+      trust(w, 'v1', 'v2', 50);
+      trust(w, 'v2', 'v1', 50);
+      w.poll.update_own_rating('v1', 'o1', 100, true);
+      w.poll.update_own_rating('v2', 'o1', 0, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(Math.round(200 / 3));
+      expect(w.poll.proxy_ratings_map.get('o1').get('v2')).toBe(Math.round(100 / 3));
+    });
+
+    it('scales down shares that add up to more than a voter has', () => {
+      // 80% and 80% cannot both be given away; they are scaled to 0.495
+      // each, leaving the voter 1% of their own wap
+      const w = make_world(['o1'], {weighted: true});
+      trust(w, 'v1', 'v2', 80);
+      trust(w, 'v1', 'v3', 80);
+      w.poll.update_own_rating('v1', 'o1', 0, true);
+      w.poll.update_own_rating('v2', 'o1', 100, true);
+      w.poll.update_own_rating('v3', 'o1', 100, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(99);
+    });
+
+    it('lets one option override the general shares', () => {
+      const w = make_world(['o1', 'o2'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 20, 'o2');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v1', 'o2', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      w.poll.update_own_rating('v2', 'o2', 80, true);
+      // o1 takes the general 50%, o2 the 20% set against it
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      expect(w.poll.proxy_ratings_map.get('o2').get('v1')).toBe(48);
+    });
+
+    it('takes an option back to the voter alone when every share there is nil', () => {
+      const w = make_world(['o1', 'o2'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 0, 'o2');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v1', 'o2', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      w.poll.update_own_rating('v2', 'o2', 80, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      expect(w.poll.proxy_ratings_map.get('o2').get('v1'))
+        .withContext('nothing shared here, so the voter\'s own wap stands').toBe(40);
+    });
+
+    it('gives the general share back when the option\'s own is cleared', () => {
+      const w = make_world(['o1'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.as('v1');
+      w.Del.set_delegate_trust(pid, did, 0, 'o1');
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(40);
+      expect(w.Del.option_has_own_trusts(pid, 'v1', 'o1')).toBeTrue();
+      w.Del.clear_delegate_trust(pid, did, 'o1');
+      expect(w.Del.option_has_own_trusts(pid, 'v1', 'o1')).toBeFalse();
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1'))
+        .withContext('back to the general 50%').toBe(60);
+    });
+
+    it('lets go of a delegate whose request is revoked', () => {
+      const w = make_world(['o1'], {weighted: true});
+      const did = trust(w, 'v1', 'v2', 50);
+      w.poll.update_own_rating('v1', 'o1', 40, true);
+      w.poll.update_own_rating('v2', 'o1', 80, true);
+      expect(w.poll.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+      w.as('v1');
+      return w.Del.revoke_delegation(pid, did, '*').then(() => {
+        expect(w.poll.proxy_ratings_map.get('o1').get('v1'))
+          .withContext('back to the voter\'s own rating').toBe(40);
+      });
+    });
+
+  });
+
+  describe('ranked delegation puts exactly one of them in effect', () => {
+
+    it('takes the better-ranked of two acceptances', () => {
+      const w = make_world(['o1'], {ranked: true});
+      const second_choice = w.request('v1'), first_choice = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_rank(pid, second_choice, 2);
+      w.Del.set_delegate_rank(pid, first_choice, 1);
+      w.accept('v2', second_choice);
+      w.accept('v3', first_choice);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1'))
+        .withContext('rank 1 wins').toBe('v3');
+      const dels = w.Del.get_direct_delegations(pid).get('v1');
+      expect(dels.find(e => e[0] == first_choice)[2]).withContext('in effect').toBe('2');
+      expect(dels.find(e => e[0] == second_choice)[2])
+        .withContext('accepted but not in effect').toBe('1');
+    });
+
+    it('falls back to the next choice when the first declines', () => {
+      const w = make_world(['o1'], {ranked: true});
+      const first_choice = w.request('v1'), second_choice = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_rank(pid, first_choice, 1);
+      w.Del.set_delegate_rank(pid, second_choice, 2);
+      w.accept('v2', first_choice);
+      w.accept('v3', second_choice);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1')).toBe('v2');
+      w.decline('v2', first_choice);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1'))
+        .withContext('the second choice takes over').toBe('v3');
+    });
+
+    it('prefers the chain whose ranks sum to least', () => {
+      // v1 can reach a voter who casts their own vote either through v2
+      // (rank 1, and v2 in turn delegates at rank 3) or straight to v3
+      // (rank 2, and v3 casts their own vote): 1+3 > 2.
+      const w = make_world(['o1'], {ranked: true});
+      const through_v2 = w.request('v1'), straight_to_v3 = w.request('v1');
+      w.as('v1');
+      w.Del.set_delegate_rank(pid, through_v2, 1);
+      w.Del.set_delegate_rank(pid, straight_to_v3, 2);
+      const v2_onwards = w.request('v2');
+      w.as('v2');
+      w.Del.set_delegate_rank(pid, v2_onwards, 3);
+      w.accept('v2', through_v2);
+      w.accept('v3', straight_to_v3);
+      w.accept('v4', v2_onwards);
+      expect(w.poll.effective_delegation_map.get('o1').get('v1'))
+        .withContext('2 beats 1+3').toBe('v3');
+    });
+
+  });
+
+});
