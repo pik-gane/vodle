@@ -201,8 +201,6 @@
         "message-body-regards": "Best regards",
         "nickname": "Nickname",
         "rank": "Rank",
-        "agreed-options": "Agreed Options",
-        "trust-level": "Trust Level",
         "status": "Status",
         "reorder": "Reorder delegations",
         "edit-shares": "Edit shares",
@@ -210,9 +208,10 @@
         "shares-in-general": "all options, in general",
         "use-general-shares": "Use my general shares here",
         "_COMMENT_share_": "[COMMENT] In a poll with weighted delegation, a delegation is not all-or-nothing: the participant gives each delegate a share of their wap, in percent, and speaks for the rest themselves.",
-        "share-intro": "You can give this person a share of your wap. Whatever you do not give away stays yours: your own waps still count for that part. You have {{left}}% left to give.",
-        "share-label": "Their share: {{share}}% — you keep {{kept}}%",
-        "share": "Share",
+        "share-intro": "You can give this person a share of your wap. Whatever you do not give away stays yours: your own waps still count for that part.",
+        "share-label": "Their share: {{share}}%",
+        "share-balance": "You keep {{kept}}% of your wap, and can still give {{left}}% of it away.",
+        "share-header": "Share",
         "you-keep": "You keep {{kept}}%"
     },
     "delete-all": {
@@ -235,8 +234,10 @@
         "-page-title": "Act as delegate?",
         "header": "Would you act as a delegate for {{from}} in the poll <i>“{{poll_title}}”?</i>",
         "intro": "Your waps will then also control the other participantʼs waps.",
+        "intro-weighted": "Your waps will then also control the other participantʼs waps to a certain extent.",
         "details": "If you accept, you can still choose whether you want to set your waps yourself or delegate your (and the other participantʼs) waps further to some third person.",
-        "details_ranked": "Note that this poll allows ranked delegation. [Insert explanation of how cycles and stuff are allowed]",
+        "details_ranked": "In this poll a participant may ask several people to be their delegate, in an order of preference: the best-ranked of those who accept is the one whose waps are used.",
+        "details-weighted": "In this poll a delegation is not all-or-nothing: the other participant gives each of their delegates a share of their wap, in percent, and speaks for the rest themselves. Several delegates can carry parts of it at once, and they can change your share, or take it back, at any time.",
         "check-first": "You can also check your waps first and then return here to accept or decline.",
         "accept": "Accept",
         "decline": "Decline",
@@ -263,9 +264,7 @@
         "try-again": "We apologize, vodle is still waiting for some data on this request. Please try this link again later.",
         "closed": "Unfortunately, this poll has already ended.",
         "is-self": "This request was created by yourself :-) Please send this link to the person youʼd like to ask for delegation!",
-        "checking": "Checking this request…",
-        "accepted-diff": "You have already accepted a request from the same person.",
-        "been-revoked": "Unfortunately, this request has already been revoked."
+        "checking": "Checking this request…"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
@@ -319,10 +318,7 @@
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-        "notification-saved-title": "Draft saved under “My polls”.",
-        "del_ranked": "Allow ranked delegation?",
-        "del_different": "Allow delegation of waps to different participants?",
-        "del_weighted": "Allow weighted delegation?"
+        "notification-saved-title": "Draft saved under “My polls”."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",

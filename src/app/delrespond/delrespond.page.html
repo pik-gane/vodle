@@ -83,9 +83,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.intro'|translate"></p> 
+        <!-- a weighted delegation carries a share of the other person's wap,
+             not all of it, so this page says so rather than promising more -->
+        <p [innerHtml]="'delrespond.intro-weighted'|translate"></p> 
         <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-        <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+        <small><p [innerHtml]="'delrespond.details-weighted'|translate"></p></small>
       </ion-col>
     </ion-item>  
     <ion-item lines="none" class="ion-text-center">

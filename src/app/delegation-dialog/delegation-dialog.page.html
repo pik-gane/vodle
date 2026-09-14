@@ -95,15 +95,23 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
           <ion-item lines="none">
             <ion-col class="ion-no-padding ion-no-margin">
-              <small><p [innerHtml]="'delegation-request.share-intro'|translate:{left:weight_left}"></p></small>
+              <small><p [innerHtml]="'delegation-request.share-intro'|translate"></p></small>
             </ion-col>
           </ion-item>
-          <ion-item>
+          <ion-item lines="none">
             <ion-label position="stacked"
-              [innerHtml]="'delegation-request.share-label'|translate:{
-                share: formGroup.get('trustLevel').value, kept: share_kept()
-              }"></ion-label>
+              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></ion-label>
             <ion-range formControlName="trustLevel" min="0" [max]="weight_left" pin="true"></ion-range>
+          </ion-item>
+          <!-- both figures follow the slider: what is left to give is the
+               point of the whole screen, and a fixed "99% left to give" said
+               the opposite of the truth as soon as the voter moved it -->
+          <ion-item>
+            <ion-col class="ion-no-padding ion-no-margin">
+              <small [innerHtml]="'delegation-request.share-balance'|translate:{
+                kept: share_kept(), left: share_left()
+              }"></small>
+            </ion-col>
           </ion-item>
         </ng-container>
         
