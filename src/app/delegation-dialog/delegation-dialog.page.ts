@@ -259,23 +259,45 @@ export class DelegationDialogPage implements OnInit {
     this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
   }
 
+  /** the share the slider is on */
+  share(): number {
+    return Number(this.formGroup.get('trustLevel').value) || 0;
+  }
+
   /** what the voter would still speak for themselves, in percent, if they
    *  gave this delegate the share the slider is on */
   share_kept(): number {
-    const share = Number(this.formGroup.get('trustLevel').value) || 0;
-    return Math.max(1, this.weight_left + 1 - share);
+    return Math.max(1, this.weight_left + 1 - this.share());
   }
 
-  /** Record what this delegation is worth to the client: where the delegate
+  /** and what they could still give to a further delegate after this one.
+   *  It is one less than what they keep: a voter can never give away all of
+   *  their wap, so a percent of it always stays with them. */
+  share_left(): number {
+    return Math.max(0, this.weight_left - this.share());
+  }
+
+  /** Record what this delegation is worth to the client — where the delegate
    *  stands in their order of preference, or how much of their wap the
-   *  delegate carries. Both go into the client's own request, which by now
-   *  after_request_was_sent() has stored. */
-  store_rank_or_trust() {
+   *  delegate carries — in the request itself, before it goes out.
+   *
+   *  It has to be in the request that is sent rather than written after it.
+   *  Both are the same key in the same document, so writing it afterwards is
+   *  a second write of `del_request.<did>`, and on the Matrix backend that is
+   *  a second state event of the same type racing the first: when the first
+   *  one landed last, the share was lost and the delegate appeared to carry
+   *  0% of the voter's wap — which in turn hid the per-option switches and
+   *  the shared-wap slider, both of which ask whether anything was given
+   *  away at all. */
+  stamp_rank_or_trust() {
+    if (!this.request) {
+      this.G.L.error("DelegationDialogPage.stamp_rank_or_trust without a request");
+      return;
+    }
     if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
-      this.G.Del.set_delegate_trust(this.parent.pid, this.did,
-                                    Number(this.formGroup.get('trustLevel').value));
+      this.request.trust = Number(this.formGroup.get('trustLevel').value);
     } else if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
-      this.G.Del.set_delegate_rank(this.parent.pid, this.did, this.rank);
+      this.request.rank = this.rank;
     }
   }
 
@@ -291,8 +313,9 @@ export class DelegationDialogPage implements OnInit {
       dialogTitle: 'Share vodle delegation link',
     }).then(res => {
       this.G.L.info("DelegationDialogPage.share_button_clicked succeeded", res);
+      this.stamp_rank_or_trust();
       this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-      this.store_rank_or_trust();
+      this.parent.update_delegation_info();
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
@@ -305,8 +328,8 @@ export class DelegationDialogPage implements OnInit {
     this.from_changed();
     this.prepare_if_different_allowed();
     window.navigator.clipboard.writeText(this.delegation_link);
+    this.stamp_rank_or_trust();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.store_rank_or_trust();
     LocalNotifications.schedule({
       notifications: [{
         title: this.translate.instant("delegation-request.notification-copied-link-title"),
@@ -330,8 +353,8 @@ export class DelegationDialogPage implements OnInit {
     this.prepare_if_different_allowed();
     this.delegate_nickname_changed();
     this.from_changed();
+    this.stamp_rank_or_trust();
     this.G.Del.after_request_was_sent(this.parent.pid, this.did, this.request, this.private_key, this.agreement);
-    this.store_rank_or_trust();
     this.parent.update_delegation_info();
     this.popover.dismiss();
     this.G.L.exit("DelegationDialogPage.email_button_clicked");

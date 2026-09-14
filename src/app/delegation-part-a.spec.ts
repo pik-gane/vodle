@@ -52,8 +52,15 @@ describe('delegation without a shared document (#285)', () => {
   const pid = 'part-a-test';
 
   let previous_delegation: boolean;
-  beforeEach(() => { previous_delegation = environment.delegation.enabled; });
-  afterEach(() => { environment.delegation.enabled = previous_delegation; });
+  let previous_mode: string;
+  beforeEach(() => {
+    previous_delegation = environment.delegation.enabled;
+    previous_mode = environment.delegation.mode;
+  });
+  afterEach(() => {
+    environment.delegation.enabled = previous_delegation;
+    environment.delegation.mode = previous_mode;
+  });
 
   /** a poll, a delegation service, and a database that behaves like the
    *  CouchDB one: a voter's write of a delegation key is routed back to the
@@ -63,6 +70,9 @@ describe('delegation without a shared document (#285)', () => {
     // vid -> key -> value, i.e. one voter document per voter:
     const voter_data = new Map<string, Map<string, string>>();
     const poll_data = new Map<string, string>();
+    // how often each voter key has been written, for the specs that care
+    // that a value goes to the server once rather than twice:
+    const writes = new Map<string, number>();
     let acting_vid = 'v1';
     let ids = 0;
 
@@ -82,6 +92,7 @@ describe('delegation without a shared document (#285)', () => {
       },
       getv: (_pid: string, key: string, vid?: string) => own(vid || acting_vid).get(key) || '',
       setv: (_pid: string, key: string, value: string) => {
+        writes.set(key, (writes.get(key) || 0) + 1);
         own(acting_vid).set(key, value);
         D.route(key, acting_vid);
         return true;
@@ -131,9 +142,11 @@ describe('delegation without a shared document (#285)', () => {
     poll._options = {};
     for (const oid of oids) { poll._options[oid] = {name: oid}; }
     G.P.polls[pid] = poll;
-    poll_data.set('allow_ranked', flags.ranked ? 'true' : 'false');
-    poll_data.set('allow_different', flags.different ? 'true' : 'false');
-    poll_data.set('allow_weighted', flags.weighted ? 'true' : 'false');
+    // the delegation in force is the deployment's setting now, not the
+    // poll's, and Poll reads it straight from the environment:
+    environment.delegation.mode = flags.weighted ? 'weighted'
+                                : flags.ranked ? 'ranked'
+                                : flags.different ? 'different' : 'simple';
     poll.tally_all();
 
     const Del: any = new (DelegationService as any)({instant: (k: string) => k});
@@ -145,12 +158,16 @@ describe('delegation without a shared document (#285)', () => {
     const as = (vid: string) => { acting_vid = vid; };
 
     /** client_vid asks delegate_vid, for these options (all of them if none
-     *  are named), and the delegate answers. Returns the did. */
-    function request(client_vid: string, oids_wanted?: string[]): string {
+     *  are named), and the delegate answers. `stamp` is what the dialog puts
+     *  on the request before sending it — a rank or a share. Returns the
+     *  did. */
+    function request(client_vid: string, oids_wanted?: string[],
+                     stamp?: {rank?: number, trust?: number}): string {
       as(client_vid);
       const [, did, req, private_key, agreement] = oids_wanted
         ? Del.prepare_delegation_for_options(pid, oids_wanted)
         : Del.prepare_delegation(pid);
+      if (stamp) { Object.assign(req, stamp); }
       Del.after_request_was_sent(pid, did, req, private_key, agreement);
       // the private key travels in the link, not in the database:
       keys.set(did, private_key);
@@ -172,7 +189,7 @@ describe('delegation without a shared document (#285)', () => {
       Del.decline(pid, did, keys.get(did));
     }
 
-    return {poll, Del, D, as, request, accept, decline, voter_data, news};
+    return {poll, Del, D, as, request, accept, decline, voter_data, news, writes};
   }
 
   describe('a rank lives in the client\'s own request', () => {
@@ -187,6 +204,23 @@ describe('delegation without a shared document (#285)', () => {
       expect(stored.rank).withContext('in the requester\'s own document').toBe(2);
       // and nowhere else: no poll-wide document was written
       expect(w.voter_data.get('v2')).toBeUndefined();
+    });
+
+    it('travels in the request that is sent, in a single write', () => {
+      // The share used to be written after the request, in a second write of
+      // the same key. On the Matrix backend those are two state events of the
+      // same type racing each other, and when the first one landed last the
+      // share was gone: the delegate showed as carrying 0% of the voter's
+      // wap, which in turn hid the per-option switches and the shared-wap
+      // slider, both of which ask whether anything was given away at all.
+      const w = make_world(['o1'], {weighted: true});
+      const did = w.request('v1', undefined, {trust: 80});
+      expect(w.writes.get('del_request.' + did))
+        .withContext('one write, so there is no second one to lose').toBe(1);
+      expect(w.Del.get_delegate_trust(pid, did)).toBe(80);
+      w.accept('v2', did);
+      expect(w.Del.get_direct_delegations(pid).get('v1'))
+        .withContext('and the shares list reads it back').toEqual([[did, '80', '2']]);
     });
 
     it('keeps a trust the same way, and the two do not collide', () => {
