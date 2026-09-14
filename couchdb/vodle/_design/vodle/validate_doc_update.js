@@ -38,7 +38,7 @@ function (newDoc, savedDoc, userCtx) {
                     }
                     */
                 } else {
-                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("\u00a7"));
+                    let doc_pid = _id.substring(pollprefix.length, _id.indexOf("§"));
                     // if doc already exists, let noone update or delete it.
                     // (In particular, no voter tombstones are allowed here: a
                     // validate function cannot verify that a deleted revision
@@ -47,14 +47,7 @@ function (newDoc, savedDoc, userCtx) {
                     // immutable shared poll metadata. Client-side conflict
                     // cleanup (#292) therefore only deletes losing revisions
                     // of documents the client's credentials own.)
-                    // The one exception left from #285 is the waps document,
-                    // which its weighted delegation still keeps poll-wide and
-                    // every voter must be able to amend. It is therefore NOT
-                    // immutable shared metadata, and a voter can damage it —
-                    // which the client has to survive rather than assume away.
-                    // The delegation maps no longer need one: each client
-                    // derives them from the requests and responses it can see.
-                    if (savedDoc && !_id.endsWith("waps")) {
+                    if (savedDoc) {
                         throw ({forbidden: 'Noone may update or delete existing poll documents.'})
                     }
                     // let only the voters create it:

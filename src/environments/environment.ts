@@ -145,8 +145,7 @@ export const environment = {
     // which is a policy choice and not a detail of the feature, so raising
     // it is the owner's to make deliberately.
     max_weight: 3,
-    max_delegations: 3,
-    weighted_epsilon: 1
+    max_delegations: 3
   },
   no_more_options_time_fraction: 1/2,
   db_put_retry_delay_ms: 100,

@@ -134,6 +134,15 @@ export class DelrespondPage implements OnInit {
     return second == 'not-in-db' || second == 'poll-unknown';
   }
 
+  /** The delegate said no to this request once, but could still say yes.
+   *  Which of the three answerable shapes it is does not matter here: the
+   *  page says the same thing about all of them. */
+  declined_but_possible(): boolean {
+    const first = (this.status || [])[0];
+    return first == 'declined, possible' || first == 'declined, ranked'
+        || first == 'declined, weighted';
+  }
+
   /** Whether the template has a block for this status.
    *
    *  One that it does not know must still put something on the screen: four
@@ -144,12 +153,11 @@ export class DelrespondPage implements OnInit {
     const [first, second] = this.status || [];
     return first == 'possible' || first == 'accepted' || first == 'closed'
         || first == 'ranked' || first == 'weighted'
-        || first == 'declined, possible' || first == 'declined, impossible'
+        || first == 'declined, possible' || first == 'declined, ranked'
+        || first == 'declined, weighted' || first == 'declined, impossible'
         || (first == 'impossible'
             && (second == 'weight-exceeded' || second == 'not-in-db'
-                || second == 'poll-unknown' || second == 'is-self'
-                || second == 'two-way' || second == 'cycle'
-                || second == 'accepted-diff' || second == 'revoked'));
+                || second == 'poll-unknown' || second == 'is-self'));
   }
 
   ionViewDidLeave() {

@@ -93,14 +93,6 @@ export class MypollsPage implements OnInit {
         for (let [did, [from, url, status]] of cache) {
           if (["possible","two-way","cycle"].includes(status)) {
             this.G.L.trace("MypollsPage.onDataChange found unanswered request", did, from, url, status);
-            // check if request has been revoked:
-            const a = this.G.Del.get_agreement(pid, did);
-            if (this.G.D.getv(pid, "del_status." + did, a.client_vid) === 'revoked') {
-              // delete request from cache:
-              newcache.delete(did);
-              continue;
-            }
-
             this.unanswered_requests.push({pid:pid, did:did, from:from, url:url, status:status});
           }
         }  

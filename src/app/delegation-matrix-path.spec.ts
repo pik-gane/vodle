@@ -64,6 +64,19 @@ describe('the delegation path on the Matrix backend (#327)', () => {
       expect(MatrixService.voterDataKeyOf(undefined as any)).toBeNull();
     });
 
+    it('tells the listeners when a voter empties the event, which is a deletion', async () => {
+      const seen: any[] = [];
+      (service as any).pollEventListeners.set('p1', [{
+        onVoterDataChange: (pollId: string, vid: string, key: string, value: any) =>
+          seen.push([pollId, vid, key, value]),
+      }]);
+      (service as any).voterVidMap.set('p1:@someone:hs', 'v9');
+      await (service as any).handleVoterDataEvent('p1', '@someone:hs', 'del_request.d1',
+        {getContent: () => ({})});
+      expect(seen).withContext('an empty content is how deleteVoterData deletes')
+        .toEqual([['p1', 'v9', 'del_request.d1', null]]);
+    });
+
     it('hands a delegation request to the poll\'s listeners', async () => {
       const seen: any[] = [];
       (service as any).pollEventListeners.set('p1', [{
@@ -108,6 +121,8 @@ describe('the delegation path on the Matrix backend (#327)', () => {
             processed.push(['request', pid, did, vid]),
           process_signed_response_from_db: (pid: string, did: string, vid: string) =>
             processed.push(['response', pid, did, vid]),
+          process_deleted_request_from_db: (pid: string, did: string, vid: string) =>
+            processed.push(['deleted', pid, did, vid]),
         },
         D: svc,
       };
@@ -129,6 +144,36 @@ describe('the delegation path on the Matrix backend (#327)', () => {
       svc.matrix_voter_data_arrived('p1', 'v9', 'something.else', 'x');
       expect(svc.getv('p1', 'something.else', 'v9')).toBe('x');
       expect(processed).toEqual([]);
+    });
+
+    // A voter deletes data on Matrix by overwriting the state event with an
+    // empty content, which is how a revoked delegation reaches the delegate.
+    // doc2poll_cache routes that to process_deleted_request_from_db; this
+    // handed it to process_request_from_db, where an empty request only made
+    // the agreement look unfinished, so the revoked request stayed put.
+    it('treats an emptied request as the revocation it is', () => {
+      svc.matrix_voter_data_arrived('p1', 'v9', 'del_request.d1', '{"x":1}');
+      processed.length = 0;
+      svc.matrix_voter_data_arrived('p1', 'v9', 'del_request.d1', null);
+      expect(processed).toEqual([['deleted', 'p1', 'd1', 'v9']]);
+      expect(svc.getv('p1', 'del_request.d1', 'v9'))
+        .withContext('and the value is gone, not an empty request').toBe('');
+    });
+
+    it('does not read an emptied response as an answer', () => {
+      svc.matrix_voter_data_arrived('p1', 'v9', 'del_response.d1', '');
+      expect(processed).toEqual([]);
+      expect(svc.getv('p1', 'del_response.d1', 'v9')).toBe('');
+    });
+
+    it('carries the rank and the trust that ride in a request', () => {
+      // they live in the client's own request now, so the Matrix path that
+      // already delivers the request delivers them too
+      const request = '{"option_spec":{"type":"-","oids":[]},"public_key":"k","rank":2,"trust":40}';
+      svc.matrix_voter_data_arrived('p1', 'v9', 'del_request.d1', request);
+      const stored = JSON.parse(svc.getv('p1', 'del_request.d1', 'v9'));
+      expect(stored.rank).toBe(2);
+      expect(stored.trust).toBe(40);
     });
 
     it('survives a delegation service that throws, rather than losing the value', () => {

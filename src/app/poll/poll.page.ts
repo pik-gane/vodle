@@ -445,24 +445,13 @@ export class PollPage implements OnInit {
     this.declined_requests = [];
     if (cache) {
       for (const [did, [from, url, status]] of cache) {
-        const st = this.G.D.getv(this.pid, "del_status."+did);
-        if (st && st != status) {
-          if (status == 'agreed') {
-            if (st == 'revoked') {
-              this.G.N.add({
-                class: 'delegation_declined', 
-                pid: this.pid,
-                title: this.translate.instant('news-title.delegation_revoked', {nickname: from}),
-              });
-              cache.delete(did);
-            }
-          }
-        }else{
-          if (status == 'agreed') {
-            this.accepted_requests.push({from:from, url:url});
-          } else if (status.startsWith('declined')) {
-            this.declined_requests.push({from:from, url:url});
-          } 
+        // a revoked request takes itself off this list when the deletion
+        // arrives (DelegationService.process_deleted_request_from_db); #285
+        // looked for a del_status key here that nothing ever wrote.
+        if (status == 'agreed') {
+          this.accepted_requests.push({from:from, url:url});
+        } else if (status.startsWith('declined')) {
+          this.declined_requests.push({from:from, url:url});
         }
       }
     }
@@ -550,34 +539,13 @@ export class PollPage implements OnInit {
   }
 
   on_rate_yourself_toggle_change(oid:string) {
-  //const new_rating = this.p.own_ratings_map.get(oid).get(this.p.myvid);
-    // update delegation data:
-    var did = null;
-    const dm = this.G.D.get_direct_delegation_map(this.pid);
-    const list = dm.get(this.p.myvid) || [];
-    for (const [did_, _, status] of list) {
-      if (status == '2') {
-        did = did_;
-        break;
-      }
-    }
-
-    // set rating
-    if (this.rate_yourself_toggle[oid]) {
-      const rm = this.G.D.get_self_waps(this.pid).get(this.p.myvid);
-      this.p.set_my_own_rating(oid, rm.get(oid), true);
-      this.show_stats();
-    } else {
-      var d = this.G.Del.get_my_outgoing_dids_cache(this.pid).get('*');
-      if (this.get_different_delegation_allowed()) {
-        d = this.option_delegated.get(oid);
-      }
-      this.p.set_my_own_rating(oid, +this.G.D.getv(this.pid, "rating."+oid, d)||0, true);
-    }
-
-    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid], did);
-    // update slider value:
-//    this.get_slider(oid).value = new_rating.toString();
+    // #285 restored the voter's own rating from a poll-wide waps document
+    // here, and took the delegate's rating as their own when switching the
+    // other way. Neither is needed: a delegation never overwrites a voter's
+    // own rating in the first place — the poll keeps it in own_ratings_map
+    // and the delegate's in the effective one — so toggling the switch only
+    // has to (de)activate the delegation.
+    this.G.Del.update_my_delegation(this.pid, oid, !this.rate_yourself_toggle[oid]);
     this.on_delegate_toggle_change();
     this.G.D.save_state();
   }

@@ -116,7 +116,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
   </ng-container>
 
-  <ng-container *ngIf="status[0]=='possible'">
+  <ng-container *ngIf="status[0]=='possible' && status[1]=='acyclic'">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -152,11 +152,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>  
   </ng-container>
 
-  <!-- Acceptance would lead to cycle: - ->
-    (We do no longer disallow this. 
-     TODO: We should however tell the user that a cycle is created) -->
+  <!-- Acceptance would lead to a cycle. It is not disallowed — the poll's
+       maps carry cycles, and with weighted delegation they even settle to a
+       definite answer — but the delegate is told before they agree. -->
 
-  <ng-container *ngIf="(status[1]=='cycle'||status[1]=='two-way') && status[0]=='impossible'">
+  <ng-container *ngIf="status[0]=='possible' && (status[1]=='cycle'||status[1]=='two-way')">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4> 
@@ -177,7 +177,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
         </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary" disabled="true"
+        <ion-button size="large" color="primary"
             shape="round"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
@@ -312,7 +312,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <!-- Request was already declined but can be accepted after the fact: -->
 
-  <ng-container *ngIf="status[0]=='declined, possible'">
+  <ng-container *ngIf="declined_but_possible()">
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
@@ -473,22 +473,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ng-container>
 
   <!-- Already accepted a different delegation from user-->
-  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='accepted-diff')">
-    <ion-item [innerHtml]="'delrespond.accepted-diff'|translate">      
-    </ion-item>  
-    <ion-button size="large" color="primary" slot="end"
-        shape="round"
-        (click)="dismiss()">
-      <span [innerHtml]="'OK'|translate"></span>&nbsp;
-    </ion-button>
-  </ng-container>
 
-  <ng-container *ngIf="(status[0]=='impossible')&&(status[1]=='revoked')">
-    <ion-item [innerHtml]="'delrespond.been-revoked'|translate">      
-    </ion-item>
-    <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-      <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-    </ion-button>
-  </ng-container>
   
 </ion-content>
