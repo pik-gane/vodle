@@ -45,7 +45,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <!-- Show details button: -->
     <ion-item color="primary">
       <ion-label><span [innerHtml]="'draftpoll.general-information'|translate"></span></ion-label>
-      <ion-button slot="end" fill="clear" (click)="show_details=!show_details" class="ion-no-margin ion-no-padding">
+      <!--A clear button takes its text colour from the primary colour, which
+          here is exactly the colour of the bar it sits on, so this label was
+          drawn invisible on it (in both themes, and under Ionic 6 as well).
+          currentColor is the bar's own contrast colour, the one the label
+          beside it uses.-->
+      <ion-button slot="end" fill="clear" (click)="show_details=!show_details"
+          class="ion-no-margin ion-no-padding" style="--color: currentColor;">
         <span [innerHtml]="'draftpoll.details'|translate"></span>
         <ion-toggle 
           name="detail-toggle" #detailstoggle [checked]="show_details"
