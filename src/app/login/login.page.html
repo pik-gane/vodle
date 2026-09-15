@@ -87,13 +87,13 @@ TODO:
         </ion-item>
         <form [formGroup]="languageFormGroup">
           <ion-item>
-            <ion-label position="floating" color="primary">
+            <ion-select labelPlacement="floating" #ionSelects interface="popover" formControlName="language" data-vodle="language-select"
+                [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+                (ionChange)="set_language()">
+              <ion-label slot="label" color="primary">
               <ion-icon name="language-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'language'|translate"></span>
             </ion-label>
-            <ion-select #ionSelects interface="popover" formControlName="language" data-vodle="language-select"
-                [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-                (ionChange)="set_language()">
               <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
             </ion-select>
           </ion-item>
@@ -140,13 +140,13 @@ TODO:
           <ion-row class="ion-no-padding">
             <ion-col class="ion-no-padding">
               <ion-item>
-                <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
-                <ion-input #input_email
+                <ion-input labelPlacement="floating" #input_email
                   formControlName="email" [maxlength]="E.max_len.name"
                   type="text" inputmode="email" [autofocus]="step=='old_email'"
                   data-vodle="email-input"
                   (ionInput)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
+                  <ion-label slot="label" color="primary" [innerHtml]="'email'|translate"></ion-label>
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
               </ion-item>
             </ion-col>
@@ -218,8 +218,7 @@ TODO:
           <ion-row class="ion-no-padding ion-nowrap">
             <ion-col class="ion-no-padding">
               <ion-item>
-                <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-                <ion-input #input_new_password
+                <ion-input labelPlacement="floating" #input_new_password
                   formControlName="password"
                   clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
@@ -227,6 +226,7 @@ TODO:
                   data-vodle="new-password-input"
                   (ionInput)="set_password()" debounce="100"
                   (ionBlur)="blur_password()">
+                  <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 </ion-input>
               </ion-item>
             </ion-col>
@@ -248,8 +248,7 @@ TODO:
           </div>
           <ng-container>
             <ion-item>
-              <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
-              <ion-input 
+              <ion-input labelPlacement="floating" 
                 formControlName="confirm_password" 
                 #input_retype_password  [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
@@ -258,6 +257,7 @@ TODO:
                 data-vodle="confirm-password-input"
                 (ionInput)="set_password()" debounce="100"
                 (keydown.enter)="submit_new_password()">
+                <ion-label slot="label" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
               </ion-input>
             </ion-item>
             <div class="validation-errors">
@@ -300,8 +300,7 @@ TODO:
           <ion-row class="ion-no-padding">
             <ion-col class="ion-no-padding">
               <ion-item>
-                <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-                <ion-input #input_old_password
+                <ion-input labelPlacement="floating" #input_old_password
                   formControlName="password"
                   clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                   [type]="showing_password?'text':'password'" required autofocus="true"
@@ -309,6 +308,7 @@ TODO:
                   data-vodle="old-password-input"
                   (ionInput)="set_old_password()" debounce="100"
                   (keydown.enter)="submit_old_password()">
+                  <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
                 </ion-input>
               </ion-item>
             </ion-col>

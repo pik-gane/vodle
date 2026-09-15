@@ -225,13 +225,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ng-container *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
       <ion-item *ngIf="acceptable[P.oidsorted[i]] && P.oidsorted[i] != favourite">
         <ng-container *ngIf="P.oidsorted[i] != favourite">
-          <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
           <ion-buttons slot="end">
             <ion-input 
               inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
               [(ngModel)]="estimates[P.oidsorted[i]]" 
               debounce="100" (ngModelChange)="estimate_change()"
-            ></ion-input>&nbsp;%
+            >
+              <ion-label slot="label"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
       </ion-item>  

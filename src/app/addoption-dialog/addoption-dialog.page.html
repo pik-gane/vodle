@@ -34,14 +34,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!-- NAME: -->
 
       <ion-item>
-        <ion-label position="floating" color="primary">
-          <span [innerHtml]="
-              (p.type=='winner' 
-              ? 'draftpoll.option-name-label' 
-              : 'draftpoll.target-name-label') | translate">
-          </span>
-        </ion-label>
-        <ion-input  
+        <ion-input labelPlacement="floating"  
           [disabled]="!p.can_add_option()"
           formControlName="option_name" 
           autofocus="true" #focus_element
@@ -51,6 +44,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           type="text" required [maxlength]="E.max_len.name" 
           style="font-weight: bold; font-style: italic;"
           data-vodle="new-option-name-input">
+          <ion-label slot="label" color="primary">
+          <span [innerHtml]="
+              (p.type=='winner' 
+              ? 'draftpoll.option-name-label' 
+              : 'draftpoll.target-name-label') | translate">
+          </span>
+        </ion-label>
         </ion-input>
       </ion-item>
       <div class="validation-errors">
@@ -66,17 +66,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!-- DESCRIPTION: -->
 
       <ion-item>
-        <ion-label position="floating" color="primary">
-          <span [innerHtml]="'draftpoll.option-desc-label'|translate">
-          </span>
-        </ion-label>
-        <ion-textarea 
+        <ion-textarea labelPlacement="floating" 
           [disabled]="!p.can_add_option()"
           formControlName="option_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
           rows="1" auto-grow type="text" 
           style="font-style: italic;"
           data-vodle="new-option-description-input">
+          <ion-label slot="label" color="primary">
+          <span [innerHtml]="'draftpoll.option-desc-label'|translate">
+          </span>
+        </ion-label>
         </ion-textarea>
       </ion-item>
       <div class="validation-errors">
@@ -92,16 +92,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <!-- READ-MORE LINK (URL): -->
 
       <ion-item>
-        <ion-label position="floating" color="primary">
-          <span [innerHtml]="'draftpoll.option-url-label'|translate">
-          </span>
-        </ion-label>
-        <ion-input 
+        <ion-input labelPlacement="floating" 
           [disabled]="!p.can_add_option()"
           formControlName="option_url" 
           [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
           type="text" inputmode="url" [maxlength]="E.max_len.url"
           style="font-size: smaller;">
+          <ion-label slot="label" color="primary">
+          <span [innerHtml]="'draftpoll.option-url-label'|translate">
+          </span>
+        </ion-label>
         </ion-input>
         <ion-button 
             *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 

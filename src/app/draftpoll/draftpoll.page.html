@@ -56,7 +56,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
     <!-- Poll type: -->
     <ion-item [color]="stage==0?'warning':''"><!--stage 0-->
-      <ion-label color="primary" position="floating">
+      <ion-select labelPlacement="floating" 
+          formControlName="poll_type" 
+          text-wrap autofocus tabindex="0" 
+          #ionSelects #type_select data-vodle="poll-type-select"
+          [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+          (ionChange)="set_poll_type();changed_poll_type()">
+        <ion-label slot="label" color="primary">
         <span *ngIf="formGroup.get('poll_type').valid" 
             [class]="stage==0?'current-field':''" 
             ><!--style="position:relative;top:3px;z-index:10;" now in class=poll-type-->
@@ -68,12 +74,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [innerHtml]="'draftpoll.type-label'|translate">
         </span>
       </ion-label>
-      <ion-select 
-          formControlName="poll_type" 
-          text-wrap autofocus tabindex="0" 
-          #ionSelects #type_select data-vodle="poll-type-select"
-          [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-          (ionChange)="set_poll_type();changed_poll_type()">
         <ion-select-option text-wrap value="winner" [innerHtml]="'draftpoll.type-winner'|translate"></ion-select-option>
         <ion-select-option text-wrap value="share" [innerHtml]="'draftpoll.type-share'|translate"></ion-select-option>
       </ion-select>
@@ -91,12 +91,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <!-- Poll title: -->
     <ng-container *ngIf="stage>0">
       <ion-item [color]="stage==1?'warning':'light'"><!--stage 1-->
-        <ion-label position="floating" color="primary">
-          <span [class]="stage==1?'current-field':''" 
-            [innerHtml]="'draftpoll.title-label'|translate">
-          </span>
-        </ion-label>
-        <ion-input  
+        <ion-input labelPlacement="floating"  
           id="input_poll_title"
           formControlName="poll_title" [maxlength]="E.max_len.title"
           [placeholder]="'draftpoll.title-placeholder'|translate"
@@ -106,6 +101,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           (ionInput)="set_poll_title();" debounce="100"
           (keydown)="poll_title_onKeydown($event)"
           (ionBlur)="blur_poll_title()">
+          <ion-label slot="label" color="primary">
+          <span [class]="stage==1?'current-field':''" 
+            [innerHtml]="'draftpoll.title-label'|translate">
+          </span>
+        </ion-label>
         </ion-input>      
       </ion-item>
       <div class="validation-errors">
@@ -122,13 +122,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <!-- Poll description: -->
     <ng-container *ngIf="stage>1 && show_details">
       <ion-item [color]="stage==2?'warning':''"><!--stage 2-->
-        <ion-label position="floating" color="primary">
-          <span [class]="stage==2?'current-field':''" 
-            [innerHtml]="'draftpoll.desc-label'|translate">
-          </span>
-        </ion-label>
         <!--TODO: textarea too large (mostly white) in Firefox when desc is long -->
-        <ion-textarea 
+        <ion-textarea labelPlacement="floating" 
           id="input_poll_desc"
           formControlName="poll_desc" [maxlength]="E.max_len.desc"
           [placeholder]="'draftpoll.desc-placeholder'|translate"
@@ -138,6 +133,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           (ionInput)="set_poll_desc()" debounce="100"
           (keydown)="poll_desc_onKeydown($event)"
           (ionBlur)="blur_poll_desc()">
+          <ion-label slot="label" color="primary">
+          <span [class]="stage==2?'current-field':''" 
+            [innerHtml]="'draftpoll.desc-label'|translate">
+          </span>
+        </ion-label>
         </ion-textarea>
         <ion-button 
           *ngIf="stage==2 && [null,''].includes(formGroup.get('poll_desc').value)" 
@@ -159,12 +159,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <!-- Poll URL: -->
     <ng-container *ngIf="stage>2 && show_details">
       <ion-item [color]="stage==3?'warning':''"><!--stage 3-->
-        <ion-label position="floating" color="primary">
-          <span [class]="stage==3?'current-field':''" 
-            [innerHtml]="'draftpoll.url-label'|translate">
-          </span>
-        </ion-label>
-        <ion-input 
+        <ion-input labelPlacement="floating" 
           id="input_poll_url"
           formControlName="poll_url"
           [placeholder]="'draftpoll.url-placeholder'|translate"
@@ -173,6 +168,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           (ionInput)="set_poll_url()" debounce="100"
           (keydown)="poll_url_onKeydown($event)"
           (ionBlur)="blur_poll_url()">
+          <ion-label slot="label" color="primary">
+          <span [class]="stage==3?'current-field':''" 
+            [innerHtml]="'draftpoll.url-label'|translate">
+          </span>
+        </ion-label>
         </ion-input>
         <ion-button 
           *ngIf="stage==3 && [null,''].includes(formGroup.get('poll_url').value)" 
@@ -201,17 +201,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <!-- Due type: -->
     <ng-container *ngIf="stage>3">
       <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
-        <ion-label color="primary" position="floating">
-          <span [class]="stage==4?'current-field':''" 
-            [innerHtml]="'draftpoll.due-type-label'|translate">
-          </span>
-        </ion-label>
-        <ion-select
+        <ion-select labelPlacement="floating"
             id="due_select" #due_select
             formControlName="poll_due_type" 
             [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
             #ionSelects tabindex="0" required data-vodle="poll-due-type-select"
             (ionChange)="set_poll_due_type();changed_due_type()">
+          <ion-label slot="label" color="primary">
+          <span [class]="stage==4?'current-field':''" 
+            [innerHtml]="'draftpoll.due-type-label'|translate">
+          </span>
+        </ion-label>
           <ion-select-option value="custom" [innerHtml]="'draftpoll.due-type-custom'|translate"></ion-select-option>
           <ion-select-option value="10min" [innerHtml]="'draftpoll.due-type-10min'|translate"></ion-select-option>
           <ion-select-option value="hour" [innerHtml]="'draftpoll.due-type-hour'|translate"></ion-select-option>
@@ -281,13 +281,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
     <!-- Language: -->
     <ion-item [style.display]="(stage>5) && advanced_expanded?'block':'none'">
-      <ion-label position="floating" color="primary">
+      <ion-select labelPlacement="floating" #ionSelects formControlName="poll_language" (ionChange)="set_poll_language()"
+        [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
+        style="font-size: smaller">
+        <ion-label slot="label" color="primary">
         <ion-icon name="language-outline"></ion-icon>&nbsp;
         <span [innerHtml]="'draftpoll.language'|translate"></span>
       </ion-label>
-      <ion-select #ionSelects formControlName="poll_language" (ionChange)="set_poll_language()"
-        [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-        style="font-size: smaller">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
       <!-- #285 put three delegation switches here, unlabelled (a floating
@@ -323,15 +323,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               (click)="expanded[i]=!expanded[i]">
             <ion-icon [name]="expanded[i]?'caret-down-outline':'caret-forward-outline'" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-label position="floating" color="primary">
-            <span [class]="option_stage==0?'current-field':''"
-              [innerHtml]="
-                (formGroup.get('poll_type').value=='winner' 
-                ? 'draftpoll.option-name-label' 
-                : 'draftpoll.target-name-label') | translate">
-            </span>
-          </ion-label>
-          <ion-input 
+          <ion-input labelPlacement="floating" 
             [id]="'input_option_name'+i"
             [formControlName]="'option_name'+i" 
             [placeholder]="(formGroup.get('poll_type').value == 'winner' 
@@ -343,6 +335,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             (ionInput)="set_option_name(i)" debounce="100"
             (keydown)="option_name_onKeydown($event, i, show_details)"
             (ionBlur)="blur_option_name(i)">
+            <ion-label slot="label" color="primary">
+            <span [class]="option_stage==0?'current-field':''"
+              [innerHtml]="
+                (formGroup.get('poll_type').value=='winner' 
+                ? 'draftpoll.option-name-label' 
+                : 'draftpoll.target-name-label') | translate">
+            </span>
+          </ion-label>
           </ion-input>      
           <ion-button 
             *ngIf="i == n_options-1 && i > 1 && (formGroup.get('option_name'+i).value||'')==''" 
@@ -370,12 +370,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <!-- Option description: -->
         <ng-container *ngIf="option_stage>0 && expanded[i]">
           <ion-item [color]="i == n_options-1 && option_stage==1?'warning':''"><!--option_stage 1-->
-            <ion-label position="floating" color="primary">
-              <span [class]="option_stage==1?'current-field':''" 
-                [innerHtml]="'draftpoll.option-desc-label'|translate">
-              </span>
-            </ion-label>
-            <ion-textarea 
+            <ion-textarea labelPlacement="floating" 
               [id]="'input_option_desc'+i"
               [formControlName]="'option_desc'+i" tabindex="0" 
               [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
@@ -384,6 +379,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               (ionInput)="set_option_desc(i)" debounce="100"
               (keydown)="option_desc_onKeydown($event, i)"
               (ionBlur)="blur_option_desc(i)">
+              <ion-label slot="label" color="primary">
+              <span [class]="option_stage==1?'current-field':''" 
+                [innerHtml]="'draftpoll.option-desc-label'|translate">
+              </span>
+            </ion-label>
             </ion-textarea>
             <ion-button 
               *ngIf="option_stage==1 && i == n_options-1 && [null,''].includes(formGroup.get('option_desc'+i).value)" 
@@ -405,12 +405,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <!-- Option URL: -->
         <ng-container *ngIf="option_stage>1 && expanded[i]">
           <ion-item [color]="i == n_options-1 && option_stage==2?'warning':''"><!--option_stage 2-->
-            <ion-label position="floating" color="primary">
-              <span [class]="option_stage==2?'current-field':''" 
-                [innerHtml]="'draftpoll.option-url-label'|translate">
-              </span>
-            </ion-label>
-            <ion-input 
+            <ion-input labelPlacement="floating" 
               [id]="'input_option_url'+i"
               [formControlName]="'option_url'+i" 
               [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name'+i).value}"
@@ -419,6 +414,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               (ionInput)="set_option_url(i)" debounce="100"
               (keydown)="option_url_onKeydown($event, i)"
               (ionBlur)="blur_option_url(i)">
+              <ion-label slot="label" color="primary">
+              <span [class]="option_stage==2?'current-field':''" 
+                [innerHtml]="'draftpoll.option-url-label'|translate">
+              </span>
+            </ion-label>
             </ion-input>
             <ion-button 
               *ngIf="option_stage==2 && i == n_options-1 && [null,''].includes(formGroup.get('option_url'+i).value)" 

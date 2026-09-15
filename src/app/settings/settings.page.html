@@ -52,8 +52,7 @@ TODO:
       <ion-row class="ion-no-padding">
         <ion-col class="ion-no-padding">
           <ion-item>
-            <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
-            <ion-input 
+            <ion-input labelPlacement="floating" 
               formControlName="email" 
               [placeholder]="'settings.email-placeholder'|translate"
               type="text" inputmode="email" required [maxlength]="E.max_len.name"
@@ -63,6 +62,7 @@ TODO:
                     :'pointer-events:none;font-size:smaller;'"
               (keydown.enter)="finish_editing_email()"
               (keydown.tab)="finish_editing_email()">
+              <ion-label slot="label" color="primary" [innerHtml]="'email'|translate"></ion-label>
             </ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
@@ -92,8 +92,7 @@ TODO:
         <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
             <ion-item lines="none">
-              <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-              <ion-input 
+              <ion-input labelPlacement="floating" 
                 formControlName="password" [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [readonly]="!editing_password"
@@ -102,6 +101,7 @@ TODO:
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
                 (keydown.enter)="finish_editing_password()">
+                <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
               </ion-input>
             </ion-item>
           </ion-col>
@@ -133,8 +133,7 @@ TODO:
       </div>
       <ng-container *ngIf="editing_password">
         <ion-item>
-          <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
-          <ion-input 
+          <ion-input labelPlacement="floating" 
             formControlName="confirm_password" 
             #input_retype_password 
             [disabled]="!editing_password"
@@ -145,6 +144,7 @@ TODO:
               :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password">
+            <ion-label slot="label" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
           </ion-input>
         </ion-item>
         <div class="validation-errors">
@@ -179,21 +179,21 @@ TODO:
     <ion-item color="primary" [innerHtml]="'settings.appearance'|translate">
     </ion-item>
     <ion-item>
-      <ion-label position="floating" color="primary">
+      <ion-select labelPlacement="floating" #ionSelects formControlName="language" 
+          [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
+          (ionChange)="set_language()">
+        <ion-label slot="label" color="primary">
         <ion-icon name="language-outline"></ion-icon>&nbsp;
         <span [innerHtml]="'language'|translate"></span>
       </ion-label>
-      <ion-select #ionSelects formControlName="language" 
-          [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
-          (ionChange)="set_language()">
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>
-      <ion-label position="floating" color="primary">Theme</ion-label>
-      <ion-select formControlName="theme" 
+      <ion-select labelPlacement="floating" formControlName="theme" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           >
+        <ion-label slot="label" color="primary">Theme</ion-label>
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>

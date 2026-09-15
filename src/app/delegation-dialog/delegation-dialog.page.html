@@ -29,8 +29,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </ion-col>      
         </ion-item>
         <ion-item>
-          <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
-          <ion-input 
+          <ion-input labelPlacement="floating" 
             formControlName="delegate_nickname" 
             autofocus="true" #focus_element
             [placeholder]="'delegation-request.nickname-placeholder'|translate"
@@ -38,6 +37,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             (ionBlur)="delegate_nickname_changed()"
             type="text" [maxlength]="E.max_len.name"
             data-vodle="delegate-nickname-input">
+            <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
           </ion-input>
         </ion-item>
         <div class="validation-errors">
@@ -51,13 +51,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </div>
         <ion-item>
           <small>
-            <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
-            <ion-input 
+            <ion-input labelPlacement="floating" 
               formControlName="from" 
               [placeholder]="'delegation-request.from-placeholder'|translate"
               (ionInput)="from_changed()" debounce="100"
               (ionBlur)="from_changed()"
               type="text" [maxlength]="E.max_len.name">
+              <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
             </ion-input>
           </small>
         </ion-item>
@@ -65,10 +65,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ng-container *ngIf="this.G.D.get_ranked_delegation_allowed(this.parent.pid)">
         <ion-item>
           <small>
-            <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.rank-label'|translate"></ion-label>
-            <ion-select aria-label="Rank" interface="popover" [placeholder]="rank"
+            <ion-select labelPlacement="floating" aria-label="Rank" interface="popover" [placeholder]="rank"
               (ionChange)="rank_changed($event)"
               >
+              <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.rank-label'|translate"></ion-label>
               <ion-select-option *ngFor="let i of rank_options" [value]="i">{{i}}</ion-select-option>
             </ion-select>
           </small>
@@ -78,12 +78,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ng-container *ngIf="this.G.D.get_different_delegation_allowed(this.parent.pid)">
           <ion-item>
             <small>
-              <ion-label position="floating" color="primary" [innerHtml]="'delegation-request.different-label'|translate"></ion-label>
-              <ion-select aria-label="Options"
+              <ion-select labelPlacement="floating" aria-label="Options"
               [placeholder]=""
               [multiple]="true"
               (ionChange)="options_changed($event)"
               >
+                <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.different-label'|translate"></ion-label>
                 <ion-select-option *ngFor="let x of option_names" [value]="x">
                   {{ x.name }}
                 </ion-select-option>
@@ -99,9 +99,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             </ion-col>
           </ion-item>
           <ion-item lines="none">
-            <ion-label position="stacked"
-              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></ion-label>
-            <ion-range formControlName="trustLevel" min="0" [max]="weight_left" pin="true"></ion-range>
+            <ion-range labelPlacement="stacked" formControlName="trustLevel" min="0" [max]="weight_left" pin="true">
+              <ion-label slot="label"
+              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></ion-label></ion-range>
           </ion-item>
           <!-- both figures follow the slider: what is left to give is the
                point of the whole screen, and a fixed "99% left to give" said
