@@ -939,15 +939,26 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                        the voter rating it alone. -->
                   <ion-col *ngIf="!get_weighted_delegation_allowed() && ((delegation_status=='agreed' && !get_different_delegation_allowed()) || (delegation_status=='agreed' && get_different_delegation_allowed() && option_delegated.get(oidsorted[i]) != null && option_delegated.get(oidsorted[i]) != ''))" 
                       class="ion-no-margin ion-no-padding" 
-                      size="auto">&nbsp;&nbsp;&nbsp;
+                      size="auto" style="padding-bottom:6px;"><!--room under the switch for the caption below it-->&nbsp;&nbsp;&nbsp;
                     <ion-toggle [id]="'rate_yourself_toggle_' + oidsorted[i]" 
                       [disabled]="!p.allow_voting"
                       (ionChange)="on_rate_yourself_toggle_change(oidsorted[i])"
-                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                      style="position:relative; top:-8px;" 
+                      class="ion-no-margin ion-no-padding" 
+                      style="position:relative; top:-20px;" 
                       [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
                     </ion-toggle>
-                    <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+                    <!--The switch belongs beside the slider's bar, and the caption
+                         under it. Both were displaced: ion-padding-top and
+                         ion-padding-bottom (which the ion-no-padding beside them was
+                         meant to cancel) stretched the toggle's box to 98px and left
+                         the switch 40px below the bar, and the caption, one string
+                         ("50% mine", "Chris’s") in a column only as wide as the
+                         switch, wrapped and drew its second line on top of it.
+                         The switch's own box is 42px, exactly the range's, so -20px
+                         lines the two up whatever the slider's state; the caption is
+                         positioned against this column and extends leftwards from
+                         its right edge.-->
+                    <div style="position:absolute; z-index:10; top:28px; right:1px; text-align:right; white-space:nowrap; line-height:1;">
                       <small [innerHtml]="
                         rate_yourself_toggle[oidsorted[i]] 
                         ? ('poll.my-own' | translate) 
@@ -962,15 +973,26 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
 
                   <ion-col *ngIf="get_weighted_delegation_allowed() && my_share_kept() < 100"
                       class="ion-no-margin ion-no-padding" 
-                      size="auto">&nbsp;&nbsp;&nbsp;
+                      size="auto" style="padding-bottom:6px;"><!--room under the switch for the caption below it-->&nbsp;&nbsp;&nbsp;
                     <ion-toggle [id]="'share_toggle_' + oidsorted[i]"
                       [disabled]="!p.allow_voting"
                       (ionChange)="on_share_toggle_change(oidsorted[i])"
-                      class="ion-no-margin ion-no-padding ion-padding-bottom ion-padding-top" 
-                      style="position:relative; top:-8px;" 
+                      class="ion-no-margin ion-no-padding" 
+                      style="position:relative; top:-20px;" 
                       [(ngModel)]="rate_yourself_toggle[oidsorted[i]]">
                     </ion-toggle>
-                    <div style="position:absolute; z-index:10; top:22px; right:1px; text-align:right;">
+                    <!--The switch belongs beside the slider's bar, and the caption
+                         under it. Both were displaced: ion-padding-top and
+                         ion-padding-bottom (which the ion-no-padding beside them was
+                         meant to cancel) stretched the toggle's box to 98px and left
+                         the switch 40px below the bar, and the caption, one string
+                         ("50% mine", "Chris’s") in a column only as wide as the
+                         switch, wrapped and drew its second line on top of it.
+                         The switch's own box is 42px, exactly the range's, so -20px
+                         lines the two up whatever the slider's state; the caption is
+                         positioned against this column and extends leftwards from
+                         its right edge.-->
+                    <div style="position:absolute; z-index:10; top:28px; right:1px; text-align:right; white-space:nowrap; line-height:1;">
                       <small [innerHtml]="
                         rate_yourself_toggle[oidsorted[i]] 
                         ? ('poll.my-own' | translate) 
