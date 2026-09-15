@@ -109,8 +109,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
     <ion-radio-group [(ngModel)]="favourite" (ngModelChange)="favourite_change()">
       <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
-        <ion-radio slot="start" [value]="P.oidsorted[i]"></ion-radio>
-        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>
+        <ion-radio labelPlacement="end" justify="start" [value]="P.oidsorted[i]">
+          <i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>
+        </ion-radio>
       </ion-item>  
     </ion-radio-group>
     <ion-item lines="none">
@@ -165,9 +166,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <ion-text><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
       </ng-container>
       <ng-container *ngIf="P.oidsorted[i] != favourite">
-        <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 
-          slot="start"></ion-checkbox>
-        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>  
+        <ion-checkbox labelPlacement="end" justify="start"
+          [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()">
+          <i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>
+        </ion-checkbox>
       </ng-container>
     </ion-item>  
     <ion-item lines="none">

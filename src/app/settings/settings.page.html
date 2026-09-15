@@ -204,15 +204,15 @@ TODO:
     <ion-item color="primary" [innerHtml]="'settings.behaviour'|translate">
     </ion-item>
     <ion-item>
-      <ion-label color="primary" position="stacked" style="min-height:20px!important;">
-        <span [innerHtml]="'settings.default-wap'|translate"></span>
-      </ion-label>
-      <ion-range formControlName="default_wap"
+      <ion-range labelPlacement="stacked" formControlName="default_wap"
           color="vodleblue" (ionChange)="set_default_wap()"
           mode="md" pin="true"
           min="0" max="100" step="1" snaps="true" ticks="false"
           style="--bar-height: 7px; --knob-size: 35px; padding-top:8px; padding-left:0px " 
           >
+        <ion-label slot="label" color="primary" style="min-height:20px!important;">
+          <span [innerHtml]="'settings.default-wap'|translate"></span>
+        </ion-label>
         <ion-label slot="start" style="width:25px!important;"><span style="font-size:16px!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
         <!--
         <ion-label slot="start">0</ion-label>
@@ -230,19 +230,34 @@ TODO:
   <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.new_option'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.new_option'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_accepted" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_accepted'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.delegation_accepted" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.delegation_accepted'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_declined'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.delegation_declined'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closing_soon" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closing_soon'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.poll_closing_soon" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.poll_closing_soon'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closed'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.poll_closed'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <!--and:
   when my vote turns into an abstention
