@@ -170,7 +170,7 @@ TODO:
 
     <ion-item color="primary" (click)="closed_expanded=!closed_expanded" style="cursor: pointer;" data-vodle="closed-polls-section">
       <ion-icon size="small" [name]="closed_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
-      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.recently-closed'|translate"></ion-label>
+      &nbsp;&nbsp;<ion-label><span [innerHtml]="'mypolls.recently-closed'|translate"></span></ion-label>
     </ion-item>
     <ng-container *ngIf="closed_expanded">
       <ng-container *ngFor="let p of closed_polls">
@@ -212,7 +212,7 @@ TODO:
 
     <ion-item color="light" (click)="archived_expanded=!archived_expanded" style="cursor: pointer;" data-vodle="archived-polls-section">
       <ion-icon size="small" [name]="archived_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
-      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.archived'|translate"></ion-label>
+      &nbsp;&nbsp;<ion-label><span [innerHtml]="'mypolls.archived'|translate"></span></ion-label>
     </ion-item>
     <ng-container *ngIf="archived_expanded">
       <ng-container *ngFor="let p of archived_polls">
@@ -242,7 +242,7 @@ TODO:
     <!--
     <ion-item color="light" (click)="older_expanded=!older_expanded">
       <ion-icon size="small" [name]="older_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
-      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.older'|translate"></ion-label>
+      &nbsp;&nbsp;<ion-label><span [innerHtml]="'mypolls.older'|translate"></span></ion-label>
     </ion-item>
     <ng-container *ngIf="older_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">
@@ -259,7 +259,7 @@ TODO:
 
     <ion-item color="light" (click)="drafts_expanded=!drafts_expanded" style="cursor: pointer;" data-vodle="drafts-section">
       <ion-icon size="small" [name]="drafts_expanded?'caret-down-outline':'caret-forward-outline'"></ion-icon>
-      &nbsp;&nbsp;<ion-label [innerHtml]="'mypolls.drafts'|translate"></ion-label>
+      &nbsp;&nbsp;<ion-label><span [innerHtml]="'mypolls.drafts'|translate"></span></ion-label>
     </ion-item>
     <ng-container *ngIf="drafts_expanded">
       <ng-container *ngFor="let p of Object.values(G.P.polls)">

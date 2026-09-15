@@ -35,6 +35,22 @@ import { PollService } from './poll.service';
 import { DelegationService } from './delegation.service';
 import { NewsService } from './news.service';
 
+/**
+ * Escape a value that gets interpolated into an Ionic overlay message.
+ *
+ * Those messages are HTML (innerHTMLTemplatesEnabled, see app.module.ts) and
+ * Ionic sanitizes them -- script, style, iframe, meta, link, object and embed
+ * are dropped, and every attribute outside class/id/href/src/name/slot with
+ * them, so on* handlers cannot survive. href and src DO survive, though, so a
+ * value coming from a user could still smuggle in a javascript: link. The
+ * translation around it is ours and trusted; what we substitute into it is
+ * not, so it is escaped here.
+ */
+export function escape_html(value: any): string {
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -171,7 +187,7 @@ export class GlobalService implements OnDestroy {
     const url = this.D.fix_url(dirty_url);
     const confirm = await this.alertCtrl.create({ 
       message: this.translate.instant(
-        "external-link.confirm", {url: url}), 
+        "external-link.confirm", {url: escape_html(url)}), 
       buttons: [
         { 
           text: this.translate.instant('no'), 

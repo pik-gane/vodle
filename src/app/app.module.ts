@@ -51,7 +51,19 @@ export function configureLogging(loggingService: LoggingService): () => void {
     imports: [
         LoggingServiceModule,
         BrowserModule,
-        IonicModule.forRoot(),
+        IonicModule.forRoot({
+            // vodle's alert and toast messages are HTML -- line breaks and
+            // emphasis in the translations. Ionic turned that off by default,
+            // which rendered the tags as literal text. Turning it back on is
+            // safe here and safer than Ionic 6 was: with it on, Ionic runs the
+            // message through its sanitizer (script/style/iframe/meta/link/
+            // object/embed dropped, every attribute but class/id/href/src/name/
+            // slot dropped, so no on* handlers), whereas Ionic 6 rendered it
+            // raw. Values interpolated INTO a translation are escaped at the
+            // call site -- see escape_html in global.service.ts -- because
+            // href and src do survive sanitizing.
+            innerHTMLTemplatesEnabled: true,
+        }),
         IonicStorageModule.forRoot(),
         AppRoutingModule,
         TranslateModule.forRoot({

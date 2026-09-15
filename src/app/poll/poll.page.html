@@ -244,9 +244,7 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
                 (click)="assist_dialog()" 
                 size="small" fill="clear" class="ion-float-right ion-no-padding ion-no-margin"
                 style="position: relative; top: 5px; right: 10px; margin-left:20px; margin-bottom:5px!important;">
-              <ion-label *ngIf="details_expanded" style="color:var(--vodle-highlight); white-space: normal; text-align: right; font-size: 11.5px;"
-                [innerHtml]="'poll.assist-me-button' | translate">
-              </ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
+              <ion-label *ngIf="details_expanded" style="color:var(--vodle-highlight); white-space: normal; text-align: right; font-size: 11.5px;"><span [innerHtml]="'poll.assist-me-button' | translate"></span></ion-label>&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
                 <ion-icon name="color-wand-outline" slot="icon-only" 
                   style="margin: 5px;"></ion-icon>
               </ion-button>

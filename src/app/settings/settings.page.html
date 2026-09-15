@@ -39,8 +39,7 @@ TODO:
 
     <!--DATA STORAGE:-->
 
-    <ion-item color="primary" [innerHtml]="'settings.data-storage'|translate"> 
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.data-storage'|translate"></span></ion-item>
     <ion-item>
       <small [innerHtml]="'settings.data-storage-msg'|translate"></small>
     </ion-item>
@@ -176,8 +175,7 @@ TODO:
   <!--APPEARANCE-->
 
   <form [formGroup]="formGroup">
-    <ion-item color="primary" [innerHtml]="'settings.appearance'|translate">
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.appearance'|translate"></span></ion-item>
     <ion-item>
       <ion-select labelPlacement="floating" #ionSelects formControlName="language" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
@@ -201,8 +199,7 @@ TODO:
 
     <!--BEHAVIOUR-->
 
-    <ion-item color="primary" [innerHtml]="'settings.behaviour'|translate">
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.behaviour'|translate"></span></ion-item>
     <ion-item>
       <ion-range labelPlacement="stacked" formControlName="default_wap"
           color="vodleblue" (ionChange)="set_default_wap()"
@@ -227,8 +224,7 @@ TODO:
     - if "denied", grey it out and show a message to please grant notifications first.
   -->
 
-  <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
-  </ion-item>
+  <ion-item color="primary"><span [innerHtml]="'settings.notifications'|translate"></span></ion-item>
   <ion-item>
     <ion-checkbox labelPlacement="end" justify="start"
         [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()">

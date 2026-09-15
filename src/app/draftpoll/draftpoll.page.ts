@@ -34,7 +34,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 
-import { GlobalService } from "../global.service";
+import { GlobalService, escape_html } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
@@ -648,7 +648,7 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('poll_type').value == 'choice' 
           ? "draftpoll.del-option-confirm-question" 
           : "draftpoll.del-target-confirm-question", 
-        { name: this.formGroup.get('option_name'+i).value }), 
+        { name: escape_html(this.formGroup.get('option_name'+i).value) }), 
       buttons: [
         { 
           text: this.translate.instant('cancel'), 
