@@ -51,6 +51,25 @@ export function escape_html(value: any): string {
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/** Whether this browser can really take a Web Share of the given data (#343).
+ *
+ * The presence of navigator.share is not the whole answer: a browser may
+ * expose the API and still refuse the payload, in which case the share sheet
+ * never appears and the button is dead. canShare is what answers for the data
+ * we would actually send, so ask it when it exists. The default payload is the
+ * shape both share buttons use -- a title and a text, no url.
+ */
+export function web_share_available(data: any = { title: 'vodle', text: 'vodle' }): boolean {
+  const nav = (typeof navigator === 'undefined') ? null : (navigator as any);
+  if (!nav || typeof nav.share !== 'function') return false;
+  if (typeof nav.canShare !== 'function') return true;
+  try {
+    return !!nav.canShare(data);
+  } catch (err) {
+    return false;
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })

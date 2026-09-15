@@ -26,7 +26,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-import { GlobalService } from "../global.service";
+import { GlobalService, web_share_available } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
@@ -83,7 +83,7 @@ export class DelegationDialogPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.can_use_web_share = (typeof navigator.share === "function");
+    this.can_use_web_share = web_share_available();
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
