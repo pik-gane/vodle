@@ -59,6 +59,19 @@ export function escape_html(value: any): string {
  * we would actually send, so ask it when it exists. The default payload is the
  * shape both share buttons use -- a title and a text, no url.
  */
+/** Whether a failed share means this browser cannot share at all (#343).
+ *
+ * Neither navigator.share nor canShare is a promise that a share will happen:
+ * Waterfox 6.7.2 answers "function" and true to both and then does nothing at
+ * all, so no check made before the attempt can hide the button there. The
+ * attempt itself is the only thing that settles it, and every way it can fail
+ * says the browser could not do it -- except AbortError, which is what closing
+ * the share sheet gives, and which says the opposite.
+ */
+export function web_share_broke(err: any): boolean {
+  return !!err && err.name !== 'AbortError';
+}
+
 export function web_share_available(data: any = { title: 'vodle', text: 'vodle' }): boolean {
   const nav = (typeof navigator === 'undefined') ? null : (navigator as any);
   if (!nav || typeof nav.share !== 'function') return false;
@@ -76,6 +89,10 @@ export function web_share_available(data: any = { title: 'vodle', text: 'vodle' 
 export class GlobalService implements OnDestroy {
 
   L: Logger;
+
+  // set once a share attempt has shown that this browser cannot share, so
+  // that the buttons stay away for the rest of the session (#343)
+  web_share_broken = false;
 
   show_spinner = false;
 

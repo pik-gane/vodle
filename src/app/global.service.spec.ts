@@ -26,7 +26,7 @@ import { IonicStorageModule } from '@ionic/storage-angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { LoggingServiceModule } from 'ionic-logging-service';
 
-import { GlobalService, web_share_available } from './global.service';
+import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
 
 describe('GlobalService', () => {
@@ -161,6 +161,23 @@ describe('GlobalService', () => {
       set('canShare', (data: any) => { asked = data; return true; });
       web_share_available();
       expect(asked).toEqual({ title: 'vodle', text: 'vodle' });
+    });
+
+    // Waterfox 6.7.2 answers "function" and true to both and then shares
+    // nothing, so what the attempt does is the only thing that settles it.
+    it('reads a failed attempt as the browser being unable to share', () => {
+      expect(web_share_broke({ name: 'NotSupportedError' })).toBeTrue();
+      expect(web_share_broke(new Error('no idea what went wrong'))).toBeTrue();
+    });
+
+    it('does not read a cancelled share sheet as a broken browser', () => {
+      expect(web_share_broke({ name: 'AbortError' })).toBeFalse();
+      expect(web_share_broke(null)).toBeFalse();
+      expect(web_share_broke(undefined)).toBeFalse();
+    });
+
+    it('starts out believing the browser', () => {
+      expect(service.web_share_broken).toBeFalse();
     });
   });
 });
