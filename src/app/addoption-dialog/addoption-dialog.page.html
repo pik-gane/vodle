@@ -44,13 +44,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           type="text" required [maxlength]="E.max_len.name" 
           style="font-weight: bold; font-style: italic;"
           data-vodle="new-option-name-input">
-          <ion-label slot="label" color="primary">
+          <span slot="label" class="form-label">
           <span [innerHtml]="
               (p.type=='winner' 
               ? 'draftpoll.option-name-label' 
               : 'draftpoll.target-name-label') | translate">
           </span>
-        </ion-label>
+        </span>
         </ion-input>
       </ion-item>
       <div class="validation-errors">
@@ -73,10 +73,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           rows="1" auto-grow type="text" 
           style="font-style: italic;"
           data-vodle="new-option-description-input">
-          <ion-label slot="label" color="primary">
+          <span slot="label" class="form-label">
           <span [innerHtml]="'draftpoll.option-desc-label'|translate">
           </span>
-        </ion-label>
+        </span>
         </ion-textarea>
       </ion-item>
       <div class="validation-errors">
@@ -98,10 +98,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
           type="text" inputmode="url" [maxlength]="E.max_len.url"
           style="font-size: smaller;">
-          <ion-label slot="label" color="primary">
+          <span slot="label" class="form-label">
           <span [innerHtml]="'draftpoll.option-url-label'|translate">
           </span>
-        </ion-label>
+        </span>
         </ion-input>
         <ion-button 
             *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 

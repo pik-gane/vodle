@@ -90,10 +90,10 @@ TODO:
             <ion-select labelPlacement="floating" #ionSelects interface="popover" formControlName="language" data-vodle="language-select"
                 [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
                 (ionChange)="set_language()">
-              <ion-label slot="label" color="primary">
+              <span slot="label" class="form-label">
               <ion-icon name="language-outline"></ion-icon>&nbsp;
               <span [innerHtml]="'language'|translate"></span>
-            </ion-label>
+            </span>
               <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
             </ion-select>
           </ion-item>
@@ -146,7 +146,7 @@ TODO:
                   data-vodle="email-input"
                   (ionInput)="set_email()" debounce="100"
                   (keydown.enter)="submit_email()">
-                  <ion-label slot="label" color="primary" [innerHtml]="'email'|translate"></ion-label>
+                  <span slot="label" class="form-label" [innerHtml]="'email'|translate"></span>
                 </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
               </ion-item>
             </ion-col>
@@ -226,7 +226,7 @@ TODO:
                   data-vodle="new-password-input"
                   (ionInput)="set_password()" debounce="100"
                   (ionBlur)="blur_password()">
-                  <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
+                  <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
                 </ion-input>
               </ion-item>
             </ion-col>
@@ -257,7 +257,7 @@ TODO:
                 data-vodle="confirm-password-input"
                 (ionInput)="set_password()" debounce="100"
                 (keydown.enter)="submit_new_password()">
-                <ion-label slot="label" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
+                <span slot="label" class="form-label" [innerHtml]="'retype-password'|translate"></span>
               </ion-input>
             </ion-item>
             <div class="validation-errors">
@@ -308,7 +308,7 @@ TODO:
                   data-vodle="old-password-input"
                   (ionInput)="set_old_password()" debounce="100"
                   (keydown.enter)="submit_old_password()">
-                  <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
+                  <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
                 </ion-input>
               </ion-item>
             </ion-col>

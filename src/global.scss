@@ -296,3 +296,13 @@ ion-spinner {
 ion-popover [popover]:not(:popover-open):not(dialog[open]) {
     display: contents;
 }
+// Form labels. Ionic 8 takes a control's label from its own `label` property
+// or its label slot, not from an ion-label sitting beside it in the item.
+// ion-label cannot be used as the slotted content either: it is a scoped
+// Stencil component, and its content is swallowed when it is slotted into
+// another component's named slot, leaving a blank label. So the slotted
+// labels are plain spans, and this restores the colour that
+// <ion-label color="primary"> used to give them.
+[slot="label"].form-label {
+    color: var(--ion-color-primary);
+}

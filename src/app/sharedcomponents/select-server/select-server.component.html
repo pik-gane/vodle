@@ -22,7 +22,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-select labelPlacement="floating" formControlName="db" [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
         [style]="page!='settings'?'font-size: smaller;':''"
         (ionChange)="set_db()">
-      <ion-label slot="label" color="primary" [innerHtml]="(page=='settings'?'settings.db-label':'draftpoll.db-label')|translate"></ion-label>
+      <span slot="label" class="form-label" [innerHtml]="(page=='settings'?'settings.db-label':'draftpoll.db-label')|translate"></span>
       <ion-select-option *ngIf="page!='settings'" value="default" [innerHtml]="'select-server.same-as-personal'|translate"></ion-select-option>
       <ion-select-option value="central" [innerHtml]="'select-server.central'|translate"></ion-select-option>
       <ion-select-option value="poll" [innerHtml]="(page=='settings'?'select-server.same-as-some-poll':'select-server.same-as-other-poll')|translate"></ion-select-option>
@@ -35,7 +35,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           style="font-size: smaller;"
           (ionChange)="set_db_from_pid()">
-        <ion-label slot="label" color="primary" [innerHtml]="(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate"></ion-label>
+        <span slot="label" class="form-label" [innerHtml]="(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate"></span>
         <ng-container *ngFor="let pid of Object.keys(G.P.polls)">
           <ion-select-option *ngIf="pid!=page_object.p.pid" [value]="pid" [innerHtml]="G.P.polls[pid].title"></ion-select-option>
         </ng-container>
@@ -51,7 +51,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         style="font-size: smaller;" type="text" [maxlength]="E.max_len.url"
         formControlName="db_custom_server_url" required
         (ionInput)="set_db_custom_server_url()" debounce="100">
-        <ion-label slot="label" color="primary" [innerHtml]="'db-server-url'|translate"></ion-label>
+        <span slot="label" class="form-label" [innerHtml]="'db-server-url'|translate"></span>
       </ion-input>
     </ion-item>
     <div class="validation-errors">
@@ -69,7 +69,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         (keydown.enter)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
         (keydown.tab)="showing_db_custom_password=selectServerFormGroup.get('db_custom_password').valid?false:showing_db_custom_password;blur()"
         (ionInput)="set_db_custom_password()" debounce="100">
-        <ion-label slot="label" color="primary" [innerHtml]="'db-pw'|translate"></ion-label>
+        <span slot="label" class="form-label" [innerHtml]="'db-pw'|translate"></span>
       </ion-input>
       <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_custom_password=!showing_db_custom_password">
         <ion-icon tabindex="-1" [name]="showing_db_custom_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;<span [innerHtml]="(showing_db_custom_password?'hide':'show')|translate"></span>

@@ -233,7 +233,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               [(ngModel)]="estimates[P.oidsorted[i]]" 
               debounce="100" (ngModelChange)="estimate_change()"
             >
-              <ion-label slot="label"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label></ion-input>&nbsp;%
+              <span slot="label" class="form-label"><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</span></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
       </ion-item>  

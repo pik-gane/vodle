@@ -62,7 +62,7 @@ TODO:
                     :'pointer-events:none;font-size:smaller;'"
               (keydown.enter)="finish_editing_email()"
               (keydown.tab)="finish_editing_email()">
-              <ion-label slot="label" color="primary" [innerHtml]="'email'|translate"></ion-label>
+              <span slot="label" class="form-label" [innerHtml]="'email'|translate"></span>
             </ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
@@ -101,7 +101,7 @@ TODO:
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
                 (keydown.enter)="finish_editing_password()">
-                <ion-label slot="label" color="primary" [innerHtml]="'password'|translate"></ion-label>
+                <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
               </ion-input>
             </ion-item>
           </ion-col>
@@ -144,7 +144,7 @@ TODO:
               :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password">
-            <ion-label slot="label" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
+            <span slot="label" class="form-label" [innerHtml]="'retype-password'|translate"></span>
           </ion-input>
         </ion-item>
         <div class="validation-errors">
@@ -182,10 +182,10 @@ TODO:
       <ion-select labelPlacement="floating" #ionSelects formControlName="language" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
           (ionChange)="set_language()">
-        <ion-label slot="label" color="primary">
+        <span slot="label" class="form-label">
         <ion-icon name="language-outline"></ion-icon>&nbsp;
         <span [innerHtml]="'language'|translate"></span>
-      </ion-label>
+      </span>
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
@@ -193,7 +193,7 @@ TODO:
       <ion-select labelPlacement="floating" formControlName="theme" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           >
-        <ion-label slot="label" color="primary">Theme</ion-label>
+        <span slot="label" class="form-label">Theme</span>
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>
@@ -210,9 +210,9 @@ TODO:
           min="0" max="100" step="1" snaps="true" ticks="false"
           style="--bar-height: 7px; --knob-size: 35px; padding-top:8px; padding-left:0px " 
           >
-        <ion-label slot="label" color="primary" style="min-height:20px!important;">
+        <span slot="label" class="form-label" style="min-height:20px!important;">
           <span [innerHtml]="'settings.default-wap'|translate"></span>
-        </ion-label>
+        </span>
         <ion-label slot="start" style="width:25px!important;"><span style="font-size:16px!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
         <!--
         <ion-label slot="start">0</ion-label>

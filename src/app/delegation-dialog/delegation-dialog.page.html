@@ -37,7 +37,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             (ionBlur)="delegate_nickname_changed()"
             type="text" [maxlength]="E.max_len.name"
             data-vodle="delegate-nickname-input">
-            <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.nickname-label'|translate"></ion-label>
+            <span slot="label" class="form-label" [innerHtml]="'delegation-request.nickname-label'|translate"></span>
           </ion-input>
         </ion-item>
         <div class="validation-errors">
@@ -57,7 +57,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               (ionInput)="from_changed()" debounce="100"
               (ionBlur)="from_changed()"
               type="text" [maxlength]="E.max_len.name">
-              <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.from-label'|translate"></ion-label>
+              <span slot="label" class="form-label" [innerHtml]="'delegation-request.from-label'|translate"></span>
             </ion-input>
           </small>
         </ion-item>
@@ -68,7 +68,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <ion-select labelPlacement="floating" aria-label="Rank" interface="popover" [placeholder]="rank"
               (ionChange)="rank_changed($event)"
               >
-              <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.rank-label'|translate"></ion-label>
+              <span slot="label" class="form-label" [innerHtml]="'delegation-request.rank-label'|translate"></span>
               <ion-select-option *ngFor="let i of rank_options" [value]="i">{{i}}</ion-select-option>
             </ion-select>
           </small>
@@ -83,7 +83,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               [multiple]="true"
               (ionChange)="options_changed($event)"
               >
-                <ion-label slot="label" color="primary" [innerHtml]="'delegation-request.different-label'|translate"></ion-label>
+                <span slot="label" class="form-label" [innerHtml]="'delegation-request.different-label'|translate"></span>
                 <ion-select-option *ngFor="let x of option_names" [value]="x">
                   {{ x.name }}
                 </ion-select-option>
@@ -100,8 +100,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </ion-item>
           <ion-item lines="none">
             <ion-range labelPlacement="stacked" formControlName="trustLevel" min="0" [max]="weight_left" pin="true">
-              <ion-label slot="label"
-              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></ion-label></ion-range>
+              <span slot="label" class="form-label"
+              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></span></ion-range>
           </ion-item>
           <!-- both figures follow the slider: what is left to give is the
                point of the whole screen, and a fixed "99% left to give" said
