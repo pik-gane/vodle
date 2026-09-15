@@ -75,4 +75,57 @@ describe('DraftpollPage', () => {
       expect(component.ready).toBeFalse();
     });
   });
+
+  // #342: ion-datetime-button renders nothing at all - no text, zero size -
+  // while the ion-datetime it points at has no value, and the form control
+  // starts empty. The row was there, but with nothing in it to click, so a
+  // custom end date could not be set at all. The size of the rendered button
+  // is what the test is really about; the value is how it gets there.
+  describe('the custom end date', () => {
+    it('gives the datetime button something to show, and the draft a date', async () => {
+      const open = spyOn(component, 'open_due_custom');
+      (component as any).ready = true;
+      (component as any).stage = 4;
+      component.formGroup.get('poll_due_type').setValue('custom');
+      component.set_poll_due_type();
+      component.changed_due_type();
+      fixture.detectChanges();
+
+      // asking for a custom date puts the picker in front of the user, and the
+      // flow carries on to the options rather than waiting on a field that is
+      // now filled
+      expect(open).toHaveBeenCalled();
+      expect((component as any).stage).toBe(6);
+
+      const control = component.formGroup.get('poll_due_custom');
+      expect(control.value).toBeTruthy();
+      expect(control.valid).toBeTrue();
+      expect(new Date(control.value).valueOf()).toBeGreaterThan(Date.now());
+      expect((component as any).pd.due_custom).toEqual(new Date(control.value));
+
+      // Ionic hydrates its components outside Angular's change detection, so
+      // wait for the button to lay itself out rather than assuming a delay.
+      const button: HTMLElement = fixture.nativeElement.querySelector('ion-datetime-button');
+      expect(button).toBeTruthy();
+      let box = button.getBoundingClientRect();
+      for (let i = 0; i < 80 && box.width === 0; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        box = button.getBoundingClientRect();
+      }
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.height).toBeGreaterThan(0);
+    });
+
+    it('keeps a date the draft already carries, and does not reopen the picker', () => {
+      const open = spyOn(component, 'open_due_custom');
+      const existing = new Date(Date.now() + 3*24*60*60*1000).toISOString();
+      (component as any).stage = 4;
+      component.formGroup.get('poll_due_custom').setValue(existing);
+      component.formGroup.get('poll_due_type').setValue('custom');
+      component.changed_due_type();
+      expect(component.formGroup.get('poll_due_custom').value).toEqual(existing);
+      expect(open).not.toHaveBeenCalled();
+      expect((component as any).stage).toBe(6);
+    });
+  });
 });

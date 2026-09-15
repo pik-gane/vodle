@@ -29,12 +29,12 @@ import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, V
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
-import { PopoverController, IonSelect, IonToggle, AlertController, IonInput, IonDatetime } from '@ionic/angular';
+import { PopoverController, IonSelect, IonToggle, AlertController, IonInput } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  
 
-import { GlobalService } from "../global.service";
+import { GlobalService, escape_html } from "../global.service";
 import { Poll, Option } from "../poll.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
@@ -55,6 +55,7 @@ function is_forward_key(ev: KeyboardEvent) {
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
   styleUrls: ['./draftpoll.page.scss'],
+  standalone: false,
 })
 export class DraftpollPage implements OnInit {
 
@@ -456,8 +457,11 @@ export class DraftpollPage implements OnInit {
   }
 
   open_due_custom() {
+    // The picker lives in the ion-modal around the ion-datetime, and it is the
+    // modal that presents it - ion-datetime has no open() of its own.
     setTimeout(() => {
-// FIXME:      (<IonDatetime><unknown>document.getElementById('poll_due_custom')).open();
+      const overlay = document.getElementById('poll_due_custom')?.closest('ion-modal');
+      if (overlay) (overlay as HTMLIonModalElement).present();
     }, 100);
   }
 
@@ -527,15 +531,37 @@ export class DraftpollPage implements OnInit {
   }
 
   changed_due_type() {
-    if (this.stage < 5) {
-      if (this.formGroup.get('poll_due_type').value == 'custom') {
-        this.stage = 5;
-        this.open_due_custom();
-      } else {
-        this.stage = 6;
-        this.set_focus('input_option_name0');
-      }
+    if (this.formGroup.get('poll_due_type').value == 'custom') {
+      // They have asked to set a date, so give the field one to show and put
+      // the picker in front of them to adjust it. Either way a date is now
+      // set, so the flow can go on to the options.
+      const seeded = this.seed_poll_due_custom();
+      this.changed_poll_due_custom();
+      if (seeded) this.open_due_custom();
+    } else if (this.stage < 5) {
+      this.stage = 6;
+      this.set_focus('input_option_name0');
     }
+  }
+
+  /** Give the custom end date a starting value, and say whether it needed one.
+   *
+   * ion-datetime-button renders nothing at all - no text, zero size - while
+   * the ion-datetime it points at has no value, and this control starts empty.
+   * The row was therefore there but with nothing in it to click, so a custom
+   * end date could not be set at all (#342). The starting value is the moment
+   * the '24hr' option would end the poll: a date the picker can show, well
+   * inside the allowed range, and one the user can then change.
+   */
+  seed_poll_due_custom(): boolean {
+    const c = this.formGroup.get('poll_due_custom');
+    if (c.value) return false;
+    const due = new Date();
+    due.setSeconds(0, 0);
+    due.setTime(due.getTime() + 24*60*60*1000);
+    c.setValue(due.toISOString());
+    this.set_poll_due_custom();
+    return true;
   }
 
   changed_poll_due_custom() {
@@ -647,7 +673,7 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('poll_type').value == 'choice' 
           ? "draftpoll.del-option-confirm-question" 
           : "draftpoll.del-target-confirm-question", 
-        { name: this.formGroup.get('option_name'+i).value }), 
+        { name: escape_html(this.formGroup.get('option_name'+i).value) }), 
       buttons: [
         { 
           text: this.translate.instant('cancel'), 

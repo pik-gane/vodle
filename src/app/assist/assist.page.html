@@ -109,15 +109,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
     <ion-radio-group [(ngModel)]="favourite" (ngModelChange)="favourite_change()">
       <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
-        <ion-radio slot="start" [value]="P.oidsorted[i]"></ion-radio>
-        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>
+        <ion-radio labelPlacement="end" justify="start" [value]="P.oidsorted[i]">
+          <i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>
+        </ion-radio>
       </ion-item>  
     </ion-radio-group>
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           [disabled]="!favourite"
           (click)="submit_favourite()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'OK'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
     <ion-item lines="none">
@@ -145,7 +146,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="understood_favourite()">
-        <ion-label [innerHtml]="'next'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'next'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
@@ -161,19 +162,21 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-item>
     <ion-item *ngFor="let item of [].constructor(P.oidsorted.length); let i = index">
       <ng-container *ngIf="P.oidsorted[i] == favourite">
-        <ion-checkbox slot="start" checked="true" disabled="true" style="margin-right:30px;"></ion-checkbox>
-        <ion-text><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text></ion-text>  
+        <ion-checkbox labelPlacement="end" justify="start" checked="true" disabled="true">
+          <i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;<ion-text color="grey">(<span [innerHtml]="'favourite'|translate"></span>)</ion-text>
+        </ion-checkbox>
       </ng-container>
       <ng-container *ngIf="P.oidsorted[i] != favourite">
-        <ion-checkbox [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()" 
-          slot="start"></ion-checkbox>
-        <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i></ion-label>  
+        <ion-checkbox labelPlacement="end" justify="start"
+          [(ngModel)]="acceptable[P.oidsorted[i]]" (ngModelChange)="acceptable_change()">
+          <i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>
+        </ion-checkbox>
       </ng-container>
     </ion-item>  
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="submit_acceptable()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'OK'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
@@ -208,7 +211,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="understood_acceptable()">
-        <ion-label [innerHtml]="'next'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'next'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
@@ -231,6 +234,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
               inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5" 
               [(ngModel)]="estimates[P.oidsorted[i]]" 
               debounce="100" (ngModelChange)="estimate_change()"
+              [attr.aria-label]="P.p.options[P.oidsorted[i]].name"
             ></ion-input>&nbsp;%
           </ion-buttons>
         </ng-container>
@@ -239,7 +243,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="submit_estimates()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'OK'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
@@ -259,7 +263,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="understood_estimates()">
-        <ion-label [innerHtml]="'next'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'next'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
   </ng-container>
@@ -311,7 +315,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="submit_threshold()" [disabled]="threshold_answer[thresholded_oids[current_index]] != true && threshold_answer[thresholded_oids[current_index]] != false">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'OK'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
     <ion-item *ngFor="let item of [].constructor(thresholded_oids.length-1-current_index); let j = index" color="secondary"
@@ -365,7 +369,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" style="padding-bottom: 10px!important;">
       <ion-button size="normal" shape="round" slot="end" style="padding-top: 10px;"
           (click)="understood_ratings()">
-        <ion-label [innerHtml]="'OK'|translate"></ion-label>
+        <ion-label><span [innerHtml]="'OK'|translate"></span></ion-label>
       </ion-button>
     </ion-item>
     <!-- debugging info: -- >

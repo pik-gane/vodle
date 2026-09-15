@@ -29,6 +29,7 @@ import { Poll } from '../poll.service';
   selector: 'app-explain-approval',
   templateUrl: './explain-approval.page.html',
   styleUrls: ['./explain-approval.page.scss'],
+  standalone: false,
 })
 export class ExplainApprovalPage implements OnInit {
 

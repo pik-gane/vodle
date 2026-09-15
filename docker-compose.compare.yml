@@ -1,0 +1,110 @@
+# vodle — a second copy of the app, built from another revision, on another
+# port, sharing this stack's homeserver. For looking at two versions' GUIs
+# side by side against the same accounts and the same polls:
+#
+#   git fetch origin <branch>
+#   git worktree add --detach ../vodle-compare origin/<branch>
+#   docker compose --env-file .env -f docker-compose.prod.yml \
+#       -f docker-compose.tls.yml -f docker-compose.compare.yml \
+#       up --build -d vodle-web-compare
+#
+# --detach matters. A worktree added at a BRANCH name checks out a local branch
+# tracking it, which then diverges the moment anything pulls into it -- and if
+# it is the same branch someone else is pushing to, `git pull` there answers
+# with a merge commit instead of the commit you asked for, and the build is
+# silently of something else. Detached, the worktree is the remote commit and
+# nothing else, and cannot be pushed from by accident.
+#
+# To move the copy to a newer revision, update the WORKTREE -- fetching in the
+# deployment directory only moves the remote-tracking ref, and the worktree
+# keeps building whatever it still has checked out:
+#
+#   cd ../vodle-compare
+#   git fetch origin <branch>
+#   git checkout --detach origin/<branch>
+#   git log --oneline -1          # must show the commit you expect
+#
+# then rebuild. If every layer of that build says CACHED and the container
+# comes up "Running" rather than "Recreated", the context did not change --
+# i.e. the worktree was not moved, and the check above was skipped.
+#
+# It is one more service in THIS stack rather than a second stack, for two
+# reasons: docker-compose.prod.yml fixes container_name, which a second
+# project would collide on, and vodle-net is project-scoped, so a second
+# project's web container could not reach this one's synapse.
+#
+# Building from Dockerfile.prod is what makes it work at all. The app is
+# configured with matrix.homeserver_url "/" and resolves that against the
+# page's own origin, PORT INCLUDED (MatrixService.resolveHomeserverUrl), so a
+# copy served on another port looks for the homeserver on that port too. The
+# image answers /_matrix/ there because its nginx config forwards it to
+# synapse, which a plain static server would not.
+#
+# .env needs three settings:
+#
+#   COMPARE_CONTEXT=../vodle-compare       the worktree to build
+#   COMPARE_PORT=8443                      host port to publish
+#   COMPARE_ORIGIN=https://<host>:8443     where a browser reaches the copy
+#
+# and the host's firewall needs COMPARE_PORT open.
+#
+# HTTPS rather than HTTP, even for a throwaway copy: vodle calls
+# crypto.subtle (src/app/matrix.service.ts — the HMAC proof that knocks on a
+# closed poll room, and the encrypted paths), which browsers expose only in a
+# secure context. Over plain HTTP on anything but localhost those calls throw
+# and the copy cannot join a closed poll. The certificate already covers the
+# host, so the same TLS_DIR/TLS_CERT/TLS_KEY serve both ports.
+#
+# Two consequences of the second port worth knowing before comparing data
+# rather than pixels. A different port is a different browser origin, so
+# localStorage, the PouchDB databases and the Matrix crypto store are
+# separate: you log in on each copy, and neither can corrupt the other's
+# local state. And logging into ONE account from both makes two Matrix
+# devices; delegation events are encrypted, so the second device cannot
+# decrypt what was written before it existed. To compare a poll's data, join
+# it as two different participants instead.
+#
+# Removing it again:
+#
+#   docker compose --env-file .env -f docker-compose.prod.yml \
+#       -f docker-compose.tls.yml -f docker-compose.compare.yml \
+#       stop vodle-web-compare
+#   docker compose ... rm -f vodle-web-compare
+#   git worktree remove ../vodle-compare
+#
+# deploy/deploy.sh may be used as usual while this runs: it names only its own
+# two compose files and passes no --remove-orphans, so it leaves the copy
+# alone and only warns that it is there.
+
+services:
+  vodle-web-compare:
+    build:
+      context: ${COMPARE_CONTEXT:?COMPARE_CONTEXT missing in .env (the worktree to build, e.g. ../vodle-compare)}
+      dockerfile: Dockerfile.prod
+      args:
+        # the same token the stack's own app is built with, so that the copy
+        # can register against the same homeserver (#327)
+        REGISTRATION_TOKEN: "${REGISTRATION_TOKEN:-}"
+    container_name: vodle-web-compare
+    # Only the TLS port. Port 80 stays with the stack's own web container,
+    # which is also why this copy needs no redirect from it.
+    ports:
+      - "${COMPARE_PORT:?COMPARE_PORT missing in .env (host port for the copy, e.g. 8443)}:443"
+    volumes:
+      - ./deploy/site:/usr/share/nginx/html/site:ro
+      - ${TLS_DIR:?TLS_DIR missing in .env}:/etc/nginx/tls:ro
+      - ./deploy/nginx-tls.conf.template:/etc/nginx/templates/vodle.conf.template:ro
+    environment:
+      - TLS_CERT=${TLS_CERT:?TLS_CERT missing in .env}
+      - TLS_KEY=${TLS_KEY:?TLS_KEY missing in .env}
+      # the copy's own origin, not the deployment's: the template uses it for
+      # the redirect from port 80, which this service does not publish anyway
+      - "TLS_PUBLIC_ORIGIN=${COMPARE_ORIGIN:?COMPARE_ORIGIN missing in .env (where a browser reaches the copy, see this file's header)}"
+      - NGINX_ENVSUBST_FILTER=^TLS_
+    depends_on:
+      synapse:
+        condition: service_healthy
+    # a comparison is temporary: it does not come back after a reboot
+    restart: "no"
+    networks:
+      - vodle-net

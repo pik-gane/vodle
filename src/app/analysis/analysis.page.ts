@@ -41,6 +41,7 @@ const svgcolors = {
   selector: 'app-analysis',
   templateUrl: './analysis.page.html',
   styleUrls: ['./analysis.page.scss'],
+  standalone: false,
 })
 export class AnalysisPage implements OnInit {
 

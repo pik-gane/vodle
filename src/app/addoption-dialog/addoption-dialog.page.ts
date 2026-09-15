@@ -39,6 +39,7 @@ import { Poll, Option } from '../poll.service';
   selector: 'app-addoption-dialog',
   templateUrl: './addoption-dialog.page.html',
   styleUrls: ['./addoption-dialog.page.scss'],
+  standalone: false,
 })
 export class AddoptionDialogPage implements OnInit {
 

@@ -23,7 +23,7 @@ import { RouteReuseStrategy } from '@angular/router';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
-import { HttpClientModule, HttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
@@ -51,10 +51,21 @@ export function configureLogging(loggingService: LoggingService): () => void {
     imports: [
         LoggingServiceModule,
         BrowserModule,
-        IonicModule.forRoot(),
+        IonicModule.forRoot({
+            // vodle's alert and toast messages are HTML -- line breaks and
+            // emphasis in the translations. Ionic turned that off by default,
+            // which rendered the tags as literal text. Turning it back on is
+            // safe here and safer than Ionic 6 was: with it on, Ionic runs the
+            // message through its sanitizer (script/style/iframe/meta/link/
+            // object/embed dropped, every attribute but class/id/href/src/name/
+            // slot dropped, so no on* handlers), whereas Ionic 6 rendered it
+            // raw. Values interpolated INTO a translation are escaped at the
+            // call site -- see escape_html in global.service.ts -- because
+            // href and src do survive sanitizing.
+            innerHTMLTemplatesEnabled: true,
+        }),
         IonicStorageModule.forRoot(),
         AppRoutingModule,
-        HttpClientModule,
         TranslateModule.forRoot({
             defaultLanguage: DEFAULT_LANG,
             loader: {
@@ -73,7 +84,9 @@ export function configureLogging(loggingService: LoggingService): () => void {
             multi: true,
             provide: APP_INITIALIZER,
             useFactory: configureLogging
-        }
+        },
+        // HttpClientModule is deprecated as of Angular 18; this is its replacement
+        provideHttpClient(withInterceptorsFromDi())
     ],
     bootstrap: [AppComponent]
 })

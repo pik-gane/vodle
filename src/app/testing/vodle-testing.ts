@@ -28,7 +28,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { IonicModule } from '@ionic/angular';
 import { RouterTestingModule } from '@angular/router/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
@@ -118,7 +119,6 @@ export function global_service_stub(): any {
 export const VODLE_PAGE_TEST_IMPORTS = [
   IonicModule.forRoot(),
   RouterTestingModule,
-  HttpClientTestingModule,
   TranslateModule.forRoot(),
   FormsModule,
   ReactiveFormsModule,
@@ -126,5 +126,11 @@ export const VODLE_PAGE_TEST_IMPORTS = [
 
 /** providers for a page/component smoke test */
 export function vodle_page_test_providers(): any[] {
-  return [{provide: GlobalService, useValue: global_service_stub()}];
+  return [
+    {provide: GlobalService, useValue: global_service_stub()},
+    // HttpClientTestingModule is deprecated as of Angular 18; these are its
+    // replacement, and being providers they cannot live in the imports above
+    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClientTesting(),
+  ];
 }

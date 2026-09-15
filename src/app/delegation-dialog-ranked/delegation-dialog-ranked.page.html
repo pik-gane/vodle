@@ -22,8 +22,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
        can give a delegate a different share on a particular option, and the
        general ones stand everywhere they have not. -->
   <ion-item *ngIf="weighted" lines="none">
-    <ion-label position="stacked" [innerHtml]="'delegation-request.shares-for'|translate"></ion-label>
-    <ion-select [(ngModel)]="for_oid" (ionChange)="for_oid_changed()"
+    <ion-select [label]="'delegation-request.shares-for'|translate" labelPlacement="stacked"
+        [(ngModel)]="for_oid" (ionChange)="for_oid_changed()"
         [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
         [interfaceOptions]="{}">
       <ion-select-option value="" [innerHtml]="'delegation-request.shares-in-general'|translate"></ion-select-option>

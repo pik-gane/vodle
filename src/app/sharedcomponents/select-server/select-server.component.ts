@@ -27,6 +27,7 @@ import { GlobalService } from "../../global.service";
   selector: 'app-select-server',
   templateUrl: './select-server.component.html',
   styleUrls: ['./select-server.component.scss'],
+  standalone: false,
 })
 export class SelectServerComponent implements OnInit {
 

@@ -35,12 +35,64 @@ import { PollService } from './poll.service';
 import { DelegationService } from './delegation.service';
 import { NewsService } from './news.service';
 
+/**
+ * Escape a value that gets interpolated into an Ionic overlay message.
+ *
+ * Those messages are HTML (innerHTMLTemplatesEnabled, see app.module.ts) and
+ * Ionic sanitizes them -- script, style, iframe, meta, link, object and embed
+ * are dropped, and every attribute outside class/id/href/src/name/slot with
+ * them, so on* handlers cannot survive. href and src DO survive, though, so a
+ * value coming from a user could still smuggle in a javascript: link. The
+ * translation around it is ours and trusted; what we substitute into it is
+ * not, so it is escaped here.
+ */
+export function escape_html(value: any): string {
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/** Whether this browser can really take a Web Share of the given data (#343).
+ *
+ * The presence of navigator.share is not the whole answer: a browser may
+ * expose the API and still refuse the payload, in which case the share sheet
+ * never appears and the button is dead. canShare is what answers for the data
+ * we would actually send, so ask it when it exists. The default payload is the
+ * shape both share buttons use -- a title and a text, no url.
+ */
+/** Whether a failed share means this browser cannot share at all (#343).
+ *
+ * Neither navigator.share nor canShare is a promise that a share will happen:
+ * Waterfox 6.7.2 answers "function" and true to both and then does nothing at
+ * all, so no check made before the attempt can hide the button there. The
+ * attempt itself is the only thing that settles it, and every way it can fail
+ * says the browser could not do it -- except AbortError, which is what closing
+ * the share sheet gives, and which says the opposite.
+ */
+export function web_share_broke(err: any): boolean {
+  return !!err && err.name !== 'AbortError';
+}
+
+export function web_share_available(data: any = { title: 'vodle', text: 'vodle' }): boolean {
+  const nav = (typeof navigator === 'undefined') ? null : (navigator as any);
+  if (!nav || typeof nav.share !== 'function') return false;
+  if (typeof nav.canShare !== 'function') return true;
+  try {
+    return !!nav.canShare(data);
+  } catch (err) {
+    return false;
+  }
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class GlobalService implements OnDestroy {
 
   L: Logger;
+
+  // set once a share attempt has shown that this browser cannot share, so
+  // that the buttons stay away for the rest of the session (#343)
+  web_share_broken = false;
 
   show_spinner = false;
 
@@ -171,7 +223,7 @@ export class GlobalService implements OnDestroy {
     const url = this.D.fix_url(dirty_url);
     const confirm = await this.alertCtrl.create({ 
       message: this.translate.instant(
-        "external-link.confirm", {url: url}), 
+        "external-link.confirm", {url: escape_html(url)}), 
       buttons: [
         { 
           text: this.translate.instant('no'), 

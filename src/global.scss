@@ -28,21 +28,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
-/* Core CSS required for Ionic components to work properly */
-@import "~@ionic/angular/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
-@import "~@ionic/angular/css/normalize.css";
-@import "~@ionic/angular/css/structure.css";
-@import "~@ionic/angular/css/typography.css";
-@import '~@ionic/angular/css/display.css';
-
-/* Optional CSS utils that can be commented out */
-@import "~@ionic/angular/css/padding.css";
-@import "~@ionic/angular/css/float-elements.css";
-@import "~@ionic/angular/css/text-alignment.css";
-@import "~@ionic/angular/css/text-transformation.css";
-@import "~@ionic/angular/css/flex-utils.css";
+/* Ionic's own stylesheets are imported at the top of src/theme/variables.scss,
+   which angular.json lists first, so that everything below -- and vodle's
+   palette and element rules in that file -- overrides them rather than the
+   other way round. Ionic 8 ships its default palette in core.css (:root
+   { --ion-color-primary: #0054e9; ... }), so a library import that lands
+   after vodle's :root blocks silently replaces the whole theme. */
 
 /* custom CSS: */
 
@@ -295,4 +286,24 @@ ion-spinner {
 // See: https://stackoverflow.com/a/76381282, https://stackoverflow.com/a/76382473
 ion-popover [popover]:not(:popover-open):not(dialog[open]) {
     display: contents;
+}
+// Form labels. Ionic 8 takes a control's label from its own `label` property
+// or its label slot, not from an ion-label sitting beside it in the item.
+// ion-label cannot be used as the slotted content either: it is a scoped
+// Stencil component, and its content is swallowed when it is slotted into
+// another component's named slot, leaving a blank label. So the slotted
+// labels are plain spans, and this restores the colour that
+// <ion-label color="primary"> used to give them.
+[slot="label"].form-label {
+    color: var(--ion-color-primary);
+}
+
+// The app draws its own "show password" eye next to every password field, and
+// browsers of the Edge/IE line add one of their own inside the field, so those
+// fields carry two (#344). Ours stays, theirs goes. This says nothing about
+// the eye a password manager injects, which is the extension's, not the
+// page's, and is not ours to remove.
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
 }

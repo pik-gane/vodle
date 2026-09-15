@@ -430,7 +430,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- We're still missing some data: -->
 
   <ng-container *ngIf="status[0]=='impossible' && status[1]=='not-in-db'">
-    <ion-item [innerHtml]="'delrespond.try-again'|translate">      
+    <ion-item>      
+      <span [innerHtml]="'delrespond.try-again'|translate"></span>
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"
@@ -465,8 +466,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- It's ourselves: -->
 
   <ng-container *ngIf="status[0]=='impossible' && status[1]=='is-self'">
-    <ion-item [innerHtml]="'delrespond.is-self'|translate">      
-    </ion-item>  
+    <ion-item><span [innerHtml]="'delrespond.is-self'|translate"></span></ion-item>  
     <ion-button size="large" color="primary" slot="end"
         shape="round"
         (click)="dismiss()">
