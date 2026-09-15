@@ -2,10 +2,31 @@
 # port, sharing this stack's homeserver. For looking at two versions' GUIs
 # side by side against the same accounts and the same polls:
 #
-#   git worktree add ../vodle-compare <branch, tag or commit>
+#   git fetch origin <branch>
+#   git worktree add --detach ../vodle-compare origin/<branch>
 #   docker compose --env-file .env -f docker-compose.prod.yml \
 #       -f docker-compose.tls.yml -f docker-compose.compare.yml \
 #       up --build -d vodle-web-compare
+#
+# --detach matters. A worktree added at a BRANCH name checks out a local branch
+# tracking it, which then diverges the moment anything pulls into it -- and if
+# it is the same branch someone else is pushing to, `git pull` there answers
+# with a merge commit instead of the commit you asked for, and the build is
+# silently of something else. Detached, the worktree is the remote commit and
+# nothing else, and cannot be pushed from by accident.
+#
+# To move the copy to a newer revision, update the WORKTREE -- fetching in the
+# deployment directory only moves the remote-tracking ref, and the worktree
+# keeps building whatever it still has checked out:
+#
+#   cd ../vodle-compare
+#   git fetch origin <branch>
+#   git checkout --detach origin/<branch>
+#   git log --oneline -1          # must show the commit you expect
+#
+# then rebuild. If every layer of that build says CACHED and the container
+# comes up "Running" rather than "Recreated", the context did not change --
+# i.e. the worktree was not moved, and the check above was skipped.
 #
 # It is one more service in THIS stack rather than a second stack, for two
 # reasons: docker-compose.prod.yml fixes container_name, which a second
