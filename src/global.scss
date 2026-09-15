@@ -297,3 +297,13 @@ ion-popover [popover]:not(:popover-open):not(dialog[open]) {
 [slot="label"].form-label {
     color: var(--ion-color-primary);
 }
+
+// The app draws its own "show password" eye next to every password field, and
+// browsers of the Edge/IE line add one of their own inside the field, so those
+// fields carry two (#344). Ours stays, theirs goes. This says nothing about
+// the eye a password manager injects, which is the extension's, not the
+// page's, and is not ours to remove.
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
