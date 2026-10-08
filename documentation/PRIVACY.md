@@ -116,7 +116,7 @@ The authoritative delegation data travels the ordinary vodle data path — poll 
 
 ### 6.1 How a delegation is recorded
 
-A delegator generates a delegation id `did` and a keypair, sends a magic link `.../delrespond/<pid>/<did>/<from>/<private key>` out of band (`from` is a nickname they type), and records the request. The delegate opens the link, signs a response with that private key, and records it. Both records live in vodle's ordinary data, plus a pair of timeline events in the poll room for live notification:
+A delegator generates a delegation id `did` and a keypair, sends a magic link `.../delrespond/<pid>/<did>/<from>/<private key>?db_server_url=…&db_password=…&poll_password=<poll password>` out of band (`from` is a nickname they type; the query carries what an invitation link carries, so that a delegate who is not in the poll yet can join it from this link, [#341](https://github.com/pik-gane/vodle/issues/341)), and records the request. The delegate opens the link, signs a response with that private key, and records it. Both records live in vodle's ordinary data, plus a pair of timeline events in the poll room for live notification:
 
 | Record | Written by | Lives in | Event type (plain) | Value |
 |---|---|---|---|---|

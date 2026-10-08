@@ -230,8 +230,8 @@ export class DelegationDialogPage implements OnInit {
     'from': []
   }
 
-  set_delegation_link(from: string) {
-    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key);
+  set_delegation_link(from: string, options?: string[]) {
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key, options);
     this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
                 + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
                 + String.fromCharCode(160).repeat(4) + this.p.title + ".\n\n"
@@ -255,8 +255,9 @@ export class DelegationDialogPage implements OnInit {
     const options = Array.from(this.options_selected);
     [this.p, this.did, this.request, this.private_key, this.agreement] =
         this.G.Del.prepare_delegation_for_options(this.parent.pid, options);
-    this.set_delegation_link(this.formGroup.get('from').value);
-    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
+    // the link in the message names the options too; it used to be rebuilt
+    // without them after the message had been composed with it
+    this.set_delegation_link(this.formGroup.get('from').value, options);
     this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
   }
 

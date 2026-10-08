@@ -2485,7 +2485,7 @@ export class MatrixService {
    * whenever a user is logged in; before login, the URL's hostname is the
    * best available guess.
    */
-  private getHomeserverDomain(): string {
+  getHomeserverDomain(): string {
     const from_user_id = MatrixService.serverNameOf(this.userId);
     if (from_user_id) {
       return from_user_id;

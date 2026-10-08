@@ -117,11 +117,30 @@ export class DelegationService {
   get_delegation_link(pid: string, did: string, from: string, privkey: string, oids?: string[]): string {
     /** generate magic link to be sent to delegate */
     let link = `${environment.magic_link_base_url}delrespond/${pid}/${did}/${encodeURIComponent(from)}/${privkey}`;
-    
+    const params = new URLSearchParams();
     if (oids && oids.length > 0) {
-      const params = new URLSearchParams();
       oids.forEach(value => params.append('oids', value));
-      link = `${link}?${params.toString()}`;
+    }
+    // What the invitation link carries, so that someone who is not in the
+    // poll yet -- a brand-new guest, the usual recipient of a delegation
+    // request -- can join the poll from this link and answer, instead of
+    // being told to find an invitation link first (#341). The poll password
+    // IS the invitation, and the message around this link already asks not
+    // to pass it on.
+    const p = this.G.P.polls[pid];
+    if (p && p.password) {
+      if (environment.useMatrixBackend) {
+        params.append('db_server_url', this.G.D.poll_origin_server_known(pid));
+        params.append('db_password', '_');
+      } else {
+        params.append('db_server_url', p.db_server_url || '');
+        params.append('db_password', p.db_password || '');
+      }
+      params.append('poll_password', p.password);
+    }
+    const query = params.toString();
+    if (query) {
+      link = `${link}?${query}`;
     }
     this.G.L.debug("DelegationService.get_delegation_link", link);
     return link;

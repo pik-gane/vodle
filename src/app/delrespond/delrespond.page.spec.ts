@@ -184,4 +184,124 @@ describe('DelrespondPage', () => {
     expect(() => component.onDataReady()).not.toThrow();
     expect(component.ready).withContext('and it says so rather than showing nothing').toBeTrue();
   });
+
+  /** The owner opened a delegation link in a private window and was told,
+   *  after a minute, that vodle was still waiting for data on the request,
+   *  for ever (#341). A fresh device learns which polls it is in from the
+   *  server after the start, so the page's one request for the poll's
+   *  contents came before the poll was known and failed, and nothing asked
+   *  again once the poll list had arrived. And a recipient who is not in
+   *  the poll at all -- the usual recipient of a delegation request -- had
+   *  no way in from this link, which named the poll and nothing more. */
+  describe('a device that does not know the poll yet (#341)', () => {
+    const running = {pid: 'p1', title: 'A poll', state: 'running'} as any;
+    const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    beforeEach(() => {
+      component.pid = 'p1';
+      component.did = 'd1';
+      component.from = 'someone@example.org';
+      component.G.Del.store_incoming_request = () => {};
+    });
+
+    it("asks for the poll's contents once the poll is known, not only before", async () => {
+      const loads: string[] = [];
+      component.G.P.polls = {};
+      component.G.D.ensure_poll_loaded = (pid: string) => { loads.push(pid); return Promise.resolve(); };
+      let loaded = false;
+      component.G.Del.get_incoming_request_status = (pid: string) =>
+        !(pid in component.G.P.polls) ? ['impossible', 'poll-unknown']
+        : loaded ? ['possible', 'acyclic'] : ['impossible', 'not-in-db'];
+      component.onDataReady();
+      expect(component.status).toEqual(['impossible', 'poll-unknown']);
+      expect(loads).withContext('nothing to load while the poll is unknown').toEqual([]);
+      component.G.P.polls = {p1: running};      // the poll list arrived
+      component.onDataChange();
+      expect(component.status).toEqual(['impossible', 'not-in-db']);
+      expect(loads).withContext('the poll is asked for as soon as it is known').toEqual(['p1']);
+      loaded = true;
+      await settle();
+      expect(component.status).withContext('and the request read once it is there').toEqual(['possible', 'acyclic']);
+    });
+
+    it('joins the poll the link names when this device does not know it, then reads the request', async () => {
+      component.G.P.polls = {};
+      component.db_server_url = 'hs.example';
+      component.db_password = '_';
+      component.poll_password = 'secret';
+      const joins: any[] = [];
+      component.G.D.join_poll_from_link = (...args: any[]) => {
+        joins.push(args);
+        component.G.P.polls = {p1: running};    // what joining does
+        return Promise.resolve(running);
+      };
+      const loads: string[] = [];
+      component.G.D.ensure_poll_loaded = (pid: string) => { loads.push(pid); return Promise.resolve(); };
+      component.G.Del.get_incoming_request_status = (pid: string) =>
+        !(pid in component.G.P.polls) ? ['impossible', 'poll-unknown']
+        : loads.length ? ['possible', 'acyclic'] : ['impossible', 'not-in-db'];
+      component.onDataReady();
+      expect(joins).toEqual([['p1', 'hs.example', '_', 'secret']]);
+      expect(component.joining).withContext('shown as being joined, not as "not participating"').toBeTrue();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('delrespond.checking');
+      await settle();
+      expect(component.joining).toBeFalse();
+      expect(loads).withContext("then the poll's contents, which hold the request").toEqual(['p1']);
+      expect(component.status).toEqual(['possible', 'acyclic']);
+    });
+
+    it('says the poll could not be joined when it cannot be, with the reason', async () => {
+      component.G.P.polls = {};
+      component.poll_password = 'secret';
+      component.G.D.join_poll_from_link = () => Promise.reject(new Error('poll p1 not found on homeserver hs.example'));
+      component.G.D.ensure_poll_loaded = jasmine.createSpy('ensure_poll_loaded');
+      component.G.Del.get_incoming_request_status = () => ['impossible', 'poll-unknown'];
+      component.onDataReady();
+      await settle();
+      expect(component.joining).toBeFalse();
+      expect(component.join_error).toContain('not found');
+      expect(component.G.D.ensure_poll_loaded).not.toHaveBeenCalled();
+      fixture.detectChanges();
+      const body = fixture.nativeElement.textContent;
+      expect(body).toContain('delrespond.poll-unknown');
+      expect(body).toContain('not found on homeserver');
+    });
+
+    it('joins nothing when the link does not say where the poll is', () => {
+      component.G.P.polls = {};
+      component.G.D.join_poll_from_link = jasmine.createSpy('join_poll_from_link');
+      component.G.D.ensure_poll_loaded = jasmine.createSpy('ensure_poll_loaded');
+      component.G.Del.get_incoming_request_status = () => ['impossible', 'poll-unknown'];
+      component.onDataReady();
+      expect(component.G.D.join_poll_from_link).not.toHaveBeenCalled();
+      expect(component.G.D.ensure_poll_loaded).not.toHaveBeenCalled();
+      expect(component.status).toEqual(['impossible', 'poll-unknown']);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('delrespond.poll-unknown');
+    });
+
+    it('lets a guest consent before answering', () => {
+      // a guest made for the link has not consented to the privacy statement
+      // (#193): the answer waits for that, as the poll page's sliders do
+      component.G.P.polls = {p1: running};
+      const D: any = component.G.D;     // the stub, whose consent_pending is a plain property
+      D.consent_pending = true;
+      D.record_consent = () => { D.consent_pending = false; };
+      component.p = running;
+      component.status = ['possible', 'acyclic'];
+      component.ready = true;
+      fixture.detectChanges();
+      const el = fixture.nativeElement;
+      expect(el.querySelector('[data-vodle="consent-footer"]')).withContext('the consent question').toBeTruthy();
+      const answers = (Array.from(el.querySelectorAll('ion-button')) as any[])
+        .filter(b => /delrespond\.(accept|decline)/.test(b.textContent));
+      expect(answers.length).toBe(2);
+      for (const b of answers) { expect(b.disabled).withContext(b.textContent.trim()).toBeTrue(); }
+      component.consent_given(true);
+      fixture.detectChanges();
+      for (const b of answers) { expect(b.disabled).withContext(b.textContent.trim()).toBeFalse(); }
+      expect(el.querySelector('[data-vodle="consent-footer"]')).toBeNull();
+    });
+  });
 });
