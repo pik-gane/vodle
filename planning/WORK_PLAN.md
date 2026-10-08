@@ -194,21 +194,19 @@ questions below are answered.
 
 ### What is in flight
 
-PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — is **open and
-unmerged**, on branch `claude/keen-ptolemy-i0m1n5`. `main` is `c7fed2b` and has
-not moved since 2026-09-14, so there is no conflict. The last commits carrying
-code are the room-version fix described below and the fixes for #345 and #341
-(under *Issues*); before them, `9da5bd3` was the last on which both checks —
-`build and test` and `e2e smoke (built app)` — were green. `mergeable_state` is `blocked`, which here means branch protection
-waiting on a human approval, a thing no push can supply.
+PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — was **merged** into
+`main` on 2026-10-08 as `73b2c55`, with the room-version fix and the fixes
+for #341 and #345 (both under *Issues* below) in it.
 
-**Do not start the follow-up work from `main`**: sessions 38 and 39 are only
-on that branch. A session told to develop on a different branch should branch
-from `claude/keen-ptolemy-i0m1n5`, not from `main`, until #339 lands.
+The work continues on branch **`claude/to-current-versions`**, branched from
+that merge, which brings the stack to the versions current on 2026-10-08:
+Angular 22, Ionic 9, TypeScript 6 (see *The hops after the merge*). It has no
+pull request yet. CI does not run on a push to a branch without one; the runs
+there were started by hand (`workflow_dispatch`, runs 138, 139 and later),
+and a new dispatch on the same branch cancels one still running.
 
-Nobody is watching the PR any more. The hourly check-in and the PR-activity
-subscription belonged to the session that opened it and ended with it; a
-successor that wants them must arm them itself.
+Nobody is watching either branch from a session any more; a successor that
+wants a PR watched must open it and arm the watching itself.
 
 ### The red run of 2026-10-08, and what it was
 
@@ -246,11 +244,54 @@ That is a design decision, not a migration task, and is left open here.
     npx ng build --configuration production
     CHROME_BIN=<chromium> npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
 
+Node 22.22.3 or newer is needed since Angular 22 (CI's `node-version: 22`
+and the Dockerfiles' `node:22-slim` resolve to 22.23.3 and are fine; a
+container with an older 22 wants a Node 24 on its PATH).
+
 The suite should say `Executed 972 of 992 (skipped 20) SUCCESS`. The 20 skips
 are the CouchDB/Synapse integration specs, which call `pending()` when no
-backends are provisioned. The build is clean apart from one known warning:
-the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads
-`"2mb"` in `angular.json` as 2×10⁶ where 18 read it as 2×2²⁰.
+backends are provisioned. The build is clean apart from two known warnings:
+the initial bundle is 2.96 MB against a 2 MB budget (2.80 before the four
+hops; Angular 19 and later read `"2mb"` in `angular.json` as 2×10⁶ where 18
+read it as 2×2²⁰), and since Angular 22 the CLI says on every build and test
+run that its webpack builders are deprecated (see *Deprecations now pending*).
+
+### The hops after the merge (2026-10-08, branch `claude/to-current-versions`)
+
+Each hop is a commit of what `ng update` did and a commit of what vodle had to
+change in response, as the series did before, and each was verified by the
+production build, the suite (`Executed 972 of 992 (skipped 20) SUCCESS`
+throughout), a plain `npm ci`, and a CI run against the real homeservers.
+
+| hop | what it took |
+| --- | --- |
+| Angular 19 → 20 (`3fc91d9`) | The two `ng-reflect-router-link` assertions in `mypolls.page.spec.ts` read the RouterLink directive now. Dockerfiles on `node:22-slim`: Angular 20 needs Node 20.19 or 22.12, and 18 was end-of-life. CI run 138 green. |
+| Angular 20 → 21 (`531faa2`, `f2adcf9`) | The control-flow migration is part of the update in 21: 24 templates use `@if`/`@for`/`@switch` now (`git diff -w` shows the logical change; the migration re-indents and trims). TypeScript 5.9. `provideZoneChangeDetection()` in `main.ts` **and** in `test.ts`: Angular 21 is zoneless unless told otherwise, and the zoneless TestBed failed 29 page specs with NG0100. `ionic-logging-service` 21 has no NgModule. `hexToBytes` typed for TS 5.9's WebCrypto. The update was run with the CLI's Prettier lookup disarmed — it had found a Prettier on the machine, not in the repository, and reformatted every template; that diff was discarded. CI run 138 green. |
+| Angular 21 → 22 (`e21aef3`, `b7b0eef`) | TypeScript 6.0 turns `strict` on by default (1103 errors here) and deprecates `baseUrl` and `downlevelIteration`: `tsconfig.json` says `strict: false` and resolves the `src/…` imports through `paths`. OnPush is the default strategy now; the migration made all 28 components `Eager`, which is what they were. `withXhr()`. `ionic-logging-service` 23. `@angular/animations` dropped (unused, deprecated). CI run 139. |
+| Ionic 8 → 9 (`064a0da`) | `@ionic/angular` is the standalone entry point now; the module-based app imports from `@ionic/angular/lazy` (72 files). `autocorrect="off"` removed from three inputs (a string is `true` now). Rendered check: the login page's e-mail label measures 47×20 in the primary colour, as under Ionic 7 and 8; the browser smoke specs pass against the build. |
+
+**Still behind** after the four hops (37 packages per `npm outdated`):
+`matrix-js-sdk` 37 → 43 — six majors in the data layer; read its changelogs
+first, the two-client and federation specs in CI are the net — then
+`@ngx-translate/core` 15 → 18 with `http-loader` 8 → 18 (16 moved to
+standalone providers), Capacitor 3 → 8 (the mobile targets are dead, but the
+web code imports its plugins for notifications and sharing), the test tooling
+(jasmine 3 → 7, karma-jasmine 4 → 5, `@wdio/*` 8 → 10 — pinned to 8 on
+purpose, see `test/wdio.conf.js`), pouchdb 7 → 9 (the CouchDB backend is
+slated for removal, C1), crypto-es 2 → 3, zone.js 0.15 → 0.16,
+libsodium-wrappers 0.7.10 (0.7.16 broke the build, see `1a8bd0a`).
+TypeScript 7 is the Go-based compiler; Angular 22 wants < 6.1.
+
+**Deprecations now pending**, each a decision of its own and none of them a
+compiler update: Angular's webpack builders (`browser`, `karma`), whose
+replacements are the application builder (esbuild) and the
+`@angular/build:karma` or vitest test builder — the optional migrations this
+series has declined every time, and the ones the next Angular major is most
+likely to force; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9);
+`platformBrowserDynamic` → `platformBrowser` (the dev build still compiles
+JIT, `aot: false` in `angular.json`); `APP_INITIALIZER` →
+`provideAppInitializer`; `strict` TypeScript; OnPush as the default strategy,
+component by component.
 
 ### Three questions this session could not answer
 
