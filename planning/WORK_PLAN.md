@@ -312,6 +312,7 @@ throughout), a plain `npm ci`, and a CI run against the real homeservers.
 | Capacitor 3 → 8 (`abaa99b`) | core, android, ios 3.3.1 → 8.5.3, the plugins 1.0 → 8.x, the CLI 3 → 8 (Node 22). The web code uses four things — `Capacitor.isNativePlatform()`, `LocalNotifications.schedule()` and `requestPermissions()`, `Share.share()` — all unchanged; the plugins' web implementations differ from 1.0 only by what was added (compared file by file). `capacitor.config.ts` loses `bundledWebRuntime`. The native projects under `android/` and `ios/` were at Capacitor 3's `cap sync` and nothing built them; the owner decided on 2026-10-08 to remove them, and the commit *Remove the native projects* on this branch does — the two directories, the six platform packages, `@capacitor/cli`, `capacitor.config.ts` and the F-Droid guide. The web code keeps `@capacitor/core`, `local-notifications` and `share`. CI run 144, the removal in the pull request's run. |
 | pouchdb 7 → 9 (`d952966`), and the minors the ranges allowed (`0d4d102`: d3 7.9, globalthis 1.0.4) | `pouchdb/dist/pouchdb` is still the browser bundle and still what the package's `browser` field names; the five import sites are unchanged, as is the API vodle uses. The CouchDB two-client and migration specs run in CI only. `0d4d102`'s message counts sass 1.105 among the minors it moved; it did not move — `@angular/build` 22.2.2, which `@angular-devkit/build-angular` carries, pins sass to exactly 1.104.1, the lockfile keeps that single copy, and `npm outdated` will keep reporting 1.105 as wanted. CI run 145. |
 | wdio 8.3 → 8.46, within the pinned major | `npm update` of the four `@wdio/*` packages. webdriverio 8.46 no longer depends on the `devtools` package that the `automationProtocol: 'devtools'` of `test/wdio.conf.js` needs (the run failed with "Automation protocol package is not installed!"), so `devtools` 8.46 is a devDependency of its own now; it is also where the click-through's `puppeteer-core` comes from. The two smoke specs pass. CI run 146. |
+| Angular's application builder and karma builder (branch `claude/application-builder`) | `ng update @angular/cli --migrate-only --name use-application-builder`: `@angular/build:application` (esbuild) builds the app, `@angular/build:karma` runs the suite, `@angular/build` replaces `@angular-devkit/build-angular` and the webpack half of the lockfile goes. Output stays in `docs/` (`outputPath: {base: "docs", browser: ""}`; the migration's default is `docs/browser/`). One code change: `pouchdb/dist/pouchdb` is UMD, and esbuild hands a namespace import of it an object whose `default` is the constructor — the built app died at boot with "ss is not a constructor" (found by loading it headless) until the five import sites became default imports. The test target's `polyfills` had to become an array by hand. Build 25 s instead of about 60, initial bundle 2.56 MB from 2.78; the `~` prefixes in `variables.scss` went, `esModuleInterop` replaces `allowSyntheticDefaultImports`. With the webpack half of the lockfile gone, the audit's remaining unfixable entries drop from 27 to 23 (still only braces and extract-zip). The vitest builder (`migrate-karma-to-vitest`) remains the separate, larger decision. |
 
 **Still behind** after these hops, each on purpose: `@wdio/*` 8 → 10
 (pinned to 8, see `test/wdio.conf.js`: the devtools automation protocol it
@@ -324,11 +325,9 @@ and two registry-view quirks: the Angular packages with a "latest" of 21.2
 8.46 against a "latest" of 8.42, where that package's tag points.
 
 **Deprecations now pending**, each a decision of its own and none of them a
-compiler update: Angular's webpack builders (`browser`, `karma`), whose
-replacements are the application builder (esbuild) and the
-`@angular/build:karma` or vitest test builder — the optional migrations this
-series has declined every time, and the ones the next Angular major is most
-likely to force; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9,
+compiler update: the vitest test builder (`migrate-karma-to-vitest`), now
+that the webpack builders are gone (see the last row above) and karma itself
+is in maintenance; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9,
 which warns about it on every test run) and `<ion-img>` →
 `<img loading="lazy">` (deprecated in Ionic 9, removed in 10; the suite's
 console names the top-right icon);
