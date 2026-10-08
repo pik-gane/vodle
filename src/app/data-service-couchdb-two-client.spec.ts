@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import * as PouchDB from 'pouchdb/dist/pouchdb';
-import CryptoES from 'crypto-es';
+import * as CryptoES from 'crypto-es';
 
 import { DataService } from './data.service';
 import { environment } from '../environments/environment';
@@ -60,7 +60,7 @@ describe('DataService against a real CouchDB (two clients, #292)', () => {
   const noop = () => {};
   const silent = {entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop};
   const decrypt = (cyphertext: string, password = POLL_PASSWORD) =>
-    CryptoES.AES.decrypt(cyphertext, password).toString(CryptoES.enc.Utf8);
+    CryptoES.AES.decrypt(cyphertext, password).toString(CryptoES.Utf8);
 
   let available = false;
   let unavailable_reason = '';

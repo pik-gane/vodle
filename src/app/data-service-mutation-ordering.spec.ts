@@ -1,5 +1,5 @@
 import * as PouchDB from 'pouchdb/dist/pouchdb';
-import CryptoES from 'crypto-es';
+import * as CryptoES from 'crypto-es';
 import { DataService } from './data.service';
 import { CouchDBBackend } from './couchdb-backend';
 import { DelegationService } from './delegation.service';
@@ -14,7 +14,7 @@ describe('DataService ordered voter mutations', () => {
   const noop = () => {};
   const encrypt = (value: string, password = 'user-password') => CryptoES.AES.encrypt(value, password).toString();
   const decrypt = (doc: any, password = 'user-password') =>
-    CryptoES.AES.decrypt(doc.value, password).toString(CryptoES.enc.Utf8);
+    CryptoES.AES.decrypt(doc.value, password).toString(CryptoES.Utf8);
   let service: any;
   let retry_delay: number;
   let delegation_mode: string;

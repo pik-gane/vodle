@@ -44,12 +44,12 @@ import * as PouchDB from 'pouchdb/dist/pouchdb';
 
 import BLAKE2s from 'blake2s-js'; // TODO: replace by sodium later?
 
-import CryptoES from 'crypto-es';
-const iv = CryptoES.enc.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
+import * as CryptoES from 'crypto-es'; // 3.0 has named exports only: no default, no enc/algo/lib namespaces
+const iv = CryptoES.Hex.parse("101112131415161718191a1b1c1d1e1f"); // this needs to be some arbitrary but GLOBALLY CONSTANT value
 
-
-import * as Sodium from 'libsodium-wrappers';
-import { PasswordBasedCipher } from 'crypto-es/lib/cipher-core';
+// 0.8's ES module puts the crypto_* functions on its default export once `ready` resolves;
+// the named exports are the helpers only, so a namespace import does not find them.
+import Sodium from 'libsodium-wrappers';
 
 import { MatrixService, hashEmail } from './matrix.service';
 
@@ -239,7 +239,7 @@ const voter_subkeystarts_requiring_due = ['rating', 'del_request', 'del_response
 const textEncoder = new TextEncoder();
 
 function encrypt_deterministically(value, password:string) {
-  const aesEncryptor = CryptoES.algo.AES.createEncryptor(CryptoES.enc.Utf8.parse(password), { iv: iv });
+  const aesEncryptor = CryptoES.AESAlgo.createEncryptor(CryptoES.Utf8.parse(password), { iv: iv });
   const result = aesEncryptor.process(''+value).toString()+aesEncryptor.finalize().toString(); 
   return result;
 }
@@ -257,7 +257,7 @@ function decrypt(value:string, password:string): string {
   try {
     const temp = CryptoES.AES.decrypt(value, password);
     // FIXME: sometimes we get a malformed UTF-8 error on toString: 
-    const result = temp.toString(CryptoES.enc.Utf8);
+    const result = temp.toString(CryptoES.Utf8);
     return result;
   } catch (error) {
     return null;
@@ -7185,7 +7185,7 @@ export class DataService implements OnDestroy {
 
   generate_id(length:number): string {
     // generates a random string of requested length
-    return CryptoES.lib.WordArray.random(length/2).toString();
+    return CryptoES.WordArray.random(length/2).toString();
   }
 
   email_is_valid(email: string): boolean {

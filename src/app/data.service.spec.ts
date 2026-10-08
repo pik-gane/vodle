@@ -24,7 +24,7 @@ import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/com
 import { IonicModule } from '@ionic/angular/lazy';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { provideTranslateService } from '@ngx-translate/core';
-import CryptoES from 'crypto-es';
+import * as CryptoES from 'crypto-es';
 import * as PouchDB from 'pouchdb/dist/pouchdb';
 
 import { DataService } from './data.service';
@@ -1365,7 +1365,7 @@ describe('DataService consistency hardening (#292)', () => {
 
         expect(db.put).toHaveBeenCalledTimes(1);
         const put_doc = db.put.calls.mostRecent().args[0];
-        expect(CryptoES.AES.decrypt(put_doc.value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('closed');
+        expect(CryptoES.AES.decrypt(put_doc.value, 'pw123').toString(CryptoES.Utf8)).toBe('closed');
         expect(svc.poll_caches['p1']['state']).toBe('closed');
       });
 
@@ -1462,7 +1462,7 @@ describe('DataService consistency hardening (#292)', () => {
 
         const migration = svc.move_draft_data_to_poll_db('p1');
         await settle();
-        expect(CryptoES.AES.decrypt(stored_marker.value, 'test-password').toString(CryptoES.enc.Utf8)).toBe('draft');
+        expect(CryptoES.AES.decrypt(stored_marker.value, 'test-password').toString(CryptoES.Utf8)).toBe('draft');
         expect(svc.store_poll_data_confirmed).not.toHaveBeenCalled();
         expect(svc.delu).not.toHaveBeenCalled();
         expect(svc.user_cache['poll.p1.title']).toBe('T');
@@ -2107,7 +2107,7 @@ describe('DataService consistency hardening (#292)', () => {
           expect(svc.poll_caches.p1[key]).toBe('80');
           const persisted = await local.get(_id);
           expect(persisted._rev).toBe(accepted.rev);
-          expect(CryptoES.AES.decrypt(persisted.value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('80');
+          expect(CryptoES.AES.decrypt(persisted.value, 'pw123').toString(CryptoES.Utf8)).toBe('80');
         } finally {
           await local.destroy();
           await remote.destroy();
@@ -2334,7 +2334,7 @@ describe('DataService consistency hardening (#292)', () => {
         // the remotely accepted vote is adopted locally rather than dropped:
         expect(svc.handle_deleted_poll_doc).not.toHaveBeenCalled();
         expect(local_docs[id]).toBeDefined();
-        expect(CryptoES.AES.decrypt(local_docs[id].value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('50');
+        expect(CryptoES.AES.decrypt(local_docs[id].value, 'pw123').toString(CryptoES.Utf8)).toBe('50');
         expect(local_docs[id].due).toBe(due);
       });
 
@@ -2514,7 +2514,7 @@ describe('DataService consistency hardening (#292)', () => {
               expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 0, false);
             } else {
               expect(svc.poll_caches.p1[key]).toBe('50');
-              expect(CryptoES.AES.decrypt((await local.get(id)).value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('50');
+              expect(CryptoES.AES.decrypt((await local.get(id)).value, 'pw123').toString(CryptoES.Utf8)).toBe('50');
               expect((await local.get(id)).due).toBe(due);
               expect((await remote.get(id))._rev).toBe(previous._rev);
               expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v1', 'o1', 50, false);
@@ -2643,7 +2643,7 @@ describe('DataService consistency hardening (#292)', () => {
         const written = remote.put.calls.mostRecent().args[0];
         expect(written._rev).toBe('1-running');
         expect(written.due).toBe(doc.due);
-        expect(CryptoES.AES.decrypt(written.value, 'pw123').toString(CryptoES.enc.Utf8)).toBe('closed');
+        expect(CryptoES.AES.decrypt(written.value, 'pw123').toString(CryptoES.Utf8)).toBe('closed');
         acknowledge({ok: true});
         await closing;
         expect(confirmed).toBeTrue();
