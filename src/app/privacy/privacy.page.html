@@ -31,7 +31,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <!-- IF GERMAN, USE GERMAN VERSION: -->
 
-@if (translate.currentLang=='de') {
+@if (translate.currentLang()=='de') {
   <ion-content class="ion-padding">
     <ion-item color="primary">
       <ion-label><span [innerHtml]="E.privacy_statement_headline"></span></ion-label>
@@ -312,7 +312,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 <!-- OTHERWISE USE ENGLISH VERSION: -->
 
-@if (translate.currentLang!='de') {
+@if (translate.currentLang()!='de') {
   <ion-content class="ion-padding">
     <ion-item color="primary">
       <ion-label><span [innerHtml]="E.privacy_statement_headline"></span></ion-label>

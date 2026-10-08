@@ -21,7 +21,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular/lazy';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 import { MigrationPageRoutingModule } from './migration-routing.module';
 
@@ -33,7 +33,7 @@ import { MigrationPage } from './migration.page';
     FormsModule,
     IonicModule,
     MigrationPageRoutingModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [MigrationPage]
 })

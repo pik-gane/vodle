@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { IonicStorageModule } from '@ionic/storage-angular';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { DelegationService } from './delegation.service';
 import { environment } from '../environments/environment';
@@ -31,7 +31,8 @@ describe('DelegationService', () => {
     // the real dependency graph (TranslateService, MatrixService -> Storage);
     // DelegationService's constructor is side-effect free:
     TestBed.configureTestingModule({
-      imports: [TranslateModule.forRoot(), IonicStorageModule.forRoot()],
+      imports: [IonicStorageModule.forRoot()],
+      providers: [provideTranslateService()],
     });
     service = TestBed.inject(DelegationService);
   });

@@ -7174,7 +7174,9 @@ export class DataService implements OnDestroy {
   }
   
   format_date(date: Date): string {
-    return date ? date.toLocaleDateString(this.translate.currentLang, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : '';
+    // getCurrentLang() is null before a language is set (ngx-translate 18);
+    // undefined lets the browser pick its own locale then
+    return date ? date.toLocaleDateString(this.translate.getCurrentLang() || undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : '';
   }
 
   hash(what): string {

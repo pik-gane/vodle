@@ -23,7 +23,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 import { IonicModule } from '@ionic/angular/lazy';
 import { IonicStorageModule } from '@ionic/storage-angular';
-import { TranslateModule } from '@ngx-translate/core';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
@@ -47,10 +47,10 @@ describe('GlobalService', () => {
         RouterTestingModule,
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),
-        TranslateModule.forRoot(),
       ],
       providers: [
         GlobalService,
+        provideTranslateService(),
         provideHttpClient(withXhr(), withInterceptorsFromDi()),
         provideHttpClientTesting(),
       ],

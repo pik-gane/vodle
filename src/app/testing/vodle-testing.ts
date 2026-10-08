@@ -30,7 +30,7 @@ import { IonicModule } from '@ionic/angular/lazy';
 import { RouterTestingModule } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe, provideTranslateService } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { GlobalService } from '../global.service';
@@ -119,7 +119,7 @@ export function global_service_stub(): any {
 export const VODLE_PAGE_TEST_IMPORTS = [
   IonicModule.forRoot(),
   RouterTestingModule,
-  TranslateModule.forRoot(),
+  TranslatePipe,
   FormsModule,
   ReactiveFormsModule,
 ];
@@ -128,6 +128,7 @@ export const VODLE_PAGE_TEST_IMPORTS = [
 export function vodle_page_test_providers(): any[] {
   return [
     {provide: GlobalService, useValue: global_service_stub()},
+    provideTranslateService(),
     // HttpClientTestingModule is deprecated as of Angular 18; these are its
     // replacement, and being providers they cannot live in the imports above
     provideHttpClient(withXhr(), withInterceptorsFromDi()),

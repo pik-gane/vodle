@@ -183,7 +183,7 @@ TODO:
             <ion-icon name="language-outline"></ion-icon>&nbsp;
             <span [innerHtml]="'language'|translate"></span>
           </span>
-          @for (lang of translate.langs; track lang) {
+          @for (lang of translate.getLangs(); track lang) {
             <ion-select-option [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
           }
         </ion-select>

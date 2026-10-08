@@ -24,7 +24,7 @@ import { RouteReuseStrategy } from '@angular/router';
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular/lazy';
 
 import { HttpClient, provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
-import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
+import { TranslatePipe, TranslateLoader, provideTranslateService } from '@ngx-translate/core';
 import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
 // version 21 of the logging service has no NgModule any more: the service is
@@ -67,16 +67,21 @@ export function configureLogging(loggingService: LoggingService): () => void {
         }),
         IonicStorageModule.forRoot(),
         AppRoutingModule,
-        TranslateModule.forRoot({
-            defaultLanguage: DEFAULT_LANG,
+        TranslatePipe,
+    ],
+    providers: [
+        // ngx-translate 18 has no NgModule any more: the service is provided
+        // here, with English as the language a missing key falls back to
+        // (what defaultLanguage meant), and the pipe is a standalone import of
+        // every module whose templates use it
+        provideTranslateService({
+            fallbackLang: DEFAULT_LANG,
             loader: {
                 provide: TranslateLoader,
                 useFactory: (createTranslateLoader),
                 deps: [HttpClient]
             }
         }),
-    ],
-    providers: [
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
         { provide: LocationStrategy, useClass: HashLocationStrategy },
         GlobalService,

@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 import { IonicModule } from '@ionic/angular/lazy';
 
@@ -15,7 +15,7 @@ import { ImprintPage, SafePipe } from './imprint.page';
     FormsModule,
     IonicModule,
     ImprintPageRoutingModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [ImprintPage, SafePipe]
 })
