@@ -196,10 +196,10 @@ questions below are answered.
 
 PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — is **open and
 unmerged**, on branch `claude/keen-ptolemy-i0m1n5`. `main` is `c7fed2b` and has
-not moved since 2026-09-14, so there is no conflict. The last commit carrying
-code is the room-version fix described below; before it, `9da5bd3` was the
-last on which both checks — `build and test` and `e2e smoke (built app)` —
-were green. `mergeable_state` is `blocked`, which here means branch protection
+not moved since 2026-09-14, so there is no conflict. The last commits carrying
+code are the room-version fix described below and the fixes for #345 and #341
+(under *Issues*); before them, `9da5bd3` was the last on which both checks —
+`build and test` and `e2e smoke (built app)` — were green. `mergeable_state` is `blocked`, which here means branch protection
 waiting on a human approval, a thing no push can supply.
 
 **Do not start the follow-up work from `main`**: sessions 38 and 39 are only
@@ -246,7 +246,7 @@ That is a design decision, not a migration task, and is left open here.
     npx ng build --configuration production
     CHROME_BIN=<chromium> npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
 
-The suite should say `Executed 961 of 981 (skipped 20) SUCCESS`. The 20 skips
+The suite should say `Executed 972 of 992 (skipped 20) SUCCESS`. The 20 skips
 are the CouchDB/Synapse integration specs, which call `pending()` when no
 backends are provisioned. The build is clean apart from one known warning:
 the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads
@@ -280,11 +280,38 @@ the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads
 
 Fixed on this branch, so they close when #339 merges: **#342** (the custom end
 date), **#343** (the Share button, see above), **#344** (the duplicate reveal,
-see above), **#346** (the logo). Filed from the same comparison and **not
-touched**: **#341** (a delegation link never resolves — "vodle is still
-waiting for some data on this request"), **#345** (on page two of the
-explain-approval dialog the finished graph flashes before the animation
-starts; an earlier fix of the same shape exists for page one).
+see above), **#346** (the logo), and, since 2026-10-08, the two that the GUI
+comparison had filed and left:
+
+- **#345** (page two of the explain-approval dialog flashed the finished
+  graph): the share tab's `<g>` was switched into an SVG whose clock had
+  been running since page one, so its SMIL animations were past their begin
+  and showed their end state until the clock was reset 100 ms later. The
+  reset now happens before the tab is rendered (`go()` in
+  `explain-approval.page.ts`), which is what page one gets by being rendered
+  into a fresh SVG. Spec: the clock is turned back before the second page
+  is rendered, and a seen page is not replayed.
+- **#341** (a delegation link never resolved for someone not logged in).
+  Two causes. A fresh device learns its polls from the server after the
+  start, so the page's one request for the poll's contents came before the
+  poll was known, failed for want of a voter id, and was never repeated once
+  the poll list arrived — the page then found the poll but not the request
+  and said it was still waiting, for ever. It now asks whenever it looks and
+  the poll is known (`DelrespondPage.fetch`). And a recipient who is not in
+  the poll at all, the usual recipient of a delegation request, had no way
+  in from a link that named the poll and nothing more: the link now carries
+  what the invitation link carries (`db_server_url`, `db_password`,
+  `poll_password` as query parameters; old links still work), the start
+  treats such a link like an invitation link and makes a guest
+  (`DataService.route_is_magic_link`), the page joins the poll the way the
+  join page does (`DataService.join_poll_from_link`, which the join page now
+  uses too) and shows the consent question before a guest may answer.
+  `documentation/PRIVACY.md` §6.1 records the link's new contents. **Not
+  verified against a homeserver here** (no Docker daemon in the session):
+  the specs cover the page's decisions with the backend stubbed, and the
+  click-through does not open a delegation link. The owner's "done when" —
+  a brand-new guest and an existing account both reach the accept/decline
+  screen — needs a run against a real deployment.
 
 ### Deferred, deliberately
 
