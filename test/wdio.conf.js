@@ -30,9 +30,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  *
  * The 'devtools' automation protocol drives the browser over the Chrome
  * DevTools Protocol via puppeteer-core, which comes in through the 'devtools'
- * package that webdriverio itself depends on, so no chromedriver is needed
- * (the pinned chromedriver 119 no longer matches any current Chrome, and wdio
- * 8.3's automatic driver management arrived only in 8.14).
+ * package -- a devDependency of its own since wdio 8.46, which no longer
+ * depends on it (wdio 8.3 did) -- so no chromedriver is needed (the pinned
+ * chromedriver 119 no longer matched any current Chrome).
  *
  * NOTE: this pins the suite to wdio 8 — 'devtools' as an automation protocol
  * was dropped in wdio 9. Upgrading means moving to WebDriver Bidi and letting
