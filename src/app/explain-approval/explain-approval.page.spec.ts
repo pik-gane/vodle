@@ -166,13 +166,21 @@ describe('ExplainApprovalPage', () => {
       svg().setCurrentTime(20);      // the first page's animation has long finished
       component.forward();
       fixture.detectChanges();       // the share tab's <g> is in the SVG now
-      // the approval bar of the share page fades in from second 3; at time
-      // zero it is still invisible, at second 20 it would be finished
+      // the approval bar of the share page fades in from second 3: while
+      // the clock is behind that, the bar is at its initial opacity of 0 by
+      // SMIL's own rules, and at second 20 it would be finished. (Asserted
+      // on the clock and the animation's begin rather than on
+      // getComputedStyle, which Chrome 154 answers with '' for this element
+      // where Chromium 141 answers '0'.)
       const bar = fixture.nativeElement.querySelector('[data-vodle="share-approval-bar"]') as SVGGElement;
       expect(bar).withContext('the share page is rendered').toBeTruthy();
+      const fade_in = bar.querySelector('animate[attributeName="opacity"]') as SVGAnimationElement;
+      const begins_at = parseFloat(fade_in.getAttribute('begin'));
+      expect(begins_at).toBe(3);
       expect(svg().getCurrentTime()).withContext('the clock was turned back before the page was rendered')
         .toBeLessThan(1);
-      expect(getComputedStyle(bar).opacity).withContext('nothing of the finished graph is painted').toBe('0');
+      expect(svg().getCurrentTime()).withContext('so nothing of the finished graph is painted yet')
+        .toBeLessThan(begins_at);
     });
 
     it('does not replay a page that has been seen', () => {
