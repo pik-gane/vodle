@@ -24,7 +24,6 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { IonicModule } from '@ionic/angular';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { TranslateModule } from '@ngx-translate/core';
-import { LoggingServiceModule } from 'ionic-logging-service';
 
 import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
@@ -45,7 +44,6 @@ describe('GlobalService', () => {
     // "should be created" is supposed to prove works in a browser:
     TestBed.configureTestingModule({
       imports: [
-        LoggingServiceModule,
         RouterTestingModule,
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),

@@ -27,7 +27,9 @@ import { HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
-import { LoggingServiceModule, LoggingService, LoggingServiceConfiguration } from 'ionic-logging-service';
+// version 21 of the logging service has no NgModule any more: the service is
+// provided in root, and configured by the initializer below as before
+import { LoggingService, LoggingServiceConfiguration } from 'ionic-logging-service';
 import { IonicStorageModule } from '@ionic/storage-angular';
 
 import { environment } from '../environments/environment';
@@ -49,7 +51,6 @@ export function configureLogging(loggingService: LoggingService): () => void {
 @NgModule({
     declarations: [AppComponent],
     imports: [
-        LoggingServiceModule,
         BrowserModule,
         IonicModule.forRoot({
             // vodle's alert and toast messages are HTML -- line breaks and
