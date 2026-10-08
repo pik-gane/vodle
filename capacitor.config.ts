@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'io.ionic.starter',
   appName: 'vodle',
   webDir: 'www',
-  bundledWebRuntime: false,
   plugins: {
     LocalNotifications: {
       smallIcon: "icon",
