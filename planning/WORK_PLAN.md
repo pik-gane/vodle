@@ -210,6 +210,17 @@ Nobody is watching the PR any more. The hourly check-in and the PR-activity
 subscription belonged to the session that opened it and ended with it; a
 successor that wants them must arm them itself.
 
+### One thing left red
+
+The last push is docs only (this section), and on it the `build and test`
+job failed at step 13, "Build and click through the production app", which
+skipped the suite steps after it. The same job passed on `9da5bd3`, and
+`WORK_PLAN.md` is the whole difference between the two commits, so it is not
+this branch's code — but it is unresolved, and the first thing to do is
+re-run that job and read step 13's own output. Three weeks passed between the
+two runs, so the click-through's homeservers, or the images they come from,
+are the first place to look.
+
 ### How to check it is still sound before touching anything
 
     npm ci                       # plain, no --legacy-peer-deps (restored in 1a8bd0a)
