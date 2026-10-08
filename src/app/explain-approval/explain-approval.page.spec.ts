@@ -55,6 +55,7 @@ describe('ExplainApprovalPage', () => {
     };
     const p = {
       myvid: 'v1',
+      oids: ['o1'],
       options: {o1: {name: 'Option 1'}},
       tally_all: jasmine.createSpy('tally_all').and.callFake(() => {
         T.effective_ratings_ascending_map.set('o1', [...tally.effective]);
@@ -141,6 +142,49 @@ describe('ExplainApprovalPage', () => {
       expect(component.has_my_rating).toBeFalse();
       // the marker position then only reflects the approval share:
       expect(component.mypos).toBeCloseTo(100 * (1 - 0.5), 10);
+    });
+  });
+
+  /** The second page is a <g> switched into an SVG whose clock has been
+   *  running since the first page started. An SMIL animation inserted at a
+   *  document time past its begin shows its end state, so the completed
+   *  graph was painted and only then, 100 ms later, the clock reset and the
+   *  animation drawn (#345). The clock has to be turned back BEFORE the
+   *  tab is rendered, which is what the first page gets for free by being
+   *  rendered into a fresh SVG. */
+  describe('the share page starts from its initial state (#345)', () => {
+    const svg = (): SVGSVGElement => fixture.nativeElement.querySelector('svg#animation');
+
+    it('turns the clock back before the second page is rendered, so nothing of it is painted finished', () => {
+      component.parent = make_parent({
+        effective: [60, 90], threshold: 50, approvals: 2, n: 2, vids: ['v2', 'v3'],
+        my_effective: 0, my_proxy: 0,
+      });
+      component.ready = true;        // what ionViewDidEnter does
+      fixture.detectChanges();
+      expect(svg()).withContext('the first page is rendered').toBeTruthy();
+      svg().setCurrentTime(20);      // the first page's animation has long finished
+      component.forward();
+      fixture.detectChanges();       // the share tab's <g> is in the SVG now
+      // the approval bar of the share page fades in from second 3; at time
+      // zero it is still invisible, at second 20 it would be finished
+      const bar = fixture.nativeElement.querySelector('[data-vodle="share-approval-bar"]') as SVGGElement;
+      expect(bar).withContext('the share page is rendered').toBeTruthy();
+      expect(svg().getCurrentTime()).withContext('the clock was turned back before the page was rendered')
+        .toBeLessThan(1);
+      expect(getComputedStyle(bar).opacity).withContext('nothing of the finished graph is painted').toBe('0');
+    });
+
+    it('does not replay a page that has been seen', () => {
+      component.parent = make_parent(empty_tally);
+      component.ready = true;
+      fixture.detectChanges();
+      component.forward();
+      fixture.detectChanges();
+      svg().setCurrentTime(20);
+      component.back();              // the first page again, as it ended
+      fixture.detectChanges();
+      expect(svg().getCurrentTime()).toBeGreaterThan(10);
     });
   });
 });
