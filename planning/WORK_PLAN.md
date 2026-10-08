@@ -337,6 +337,36 @@ JIT, `aot: false` in `angular.json`); `APP_INITIALIZER` →
 `provideAppInitializer`; `strict` TypeScript; OnPush as the default strategy,
 component by component.
 
+### The dependency audit (2026-10-08, branch `claude/dependency-audit`)
+
+After the hops, `npm audit` reported 8 advisories in the production
+dependencies (6 high) and 66 in all. `npm audit fix` closed most of them
+within the declared ranges; the rest are pinned too tightly by their
+dependents and needed `overrides` in `package.json` — the first this project
+has, so here is what each is for:
+
+| override | why |
+| --- | --- |
+| `uuid` → ^11.1.1 | pouchdb 9 pins 8.3, devtools 10; the advisory is in v3/v5/v6 with a caller-provided buffer, which neither uses, and uuid 11 keeps `v4()` in CommonJS and ESM. The browser bundle of pouchdb carries its own copy and is untouched. |
+| `deepmerge-ts` → ^8.0.2 | the four `@wdio/*` 8 packages want ^5; 8 fixes a stack exhaustion on cyclic objects and keeps the `deepmerge` API; the smoke suite passes on it. |
+| `ws` under `puppeteer-core` → ^8.22.0 | pinned to 8.16.0 exactly; three DoS advisories in 8.0 – 8.20.1. |
+| `tar-fs` under `@puppeteer/browsers` → ^3.1.3 | pinned to 3.0.4; path traversal when extracting. Only used to download browsers, which the harness never does. |
+| `basic-ftp` under `get-uri` → ^6.2.2 | ^5 there; quadratic parser. The FTP path of a PAC proxy, never taken here. |
+| `minimatch@^3.0.0` → ^3.1.5 | globule, karma, karma-coverage, glob 7 and others want 3.0.x; three ReDoS advisories up to 3.1.3. Only the 3.x dependents are moved; the 5.x and 9.x copies stay. |
+| `tmp` → ^0.2.7 | external-editor (via @wdio/cli's inquirer) wants ^0.0.33; symlink advisory up to 0.2.5. |
+| `rollup` under `fmin` → ^4.64.3 | venn.js's fmin lists rollup 0.25 as a dependency although it is its build tool; nothing imports it, any version does. |
+| `diff` under `@wdio/reporter` → ^8.0.3 | `npm audit fix` had resolved the `diff` advisory by moving `@wdio/spec-reporter` back to 8.40; the override keeps 8.43. |
+
+Production dependencies are clean now (`npm audit --omit=dev`: 0). What
+remains, 27 "high" entries, is two advisories without a fixed release:
+**braces** (every version; via karma's chokidar and micromatch) and
+**extract-zip** (every version; via @puppeteer/browsers). Both are build and
+test tooling that never sees input from outside here; when a release fixes
+them, `npm audit fix` will take it. Dependabot's three pull requests (#268
+`ip`, #269 `follow-redirects`, #270 `express`) are overtaken: `ip` is no
+longer in the tree, `follow-redirects` and `express` (both devDependencies'
+dependencies) are at fixed versions; the three can be closed.
+
 ### Three questions this session could not answer
 
 - **#343, the Share button on Waterfox 6.7.2.** That browser answers
