@@ -17,9 +17,9 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, DOCUMENT } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { DOCUMENT } from '@angular/common';
+
 import { environment } from 'src/environments/environment';
 
 @Component({

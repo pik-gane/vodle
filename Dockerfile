@@ -10,7 +10,9 @@
 #
 # The dev server is accessible at http://localhost:4200
 
-FROM node:18-slim
+# Angular 20 builds on Node 20.19 or 22.12 at least (its engines field);
+# 18 reached its end of life in April 2025
+FROM node:22-slim
 
 WORKDIR /app
 

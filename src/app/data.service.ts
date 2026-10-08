@@ -24,12 +24,12 @@ TODO:
 - store emailandpasswordhash for performance
 */
 
-import { Injectable, Inject, OnDestroy } from '@angular/core';
+import { Injectable, Inject, OnDestroy, DOCUMENT } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
-import { DOCUMENT } from '@angular/common';
+
 // rxjs 7 deprecates toPromise(); firstValueFrom is its replacement for a
 // source that emits once and completes, which is what HttpClient.get does
 import { firstValueFrom } from 'rxjs';
