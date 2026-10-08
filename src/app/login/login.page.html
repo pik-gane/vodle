@@ -228,7 +228,7 @@ TODO:
                     formControlName="password"
                     clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                     [type]="showing_password?'text':'password'" required autofocus="true"
-                    autocomplete="off" autocorrect="off"
+                    autocomplete="off"
                     data-vodle="new-password-input"
                     (ionInput)="set_password()" debounce="100"
                     (ionBlur)="blur_password()">
@@ -260,7 +260,7 @@ TODO:
                   #input_retype_password  [maxlength]="E.max_len.name"
                   clearOnEdit="false" clearInput="true"
                   [type]="showing_password?'text':'password'" required
-                  autocomplete="off" autocorrect="off"
+                  autocomplete="off"
                   data-vodle="confirm-password-input"
                   (ionInput)="set_password()" debounce="100"
                   (keydown.enter)="submit_new_password()">
@@ -311,7 +311,7 @@ TODO:
                     formControlName="password"
                     clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
                     [type]="showing_password?'text':'password'" required autofocus="true"
-                    autocomplete="off" autocorrect="off"
+                    autocomplete="off"
                     data-vodle="old-password-input"
                     (ionInput)="set_old_password()" debounce="100"
                     (keydown.enter)="submit_old_password()">

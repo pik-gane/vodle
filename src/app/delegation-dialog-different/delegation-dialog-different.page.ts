@@ -31,7 +31,7 @@ import {
   IonLabel,
   IonList,
   IonReorder,
-  IonReorderGroup, } from '@ionic/angular';
+  IonReorderGroup, } from '@ionic/angular/lazy';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';

@@ -26,7 +26,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * (see data.service.spec.ts / global.service.spec.ts).
  */
 
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 import { RouterTestingModule } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';

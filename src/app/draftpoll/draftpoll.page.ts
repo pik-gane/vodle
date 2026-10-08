@@ -29,7 +29,7 @@ import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, V
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
 
-import { PopoverController, IonSelect, IonToggle, AlertController, IonInput } from '@ionic/angular';
+import { PopoverController, IonSelect, IonToggle, AlertController, IonInput } from '@ionic/angular/lazy';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { DraftpollKebapPage } from '../draftpoll-kebap/draftpoll-kebap.module';  

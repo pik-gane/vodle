@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { SettingsPageRoutingModule } from './settings-routing.module';

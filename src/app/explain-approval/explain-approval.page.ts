@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
-import { ModalController } from '@ionic/angular';
+import { ModalController } from '@ionic/angular/lazy';
 import { TranslateService } from '@ngx-translate/core';
 
 import { GlobalService } from "../global.service";

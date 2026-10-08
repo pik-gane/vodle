@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
-import { ModalController, IonContent } from '@ionic/angular';
+import { ModalController, IonContent } from '@ionic/angular/lazy';
 import { TranslateService } from '@ngx-translate/core';
 
 import * as venn from 'venn.js'

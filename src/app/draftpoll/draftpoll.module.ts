@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 
 import { DraftpollPageRoutingModule } from './draftpoll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';

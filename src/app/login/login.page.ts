@@ -21,7 +21,7 @@ import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/
 import { Router, ActivatedRoute } from "@angular/router";
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { IonButton, IonInput } from '@ionic/angular';
+import { IonButton, IonInput } from '@ionic/angular/lazy';
 
 import { GlobalService } from "../global.service";
 import { environment } from 'src/environments/environment';
