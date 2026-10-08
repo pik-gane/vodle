@@ -40,7 +40,7 @@ import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { Poll, Option } from "./poll.service";
 
-import * as PouchDB from 'pouchdb/dist/pouchdb';
+import PouchDB from 'pouchdb/dist/pouchdb';
 
 import BLAKE2s from 'blake2s-js'; // TODO: replace by sodium later?
 

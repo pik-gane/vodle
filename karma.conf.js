@@ -63,7 +63,7 @@ module.exports = function (config) {
       require('karma-chrome-launcher'),
       require('karma-jasmine-html-reporter'),
       require('karma-coverage'),
-      require('@angular-devkit/build-angular/plugins/karma'),
+      // the Angular test builder (@angular/build:karma) adds its own plugin
       ...(result_file ? [{'reporter:json-result': ['type', JsonResultReporter]}] : [])
     ],
     client: {
