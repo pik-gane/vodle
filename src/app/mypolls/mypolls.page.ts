@@ -28,6 +28,7 @@ import { Poll } from "../poll.service";
   selector: 'app-mypolls',
   templateUrl: './mypolls.page.html',
   styleUrls: ['./mypolls.page.scss'],
+  standalone: false,
 })
 export class MypollsPage implements OnInit {
 

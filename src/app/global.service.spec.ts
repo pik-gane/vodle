@@ -19,13 +19,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { IonicModule } from '@ionic/angular';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { LoggingServiceModule } from 'ionic-logging-service';
 
-import { GlobalService } from './global.service';
+import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
 
 describe('GlobalService', () => {
@@ -46,12 +47,15 @@ describe('GlobalService', () => {
       imports: [
         LoggingServiceModule,
         RouterTestingModule,
-        HttpClientTestingModule,
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),
         TranslateModule.forRoot(),
       ],
-      providers: [GlobalService],
+      providers: [
+        GlobalService,
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+      ],
     });
     service = TestBed.inject(GlobalService);
   });
@@ -116,6 +120,64 @@ describe('GlobalService', () => {
       expect(GlobalService.host_of('not a url')).toBe('not a url');
       (environment as any).handover.predecessor_url = 'https://app.vodle.it/#/';
       expect(service.predecessor_url).toBe('https://app.vodle.it/#/');
+    });
+  });
+  // #343: the Share button is shown only where a share can actually happen.
+  describe('the Web Share capability check', () => {
+    const nav = navigator as any;
+    // define rather than assign: a browser that has these on the prototype
+    // would otherwise keep answering for them
+    const set = (name: string, value: any) =>
+      Object.defineProperty(nav, name, { configurable: true, value });
+    afterEach(() => { delete nav.share; delete nav.canShare; });
+
+    it('says no when the browser has no Web Share at all', () => {
+      set('share', undefined); set('canShare', undefined);
+      expect(web_share_available()).toBeFalse();
+    });
+
+    it('says yes on a browser that shares but cannot be asked in advance', () => {
+      set('share', () => Promise.resolve()); set('canShare', undefined);
+      expect(web_share_available()).toBeTrue();
+    });
+
+    it('follows canShare where there is one', () => {
+      set('share', () => Promise.resolve());
+      set('canShare', () => false);
+      expect(web_share_available()).toBeFalse();
+      set('canShare', () => true);
+      expect(web_share_available()).toBeTrue();
+    });
+
+    it('says no when canShare refuses to answer', () => {
+      set('share', () => Promise.resolve());
+      set('canShare', () => { throw new Error('not supported here'); });
+      expect(web_share_available()).toBeFalse();
+    });
+
+    it('asks about the data the share buttons would send', () => {
+      let asked: any = null;
+      set('share', () => Promise.resolve());
+      set('canShare', (data: any) => { asked = data; return true; });
+      web_share_available();
+      expect(asked).toEqual({ title: 'vodle', text: 'vodle' });
+    });
+
+    // Waterfox 6.7.2 answers "function" and true to both and then shares
+    // nothing, so what the attempt does is the only thing that settles it.
+    it('reads a failed attempt as the browser being unable to share', () => {
+      expect(web_share_broke({ name: 'NotSupportedError' })).toBeTrue();
+      expect(web_share_broke(new Error('no idea what went wrong'))).toBeTrue();
+    });
+
+    it('does not read a cancelled share sheet as a broken browser', () => {
+      expect(web_share_broke({ name: 'AbortError' })).toBeFalse();
+      expect(web_share_broke(null)).toBeFalse();
+      expect(web_share_broke(undefined)).toBeFalse();
+    });
+
+    it('starts out believing the browser', () => {
+      expect(service.web_share_broken).toBeFalse();
     });
   });
 });

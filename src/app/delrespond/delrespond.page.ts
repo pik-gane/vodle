@@ -21,6 +21,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { del_agreement_t } from '../data.service';
+import { environment } from '../../environments/environment';
 
 import { GlobalService } from "../global.service";
 import { Poll } from '../poll.service';
@@ -29,6 +30,7 @@ import { Poll } from '../poll.service';
   selector: 'app-join',
   templateUrl: './delrespond.page.html',
   styleUrls: ['./delrespond.page.scss'],
+  standalone: false,
 })
 export class DelrespondPage implements OnInit {
 
@@ -41,6 +43,25 @@ export class DelrespondPage implements OnInit {
   private_key: string;
   agreement: del_agreement_t;
   status: Array<string>;
+
+  /** The poll's join information, when the link carries it (#341): the
+   *  homeserver the poll room lives on ('_' for this device's own), the
+   *  database password (CouchDB only) and the poll password -- what an
+   *  invitation link carries. A delegation link used to name only the poll,
+   *  so a device that did not know the poll, which a brand-new guest's
+   *  never does, could only be told to find an invitation link first. */
+  db_server_url: string = null;
+  db_password: string = null;
+  poll_password: string = null;
+  E = environment;
+  /** the poll the link names is being joined */
+  joining = false;
+  /** why the poll could not be joined, or the guest not made */
+  join_error: string = null;
+  private slow_timer: any = null;
+  /** how long to give the start to make a guest for this link before the
+   *  page asks for one itself, as the join page does */
+  static SLOW_AFTER_MS = 3000;
 
   // LIFECYCLE:
 
@@ -61,11 +82,22 @@ export class DelrespondPage implements OnInit {
     } );
     this.route.queryParamMap.subscribe(queryParams => {
       this.oids = queryParams.getAll('oids'); // Extract all `oids` values as an array
+      this.db_server_url = queryParams.get('db_server_url');
+      this.db_password = queryParams.get('db_password');
+      this.poll_password = queryParams.get('poll_password');
     });
   }
 
   ngOnInit() {
     this.G.L.entry("DelrespondPage.ngOnInit");
+    if (this.can_join()) {
+      // a link that can be followed without an account gets a guest made
+      // for it during the start (DataService.route_is_magic_link); if the
+      // start could not see which page this is, the page asks for one when
+      // it has been waiting a few seconds, as the join page does (#193,
+      // #327). Idempotent.
+      this.slow_timer = window.setTimeout(() => this.G.D.ensure_guest_for_magic_link(), DelrespondPage.SLOW_AFTER_MS);
+    }
   }
 
   ionViewWillEnter() {
@@ -75,6 +107,10 @@ export class DelrespondPage implements OnInit {
 
   ionViewDidEnter() {
     this.G.L.entry("DelrespondPage.ionViewDidEnter");
+    if (this.G.D.login_failure && !this.G.D.ready) {
+      // the guest login started before this page was there (#193):
+      this.onLoginFailed(this.G.D.login_failure);
+    }
     if (this.G.D.ready) {
       this.onDataReady();
     }
@@ -85,18 +121,7 @@ export class DelrespondPage implements OnInit {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("DelrespondPage.onDataReady", this.pid);
     this.decide();
-    /** And FETCH the request, which nothing else here does.
-     *
-     *  A delegation request is voter data: it lives in the requester's voter
-     *  room. On the Matrix backend a poll's voter rooms are read when the
-     *  poll is OPENED (#327, ensure_poll_loaded) — a hundred round trips for
-     *  a fifty-voter poll, which is why the poll list does not do it. This
-     *  page is not the poll page, so nobody was fetching the one room the
-     *  request is in, and the page's honest "still waiting for some data"
-     *  was permanent: nothing was coming. */
-    this.G.D.ensure_poll_loaded(this.pid)
-      .then(() => this.decide())
-      .catch(err => this.G.L.error("DelrespondPage could not load the poll", this.pid, err));
+    this.fetch();
     this.G.L.exit("DelrespondPage.onDataReady");
   }
 
@@ -109,6 +134,84 @@ export class DelrespondPage implements OnInit {
      *  was answered with "try again later", or with nothing at all (#327). */
     if (!this.ready || this.undecided()) {
       this.decide();
+      this.fetch();
+    }
+  }
+
+  /** Get what the status is still waiting for, if it can be got, and look
+   *  again once it has arrived. Safe to run again; cheap when there is
+   *  nothing to get.
+   *
+   *  The request is voter data: it lives in the requester's voter room, and
+   *  on the Matrix backend a poll's voter rooms are read when the poll is
+   *  OPENED (#327, ensure_poll_loaded) -- a hundred round trips for a
+   *  fifty-voter poll, which is why the poll list does not do it. This page
+   *  is not the poll page, so it has to ask for them itself.
+   *
+   *  It used to ask once, in onDataReady. A device that knows the poll is
+   *  fine with that. A fresh device -- a private window, a new browser --
+   *  learns which polls it is in from the server after the start, so at
+   *  that moment the poll was not known yet: the one load it asked for
+   *  failed for want of the poll's voter id, and once the poll list had
+   *  arrived nobody asked again. The page read the status afresh, found the
+   *  poll but not the request, and said it was still waiting for data --
+   *  for ever (#341). Now it asks whenever it looks and the poll is known;
+   *  ensure_poll_loaded is idempotent and forgets a failure.
+   *
+   *  And when the poll is not known at all but the link says where it is,
+   *  the poll is joined first, the way the join page joins (#341). */
+  private fetch(): void {
+    if (this.p) {
+      this.G.D.ensure_poll_loaded(this.pid)
+        .then(() => this.decide())
+        .catch(err => this.G.L.error("DelrespondPage could not load the poll", this.pid, err));
+    } else if (this.can_join() && !this.joining && !this.join_error) {
+      this.join();
+    }
+  }
+
+  /** whether the link carries what joining the poll takes */
+  can_join(): boolean {
+    return !!this.poll_password;
+  }
+
+  private join(): void {
+    this.G.L.info("DelrespondPage joining the poll the link names", this.pid);
+    this.joining = true;
+    this.G.D.join_poll_from_link(this.pid, this.db_server_url || '_', this.db_password || '_', this.poll_password)
+      .then(() => {
+        this.joining = false;
+        this.decide();
+        this.fetch();   // the poll is known now: its contents, which hold the request
+      })
+      .catch(err => {
+        this.G.L.error("DelrespondPage could not join the poll", this.pid, err);
+        this.join_error = String(err?.message || err);
+        this.joining = false;
+        this.decide();  // "not participating yet", with the reason under it
+      });
+  }
+
+  /** the guest account a first visit of the link makes silently (#193)
+   *  could not be created or logged in */
+  onLoginFailed(message: string) {
+    this.G.L.warn("DelrespondPage.onLoginFailed", message);
+    this.join_error = message;
+    this.status = ["impossible", "poll-unknown"];
+    this.ready = true;
+  }
+
+  /** a guest has not consented to the privacy statement yet (#193): the
+   *  page says so at its bottom and takes no answer until they have, as the
+   *  poll page takes no rating */
+  get consent_pending(): boolean {
+    return this.G.D.consent_pending;
+  }
+
+  consent_given(checked: boolean) {
+    this.G.L.entry("DelrespondPage.consent_given", checked);
+    if (checked && this.consent_pending) {
+      this.G.D.record_consent();
     }
   }
 
@@ -162,6 +265,7 @@ export class DelrespondPage implements OnInit {
 
   ionViewDidLeave() {
     this.G.L.entry("DelrespondPage.ionViewDidLeave");
+    if (this.slow_timer) { window.clearTimeout(this.slow_timer); this.slow_timer = null; }
     this.G.D.save_state();
     this.G.L.exit("DelrespondPage.ionViewDidLeave");
   }

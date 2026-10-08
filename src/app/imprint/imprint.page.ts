@@ -6,7 +6,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 
 import { environment } from '../../environments/environment';
 
-@Pipe({ name: 'safe' })
+@Pipe({ name: 'safe', standalone: false })
 export class SafePipe implements PipeTransform {
   constructor(private domSanitizer: DomSanitizer) {}
   transform(url) {
@@ -18,6 +18,7 @@ export class SafePipe implements PipeTransform {
   selector: 'app-imprint',
   templateUrl: './imprint.page.html',
   styleUrls: ['./imprint.page.scss'],
+  standalone: false,
 })
 export class ImprintPage implements OnInit {
 

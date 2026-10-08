@@ -105,6 +105,22 @@ create_registration_token() {  # create_registration_token CLIENT_PORT ADMIN_ACC
   esac
 }
 
+report_server() {  # report_server NAME CLIENT_PORT ADMIN_ACCESS_TOKEN
+  # The image is `latest`, so what runs here changes under the suite. When
+  # Synapse 1.162 made room version 12 its default, every createRoom of the
+  # production click-through failed and nothing in the job log said which
+  # Synapse this was or what it would have created; that had to be read off
+  # Docker Hub. The version and the default room version are the first
+  # things to look at when the homeserver's behaviour has changed.
+  local version default_version
+  version=$(curl -sS "http://127.0.0.1:$2/_synapse/admin/v1/server_version" \
+    | sed -n 's/.*"server_version": *"\([^"]*\)".*/\1/p')
+  default_version=$(curl -sS "http://127.0.0.1:$2/_matrix/client/v3/capabilities" -H "Authorization: Bearer $3" \
+    | sed -n 's/.*"m\.room_versions": *{ *"default": *"\([^"]*\)".*/\1/p')
+  echo "Synapse $1 is ${version:-of unknown version}, default room version ${default_version:-unknown}" \
+    "(vodle names its own: ROOM_VERSION in src/app/matrix.service.ts)"
+}
+
 make_tls_cert() {  # make_tls_cert VOLUME  — self-signed cert for the federation listener
   # done with the python inside the image (cryptography is a Synapse
   # dependency), so no host tooling is needed:
@@ -297,7 +313,7 @@ stop_guard_bot() {
 }
 
 start() {
-  local spec name cport fport
+  local spec name cport fport admin_token
   # the proxy first: the servers reach each other only through it
   start_proxy
   for spec in ${SERVERS}; do
@@ -310,7 +326,9 @@ start() {
   for spec in ${SERVERS}; do
     IFS=: read -r name cport _ <<< "${spec}"
     register_admin "${PREFIX}-${name}" "${cport}" "${ADMIN_USER}" "${ADMIN_PW}"
-    create_registration_token "${cport}" "$(login_token "${cport}" "${ADMIN_USER}" "${ADMIN_PW}")"
+    admin_token="$(login_token "${cport}" "${ADMIN_USER}" "${ADMIN_PW}")"
+    create_registration_token "${cport}" "${admin_token}"
+    report_server "${name}" "${cport}" "${admin_token}"
   done
   register_admin "${PREFIX}-hs1" 8009 "${GUARD_BOT_USER}" "${GUARD_BOT_PW}"
   start_guard_bot

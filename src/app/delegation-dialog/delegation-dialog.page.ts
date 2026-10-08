@@ -26,7 +26,7 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-import { GlobalService } from "../global.service";
+import { GlobalService, web_share_available, web_share_broke } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll } from '../poll.service';
 import { del_agreement_t, del_request_t } from '../data.service';
@@ -42,6 +42,7 @@ interface Option {
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog.page.html',
   styleUrls: ['./delegation-dialog.page.scss'],
+  standalone: false,
 })
 export class DelegationDialogPage implements OnInit {
 
@@ -82,7 +83,7 @@ export class DelegationDialogPage implements OnInit {
   }
 
   ionViewWillEnter() {
-    this.can_use_web_share = (typeof navigator.share === "function");
+    this.can_use_web_share = !this.G.web_share_broken && web_share_available();
     this.can_share = Capacitor.isNativePlatform() || this.can_use_web_share;
     this.formGroup = this.formBuilder.group({
       delegate_nickname: new UntypedFormControl('', Validators.required),
@@ -229,8 +230,8 @@ export class DelegationDialogPage implements OnInit {
     'from': []
   }
 
-  set_delegation_link(from: string) {
-    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key);
+  set_delegation_link(from: string, options?: string[]) {
+    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, from, this.private_key, options);
     this.message_body = (this.translate.instant('delegation-request.message-body-greeting') + "\n\n" 
                 + this.translate.instant('delegation-request.message-body-before-title') + "\n\n"
                 + String.fromCharCode(160).repeat(4) + this.p.title + ".\n\n"
@@ -254,8 +255,9 @@ export class DelegationDialogPage implements OnInit {
     const options = Array.from(this.options_selected);
     [this.p, this.did, this.request, this.private_key, this.agreement] =
         this.G.Del.prepare_delegation_for_options(this.parent.pid, options);
-    this.set_delegation_link(this.formGroup.get('from').value);
-    this.delegation_link = this.G.Del.get_delegation_link(this.parent.pid, this.did, this.formGroup.get('from').value, this.private_key, options);
+    // the link in the message names the options too; it used to be rebuilt
+    // without them after the message had been composed with it
+    this.set_delegation_link(this.formGroup.get('from').value, options);
     this.G.Del.set_delegate_nickname(this.parent.pid, this.did, this.formGroup.get('delegate_nickname').value);
   }
 
@@ -319,6 +321,13 @@ export class DelegationDialogPage implements OnInit {
       this.popover.dismiss();
     }).catch(err => {
       this.G.L.error("DelegationDialogPage.share_button_clicked failed", err);
+      if (web_share_broke(err)) {
+        // the browser said it could share and then could not, so stop
+        // offering it a button that does nothing (#343)
+        this.G.web_share_broken = true;
+        this.can_use_web_share = false;
+        this.can_share = Capacitor.isNativePlatform();
+      }
     });
   }
 

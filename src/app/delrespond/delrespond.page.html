@@ -26,7 +26,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="!ready">
+<ion-content *ngIf="!ready || joining">
   <ion-item lines="none" class="ion-text-center">
     <ion-col class="ion-no-padding ion-no-margin">
       <p>
@@ -37,7 +37,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-item>
 </ion-content>
 
-<ion-content *ngIf="ready">
+<ion-content *ngIf="ready && !joining">
 
   <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
 
@@ -54,13 +54,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.accept'|translate"></span>
@@ -93,13 +93,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.accept'|translate"></span>
@@ -129,13 +129,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.accept'|translate"></span>
@@ -174,13 +174,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.accept'|translate"></span>
@@ -220,7 +220,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <p>&nbsp;</p>
         <p>&nbsp;</p>
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
@@ -259,7 +259,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         <p>&nbsp;</p>
         <p>&nbsp;</p>
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.decline'|translate"></span>
@@ -287,13 +287,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="revoke()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.revoke'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.keep'|translate"></span>
@@ -325,13 +325,13 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <ion-button size="large" color="warning"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="decline()">
           <ion-icon name="ban"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.no-change'|translate"></span>
         </ion-button>&nbsp;&nbsp;
         <ion-button size="large" color="primary"
-            shape="round"
+            shape="round" [disabled]="consent_pending"
             (click)="accept()">
           <ion-icon name="checkmark"></ion-icon>&nbsp;
           <span [innerHtml]="'delrespond.accept'|translate"></span>
@@ -386,6 +386,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
         <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
+        <!-- the link said where the poll is, and joining it failed (#341) -->
+        <small *ngIf="join_error"><p data-vodle="delrespond-join-error">{{ join_error }}</p></small>
       </ion-col>
     </ion-item>  
     <ion-item lines="none" class="ion-text-center">
@@ -430,7 +432,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- We're still missing some data: -->
 
   <ng-container *ngIf="status[0]=='impossible' && status[1]=='not-in-db'">
-    <ion-item [innerHtml]="'delrespond.try-again'|translate">      
+    <ion-item>      
+      <span [innerHtml]="'delrespond.try-again'|translate"></span>
       <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
     </ion-item>  
     <ion-button size="large" color="primary" slot="end"
@@ -465,8 +468,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   <!-- It's ourselves: -->
 
   <ng-container *ngIf="status[0]=='impossible' && status[1]=='is-self'">
-    <ion-item [innerHtml]="'delrespond.is-self'|translate">      
-    </ion-item>  
+    <ion-item><span [innerHtml]="'delrespond.is-self'|translate"></span></ion-item>  
     <ion-button size="large" color="primary" slot="end"
         shape="round"
         (click)="dismiss()">
@@ -478,3 +480,17 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   
 </ion-content>
+
+<!-- A guest who has not consented to the privacy statement yet (#193): the
+     answer buttons above stay disabled until this is checked, as the poll
+     page's sliders do (#341) -->
+
+<ion-footer *ngIf="ready && !joining && consent_pending" data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
+  <ion-item color="warning" lines="none" class="item-text-wrap">
+    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($any($event).detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
+    <small><p>
+      <b [innerHtml]="'poll.consent-lead'|translate"></b>
+      <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+    </p></small>
+  </ion-item>
+</ion-footer>

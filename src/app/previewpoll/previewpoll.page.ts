@@ -28,6 +28,7 @@ import { Poll } from '../poll.service';
   selector: 'app-previewpoll',
   templateUrl: './previewpoll.page.html',
   styleUrls: ['./previewpoll.page.scss'],
+  standalone: false,
 })
 export class PreviewpollPage implements OnInit {
 

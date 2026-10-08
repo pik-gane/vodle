@@ -31,6 +31,7 @@ import { Component, OnInit } from '@angular/core';
   selector: 'app-configure-server',
   templateUrl: './configure-server.page.html',
   styleUrls: ['./configure-server.page.scss'],
+  standalone: false,
 })
 export class ConfigureServerPage implements OnInit {
 

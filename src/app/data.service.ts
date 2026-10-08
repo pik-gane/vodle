@@ -30,6 +30,9 @@ import { TranslateService } from '@ngx-translate/core';
 import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
 import { DOCUMENT } from '@angular/common';
+// rxjs 7 deprecates toPromise(); firstValueFrom is its replacement for a
+// source that emits once and completes, which is what HttpClient.get does
+import { firstValueFrom } from 'rxjs';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -1105,6 +1108,15 @@ export class DataService implements OnDestroy {
     this.G.L.exit("DataService.process_local_only_user_docs");
   }
 
+  /** A link that may be opened on a device with no credentials and is then
+   *  followed as a guest rather than sent to the login page (#193): an
+   *  invitation link, and a delegation link that carries the poll's
+   *  password, which is to say the invitation (#341). */
+  static route_is_magic_link(route: string): boolean {
+    return route.includes('/joinpoll/')
+        || (route.includes('/delrespond/') && /[?&]poll_password=/.test(route));
+  }
+
   /**
    * Where the app is, as the BROWSER knows it rather than as the router does.
    *
@@ -1166,7 +1178,7 @@ export class DataService implements OnDestroy {
       this.hide_loading();
       const route = this.current_route();
       (this as any).boot_log?.("no credentials; the page is", route || "(not known yet)");
-      if (route.includes('/joinpoll/')) {
+      if (DataService.route_is_magic_link(route)) {
         // the first visit of a magic link on this device (#193): take part
         // as a guest right away instead of asking for a login first — the
         // visitor votes before registering anything. When the deployment
@@ -2030,6 +2042,48 @@ export class DataService implements OnDestroy {
                    "options:", options.size,
                    "voters:", bridgedVoters, "ratings:", bridgedRatings);
     this.G.L.exit("DataService.load_poll_contents", pid);
+  }
+
+  /** Join a poll this device does not know yet, from what a link carries:
+   *  the server (the homeserver the poll room lives on, '_' for this
+   *  device's own), the database password (CouchDB only) and the poll
+   *  password. Makes the Poll, connects it, and once connected reads its
+   *  state and options back, so that it is known to the app and ready for
+   *  ensure_poll_loaded. The join page has done this since the beginning;
+   *  a delegation link that carries the same information (#341) is the
+   *  second place that needs it. */
+  join_poll_from_link(pid: string, db_server_url: string, db_password: string, poll_password: string): Promise<Poll> {
+    this.G.L.entry("DataService.join_poll_from_link", pid, db_server_url);
+    const p = this.G.P.polls[pid] || new Poll(this.G, pid);
+    p._state = "running";
+    p.allow_voting = true;
+    p.password = poll_password;
+    p.init_myvid();
+    let connected: Promise<any>;
+    if (environment.useMatrixBackend) {
+      // the link's first segment names the homeserver the poll room lives
+      // on ('_' in links from before federation support, meaning this
+      // user's own homeserver); the CouchDB db_password is meaningless here
+      const origin_server = (db_server_url && db_server_url != '_') ? db_server_url : undefined;
+      connected = this.connect_to_remote_poll_db(pid, true, origin_server).then(() => {
+        // the state as the caches now hold it, and Option objects for the
+        // oids discovered on the way (registered in _pid_oids, no more)
+        p._state = (this.getp(pid, 'state') as any) || 'running';
+        for (const oid of this._pid_oids[pid] || []) {
+          if (!p.oids.includes(oid)) { new Option(this.G, p, oid); }
+        }
+      });
+    } else {
+      p.db_server_url = db_server_url;
+      p.db_password = db_password;
+      connected = this.connect_to_remote_poll_db(pid, true);
+    }
+    return connected.then(() => {
+      p.set_timeouts();
+      p.tally_all();
+      this.G.L.exit("DataService.join_poll_from_link", pid, p.state);
+      return p;
+    });
   }
 
   connect_to_remote_poll_db(pid: string, wait_for_replication=false, origin_server?: string): Promise<any> {
@@ -2943,6 +2997,15 @@ export class DataService implements OnDestroy {
         || this.has_pending_poll_mutations(pid)) {
       throw make_consistency_failure_error("Poll publication is incomplete for " + pid);
     }
+  }
+
+  /** The homeserver a poll's room lives on, as a magic link names it, from
+   *  what this device knows and without a round trip: the server a link
+   *  named when this device joined the poll, else this device's own
+   *  homeserver, where it created the poll. get_poll_origin_server is the
+   *  same answer with the poll's own session asked. */
+  poll_origin_server_known(pid: string): string {
+    return this.getp(pid, 'origin_server') || this.matrixService.getHomeserverDomain();
   }
 
   get_poll_origin_server(pid: string): Promise<string> {
@@ -4525,12 +4588,12 @@ export class DataService implements OnDestroy {
   get_example_docs(): Promise<any> {
     if (environment.useMatrixBackend) {
       // For Matrix backend, fetch example polls from static JSON assets
-      return this.G.http.get<any[]>('assets/examples/index.json').toPromise()
+      return firstValueFrom(this.G.http.get<any[]>('assets/examples/index.json'))
         .then(async (index: any[]) => {
           const rows = [];
           for (const entry of index) {
             try {
-              const doc = await this.G.http.get<any>('assets/examples/' + entry.file).toPromise();
+              const doc = await firstValueFrom(this.G.http.get<any>('assets/examples/' + entry.file));
               doc._id = 'examples§' + entry.file.replace('.json', '');
               rows.push({ doc });
             } catch (e) {

@@ -140,8 +140,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-card-header>
     <ion-card-content>
       <ion-item>
-        <ion-label position="stacked">Poll ID</ion-label>
-        <ion-input [(ngModel)]="pollIdInput"
+        <ion-input label="Poll ID" labelPlacement="stacked"
+                   [(ngModel)]="pollIdInput"
                    placeholder="Enter poll ID to migrate"
                    [disabled]="!migrationService || isRunning">
         </ion-input>

@@ -39,8 +39,7 @@ TODO:
 
     <!--DATA STORAGE:-->
 
-    <ion-item color="primary" [innerHtml]="'settings.data-storage'|translate"> 
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.data-storage'|translate"></span></ion-item>
     <ion-item>
       <small [innerHtml]="'settings.data-storage-msg'|translate"></small>
     </ion-item>
@@ -52,8 +51,7 @@ TODO:
       <ion-row class="ion-no-padding">
         <ion-col class="ion-no-padding">
           <ion-item>
-            <ion-label position="floating" color="primary" [innerHtml]="'email'|translate"></ion-label>
-            <ion-input 
+            <ion-input labelPlacement="floating" 
               formControlName="email" 
               [placeholder]="'settings.email-placeholder'|translate"
               type="text" inputmode="email" required [maxlength]="E.max_len.name"
@@ -63,6 +61,7 @@ TODO:
                     :'pointer-events:none;font-size:smaller;'"
               (keydown.enter)="finish_editing_email()"
               (keydown.tab)="finish_editing_email()">
+              <span slot="label" class="form-label" [innerHtml]="'email'|translate"></span>
             </ion-input>
             <!--TODO: click OK when hitting enter and valid-->
           </ion-item>
@@ -92,8 +91,7 @@ TODO:
         <ion-row class="ion-no-padding">
           <ion-col class="ion-no-padding">
             <ion-item lines="none">
-              <ion-label position="floating" color="primary" [innerHtml]="'password'|translate"></ion-label>
-              <ion-input 
+              <ion-input labelPlacement="floating" 
                 formControlName="password" [maxlength]="E.max_len.name"
                 clearOnEdit="false" clearInput="true"
                 [readonly]="!editing_password"
@@ -102,6 +100,7 @@ TODO:
                       ?'pointer-events:;'
                       :'pointer-events:none;font-size:smaller;'"
                 (keydown.enter)="finish_editing_password()">
+                <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
               </ion-input>
             </ion-item>
           </ion-col>
@@ -133,8 +132,7 @@ TODO:
       </div>
       <ng-container *ngIf="editing_password">
         <ion-item>
-          <ion-label position="floating" color="primary" [innerHtml]="'retype-password'|translate"></ion-label>
-          <ion-input 
+          <ion-input labelPlacement="floating" 
             formControlName="confirm_password" 
             #input_retype_password 
             [disabled]="!editing_password"
@@ -145,6 +143,7 @@ TODO:
               :'pointer-events:none;font-size:smaller;'"
             (keydown.enter)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password"
             (keydown.tab)="finish_editing_password();showing_password=formGroup.get('pw').valid?false:showing_password">
+            <span slot="label" class="form-label" [innerHtml]="'retype-password'|translate"></span>
           </ion-input>
         </ion-item>
         <div class="validation-errors">
@@ -176,24 +175,23 @@ TODO:
   <!--APPEARANCE-->
 
   <form [formGroup]="formGroup">
-    <ion-item color="primary" [innerHtml]="'settings.appearance'|translate">
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.appearance'|translate"></span></ion-item>
     <ion-item>
-      <ion-label position="floating" color="primary">
-        <ion-icon name="language-outline"></ion-icon>&nbsp;
-        <span [innerHtml]="'language'|translate"></span>
-      </ion-label>
-      <ion-select #ionSelects formControlName="language" 
+      <ion-select labelPlacement="floating" #ionSelects formControlName="language" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate"   
           (ionChange)="set_language()">
+        <span slot="label" class="form-label">
+        <ion-icon name="language-outline"></ion-icon>&nbsp;
+        <span [innerHtml]="'language'|translate"></span>
+      </span>
         <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
       </ion-select>
     </ion-item>
   <!--  <ion-item>
-      <ion-label position="floating" color="primary">Theme</ion-label>
-      <ion-select formControlName="theme" 
+      <ion-select labelPlacement="floating" formControlName="theme" 
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
           >
+        <span slot="label" class="form-label">Theme</span>
         <ion-select-option value="light">Light</ion-select-option>
         <ion-select-option value="dark">Dark</ion-select-option>
       </ion-select>
@@ -201,18 +199,17 @@ TODO:
 
     <!--BEHAVIOUR-->
 
-    <ion-item color="primary" [innerHtml]="'settings.behaviour'|translate">
-    </ion-item>
+    <ion-item color="primary"><span [innerHtml]="'settings.behaviour'|translate"></span></ion-item>
     <ion-item>
-      <ion-label color="primary" position="stacked" style="min-height:20px!important;">
-        <span [innerHtml]="'settings.default-wap'|translate"></span>
-      </ion-label>
-      <ion-range formControlName="default_wap"
+      <ion-range labelPlacement="stacked" formControlName="default_wap"
           color="vodleblue" (ionChange)="set_default_wap()"
           mode="md" pin="true"
           min="0" max="100" step="1" snaps="true" ticks="false"
           style="--bar-height: 7px; --knob-size: 35px; padding-top:8px; padding-left:0px " 
           >
+        <span slot="label" class="form-label" style="min-height:20px!important;">
+          <span [innerHtml]="'settings.default-wap'|translate"></span>
+        </span>
         <ion-label slot="start" style="width:25px!important;"><span style="font-size:16px!important" [innerText]="formGroup.get('default_wap').value"></span></ion-label>
         <!--
         <ion-label slot="start">0</ion-label>
@@ -227,22 +224,36 @@ TODO:
     - if "denied", grey it out and show a message to please grant notifications first.
   -->
 
-  <ion-item color="primary" [innerHtml]="'settings.notifications'|translate">
+  <ion-item color="primary"><span [innerHtml]="'settings.notifications'|translate"></span></ion-item>
+  <ion-item>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.new_option'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.new_option" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.new_option'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.delegation_accepted" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.delegation_accepted'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_accepted" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_accepted'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.delegation_declined'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.delegation_declined" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.delegation_declined'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.poll_closing_soon" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.poll_closing_soon'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closing_soon" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closing_soon'|translate"></ion-label>
-  </ion-item>
-  <ion-item>
-    <ion-checkbox slot="start" [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()"></ion-checkbox><ion-label [innerHtml]="'notify_of.poll_closed'|translate"></ion-label>
+    <ion-checkbox labelPlacement="end" justify="start"
+        [(ngModel)]="notify_of.poll_closed" (ngModelChange)="notify_changed()">
+      <span [innerHtml]="'notify_of.poll_closed'|translate"></span>
+    </ion-checkbox>
   </ion-item>
   <!--and:
   when my vote turns into an abstention

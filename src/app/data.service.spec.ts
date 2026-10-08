@@ -19,7 +19,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { IonicModule } from '@ionic/angular';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { TranslateModule } from '@ngx-translate/core';
@@ -40,10 +41,13 @@ describe('DataService', () => {
     TestBed.configureTestingModule({
       imports: [
         RouterTestingModule,
-        HttpClientTestingModule,
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),
         TranslateModule.forRoot(),
+      ],
+      providers: [
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
       ],
     });
     service = TestBed.inject(DataService);
@@ -3359,6 +3363,50 @@ describe('credential changes and guest accounts (#330, #193)', () => {
     svc.after_local_only_user_cache_is_filled();
     expect(as_guest).not.toHaveBeenCalled();
     expect(svc.router.navigate).toHaveBeenCalled();
+  });
+
+  it('takes a delegation link that carries the poll password for a magic link too (#341)', () => {
+    // the recipient of a delegation request is usually not in the poll yet,
+    // and often has no account; the link now carries what the invitation
+    // link carries, and gets a guest made for it the same way
+    fresh({});
+    svc.router.url = '/';
+    svc.location_hash = () => '#/delrespond/P1/D1/some%40one.org/key?db_server_url=hs.example&db_password=_&poll_password=pw';
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(as_guest).toHaveBeenCalled();
+    expect(svc.router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('but sends a delegation link without it to the login page, as before', () => {
+    fresh({});
+    svc.router.url = '/';
+    svc.location_hash = () => '#/delrespond/P1/D1/some%40one.org/key';
+    const as_guest = spyOn(svc, 'login_as_guest');
+    svc.after_local_only_user_cache_is_filled();
+    expect(as_guest).not.toHaveBeenCalled();
+    expect(svc.router.navigate).toHaveBeenCalled();
+  });
+
+  it('joins a poll from what a link carries, for the join page and the delegation page alike (#341)', async () => {
+    fresh({});
+    const poll: any = {oids: [], options: {}, init_myvid: jasmine.createSpy('init_myvid'),
+                       set_timeouts: jasmine.createSpy('set_timeouts'), tally_all: jasmine.createSpy('tally_all')};
+    svc.G.P.polls = {P1: poll};
+    svc.connect_to_remote_poll_db = jasmine.createSpy('connect_to_remote_poll_db').and.returnValue(Promise.resolve());
+    svc.getp = (pid: string, key: string) => key == 'state' ? 'running' : '';
+    svc._pid_oids = {};
+    expect(await svc.join_poll_from_link('P1', 'hs.example', '_', 'secret')).toBe(poll);
+    expect(poll.password).toBe('secret');
+    expect(poll.allow_voting).toBeTrue();
+    expect(poll._state).toBe('running');
+    expect(poll.init_myvid).toHaveBeenCalled();
+    expect(svc.connect_to_remote_poll_db).toHaveBeenCalledWith('P1', true, 'hs.example');
+    expect(poll.set_timeouts).toHaveBeenCalled();
+    expect(poll.tally_all).toHaveBeenCalled();
+    // '_' means this device's own homeserver, as in links from before federation support:
+    await svc.join_poll_from_link('P1', '_', '_', 'secret');
+    expect(svc.connect_to_remote_poll_db).toHaveBeenCalledWith('P1', true, undefined);
   });
 
   it('lets the join page ask for a guest when the start did not make one', () => {

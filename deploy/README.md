@@ -393,6 +393,68 @@ closed poll room ([MATRIX.md §3](../documentation/deployment/MATRIX.md#3-the-gu
 `restart: unless-stopped` and the healthcheck restart it, `deploy.sh status`
 shows it.
 
+**Two revisions side by side**: to look at a branch's GUI next to the
+running one, against the same accounts and the same polls, add
+`docker-compose.compare.yml` — one more web container on another port,
+sharing this stack's Synapse:
+
+```sh
+git fetch origin <branch>
+git worktree add --detach ../vodle-compare origin/<branch>
+printf 'COMPARE_CONTEXT=../vodle-compare\nCOMPARE_PORT=8443\nCOMPARE_ORIGIN=https://<host>:8443\n' >> .env
+docker compose --env-file .env -f docker-compose.prod.yml \
+    -f docker-compose.tls.yml -f docker-compose.compare.yml \
+    up --build -d vodle-web-compare
+```
+
+`--detach` is not optional. Adding the worktree at a *branch name* checks out a
+local branch that tracks it, which diverges as soon as anything pulls into it;
+when it is a branch someone else pushes to, `git pull` there answers with a
+merge commit rather than the commit you asked for, and the copy is then built
+from something that is on nobody's branch. Detached, the worktree is that
+remote commit and nothing else.
+
+**To move the copy to a newer revision, update the worktree, not the
+deployment.** Fetching in `/opt/vodle` moves only the remote-tracking ref; the
+worktree goes on building whatever it still has checked out:
+
+```sh
+cd ../vodle-compare
+git fetch origin <branch>
+git checkout --detach origin/<branch>
+git log --oneline -1          # must show the commit you expect
+```
+
+then rebuild with the same `docker compose … up --build -d vodle-web-compare`.
+If every layer reports `CACHED` and the container comes up `Running` instead of
+`Recreated`, the build context did not change — which means the worktree was
+not moved, and the `git log` check above was skipped.
+
+Open the firewall for `COMPARE_PORT`. The file's header says why it is a
+service in this stack rather than a second stack, why it is built from
+`Dockerfile.prod` rather than served statically (the app resolves
+`homeserver_url: "/"` against its own origin, port included, so the copy needs
+its own `/_matrix/` proxy), and why it is HTTPS even when throwaway
+(`crypto.subtle` is a secure-context API, and without it the copy cannot knock
+on a closed poll room).
+
+If the worktree's `src/environments/environment.prod.ts` differs from this
+deployment's — a locally edited `server_name`, say — copy yours into it first,
+or the two copies address different homeservers and there is nothing to
+compare.
+
+The second port is a second browser origin, so each copy has its own
+`localStorage`, PouchDB databases and Matrix crypto store: log in on each, and
+neither can disturb the other. One account logged in on both is two Matrix
+devices, and the second cannot decrypt delegation events written before it
+existed — so compare a poll's data as two different participants, not as one
+person twice.
+
+`deploy/deploy.sh` keeps working while the copy runs: it names only its own
+two compose files and passes no `--remove-orphans`, so it warns that the extra
+container is there and leaves it alone. Remove the copy with `stop` and
+`rm -f` on the service, then `git worktree remove`.
+
 ## What the scripts do not do
 
 - Firewall, DNS, obtaining the certificate (certbot on the host does that;

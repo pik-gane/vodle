@@ -23,13 +23,14 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
-import { Poll, Option } from '../poll.service';
+import { Poll } from '../poll.service';
 import { MatrixService } from '../matrix.service';
 
 @Component({
   selector: 'app-join',
   templateUrl: './joinpoll.page.html',
   styleUrls: ['./joinpoll.page.scss'],
+  standalone: false,
 })
 export class JoinpollPage implements OnInit {
 
@@ -145,59 +146,23 @@ export class JoinpollPage implements OnInit {
       }
     } else {
       this.G.L.info("JoinpollPage called for unknown pid, trying to connect", this.pid);
-      this.p = new Poll(this.G, this.pid);
-      this.p._state = "running";
-      this.p.allow_voting = true;
-      this.p.password = this.poll_password;
-      this.p.init_myvid();
-
-      if (environment.useMatrixBackend) {
-        // Phase 13: Join via Matrix. The link's first segment names the
-        // homeserver the poll room lives on ('_' in links from before
-        // federation support, meaning: this user's own homeserver); the
-        // CouchDB db_password segment is meaningless here.
-        const origin_server = (this.db_server_url && this.db_server_url != '_') ? this.db_server_url : undefined;
-        // a join that takes longer than a few seconds says so, rather than
-        // showing the same "just a moment" until the ceiling runs out (#327)
-        this.start_waiting();
-        this.G.D.connect_to_remote_poll_db(this.pid, true, origin_server).then(() => {
-          this.stop_waiting();
-          // Re-read state from poll_caches now that it has been populated
-          this.p._state = (this.G.D.getp(this.pid, 'state') as any) || 'running';
-          this.ready = true;
-
-          // Create Option objects for every oid discovered during
-          // connect_to_remote_poll_db (they were registered in _pid_oids
-          // but Option instances don't exist yet).
-          const oids = (this.G.D as any)._pid_oids[this.pid] as Set<string> | undefined;
-          if (oids) {
-            for (const oid of oids) {
-              if (!this.p.oids.includes(oid)) {
-                new Option(this.G, this.p, oid);
-              }
-            }
-          }
-
-          this.p.set_timeouts();
-          this.p.tally_all();
+      // a join that takes longer than a few seconds says so, rather than
+      // showing the same "just a moment" until the ceiling runs out (#327)
+      if (environment.useMatrixBackend) { this.start_waiting(); }
+      // the procedure is the data service's since the delegation link
+      // learned to carry the same information (#341)
+      this.G.D.join_poll_from_link(this.pid, this.db_server_url, this.db_password, this.poll_password).then(p => {
+        this.stop_waiting();
+        this.p = p;
+        this.ready = true;
+        if (environment.useMatrixBackend) {
           this.router.navigate(['/poll/' + this.pid]);
-        }).catch(err => {
-          this.stop_waiting();
-          this.G.L.error("JoinpollPage Matrix join failed", this.pid, err);
-          this.join_error = String(err?.message || err);
-        });
-      } else {
-        this.p.db_server_url = this.db_server_url;
-        this.p.db_password = this.db_password;
-        this.G.D.connect_to_remote_poll_db(this.pid, true).then(() => {
-          // remote poll db has been replicated completely to local poll db
-          this.ready = true;
-          this.p.set_timeouts();
-          this.p.tally_all();
-        }).catch(err => {
-          this.G.L.error("JoinpollPage CouchDB join failed", this.pid, err);
-        });
-      }
+        }
+      }).catch(err => {
+        this.stop_waiting();
+        this.G.L.error("JoinpollPage join failed", this.pid, err);
+        this.join_error = String(err?.message || err);
+      });
     }
     this.G.L.exit("JoinpollPage.onDataReady");
   }

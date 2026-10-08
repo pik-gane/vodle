@@ -34,12 +34,12 @@ import { AssistPage } from '../assist/assist.module';
 import { AnalysisPage } from '../analysis/analysis.module';  
 import { AddoptionDialogPage } from '../addoption-dialog/addoption-dialog.module';  
 import { ExplainApprovalPage } from '../explain-approval/explain-approval.module';  
-import { waitForAsync } from '@angular/core/testing';
 
 @Component({
   selector: 'app-poll',
   templateUrl: './poll.page.html',
   styleUrls: ['./poll.page.scss'],
+  standalone: false,
 })
 export class PollPage implements OnInit {
 
@@ -1258,7 +1258,7 @@ export class PollPage implements OnInit {
   //        cssClass: 'assist',
   //        showBackdrop: true,
           componentProps: {P: this},
-          backdropDismiss​: false
+          backdropDismiss: false
   //        swipeToClose: true,
   //        presentingElement: this.routerOutlet.nativeEl
       });
@@ -1277,7 +1277,7 @@ export class PollPage implements OnInit {
         cssClass: 'analysis',
 //        showBackdrop: true,
         componentProps: {P: this},
-        backdropDismiss​: true
+        backdropDismiss: true
 //        swipeToClose: true,
 //        presentingElement: this.routerOutlet.nativeEl
     });
@@ -1294,7 +1294,8 @@ export class PollPage implements OnInit {
         cssClass: 'explain-approval',
         showBackdrop: true,
         componentProps: {parent: this, oid: oid},
-        swipeToClose: true,
+        // Ionic 7 removed swipeToClose: a modal with presentingElement set is
+        // a card modal, and card modals get the swipe gesture unconditionally
         presentingElement: this.routerOutlet.nativeEl
     })
     .then((modalElement)=>{

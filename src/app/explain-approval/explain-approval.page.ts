@@ -29,6 +29,7 @@ import { Poll } from '../poll.service';
   selector: 'app-explain-approval',
   templateUrl: './explain-approval.page.html',
   styleUrls: ['./explain-approval.page.scss'],
+  standalone: false,
 })
 export class ExplainApprovalPage implements OnInit {
 
@@ -229,18 +230,19 @@ export class ExplainApprovalPage implements OnInit {
   }
 
   go(tab: string) {
-    this.tab = tab;
     if (!this.seen_tabs.has(tab)) {
       this.seen_tabs.add(tab);
-      // NOT straight away: the tab's own <g> is put into the SVG only when
-      // Angular next renders, and an SMIL animation inserted at a document
-      // time that is already past its begin jumps to its end state. That is
-      // why the second page showed everything at once and then drew it
-      // again, while the replay button — pressed when the <g> is long since
-      // there — played it properly. ionViewDidEnter waits for the same
-      // reason for the first page (#327).
-      window.setTimeout(this.restart, 100);
+      // BEFORE the tab is rendered, not after: the tab's own <g> is put into
+      // the SVG when Angular next renders, and an SMIL animation inserted at
+      // a document time that is already past its begin shows its end state.
+      // Resetting the clock 100 ms after the render, as this did, replayed
+      // the animation -- but by then the finished graph had been painted,
+      // and the answer flashed up before it was explained (#345). With the
+      // clock turned back first, the <g> arrives at time zero, which is what
+      // the first page gets by being rendered into a fresh SVG.
+      this.restart();
     }
+    this.tab = tab;
   }
 
   close()

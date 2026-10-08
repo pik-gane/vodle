@@ -33,6 +33,7 @@ import { restart_at_the_beginning } from "../data.service";
   selector: 'app-logout',
   templateUrl: './logout.page.html',
   styleUrls: ['./logout.page.scss'],
+  standalone: false,
 })
 export class LogoutPage implements OnInit {
 

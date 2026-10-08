@@ -24,7 +24,7 @@ import { environment } from '../environments/environment';
 import BLAKE2s from 'blake2s-js';
 
 // Import Matrix SDK
-import { createClient } from 'matrix-js-sdk/lib/matrix';
+import { createClient, EventType, Preset, Visibility } from 'matrix-js-sdk/lib/matrix';
 import { IndexedDBStore } from 'matrix-js-sdk/lib/store/indexeddb';
 import type { MatrixClient } from 'matrix-js-sdk/lib/client';
 import type { ICreateRoomOpts } from 'matrix-js-sdk/lib/@types/requests';
@@ -138,6 +138,30 @@ export function hashEmail(email: string): string {
  */
 export const JOIN_KEY_EVENT_TYPE = 'm.room.vodle.poll.join_key';
 export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
+
+/**
+ * The room version every room vodle creates is created in.
+ *
+ * It used to be whatever the homeserver's default was. Synapse 1.162.0
+ * (2026-09-29) made that 12, and under room version 12 a room's creator has
+ * unbounded power that no power-levels event can take away or even mention:
+ * an `m.room.power_levels` whose `users` lists the creator is rejected.
+ * vodle's rooms are governed the other way round. The poll and voter rooms
+ * are created with the creator at 100 so that the initial state can be
+ * applied, and the creator is demoted to 50 once the room is set up
+ * (demotePollCreator, createVoterRoom), so that after lockPollMetadata only
+ * the guard bot can change a running poll. A creator who cannot be demoted
+ * could rewrite a poll after it has started -- and in fact the creation was
+ * refused outright, "Creator user ... must not appear in content.users",
+ * which took the production click-through down on 2026-10-08.
+ *
+ * 11 is the newest version without creator privilege, and the one Synapse
+ * defaulted to from 1.158 to 1.161 (July to September 2026), so it is what
+ * this code last ran against. Named here so that the server's default no
+ * longer decides what vodle's rooms can do. Everything the rooms rely on is
+ * older: knock joins need 7, restricted joins 8 (#328).
+ */
+export const ROOM_VERSION = '11';
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
@@ -1189,7 +1213,7 @@ export class MatrixService {
         const users = { ...(levels?.users || {}) };
         if ((users[this.userId] ?? levels?.users_default ?? 0) < 50) {
           users[this.userId] = 50;
-          await this.retryOnRateLimit(() => oldSession.sendStateEvent(roomId!, 'm.room.power_levels', { ...levels, users }, ''));
+          await this.retryOnRateLimit(() => oldSession.sendStateEvent(roomId!, EventType.RoomPowerLevels, { ...levels, users }, ''));
         }
         // the room carries its vid already (the old account wrote it):
         this.voterVidStored.add(roomId);
@@ -1246,7 +1270,7 @@ export class MatrixService {
       }
       users[this.userId] = theirs;
       await this.retryOnRateLimit(
-        () => oldSession.sendStateEvent(roomId, 'm.room.power_levels', { ...levels, users }, ''));
+        () => oldSession.sendStateEvent(roomId, EventType.RoomPowerLevels, { ...levels, users }, ''));
       this.logger?.info("MatrixService.takeOverPollRoom: granted", pollId, theirs);
       this.logger?.exit("MatrixService.takeOverPollRoom");
       return true;
@@ -2010,7 +2034,7 @@ export class MatrixService {
   }
 
   /**
-   * Create a room
+   * Create a room -- in ROOM_VERSION, unless the options name a version.
    */
   async createRoom(options: ICreateRoomOpts): Promise<string> {
     this.logger?.entry("MatrixService.createRoom", options.name);
@@ -2020,7 +2044,8 @@ export class MatrixService {
     }
     
     try {
-      const response = await this.retryOnRateLimit(() => this.client!.createRoom(options));
+      const response = await this.retryOnRateLimit(
+        () => this.client!.createRoom({room_version: ROOM_VERSION, ...options}));
       this.logger?.info("Room created", response.room_id);
       return response.room_id;
     } catch (error) {
@@ -2046,7 +2071,10 @@ export class MatrixService {
     
     try {
       await this.retryOnRateLimit(() =>
-        this.client!.sendStateEvent(roomId, eventType, content, stateKey)
+        // vodle's own event types (m.room.vodle.*) are not in the SDK's
+        // StateEvents union and cannot be, so a cast here is the honest
+        // form rather than widening this wrapper's signature:
+        this.client!.sendStateEvent(roomId, eventType as any, content, stateKey)
       );
       this.logger?.info("State event sent", eventType);
     } catch (error) {
@@ -2211,7 +2239,7 @@ export class MatrixService {
       
       const options: ICreateRoomOpts = {
         name: 'Vodle User Settings',
-        preset: 'private_chat',
+        preset: Preset.PrivateChat,
         is_direct: false,
         ...(alias_to_claim ? {room_alias_name: roomAlias} : {}),
         // Only when end-to-end encryption is on at all. It never covered
@@ -2457,7 +2485,7 @@ export class MatrixService {
    * whenever a user is logged in; before login, the URL's hostname is the
    * best available guess.
    */
-  private getHomeserverDomain(): string {
+  getHomeserverDomain(): string {
     const from_user_id = MatrixService.serverNameOf(this.userId);
     if (from_user_id) {
       return from_user_id;
@@ -2789,8 +2817,8 @@ export class MatrixService {
       // (knock); the preset still gives shared history, which a joiner
       // needs to read the options. The room is NOT listed in the public
       // directory (visibility 'private').
-      preset: 'public_chat',
-      visibility: 'private',
+      preset: Preset.PublicChat,
+      visibility: Visibility.Private,
       room_alias_name: roomAlias,
       initial_state: initialState,
       power_level_content_override: {
@@ -3675,7 +3703,7 @@ export class MatrixService {
     const options: ICreateRoomOpts = {
       name: `Vodle Voter: ${pollId}`,
       topic: `Voter data for poll ${pollId}, voter ${voterId}`,
-      preset: 'public_chat',
+      preset: Preset.PublicChat,
       room_alias_name: roomAlias,
       initial_state: initialState,
       power_level_content_override: {
@@ -3718,7 +3746,7 @@ export class MatrixService {
       );
       plContent.users = { ...(plContent.users || {}) };
       plContent.users[roomOwner] = 50;
-      await this.client!.sendStateEvent(roomId, 'm.room.power_levels', plContent, '');
+      await this.client!.sendStateEvent(roomId, EventType.RoomPowerLevels, plContent, '');
       this.logger?.info("Room owner demoted to power 50 after room setup", pollId, voterId);
     }
     

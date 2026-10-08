@@ -48,6 +48,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog-different.page.html',
   styleUrls: ['./delegation-dialog-different.page.scss'],
+  standalone: false,
 })
 export class DelegationDialogDifferentPage implements OnInit {
 

@@ -25,6 +25,7 @@ import { DraftpollPage } from '../draftpoll/draftpoll.module';
   selector: 'app-draftpoll-kebap',
   templateUrl: './draftpoll-kebap.page.html',
   styleUrls: ['./draftpoll-kebap.page.scss'],
+  standalone: false,
 })
 export class DraftpollKebapPage implements OnInit {
 

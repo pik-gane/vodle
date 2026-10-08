@@ -48,6 +48,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog-ranked.page.html',
   styleUrls: ['./delegation-dialog-ranked.page.scss'],
+  standalone: false,
 })
 export class DelegationDialogRankedPage implements OnInit {
 
