@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
@@ -26,13 +26,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="ready && (p!=null)">
-  <ion-list lines="full">
-    <ion-item>
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p>
-          <ion-text [innerHtml]="'previewpoll.type-label'|translate"></ion-text>&nbsp;<ion-text color="primary"
-            [innerHtml]="('draftpoll.type-'+p.type|translate)+'.'"></ion-text>
+@if (ready && (p!=null)) {
+  <ion-content>
+    <ion-list lines="full">
+      <ion-item>
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p>
+            <ion-text [innerHtml]="'previewpoll.type-label'|translate"></ion-text>&nbsp;<ion-text color="primary"
+          [innerHtml]="('draftpoll.type-'+p.type|translate)+'.'"></ion-text>
         </p>
         <ion-text color="primary"><h3>
           <span style="position:relative;top:3px;z-index:10;">
@@ -42,70 +43,97 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </span>
           <b><i [lang]="p.language" [innerHtml]="p.title"></i></b>
         </h3></ion-text>
-        <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
-          <ion-text *ngIf="(p.desc||'')!=''" color="primary"><i [lang]="p.language" [innerHtml]="G.format_details(p.desc)"></i></ion-text>
-          <ion-text *ngIf="(p.url||'')!=''" style="font-size: smaller;" color="primary"><span *ngIf="((p.desc||'')!='')&&((p.url||'')!='')">&nbsp;</span>
-            (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
-          </ion-text>
+        @if (((p.desc||'')!='')||((p.url||'')!='')) {
+          <p>
+            @if ((p.desc||'')!='') {
+              <ion-text color="primary"><i [lang]="p.language" [innerHtml]="G.format_details(p.desc)"></i></ion-text>
+            }
+            @if ((p.url||'')!='') {
+              <ion-text style="font-size: smaller;" color="primary">@if (((p.desc||'')!='')&&((p.url||'')!='')) {
+                <span>&nbsp;</span>
+              }
+              (<span  (click)="G.open_url_in_new_tab(G.D.fix_url(p.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
+            </ion-text>
+          }
         </p>
+      }
+      <p>
+        @if (p.due >= G.P.ref_date) {
+          <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))"></ion-text>
+        }
+        @if (p.due < G.P.ref_date) {
+          <ion-text [innerHtml]="'previewpoll.is-in-past'|translate" color="danger"></ion-text>
+        }
+      </p>
+      @if (((p.language||'')!='') && (p.language!=G.S.language)) {
         <p>
-          <ng-container *ngIf="p.due >= G.P.ref_date">
-            <ion-text [innerHtml]="'previewpoll.closes'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerHtml]="((p.due_type!='custom')?('draftpoll.due-type-'+p.due_type|translate):G.D.format_date(p.due))"></ion-text>
-          </ng-container>
-          <ion-text *ngIf="p.due < G.P.ref_date" [innerHtml]="'previewpoll.is-in-past'|translate" color="danger"></ion-text>
-        </p>
-        <p *ngIf="((p.language||'')!='') && (p.language!=G.S.language)">
           <small>
             <ion-text [innerHtml]="'draftpoll.language'|translate"></ion-text>:&nbsp;<ion-text color="primary" [innerHtml]="G.S.language_names[p.language]"></ion-text>
           </small>
         </p>
-        <p *ngIf="p.db!='default'">
+      }
+      @if (p.db!='default') {
+        <p>
           <ion-select-option value="central" [innerHtml]="'select-server.central'|translate"></ion-select-option>
           <ion-select-option value="poll" [innerHtml]="(page=='settings'?'select-server.same-as-some-poll':'select-server.same-as-other-poll')|translate"></ion-select-option>
           <ion-select-option value="other" [innerHtml]="'select-server.other'|translate"></ion-select-option>
-              <small>
+          <small>
             <ion-text [innerHtml]="'previewpoll.db-label'|translate"></ion-text>:&nbsp;<ion-text color="primary" [innerHtml]="(p.db=='poll'?'select-server.same-as-other-poll':p.db=='central'?'select-server.central':'select-server.other')|translate"></ion-text>
           </small>
         </p>
-        <p>
-          <small>
-            <b>
-              <ion-text [innerHtml]="(p.type=='winner' ? 'options' : 'possible-targets')|translate"></ion-text>:
-            </b>
-          </small>
-        </p>
-      </ion-col>
-    </ion-item>
-
-    <!-- OPTIONS: -->
-    <ion-item *ngFor="let o of Object.values(p.options)">
+      }
+      <p>
+        <small>
+          <b>
+            <ion-text [innerHtml]="(p.type=='winner' ? 'options' : 'possible-targets')|translate"></ion-text>:
+          </b>
+        </small>
+      </p>
+    </ion-col>
+  </ion-item>
+  <!-- OPTIONS: -->
+  @for (o of Object.values(p.options); track o) {
+    <ion-item>
       <ion-col class="ion-no-padding ion-no-margin">
         <p>
           <ion-text color="primary"><b><i [lang]="p.language" [innerHtml]="o.name"></i></b></ion-text>
-          <ion-text *ngIf="(o.desc||'')!=''" color="primary"><br/><i [lang]="p.language" [innerHtml]="o.desc"></i></ion-text>
-          <ion-text *ngIf="(o.url||'')!=''" style="font-size: smaller;" color="primary">&nbsp;
-            (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
-          </ion-text>            
+          @if ((o.desc||'')!='') {
+            <ion-text color="primary"><br/><i [lang]="p.language" [innerHtml]="o.desc"></i></ion-text>
+          }
+          @if ((o.url||'')!='') {
+            <ion-text style="font-size: smaller;" color="primary">&nbsp;
+              (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
+            </ion-text>
+          }
         </p>
       </ion-col>
     </ion-item>
-    
-    <ion-item lines="none">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'previewpoll.caution1'|translate"></p> 
-        <small><p [innerHtml]="'previewpoll.caution2'|translate"></p></small> 
-      </ion-col>      
-    </ion-item>
-    <ion-item 
-        lines="none" class="ion-text-end" text-wrap>
-      <ion-button size="large" color="primary" slot="end" [disabled]="publishing || p.due < G.P.ref_date" data-vodle="publish-poll-button" 
-          shape="round"
-          (click)="publish_button_clicked()">
-        <span *ngIf="!publishing" [innerHtml]="'previewpoll.publish'|translate"></span>
-        <span *ngIf="publishing" [innerHtml]="'previewpoll.publishing'|translate"></span>&nbsp;
-        <ion-icon *ngIf="!publishing" name="paper-plane"></ion-icon>
-        <ion-spinner *ngIf="publishing" name="dots"></ion-spinner>
+  }
+  <ion-item lines="none">
+    <ion-col class="ion-no-padding ion-no-margin">
+      <p [innerHtml]="'previewpoll.caution1'|translate"></p>
+      <small><p [innerHtml]="'previewpoll.caution2'|translate"></p></small>
+    </ion-col>
+  </ion-item>
+  <ion-item
+    lines="none" class="ion-text-end" text-wrap>
+    <ion-button size="large" color="primary" slot="end" [disabled]="publishing || p.due < G.P.ref_date" data-vodle="publish-poll-button"
+      shape="round"
+      (click)="publish_button_clicked()">
+      @if (!publishing) {
+        <span [innerHtml]="'previewpoll.publish'|translate"></span>
+      }
+      @if (publishing) {
+        <span [innerHtml]="'previewpoll.publishing'|translate"></span>
+        }&nbsp;
+        @if (!publishing) {
+          <ion-icon name="paper-plane"></ion-icon>
+        }
+        @if (publishing) {
+          <ion-spinner name="dots"></ion-spinner>
+        }
       </ion-button>
     </ion-item>
   </ion-list>
 </ion-content>
+}

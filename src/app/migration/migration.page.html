@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
@@ -43,66 +43,82 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           {{ isMatrixEnabled ? 'Enabled' : 'Disabled' }}
         </ion-badge>
       </ion-item>
-      <p *ngIf="!isMatrixEnabled" class="hint-text">
-        Enable the Matrix backend in the environment configuration to use migration features.
-      </p>
+      @if (!isMatrixEnabled) {
+        <p class="hint-text">
+          Enable the Matrix backend in the environment configuration to use migration features.
+        </p>
+      }
     </ion-card-content>
   </ion-card>
 
   <!-- Overall migration status -->
-  <ion-card *ngIf="migrationStatus">
-    <ion-card-header>
-      <ion-card-title>Migration Status</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item lines="none">
-        <ion-label>Overall Status</ion-label>
-        <ion-badge [class]="getStatusClass(migrationStatus.overallStatus)" slot="end">
-          {{ getStatusLabel(migrationStatus.overallStatus) }}
-        </ion-badge>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-label>Items Migrated</ion-label>
-        <ion-note slot="end">{{ migrationStatus.totalItemsMigrated }}</ion-note>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-label>Items Failed</ion-label>
-        <ion-note slot="end" [color]="migrationStatus.totalItemsFailed > 0 ? 'danger' : null">
-          {{ migrationStatus.totalItemsFailed }}
-        </ion-note>
-      </ion-item>
-      <ion-item lines="none" *ngIf="migrationStatus.startedAt">
-        <ion-label>Started</ion-label>
-        <ion-note slot="end">{{ formatTimestamp(migrationStatus.startedAt) }}</ion-note>
-      </ion-item>
-      <ion-item lines="none" *ngIf="migrationStatus.completedAt">
-        <ion-label>Completed</ion-label>
-        <ion-note slot="end">{{ formatTimestamp(migrationStatus.completedAt) }}</ion-note>
-      </ion-item>
-    </ion-card-content>
-  </ion-card>
+  @if (migrationStatus) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Migration Status</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item lines="none">
+          <ion-label>Overall Status</ion-label>
+          <ion-badge [class]="getStatusClass(migrationStatus.overallStatus)" slot="end">
+            {{ getStatusLabel(migrationStatus.overallStatus) }}
+          </ion-badge>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-label>Items Migrated</ion-label>
+          <ion-note slot="end">{{ migrationStatus.totalItemsMigrated }}</ion-note>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-label>Items Failed</ion-label>
+          <ion-note slot="end" [color]="migrationStatus.totalItemsFailed > 0 ? 'danger' : null">
+            {{ migrationStatus.totalItemsFailed }}
+          </ion-note>
+        </ion-item>
+        @if (migrationStatus.startedAt) {
+          <ion-item lines="none">
+            <ion-label>Started</ion-label>
+            <ion-note slot="end">{{ formatTimestamp(migrationStatus.startedAt) }}</ion-note>
+          </ion-item>
+        }
+        @if (migrationStatus.completedAt) {
+          <ion-item lines="none">
+            <ion-label>Completed</ion-label>
+            <ion-note slot="end">{{ formatTimestamp(migrationStatus.completedAt) }}</ion-note>
+          </ion-item>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
 
   <!-- Migration steps -->
-  <ion-card *ngIf="migrationStatus && migrationStatus.steps.length > 0">
-    <ion-card-header>
-      <ion-card-title>Migration Steps</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-item *ngFor="let step of migrationStatus.steps" lines="full">
-        <ion-label>
-          <h3>{{ step.description }}</h3>
-          <p>{{ step.itemsMigrated }} migrated, {{ step.itemsFailed }} failed</p>
-          <p *ngIf="step.errors.length > 0" class="error-text">
-            {{ step.errors[0] }}
-            <span *ngIf="step.errors.length > 1"> (+{{ step.errors.length - 1 }} more)</span>
-          </p>
-        </ion-label>
-        <ion-badge [class]="getStatusClass(step.status)" slot="end">
-          {{ getStatusLabel(step.status) }}
-        </ion-badge>
-      </ion-item>
-    </ion-card-content>
-  </ion-card>
+  @if (migrationStatus && migrationStatus.steps.length > 0) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Migration Steps</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        @for (step of migrationStatus.steps; track step) {
+          <ion-item lines="full">
+            <ion-label>
+              <h3>{{ step.description }}</h3>
+              <p>{{ step.itemsMigrated }} migrated, {{ step.itemsFailed }} failed</p>
+              @if (step.errors.length > 0) {
+                <p class="error-text">
+                  {{ step.errors[0] }}
+                  @if (step.errors.length > 1) {
+                    <span> (+{{ step.errors.length - 1 }} more)</span>
+                  }
+                </p>
+              }
+            </ion-label>
+            <ion-badge [class]="getStatusClass(step.status)" slot="end">
+              {{ getStatusLabel(step.status) }}
+            </ion-badge>
+          </ion-item>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
 
   <!-- Migration controls -->
   <ion-card>
@@ -111,22 +127,22 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-card-header>
     <ion-card-content>
       <ion-button expand="block" color="primary"
-                  [disabled]="!migrationService || isRunning"
-                  (click)="migrateUserData()">
+        [disabled]="!migrationService || isRunning"
+        (click)="migrateUserData()">
         <ion-icon name="person-outline" slot="start"></ion-icon>
         Migrate User Data
       </ion-button>
 
       <ion-button expand="block" color="secondary"
-                  [disabled]="!migrationService || isRunning"
-                  (click)="verifyUserData()">
+        [disabled]="!migrationService || isRunning"
+        (click)="verifyUserData()">
         <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
         Verify User Data
       </ion-button>
 
       <ion-button expand="block" color="warning"
-                  [disabled]="!migrationService || isRunning"
-                  (click)="rollbackUserData()">
+        [disabled]="!migrationService || isRunning"
+        (click)="rollbackUserData()">
         <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
         Rollback User Data
       </ion-button>
@@ -141,29 +157,29 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     <ion-card-content>
       <ion-item>
         <ion-input label="Poll ID" labelPlacement="stacked"
-                   [(ngModel)]="pollIdInput"
-                   placeholder="Enter poll ID to migrate"
-                   [disabled]="!migrationService || isRunning">
+          [(ngModel)]="pollIdInput"
+          placeholder="Enter poll ID to migrate"
+          [disabled]="!migrationService || isRunning">
         </ion-input>
       </ion-item>
 
       <ion-button expand="block" color="primary"
-                  [disabled]="!migrationService || isRunning || !pollIdInput"
-                  (click)="migratePollData(pollIdInput)">
+        [disabled]="!migrationService || isRunning || !pollIdInput"
+        (click)="migratePollData(pollIdInput)">
         <ion-icon name="document-outline" slot="start"></ion-icon>
         Migrate Poll Data
       </ion-button>
 
       <ion-button expand="block" color="secondary"
-                  [disabled]="!migrationService || isRunning || !pollIdInput"
-                  (click)="verifyPollData(pollIdInput)">
+        [disabled]="!migrationService || isRunning || !pollIdInput"
+        (click)="verifyPollData(pollIdInput)">
         <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
         Verify Poll Data
       </ion-button>
 
       <ion-button expand="block" color="warning"
-                  [disabled]="!migrationService || isRunning || !pollIdInput"
-                  (click)="rollbackPollData(pollIdInput)">
+        [disabled]="!migrationService || isRunning || !pollIdInput"
+        (click)="rollbackPollData(pollIdInput)">
         <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
         Rollback Poll Data
       </ion-button>
@@ -177,15 +193,15 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-card-header>
     <ion-card-content>
       <ion-button expand="block" color="success"
-                  [disabled]="!migrationService || isRunning || migrationStatus?.overallStatus !== 'in_progress'"
-                  (click)="completeMigration()">
+        [disabled]="!migrationService || isRunning || migrationStatus?.overallStatus !== 'in_progress'"
+        (click)="completeMigration()">
         <ion-icon name="flag-outline" slot="start"></ion-icon>
         Complete Migration
       </ion-button>
 
       <ion-button expand="block" color="medium"
-                  [disabled]="!migrationService || isRunning"
-                  (click)="resetMigration()">
+        [disabled]="!migrationService || isRunning"
+        (click)="resetMigration()">
         <ion-icon name="refresh-outline" slot="start"></ion-icon>
         Reset Migration
       </ion-button>
@@ -193,15 +209,19 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-card>
 
   <!-- Log output -->
-  <ion-card *ngIf="logMessages.length > 0">
-    <ion-card-header>
-      <ion-card-title>Migration Log</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <div class="log-container">
-        <p *ngFor="let msg of logMessages" class="log-entry">{{ msg }}</p>
-      </div>
-    </ion-card-content>
-  </ion-card>
+  @if (logMessages.length > 0) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Migration Log</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="log-container">
+          @for (msg of logMessages; track msg) {
+            <p class="log-entry">{{ msg }}</p>
+          }
+        </div>
+      </ion-card-content>
+    </ion-card>
+  }
 
 </ion-content>

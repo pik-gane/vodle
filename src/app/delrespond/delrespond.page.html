@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
@@ -26,471 +26,452 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="!ready || joining">
-  <ion-item lines="none" class="ion-text-center">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <p>
-        <ion-spinner name="dots"></ion-spinner>&nbsp;
-        <span [innerHtml]="'delrespond.checking'|translate"></span>
-      </p>
-    </ion-col>
-  </ion-item>
-</ion-content>
-
-<ion-content *ngIf="ready && !joining">
-
-  <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
-
-  <!-- Acceptance is possible: -->
-  <ng-container *ngIf="status[0]=='ranked'">
+@if (!ready || joining) {
+  <ion-content>
     <ion-item lines="none" class="ion-text-center">
       <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.intro'|translate"></p> 
-        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-        <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+        <p>
+          <ion-spinner name="dots"></ion-spinner>&nbsp;
+          <span [innerHtml]="'delrespond.checking'|translate"></span>
+        </p>
       </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+    </ion-item>
+  </ion-content>
+}
+
+@if (ready && !joining) {
+  <ion-content>
+    <!-- DEPENDING ON STATUS, SHOW DIFFERENT VERSIONS OF THE PAGE: -->
+    <!-- Acceptance is possible: -->
+    @if (status[0]=='ranked') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.intro'|translate"></p>
+          <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+          <small><p [innerHtml]="'delrespond.details_ranked'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>
-  </ng-container>
-
-  <ng-container *ngIf="status[0]=='weighted'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <!-- a weighted delegation carries a share of the other person's wap,
-             not all of it, so this page says so rather than promising more -->
-        <p [innerHtml]="'delrespond.intro-weighted'|translate"></p> 
-        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-        <small><p [innerHtml]="'delrespond.details-weighted'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    @if (status[0]=='weighted') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <!-- a weighted delegation carries a share of the other person's wap,
+          not all of it, so this page says so rather than promising more -->
+          <p [innerHtml]="'delrespond.intro-weighted'|translate"></p>
+          <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+          <small><p [innerHtml]="'delrespond.details-weighted'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>
-  </ng-container>
-
-  <ng-container *ngIf="status[0]=='possible' && status[1]=='acyclic'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.intro'|translate"></p> 
-        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    @if (status[0]=='possible' && status[1]=='acyclic') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.intro'|translate"></p>
+          <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-  </ng-container>
-
-  <!-- Acceptance would lead to a cycle. It is not disallowed — the poll's
-       maps carry cycles, and with weighted delegation they even settle to a
-       definite answer — but the delegate is told before they agree. -->
-
-  <ng-container *ngIf="status[0]=='possible' && (status[1]=='cycle'||status[1]=='two-way')">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4> 
-        <ng-container *ngIf="status[1]=='two-way'">
-          <p><b [innerHtml]="'delrespond.two-way-intro'|translate:{from:from}"></b></p> 
-        </ng-container>
-        <ng-container *ngIf="status[1]=='cycle'">
-          <p [innerHtml]="'delrespond.cycle-intro'|translate:{from:from}"></p> 
-        </ng-container>
-        <p [innerHtml]="'delrespond.cycle-details'|translate"></p>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    <!-- Acceptance would lead to a cycle. It is not disallowed — the poll's
+    maps carry cycles, and with weighted delegation they even settle to a
+    definite answer — but the delegate is told before they agree. -->
+    @if (status[0]=='possible' && (status[1]=='cycle'||status[1]=='two-way')) {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4 [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></h4>
+          @if (status[1]=='two-way') {
+            <p><b [innerHtml]="'delrespond.two-way-intro'|translate:{from:from}"></b></p>
+          }
+          @if (status[1]=='cycle') {
+            <p [innerHtml]="'delrespond.cycle-intro'|translate:{from:from}"></p>
+          }
+          <p [innerHtml]="'delrespond.cycle-details'|translate"></p>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p [innerHtml]="'delrespond.cycle-revoke-first'|translate"></p>
-        <ion-button shape="round" class="" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-col>
-    </ion-item>  
-  </ng-container>
-
-  <!--
-  <ng-container *ngIf="status=='cycle'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.cycle-intro:{from:from}'|translate"></p> 
-        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'delrespond.cycle-revoke-first'|translate"></p>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p [innerHtml]="'delrespond.cycle-revoke-first'|translate"></p>
+          <ion-button shape="round" class="" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+    }
+    <!--
+    <ng-container *ngIf="status=='cycle'">
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.cycle-header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.cycle-intro:{from:from}'|translate"></p>
+          <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'delrespond.cycle-revoke-first'|translate"></p>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary" disabled="true"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary" disabled="true"
             shape="round"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-  </ng-container>
-  -->
-  
-  <!-- Acceptance would exceed maximum allowed voting weight: -->
-
-  <ng-container *ngIf="status[0]=='impossible' && status[1]=='weight-exceeded'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.weight-exceeded-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.weight-exceeded-intro:{from:from,limit:environment.delegation.max_weight}'|translate"></p> 
-        <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'delrespond.weight-exceeded-revoke-first'|translate"></p>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+    </ng-container>
+    -->
+    <!-- Acceptance would exceed maximum allowed voting weight: -->
+    @if (status[0]=='impossible' && status[1]=='weight-exceeded') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.weight-exceeded-header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.weight-exceeded-intro:{from:from,limit:environment.delegation.max_weight}'|translate"></p>
+          <small><p [innerHtml]="'delrespond.details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'delrespond.weight-exceeded-revoke-first'|translate"></p>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.decline'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary" disabled="true"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.decline'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary" disabled="true"
             shape="round"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-  </ng-container>
-
-  <!-- Request was already accepted but can be declined after the fact: -->
-
-  <ng-container *ngIf="status[0]=='accepted'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.accepted-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.accepted-intro'|translate:{from:from,poll_title:p.title}"></p> 
-        <small><p [innerHtml]="'delrespond.accepted-details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+    }
+    <!-- Request was already accepted but can be declined after the fact: -->
+    @if (status[0]=='accepted') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.accepted-header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.accepted-intro'|translate:{from:from,poll_title:p.title}"></p>
+          <small><p [innerHtml]="'delrespond.accepted-details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="revoke()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.revoke'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.revoke'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.keep'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-  </ng-container>
-
-  <!-- Request was already declined but can be accepted after the fact: -->
-
-  <ng-container *ngIf="declined_but_possible()">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.declined-intro'|translate:{from:from,poll_title:p.title}"></p> 
-        <small><p [innerHtml]="'delrespond.declined-details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="warning"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.keep'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    <!-- Request was already declined but can be accepted after the fact: -->
+    @if (declined_but_possible()) {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.declined-intro'|translate:{from:from,poll_title:p.title}"></p>
+          <small><p [innerHtml]="'delrespond.declined-details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="warning"
             shape="round" [disabled]="consent_pending"
             (click)="decline()">
-          <ion-icon name="ban"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.no-change'|translate"></span>
-        </ion-button>&nbsp;&nbsp;
-        <ion-button size="large" color="primary"
+            <ion-icon name="ban"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.no-change'|translate"></span>
+          </ion-button>&nbsp;&nbsp;
+          <ion-button size="large" color="primary"
             shape="round" [disabled]="consent_pending"
             (click)="accept()">
-          <ion-icon name="checkmark"></ion-icon>&nbsp;
-          <span [innerHtml]="'delrespond.accept'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-  </ng-container>
-
-  <!-- Request was already declined and cannot be accepted: -->
-  <ng-container *ngIf="status[0]=='declined, impossible'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4> 
-        <p [innerHtml]="'delrespond.declined-intro'|translate:{from:from,poll_title:p.title}"></p> 
-        <small><p [innerHtml]="'delrespond.declined-impossible-details'|translate"></p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="primary"
+            <ion-icon name="checkmark"></ion-icon>&nbsp;
+            <span [innerHtml]="'delrespond.accept'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    <!-- Request was already declined and cannot be accepted: -->
+    @if (status[0]=='declined, impossible') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <h4><b [innerHtml]="'delrespond.declined-header'|translate:{from:from,poll_title:p.title}"></b></h4>
+          <p [innerHtml]="'delrespond.declined-intro'|translate:{from:from,poll_title:p.title}"></p>
+          <small><p [innerHtml]="'delrespond.declined-impossible-details'|translate"></p></small>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="primary"
             shape="round"
             (click)="dismiss()">
-          <span [innerHtml]="'OK'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-  </ng-container>
-
-  <!-- Poll is unknown: -->
-
-  <ng-container *ngIf="status[0]=='impossible' && status[1]=='poll-unknown'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p> 
-        <!-- the link said where the poll is, and joining it failed (#341) -->
-        <small *ngIf="join_error"><p data-vodle="delrespond-join-error">{{ join_error }}</p></small>
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="primary" 
+            <span [innerHtml]="'OK'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <small><p [innerHtml]="'delrespond.check-first'|translate"></p></small>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    <!-- Poll is unknown: -->
+    @if (status[0]=='impossible' && status[1]=='poll-unknown') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'delrespond.poll-unknown'|translate:{from:from}"></p>
+          <!-- the link said where the poll is, and joining it failed (#341) -->
+          @if (join_error) {
+            <small><p data-vodle="delrespond-join-error">{{ join_error }}</p></small>
+          }
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="primary"
             shape="round"
             (click)="dismiss()">
-          <span [innerHtml]="'OK'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-  </ng-container>
-
-  <!-- Poll is already closed (has already ended): -->
-
-  <ng-container *ngIf="status[0]=='closed'">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p> 
-      </ion-col>
-    </ion-item>  
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="primary"
+            <span [innerHtml]="'OK'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+    }
+    <!-- Poll is already closed (has already ended): -->
+    @if (status[0]=='closed') {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'delrespond.closed'|translate:{from:from}"></p>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="primary"
             shape="round"
             (click)="dismiss()">
-          <span [innerHtml]="'OK'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-label class="ion-no-padding ion-no-margin">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-      </ion-label>
-    </ion-item>  
-  </ng-container>
-
-  <!-- We're still missing some data: -->
-
-  <ng-container *ngIf="status[0]=='impossible' && status[1]=='not-in-db'">
-    <ion-item>      
-      <span [innerHtml]="'delrespond.try-again'|translate"></span>
-      <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
-    </ion-item>  
-    <ion-button size="large" color="primary" slot="end"
+            <span [innerHtml]="'OK'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-label class="ion-no-padding ion-no-margin">
+          <p>&nbsp;</p>
+          <p>&nbsp;</p>
+          <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid">
+            <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+          </ion-button>
+        </ion-label>
+      </ion-item>
+    }
+    <!-- We're still missing some data: -->
+    @if (status[0]=='impossible' && status[1]=='not-in-db') {
+      <ion-item>
+        <span [innerHtml]="'delrespond.try-again'|translate"></span>
+        <!-- TODO: store this request anyway and show it as a badge in mypolls and as a banner in the poll once poll has been entered -->
+      </ion-item>
+      <ion-button size="large" color="primary" slot="end"
         shape="round"
         (click)="dismiss()">
-      <span [innerHtml]="'OK'|translate"></span>&nbsp;
-    </ion-button>
-  </ng-container>
-
-  <!-- A status no block above claims. There is no such status today, and
-       there was none when four of the blocks above could not match one
-       either: `status == ['impossible','not-in-db']` compares an array with
-       a fresh array, which is false in JavaScript, so those four rendered an
-       empty page — which is what a delegation link showed the owner (#327).
-       A page that cannot explain itself must at least say so. -->
-
-  <ng-container *ngIf="!handled()">
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="'delrespond.try-again'|translate"></p>
-      </ion-col>
-    </ion-item>
-    <ion-item lines="none" class="ion-text-center">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-button size="large" color="primary" shape="round" (click)="dismiss()">
-          <span [innerHtml]="'OK'|translate"></span>
-        </ion-button>
-      </ion-col>
-    </ion-item>
-  </ng-container>
-
-  <!-- It's ourselves: -->
-
-  <ng-container *ngIf="status[0]=='impossible' && status[1]=='is-self'">
-    <ion-item><span [innerHtml]="'delrespond.is-self'|translate"></span></ion-item>  
-    <ion-button size="large" color="primary" slot="end"
+        <span [innerHtml]="'OK'|translate"></span>&nbsp;
+      </ion-button>
+    }
+    <!-- A status no block above claims. There is no such status today, and
+    there was none when four of the blocks above could not match one
+    either: `status == ['impossible','not-in-db']` compares an array with
+    a fresh array, which is false in JavaScript, so those four rendered an
+    empty page — which is what a delegation link showed the owner (#327).
+    A page that cannot explain itself must at least say so. -->
+    @if (!handled()) {
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="'delrespond.try-again'|translate"></p>
+        </ion-col>
+      </ion-item>
+      <ion-item lines="none" class="ion-text-center">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-button size="large" color="primary" shape="round" (click)="dismiss()">
+            <span [innerHtml]="'OK'|translate"></span>
+          </ion-button>
+        </ion-col>
+      </ion-item>
+    }
+    <!-- It's ourselves: -->
+    @if (status[0]=='impossible' && status[1]=='is-self') {
+      <ion-item><span [innerHtml]="'delrespond.is-self'|translate"></span></ion-item>
+      <ion-button size="large" color="primary" slot="end"
         shape="round"
         (click)="dismiss()">
-      <span [innerHtml]="'OK'|translate"></span>&nbsp;
-    </ion-button>
-  </ng-container>
-
-  <!-- Already accepted a different delegation from user-->
-
-  
-</ion-content>
+        <span [innerHtml]="'OK'|translate"></span>&nbsp;
+      </ion-button>
+    }
+    <!-- Already accepted a different delegation from user-->
+  </ion-content>
+}
 
 <!-- A guest who has not consented to the privacy statement yet (#193): the
-     answer buttons above stay disabled until this is checked, as the poll
-     page's sliders do (#341) -->
+answer buttons above stay disabled until this is checked, as the poll
+page's sliders do (#341) -->
 
-<ion-footer *ngIf="ready && !joining && consent_pending" data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
-  <ion-item color="warning" lines="none" class="item-text-wrap">
-    <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($any($event).detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
-    <small><p>
-      <b [innerHtml]="'poll.consent-lead'|translate"></b>
-      <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
-    </p></small>
-  </ion-item>
-</ion-footer>
+@if (ready && !joining && consent_pending) {
+  <ion-footer data-vodle="consent-footer" style="box-shadow: 0px -3px 4px var(--vodle-background-light);">
+    <ion-item color="warning" lines="none" class="item-text-wrap">
+      <ion-checkbox slot="start" [checked]="false" (ionChange)="consent_given($any($event).detail.checked)" data-vodle="consent-checkbox"></ion-checkbox>
+      <small><p>
+        <b [innerHtml]="'poll.consent-lead'|translate"></b>
+        <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+      </p></small>
+    </ion-item>
+  </ion-footer>
+}

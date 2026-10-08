@@ -3,153 +3,152 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
-<ion-content *ngIf="ready" data-vodle="add-option-dialog">
-  <form [formGroup]="formGroup">
-    <ion-list lines="full">
-
-      <ion-item lines="none">
-        <ion-col class="ion-no-padding ion-no-margin">
-          <h1 [innerHtml]="'addoption.header'|translate"></h1> 
-          <p [innerHtml]="'addoption.intro'|translate"></p> 
-          <small *ngIf="(!!p.language) && (p.language != G.S.language)">
-            <p [innerHtml]="'addoption.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
-          </small>
-          </ion-col>      
-      </ion-item>
-
-      <!-- NAME: -->
-
-      <ion-item>
-        <ion-input labelPlacement="floating"  
-          [disabled]="!p.can_add_option()"
-          formControlName="option_name" 
-          autofocus="true" #focus_element
+@if (ready) {
+  <ion-content data-vodle="add-option-dialog">
+    <form [formGroup]="formGroup">
+      <ion-list lines="full">
+        <ion-item lines="none">
+          <ion-col class="ion-no-padding ion-no-margin">
+            <h1 [innerHtml]="'addoption.header'|translate"></h1>
+            <p [innerHtml]="'addoption.intro'|translate"></p>
+            @if ((!!p.language) && (p.language != G.S.language)) {
+              <small>
+                <p [innerHtml]="'addoption.different-language' | translate: {language: G.S.language_names[p.language]}"></p>
+              </small>
+            }
+          </ion-col>
+        </ion-item>
+        <!-- NAME: -->
+        <ion-item>
+          <ion-input labelPlacement="floating"
+            [disabled]="!p.can_add_option()"
+            formControlName="option_name"
+            autofocus="true" #focus_element
           [placeholder]="(p.type == 'winner' 
                           ? 'draftpoll.option-name-placeholder' 
                           : 'draftpoll.target-name-placeholder') | translate"
-          type="text" required [maxlength]="E.max_len.name" 
-          style="font-weight: bold; font-style: italic;"
-          data-vodle="new-option-name-input">
-          <span slot="label" class="form-label">
+            type="text" required [maxlength]="E.max_len.name"
+            style="font-weight: bold; font-style: italic;"
+            data-vodle="new-option-name-input">
+            <span slot="label" class="form-label">
           <span [innerHtml]="
               (p.type=='winner' 
               ? 'draftpoll.option-name-label' 
               : 'draftpoll.target-name-label') | translate">
-          </span>
-        </span>
-        </ion-input>
-      </ion-item>
-      <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.option_name">
-          <div class="error-message" 
-              *ngIf="formGroup.get('option_name').hasError(validation.type) 
-                      && (formGroup.get('option_name').dirty || formGroup.get('option_name').touched)"
-              [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-      </div>
-
-      <!-- DESCRIPTION: -->
-
-      <ion-item>
-        <ion-textarea labelPlacement="floating" 
-          [disabled]="!p.can_add_option()"
-          formControlName="option_desc" [maxlength]="E.max_len.desc"
-          [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          rows="1" auto-grow type="text" 
-          style="font-style: italic;"
-          data-vodle="new-option-description-input">
-          <span slot="label" class="form-label">
-          <span [innerHtml]="'draftpoll.option-desc-label'|translate">
-          </span>
-        </span>
-        </ion-textarea>
-      </ion-item>
-      <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.option_desc">
-          <div class="error-message" 
-              *ngIf="formGroup.get('option_desc').hasError(validation.type) 
-                      && (formGroup.get('option_desc').dirty || formGroup.get('option_desc').touched)"
-            [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-      </div>
-
-      <!-- READ-MORE LINK (URL): -->
-
-      <ion-item>
-        <ion-input labelPlacement="floating" 
-          [disabled]="!p.can_add_option()"
-          formControlName="option_url" 
-          [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
-          type="text" inputmode="url" [maxlength]="E.max_len.url"
-          style="font-size: smaller;">
-          <span slot="label" class="form-label">
-          <span [innerHtml]="'draftpoll.option-url-label'|translate">
-          </span>
-        </span>
-        </ion-input>
-        <ion-button 
-            *ngIf="formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)" 
-            fill="clear" slot="end" class="skip-button" tabindex="-1" 
-            (click)="G.open_url_in_new_tab(formGroup.get('option_url').value)">
-          <span [innerHtml]="'test'|translate"></span>&nbsp;
-          <ion-icon name="open-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-      <div class="validation-errors">
-        <ng-container *ngFor="let validation of validation_messages.option_url">
-          <div class="error-message" 
-              *ngIf="formGroup.get('option_url').hasError(validation.type) 
-                      && (formGroup.get('option_url').dirty || formGroup.get('option_url').touched)"
-            [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-      </div>
-
-      <!-- BUTTONS: -->
-
-      <ion-item lines="none" class="ion-text-right">
-        <ion-buttons slot="end">
-          <ion-button shape="round"
+              </span>
+            </span>
+          </ion-input>
+        </ion-item>
+        <div class="validation-errors">
+          @for (validation of validation_messages.option_name; track validation) {
+            @if (formGroup.get('option_name').hasError(validation.type)
+              && (formGroup.get('option_name').dirty || formGroup.get('option_name').touched)) {
+              <div class="error-message"
+                [innerHtml]="validation.message|translate">
+              </div>
+            }
+          }
+        </div>
+        <!-- DESCRIPTION: -->
+        <ion-item>
+          <ion-textarea labelPlacement="floating"
+            [disabled]="!p.can_add_option()"
+            formControlName="option_desc" [maxlength]="E.max_len.desc"
+            [placeholder]="'draftpoll.option-desc-placeholder'|translate:{name:formGroup.get('option_name').value}"
+            rows="1" auto-grow type="text"
+            style="font-style: italic;"
+            data-vodle="new-option-description-input">
+            <span slot="label" class="form-label">
+              <span [innerHtml]="'draftpoll.option-desc-label'|translate">
+              </span>
+            </span>
+          </ion-textarea>
+        </ion-item>
+        <div class="validation-errors">
+          @for (validation of validation_messages.option_desc; track validation) {
+            @if (formGroup.get('option_desc').hasError(validation.type)
+              && (formGroup.get('option_desc').dirty || formGroup.get('option_desc').touched)) {
+              <div class="error-message"
+                [innerHtml]="validation.message|translate">
+              </div>
+            }
+          }
+        </div>
+        <!-- READ-MORE LINK (URL): -->
+        <ion-item>
+          <ion-input labelPlacement="floating"
+            [disabled]="!p.can_add_option()"
+            formControlName="option_url"
+            [placeholder]="'draftpoll.option-url-placeholder'|translate:{name:formGroup.get('option_name').value}"
+            type="text" inputmode="url" [maxlength]="E.max_len.url"
+            style="font-size: smaller;">
+            <span slot="label" class="form-label">
+              <span [innerHtml]="'draftpoll.option-url-label'|translate">
+              </span>
+            </span>
+          </ion-input>
+          @if (formGroup.get('option_url').valid && ![null,''].includes(formGroup.get('option_url').value)) {
+            <ion-button
+              fill="clear" slot="end" class="skip-button" tabindex="-1"
+              (click)="G.open_url_in_new_tab(formGroup.get('option_url').value)">
+              <span [innerHtml]="'test'|translate"></span>&nbsp;
+              <ion-icon name="open-outline"></ion-icon>
+            </ion-button>
+          }
+        </ion-item>
+        <div class="validation-errors">
+          @for (validation of validation_messages.option_url; track validation) {
+            @if (formGroup.get('option_url').hasError(validation.type)
+              && (formGroup.get('option_url').dirty || formGroup.get('option_url').touched)) {
+              <div class="error-message"
+                [innerHtml]="validation.message|translate">
+              </div>
+            }
+          }
+        </div>
+        <!-- BUTTONS: -->
+        <ion-item lines="none" class="ion-text-right">
+          <ion-buttons slot="end">
+            <ion-button shape="round"
               (click)="ClosePopover()">
-            <ion-icon name="arrow-back-outline"></ion-icon>&nbsp;
-            <span [innerHtml]="'cancel'|translate"></span>
-          </ion-button>&nbsp;&nbsp;
-          <ion-button color="primary" [disabled]="isAddButtonDisabled()"
+              <ion-icon name="arrow-back-outline"></ion-icon>&nbsp;
+              <span [innerHtml]="'cancel'|translate"></span>
+            </ion-button>&nbsp;&nbsp;
+            <ion-button color="primary" [disabled]="isAddButtonDisabled()"
               shape="round" fill="solid" data-vodle="confirm-add-option-button"
               (click)="OK_button_clicked()"><!--type="submit" button-type="submit"-->
-            <ion-icon name="checkmark"></ion-icon>&nbsp;
-            <span [innerHtml]="'add'|translate"></span>
-          </ion-button>
-        </ion-buttons>
-      </ion-item>
-      <div class="validation-errors">
-        <ng-container>
-          <div class="error-message"
-               *ngIf="!this.p.can_add_option()"
-               [innerHtml]="'poll.add-option-expired'|translate">
-          </div>
-        </ng-container>
-      </div>
-      <ion-item lines="none">
-        <small [innerHtml]="'addoption.info' | translate"></small>
-      </ion-item>
-
-    </ion-list>
-  </form>
-</ion-content>
+              <ion-icon name="checkmark"></ion-icon>&nbsp;
+              <span [innerHtml]="'add'|translate"></span>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+        <div class="validation-errors">
+          <ng-container>
+            @if (!this.p.can_add_option()) {
+              <div class="error-message"
+                [innerHtml]="'poll.add-option-expired'|translate">
+              </div>
+            }
+          </ng-container>
+        </div>
+        <ion-item lines="none">
+          <small [innerHtml]="'addoption.info' | translate"></small>
+        </ion-item>
+      </ion-list>
+    </form>
+  </ion-content>
+}
