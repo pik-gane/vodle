@@ -189,8 +189,8 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 ## Open at the 2026-10-08 handover
 
 This section is for whoever picks the work up next, in another session and
-under another account. It can go once PR #339 is merged and the three
-questions below are answered.
+under another account. It can go once the branch below is merged and the
+three questions at its end are answered.
 
 ### What is in flight
 
@@ -200,10 +200,12 @@ for #341 and #345 (both under *Issues* below) in it.
 
 The work continues on branch **`claude/to-current-versions`**, branched from
 that merge, which brings the stack to the versions current on 2026-10-08:
-Angular 22, Ionic 9, TypeScript 6 (see *The hops after the merge*). It has no
+Angular 22, Ionic 9, TypeScript 6, matrix-js-sdk 43, ngx-translate 18,
+Capacitor 8, pouchdb 9 and the smaller libraries (see *The hops after the
+merge*; what is still behind, and why, follows the table there). It has no
 pull request yet. CI does not run on a push to a branch without one; the runs
-there were started by hand (`workflow_dispatch`, runs 138, 139 and later),
-and a new dispatch on the same branch cancels one still running.
+there were started by hand (`workflow_dispatch`, runs 138 to 146), and a new
+dispatch on the same branch cancels one still running.
 
 Nobody is watching either branch from a session any more; a successor that
 wants a PR watched must open it and arm the watching itself.
@@ -251,10 +253,20 @@ container with an older 22 wants a Node 24 on its PATH).
 The suite should say `Executed 972 of 992 (skipped 20) SUCCESS`. The 20 skips
 are the CouchDB/Synapse integration specs, which call `pending()` when no
 backends are provisioned. The build is clean apart from two known warnings:
-the initial bundle is 2.96 MB against a 2 MB budget (2.80 before the four
-hops; Angular 19 and later read `"2mb"` in `angular.json` as 2×10⁶ where 18
-read it as 2×2²⁰), and since Angular 22 the CLI says on every build and test
-run that its webpack builders are deprecated (see *Deprecations now pending*).
+the initial bundle is 2.78 MB against a 2 MB budget (2.80 before the hops,
+2.96 after the Angular and Ionic ones, 2.78 since crypto-es 3, which
+tree-shakes; Angular 19 and later read `"2mb"` in `angular.json` as 2×10⁶
+where 18 read it as 2×2²⁰), and since Angular 22 the CLI says on every build
+and test run that its webpack builders are deprecated (see *Deprecations now
+pending*).
+
+One local observation, so that nobody chases it: in the container this
+session ran in, every suite run — the first of the day on the PR branch
+included, before any hop — ended with karma reporting the browser
+`DISCONNECTED`, "no message in 120000 ms", two minutes after the last spec;
+all 972 specs had passed and `ng test` exited 0. CI's *Test* step shows no
+such wait (6 min 49 s in run 143, 6 min 41 s in run 140). An artifact of that
+container's headless Chromium, not of the code.
 
 ### The hops after the merge (2026-10-08, branch `claude/to-current-versions`)
 
@@ -269,25 +281,34 @@ throughout), a plain `npm ci`, and a CI run against the real homeservers.
 | Angular 20 → 21 (`531faa2`, `f2adcf9`) | The control-flow migration is part of the update in 21: 24 templates use `@if`/`@for`/`@switch` now (`git diff -w` shows the logical change; the migration re-indents and trims). TypeScript 5.9. `provideZoneChangeDetection()` in `main.ts` **and** in `test.ts`: Angular 21 is zoneless unless told otherwise, and the zoneless TestBed failed 29 page specs with NG0100. `ionic-logging-service` 21 has no NgModule. `hexToBytes` typed for TS 5.9's WebCrypto. The update was run with the CLI's Prettier lookup disarmed — it had found a Prettier on the machine, not in the repository, and reformatted every template; that diff was discarded. CI run 138 green. |
 | Angular 21 → 22 (`e21aef3`, `b7b0eef`) | TypeScript 6.0 turns `strict` on by default (1103 errors here) and deprecates `baseUrl` and `downlevelIteration`: `tsconfig.json` says `strict: false` and resolves the `src/…` imports through `paths`. OnPush is the default strategy now; the migration made all 28 components `Eager`, which is what they were. `withXhr()`. `ionic-logging-service` 23. `@angular/animations` dropped (unused, deprecated). CI run 139. |
 | Ionic 8 → 9 (`064a0da`) | `@ionic/angular` is the standalone entry point now; the module-based app imports from `@ionic/angular/lazy` (72 files). `autocorrect="off"` removed from three inputs (a string is `true` now). Rendered check: the login page's e-mail label measures 47×20 in the primary colour, as under Ionic 7 and 8; the browser smoke specs pass against the build. |
+| matrix-js-sdk 37 → 43 (`c541edc`) | Six majors, no call site changed: what they removed (FetchHttpApi's `onlyData=false`, the legacy-crypto verification methods, `getAuthIssuer`, `getContentUri`, the `defer` utility) and changed (MatrixRTC) vodle does not use. The Rust crypto WebAssembly package goes 14.2 → 18.9; its loader (`fetchCryptoWasm`) is unchanged. The guard bot's unit tests pass on the same package. CI run 141 failed **one** spec: the federation spec's two-minute wait for "alice to see bob's rating from the other homeserver", with both voter rooms joined, so neither the announcement nor the restricted join had stalled (the diagnosis #329 added). Run 142, on the next commit with the same SDK, passed it, as did 143 to 145. One reading, not a pattern, and that spec has failed on the same wait before (#329, runs 109 and 111); the next failure there should still be read with the SDK in mind. |
+| ngx-translate 15 → 18 (`ead9ae3`) | 17 renames the fallback (`setFallbackLang`, `fallbackLang`) and makes `langs` a getter; 18 removes `TranslateModule`: `provideTranslateService({fallbackLang, loader})` in `app.module.ts`, the standalone `TranslatePipe` in the 26 modules that imported the module. `currentLang` is a Signal and `getCurrentLang()` nullable. `@ngx-translate/http-loader` removed: nothing imported it, the loader is vodle's own (`i18n-loader.ts`). CI run 142. |
+| zone.js 0.16, crypto-es 3, libsodium-wrappers 0.8, ts-node removed (`8a6c72c`) | crypto-es 3 has named exports only (no default, no `enc`/`algo`/`lib`, no `lib/…` paths): `data.service.ts` and three specs read `Hex`, `Utf8`, `AESAlgo`, `WordArray` from a namespace import. Checked with both versions side by side in Node: ciphertexts decrypt across versions in both directions and the fixed-iv path is byte-identical, so stored data and derived ids are unaffected. libsodium-wrappers 0.8's ES module puts the `crypto_*` functions on its default export (the named exports are the helpers), so the import is a default import; the file 0.7.16 lacked is a separate package now. ts-node 8 was a devDependency nothing used; the two guards against it in `test/wdio.conf.js` stay. Bundle 2.96 → 2.77 MB. CI run 143. |
+| karma 6.4, karma-jasmine 5.1, jasmine 4.6 (`31a5ec6`) | karma 6.3 → 6.4, karma-jasmine 4 → 5.1, karma-chrome-launcher 3.2, karma-coverage 2.2, karma-jasmine-html-reporter 1.7 → 2.3, `@types/jasmine` 3.6 → 4.6; jasmine-spec-reporter removed (nothing used it). **Not jasmine-core 7**: karma-jasmine serves the browser the `jasmine.js` of its own dependency (`^4.1.0`, so 4.6.1 — measured, a spec printing `jasmine.version`), while the HTML reporter serves `jasmine-html.js` from the project's copy; with the project's copy at 7.0.2 the run died at load ("Cannot assign to read only property 'describe'": jasmine 7 freezes its Env, and zone.js's jasmine patch, which the 28 spec files using `waitForAsync` need, writes to it). One copy is what runs, so the project's `jasmine-core` is 4.6.1 too, typed by `@types/jasmine` 4.6. Angular 22's CLI writes jasmine-core ~6.3 for a new karma project, with the same karma-jasmine; the browser runs 4.6.1 there as well. Past jasmine 4 lies the test-runner decision (vitest), below. CI run 144. |
+| Capacitor 3 → 8 (`abaa99b`) | core, android, ios 3.3.1 → 8.5.3, the plugins 1.0 → 8.x, the CLI 3 → 8 (Node 22). The web code uses four things — `Capacitor.isNativePlatform()`, `LocalNotifications.schedule()` and `requestPermissions()`, `Share.share()` — all unchanged; the plugins' web implementations differ from 1.0 only by what was added (compared file by file). `capacitor.config.ts` loses `bundledWebRuntime`. **Not done:** the native projects under `android/` and `ios/` are at Capacitor 3's `cap sync` (the generated gradle file even lists a browser plugin that is no dependency); nothing in the repository builds or tests them and there was no toolchain here to verify a migration, so whoever builds them next runs `npx cap migrate` and `npx cap sync`. CI run 144. |
+| pouchdb 7 → 9 (`d952966`), and the minors the ranges allowed (`0d4d102`: d3 7.9, globalthis 1.0.4) | `pouchdb/dist/pouchdb` is still the browser bundle and still what the package's `browser` field names; the five import sites are unchanged, as is the API vodle uses. The CouchDB two-client and migration specs run in CI only. `0d4d102`'s message counts sass 1.105 among the minors it moved; it did not move — `@angular/build` 22.2.2, which `@angular-devkit/build-angular` carries, pins sass to exactly 1.104.1, the lockfile keeps that single copy, and `npm outdated` will keep reporting 1.105 as wanted. CI run 145. |
+| wdio 8.3 → 8.46, within the pinned major | `npm update` of the four `@wdio/*` packages. webdriverio 8.46 no longer depends on the `devtools` package that the `automationProtocol: 'devtools'` of `test/wdio.conf.js` needs (the run failed with "Automation protocol package is not installed!"), so `devtools` 8.46 is a devDependency of its own now; it is also where the click-through's `puppeteer-core` comes from. The two smoke specs pass. CI run 146. |
 
-**Still behind** after the four hops (37 packages per `npm outdated`):
-`matrix-js-sdk` 37 → 43 — six majors in the data layer; read its changelogs
-first, the two-client and federation specs in CI are the net — then
-`@ngx-translate/core` 15 → 18 with `http-loader` 8 → 18 (16 moved to
-standalone providers), Capacitor 3 → 8 (the mobile targets are dead, but the
-web code imports its plugins for notifications and sharing), the test tooling
-(jasmine 3 → 7, karma-jasmine 4 → 5, `@wdio/*` 8 → 10 — pinned to 8 on
-purpose, see `test/wdio.conf.js`), pouchdb 7 → 9 (the CouchDB backend is
-slated for removal, C1), crypto-es 2 → 3, zone.js 0.15 → 0.16,
-libsodium-wrappers 0.7.10 (0.7.16 broke the build, see `1a8bd0a`).
-TypeScript 7 is the Go-based compiler; Angular 22 wants < 6.1.
+**Still behind** after these hops, each on purpose: `@wdio/*` 8 → 10
+(pinned to 8, see `test/wdio.conf.js`: the devtools automation protocol it
+drives the browser with was dropped in wdio 9, and moving means WebDriver
+BiDi with wdio managing the driver); `jasmine-core` and `@types/jasmine`
+4.6 → 7 (see the karma row); TypeScript 7, the Go-based compiler, which
+Angular 22 does not accept (it wants < 6.1); and the native projects under
+`android/` and `ios/` (see the Capacitor row). `npm outdated` lists these
+and two registry-view quirks: the Angular packages with a "latest" of 21.2
+(`npm view @angular/core dist-tags` says `latest: 22.2.2`), and `devtools`
+8.46 against a "latest" of 8.42, where that package's tag points.
 
 **Deprecations now pending**, each a decision of its own and none of them a
 compiler update: Angular's webpack builders (`browser`, `karma`), whose
 replacements are the application builder (esbuild) and the
 `@angular/build:karma` or vitest test builder — the optional migrations this
 series has declined every time, and the ones the next Angular major is most
-likely to force; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9);
+likely to force; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9,
+which warns about it on every test run) and `<ion-img>` →
+`<img loading="lazy">` (deprecated in Ionic 9, removed in 10; the suite's
+console names the top-right icon);
 `platformBrowserDynamic` → `platformBrowser` (the dev build still compiles
 JIT, `aot: false` in `angular.json`); `APP_INITIALIZER` →
 `provideAppInitializer`; `strict` TypeScript; OnPush as the default strategy,
