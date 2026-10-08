@@ -139,6 +139,30 @@ export function hashEmail(email: string): string {
 export const JOIN_KEY_EVENT_TYPE = 'm.room.vodle.poll.join_key';
 export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
 
+/**
+ * The room version every room vodle creates is created in.
+ *
+ * It used to be whatever the homeserver's default was. Synapse 1.162.0
+ * (2026-09-29) made that 12, and under room version 12 a room's creator has
+ * unbounded power that no power-levels event can take away or even mention:
+ * an `m.room.power_levels` whose `users` lists the creator is rejected.
+ * vodle's rooms are governed the other way round. The poll and voter rooms
+ * are created with the creator at 100 so that the initial state can be
+ * applied, and the creator is demoted to 50 once the room is set up
+ * (demotePollCreator, createVoterRoom), so that after lockPollMetadata only
+ * the guard bot can change a running poll. A creator who cannot be demoted
+ * could rewrite a poll after it has started -- and in fact the creation was
+ * refused outright, "Creator user ... must not appear in content.users",
+ * which took the production click-through down on 2026-10-08.
+ *
+ * 11 is the newest version without creator privilege, and the one Synapse
+ * defaulted to from 1.158 to 1.161 (July to September 2026), so it is what
+ * this code last ran against. Named here so that the server's default no
+ * longer decides what vodle's rooms can do. Everything the rooms rely on is
+ * older: knock joins need 7, restricted joins 8 (#328).
+ */
+export const ROOM_VERSION = '11';
+
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -2010,7 +2034,7 @@ export class MatrixService {
   }
 
   /**
-   * Create a room
+   * Create a room -- in ROOM_VERSION, unless the options name a version.
    */
   async createRoom(options: ICreateRoomOpts): Promise<string> {
     this.logger?.entry("MatrixService.createRoom", options.name);
@@ -2020,7 +2044,8 @@ export class MatrixService {
     }
     
     try {
-      const response = await this.retryOnRateLimit(() => this.client!.createRoom(options));
+      const response = await this.retryOnRateLimit(
+        () => this.client!.createRoom({room_version: ROOM_VERSION, ...options}));
       this.logger?.info("Room created", response.room_id);
       return response.room_id;
     } catch (error) {

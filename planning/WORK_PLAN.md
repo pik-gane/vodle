@@ -197,10 +197,10 @@ questions below are answered.
 PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — is **open and
 unmerged**, on branch `claude/keen-ptolemy-i0m1n5`. `main` is `c7fed2b` and has
 not moved since 2026-09-14, so there is no conflict. The last commit carrying
-code is `9da5bd3` (this section is the one after it); both checks are green on
-it — `build and test` and `e2e smoke (built app)` — and `mergeable_state` is
-`blocked`, which here means branch protection waiting on a human approval, a
-thing no push can supply.
+code is the room-version fix described below; before it, `9da5bd3` was the
+last on which both checks — `build and test` and `e2e smoke (built app)` —
+were green. `mergeable_state` is `blocked`, which here means branch protection
+waiting on a human approval, a thing no push can supply.
 
 **Do not start the follow-up work from `main`**: sessions 38 and 39 are only
 on that branch. A session told to develop on a different branch should branch
@@ -210,16 +210,35 @@ Nobody is watching the PR any more. The hourly check-in and the PR-activity
 subscription belonged to the session that opened it and ended with it; a
 successor that wants them must arm them itself.
 
-### One thing left red
+### The red run of 2026-10-08, and what it was
 
-The last push is docs only (this section), and on it the `build and test`
-job failed at step 13, "Build and click through the production app", which
-skipped the suite steps after it. The same job passed on `9da5bd3`, and
-`WORK_PLAN.md` is the whole difference between the two commits, so it is not
-this branch's code — but it is unresolved, and the first thing to do is
-re-run that job and read step 13's own output. Three weeks passed between the
-two runs, so the click-through's homeservers, or the images they come from,
-are the first place to look.
+The two docs-only pushes of the handover (`8e08abc`, `e72a7dc`) failed the
+`build and test` job at step 13, "Build and click through the production
+app", while the same job had passed on `9da5bd3` three weeks earlier. Not
+this branch's code: every `createRoom` of the click-through came back
+`400 Creator user @…:localhost:8449 must not appear in content.users`.
+Synapse 1.162.0 (2026-09-29) raised its default room version to 12, the
+harness runs `matrixdotorg/synapse:latest`, and the Docker Hub tag of that
+day carries exactly the digest CI pulled. Under room version 12 a room's
+creator holds power that no power-levels event can take away or even list,
+and vodle's rooms are built on the opposite: the creator is demoted to 50
+once a poll or voter room is set up, so that only the guard bot can change a
+running poll.
+
+Fixed on this branch by naming the room version in the one `createRoom`
+wrapper (`ROOM_VERSION = '11'` in `matrix.service.ts`; 11 is what Synapse
+defaulted to from 1.158 to 1.161, so it is what the green runs ran against),
+with a spec, a note in `documentation/deployment/MATRIX.md`, and a line in
+the output of `scripts/test-matrix.sh` naming the Synapse version and its
+default room version, which the job log had not said. The production
+deployment (`docker-compose.prod.yml`, `deploy/deploy.sh`) runs the same
+`latest` image, so without the fix its next image pull would have stopped
+poll creation there too. The CI image stays unpinned on purpose: `latest` is
+what found this.
+
+Moving vodle's rooms to version 12 would mean giving up the creator's
+demotion, or another way of keeping a creator from rewriting a running poll.
+That is a design decision, not a migration task, and is left open here.
 
 ### How to check it is still sound before touching anything
 
@@ -227,7 +246,7 @@ are the first place to look.
     npx ng build --configuration production
     CHROME_BIN=<chromium> npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
 
-The suite should say `Executed 959 of 979 (skipped 20) SUCCESS`. The 20 skips
+The suite should say `Executed 961 of 981 (skipped 20) SUCCESS`. The 20 skips
 are the CouchDB/Synapse integration specs, which call `pending()` when no
 backends are provisioned. The build is clean apart from one known warning:
 the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads

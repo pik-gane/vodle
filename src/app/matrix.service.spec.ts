@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { TestBed } from '@angular/core/testing';
 import { Storage } from '@ionic/storage-angular';
 import { environment } from '../environments/environment';
-import { JOIN_KEY_EVENT_TYPE, KNOCK_REASON_PREFIX, joinKey, joinProof, MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus, pollAccountName, pollAccountPassword } from './matrix.service';
+import { JOIN_KEY_EVENT_TYPE, KNOCK_REASON_PREFIX, ROOM_VERSION, joinKey, joinProof, MatrixService, hashEmail, deriveMatrixPassword, DelegationRequest, DelegationResponse, PollEventListener, QueuedEvent, OfflineQueueStatus, pollAccountName, pollAccountPassword } from './matrix.service';
 
 describe('MatrixService', () => {
   let service: MatrixService;
@@ -1446,6 +1446,52 @@ describe('MatrixService closed poll rooms (#328)', () => {
     expect(sent[0].content.events['m.room.join_rules']).toBe(100);
     expect(sent[0].content.events['m.room.power_levels']).toBe(100);
     expect(sent[0].content.state_default).toBe(100);
+  });
+});
+
+describe('MatrixService creates its rooms in a version it can govern', () => {
+  // Synapse 1.162 made room version 12 its default. Under it a room's creator
+  // can neither be demoted nor so much as listed in the power levels, and
+  // vodle demotes every poll and voter room's creator to 50 once the room is
+  // set up, so that only the guard bot can change a running poll. So the app
+  // names the version itself instead of taking the server's default; the
+  // production click-through of 2026-10-08 is what happened when it did not.
+  let service: any;
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+    service.userId = '@alice:example.org';
+  });
+
+  it('asks for room version 11 whatever the homeserver would default to', async () => {
+    expect(ROOM_VERSION).toBe('11');
+    const created: any[] = [];
+    service.client = {
+      createRoom: async (opts: any) => { created.push(opts); return {room_id: '!r' + created.length + ':example.org'}; },
+      getRoom: () => ({currentState: {getStateEvents: () => null}}),
+      sendStateEvent: async () => ({}),
+      invite: async () => ({}),
+    };
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    await service.createRoom({name: 'any room'});
+    await service.createPollRoom('P1', 'Title');
+    expect(created.length).toBe(2);
+    for (const opts of created) {
+      expect(opts.room_version).withContext(opts.name).toBe('11');
+    }
+    expect(created[1].power_level_content_override.users['@alice:example.org'])
+      .withContext('the creator is listed in the power levels, which room version 12 forbids').toBe(100);
+  });
+
+  it('keeps a room version the caller names', async () => {
+    const created: any[] = [];
+    service.client = {createRoom: async (opts: any) => { created.push(opts); return {room_id: '!r:example.org'}; }};
+    await service.createRoom({name: 'an older room', room_version: '10'});
+    expect(created[0].room_version).toBe('10');
   });
 });
 

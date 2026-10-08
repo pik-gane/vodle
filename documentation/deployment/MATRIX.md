@@ -206,7 +206,7 @@ curl -X POST https://vodle.example.org/_synapse/admin/v1/registration_tokens/new
 
 Put the token into the app's configuration (step 1) and rebuild the app (the scripted deployment builds it in from `.env`). Rotating it is a new token here plus a rebuild; old accounts keep working (the token is only needed to register).
 
-Leave `default_room_version` at Synapse's default (10 or later): poll rooms use the `knock` join rule (room version 7 or later) and voter rooms the `restricted` join rule (8 or later) — see the bot's doorman role below ([#328](https://github.com/pik-gane/vodle/issues/328)).
+`default_room_version` does not matter to vodle: the app names the room version itself when it creates a room (`ROOM_VERSION` in `src/app/matrix.service.ts`, currently 11). Room version 12, Synapse's default since 1.162.0, gives a room's creator power that no power-levels event can take away, and vodle's rooms depend on the opposite: the creator is demoted to 50 once a poll or voter room is set up, so that only the guard bot can change a running poll. The join rules the rooms use need version 7 (`knock`, poll rooms) and 8 (`restricted`, voter rooms) or later — see the bot's doorman role below ([#328](https://github.com/pik-gane/vodle/issues/328)).
 
 ## 3. The guard bot
 
