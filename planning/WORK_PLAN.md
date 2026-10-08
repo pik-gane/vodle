@@ -179,6 +179,24 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 | D3 | PRs #285 #253 #202 #268–#270 | Open pull requests need a decision by the owner: #285 (weighted delegation and UI changes — **examined 2026-09-13: not incorporable as it stands**. It targets the `hemped` branch, not `main`, and is the last 13 commits of a 29-commit feature branch that forked on 2024-10-14. Every symbol its diff patches exists only there — `get_weighted_delegation_allowed`, `get_different_delegation_allowed`, `get_direct_delegation_map`, `self_rating_map`, `effective_rating_map`, `get_inverse_indirect_map`, `update_effective_votes` are all zero occurrences on `main` — so there is nothing to cherry-pick: it is a patch to a feature, and the feature is `hemped`'s other 16 commits (weighted, ranked and per-option delegation with cycle checking, four dialog pages). `hemped` is 289 commits BEHIND main, having forked before the whole Matrix migration, and carries Angular 14→19, Ionic 6→8 and TypeScript 4.4→5.8; its 360k-line diff is `docs/`, 1742 files of committed build output that `main` does not have at all. The last review (mensch72, 2025-04-12) reports it broken — missing toggles, an undefined variable, a banner without the delegate's name — and six commits followed with no re-review. Integrating it is its own job: a framework upgrade plus a two-year rebase plus the feature, and easier after the Matrix work has landed than during it. When it is done, note that per-option delegation writes `del_oid.<oid>` as a vodle data key, and a data key becomes part of the unencrypted Matrix event type — not a new kind of exposure, since ratings already ship as `m.room.vodle.voter.rating.rating.<oid>`, but it extends PRIVACY.md §6 from "the delegation graph by vid" to "and for which option"), #253 (CSS theme option from 2023, probably superseded by the dark theme of PR #291), #202 (Finnish translation from 2022; Finnish is in the app, so probably superseded), the dependabot bumps #268–#270 (2024; the lock file still carries the old versions of `express`, `follow-redirects` and `ip`, so they are still applicable — merge them or bump the three with a fresh `npm audit`). Community PRs #254 and #298 were ported and closed only in 2026-09; a week from opening to a decision should be the rule. |
 | D4 | backlog | The older "ready to implement" features (#84, #62, #86, #156, #173, #182, #184, #201, #169) stay unscheduled until Tracks A–B are done. |
 
+### Track E — room version 12: the guard bot creates the rooms
+
+Decided 2026-10-08 (owner: have the existing server process create the rooms).
+The handover below says why the rooms are pinned to version 11: version 12,
+Synapse's default since 1.162.0, gives a room's creator power that no
+power-levels event can lower or even list, and vodle's rooms rely on demoting
+the creator to 50 once a poll runs. The way out is to make the guard bot the
+creator — it is the one member meant to hold power nobody can take away, and
+today it holds an explicit 100 that a creator still at 100 could, in
+principle, strip before the demotion.
+
+| # | Issue | What |
+| --- | --- | --- |
+| E1 | to file | **The bot creates poll rooms.** Today the client creates them (`createPollRoom`: creator at 100, demoted to 50 by `demotePollCreator` once `lockPollMetadata` has raised the levels). New: the client asks the bot (E3); the bot creates the room in version 12 and is its creator, with the same initial state as now (alias, `knock` join rule, the join key K, encryption flags, power levels with `state_default`, `events_default` and `users_default` 50 and the lock levels), and invites the human creator, who joins at the default 50 and writes the poll data as before (`state_default` 50 permits it). When the poll starts, the bot — not the client — raises `state_default` to 100: the raising half of `lockPollMetadata` moves to the bot, on the client's `lock_poll` request or on the `m.room.vodle.poll.state = running` event the bot sees anyway. Nothing is demoted any more. |
+| E2 | to file | **The bot creates voter rooms.** The same for `createVoterRoom`: the voter asks, the bot creates (version 12, alias, `restricted` to the poll room's members), invites the voter at 50, and the voter writes its ratings (`state_default` 50) and announces the room in the poll room as now. Consequence: every voter room lives on the bot's homeserver, also for a voter of another homeserver, where it lived on the voter's. The privacy delta is small — the bot's server already holds a full copy of every voter room because the bot is a member of each (PRIVACY.md, "The guard bot" and "Another homeserver"), and the voter's server now holds the replica through the voter's membership: origin and replica swap roles. PRIVACY.md §2 and §4 and the deployment guide say so. |
+| E3 | to file | **The request channel.** Matrix itself, not a new HTTP surface on the bot. The client creates a small request room per account (alias `vodle_requests_<hash of the user id>`, any room version — no demotion needed — `invite` join rule), invites the bot (it joins invitations already) and sends `m.room.vodle.request` events: `create_poll` (poll id, title, K), `create_voter_room` (poll id, voter id), `lock_poll` (poll id). The bot answers in the same room with the room id, having sent the invitation. The homeserver authenticates the sender, so no token travels to the bot, and the channel works across federation (a voter on another homeserver invites the bot over federation, as the knock does). Rejected: an authenticated endpoint on the bot's HTTP server (`/healthz` only, today) — the bot cannot verify another homeserver's access token without being handed it, and the endpoint would have to be exposed through nginx. |
+| E4 | to file | **Consequences, and how it is verified.** The bot becomes required for creating a poll, as B3 made it required for joining one (today a missing bot is "non-fatal" in `createPollRoom`); the bot-less path stays for the test code that creates public rooms without a password, in version 11 — `ROOM_VERSION` becomes that fallback and the bot names 12. Rooms created before stay version 11 and keep working; reading is version-agnostic. Rate limits: every room creation now comes from one account, so the deployment's `rc_*` settings (MATRIX.md §2) need an override for the bot (`ratelimit_override` through the admin API, which `deploy.sh` can set), or the bot sees 429 under load; `withRateLimitRetry` exists. The bot's closing, re-checking and knock-answering code is unchanged — its power only grows. Specs: the `ROOM_VERSION` spec in `matrix.service.spec.ts` becomes "poll and voter rooms are created by the bot in version 12"; the two-client and federation specs, the click-through and the bot's unit tests cover the rest. Order: E3, E1, E2, each its own PR; E4's text with E1. |
+
 ### Process notes
 
 - Land work in reviewable slices (PR #319 with ~5000 added lines was too large to review).
@@ -236,9 +254,10 @@ deployment (`docker-compose.prod.yml`, `deploy/deploy.sh`) runs the same
 poll creation there too. The CI image stays unpinned on purpose: `latest` is
 what found this.
 
-Moving vodle's rooms to version 12 would mean giving up the creator's
-demotion, or another way of keeping a creator from rewriting a running poll.
-That is a design decision, not a migration task, and is left open here.
+Moving vodle's rooms to version 12 means giving up the creator's demotion
+for another way of keeping a creator from rewriting a running poll. Decided
+on 2026-10-08: the guard bot will create the rooms and so be the creator
+whose power version 12 protects — *Track E* in Plan 2 above says how.
 
 ### How to check it is still sound before touching anything
 
