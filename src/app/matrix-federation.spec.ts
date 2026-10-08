@@ -173,6 +173,47 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     }
   }
 
+  /**
+   * What a homeserver holds of a room, as the member `svc` sees it through
+   * GET /state — the vodle state events by type, with the age of the
+   * newest, and how long the server took to answer (a server mid-way
+   * through a faster join answers /state only once it has the full state,
+   * which is one way a wait can look stuck). Ten seconds, then it is
+   * reported as such; never throws.
+   */
+  async function server_view(label: string, svc: any, hs: {url: string}, roomId: string): Promise<string> {
+    const started = performance.now();
+    try {
+      const response = await fetch(hs.url + '/_matrix/client/v3/rooms/' + encodeURIComponent(roomId) + '/state', {
+        headers: {Authorization: 'Bearer ' + svc.client.getAccessToken()},
+        cache: 'no-store', signal: AbortSignal.timeout(10000),
+      });
+      const took = Math.round(performance.now() - started) + ' ms';
+      if (!response.ok) { return label + ': HTTP ' + response.status + ' after ' + took; }
+      const events: any[] = await response.json();
+      const vodle = events.filter(e => typeof e.type === 'string' && e.type.startsWith('m.room.vodle.'));
+      const newest = Math.max(0, ...vodle.map(e => e.origin_server_ts || 0));
+      const members = events.filter(e => e.type === 'm.room.member').map(e => e.state_key + '=' + e.content?.membership);
+      return label + ': ' + events.length + ' state events in ' + took + ', vodle types ['
+        + vodle.map(e => e.type.replace('m.room.vodle.', '')).sort().join(', ') + ']'
+        + (vodle.length ? ', newest ' + Math.round((Date.now() - newest) / 1000) + ' s old' : '')
+        + ', members [' + members.join(', ') + ']';
+    } catch (err) {
+      return label + ': ' + ((err as Error).name === 'TimeoutError' ? 'no answer within 10 s' : String(err));
+    }
+  }
+
+  /** the vodle state event types the SDK store holds for a room */
+  function store_view(svc: any, roomId: string): string {
+    const room = svc.client.getRoom(roomId);
+    if (!room) { return 'not in the store'; }
+    const types: string[] = [];
+    for (const [type] of (room.currentState?.events ?? new Map())) {
+      if (typeof type === 'string' && type.startsWith('m.room.vodle.')) { types.push(type.replace('m.room.vodle.', '')); }
+    }
+    return 'store has [' + types.sort().join(', ') + ']';
+  }
+
   async function fresh_ratings(svc: any, poll_id: string = pid): Promise<Map<string, Map<string, number>>> {
     svc.ratingCaches.delete(poll_id);
     return svc.getRatings(poll_id);
@@ -305,18 +346,38 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const bob_voter_rooms = () => [...alice.voterRooms.entries()]
       .filter(([key]: [string, string]) => key.startsWith(pid + ':'))
       .map(([, roomId]: [string, string]) => roomId);
+    // Each read is timed: a read that takes the whole wait is a server
+    // that does not answer GET /state (hs1 mid-way through a faster join,
+    // say), not a rating that is slow to arrive. And when the wait fails,
+    // what each side holds of bob's voter room is said as well — runs 141
+    // and 147 (2026-10-08) failed here with both rooms joined, which the
+    // two reasons below do not explain; whether hs1 has the rating event
+    // and whether the client reads it are the next two questions.
+    let slowest_read_ms = 0;
     try {
-      await until(async () => rating_values(await fresh_ratings(alice), 'o1').includes(40),
-        "alice to see bob's rating from the other homeserver", CROSS_SERVER_TIMEOUT_MS);
+      await until(async () => {
+        const read_started = performance.now();
+        const ratings = await fresh_ratings(alice);
+        slowest_read_ms = Math.max(slowest_read_ms, performance.now() - read_started);
+        return rating_values(ratings, 'o1').includes(40);
+      }, "alice to see bob's rating from the other homeserver", CROSS_SERVER_TIMEOUT_MS);
     } catch (err) {
       const rooms = bob_voter_rooms();
       const membership = rooms.map(roomId =>
         roomId + '=' + (alice.client.getRoom(roomId)?.getMyMembership() ?? 'not in the store'));
+      const views: string[] = [];
+      for (const roomId of rooms) {
+        views.push(roomId + ': ' + store_view(alice, roomId) + '; '
+          + await server_view('alice via hs1', alice, HS1, roomId) + '; '
+          + await server_view('bob via hs2', bob, HS2, roomId));
+      }
       throw new Error((err as Error).message
         + ' — alice knows ' + rooms.length + ' voter room(s) of this poll ['
         + (membership.join(', ') || 'none')
         + ']. One room means bob\'s ANNOUNCEMENT never reached hs1; two with a'
-        + ' membership that is not "join" means the restricted JOIN is being refused.');
+        + ' membership that is not "join" means the restricted JOIN is being refused.'
+        + ' Slowest single read: ' + Math.round(slowest_read_ms) + ' ms.'
+        + ' What each side holds: ' + (views.join(' | ') || 'nothing to ask about'));
     }
     console.info('VODLE_PERF federation_first_vote_visible_ms', Math.round(performance.now() - vote_started));
     expect(rating_values(await fresh_ratings(alice), 'o1')).toEqual([40, 70]);
