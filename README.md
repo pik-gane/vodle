@@ -141,7 +141,7 @@ If you want to try it out first in an existing demo poll, visit **[demo.vodle.it
 
 Even though it might still have some smaller bugs *([you can do something about that](CONTRIBUTING.md))*, the app works quite decently already.
 
-Later, when the First Stable Release is ready, you can alternatively install vodle as an **app on your smartphone** via certain app stores.
+vodle is a web app: it runs in the browser of a **smartphone** as well, and there is no app-store version.
 
 ### I want to learn about the project
 
