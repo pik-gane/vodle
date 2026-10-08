@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Location } from '@angular/common'
 import { TranslateService } from '@ngx-translate/core';
 import { AlertController } from '@ionic/angular';
@@ -33,6 +33,7 @@ import { restart_at_the_beginning } from "../data.service";
   selector: 'app-logout',
   templateUrl: './logout.page.html',
   styleUrls: ['./logout.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class LogoutPage implements OnInit {

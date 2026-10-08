@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
@@ -49,6 +49,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-login',
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class LoginPage implements OnInit {

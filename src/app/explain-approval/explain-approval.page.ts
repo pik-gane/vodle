@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -29,6 +29,7 @@ import { Poll } from '../poll.service';
   selector: 'app-explain-approval',
   templateUrl: './explain-approval.page.html',
   styleUrls: ['./explain-approval.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class ExplainApprovalPage implements OnInit {

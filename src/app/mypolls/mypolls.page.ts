@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { news_t } from '../data.service';
 
@@ -28,6 +28,7 @@ import { Poll } from "../poll.service";
   selector: 'app-mypolls',
   templateUrl: './mypolls.page.html',
   styleUrls: ['./mypolls.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class MypollsPage implements OnInit {

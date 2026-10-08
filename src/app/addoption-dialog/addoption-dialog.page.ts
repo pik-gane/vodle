@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectorRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { IonInput, PopoverController } from '@ionic/angular';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -39,6 +39,7 @@ import { Poll, Option } from '../poll.service';
   selector: 'app-addoption-dialog',
   templateUrl: './addoption-dialog.page.html',
   styleUrls: ['./addoption-dialog.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class AddoptionDialogPage implements OnInit {

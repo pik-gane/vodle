@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl, Form } from '@angular/forms';
 import {
   IonInput,
@@ -48,6 +48,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-delegation-dialog',
   templateUrl: './delegation-dialog-ranked.page.html',
   styleUrls: ['./delegation-dialog-ranked.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DelegationDialogRankedPage implements OnInit {

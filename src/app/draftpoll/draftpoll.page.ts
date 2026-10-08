@@ -24,7 +24,7 @@ TODO:
 - make tab key autofocus work properly
 */
 
-import { Component, OnInit, ViewChild, ViewChildren, ElementRef, QueryList, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, ElementRef, QueryList, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
@@ -55,6 +55,7 @@ function is_forward_key(ev: KeyboardEvent) {
   selector: 'app-draftpoll',
   templateUrl: './draftpoll.page.html',
   styleUrls: ['./draftpoll.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DraftpollPage implements OnInit {

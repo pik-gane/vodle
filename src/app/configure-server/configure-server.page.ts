@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 /*
 - ask for url, admin user + pwd. check connection.
@@ -31,6 +31,7 @@ import { Component, OnInit } from '@angular/core';
   selector: 'app-configure-server',
   templateUrl: './configure-server.page.html',
   styleUrls: ['./configure-server.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class ConfigureServerPage implements OnInit {

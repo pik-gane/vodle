@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { del_agreement_t } from '../data.service';
@@ -30,6 +30,7 @@ import { Poll } from '../poll.service';
   selector: 'app-join',
   templateUrl: './delrespond.page.html',
   styleUrls: ['./delrespond.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DelrespondPage implements OnInit {

@@ -23,7 +23,7 @@ import { RouteReuseStrategy } from '@angular/router';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 
-import { HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { VodleTranslateLoader, DEFAULT_LANG } from './i18n-loader';
 
@@ -87,7 +87,7 @@ export function configureLogging(loggingService: LoggingService): () => void {
             useFactory: configureLogging
         },
         // HttpClientModule is deprecated as of Angular 18; this is its replacement
-        provideHttpClient(withInterceptorsFromDi())
+        provideHttpClient(withXhr(), withInterceptorsFromDi())
     ],
     bootstrap: [AppComponent]
 })

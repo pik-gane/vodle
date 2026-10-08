@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input, ViewChild } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ModalController, IonContent } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -41,6 +41,7 @@ const svgcolors = {
   selector: 'app-analysis',
   templateUrl: './analysis.page.html',
   styleUrls: ['./analysis.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class AnalysisPage implements OnInit {

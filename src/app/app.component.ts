@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, Inject, DOCUMENT } from '@angular/core';
+import { Component, Inject, DOCUMENT, ChangeDetectionStrategy } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from 'src/environments/environment';
@@ -26,6 +26,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class AppComponent {

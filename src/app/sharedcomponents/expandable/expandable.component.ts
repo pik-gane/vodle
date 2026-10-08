@@ -1,9 +1,10 @@
-import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild } from '@angular/core';
+import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-expandable',
   templateUrl: './expandable.component.html',
   styleUrls: ['./expandable.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class ExpandableComponent implements OnInit {

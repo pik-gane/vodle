@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { PopoverController, IonSelect } from '@ionic/angular';
 import { DraftpollPage } from '../draftpoll/draftpoll.module';  
 
@@ -25,6 +25,7 @@ import { DraftpollPage } from '../draftpoll/draftpoll.module';
   selector: 'app-draftpoll-kebap',
   templateUrl: './draftpoll-kebap.page.html',
   styleUrls: ['./draftpoll-kebap.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DraftpollKebapPage implements OnInit {
