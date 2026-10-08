@@ -126,6 +126,9 @@ at the PRs/commits that carry the detail.
 | 34 — the same defect, one key along (#327) | **done** (2026-09-13) | The owner, straight after session 33 landed: the language is preserved now, the default wap is not. It was the same mechanism and the fix had been written one key wide instead of as the rule. `user-settings-sync.spec.ts` gained the wap and theme journeys, and the one that mattered is the one session 33's equivalent had missed: a second device that has been USED BEFORE. A device that has never been started has nothing of its own to push, which is why the spec written for those keys passed while the feature was broken; a device that has been started once was handed the deployment's default wap by ensure_user_defaults, save_state persisted it with the rest of the cache, and the local-wins sync pushed that 10 over the owner's 51. Reproduced exactly ("Expected 10 to be 51"), then fixed twice over: `account_wins_user_keys` is now the person's SETTINGS — language, theme, default_wap — rather than one of them, and ensure_user_defaults no longer stores the deployment's default wap at all. Storing it was the same mistake as storing a guessed language: a value nobody chose, sitting in the account where a device can push it over one they did, and freezing the deployment's setting at the moment of the first login. SettingsService.default_wap's fallback already puts it on the screen, and the one place that WRITES a wap into a poll waits for user_data_ready, so nothing needed it stored. The poll membership keys are deliberately NOT account-wins: a device that has just created or joined a poll is the only one that knows. One existing spec asserted the old seeding and was corrected. 874 specs; the production configuration builds. |
 | 35 — the delegation link that showed nothing (#327) | **done** (2026-09-13) | The owner, twice, the second time with a screenshot and a fair complaint about the first: a delegation magic link shows the page title and an empty body. Session 30's answer had been the user-room alias 403, which was a real defect and not this one — it was never reproduced. This time it was, before anything was changed. The console rules out a stall (the client syncs and runs `discoverVoterRooms` throughout, and the user-data PUTs return 200), so the page had decided on a status its own template could not match. Four blocks compare `status == ['impossible','not-in-db']` — an array against a fresh array, false in JavaScript for ever — and the fifth, `['impossible','closed']`, is a shape `get_incoming_request_status` never returns (it returns `['closed']`). So four of the eleven statuses the service can produce rendered an empty page, their translated sentences sitting unused in the file. And `onDataReady` read `this.p.state` before checking that `this.p` existed, throwing for a poll this device had not registered and never reaching `ready = true`, with nothing to call it a second time. `delrespond.page.spec.ts` now renders the real template for every status the service can return and asserts the body is not empty; five specs failed on the code as it stood, with the owner's symptom exactly. Fixed: the comparisons, the shape, the throw; plus `onDataChange` re-decides when the request's data arrives after the page (the delegation agreement lives in the poll room and may still be on its way, which is a not-yet rather than an answer), a "still checking" state so the page is never blank while it works, and a catch-all for a status no block claims. New key `delrespond.checking` in en/de/es/fr/it/pl/zh/ko/hi/fi. 890 specs; the production configuration builds. |
 | 36 — the delegation request that was written and never read (#327) | **done** (2026-09-14) | The owner, on the page session 35 had made speak: it now says vodle is still waiting for data about the request, and reloading several more times does not change it. It was right and it would have waited for ever. A delegation request is VOTER data — `set_my_request` does `setv(pid, 'del_request.<did>', …)`, which on Matrix becomes the state event `m.room.vodle.voter.rating.del_request.<did>` in the requester's voter room — and `doc2poll_cache` routes exactly that key to `process_request_from_db` on CouchDB. The Matrix side matched `m.room.vodle.voter.rating.rating.` — ratings only — in BOTH the live `RoomState.events` handler and the `getRatings` read-back scan, so every delegation request and response was written to the homeserver and delivered to nobody. Session 31 turned delegation on saying the records already travelled the ordinary data path; that was true of the write direction only. `MatrixService.voterDataKeyOf` now takes the vodle key out of the event type and both paths dispatch anything that is not a rating through the new `handleVoterDataEvent` → `PollEventListener.onVoterDataChange` → `DataService.matrix_voter_data_arrived`, which stores the value where `getv` finds it and calls the same two delegation-service entry points CouchDB uses (the value stays stored if that throws — the poll may not be loaded yet). Two further links in the same chain: the delrespond page never called `ensure_poll_loaded`, and a poll's voter rooms are read only when the poll is OPENED (#327), so nothing was fetching the one room the request lives in; and it decided once rather than looking again. `delegation-matrix-path.spec.ts` covers the key extraction, the dispatch and the routing; `delrespond.page.spec.ts` covers the fetch and the re-decide. 898 specs; the production configuration builds. |
+| 37 — delegation on vodle's own model (#285) | **done** (2026-09-14) | PR #336 (merged): rank and trust moved into the voter's own delegation request; per-option ("different") and ranked delegation computed on the poll's own maps; weighted delegation as a fixed point over locally held ratings, with the weight limit restored and the cycle verdict settled; the shared delegation documents deleted and the CouchDB exception reverted; the delegation mode a deployment setting, default weighted; Matrix delivery specs for everything the features read back. |
+| 38 — the framework stack, five majors on (#339) | **done** (2026-09-15), **unmerged** | PR #339, branch `claude/keen-ptolemy-i0m1n5`: Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8, one major at a time, each hop verified against a clean production build and a full suite before the next began. Angular itself asked for ~21 lines of vodle's own code across the five majors; everything else was third-party stale metadata. The risky part was Ionic: `ionChange` on text entry moved to blur in 7 (14 handlers carrying `debounce="100"` moved to `(ionInput)`), and 8 removed the legacy form-control syntax this app was built on (48 blocks, 8 of them real). See the PR body for the whole account. |
+| 39 — the GUI read off two deployments side by side (#339) | **done** (2026-09-16), **unmerged** | Same PR. `docker-compose.compare.yml` runs a second copy of the app from a detached worktree on another port against the same homeserver, which is how the owner compared the pages. What that found: the Ionic 8 cascade order had replaced the dark theme (Ionic's stylesheets now load before vodle's palette, from `variables.scss`); 33 `[innerHtml]` bindings on `ion-label`/`ion-item` hosts rendered nothing and moved onto child spans; `innerHTMLTemplatesEnabled` back on with `escape_html` at the two call sites that interpolate user data; the draft poll's "Details" label drawn in the colour of the bar behind it; the top-right logo's white box (#346); a custom end date that could not be set at all (#342); a Share button on a browser that says it can share and cannot (#343); the browser's own password reveal next to ours (#344); and the delegation switch 40px below the slider's line. Filed and not fixed: #341, #345. |
 | 14 — Plan 2, B3 (#328) | **done** (2026-09-10) | This branch: closed rooms. Poll rooms are `knock`-joinable and carry a join key derived from the poll password; the app knocks with a per-user HMAC proof, the guard bot verifies and invites (`guard-bot/knock.js`, node:test; the app's WebCrypto twin asserts the same vectors), and ignores anything else (a kick would let the knocker read the room's state as of their leave); voter rooms are `restricted` to the poll room's members. The two-client spec shows a client with the poll id alone kept out of the poll room and the voter rooms and one with a wrong password left standing at the door, seeing neither members nor state; the federation spec knocks across homeservers. |
 
 ## Plan 2 (2026-09-10): from "implemented" to "usable in production"
@@ -182,3 +185,115 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 - Every fix comes with a spec; every claim of "works against a real server" with a spec that runs in CI (the real-server suites skip themselves without servers, and CI runs with `--no-skips`).
 - Keep this ledger and `matrix-migration/MIGRATION_STATUS.md` current when a session lands; keep the historical documents in `matrix-migration/history/` untouched.
 
+
+## Open at the 2026-10-08 handover
+
+This section is for whoever picks the work up next, in another session and
+under another account. It can go once PR #339 is merged and the three
+questions below are answered.
+
+### What is in flight
+
+PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — is **open and
+unmerged**, on branch `claude/keen-ptolemy-i0m1n5`. `main` is `c7fed2b` and has
+not moved since 2026-09-14, so there is no conflict. The last commit carrying
+code is `9da5bd3` (this section is the one after it); both checks are green on
+it — `build and test` and `e2e smoke (built app)` — and `mergeable_state` is
+`blocked`, which here means branch protection waiting on a human approval, a
+thing no push can supply.
+
+**Do not start the follow-up work from `main`**: sessions 38 and 39 are only
+on that branch. A session told to develop on a different branch should branch
+from `claude/keen-ptolemy-i0m1n5`, not from `main`, until #339 lands.
+
+Nobody is watching the PR any more. The hourly check-in and the PR-activity
+subscription belonged to the session that opened it and ended with it; a
+successor that wants them must arm them itself.
+
+### How to check it is still sound before touching anything
+
+    npm ci                       # plain, no --legacy-peer-deps (restored in 1a8bd0a)
+    npx ng build --configuration production
+    CHROME_BIN=<chromium> npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
+
+The suite should say `Executed 959 of 979 (skipped 20) SUCCESS`. The 20 skips
+are the CouchDB/Synapse integration specs, which call `pending()` when no
+backends are provisioned. The build is clean apart from one known warning:
+the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads
+`"2mb"` in `angular.json` as 2×10⁶ where 18 read it as 2×2²⁰.
+
+### Three questions this session could not answer
+
+- **#343, the Share button on Waterfox 6.7.2.** That browser answers
+  `"function"` to `typeof navigator.share` and `true` to
+  `canShare({title, text})`, and then shares nothing, so no check made before
+  the attempt can hide the button there. The attempt now decides: any
+  rejection other than `AbortError` marks the browser and both share buttons
+  stay away for the session (`web_share_broke` in `global.service.ts`). **If
+  Waterfox rejects with `AbortError`, that rule will not catch it and the
+  button needs a different handle.** One click with the console open settles
+  it: the app logs `share_button_clicked failed` with the error at ERROR
+  level.
+- **#344, the second "show password" eye.** In a clean Chromium the app's DOM
+  has exactly one — Ionic's `ion-input` renders no reveal of its own — so the
+  other one is the browser's or an extension's. `::-ms-reveal` and
+  `::-ms-clear` are hidden in `global.scss`, which removes it on browsers of
+  the Edge/IE line; an eye injected by a password manager is the extension's
+  and not the page's to remove. Unconfirmed on the reporter's own browser.
+- **The assist dialog, steps 2 and 3.** The fixes are in the diff
+  (`assist.page.html`: the favourite row no longer indented, option names
+  left-flush and in the text colour) and the owner reported them good on their
+  own pass, but automation could not drive the dialog past step 1, so they are
+  not verified here.
+
+### Issues
+
+Fixed on this branch, so they close when #339 merges: **#342** (the custom end
+date), **#343** (the Share button, see above), **#344** (the duplicate reveal,
+see above), **#346** (the logo). Filed from the same comparison and **not
+touched**: **#341** (a delegation link never resolves — "vodle is still
+waiting for some data on this request"), **#345** (on page two of the
+explain-approval dialog the finished graph flashes before the animation
+starts; an earlier fix of the same shape exists for page one).
+
+### Deferred, deliberately
+
+- The dead Cordova build targets in `angular.json`.
+- Two assertions in `mypolls.page.spec.ts` read the `ng-reflect-router-link`
+  debug attribute, which Angular 20 stops emitting by default. They are the
+  one known blocker for the next major.
+- The optional `use-application-builder` (esbuild) and `provide-initializer`
+  migrations were declined, so they stay separate decisions.
+- `poll.page.html` still carries a hidden `<ion-input style="display: none;">`
+  whose comment says it stops a disabled range greying the option name. That
+  hack exploited the coupling Ionic 8 deletes, so it is probably inert now,
+  but it governs how rating rows look once a poll is **closed**, which needs a
+  poll past its due date to see. Left in place rather than removed on
+  reasoning alone.
+
+### How the GUI bugs were found, since the suite cannot see them
+
+The suite is service-level and never renders one of these controls: every
+defect in session 39 passed 949 green specs and a clean build. What found
+them was driving the **production build** in a real browser —
+`npx ng build --configuration production`, served from `docs/`, with
+`puppeteer-core` (already a dependency) driving the Chromium that
+`CHROME_BIN` points at, `prefers-color-scheme` emulated for the dark theme.
+
+Two habits made it exact rather than impressionistic. First, measure, don't
+squint: read computed colour and `getBoundingClientRect()` out of the live
+page, and crop the rendered pixels when the question is "can this be seen".
+Second, where the page needs a login that the container cannot provide (no
+Synapse: the image pull is blocked there), **inject the page's own markup into
+the running app** — a real `ion-content`, the real stylesheet, the real
+cascade — and measure that. The datetime fix (#342) went the other way, into
+the page's own karma harness, which renders the real `DraftpollPage` and is
+where its regression tests now live.
+
+### The side-by-side deployment
+
+`docker-compose.compare.yml` and the "Two revisions side by side" section of
+`deploy/README.md` document how a second copy of the app runs from a detached
+worktree on another port against the same homeserver. Read the header of the
+compose file before using it: the worktree must be added with `--detach`, and
+an update moves the worktree, not the deployment.
