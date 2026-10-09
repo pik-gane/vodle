@@ -3,9 +3,17 @@
   "compileOnSave": false,
   "compilerOptions": {
     /* TypeScript 6.0 turned "strict" on by default; this code base was
-       written without it (1103 errors with it on), and turning it on is a
-       project of its own, not a side effect of a compiler update. */
-    "strict": false,
+       written without it. Since 2026-10-09 "strict" is on and the two
+       checks that would take a project of their own are off: measured on
+       that day, strictNullChecks raised 459 errors in the app and 506 in the
+       specs, noImplicitAny 416 and 500, and strictPropertyInitialization
+       needs strictNullChecks. The rest of "strict" (noImplicitThis,
+       strictFunctionTypes, strictBindCallApply, useUnknownInCatchVariables,
+       alwaysStrict) cost ten one-line fixes. */
+    "strict": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictPropertyInitialization": false,
     /* TypeScript 6.0 deprecates "baseUrl" (gone in 7.0); the nine imports
        from 'src/...' that relied on it resolve through "paths" instead.
        "downlevelIteration" went with it: a no-op since the target is ES2022. */

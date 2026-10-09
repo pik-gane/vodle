@@ -2782,7 +2782,7 @@ export class DataService implements OnDestroy {
             }
             try {
               await this.store_poll_data_confirmed(pid, key, source_value, add_due, false, still_wanted);
-            } catch (err) {
+            } catch (err: any) {
               if (!err?.vodle_publication_expired) { throw err; }
               this.assert_voter_mutation_current(still_wanted);
               await this.delu_confirmed(ukey, source_rev, still_wanted);
@@ -2931,7 +2931,7 @@ export class DataService implements OnDestroy {
         try {
           await this.store_poll_data_confirmed(pid, key, decrypted,
             true, false, () => !this.shutting_down && generation === this.poll_mutation_generation(pid));
-        } catch (err) {
+        } catch (err: any) {
           if (!err?.vodle_publication_expired) { throw err; }
         }
       } else {
@@ -3126,7 +3126,7 @@ export class DataService implements OnDestroy {
         doc.value = encrypt('closed', password);
         await remote.put(doc);
         return;
-      } catch (err) {
+      } catch (err: any) {
         // Another closer may have won the write; re-read instead of creating
         // another closed revision. Transport failures use Poll's backoff.
         if (err.status != 409 || attempt >= confirmed_put_max_attempts) { throw err; }
@@ -4483,7 +4483,7 @@ export class DataService implements OnDestroy {
   private async get_existing_doc(db, id: string): Promise<any> {
     try {
       return await db.get(id);
-    } catch (err) {
+    } catch (err: any) {
       if (err?.status === 404) { return null; }
       throw err;
     }
@@ -6020,7 +6020,7 @@ export class DataService implements OnDestroy {
       let authoritative;
       try {
         authoritative = await remote.get(_id);
-      } catch (err) {
+      } catch (err: any) {
         assert_wanted();
         if (err && err.status == 404) {
           const due = this.poll_caches[pid]['due'];
@@ -6157,7 +6157,7 @@ export class DataService implements OnDestroy {
         try {
           doc = await db.get(_id);
           this.assert_voter_mutation_current(is_current);
-        } catch (err) {
+        } catch (err: any) {
           if (err && err.status == 404) {
             // really nonexistent (not just a transient read failure):
             this.assert_voter_mutation_current(is_current);
@@ -6178,7 +6178,7 @@ export class DataService implements OnDestroy {
         const changed: any = new Error("User source still has a live revision: " + key);
         changed.vodle_source_changed = !!expected_rev;
         throw changed;
-      } catch (err) {
+      } catch (err: any) {
         this.assert_voter_mutation_current(is_current);
         if (err?.vodle_source_changed) { throw err; }
         if (attempt >= confirmed_put_max_attempts) {
