@@ -455,7 +455,10 @@ that would matter; `ng build` prints none now:
   build. pouchdb leaves with C1.
 - The workflow's actions (checkout, setup-node, upload-artifact) went from
   v4 to v5: every run warned that v4 targets Node.js 20, which the runners
-  force onto Node.js 24 since 2025-09. The two other workflow files, CodeQL
+  force onto Node.js 24 since 2025-09. Run 178, the first on v5, still
+  names `actions/upload-artifact@v5` in that warning: that action's v5
+  declares Node.js 20 too and runs on 24 by the runner's force; its next
+  major ends the line. The two other workflow files, CodeQL
   (disabled by GitHub for inactivity; it targets the long-gone
   `update_ionic` branch with codeql-action v1) and CodeSee (disabled by
   hand in 2024-12; the service no longer exists), are the owner's to delete
