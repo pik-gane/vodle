@@ -204,30 +204,47 @@ principle, strip before the demotion.
 - Keep this ledger and `matrix-migration/MIGRATION_STATUS.md` current when a session lands; keep the historical documents in `matrix-migration/history/` untouched.
 
 
-## Open at the 2026-10-08 handover
+## Open at the 2026-10-08 handover (state of 2026-10-09)
 
 This section is for whoever picks the work up next, in another session and
-under another account. It can go once the branch below is merged and the
-three questions at its end are answered.
+under another account. The subsections after *What is in flight* are the
+record of what was done and why, dated; they can go once the owner's
+questions below are answered.
 
 ### What is in flight
 
-PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — was **merged** into
-`main` on 2026-10-08 as `73b2c55`, with the room-version fix and the fixes
-for #341 and #345 (both under *Issues* below) in it.
+Nothing, as of 2026-10-09. Everything this section named is merged into
+`main`: #339 (2026-10-08) and, on 2026-10-08/09, #350–#358 (the hops to
+the current versions, the dependency audit, the application builder,
+Track E with the bot's rooms in version 12, the DISCONNECTED tail, the
+standalone Ionic setup, strict TypeScript), #359 (build and CI without
+warnings), #360 (the guard bot's request channel as state events, a voter
+room joined before it is written into — the defect that made runs 173 and
+178 red on `main`), #361 (the gap behind a cut-short sync is fetched) and
+#362 (#58: an overlay does not outlive its page). `main` is green again
+since run 182 (#360). No pull request from this work is open; the open
+pull requests are the owner's to decide (D3: #285, #253, #268–#270). No
+session is watching anything.
 
-The work continues on branch **`claude/to-current-versions`**, branched from
-that merge, which brings the stack to the versions current on 2026-10-08:
-Angular 22, Ionic 9, TypeScript 6, matrix-js-sdk 43, ngx-translate 18,
-Capacitor 8, pouchdb 9 and the smaller libraries (see *The hops after the
-merge*; what is still behind, and why, follows the table there). It has no
-pull request yet. CI does not run on a push to a branch without one; the runs
-there were started by hand (`workflow_dispatch`, runs 138 to 146; the pull
-request's runs follow), and a new
-dispatch on the same branch cancels one still running.
+Open, and whose:
 
-Nobody is watching either branch from a session any more; a successor that
-wants a PR watched must open it and arm the watching itself.
+- **The owner**: the deployment run on the test server
+  (`deploy/README.md`; `deploy/deploy.sh update` for an existing
+  deployment, or `down`, move `matrix-data/` and `postgres-data/` away,
+  `up` for a fresh one — the app and the bot must both be on today's
+  `main`, since #360 changed the channel between them), then the production
+  install and the handover of the CouchDB deployment (B1, session 17); the
+  verification of #341, #343, #344 and #346 against a real deployment or
+  the reporter's browser (each issue has a comment saying what to look at;
+  #342, #345 and #155 are closed); the Dependabot pull requests; the two
+  disabled workflow files (CodeQL, CodeSee: delete or renew).
+- **Production observation**: B6 (#159 #161 #162 #171 #251), then C1
+  (#332, the removal of the CouchDB backend).
+- **Weblate**: D2, the translations.
+- **Known noise, left**: matrix-js-sdk 43 asks every homeserver for
+  `org.matrix.msc4143/rtc/transports` once per client start and logs the
+  404 at error level (app console and bot log); Synapse 1.162 does not
+  serve it, the SDK caches the answer for a day, nothing depends on it.
 
 ### The red run of 2026-10-08, and what it was
 
