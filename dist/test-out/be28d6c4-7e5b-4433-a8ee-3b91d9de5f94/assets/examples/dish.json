@@ -1,0 +1,256 @@
+{
+    "type": "winner",
+
+    "language": "en",
+
+    "title": "What dish to serve at our next meeting",
+
+    "desc": "This is an example poll for selecting a single option. Imagine you have to select a single dish that shall be served at your next meeting. The 57 options were taken from CNN's list of the world's 50 best foods interleaved with Tasteatlas' list of 10 best-rated vegan dishes (https://www.tasteatlas.com/best-rated-vegan-dishes-in-the-world).",
+    
+    "url": "https://edition.cnn.com/travel/article/world-best-food-dishes/index.html",
+
+    "due_type": "24hr",
+
+    "options": [
+        {
+            "name": "Soparnik (vegetable pie)",
+            "url": "https://www.wikiwand.com/en/Soparnik"
+        },
+        {
+            "name": "Massaman curry",
+            "url": "https://www.wikiwand.com/en/Massaman_curry"
+        },
+        {
+            "name": "Neapolitan pizza",
+            "url": "https://www.wikiwand.com/en/Neapolitan_pizza"
+        },
+        {
+            "name": "Chocolate",
+            "url": "https://www.wikiwand.com/en/Chocolate"
+        },
+        {
+            "name": "Sushi",
+            "url": "https://www.wikiwand.com/en/Sushi"
+        },
+        {
+            "name": "Rajma chawal (rice with red beans)",
+            "url": "https://www.tasteatlas.com/rajma-chawal"
+        },
+        {
+            "name": "Peking duck",
+            "url": "https://www.wikiwand.com/en/Peking_duck"
+        },
+        {
+            "name": "Hamburgers",
+            "url": "https://www.wikiwand.com/en/Hamburger"
+        },
+        {
+            "name": "Penang assam laksa",
+            "desc": "Mackerel soup with tamarind",
+            "url": "https://www.wikiwand.com/en/Laksa#/Malaysia"
+        },
+        {
+            "name": "Tom yum (Thai soup)",
+            "url": "https://www.wikiwand.com/en/Tom_yum"
+        },
+        {
+            "name": "Fattoush (Levantine salad)",
+            "url": "https://www.wikiwand.com/en/Fattoush"
+        },
+        {
+            "name": "Ice cream",
+            "url": "https://www.wikiwand.com/en/Ice_cream"
+        },
+        {
+            "name": "Moambe chicken",
+            "url": "https://www.wikiwand.com/en/Moambe_chicken"
+        },
+        {
+            "name": "Rendang",
+            "desc": "Slow cooked meat in coconut milk",
+            "url": "https://www.wikiwand.com/en/Rendang"
+        },
+        {
+            "name": "Galinha à Zambeziana",
+            "desc": "Mozambican spicy chicken",
+            "url": "https://noodlesandbuns.com/mozambican-spicy-chicken-with-coconut-rice/"
+        },
+        {
+            "name": "Fasolada (white bean soup)",
+            "url": "https://www.wikiwand.com/en/Fasolada"
+        },
+        {
+            "name": "Corn on the cob",
+            "desc": "with melted butter",
+            "url": "https://www.wikiwand.com/en/Corn_on_the_cob"
+        },
+        {
+            "name": "Donuts",
+            "url": "https://www.wikiwand.com/en/Doughnut"
+        },
+        {
+            "name": "Pierogi (Polish dumplings)",
+            "url": "https://www.wikiwand.com/en/Pierogi"
+        },
+        {
+            "name": "Pastéis de nata",
+            "url": "https://www.wikiwand.com/en/Pastel_de_nata"
+        },
+        {
+            "name": "Zeytoon parvardeh",
+            "desc": "Dip made from olives, pomegranate, herbs",
+            "url": "https://www.tasteatlas.com/zeytoon-parvardeh"
+        },
+        {
+            "name": "Shish kebab",
+            "url": "https://www.wikiwand.com/en/Shish_kebab"
+        },
+        {
+            "name": "Bunny chow",
+            "desc": "White bread filled with spicy curry",
+            "url": "https://www.wikiwand.com/en/Bunny_chow"
+        },
+        {
+            "name": "Stuffed Arepas",
+            "desc": "Maize patties with cheese and beans stuffing",
+            "url": "https://www.wikiwand.com/en/Arepa"
+        },
+        {
+            "name": "Croissants with butter and jam",
+            "url": "https://www.wikiwand.com/en/Croissant"
+        },
+        {
+            "name": "Muhammara with pita bread",
+            "desc": "Dip made from walnut, bell peppers, pomegranate",
+            "url": "https://www.wikiwand.com/en/Muhammara"
+        },
+        {
+            "name": "Poke (Hawaiian raw fish salad)",
+            "url": "https://www.wikiwand.com/en/Poke_(Hawaiian_dish)"
+        },
+        {
+            "name": "Lasagna",
+            "url": "https://www.wikiwand.com/en/Lasagne"
+        },
+        {
+            "name": "Champ (Irish mashed potatoes)",
+            "url": "https://www.wikiwand.com/en/Champ_(food)"
+        },
+        {
+            "name": "Garlic butter crab"
+        },
+        {
+            "name": "Gallo pinto",
+            "desc": "Rice with beans and herbs",
+            "url": "https://www.wikiwand.com/en/Gallo_pinto"
+        },
+        {
+            "name": "Fajitas",
+            "url": "https://www.wikiwand.com/en/Fajita"
+        },
+        {
+            "name": "Lechon, Philippines style",
+            "url": "https://www.wikiwand.com/en/Lechon#/Philippines"
+        },
+        {
+            "name": "Pho (noodle soup)",
+            "url": "https://www.wikiwand.com/en/Pho"
+        },
+        {
+            "name": "Gỏi cuốn (summer roll)",
+            "url": "https://www.wikiwand.com/en/G%E1%BB%8Fi_cu%E1%BB%91n"
+        },
+        {
+            "name": "Baba ghanoush with pita bread",
+            "desc": "Roasted eggplant meze",
+            "url": "https://www.wikiwand.com/en/Baba_ghanoush"
+        },
+        {
+            "name": "Parma ham with grissini",
+            "url": "https://www.wikiwand.com/en/Prosciutto#/Prosciutto_crudo"
+        },
+        {
+            "name": "Ankimo (monkfish liver)",
+            "url": "https://www.wikiwand.com/en/Ankimo"
+        },
+        {
+            "name": "Fish and chips",
+            "url": "https://www.wikiwand.com/en/Fish_and_chips"
+        },
+        {
+            "name": "Maple syrup on pancakes",
+            "url": "https://www.wikiwand.com/en/Maple_syrup"
+        },
+        {
+            "name": "Blitva na lešo (Chard with potatoes)",
+            "url": "https://www.tasteatlas.com/blitva-na-leso"
+        },
+        {
+            "name": "Chili crab",
+            "url": "https://www.wikiwand.com/en/Chilli_crab"
+        },
+        {
+            "name": "Hummus with pita bread",
+            "url": "https://www.wikiwand.com/en/Hummus"
+        },
+        {
+            "name": "Chicken parm, Australian style",
+            "url": "https://www.wikiwand.com/en/Chicken_parmigiana#/Australia"
+        },
+        {
+            "name": "French toast, Hong Kong style",
+            "url": "https://www.wikiwand.com/en/French_toast#/Hong_Kong"
+        },
+        {
+            "name": "Arroz rojo (Spanish rice)",
+            "url": "https://www.wikiwand.com/en/Spanish_rice"
+        },
+        {
+            "name": "Marzipan",
+            "url": "https://www.wikiwand.com/en/Marzipan"
+        },
+        {
+            "name": "Stinky tofu",
+            "url": "https://www.wikiwand.com/en/Stinky_tofu"
+        },
+        {
+            "name": "Buttered toast with Marmite",
+            "url": "https://www.wikiwand.com/en/Marmite"
+        },
+        {
+            "name": "Mexican Tacos",
+            "url": "https://www.wikiwand.com/en/Taco"
+        },
+        {
+            "name": "Quebecian Poutine",
+            "desc": "French fries topped with cheese curds and brown gravy",
+            "url": "https://www.wikiwand.com/en/Poutine"
+        },
+        {
+            "name": "Hainanese chicken rice",
+            "desc": "with cucumber and dipping sauces",
+            "url": "https://www.wikiwand.com/en/Hainanese_chicken_rice"
+        },
+        {
+            "name": "Som tam (green papaya salad)",
+            "url": "https://www.wikiwand.com/en/Green_papaya_salad"
+        },
+        {
+            "name": "Valencian Paella",
+            "url": "https://www.wikiwand.com/en/Paella"
+        },
+        {
+            "name": "Potato chips",
+            "url": "https://www.wikiwand.com/en/Potato_chip"
+        },
+        {
+            "name": "Masala dosa",
+            "desc": "South Indian stuffed pancake",
+            "url": "https://www.wikiwand.com/en/Masala_dosa"
+        },
+        {
+            "name": "Buttered popcorn",
+            "url": "https://www.wikiwand.com/en/Popcorn"
+        }
+    ]
+}

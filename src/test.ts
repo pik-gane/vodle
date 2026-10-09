@@ -4,9 +4,9 @@ import 'zone.js/testing';
 import { NgModule, provideZoneChangeDetection } from '@angular/core';
 import { getTestBed } from '@angular/core/testing';
 import {
-  BrowserDynamicTestingModule,
-  platformBrowserDynamicTesting
-} from '@angular/platform-browser-dynamic/testing';
+  BrowserTestingModule,
+  platformBrowserTesting
+} from '@angular/platform-browser/testing';
 
 /** Since Angular 21 an application runs WITHOUT zone.js unless it is told
  *  otherwise; the app is told in main.ts (bootstrapModule's
@@ -20,6 +20,6 @@ class ZoneChangeDetectionTestingModule {}
 
 // First, initialize the Angular testing environment.
 getTestBed().initTestEnvironment(
-  [BrowserDynamicTestingModule, ZoneChangeDetectionTestingModule],
-  platformBrowserDynamicTesting()
+  [BrowserTestingModule, ZoneChangeDetectionTestingModule],
+  platformBrowserTesting()
 );

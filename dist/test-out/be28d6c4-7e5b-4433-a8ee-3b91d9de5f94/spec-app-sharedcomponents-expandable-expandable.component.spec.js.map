@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "sources": [
+    "src/app/sharedcomponents/expandable/expandable.component.spec.ts",
+    "angular:jit:template:src/app/sharedcomponents/expandable/expandable.component.html",
+    "angular:jit:style:src/app/sharedcomponents/expandable/expandable.component.scss",
+    "src/app/sharedcomponents/expandable/expandable.component.ts"
+  ],
+  "sourcesContent": [
+    "import { waitForAsync, ComponentFixture, TestBed } from '@angular/core/testing';\n\nimport { ExpandableComponent } from './expandable.component';\n\ndescribe('ExpandableComponent', () => {\n  let component: ExpandableComponent;\n  let fixture: ComponentFixture<ExpandableComponent>;\n\n  beforeEach(waitForAsync(() => {\n    TestBed.configureTestingModule({\n      declarations: [ ExpandableComponent ]\n    })\n    .compileComponents();\n  }));\n\n  beforeEach(() => {\n    fixture = TestBed.createComponent(ExpandableComponent);\n    component = fixture.componentInstance;\n    fixture.detectChanges();\n  });\n\n  it('should create', () => {\n    expect(component).toBeTruthy();\n  });\n});\n",
+    "<div #expandWrapper class='expand-wrapper' [class.collapsed]=\"!expanded\">\n  <ng-content></ng-content>\n</div>",
+    "/* src/app/sharedcomponents/expandable/expandable.component.scss */\napp-expandable .expand-wrapper {\n  transition: height 1s ease;\n}\napp-expandable .collapsed {\n  display: none;\n  height: 0 !important;\n}\n/*# sourceMappingURL=expandable.component.css.map */\n",
+    "import { Component, OnInit, ElementRef, Renderer2, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';\n\n@Component({\n  selector: 'app-expandable',\n  templateUrl: './expandable.component.html',\n  styleUrls: ['./expandable.component.scss'],\n  changeDetection: ChangeDetectionStrategy.Eager,\n  standalone: false,\n})\nexport class ExpandableComponent implements OnInit {\n\n  @ViewChild('expandWrapper', {read: ElementRef}) expandWrapper;\n  @Input('expanded') expanded;\n  @Input('expandHeight') expandHeight;\n\n  constructor(public renderer: Renderer2) {\n\n  }\n\n  ngAfterViewInit(){\n      this.renderer.setStyle(this.expandWrapper.nativeElement, 'height', this.expandHeight + 'px');    \n  }\n\n  ngOnInit() { }\n}\n"
+  ],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;AAAA;A;;;;;ACAA;AAAA;AAAA;;;ACAA,IAAAA,gCAAA;;;ACAA;AASO,IAAM,sBAAN,MAAMC,qBAAmB;EAM9B,YAAmB,UAAmB;AAAnB,SAAA,WAAA;EAEnB;EAEA,kBAAe;AACX,SAAK,SAAS,SAAS,KAAK,cAAc,eAAe,UAAU,KAAK,eAAe,IAAI;EAC/F;EAEA,WAAQ;EAAK;;;;;;;;8BAZZ,WAAS,MAAA,CAAC,iBAAiB,EAAC,MAAM,WAAU,CAAC,EAAA,CAAA;yBAC7C,OAAK,MAAA,CAAC,UAAU,EAAA,CAAA;6BAChB,OAAK,MAAA,CAAC,cAAc,EAAA,CAAA;;;;AAJV,sBAAmB,WAAA;EAP/B,UAAU;IACT,UAAU;IACV,UAAA;IAEA,iBAAiB,wBAAwB;IACzC,YAAY;;GACb;GACY,mBAAmB;;;AHLhC,SAAS,uBAAuB,MAAK;AACnC,MAAI;AACJ,MAAI;AAEJ,aAAW,aAAa,MAAK;AAC3B,YAAQ,uBAAuB;MAC7B,cAAc,CAAE,mBAAmB;KACpC,EACA,kBAAiB;EACpB,CAAC,CAAC;AAEF,aAAW,MAAK;AACd,cAAU,QAAQ,gBAAgB,mBAAmB;AACrD,gBAAY,QAAQ;AACpB,YAAQ,cAAa;EACvB,CAAC;AAED,KAAG,iBAAiB,MAAK;AACvB,WAAO,SAAS,EAAE,WAAU;EAC9B,CAAC;AACH,CAAC;",
+  "names": [
+    "expandable_component_default",
+    "ExpandableComponent"
+  ],
+  "debugId": "ebd6873f-af12-5ddd-879f-f3b4b6aadb79"
+}

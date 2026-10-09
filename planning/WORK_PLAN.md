@@ -326,15 +326,21 @@ and two registry-view quirks: the Angular packages with a "latest" of 21.2
 
 **Deprecations now pending**, each a decision of its own and none of them a
 compiler update: the vitest test builder (`migrate-karma-to-vitest`), now
-that the webpack builders are gone (see the last row above) and karma itself
-is in maintenance; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9,
-which warns about it on every test run) and `<ion-img>` →
-`<img loading="lazy">` (deprecated in Ionic 9, removed in 10; the suite's
-console names the top-right icon);
-`platformBrowserDynamic` → `platformBrowser` (the dev build still compiles
-JIT, `aot: false` in `angular.json`); `APP_INITIALIZER` →
-`provideAppInitializer`; `strict` TypeScript; OnPush as the default strategy,
-component by component.
+that the webpack builders are gone and karma itself is in maintenance;
+`IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9 warns about it on
+every test run) — **not a drop-in for this app**: the `provideIonicAngular`
+of `@ionic/angular/standalone` initialises Ionic's custom-elements build,
+while the module-based app runs the lazy loader build (`@ionic/angular/lazy`
+has no such provider), so taking the warning away means the standalone
+migration — the components each template uses imported one by one in 26
+modules, and the icons registered by hand; `strict` TypeScript; OnPush as the
+default strategy, component by component. Done on 2026-10-09 (branch
+`claude/deprecations`): `<ion-img>` → `<img loading="lazy">` for the ten
+top-right icons, `APP_INITIALIZER` → `provideAppInitializer`, and
+`platformBrowserDynamic` → `platformBrowser` with every build compiled
+ahead of time (the development build was JIT, `aot: false`) and the tests on
+`platformBrowserTesting`; `@angular/platform-browser-dynamic` is no longer a
+dependency.
 
 ### The dependency audit (2026-10-08, branch `claude/dependency-audit`)
 

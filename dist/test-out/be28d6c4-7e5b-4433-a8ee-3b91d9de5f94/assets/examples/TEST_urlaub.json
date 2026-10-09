@@ -1,0 +1,37 @@
+{
+    "is_test": true,
+
+    "type": "winner",
+
+    "language": "de",
+
+    "title": "Gemeinsamer Urlaub des Fledermauszüchtervereins Telegrafenberg",
+
+    "desc": "Nach 30 Jahren erfolgreicher Fledermauszucht haben wir uns einen Urlaub verdient! Nur wohin soll's gehen?",
+    
+    "due_type": "custom",
+
+    "options": [
+        {
+            "name": "Südsee-Kreuzfahrt",
+            "desc": "Ganz entspannt verwöhnen lassen und was zu sehen bekommen",
+            "ratings": [100,100,100,100,100, 100,100,100,100,100, 0,0,0,0,0, 0,0,0,0,0]
+        },
+        {
+            "name": "Skiwoche in St. Moritz",
+            "desc": "Jede Menge Action",
+            "ratings": [0,0,0,0,0, 0,0,0,0,0, 100,100,100,100,100, 100,100,100,100,100]
+        },
+        {
+            "name": "Höhlenklettern bei Budapest",
+            "desc": "Dort gibt es auch Fledermäuse",
+            "ratings": [0,0,19,24,22, 53,60,67,74,71, 34,34,44,46,54, 84,88,94,0,0]
+        },
+        {
+            "name": "Segeltörn von Kiel nach Stockholm",
+            "desc": "auf einer klassischen Yacht",
+            "ratings": [72,73,81,84,93, 22,25,31,36,43, 0,4,8,13,19, 43,51,54,63,62]
+        }
+    ]
+
+}

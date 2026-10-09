@@ -1,0 +1,2 @@
+bento-iframe{display:block;overflow:hidden;position:relative}bento-iframe:not(.i-amphtml-built){color:transparent!important}bento-iframe:not(.i-amphtml-built)>:not([placeholder]):not([slot=i-amphtml-svc]){display:none;content-visibility:hidden}
+/*# sourceURL=/extensions/amp-iframe/1.0/amp-iframe.css*/
