@@ -140,6 +140,28 @@ export const JOIN_KEY_EVENT_TYPE = 'm.room.vodle.poll.join_key';
 export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
 
 /**
+ * The request channel to the guard bot (planning/WORK_PLAN.md, Track E).
+ *
+ * Room version 12 gives a room's creator power that no power-levels event
+ * can lower or even list. vodle's poll rooms want exactly that power with
+ * the guard bot and with nobody else, so the bot creates them: this account
+ * asks it through a small request room of its own (`#vodle_requests_<hash
+ * of the user id>`, invite-only, the bot invited), with an
+ * `m.room.vodle.request` event the bot answers by an `m.room.vodle.response`
+ * event carrying the same request id. The homeserver authenticates the
+ * sender, the channel works across federation, and the bot gains no
+ * endpoint and holds no token. guard-bot/requests.js is the other end.
+ */
+export const REQUEST_EVENT_TYPE = 'm.room.vodle.request';
+export const RESPONSE_EVENT_TYPE = 'm.room.vodle.response';
+export const REQUEST_ROOM_ALIAS_PREFIX = 'vodle_requests_';
+/** the room version the guard bot creates poll rooms in; ROOM_VERSION stays
+ *  the version of the rooms this app creates itself */
+export const BOT_POLL_ROOM_VERSION = '12';
+/** how long a request to the guard bot waits for its answer */
+export const GUARD_BOT_REQUEST_TIMEOUT_MS = 30000;
+
+/**
  * The room version every room vodle creates is created in.
  *
  * It used to be whatever the homeserver's default was. Synapse 1.162.0
@@ -313,6 +335,12 @@ export class MatrixService {
   
   // Cache for quick access
   private userRoomId: string | null = null;
+  /** this account's request room to the guard bot (Track E), once known */
+  private requestRoomId: string | null = null;
+  /** until when poll rooms are created here rather than asked of a guard bot that did not answer */
+  private guardBotUnreachableUntil = 0;
+  /** a spec shortens this; the app waits GUARD_BOT_REQUEST_TIMEOUT_MS */
+  guardBotRequestTimeoutMs = GUARD_BOT_REQUEST_TIMEOUT_MS;
   private pollRooms: Map<string, string> = new Map(); // pollId -> roomId
   // Cache of voter rooms: "pollId:voterId" -> roomId
   // Each voter gets a dedicated room per poll for server-side write enforcement.
@@ -2744,6 +2772,142 @@ export class MatrixService {
     }
   }
 
+  // ==========================================================================
+  // THE REQUEST CHANNEL TO THE GUARD BOT (Track E; guard-bot/requests.js)
+  // ==========================================================================
+
+  /** the alias of `userId`'s request room to the guard bot */
+  private requestRoomAliasFor(userId: string): string {
+    return `#${REQUEST_ROOM_ALIAS_PREFIX}${this.hashUserId(userId)}:${MatrixService.serverNameOf(userId) || this.getHomeserverDomain()}`;
+  }
+
+  /**
+   * This account's request room to the guard bot: the one remembered, else
+   * the one its alias names (another device of this account made it), else
+   * a new one -- invite-only, with the bot invited. Resolves once the bot is
+   * in it (the bot joins invitations by itself while it runs); rejects after
+   * guardBotRequestTimeoutMs when it is not.
+   */
+  private async getRequestRoom(guardBotId: string): Promise<string> {
+    if (!this.client || !this.userId) {
+      throw new Error("Matrix client not initialized");
+    }
+    let roomId: string | null = this.requestRoomId || (await this.storage.get(this.storageKey('request_room_id'))) || null;
+    if (roomId && !this.client.getRoom(roomId)) {
+      roomId = null;   // remembered, but not among this account's rooms
+    }
+    if (!roomId) {
+      try {
+        const found = (await this.client.getRoomIdForAlias(this.requestRoomAliasFor(this.userId))).room_id;
+        await this.retryOnRateLimit(() => this.client!.joinRoom(found));   // a no-op when already in it
+        roomId = found;
+      } catch (error) {
+        roomId = null;   // no such alias, or a room this account cannot enter: a new one below
+      }
+    }
+    if (!roomId) {
+      roomId = await this.createRoom({
+        name: 'vodle requests',
+        preset: Preset.TrustedPrivateChat,
+        visibility: Visibility.Private,
+        room_alias_name: `${REQUEST_ROOM_ALIAS_PREFIX}${this.hashUserId(this.userId)}`,
+        invite: [guardBotId],
+      });
+      this.logger?.info("Request room to the guard bot created", roomId);
+    }
+    this.requestRoomId = roomId;
+    await this.storage.set(this.storageKey('request_room_id'), roomId);
+    await this.waitForRoom(roomId);
+    const botMembership = () => this.client!.getRoom(roomId!)?.getMember(guardBotId)?.membership;
+    if (botMembership() !== 'join' && botMembership() !== 'invite') {
+      // a room from before the bot's account existed, say: invite it now
+      await this.retryOnRateLimit(() => this.client!.invite(roomId!, guardBotId));
+    }
+    if (botMembership() !== 'join') {
+      await this.waitFor(() => botMembership() === 'join',
+        `the guard bot ${guardBotId} to join the request room`, this.guardBotRequestTimeoutMs);
+    }
+    return roomId;
+  }
+
+  /**
+   * Ask the guard bot for something and return its answer's content
+   * (`{ok: true, ...}` or `{ok: false, error}`). Rejects when no bot is
+   * configured, when the bot is not in the request room in time, or when
+   * it does not answer within guardBotRequestTimeoutMs.
+   */
+  async askGuardBot(kind: string, params: Record<string, any> = {}): Promise<any> {
+    const guardBotId = this.getValidatedGuardBotId();
+    if (!guardBotId) {
+      throw new Error("no guard bot is configured");
+    }
+    const roomId = await this.getRequestRoom(guardBotId);
+    const requestId = this.randomRequestId();
+    const client: any = this.client!;
+    const timeoutMs = this.guardBotRequestTimeoutMs;
+    return new Promise<any>((resolve, reject) => {
+      let settled = false;
+      const finish = (outcome: () => void) => {
+        if (settled) { return; }
+        settled = true;
+        window.clearTimeout(timer);
+        client.removeListener('Room.timeline', onTimeline);
+        outcome();
+      };
+      const onTimeline = (event: any, room: any) => {
+        if (room?.roomId !== roomId || event.getType() !== RESPONSE_EVENT_TYPE || event.getSender() !== guardBotId) { return; }
+        const content = event.getContent();
+        if (content?.request_id !== requestId) { return; }
+        finish(() => resolve(content));
+      };
+      const timer = window.setTimeout(() => finish(() => reject(new Error(
+        `the guard bot ${guardBotId} did not answer the ${kind} request within ${Math.round(timeoutMs / 1000)} s`))), timeoutMs);
+      // listen first, then send: the answer can be quick
+      client.on('Room.timeline', onTimeline);
+      this.retryOnRateLimit(() => client.sendEvent(roomId, REQUEST_EVENT_TYPE, {version: 1, request_id: requestId, kind, ...params}))
+        .catch((error: any) => finish(() => reject(error)));
+    });
+  }
+
+  private randomRequestId(): string {
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /** whether the guard bot created `roomId` -- then it is the room's creator,
+   *  with the power room version 12 reserves for it, and this account holds
+   *  the default power like every participant */
+  private createdByGuardBot(roomId: string): boolean {
+    const guardBotId = MatrixService.configuredGuardBotId();
+    if (!guardBotId || typeof this.client?.getRoom !== 'function') { return false; }
+    const create = this.client.getRoom(roomId)?.currentState?.getStateEvents('m.room.create', '');
+    return !!create && typeof create.getSender === 'function' && create.getSender() === guardBotId;
+  }
+
+  /**
+   * Have the guard bot create the poll room (Track E, E1) and join it on the
+   * bot's invitation. The bot answers with the room id; the invitation may
+   * still be on its way when it does.
+   */
+  private async createPollRoomThroughGuardBot(pollId: string, guardBotId: string, key: string | null): Promise<string> {
+    const response = await this.askGuardBot('create_poll', {poll_id: pollId, join_key: key});
+    if (!response?.ok || typeof response.room_id !== 'string') {
+      throw new Error(response?.error || 'the guard bot did not create the poll room');
+    }
+    const roomId: string = response.room_id;
+    const viaServers = [MatrixService.serverNameOf(guardBotId)].filter((s): s is string => !!s);
+    const membership = () => this.client!.getRoom(roomId)?.getMyMembership();
+    if (membership() !== 'join') {
+      await this.waitFor(() => membership() === 'invite' || membership() === 'join',
+        `the guard bot's invitation to poll room ${roomId}`, this.guardBotRequestTimeoutMs);
+      await this.joinOnInvitation(roomId, viaServers);
+    }
+    await this.waitForRoom(roomId);
+    this.logger?.info("Poll room created by the guard bot", pollId, roomId, "room version", BOT_POLL_ROOM_VERSION);
+    return roomId;
+  }
+
   /**
    * Create a new poll room in Matrix.
    * Each poll gets its own room where poll metadata is stored
@@ -2797,6 +2961,26 @@ export class MatrixService {
     const pollPassword = this.pollPasswordProvider?.(pollId) || null;
     const key = pollPassword ? await joinKey(pollId, pollPassword) : null;
     const joinRules = { join_rule: key ? 'knock' : 'public' };
+    // Track E: a guard bot creates the room, in room version 12, and is its
+    // creator -- the power that no power-levels event can lower sits with it;
+    // this account is invited and holds the default power like every
+    // participant, so there is nothing to demote. Without a bot that answers
+    // (the test code without one, a deployment whose bot is down) the room
+    // is created here as it always was, in ROOM_VERSION, with the demotion
+    // -- and the next poll within a minute does not wait for the bot again.
+    if (guardBotId && Date.now() >= this.guardBotUnreachableUntil) {
+      try {
+        const roomId = await this.createPollRoomThroughGuardBot(pollId, guardBotId, key);
+        this.pollRooms.set(pollId, roomId);
+        await this.storage.set(this.storageKey(`poll_room_${pollId}`), roomId);
+        this.logger?.exit("MatrixService.createPollRoom");
+        return roomId;
+      } catch (error) {
+        this.guardBotUnreachableUntil = Date.now() + 60000;
+        this.logger?.warn("MatrixService.createPollRoom: the guard bot did not create the room; creating it here, in room version " + ROOM_VERSION, pollId, error);
+      }
+    }
+
     const initialState: Array<{type: string; state_key: string; content: any}> = [
       // No room encryption for poll rooms: they contain only metadata and
       // options that all members must read (encrypted at the application
@@ -3386,6 +3570,14 @@ export class MatrixService {
     const roomId = await this.getPollRoom(pollId);
     if (!roomId) {
       throw new Error(`Poll room not found for poll ${pollId}`);
+    }
+    // A room the guard bot created (Track E) is the bot's to lock: it does
+    // so when the poll's state turns to running, and this account, at the
+    // default power, could not raise anything to 100 anyway.
+    if (this.createdByGuardBot(roomId)) {
+      this.logger?.info("MatrixService.lockPollMetadata: the guard bot created this room and locks it", pollId, roomId);
+      this.logger?.exit("MatrixService.lockPollMetadata");
+      return;
     }
     
     // Fetch power levels directly from the server REST API.
