@@ -1321,6 +1321,9 @@ describe('MatrixService closed poll rooms (#328)', () => {
   it('creates a poll room with the knock join rule and the join key when the poll password is known, public otherwise', async () => {
     const created: any[] = [];
     const sent: any[] = [];
+    // the app's own room is under test here; the guard bot's way of creating
+    // it (Track E) has specs of its own below
+    service.guardBotUnreachableUntil = Number.MAX_SAFE_INTEGER;
     service.client = {
       createRoom: async (opts: any) => { created.push(opts); return {room_id: '!poll' + created.length + ':example.org'}; },
       // the store does not show the join rule yet: the service sets it once more
@@ -1456,7 +1459,15 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
   // set up, so that only the guard bot can change a running poll. So the app
   // names the version itself instead of taking the server's default; the
   // production click-through of 2026-10-08 is what happened when it did not.
+  //
+  // Since Track E the poll rooms of a deployment with a guard bot are the
+  // bot's: the app asks it through its request room, the bot creates the
+  // room in version 12 and is its creator, and the app joins on the bot's
+  // invitation. The app's own version-11 room is what a deployment without
+  // a bot, or with one that does not answer, still gets.
   let service: any;
+  let previous: {guard_bot_user_id: string, server_name: string};
+  const BOT = '@vodle-guard:example.org';
 
   beforeEach(() => {
     const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
@@ -1465,10 +1476,109 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
     TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
     service = TestBed.inject(MatrixService);
     service.userId = '@alice:example.org';
+    previous = {guard_bot_user_id: environment.matrix.guard_bot_user_id, server_name: environment.matrix.server_name};
+    environment.matrix.guard_bot_user_id = BOT;
   });
 
-  it('asks for room version 11 whatever the homeserver would default to', async () => {
+  afterEach(() => {
+    environment.matrix.guard_bot_user_id = previous.guard_bot_user_id;
+    environment.matrix.server_name = previous.server_name;
+  });
+
+  /** a mock client around a request room the bot has joined; `bot_answers`
+   *  decides what the bot replies to a request, or that it stays silent */
+  function client_with_bot(bot_answers: ((request: any) => any) | null) {
+    const created: any[] = [];
+    const requests: any[] = [];
+    const joins: string[] = [];
+    const listeners: any[] = [];
+    const membership: Record<string, string> = {};
+    const rooms: Record<string, any> = {};
+    const room_of = (roomId: string) => rooms[roomId] || (rooms[roomId] = {
+      roomId,
+      getMyMembership: () => membership[roomId] || 'leave',
+      getMember: (userId: string) => userId === BOT ? {membership: 'join'} : null,
+      currentState: {getStateEvents: () => null},
+    });
+    const client = {
+      getRoomIdForAlias: async () => { throw {httpStatus: 404, errcode: 'M_NOT_FOUND'}; },
+      createRoom: async (opts: any) => {
+        created.push(opts);
+        const roomId = '!r' + created.length + ':example.org';
+        membership[roomId] = 'join';
+        return {room_id: roomId};
+      },
+      getRoom: (roomId: string) => room_of(roomId),
+      invite: async () => ({}),
+      joinRoom: async (roomId: string) => { joins.push(roomId); membership[roomId] = 'join'; return {}; },
+      on: (name: string, fn: any) => { listeners.push(fn); },
+      removeListener: (name: string, fn: any) => { const i = listeners.indexOf(fn); if (i >= 0) { listeners.splice(i, 1); } },
+      sendEvent: async (roomId: string, type: string, content: any) => {
+        requests.push({roomId, type, content});
+        if (bot_answers) {
+          const answer = {version: 1, request_id: content.request_id, ...bot_answers(content)};
+          if (answer.room_id) { membership[answer.room_id] = 'invite'; }
+          window.setTimeout(() => {
+            const event = {getType: () => 'm.room.vodle.response', getSender: () => BOT, getContent: () => answer};
+            for (const fn of [...listeners]) { fn(event, {roomId}); }
+          }, 10);
+        }
+        return {event_id: '$' + requests.length};
+      },
+      sendStateEvent: async () => ({}),
+    };
+    return {client, created, requests, joins};
+  }
+
+  it('asks the guard bot for the poll room and joins on its invitation (Track E)', async () => {
+    const {client, created, requests, joins} = client_with_bot(() => ({ok: true, room_id: '!poll:example.org'}));
+    service.client = client;
+    service.pollPasswordProvider = () => 'secret';
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    const roomId = await service.createPollRoom('P1', 'Title');
+    expect(roomId).toBe('!poll:example.org');
+    // the one room the app created itself is its request room, invite-only with the bot invited
+    expect(created.length).toBe(1);
+    expect(created[0].room_alias_name).toMatch(/^vodle_requests_/);
+    expect(created[0].invite).toEqual([BOT]);
+    expect(created[0].preset).toBe('trusted_private_chat');
+    // the request names the poll and the join key, never the password or the title
+    expect(requests.length).toBe(1);
+    expect(requests[0].roomId).toBe('!r1:example.org');
+    expect(requests[0].type).toBe('m.room.vodle.request');
+    expect(requests[0].content.kind).toBe('create_poll');
+    expect(requests[0].content.poll_id).toBe('P1');
+    expect(requests[0].content.join_key).toBe(await joinKey('P1', 'secret'));
+    expect(JSON.stringify(requests[0].content)).not.toContain('secret');
+    expect(JSON.stringify(requests[0].content)).not.toContain('Title');
+    expect(joins).toEqual(['!poll:example.org']);
+    expect(service.pollRooms.get('P1')).toBe('!poll:example.org');
+  });
+
+  it('creates the poll room itself, in room version 11, when the guard bot does not answer', async () => {
+    const {client, created} = client_with_bot(null);
+    service.client = client;
+    service.guardBotRequestTimeoutMs = 50;
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    const roomId = await service.createPollRoom('P1', 'Title');
+    // the request room, then the poll room the app made on its own
+    expect(created.length).toBe(2);
+    expect(roomId).toBe('!r2:example.org');
+    expect(created[1].room_alias_name).toBe('vodle_poll_P1');
+    expect(created[1].room_version).toBe('11');
+    expect(created[1].power_level_content_override.users['@alice:example.org'])
+      .withContext('the creator is listed in the power levels, which room version 12 forbids and version 11 needs for the demotion').toBe(100);
+    // ... and the next poll within a minute does not wait for the bot again
+    expect(service.guardBotUnreachableUntil).toBeGreaterThan(Date.now());
+    await service.createPollRoom('P2', 'Title');
+    expect(created.length).toBe(3);
+    expect(created[2].room_alias_name).toBe('vodle_poll_P2');
+  });
+
+  it('asks for room version 11 for the rooms it creates itself, whatever the homeserver would default to', async () => {
     expect(ROOM_VERSION).toBe('11');
+    environment.matrix.guard_bot_user_id = '';
+    environment.matrix.server_name = '';   // no bot configured at all
     const created: any[] = [];
     service.client = {
       createRoom: async (opts: any) => { created.push(opts); return {room_id: '!r' + created.length + ':example.org'}; },
@@ -1485,6 +1595,20 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
     }
     expect(created[1].power_level_content_override.users['@alice:example.org'])
       .withContext('the creator is listed in the power levels, which room version 12 forbids').toBe(100);
+  });
+
+  it('leaves the lock of a room the guard bot created to the bot', async () => {
+    const fetched = spyOn(window, 'fetch').and.callFake(async () => { throw new Error('the server is not asked'); });
+    const sent: any[] = [];
+    service.client = {
+      getAccessToken: () => 'token',
+      getRoom: () => ({currentState: {getStateEvents: (type: string) => type === 'm.room.create' ? {getSender: () => BOT} : null}}),
+      sendStateEvent: async (roomId: string, type: string, content: any) => { sent.push({type, content}); return {}; },
+    };
+    service.pollRooms.set('P1', '!poll:example.org');
+    await service.lockPollMetadata('P1');
+    expect(sent.length).withContext('the app at the default power could not raise anything to 100; the bot locks when the poll runs').toBe(0);
+    expect(fetched).not.toHaveBeenCalled();
   });
 
   it('keeps a room version the caller names', async () => {

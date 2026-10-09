@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test recheck.test.js knock.test.js"
+    "test": "node --test recheck.test.js knock.test.js requests.test.js"
   },
   "dependencies": {
     "matrix-js-sdk": "^43.0.0"
