@@ -66,6 +66,19 @@ describe('GlobalService', () => {
     window.onbeforeunload = previous_onbeforeunload;
   });
 
+  it('leaves window.onbeforeunload alone and says nothing on the console while the page unloads', () => {
+    // karma reports a test that reloads the page through window.onbeforeunload,
+    // and a console line during the browser's shutdown after a run re-arms
+    // karma's no-activity timer: both cost the suite, the latter two minutes
+    // on every run until 2026-10-09
+    expect(window.onbeforeunload).toBe(previous_onbeforeunload);
+    // the handler is called, not the event dispatched: karma's own handler
+    // on the event would report a full page reload and end the run
+    const logged = spyOn(console, 'log').and.callThrough();
+    service.onBeforeUnload(new Event('beforeunload'));
+    expect(logged).not.toHaveBeenCalled();
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
     // the constructor wired itself into the service tree (G is private):

@@ -23,3 +23,21 @@ getTestBed().initTestEnvironment(
   [BrowserTestingModule, ZoneChangeDetectionTestingModule],
   platformBrowserTesting()
 );
+
+/** karma ends the run when the browser's `complete` message arrives, but
+ *  any message after it -- a console line is one -- re-arms karma's
+ *  no-activity timer (`browserNoActivityTimeout`, 120 s in karma.conf.js),
+ *  and nothing clears that timer again, so the process lives until it fires
+ *  and reports the browser `DISCONNECTED`. Lines did arrive after the end:
+ *  the boot stages of a DataService that the last spec left booting, and
+ *  the unload handlers when karma closed the browser. Two minutes on every
+ *  run, locally and in CI, until 2026-10-09. So the console falls silent
+ *  once jasmine is done; errors stay visible, since one would be worth the
+ *  two minutes. */
+jasmine.getEnv().addReporter({
+  jasmineDone: () => {
+    for (const level of ['log', 'info', 'warn', 'debug'] as const) {
+      console[level] = () => {};
+    }
+  },
+});
