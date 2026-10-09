@@ -50,7 +50,19 @@
             "optimization": false,
             "namedChunks": true,
             "allowedCommonJsDependencies": [
-              "libsodium"
+              "another-json",
+              "blake2s-js",
+              "events",
+              "libsodium",
+              "localforage",
+              "log4javascript",
+              "loglevel",
+              "matrix-events-sdk",
+              "matrix-widget-api",
+              "pouchdb/dist/pouchdb",
+              "sdp-transform",
+              "unhomoglyph",
+              "venn.js"
             ],
             "browser": "src/main.ts"
           },
@@ -70,7 +82,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2mb",
+                  "maximumWarning": "3.5mb",
                   "maximumError": "5mb"
                 }
               ]
