@@ -165,7 +165,7 @@ describe('DataService against a real CouchDB (two clients, #292)', () => {
   }
 
   async function existing(db: any, id: string): Promise<any> {
-    try { return await db.get(id); } catch (err) { if (err?.status === 404) { return null; } throw err; }
+    try { return await db.get(id); } catch (err: any) { if (err?.status === 404) { return null; } throw err; }
   }
 
   beforeAll(async () => {

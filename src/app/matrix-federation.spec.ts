@@ -610,7 +610,7 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     await until(async () => {
       try {
         return !!(await hugo.getPollRoom(rpid));
-      } catch (err) {
+      } catch (err: any) {
         console.warn('recovery join not yet possible:', err?.message || err);
         return false;
       }

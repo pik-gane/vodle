@@ -382,8 +382,26 @@ output, `src/test.ts` against the builder's own setup, a browser provider
 the real-server specs, which share two homeservers and must not run as
 parallel files. A day's work with its risk in CI, for a runner change the
 compiler does not ask for; it waits for karma to break or Angular to
-deprecate its builder. Still pending: `strict` TypeScript; OnPush as the
-default strategy, component by component.
+deprecate its builder. **Decided on 2026-10-09**, the last three. `strict` TypeScript is on, with
+`strictNullChecks`, `noImplicitAny` and `strictPropertyInitialization` off
+(`tsconfig.json` says what each would cost: 459 errors in the app and 506 in
+the specs, 416 and 500, and the third needs the first; the other five
+checks took ten one-line fixes). The components stay on the default
+change-detection strategy: 28 components, none OnPush, templates that read
+the services' state (`G.D.*`, `G.P.*`) directly and eight pages that change
+it from timers — OnPush would mean marking for check at every such change,
+with no rendering test to catch a missed one, for a gain an app of this
+size does not feel; the move that would pay is signals with zoneless, a
+project of its own. The standalone build's first-load cost stays: two
+experiments, imports from Ionic's per-component entry points
+(`@ionic/angular/ion-button` and 92 more) and a build without the builder's
+Rolldown chunk merging (`NG_BUILD_OPTIMIZE_CHUNKS=0`), moved nothing.
+esbuild assigns a module to the chunk of every entry point whose import
+graph reaches it, a barrel's re-exports included; `provideIonicAngular`
+and the overlay controllers exist only in the `@ionic/angular` barrel, so
+the initial graph holds the barrel, and every component the barrel
+re-exports gets the initial chunk's bit. 713 kB of first-load transfer
+against 614 before, for no page fetching Ionic code later.
 
 ### The dependency audit (2026-10-08, branch `claude/dependency-audit`)
 

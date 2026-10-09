@@ -2125,7 +2125,7 @@ export class Poll {
             mutation_generation = generation;
             return this.G.D.ensure_remote_poll_closed(this.pid, is_current);
           })
-          .then((() => {
+          .then<boolean | 'abort'>((() => {
             if (!is_current()) { return 'abort'; }
             this.G.D.assert_poll_consistent(this.pid);
             if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
