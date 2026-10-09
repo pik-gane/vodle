@@ -41,6 +41,7 @@ import {
   REQUEST_TYPE, RESPONSE_TYPE, REQUEST_ROOM_ALIAS_PREFIX, ROOM_VERSION, DEADLINE_TYPE,
   parseRequest, pollRoomCreateOptions, pollRoomAliasLocalpart, voterRoomCreateOptions, voterRoomAliasLocalpart,
   isLocked, lockedPowerLevels, responseFor,
+  isRequestId, unansweredRequests,
 } from "./requests.js";
 
 // Configuration from environment variables
@@ -190,15 +191,20 @@ async function main() {
   });
 
   // --- 2b. The app's requests, and the lock of a poll room this bot created
-  // (Track E): a request event in a request room is answered; a poll whose
-  // state turns to running has its metadata locked, which only the room's
-  // creator can do in version 12 -- the app at the default power cannot
-  client.on("Room.timeline", (event, room, toStartOfTimeline) => {
-    if (!room || toStartOfTimeline || event.getSender() === client.getUserId()) return;
+  // (Track E): a request in a request room is answered; a poll whose state
+  // turns to running has its metadata locked, which only the room's creator
+  // can do in version 12 -- the app at the default power cannot. Both are
+  // state events, and state is what a sync delivers in full: a sync whose
+  // timeline is cut short leaves the rest of that timeline out for good,
+  // and with it a request or an answer (run 173 of 2026-10-09 lost one of
+  // nine; see requests.js), while the state section is complete. So the
+  // requests are seen whenever they were made, the initial sync included,
+  // and the ones already answered are passed over (handleRequest).
+  client.on("RoomState.events", (event, state) => {
+    const room = client.getRoom(state?.roomId || event.getRoomId());
+    if (!room || event.getSender() === client.getUserId()) return;
     if (event.getType() === REQUEST_TYPE && roomKind(room) === "requests") {
-      handleRequest(client, room, event).catch((e) =>
-        console.error(`[guard-bot] Failed to answer a request in ${room.roomId}:`, e.message)
-      );
+      answerRequest(client, room, event);
     } else if (event.getType() === POLL_STATE_TYPE && roomKind(room) === "poll"
                && createdByThisBot(room, client) && event.getContent()?.state === "running") {
       lockPollRoom(client, room).catch((e) =>
@@ -220,6 +226,7 @@ async function main() {
     if (scanning) return;
     scanning = true;
     try {
+      answerPendingRequests(client);
       await lockRunningPollRooms(client);
       await scanForExpiredDeadlines(client);
     } catch (err) {
@@ -285,17 +292,20 @@ function serverNameOf(id) {
  * app does not wait for its timeout, and ignored otherwise.
  */
 async function handleRequest(client, room, event) {
+  const requestId = event.getStateKey();
+  if (room.currentState.getStateEvents(RESPONSE_TYPE, requestId)) return;   // answered already: a restart, or the scan behind the live listener
   const sender = event.getSender();
   const content = event.getContent();
+  if (!content || typeof content !== "object" || Object.keys(content).length === 0) return;   // a request taken back, not one made
   const request = parseRequest(content);
   const owner = room.currentState.getStateEvents("m.room.create", "")?.getSender();
   let result;
-  if (!request) {
+  if (!request || request.request_id !== requestId) {
     stats.requestsRefused++;
-    console.log(`[guard-bot] Refusing a malformed request from ${sender} in ${room.roomId}: ${describeRequest(content)}`);
-    if (typeof content?.request_id !== "string" || content.request_id.length > 64) return;
+    console.log(`[guard-bot] Refusing a malformed request from ${sender} in ${room.roomId}: ${describeRequest(content)} under the key ${JSON.stringify(requestId).slice(0, 80)}`);
+    if (!isRequestId(requestId)) return;
     result = { ok: false, error: "malformed request" };
-    await respond(client, room.roomId, { request_id: content.request_id }, result);
+    await respond(client, room.roomId, { request_id: requestId }, result);
     return;
   }
   if (sender !== owner) {
@@ -336,7 +346,34 @@ function describeRequest(content) {
 }
 
 async function respond(client, roomId, request, result) {
-  await withRateLimitRetry(() => client.sendEvent(roomId, RESPONSE_TYPE, responseFor(request, result)));
+  await withRateLimitRetry(() => client.sendStateEvent(roomId, RESPONSE_TYPE, responseFor(request, result), request.request_id));
+}
+
+/** the requests being answered right now ("room id/request id"): the live
+ *  listener and the scan must not both answer one, since two creations of
+ *  the same room would have the second refused for its alias */
+const answering = new Set();
+
+function answerRequest(client, room, event) {
+  const key = `${room.roomId}/${event.getStateKey()}`;
+  if (answering.has(key)) return;
+  answering.add(key);
+  handleRequest(client, room, event)
+    .catch((e) => console.error(`[guard-bot] Failed to answer a request in ${room.roomId}:`, e.message))
+    .finally(() => answering.delete(key));
+}
+
+/** the requests nobody answered yet, in every request room this bot is in:
+ *  made while it was down, or whose answer failed. Not awaited: a room
+ *  creation must not hold up the scan */
+function answerPendingRequests(client) {
+  for (const room of client.getRooms()) {
+    if (room.getMyMembership() !== "join" || roomKind(room) !== "requests") continue;
+    for (const event of unansweredRequests(room, client.getUserId())) {
+      console.log(`[guard-bot] Answering the pending request ${event.getStateKey()} in ${room.roomId}`);
+      answerRequest(client, room, event);
+    }
+  }
 }
 
 /**

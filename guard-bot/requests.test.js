@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   REQUEST_TYPE, RESPONSE_TYPE, ROOM_VERSION, DEADLINE_TYPE, parseRequest, pollRoomCreateOptions,
   pollRoomAliasLocalpart, voterRoomCreateOptions, voterRoomAliasLocalpart, isLocked, lockedPowerLevels, responseFor,
+  isRequestId, unansweredRequests,
 } from "./requests.js";
 import { JOIN_KEY_TYPE } from "./knock.js";
 
@@ -145,4 +146,30 @@ test("lockedPowerLevels raises what the app's lock raised, keeps the rest, and i
 test("responseFor echoes the request id and the version", () => {
   assert.deepEqual(responseFor({ request_id: "r1", kind: "ping" }, { ok: true }), { version: 1, request_id: "r1", ok: true });
   assert.deepEqual(responseFor({ request_id: "r2" }, { ok: false, error: "no" }), { version: 1, request_id: "r2", ok: false, error: "no" });
+});
+
+test("isRequestId takes the ids the app makes and the state keys a request may have, and nothing else", () => {
+  assert.equal(isRequestId("4f1c9a2b3d5e6f708192a3b4"), true);
+  assert.equal(isRequestId("r-2_x"), true);
+  assert.equal(isRequestId(""), false);
+  assert.equal(isRequestId("a".repeat(65)), false);
+  assert.equal(isRequestId("has space"), false);
+  assert.equal(isRequestId(42), false);
+  assert.equal(isRequestId(undefined), false);
+});
+
+test("unansweredRequests is the other senders' requests without a response under their key, oldest first", () => {
+  const BOT = "@vodle-guard:example.org";
+  const event = (key, sender, ts) => ({ getStateKey: () => key, getSender: () => sender, getTs: () => ts });
+  const requests = [event("r2", "@alice:example.org", 20), event("r1", "@alice:example.org", 10),
+    event("r3", "@alice:example.org", 30), event("own", BOT, 5), event("not a key", "@alice:example.org", 1)];
+  const answered = new Set(["r2"]);
+  const room = { currentState: { getStateEvents: (type, key) => {
+    if (type === REQUEST_TYPE && key === undefined) return requests;
+    if (type === RESPONSE_TYPE) return answered.has(key) ? event(key, BOT, 25) : null;
+    return null;
+  } } };
+  assert.deepEqual(unansweredRequests(room, BOT).map((e) => e.getStateKey()), ["r1", "r3"]);
+  // a room without any request
+  assert.deepEqual(unansweredRequests({ currentState: { getStateEvents: () => null } }, BOT), []);
 });

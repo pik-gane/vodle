@@ -147,10 +147,20 @@ export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
  * the guard bot and with nobody else, so the bot creates them: this account
  * asks it through a small request room of its own (`#vodle_requests_<hash
  * of the user id>`, invite-only, the bot invited), with an
- * `m.room.vodle.request` event the bot answers by an `m.room.vodle.response`
- * event carrying the same request id. The homeserver authenticates the
- * sender, the channel works across federation, and the bot gains no
- * endpoint and holds no token. guard-bot/requests.js is the other end.
+ * `m.room.vodle.request` state event keyed by a request id, which the bot
+ * answers by an `m.room.vodle.response` state event under the same key.
+ * The homeserver authenticates the sender, the channel works across
+ * federation, and the bot gains no endpoint and holds no token.
+ * guard-bot/requests.js is the other end.
+ *
+ * State events, not timeline events: this client asks for one timeline
+ * event per room and sync (initialSyncLimit), so a sync that brings more
+ * marks the room's timeline as cut short, and the SDK then drops what it
+ * did not get and never fetches it. Nine voter-room requests and their
+ * nine answers within a second lost one answer that way (the click-through
+ * of 2026-10-09, run 173), and with it a vote. The state section of a sync
+ * is complete whatever the timeline holds, so an answer keyed by the
+ * request id is seen as soon as it exists.
  */
 export const REQUEST_EVENT_TYPE = 'm.room.vodle.request';
 export const RESPONSE_EVENT_TYPE = 'm.room.vodle.response';
@@ -638,9 +648,11 @@ export class MatrixService {
   /**
    * Whether the server's answer means "this write will never be accepted",
    * as opposed to "not now". A closed poll room and a room that has been
-   * purged are the two cases; everything else — a 500, a gateway error, a
-   * write attempted before the room was joined — is temporary and belongs
-   * in the queue, where it is retried until it goes through.
+   * purged are the two cases; everything else — a 500, a gateway error —
+   * is temporary and belongs in the queue, where it is retried until it
+   * goes through. A 403 is final here, so a write must not reach the server
+   * before its room is joined: the write path joins first
+   * (getOrCreateVoterRoom, joinOwnVoterRoom).
    *
    * This is the ONLY reason a write is ever given up on, and even then it
    * is counted and reported rather than dropped in silence (#327).
@@ -2863,20 +2875,22 @@ export class MatrixService {
         if (settled) { return; }
         settled = true;
         window.clearTimeout(timer);
-        client.removeListener('Room.timeline', onTimeline);
+        client.removeListener('RoomState.events', onState);
         outcome();
       };
-      const onTimeline = (event: any, room: any) => {
-        if (room?.roomId !== roomId || event.getType() !== RESPONSE_EVENT_TYPE || event.getSender() !== guardBotId) { return; }
-        const content = event.getContent();
-        if (content?.request_id !== requestId) { return; }
-        finish(() => resolve(content));
+      // the answer is the response state event under this request's key, by
+      // the bot, in the request room -- whether the sync brought it in its
+      // timeline or in its state section (see REQUEST_EVENT_TYPE)
+      const onState = (event: any, state: any) => {
+        if ((state?.roomId ?? event.getRoomId?.()) !== roomId || event.getType() !== RESPONSE_EVENT_TYPE
+            || event.getStateKey?.() !== requestId || event.getSender() !== guardBotId) { return; }
+        finish(() => resolve(event.getContent()));
       };
       const timer = window.setTimeout(() => finish(() => reject(new Error(
         `the guard bot ${guardBotId} did not answer the ${kind} request within ${Math.round(timeoutMs / 1000)} s`))), timeoutMs);
       // listen first, then send: the answer can be quick
-      client.on('Room.timeline', onTimeline);
-      this.retryOnRateLimit(() => client.sendEvent(roomId, REQUEST_EVENT_TYPE, {version: 1, request_id: requestId, kind, ...params}))
+      client.on('RoomState.events', onState);
+      this.retryOnRateLimit(() => client.sendStateEvent(roomId, REQUEST_EVENT_TYPE, {version: 1, request_id: requestId, kind, ...params}, requestId))
         .catch((error: any) => finish(() => reject(error)));
     });
   }
@@ -3076,7 +3090,24 @@ export class MatrixService {
       }
     };
     
-    const roomId = await this.createRoom(options);
+    let roomId: string;
+    try {
+      roomId = await this.createRoom(options);
+    } catch (error: any) {
+      if (error?.errcode !== 'M_ROOM_IN_USE') {
+        throw error;
+      }
+      // the alias is taken: the guard bot's room for an earlier request of
+      // this account whose answer was missed -- the room to use, once in it
+      // (getPollRoom joins by the alias, knocking where it must)
+      const found = await this.getPollRoom(pollId);
+      if (!found) {
+        throw error;
+      }
+      this.logger?.info("Poll room existed already under its alias; using it", pollId, found);
+      this.logger?.exit("MatrixService.createPollRoom");
+      return found;
+    }
     
     // Wait for the SDK to sync the room into the local store before
     // proceeding.  Subsequent operations (sendStateEvent, sendEvent)
@@ -3989,7 +4020,25 @@ export class MatrixService {
       }
     };
     
-    const roomId = await this.createRoom(options);
+    let roomId: string;
+    try {
+      roomId = await this.createRoom(options);
+    } catch (error: any) {
+      if (error?.errcode !== 'M_ROOM_IN_USE') {
+        throw error;
+      }
+      // the alias is taken: the guard bot's room for an earlier request of
+      // this account whose answer was missed, or this account's own room
+      // from another device -- either way the room to write into, once in it
+      const found = await this.getVoterRoom(pollId, voterId);
+      if (!found) {
+        throw error;
+      }
+      await this.joinOwnVoterRoom(found);
+      this.logger?.info("Voter room existed already under its alias; using it", pollId, voterId, found);
+      this.logger?.exit("MatrixService.createVoterRoom");
+      return found;
+    }
     
     // Demote the room owner from 100 → 50 now that room creation is
     // complete.  Power 100 was only needed during createRoom so that
@@ -4179,6 +4228,7 @@ export class MatrixService {
       // the room the account already owns, which its alias names (#333):
       const existing = await this.getVoterRoom(pollId, vodleVid);
       if (existing) {
+        await this.joinOwnVoterRoom(existing);
         return existing;
       }
       // createVoterRoom uses vodleVid for the room alias; the actual
@@ -4204,6 +4254,26 @@ export class MatrixService {
     return roomId;
   }
   
+  /**
+   * Be in one's own voter room before writing into it. The room an alias
+   * names is not always one this account is in: the guard bot's room for a
+   * request whose answer this client never saw. In run 173 of 2026-10-09 the
+   * bot had created the room and invited this account, the client had given
+   * up waiting and made a room of its own (refused: the alias was taken),
+   * and the queued rating then went into the room the alias named, where
+   * the server refused it as "not in room" -- a 403, which the queue takes
+   * as the room's final word. The join is allowed by the invitation, or by
+   * the room's restricted join rule for a member of the poll room; a room
+   * this account made itself on another device it is in already.
+   */
+  private async joinOwnVoterRoom(roomId: string): Promise<void> {
+    if (this.client!.getRoom(roomId)?.getMyMembership() === 'join') {
+      return;
+    }
+    await this.joinOnInvitation(roomId, this.roomAliasServers());
+    await this.waitForRoom(roomId);
+  }
+
   /**
    * Convenience wrapper: get or create the current user's own voter room.
    */
