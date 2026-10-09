@@ -61,3 +61,6 @@ karma-results.json
 # screenshots saved by the e2e smoke suite on failure (see test/wdio.conf.js)
 e2e-screenshots/
 clickthrough-result.json
+
+# build output of the test builder (@angular/build:karma writes dist/test-out/) and of ng build without an outputPath
+dist/
