@@ -514,17 +514,18 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
       pending('needs the federation proxy of scripts/test-matrix.sh (control endpoint ' + PROXY_CONTROL + ')');
       return;
     }
-    // The fork of #334, made deterministic with the partition: the voter's
-    // room lives on hs2, the guard bot on hs1. While the link is cut the
+    // The fork of #334, made deterministic with the partition: the voter
+    // (hugo) is on hs2, the guard bot on hs1 — and, since Track E, so is
+    // the voter room, which the bot creates. While the link is cut the
     // voter writes on hs2 and the bot closes the room on hs1. After the heal
     // hs2 resolves the fork: the power-level event first, then the
     // conflicted ratings re-checked against it — the forked one AND the
     // value from before the deadline — under which the voter has no power:
     // both are dropped, hs2 shows no rating. hs1 never sees the fork: the
-    // late write is soft-failed there. The bot, on hs1, therefore writes a
-    // remote voter room's state again right after closing it; its events
-    // win the resolution on hs2 too, so both sides end with the pre-close
-    // value, written by the bot.
+    // late write is soft-failed there. The bot, on hs1, therefore writes
+    // the state of a voter room whose voter is on another server again
+    // right after closing it; its events win the resolution on hs2 too, so
+    // both sides end with the pre-close value, written by the bot.
     const fpid = pid + 'fk';
     const gina = await make_client('gina', HS1);
     const roomId = await gina.createPollRoom(fpid, 'Fork poll');
@@ -545,11 +546,11 @@ describe('MatrixService across two federating Synapse homeservers (#293)', () =>
     const hugo = await make_client('hugo', HS2);
     await hugo.setPollOrigin(fpid, HS1.name);
     expect(await hugo.getPollRoom(fpid)).toBe(roomId);
-    await hugo.submitRating(fpid, 'o1', 40);   // hugo's voter room is created on hs2, the bot invited across federation
+    await hugo.submitRating(fpid, 'o1', 40);   // hugo's voter room: the bot creates it on hs1 on hugo's request, hugo joins across federation
     const voter_room = hugo.voterRooms.get(fpid + ':' + hugo.userId);
     expect(voter_room).toBeTruthy();
     await until(async () => hugo.client.getRoom(voter_room)?.getMember(GUARD_BOT)?.membership === 'join',
-      'the guard bot to join the voter room across federation', 30000);
+      'the guard bot to be in the voter room', 30000);
     await until(async () => rating_values(await fresh_ratings(gina, fpid), 'o1').includes(40),
       "hs1 to see hugo's vote");
     expect(Date.now()).withContext('setup finished before the deadline').toBeLessThan(new Date(due).getTime());

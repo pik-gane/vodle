@@ -155,9 +155,9 @@ export const KNOCK_REASON_PREFIX = 'vodle-join-v1:';
 export const REQUEST_EVENT_TYPE = 'm.room.vodle.request';
 export const RESPONSE_EVENT_TYPE = 'm.room.vodle.response';
 export const REQUEST_ROOM_ALIAS_PREFIX = 'vodle_requests_';
-/** the room version the guard bot creates poll rooms in; ROOM_VERSION stays
- *  the version of the rooms this app creates itself */
-export const BOT_POLL_ROOM_VERSION = '12';
+/** the room version the guard bot creates the poll and voter rooms in;
+ *  ROOM_VERSION stays the version of the rooms this app creates itself */
+export const BOT_ROOM_VERSION = '12';
 /** how long a request to the guard bot waits for its answer */
 export const GUARD_BOT_REQUEST_TIMEOUT_MS = 30000;
 
@@ -337,6 +337,8 @@ export class MatrixService {
   private userRoomId: string | null = null;
   /** this account's request room to the guard bot (Track E), once known */
   private requestRoomId: string | null = null;
+  /** the request room being found or made, shared by requests arriving together */
+  private requestRoomInflight: Promise<string> | null = null;
   /** until when poll rooms are created here rather than asked of a guard bot that did not answer */
   private guardBotUnreachableUntil = 0;
   /** a spec shortens this; the app waits GUARD_BOT_REQUEST_TIMEOUT_MS */
@@ -2786,9 +2788,19 @@ export class MatrixService {
    * the one its alias names (another device of this account made it), else
    * a new one -- invite-only, with the bot invited. Resolves once the bot is
    * in it (the bot joins invitations by itself while it runs); rejects after
-   * guardBotRequestTimeoutMs when it is not.
+   * guardBotRequestTimeoutMs when it is not. Requests that arrive together
+   * (a poll's voter rooms are asked for in one burst) share one lookup, so
+   * that the room is made once.
    */
-  private async getRequestRoom(guardBotId: string): Promise<string> {
+  private getRequestRoom(guardBotId: string): Promise<string> {
+    if (!this.requestRoomInflight) {
+      this.requestRoomInflight = this.findOrCreateRequestRoom(guardBotId)
+        .finally(() => { this.requestRoomInflight = null; });
+    }
+    return this.requestRoomInflight;
+  }
+
+  private async findOrCreateRequestRoom(guardBotId: string): Promise<string> {
     if (!this.client || !this.userId) {
       throw new Error("Matrix client not initialized");
     }
@@ -2886,26 +2898,49 @@ export class MatrixService {
   }
 
   /**
-   * Have the guard bot create the poll room (Track E, E1) and join it on the
-   * bot's invitation. The bot answers with the room id; the invitation may
-   * still be on its way when it does.
+   * Have the guard bot create a room on this account's behalf (Track E) and
+   * join it on the bot's invitation. The bot answers with the room id; the
+   * invitation may still be on its way when it does. A refusal by the bot
+   * is thrown with `guardBotRefused` set, a silence as the timeout's error:
+   * the callers make a room of their own either way, but remember only the
+   * silence (rememberGuardBotSilence).
    */
-  private async createPollRoomThroughGuardBot(pollId: string, guardBotId: string, key: string | null): Promise<string> {
-    const response = await this.askGuardBot('create_poll', {poll_id: pollId, join_key: key});
+  private async createRoomThroughGuardBot(kind: string, params: Record<string, any>, guardBotId: string, what: string): Promise<string> {
+    const response = await this.askGuardBot(kind, params);
     if (!response?.ok || typeof response.room_id !== 'string') {
-      throw new Error(response?.error || 'the guard bot did not create the poll room');
+      throw Object.assign(new Error(response?.error || `the guard bot did not create the ${what}`), {guardBotRefused: true});
     }
     const roomId: string = response.room_id;
     const viaServers = [MatrixService.serverNameOf(guardBotId)].filter((s): s is string => !!s);
     const membership = () => this.client!.getRoom(roomId)?.getMyMembership();
     if (membership() !== 'join') {
       await this.waitFor(() => membership() === 'invite' || membership() === 'join',
-        `the guard bot's invitation to poll room ${roomId}`, this.guardBotRequestTimeoutMs);
+        `the guard bot's invitation to the ${what} ${roomId}`, this.guardBotRequestTimeoutMs);
       await this.joinOnInvitation(roomId, viaServers);
     }
     await this.waitForRoom(roomId);
-    this.logger?.info("Poll room created by the guard bot", pollId, roomId, "room version", BOT_POLL_ROOM_VERSION);
+    this.logger?.info(`The guard bot created the ${what}`, roomId, "room version", BOT_ROOM_VERSION);
     return roomId;
+  }
+
+  /** the poll room, created by the guard bot (E1) */
+  private createPollRoomThroughGuardBot(pollId: string, guardBotId: string, key: string | null): Promise<string> {
+    return this.createRoomThroughGuardBot('create_poll', {poll_id: pollId, join_key: key}, guardBotId, `poll room of ${pollId}`);
+  }
+
+  /** this account's voter room in a poll, created by the guard bot (E2) */
+  private createVoterRoomThroughGuardBot(pollId: string, voterId: string, guardBotId: string): Promise<string> {
+    return this.createRoomThroughGuardBot('create_voter_room', {poll_id: pollId, voter_id: voterId}, guardBotId,
+      `voter room of ${voterId} in ${pollId}`);
+  }
+
+  /** a bot that did not answer in time is not asked again for a minute (a
+   *  test run without one, a deployment whose bot is down); a bot that
+   *  refused did answer, and is asked the next time */
+  private rememberGuardBotSilence(error: any): void {
+    if (!error?.guardBotRefused) {
+      this.guardBotUnreachableUntil = Date.now() + 60000;
+    }
   }
 
   /**
@@ -2976,7 +3011,7 @@ export class MatrixService {
         this.logger?.exit("MatrixService.createPollRoom");
         return roomId;
       } catch (error) {
-        this.guardBotUnreachableUntil = Date.now() + 60000;
+        this.rememberGuardBotSilence(error);
         this.logger?.warn("MatrixService.createPollRoom: the guard bot did not create the room; creating it here, in room version " + ROOM_VERSION, pollId, error);
       }
     }
@@ -3301,6 +3336,12 @@ export class MatrixService {
       const pollRoomId = this.pollRooms.get(pollId) || await this.getPollRoom(pollId);
       const deadline = pollRoomId ? this.getStateEvent(pollRoomId, 'm.room.vodle.poll.deadline', '') : null;
       if (deadline?.due) {
+        // the guard bot copies it in when it creates the room (Track E):
+        // then there is nothing to write
+        const held: any = this.client!.getRoom(roomId)?.currentState?.getStateEvents('m.room.vodle.poll.deadline' as any, '');
+        if (held?.getContent?.()?.due === deadline.due) {
+          return;
+        }
         await this.client!.sendStateEvent(roomId, 'm.room.vodle.poll.deadline' as any,
           { due: deadline.due, poll_id: pollId }, '');
       }
@@ -3890,6 +3931,26 @@ export class MatrixService {
     // invited. A voter room without a known poll room (test code only)
     // stays public.
     const pollRoomId = this.pollRooms.get(pollId) || await this.getPollRoom(pollId);
+    // Track E (E2): with a guard bot the voter room is the bot's, in room
+    // version 12 -- restricted to the poll room's members as below, this
+    // account invited at 50, where the demotion below leaves it anyway, and
+    // nothing to demote. A room without a known poll room (test code only)
+    // or without a bot that answers is created here as before.
+    if (guardBotId && pollRoomId && Date.now() >= this.guardBotUnreachableUntil) {
+      try {
+        const roomId = await this.createVoterRoomThroughGuardBot(pollId, voterId, guardBotId);
+        // the bot copies the poll's deadline in when the poll room holds
+        // one; when it did not yet, this writes it, as for the app's own room
+        await this.copyPollDeadlineInto(pollId, roomId);
+        await this.rememberVoterRoom(pollId, voterId, roomId);
+        this.logger?.info("Voter room created by the guard bot", pollId, voterId, roomId);
+        this.logger?.exit("MatrixService.createVoterRoom");
+        return roomId;
+      } catch (error) {
+        this.rememberGuardBotSilence(error);
+        this.logger?.warn("MatrixService.createVoterRoom: the guard bot did not create the room; creating it here, in room version " + ROOM_VERSION, pollId, voterId, error);
+      }
+    }
     const initialState = pollRoomId ? [{
       type: 'm.room.join_rules', state_key: '',
       content: { join_rule: 'restricted', allow: [{ type: 'm.room_membership', room_id: pollRoomId }] },
@@ -3959,14 +4020,19 @@ export class MatrixService {
     // into this voter room (it is plain; the bot must read it):
     await this.copyPollDeadlineInto(pollId, roomId);
     
-    const cacheKey = `${pollId}:${voterId}`;
-    this.voterRooms.set(cacheKey, roomId);
-    this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-    await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
+    await this.rememberVoterRoom(pollId, voterId, roomId);
     
     this.logger?.info("Voter room created", pollId, voterId, roomId);
     this.logger?.exit("MatrixService.createVoterRoom");
     return roomId;
+  }
+
+  /** the voter room of (poll, voter): in memory, for the reverse lookup, and in storage */
+  private async rememberVoterRoom(pollId: string, voterId: string, roomId: string): Promise<void> {
+    const cacheKey = `${pollId}:${voterId}`;
+    this.voterRooms.set(cacheKey, roomId);
+    this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
+    await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
   }
   
   /**
@@ -4010,21 +4076,29 @@ export class MatrixService {
       }
     }
     
-    // Try to find by alias
-    try {
-      const alias = `vodle_voter_${pollId}_${this.encodeUserIdForAlias(voterId)}`;
-      const aliasResponse = await this.client.getRoomIdForAlias(
-        `#${alias}:${this.getHomeserverDomain()}`
-      );
-      const roomId = aliasResponse.room_id;
-      this.voterRooms.set(cacheKey, roomId);
-      this.voterRoomReverseLookup.set(roomId, { pollId, voterId });
-      await this.storage.set(this.storageKey(`voter_room_${cacheKey}`), roomId);
-      return roomId;
-    } catch (error) {
-      this.logger?.info("Voter room not found", pollId, voterId);
-      return null;
+    // Try to find by alias: on the guard bot's server, where the bot
+    // creates the voter rooms (Track E), and on this account's own, where
+    // the app created them before and still does without a bot
+    const alias = `vodle_voter_${pollId}_${this.encodeUserIdForAlias(voterId)}`;
+    for (const server of this.roomAliasServers()) {
+      try {
+        const roomId = (await this.client.getRoomIdForAlias(`#${alias}:${server}`)).room_id;
+        await this.rememberVoterRoom(pollId, voterId, roomId);
+        return roomId;
+      } catch (error) {
+        // not on this server
+      }
     }
+    this.logger?.info("Voter room not found", pollId, voterId);
+    return null;
+  }
+
+  /** the servers a room this account asked for may have its alias on: the
+   *  guard bot's first, then this account's own when that is another */
+  private roomAliasServers(): string[] {
+    const own = this.getHomeserverDomain();
+    const bot = MatrixService.serverNameOf(this.getValidatedGuardBotId());
+    return bot && bot !== own ? [bot, own] : [own];
   }
   
   /**

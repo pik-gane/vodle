@@ -14,7 +14,7 @@ This is an engineering document. It is not the privacy statement a deployment sh
 |---|---|---|
 | The person's own | `@<BLAKE2s(e-mail)>:<server>` (`hashEmail`) | owns the *user room*, and joins no poll |
 | One per (poll, voter) | `@<BLAKE2s("vodle.poll."+pid+".voter."+vid)>:<server>` (`pollAccountName`) | joins the poll room, owns that voter's room, sends every event of that poll |
-| The guard bot | `@vodle-guard:<server>` | power 100 in every poll and voter room; closes them at the deadline, answers knocks |
+| The guard bot | `@vodle-guard:<server>` | creates every poll and voter room and holds a creator's power in it (room version 12; power 100 as a member in rooms from before); closes them at the deadline, answers knocks |
 
 A guest (a magic link opened on a device with no account) gets a person's account with random credentials, and poll accounts under it like anyone else.
 
@@ -26,10 +26,10 @@ The poll account's password is `BLAKE2s("vodle-matrix-poll:" + pid + ":" + vid +
 |---|---|---|---|
 | User room | none | the person's own account, alone | user data: settings, and one entry per poll the person takes part in |
 | Poll room | `#vodle_poll_<pid>` | the poll accounts of the participants, plus the bot | poll metadata, options, deadline, lifecycle state, voter-room announcements, delegation events |
-| Voter room | `#vodle_voter_<pid>_<base64url(vid)>` | one poll account (power 50), the bot (100), the other participants read-only | that voter's ratings and delegation records |
-| Request room | `#vodle_requests_<hash of the user id>` | the account, alone with the bot | the account's requests to the bot (`create_poll`: a poll id and the join key, which is a hash of the poll password) and the bot's answers (room ids) |
+| Voter room | `#vodle_voter_<pid>_<base64url(vid)>` | one poll account (power 50), the bot (the creator), the other participants read-only | that voter's ratings and delegation records |
+| Request room | `#vodle_requests_<hash of the user id>` | the account, alone with the bot | the account's requests to the bot (`create_poll`: a poll id and the join key, which is a hash of the poll password; `create_voter_room`: a poll id and a vid) and the bot's answers (room ids) |
 
-Poll rooms are `knock`: a joiner proves it holds the poll password and the bot invites it. Voter rooms are `restricted` to the poll room's members, so discovery works without invitations. Request rooms are invite-only. None is in the public room directory. Poll rooms are created by the bot (room version 12: the bot is their creator, with the power that version reserves for a creator), voter rooms by the voter's account.
+Poll rooms are `knock`: a joiner proves it holds the poll password and the bot invites it. Voter rooms are `restricted` to the poll room's members, so discovery works without invitations. Request rooms are invite-only. None is in the public room directory. Poll rooms and voter rooms are created by the bot (room version 12: the bot is their creator, with the power that version reserves for a creator), on the bot's homeserver — also the voter room of a participant from another homeserver, which that participant's own server created before; the server holding the original and the one holding the replica swap roles, and what each holds is the same (§2, *Another homeserver*). Without a bot that answers, the app creates its rooms itself, in version 11.
 
 **What is encrypted, and with what.**
 
@@ -56,11 +56,11 @@ The AES key is PBKDF2-SHA-256, 600 000 iterations, salted per poll (`vodle-poll-
 | Who | Reaches |
 |---|---|
 | **The homeserver operator** | the database: every room, event, membership, timestamp, IP address, device and user agent |
-| **The guard bot** | every poll and voter room it is in, as a member with power 100 |
+| **The guard bot** | every poll and voter room: it creates them and holds a creator's power there (a member with power 100 in rooms from before) |
 | **A co-participant** | the poll room and every voter room of that poll, and the poll password |
 | **Someone holding the magic link** | the same — the link *is* the poll password |
 | **Anyone else with an account** | nothing: poll rooms need a knock with a proof, voter rooms need poll-room membership |
-| **Another homeserver** | the rooms of polls its own users take part in, in full: federation replicates events, not just those a client asks for |
+| **Another homeserver** | the rooms of polls its own users take part in, in full: federation replicates events, not just those a client asks for. Since the bot creates every room it holds replicas, where it used to hold its own voters' rooms as originals; what it sees is the same |
 | **A network observer** | TLS only; sizes and timing |
 
 ---
@@ -90,7 +90,7 @@ This is the honest limit of the per-poll accounts: **they make two of a person's
 
 ## 4. What the guard bot sees
 
-The bot is a full member of every poll and voter room with power 100. It therefore sees everything the operator sees for those rooms, and it is trusted not to abuse the power: it *could* rewrite power levels, close a poll early, or admit a knocker who proved nothing. It cannot read anything encrypted — it never holds a poll password or a user password — and the deployment guide says to run it on the same host as the homeserver, where it is under the same administration anyway.
+The bot creates every poll and voter room and is their creator, with the power room version 12 reserves for one (a member with power 100 in rooms from before). It therefore sees everything the operator sees for those rooms, and it is trusted not to abuse the power: it *could* rewrite power levels, close a poll early, or admit a knocker who proved nothing. It cannot read anything encrypted — it never holds a poll password or a user password — and the deployment guide says to run it on the same host as the homeserver, where it is under the same administration anyway.
 
 It needs the deadline and the lifecycle state in the clear. That is why those two are the only poll fields left unencrypted.
 

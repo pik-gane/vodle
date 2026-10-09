@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { vodleState, deepEqual, droppedState, parseDelays, recheckTimes, isRemoteAlias } from "./recheck.js";
+import { vodleState, deepEqual, droppedState, parseDelays, recheckTimes, isRemoteAlias, hasRemoteWriter } from "./recheck.js";
 
 test("vodleState keeps the vodle state events with an empty state key and content", () => {
   const events = [
@@ -53,6 +53,22 @@ test("isRemoteAlias tells rooms of other homeservers by their alias", () => {
   assert.ok(!isRemoteAlias("#vodle_voter_P_dmlk:localhost:8449", "@vodle-guard:localhost:8449"));
   assert.ok(!isRemoteAlias("", "@vodle-guard:localhost:8449"));
   assert.ok(!isRemoteAlias(null, "@vodle-guard:localhost:8449"));
+});
+
+test("hasRemoteWriter tells a voter room whose voter writes from another homeserver", () => {
+  const bot = "@vodle-guard:localhost:8449";
+  // the bot's own room (Track E): the voter at 50 in the users map, the bot as the creator not in it
+  assert.ok(hasRemoteWriter({ users: { "@v:localhost:8450": 50 }, state_default: 50, users_default: 0 }, bot));
+  assert.ok(!hasRemoteWriter({ users: { "@v:localhost:8449": 50 }, state_default: 50, users_default: 0 }, bot), "a local voter");
+  assert.ok(!hasRemoteWriter({ users: { "@v:localhost:8449": 50, "@r:localhost:8450": 0 }, state_default: 50 }, bot), "a reader of another server writes nothing");
+  // a room from before, made by the app: the bot at 100 in the map does not make it remote
+  assert.ok(!hasRemoteWriter({ users: { "@v:localhost:8449": 50, [bot]: 100 }, state_default: 50 }, bot));
+  assert.ok(hasRemoteWriter({ users: { "@v:localhost:8450": 50, [bot]: 100 }, state_default: 50 }, bot));
+  // a voter handed over to a second account of another server (takeOverVoterRooms)
+  assert.ok(hasRemoteWriter({ users: { "@old:localhost:8449": 50, "@new:localhost:8450": 50 }, state_default: 50 }, bot));
+  assert.ok(!hasRemoteWriter({}, bot));
+  assert.ok(!hasRemoteWriter(undefined, bot));
+  assert.ok(!hasRemoteWriter({ users: { "@v:localhost:8450": 50 } }, ""), "no bot id, no judgement");
 });
 
 test("parseDelays reads a list of delays and falls back on nonsense", () => {
