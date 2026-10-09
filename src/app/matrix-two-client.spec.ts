@@ -740,8 +740,11 @@ describe('MatrixService against a real Synapse (two clients, #293)', () => {
     }
 
     // the world before: the person's own account makes the poll, its voter
-    // room and a vote
+    // room and a vote -- itself, in room version 11, as the creator with
+    // power 100 (such a poll predates the guard bot's rooms of Track E; the
+    // bot is told nothing, as it would have been then)
     const person = service_on_this_device(new (MatrixService as any)(device));
+    person.guardBotUnreachableUntil = Number.MAX_SAFE_INTEGER;
     await person.register('handover-' + pid + '@example.invalid', password);
     await person.getOrCreatePollRoom(hpid, 'a poll from before the poll accounts');
     const room = await person.getOrCreateVoterRoom(hpid, vid);
