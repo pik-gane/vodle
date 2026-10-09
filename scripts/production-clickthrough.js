@@ -15,11 +15,14 @@
  * poll room, consent and vote, and check that both sides count the same
  * voters.
  *
- * Selectors are the app's own data-vodle attributes. Two habits matter when
- * driving Ionic: focus a field explicitly before typing (a click settles
- * focus asynchronously, so the first characters land in the previous field),
- * and blur it afterwards (Ionic hands the value to Angular's form control on
- * blur, which a person does by clicking the next thing).
+ * Selectors are the app's own data-vodle attributes. Three habits matter
+ * when driving Ionic: wait for an element to be `hydrated` before touching
+ * it (Ionic loads each component's code lazily, and the host has its box
+ * before it has its content -- see visible() below), focus a field
+ * explicitly before typing (a click settles focus asynchronously, so the
+ * first characters land in the previous field), and blur it afterwards
+ * (Ionic hands the value to Angular's form control on blur, which a person
+ * does by clicking the next thing).
  */
 const puppeteer = require('puppeteer-core');
 const fs = require('fs');
@@ -78,29 +81,46 @@ function shot(suffix) {
 
 function log(...a) { console.log('[clickthrough]', ...a); }
 
+/* "Visible" means: the node has a box and, if it is an Ionic element, Ionic
+ * has rendered it. Ionic loads each component's code lazily, and until that
+ * code has run and marked the host `hydrated` the element already has its
+ * box (visibility:hidden) but no content: an ion-input has no native <input>
+ * yet, an ion-checkbox does not react to a click. CI run 157 found the
+ * e-mail field 1.5 s after the bundle ran and had no input to focus; against
+ * a local build the window is about 30 ms. The predicate is spelled out in
+ * each page-side function below because puppeteer serialises them. */
 async function visible(page, selector) {
   return page.waitForFunction((sel) => {
     const nodes = Array.from(document.querySelectorAll(sel));
-    return nodes.some(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0) || null;
+    return nodes.some(n => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && (!n.tagName.startsWith('ION-') || n.classList.contains('hydrated'));
+    }) || null;
   }, {timeout: STEP_TIMEOUT, polling: 200}, selector);
 }
 
 async function click(page, selector) {
   await visible(page, selector);
   await page.evaluate((sel) => {
-    const node = Array.from(document.querySelectorAll(sel))
-      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
+    const node = Array.from(document.querySelectorAll(sel)).find(n => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && (!n.tagName.startsWith('ION-') || n.classList.contains('hydrated'));
+    });
     node.click();
   }, selector);
 }
 
 async function type_into(page, selector, text) {
-  await visible(page, selector);
-  const handle = await page.evaluateHandle((sel) => {
-    const host = Array.from(document.querySelectorAll(sel))
-      .find(n => n.getBoundingClientRect().width > 0 && n.getBoundingClientRect().height > 0);
-    return host.tagName === 'INPUT' ? host : host.querySelector('input');
-  }, selector);
+  // the field itself, or the native <input> a rendered ion-input holds in
+  // its light DOM; until Ionic has rendered the field there is none, and
+  // the wait ends in a timeout naming the selector instead of a null focus
+  const handle = await page.waitForFunction((sel) => {
+    const host = Array.from(document.querySelectorAll(sel)).find(n => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && (!n.tagName.startsWith('ION-') || n.classList.contains('hydrated'));
+    });
+    return host && (host.tagName === 'INPUT' ? host : host.querySelector('input'));
+  }, {timeout: STEP_TIMEOUT, polling: 200}, selector);
   const input = handle.asElement();
   // Ionic settles focus asynchronously after a click, and typing before it
   // has landed puts the first characters into whichever field still holds
