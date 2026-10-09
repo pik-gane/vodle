@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Pipe, PipeTransform } from '@angular/core';
@@ -18,6 +18,7 @@ export class SafePipe implements PipeTransform {
   selector: 'app-imprint',
   templateUrl: './imprint.page.html',
   styleUrls: ['./imprint.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class ImprintPage implements OnInit {

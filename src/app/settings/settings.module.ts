@@ -20,8 +20,8 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
-import { TranslateModule } from '@ngx-translate/core';
+import { IonicModule } from '@ionic/angular/lazy';
+import { TranslatePipe } from '@ngx-translate/core';
 
 import { SettingsPageRoutingModule } from './settings-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
@@ -36,7 +36,7 @@ import { SettingsPage } from './settings.page';
     ReactiveFormsModule,
     SettingsPageRoutingModule,
     SharedcomponentsModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [SettingsPage]
 })

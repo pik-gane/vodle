@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { enableProdMode } from '@angular/core';
+import { enableProdMode, provideZoneChangeDetection } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
 import { AppModule } from './app/app.module';
@@ -35,5 +35,7 @@ if (environment.production) {
   enableProdMode();
 }
 
-platformBrowserDynamic().bootstrapModule(AppModule)
+// zone-based change detection, which used to be the bootstrap's default and
+// is a provider since Angular 21 (its update wrote this line)
+platformBrowserDynamic().bootstrapModule(AppModule, {applicationProviders: [provideZoneChangeDetection()]})
   .catch(err => console.log(err));

@@ -20,9 +20,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 
 import { LogoutPageRoutingModule } from './logout-routing.module';
 
@@ -34,7 +34,7 @@ import { LogoutPage } from './logout.page';
     FormsModule,
     IonicModule,
     LogoutPageRoutingModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [LogoutPage]
 })

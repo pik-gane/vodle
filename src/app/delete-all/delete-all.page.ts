@@ -17,10 +17,10 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Location } from '@angular/common'
 import { TranslateService } from '@ngx-translate/core';
-import { AlertController } from '@ionic/angular';
+import { AlertController } from '@ionic/angular/lazy';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -31,6 +31,7 @@ import { restart_at_the_beginning } from "../data.service";
   selector: 'app-delete-all',
   templateUrl: './delete-all.page.html',
   styleUrls: ['./delete-all.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class DeleteAllPage implements OnInit {

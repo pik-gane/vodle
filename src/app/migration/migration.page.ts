@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { environment } from '../../environments/environment';
 import { MigrationService, MigrationStatus } from '../migration.service';
@@ -41,6 +41,7 @@ import { MatrixBackend } from '../matrix-backend';
   selector: 'app-migration',
   templateUrl: './migration.page.html',
   styleUrls: ['./migration.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class MigrationPage implements OnInit {

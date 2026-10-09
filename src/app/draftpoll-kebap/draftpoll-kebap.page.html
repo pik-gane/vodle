@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-content>
@@ -34,12 +34,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <span [innerHtml]="'draftpoll.use-example-from-db'|translate"></span>
     </ion-button>
     <!--the actual select item is hidden so that the appearance is that of a button:-->
-    <ion-select #ionSelects #select_example interface="popover" 
-        (ionChange)="use_example()" display="none"
-        [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-        style="font-size: smaller">
+    <ion-select #ionSelects #select_example interface="popover"
+      (ionChange)="use_example()" display="none"
+      [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
+      style="font-size: smaller">
       <ion-select-option value="-" [innerHtml]="'draftpoll.use-example-from-db-none'|translate"></ion-select-option>
-      <ion-select-option *ngFor="let doc of examples" [value]="doc" [innerHtml]="JSON.parse(doc)['title']"></ion-select-option>
+      @for (doc of examples; track doc) {
+        <ion-select-option [value]="doc" [innerHtml]="JSON.parse(doc)['title']"></ion-select-option>
+      }
     </ion-select>
   </ion-item>
-</ion-content> 
+</ion-content>

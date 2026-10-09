@@ -167,7 +167,9 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function hexToBytes(hex: string): Uint8Array {
+// typed to the buffer it is backed by: TypeScript 5.9's WebCrypto signatures
+// take views over an ArrayBuffer only, not over a SharedArrayBuffer
+function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array((hex.match(/../g) || []).map(pair => parseInt(pair, 16)));
 }
 

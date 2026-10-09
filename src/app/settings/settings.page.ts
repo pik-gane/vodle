@@ -17,11 +17,11 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, ViewChild, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 
-import { IonInput, IonSelect } from '@ionic/angular';
+import { IonInput, IonSelect } from '@ionic/angular/lazy';
 
 import { GlobalService } from "../global.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
@@ -39,6 +39,7 @@ TODO:
   selector: 'app-settings',
   templateUrl: './settings.page.html',
   styleUrls: ['./settings.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class SettingsPage implements OnInit {
@@ -231,7 +232,7 @@ export class SettingsPage implements OnInit {
       // showed a language the app was not in, for someone who answered the
       // login page's language question against their browser (#327):
       language: this.G.S.language||this.G.S.display_language
-                ||(this.translate.langs.includes(preferred_lang)?preferred_lang:'en'),
+                ||(this.translate.getLangs().includes(preferred_lang)?preferred_lang:'en'),
       theme: this.G.S.theme||'light',
       default_wap: this.G.S.default_wap||0
     });

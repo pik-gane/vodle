@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">vodle</string>
-    <string name="title_activity_main">vodle</string>
-    <string name="package_name">it.vodle</string>
-    <string name="custom_url_scheme">it.vodle.app</string>
-</resources>

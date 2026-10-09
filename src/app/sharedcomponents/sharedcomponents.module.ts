@@ -19,9 +19,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 import { ExpandableComponent } from './expandable/expandable.component';
 import { SelectServerComponent } from './select-server/select-server.component';
@@ -33,7 +33,7 @@ import { SelectServerComponent } from './select-server/select-server.component';
     IonicModule, 
     FormsModule, 
     ReactiveFormsModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   exports: [ExpandableComponent, SelectServerComponent]
 })

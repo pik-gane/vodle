@@ -20,9 +20,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 
 import { DraftpollPageRoutingModule } from './draftpoll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
@@ -38,7 +38,7 @@ export { DraftpollPage } from './draftpoll.page';
     ReactiveFormsModule,
     DraftpollPageRoutingModule,
     SharedcomponentsModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [DraftpollPage],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]

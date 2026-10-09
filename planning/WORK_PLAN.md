@@ -179,6 +179,24 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 | D3 | PRs #285 #253 #202 #268–#270 | Open pull requests need a decision by the owner: #285 (weighted delegation and UI changes — **examined 2026-09-13: not incorporable as it stands**. It targets the `hemped` branch, not `main`, and is the last 13 commits of a 29-commit feature branch that forked on 2024-10-14. Every symbol its diff patches exists only there — `get_weighted_delegation_allowed`, `get_different_delegation_allowed`, `get_direct_delegation_map`, `self_rating_map`, `effective_rating_map`, `get_inverse_indirect_map`, `update_effective_votes` are all zero occurrences on `main` — so there is nothing to cherry-pick: it is a patch to a feature, and the feature is `hemped`'s other 16 commits (weighted, ranked and per-option delegation with cycle checking, four dialog pages). `hemped` is 289 commits BEHIND main, having forked before the whole Matrix migration, and carries Angular 14→19, Ionic 6→8 and TypeScript 4.4→5.8; its 360k-line diff is `docs/`, 1742 files of committed build output that `main` does not have at all. The last review (mensch72, 2025-04-12) reports it broken — missing toggles, an undefined variable, a banner without the delegate's name — and six commits followed with no re-review. Integrating it is its own job: a framework upgrade plus a two-year rebase plus the feature, and easier after the Matrix work has landed than during it. When it is done, note that per-option delegation writes `del_oid.<oid>` as a vodle data key, and a data key becomes part of the unencrypted Matrix event type — not a new kind of exposure, since ratings already ship as `m.room.vodle.voter.rating.rating.<oid>`, but it extends PRIVACY.md §6 from "the delegation graph by vid" to "and for which option"), #253 (CSS theme option from 2023, probably superseded by the dark theme of PR #291), #202 (Finnish translation from 2022; Finnish is in the app, so probably superseded), the dependabot bumps #268–#270 (2024; the lock file still carries the old versions of `express`, `follow-redirects` and `ip`, so they are still applicable — merge them or bump the three with a fresh `npm audit`). Community PRs #254 and #298 were ported and closed only in 2026-09; a week from opening to a decision should be the rule. |
 | D4 | backlog | The older "ready to implement" features (#84, #62, #86, #156, #173, #182, #184, #201, #169) stay unscheduled until Tracks A–B are done. |
 
+### Track E — room version 12: the guard bot creates the rooms
+
+Decided 2026-10-08 (owner: have the existing server process create the rooms).
+The handover below says why the rooms are pinned to version 11: version 12,
+Synapse's default since 1.162.0, gives a room's creator power that no
+power-levels event can lower or even list, and vodle's rooms rely on demoting
+the creator to 50 once a poll runs. The way out is to make the guard bot the
+creator — it is the one member meant to hold power nobody can take away, and
+today it holds an explicit 100 that a creator still at 100 could, in
+principle, strip before the demotion.
+
+| # | Issue | What |
+| --- | --- | --- |
+| E1 | to file | **The bot creates poll rooms.** Today the client creates them (`createPollRoom`: creator at 100, demoted to 50 by `demotePollCreator` once `lockPollMetadata` has raised the levels). New: the client asks the bot (E3); the bot creates the room in version 12 and is its creator, with the same initial state as now (alias, `knock` join rule, the join key K, encryption flags, power levels with `state_default`, `events_default` and `users_default` 50 and the lock levels), and invites the human creator, who joins at the default 50 and writes the poll data as before (`state_default` 50 permits it). When the poll starts, the bot — not the client — raises `state_default` to 100: the raising half of `lockPollMetadata` moves to the bot, on the client's `lock_poll` request or on the `m.room.vodle.poll.state = running` event the bot sees anyway. Nothing is demoted any more. |
+| E2 | to file | **The bot creates voter rooms.** The same for `createVoterRoom`: the voter asks, the bot creates (version 12, alias, `restricted` to the poll room's members), invites the voter at 50, and the voter writes its ratings (`state_default` 50) and announces the room in the poll room as now. Consequence: every voter room lives on the bot's homeserver, also for a voter of another homeserver, where it lived on the voter's. The privacy delta is small — the bot's server already holds a full copy of every voter room because the bot is a member of each (PRIVACY.md, "The guard bot" and "Another homeserver"), and the voter's server now holds the replica through the voter's membership: origin and replica swap roles. PRIVACY.md §2 and §4 and the deployment guide say so. |
+| E3 | to file | **The request channel.** Matrix itself, not a new HTTP surface on the bot. The client creates a small request room per account (alias `vodle_requests_<hash of the user id>`, any room version — no demotion needed — `invite` join rule), invites the bot (it joins invitations already) and sends `m.room.vodle.request` events: `create_poll` (poll id, title, K), `create_voter_room` (poll id, voter id), `lock_poll` (poll id). The bot answers in the same room with the room id, having sent the invitation. The homeserver authenticates the sender, so no token travels to the bot, and the channel works across federation (a voter on another homeserver invites the bot over federation, as the knock does). Rejected: an authenticated endpoint on the bot's HTTP server (`/healthz` only, today) — the bot cannot verify another homeserver's access token without being handed it, and the endpoint would have to be exposed through nginx. |
+| E4 | to file | **Consequences, and how it is verified.** The bot becomes required for creating a poll, as B3 made it required for joining one (today a missing bot is "non-fatal" in `createPollRoom`); the bot-less path stays for the test code that creates public rooms without a password, in version 11 — `ROOM_VERSION` becomes that fallback and the bot names 12. Rooms created before stay version 11 and keep working; reading is version-agnostic. Rate limits: every room creation now comes from one account, so the deployment's `rc_*` settings (MATRIX.md §2) need an override for the bot (`ratelimit_override` through the admin API, which `deploy.sh` can set), or the bot sees 429 under load; `withRateLimitRetry` exists. The bot's closing, re-checking and knock-answering code is unchanged — its power only grows. Specs: the `ROOM_VERSION` spec in `matrix.service.spec.ts` becomes "poll and voter rooms are created by the bot in version 12"; the two-client and federation specs, the click-through and the bot's unit tests cover the rest. Order: E3, E1, E2, each its own PR; E4's text with E1. |
+
 ### Process notes
 
 - Land work in reviewable slices (PR #319 with ~5000 added lines was too large to review).
@@ -189,26 +207,27 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 ## Open at the 2026-10-08 handover
 
 This section is for whoever picks the work up next, in another session and
-under another account. It can go once PR #339 is merged and the three
-questions below are answered.
+under another account. It can go once the branch below is merged and the
+three questions at its end are answered.
 
 ### What is in flight
 
-PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — is **open and
-unmerged**, on branch `claude/keen-ptolemy-i0m1n5`. `main` is `c7fed2b` and has
-not moved since 2026-09-14, so there is no conflict. The last commits carrying
-code are the room-version fix described below and the fixes for #345 and #341
-(under *Issues*); before them, `9da5bd3` was the last on which both checks —
-`build and test` and `e2e smoke (built app)` — were green. `mergeable_state` is `blocked`, which here means branch protection
-waiting on a human approval, a thing no push can supply.
+PR #339 — *Angular 14 → 19, rxjs 6 → 7, Ionic 6 → 8* — was **merged** into
+`main` on 2026-10-08 as `73b2c55`, with the room-version fix and the fixes
+for #341 and #345 (both under *Issues* below) in it.
 
-**Do not start the follow-up work from `main`**: sessions 38 and 39 are only
-on that branch. A session told to develop on a different branch should branch
-from `claude/keen-ptolemy-i0m1n5`, not from `main`, until #339 lands.
+The work continues on branch **`claude/to-current-versions`**, branched from
+that merge, which brings the stack to the versions current on 2026-10-08:
+Angular 22, Ionic 9, TypeScript 6, matrix-js-sdk 43, ngx-translate 18,
+Capacitor 8, pouchdb 9 and the smaller libraries (see *The hops after the
+merge*; what is still behind, and why, follows the table there). It has no
+pull request yet. CI does not run on a push to a branch without one; the runs
+there were started by hand (`workflow_dispatch`, runs 138 to 146; the pull
+request's runs follow), and a new
+dispatch on the same branch cancels one still running.
 
-Nobody is watching the PR any more. The hourly check-in and the PR-activity
-subscription belonged to the session that opened it and ended with it; a
-successor that wants them must arm them itself.
+Nobody is watching either branch from a session any more; a successor that
+wants a PR watched must open it and arm the watching itself.
 
 ### The red run of 2026-10-08, and what it was
 
@@ -236,9 +255,10 @@ deployment (`docker-compose.prod.yml`, `deploy/deploy.sh`) runs the same
 poll creation there too. The CI image stays unpinned on purpose: `latest` is
 what found this.
 
-Moving vodle's rooms to version 12 would mean giving up the creator's
-demotion, or another way of keeping a creator from rewriting a running poll.
-That is a design decision, not a migration task, and is left open here.
+Moving vodle's rooms to version 12 means giving up the creator's demotion
+for another way of keeping a creator from rewriting a running poll. Decided
+on 2026-10-08: the guard bot will create the rooms and so be the creator
+whose power version 12 protects — *Track E* in Plan 2 above says how.
 
 ### How to check it is still sound before touching anything
 
@@ -246,11 +266,76 @@ That is a design decision, not a migration task, and is left open here.
     npx ng build --configuration production
     CHROME_BIN=<chromium> npx ng test --browsers=ChromeHeadlessNoSandbox --watch=false
 
+Node 22.22.3 or newer is needed since Angular 22 (CI's `node-version: 22`
+and the Dockerfiles' `node:22-slim` resolve to 22.23.3 and are fine; a
+container with an older 22 wants a Node 24 on its PATH).
+
 The suite should say `Executed 972 of 992 (skipped 20) SUCCESS`. The 20 skips
 are the CouchDB/Synapse integration specs, which call `pending()` when no
-backends are provisioned. The build is clean apart from one known warning:
-the initial bundle is 2.80 MB against a 2 MB budget, because Angular 19 reads
-`"2mb"` in `angular.json` as 2×10⁶ where 18 read it as 2×2²⁰.
+backends are provisioned. The build is clean apart from two known warnings:
+the initial bundle is 2.78 MB against a 2 MB budget (2.80 before the hops,
+2.96 after the Angular and Ionic ones, 2.78 since crypto-es 3, which
+tree-shakes; Angular 19 and later read `"2mb"` in `angular.json` as 2×10⁶
+where 18 read it as 2×2²⁰), and since Angular 22 the CLI says on every build
+and test run that its webpack builders are deprecated (see *Deprecations now
+pending*).
+
+One observation, so that nobody chases it as a regression: every suite run,
+locally and in CI alike, ends with karma reporting the browser
+`DISCONNECTED`, "no message in 120000 ms", two minutes after the last spec —
+after all specs have reported, and with `ng test` still exiting 0 when they
+passed (run 146's log: `Executed 992 of 992 SUCCESS` at 3 min 51 s, the
+disconnect at 5 min 51 s). It was there before the hops (the first run of the
+day, on the PR branch, had it) and costs every CI run two minutes. The
+browser's console shows `GlobalService.onBeforeUnload` running several times
+right after the last spec, so karma's context is being unloaded while the
+`complete` message never arrives; the cause is not found. Not a test failure;
+a two-minute tax, and an item of its own.
+
+### The hops after the merge (2026-10-08, branch `claude/to-current-versions`)
+
+Each hop is a commit of what `ng update` did and a commit of what vodle had to
+change in response, as the series did before, and each was verified by the
+production build, the suite (`Executed 972 of 992 (skipped 20) SUCCESS`
+throughout), a plain `npm ci`, and a CI run against the real homeservers.
+
+| hop | what it took |
+| --- | --- |
+| Angular 19 → 20 (`3fc91d9`) | The two `ng-reflect-router-link` assertions in `mypolls.page.spec.ts` read the RouterLink directive now. Dockerfiles on `node:22-slim`: Angular 20 needs Node 20.19 or 22.12, and 18 was end-of-life. CI run 138 green. |
+| Angular 20 → 21 (`531faa2`, `f2adcf9`) | The control-flow migration is part of the update in 21: 24 templates use `@if`/`@for`/`@switch` now (`git diff -w` shows the logical change; the migration re-indents and trims). TypeScript 5.9. `provideZoneChangeDetection()` in `main.ts` **and** in `test.ts`: Angular 21 is zoneless unless told otherwise, and the zoneless TestBed failed 29 page specs with NG0100. `ionic-logging-service` 21 has no NgModule. `hexToBytes` typed for TS 5.9's WebCrypto. The update was run with the CLI's Prettier lookup disarmed — it had found a Prettier on the machine, not in the repository, and reformatted every template; that diff was discarded. CI run 138 green. |
+| Angular 21 → 22 (`e21aef3`, `b7b0eef`) | TypeScript 6.0 turns `strict` on by default (1103 errors here) and deprecates `baseUrl` and `downlevelIteration`: `tsconfig.json` says `strict: false` and resolves the `src/…` imports through `paths`. OnPush is the default strategy now; the migration made all 28 components `Eager`, which is what they were. `withXhr()`. `ionic-logging-service` 23. `@angular/animations` dropped (unused, deprecated). CI run 139. |
+| Ionic 8 → 9 (`064a0da`) | `@ionic/angular` is the standalone entry point now; the module-based app imports from `@ionic/angular/lazy` (72 files). `autocorrect="off"` removed from three inputs (a string is `true` now). Rendered check: the login page's e-mail label measures 47×20 in the primary colour, as under Ionic 7 and 8; the browser smoke specs pass against the build. |
+| matrix-js-sdk 37 → 43 (`c541edc`) | Six majors, no call site changed: what they removed (FetchHttpApi's `onlyData=false`, the legacy-crypto verification methods, `getAuthIssuer`, `getContentUri`, the `defer` utility) and changed (MatrixRTC) vodle does not use. The Rust crypto WebAssembly package goes 14.2 → 18.9; its loader (`fetchCryptoWasm`) is unchanged. The guard bot's unit tests pass on the same package. CI run 141 failed **one** spec: the federation spec's two-minute wait for "alice to see bob's rating from the other homeserver", with both voter rooms joined, so neither the announcement nor the restricted join had stalled (the diagnosis #329 added). Runs 142 to 146, on the following commits with the same SDK, passed it; run 147 (the pull request's) failed it again on its second attempt, both voter rooms joined again — two of eight runs on this SDK, against two earlier failures on the same wait in September (#329, runs 109 and 111). When it passes it takes about a second (`federation_first_vote_visible_ms` 1061 in run 146), so a failure is a stall, not slowness. The spec now says, when the wait fails, what each homeserver holds of bob's voter room and how long the slowest single read took; the next failure answers whether it is federation delivery or the client's reading. |
+| ngx-translate 15 → 18 (`ead9ae3`) | 17 renames the fallback (`setFallbackLang`, `fallbackLang`) and makes `langs` a getter; 18 removes `TranslateModule`: `provideTranslateService({fallbackLang, loader})` in `app.module.ts`, the standalone `TranslatePipe` in the 26 modules that imported the module. `currentLang` is a Signal and `getCurrentLang()` nullable. `@ngx-translate/http-loader` removed: nothing imported it, the loader is vodle's own (`i18n-loader.ts`). CI run 142. |
+| zone.js 0.16, crypto-es 3, libsodium-wrappers 0.8, ts-node removed (`8a6c72c`) | crypto-es 3 has named exports only (no default, no `enc`/`algo`/`lib`, no `lib/…` paths): `data.service.ts` and three specs read `Hex`, `Utf8`, `AESAlgo`, `WordArray` from a namespace import. Checked with both versions side by side in Node: ciphertexts decrypt across versions in both directions and the fixed-iv path is byte-identical, so stored data and derived ids are unaffected. libsodium-wrappers 0.8's ES module puts the `crypto_*` functions on its default export (the named exports are the helpers), so the import is a default import; the file 0.7.16 lacked is a separate package now. ts-node 8 was a devDependency nothing used; the two guards against it in `test/wdio.conf.js` stay. Bundle 2.96 → 2.77 MB. CI run 143. |
+| karma 6.4, karma-jasmine 5.1, jasmine 4.6 (`31a5ec6`) | karma 6.3 → 6.4, karma-jasmine 4 → 5.1, karma-chrome-launcher 3.2, karma-coverage 2.2, karma-jasmine-html-reporter 1.7 → 2.3, `@types/jasmine` 3.6 → 4.6; jasmine-spec-reporter removed (nothing used it). **Not jasmine-core 7**: karma-jasmine serves the browser the `jasmine.js` of its own dependency (`^4.1.0`, so 4.6.1 — measured, a spec printing `jasmine.version`), while the HTML reporter serves `jasmine-html.js` from the project's copy; with the project's copy at 7.0.2 the run died at load ("Cannot assign to read only property 'describe'": jasmine 7 freezes its Env, and zone.js's jasmine patch, which the 28 spec files using `waitForAsync` need, writes to it). One copy is what runs, so the project's `jasmine-core` is 4.6.1 too, typed by `@types/jasmine` 4.6. Angular 22's CLI writes jasmine-core ~6.3 for a new karma project, with the same karma-jasmine; the browser runs 4.6.1 there as well. Past jasmine 4 lies the test-runner decision (vitest), below. CI run 144. |
+| Capacitor 3 → 8 (`abaa99b`) | core, android, ios 3.3.1 → 8.5.3, the plugins 1.0 → 8.x, the CLI 3 → 8 (Node 22). The web code uses four things — `Capacitor.isNativePlatform()`, `LocalNotifications.schedule()` and `requestPermissions()`, `Share.share()` — all unchanged; the plugins' web implementations differ from 1.0 only by what was added (compared file by file). `capacitor.config.ts` loses `bundledWebRuntime`. The native projects under `android/` and `ios/` were at Capacitor 3's `cap sync` and nothing built them; the owner decided on 2026-10-08 to remove them, and the commit *Remove the native projects* on this branch does — the two directories, the six platform packages, `@capacitor/cli`, `capacitor.config.ts` and the F-Droid guide. The web code keeps `@capacitor/core`, `local-notifications` and `share`. CI run 144, the removal in the pull request's run. |
+| pouchdb 7 → 9 (`d952966`), and the minors the ranges allowed (`0d4d102`: d3 7.9, globalthis 1.0.4) | `pouchdb/dist/pouchdb` is still the browser bundle and still what the package's `browser` field names; the five import sites are unchanged, as is the API vodle uses. The CouchDB two-client and migration specs run in CI only. `0d4d102`'s message counts sass 1.105 among the minors it moved; it did not move — `@angular/build` 22.2.2, which `@angular-devkit/build-angular` carries, pins sass to exactly 1.104.1, the lockfile keeps that single copy, and `npm outdated` will keep reporting 1.105 as wanted. CI run 145. |
+| wdio 8.3 → 8.46, within the pinned major | `npm update` of the four `@wdio/*` packages. webdriverio 8.46 no longer depends on the `devtools` package that the `automationProtocol: 'devtools'` of `test/wdio.conf.js` needs (the run failed with "Automation protocol package is not installed!"), so `devtools` 8.46 is a devDependency of its own now; it is also where the click-through's `puppeteer-core` comes from. The two smoke specs pass. CI run 146. |
+
+**Still behind** after these hops, each on purpose: `@wdio/*` 8 → 10
+(pinned to 8, see `test/wdio.conf.js`: the devtools automation protocol it
+drives the browser with was dropped in wdio 9, and moving means WebDriver
+BiDi with wdio managing the driver); `jasmine-core` and `@types/jasmine`
+4.6 → 7 (see the karma row); TypeScript 7, the Go-based compiler, which
+Angular 22 does not accept (it wants < 6.1). `npm outdated` lists these
+and two registry-view quirks: the Angular packages with a "latest" of 21.2
+(`npm view @angular/core dist-tags` says `latest: 22.2.2`), and `devtools`
+8.46 against a "latest" of 8.42, where that package's tag points.
+
+**Deprecations now pending**, each a decision of its own and none of them a
+compiler update: Angular's webpack builders (`browser`, `karma`), whose
+replacements are the application builder (esbuild) and the
+`@angular/build:karma` or vitest test builder — the optional migrations this
+series has declined every time, and the ones the next Angular major is most
+likely to force; `IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9,
+which warns about it on every test run) and `<ion-img>` →
+`<img loading="lazy">` (deprecated in Ionic 9, removed in 10; the suite's
+console names the top-right icon);
+`platformBrowserDynamic` → `platformBrowser` (the dev build still compiles
+JIT, `aot: false` in `angular.json`); `APP_INITIALIZER` →
+`provideAppInitializer`; `strict` TypeScript; OnPush as the default strategy,
+component by component.
 
 ### Three questions this session could not answer
 

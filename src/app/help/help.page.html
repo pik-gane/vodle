@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
@@ -24,7 +24,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
     </ion-buttons>
     <ion-title [innerHtml]="'help.-page-title'|translate"></ion-title>
     <ion-thumbnail slot="end">
-        <ion-img src="./assets/topright_icon.png"></ion-img>
+      <ion-img src="./assets/topright_icon.png"></ion-img>
     </ion-thumbnail>
   </ion-toolbar>
 </ion-header>
@@ -36,7 +36,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       <ion-icon [name]="e_short?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
       <ion-label><b [innerHtml]="'help.h1'|translate"></b></ion-label>
     </ion-item>
-    <ng-template [ngIf]="e_short">
+    @if (e_short) {
       <ion-item>
         <ion-label text-wrap>
           <span [innerHtml]="'help.p11a'|translate"></span>&nbsp;<a routerLink="/mypolls"><span [innerHtml]="'help.p11b'|translate"></span></a>&nbsp;<span [innerHtml]="'help.p11c'|translate"></span>
@@ -61,97 +61,99 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </ul>
         </ion-label>
       </ion-item>
-<!--      <ion-item>
-        <ion-label text-wrap>
-          See <b>more information</b> on a poll or option by pressing the <b>dropdown buttons</b> on the right.
-        </ion-label>
-      </ion-item>-->
-      <ion-item>
-        <ion-label text-wrap>
-          <span [innerHtml]="'help.p14'|translate"></span>
-          <!--If you want to <b>freeze</b> the current sorting of options on your screen, 
-          use the <b>refresh button</b> in the top-right corner to disable automatic resorting.
-          If that button shows an <b>exclamation mark</b>, the ordering needs a refresh.-->
-        </ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap>
-          <span [innerHtml]="'help.p15a'|translate"></span>
-          <ul>
-            <li><!--TODO: make icons align better vertically:-->
-              <span [innerHtml]="'help.p15b1'|translate"></span>&nbsp;<ion-icon class="poll-type" name="trophy"></ion-icon>&nbsp;<span [innerHtml]="'help.p15b2'|translate"></span> 
-            </li>
-            <li>
-              <span [innerHtml]="'help.p15c1'|translate"></span>&nbsp;<ion-icon class="poll-type" name="cut"></ion-icon>&nbsp;<span [innerHtml]="'help.p15c2'|translate"></span> 
-            </li>
-          </ul>
-        </ion-label>
-      </ion-item>
-    </ng-template>
-
-    <ion-item button (click)="e_long = !e_long" no-padding color="primary">
-      <ion-icon [name]="e_long?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
-      <ion-label><b>{{'help.h2'|translate}}</b></ion-label>
+      <!--      <ion-item>
+      <ion-label text-wrap>
+        See <b>more information</b> on a poll or option by pressing the <b>dropdown buttons</b> on the right.
+      </ion-label>
+    </ion-item>-->
+    <ion-item>
+      <ion-label text-wrap>
+        <span [innerHtml]="'help.p14'|translate"></span>
+        <!--If you want to <b>freeze</b> the current sorting of options on your screen,
+        use the <b>refresh button</b> in the top-right corner to disable automatic resorting.
+        If that button shows an <b>exclamation mark</b>, the ordering needs a refresh.-->
+      </ion-label>
     </ion-item>
-    <ng-template [ngIf]="e_long">
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p21'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p22'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p23'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p24'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p25'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p26'|translate"></span></ion-label>
-      </ion-item>
-      <ion-item>
-        <ion-label text-wrap><span [innerHtml]="'help.p27'|translate"></span></ion-label>
-      </ion-item>
-    </ng-template>
-
-    <ion-item button (click)="e_faq = !e_faq" no-padding color="primary">
-      <ion-icon [name]="e_faq?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
-      <ion-label><b>FAQ</b></ion-label>
+    <ion-item>
+      <ion-label text-wrap>
+        <span [innerHtml]="'help.p15a'|translate"></span>
+        <ul>
+          <li><!--TODO: make icons align better vertically:-->
+            <span [innerHtml]="'help.p15b1'|translate"></span>&nbsp;<ion-icon class="poll-type" name="trophy"></ion-icon>&nbsp;<span [innerHtml]="'help.p15b2'|translate"></span>
+          </li>
+          <li>
+            <span [innerHtml]="'help.p15c1'|translate"></span>&nbsp;<ion-icon class="poll-type" name="cut"></ion-icon>&nbsp;<span [innerHtml]="'help.p15c2'|translate"></span>
+          </li>
+        </ul>
+      </ion-label>
     </ion-item>
-    <ng-template [ngIf]="e_faq">
-      <ion-item *ngFor="let q of faqs" button (click)="e_q[q[0]] = !(e_q[q[0]] || false)">
+  }
+
+  <ion-item button (click)="e_long = !e_long" no-padding color="primary">
+    <ion-icon [name]="e_long?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
+    <ion-label><b>{{'help.h2'|translate}}</b></ion-label>
+  </ion-item>
+  @if (e_long) {
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p21'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p22'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p23'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p24'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p25'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p26'|translate"></span></ion-label>
+    </ion-item>
+    <ion-item>
+      <ion-label text-wrap><span [innerHtml]="'help.p27'|translate"></span></ion-label>
+    </ion-item>
+  }
+
+  <ion-item button (click)="e_faq = !e_faq" no-padding color="primary">
+    <ion-icon [name]="e_faq?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
+    <ion-label><b>FAQ</b></ion-label>
+  </ion-item>
+  @if (e_faq) {
+    @for (q of faqs; track q) {
+      <ion-item button (click)="e_q[q[0]] = !(e_q[q[0]] || false)">
         <ion-icon [name]="e_q[q[0]]?'chevron-down-outline':'chevron-forward-outline'" no-padding no-margin size="small"></ion-icon>
         <ion-label button text-wrap>
           <div [innerHTML]="'<b>'+q[0]+'</b>'"></div>
-          <ng-template [ngIf]="e_q[q[0]]">
+          @if (e_q[q[0]]) {
             <div [innerHTML]="q[1]"></div>
-          </ng-template>
+          }
         </ion-label>
       </ion-item>
-    </ng-template>
-  
-  </ion-list>
+    }
+  }
+
+</ion-list>
 <!--    <li>
-      If you feel a good option is missing, just add it at the bottom of the list!<br/>
-      <small>
-        Options are sorted by descending approve, so your option will move upwards as it gains approve.
-        vodle works best with at least a handful of options.
-      </small><br/>&nbsp;
-    </li>-->
-<!--  
-      <small>
-        A rating of, say, 80 means you would approve this option if less then 80% oppose it
-        (or, equivalently, if more than 20% approve it).
-        If your slider meets the light approve bar to the right, then you approve the option and the slider turns green.
-        A rating of zero implies that you won't ever approve this option.
-      </small><br/>&nbsp;
-  <h3>How to set up a new poll</h3>
-  <ul>
-    <li>...</li>
-  </ul>
+If you feel a good option is missing, just add it at the bottom of the list!<br/>
+<small>
+  Options are sorted by descending approve, so your option will move upwards as it gains approve.
+  vodle works best with at least a handful of options.
+</small><br/>&nbsp;
+</li>-->
+<!--
+<small>
+  A rating of, say, 80 means you would approve this option if less then 80% oppose it
+  (or, equivalently, if more than 20% approve it).
+  If your slider meets the light approve bar to the right, then you approve the option and the slider turns green.
+  A rating of zero implies that you won't ever approve this option.
+</small><br/>&nbsp;
+<h3>How to set up a new poll</h3>
+<ul>
+  <li>...</li>
+</ul>
 -->
 
 </ion-content>

@@ -20,11 +20,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { IonicModule } from '@ionic/angular';
+import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
+import { IonicModule } from '@ionic/angular/lazy';
 import { IonicStorageModule } from '@ionic/storage-angular';
-import { TranslateModule } from '@ngx-translate/core';
-import { LoggingServiceModule } from 'ionic-logging-service';
+import { provideTranslateService } from '@ngx-translate/core';
 
 import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
@@ -45,15 +44,14 @@ describe('GlobalService', () => {
     // "should be created" is supposed to prove works in a browser:
     TestBed.configureTestingModule({
       imports: [
-        LoggingServiceModule,
         RouterTestingModule,
         IonicModule.forRoot(),
         IonicStorageModule.forRoot(),
-        TranslateModule.forRoot(),
       ],
       providers: [
         GlobalService,
-        provideHttpClient(withInterceptorsFromDi()),
+        provideTranslateService(),
+        provideHttpClient(withXhr(), withInterceptorsFromDi()),
         provideHttpClientTesting(),
       ],
     });

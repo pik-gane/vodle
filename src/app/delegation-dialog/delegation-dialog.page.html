@@ -3,179 +3,178 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
-<ion-content *ngIf="ready" data-vodle="delegation-dialog">
-
-  <ng-container *ngIf="E.delegation.enabled">
-    <form [formGroup]="formGroup">
-      <ion-list lines="full">
-        <ion-item lines="none">
-          <ion-col class="ion-no-padding ion-no-margin">
-            <h1 [innerHtml]="'delegation-request.header'|translate"></h1> 
-            <p [innerHtml]="'delegation-request.intro'|translate"></p> 
-          </ion-col>      
-        </ion-item>
-        <ion-item>
-          <ion-input labelPlacement="floating" 
-            formControlName="delegate_nickname" 
-            autofocus="true" #focus_element
-            [placeholder]="'delegation-request.nickname-placeholder'|translate"
-            (ionInput)="delegate_nickname_changed()" debounce="100"
-            (ionBlur)="delegate_nickname_changed()"
-            type="text" [maxlength]="E.max_len.name"
-            data-vodle="delegate-nickname-input">
-            <span slot="label" class="form-label" [innerHtml]="'delegation-request.nickname-label'|translate"></span>
-          </ion-input>
-        </ion-item>
-        <div class="validation-errors">
-          <ng-container *ngFor="let validation of validation_messages.delegate_nickname">
-            <div class="error-message" 
-                *ngIf="formGroup.get('delegate_nickname').hasError(validation.type) 
-                        && (formGroup.get('delegate_nickname').dirty || formGroup.get('delegate_nickname').touched)"
-                [innerHtml]="validation.message|translate">
-            </div>
-          </ng-container>
-        </div>
-        <ion-item>
-          <small>
-            <ion-input labelPlacement="floating" 
-              formControlName="from" 
-              [placeholder]="'delegation-request.from-placeholder'|translate"
-              (ionInput)="from_changed()" debounce="100"
-              (ionBlur)="from_changed()"
-              type="text" [maxlength]="E.max_len.name">
-              <span slot="label" class="form-label" [innerHtml]="'delegation-request.from-label'|translate"></span>
-            </ion-input>
-          </small>
-        </ion-item>
-
-        <ng-container *ngIf="this.G.D.get_ranked_delegation_allowed(this.parent.pid)">
-        <ion-item>
-          <small>
-            <ion-select labelPlacement="floating" aria-label="Rank" interface="popover" [placeholder]="rank"
-              (ionChange)="rank_changed($event)"
-              >
-              <span slot="label" class="form-label" [innerHtml]="'delegation-request.rank-label'|translate"></span>
-              <ion-select-option *ngFor="let i of rank_options" [value]="i">{{i}}</ion-select-option>
-            </ion-select>
-          </small>
-        </ion-item>
-        </ng-container>
-
-        <ng-container *ngIf="this.G.D.get_different_delegation_allowed(this.parent.pid)">
-          <ion-item>
-            <small>
-              <ion-select labelPlacement="floating" aria-label="Options"
-              [placeholder]=""
-              [multiple]="true"
-              (ionChange)="options_changed($event)"
-              >
-                <span slot="label" class="form-label" [innerHtml]="'delegation-request.different-label'|translate"></span>
-                <ion-select-option *ngFor="let x of option_names" [value]="x">
-                  {{ x.name }}
-                </ion-select-option>
-              </ion-select>
-            </small>
-          </ion-item>
-        </ng-container>
-
-        <ng-container *ngIf="this.G.D.get_weighted_delegation_allowed(this.parent.pid)">
+@if (ready) {
+  <ion-content data-vodle="delegation-dialog">
+    @if (E.delegation.enabled) {
+      <form [formGroup]="formGroup">
+        <ion-list lines="full">
           <ion-item lines="none">
             <ion-col class="ion-no-padding ion-no-margin">
-              <small><p [innerHtml]="'delegation-request.share-intro'|translate"></p></small>
+              <h1 [innerHtml]="'delegation-request.header'|translate"></h1>
+              <p [innerHtml]="'delegation-request.intro'|translate"></p>
             </ion-col>
           </ion-item>
-          <ion-item lines="none">
-            <ion-range labelPlacement="stacked" formControlName="trustLevel" min="0" [max]="weight_left" pin="true">
-              <span slot="label" class="form-label"
-              [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></span></ion-range>
-          </ion-item>
-          <!-- both figures follow the slider: what is left to give is the
-               point of the whole screen, and a fixed "99% left to give" said
-               the opposite of the truth as soon as the voter moved it -->
           <ion-item>
-            <ion-col class="ion-no-padding ion-no-margin">
+            <ion-input labelPlacement="floating"
+              formControlName="delegate_nickname"
+              autofocus="true" #focus_element
+              [placeholder]="'delegation-request.nickname-placeholder'|translate"
+              (ionInput)="delegate_nickname_changed()" debounce="100"
+              (ionBlur)="delegate_nickname_changed()"
+              type="text" [maxlength]="E.max_len.name"
+              data-vodle="delegate-nickname-input">
+              <span slot="label" class="form-label" [innerHtml]="'delegation-request.nickname-label'|translate"></span>
+            </ion-input>
+          </ion-item>
+          <div class="validation-errors">
+            @for (validation of validation_messages.delegate_nickname; track validation) {
+              @if (formGroup.get('delegate_nickname').hasError(validation.type)
+                && (formGroup.get('delegate_nickname').dirty || formGroup.get('delegate_nickname').touched)) {
+                <div class="error-message"
+                  [innerHtml]="validation.message|translate">
+                </div>
+              }
+            }
+          </div>
+          <ion-item>
+            <small>
+              <ion-input labelPlacement="floating"
+                formControlName="from"
+                [placeholder]="'delegation-request.from-placeholder'|translate"
+                (ionInput)="from_changed()" debounce="100"
+                (ionBlur)="from_changed()"
+                type="text" [maxlength]="E.max_len.name">
+                <span slot="label" class="form-label" [innerHtml]="'delegation-request.from-label'|translate"></span>
+              </ion-input>
+            </small>
+          </ion-item>
+          @if (this.G.D.get_ranked_delegation_allowed(this.parent.pid)) {
+            <ion-item>
+              <small>
+                <ion-select labelPlacement="floating" aria-label="Rank" interface="popover" [placeholder]="rank"
+                  (ionChange)="rank_changed($event)"
+                  >
+                  <span slot="label" class="form-label" [innerHtml]="'delegation-request.rank-label'|translate"></span>
+                  @for (i of rank_options; track i) {
+                    <ion-select-option [value]="i">{{i}}</ion-select-option>
+                  }
+                </ion-select>
+              </small>
+            </ion-item>
+          }
+          @if (this.G.D.get_different_delegation_allowed(this.parent.pid)) {
+            <ion-item>
+              <small>
+                <ion-select labelPlacement="floating" aria-label="Options"
+                  [placeholder]=""
+                  [multiple]="true"
+                  (ionChange)="options_changed($event)"
+                  >
+                  <span slot="label" class="form-label" [innerHtml]="'delegation-request.different-label'|translate"></span>
+                  @for (x of option_names; track x) {
+                    <ion-select-option [value]="x">
+                      {{ x.name }}
+                    </ion-select-option>
+                  }
+                </ion-select>
+              </small>
+            </ion-item>
+          }
+          @if (this.G.D.get_weighted_delegation_allowed(this.parent.pid)) {
+            <ion-item lines="none">
+              <ion-col class="ion-no-padding ion-no-margin">
+                <small><p [innerHtml]="'delegation-request.share-intro'|translate"></p></small>
+              </ion-col>
+            </ion-item>
+            <ion-item lines="none">
+              <ion-range labelPlacement="stacked" formControlName="trustLevel" min="0" [max]="weight_left" pin="true">
+                <span slot="label" class="form-label"
+                [innerHtml]="'delegation-request.share-label'|translate:{share: share()}"></span></ion-range>
+              </ion-item>
+              <!-- both figures follow the slider: what is left to give is the
+              point of the whole screen, and a fixed "99% left to give" said
+              the opposite of the truth as soon as the voter moved it -->
+              <ion-item>
+                <ion-col class="ion-no-padding ion-no-margin">
               <small [innerHtml]="'delegation-request.share-balance'|translate:{
                 kept: share_kept(), left: share_left()
               }"></small>
-            </ion-col>
-          </ion-item>
-        </ng-container>
-        
-        <ng-container *ngIf="can_share">
+                </ion-col>
+              </ion-item>
+            }
+            @if (can_share) {
+              <ion-item lines="none">
+                <ion-col class="ion-no-padding ion-no-margin">
+                  <small><p [innerHtml]="'delegation-request.request-options-with-share'|translate"></p></small>
+                </ion-col>
+              </ion-item>
+              <ion-item lines="none" class="ion-text-end" text-wrap>
+                <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+                  shape="round"
+                  (click)="share_button_clicked()">
+                  <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
+                  <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+                </ion-button>
+              </ion-item>
+            }
+            @if (!can_share) {
+              <ion-item lines="none">
+                <ion-col class="ion-no-padding ion-no-margin">
+                  <small><p [innerHtml]="'delegation-request.request-options-without-share'|translate"></p></small>
+                </ion-col>
+              </ion-item>
+            }
+            <ion-item
+              lines="none" class="ion-text-end" text-wrap>
+              <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+                shape="round" (click)="email_button_clicked($event)">
+                <a [href]="mailto_url" target="_top" style="color:inherit;text-decoration:inherit">
+                  <span [innerHtml]="'delegation-request.compose-email'|translate"></span>&nbsp;
+                  <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
+                </a>
+              </ion-button>
+            </ion-item>
+            <ion-item
+              lines="none" class="ion-text-end" text-wrap>
+              <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
+                shape="round" data-vodle="share-delegation-button"
+                (click)="copy_button_clicked()">
+                <span [innerHtml]="'delegation-request.copy-link'|translate"></span>&nbsp;
+                <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </form>
+      }
+      <!-- IF DISABLED: -->
+      @if (!E.delegation.enabled) {
+        <ion-list lines="full">
           <ion-item lines="none">
-            <ion-col class="ion-no-padding ion-no-margin">
-              <small><p [innerHtml]="'delegation-request.request-options-with-share'|translate"></p></small> 
-            </ion-col>      
+            <span [innerHtml]="'delegation-request.disabled'|translate"></span>
           </ion-item>
-          <ion-item lines="none" class="ion-text-end" text-wrap>
-            <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-                shape="round"
-                (click)="share_button_clicked()">
-              <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
-              <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
+          <ion-item
+            lines="none" class="ion-text-end" text-wrap>
+            <ion-button color="primary" slot="end"
+              shape="round"
+              (click)="close()">
+              <span [innerHtml]="'OK'|translate"></span>&nbsp;
             </ion-button>
           </ion-item>
-        </ng-container>
-        <ng-container *ngIf="!can_share">
-          <ion-item lines="none">
-            <ion-col class="ion-no-padding ion-no-margin">
-              <small><p [innerHtml]="'delegation-request.request-options-without-share'|translate"></p></small> 
-            </ion-col>      
-          </ion-item>
-        </ng-container>
-        <ion-item 
-            lines="none" class="ion-text-end" text-wrap>
-          <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-                shape="round" (click)="email_button_clicked($event)">
-            <a [href]="mailto_url" target="_top" style="color:inherit;text-decoration:inherit">
-              <span [innerHtml]="'delegation-request.compose-email'|translate"></span>&nbsp;
-              <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
-            </a>
-          </ion-button>
-        </ion-item>
-        <ion-item 
-            lines="none" class="ion-text-end" text-wrap>
-          <ion-button color="primary" slot="end" [disabled]="!formGroup.valid"
-              shape="round" data-vodle="share-delegation-button"
-              (click)="copy_button_clicked()">
-            <span [innerHtml]="'delegation-request.copy-link'|translate"></span>&nbsp;
-            <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
-          </ion-button>
-        </ion-item>
-      </ion-list>
-    </form>
-  </ng-container>
-
-  <!-- IF DISABLED: -->
-
-  <ng-container *ngIf="!E.delegation.enabled">
-    <ion-list lines="full">
-      <ion-item lines="none">
-        <span [innerHtml]="'delegation-request.disabled'|translate"></span>
-      </ion-item>
-      <ion-item 
-      lines="none" class="ion-text-end" text-wrap>
-        <ion-button color="primary" slot="end"
-            shape="round"
-            (click)="close()">
-          <span [innerHtml]="'OK'|translate"></span>&nbsp;
-        </ion-button>
-      </ion-item>
-    </ion-list>
-  </ng-container>
-
-</ion-content>
+        </ion-list>
+      }
+    </ion-content>
+  }

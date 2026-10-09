@@ -17,11 +17,11 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { IonButton, IonInput } from '@ionic/angular';
+import { IonButton, IonInput } from '@ionic/angular/lazy';
 
 import { GlobalService } from "../global.service";
 import { environment } from 'src/environments/environment';
@@ -49,6 +49,7 @@ import { environment } from 'src/environments/environment';
   selector: 'app-login',
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class LoginPage implements OnInit {
@@ -156,9 +157,9 @@ export class LoginPage implements OnInit {
           // the account's preference is not known until it has synced:
           stored_lang = this.G.S.display_language;
     this.languageFormGroup.get('language').setValue(
-      (!!stored_lang && this.translate.langs.includes(stored_lang)) ? stored_lang
-      : (this.translate.langs.includes(default_lang) ? default_lang : 'en'));
-    if (this.step == 'start' && !stored_lang && this.translate.langs.includes(default_lang)) {
+      (!!stored_lang && this.translate.getLangs().includes(stored_lang)) ? stored_lang
+      : (this.translate.getLangs().includes(default_lang) ? default_lang : 'en'));
+    if (this.step == 'start' && !stored_lang && this.translate.getLangs().includes(default_lang)) {
       // simplify the first-time start (issue #193): when the browser's
       // preferred language is one vodle offers, there is nothing to ask.
       // The language can still be changed on the settings page, and the

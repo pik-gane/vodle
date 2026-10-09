@@ -2,20 +2,24 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
+    /* TypeScript 6.0 turned "strict" on by default; this code base was
+       written without it (1103 errors with it on), and turning it on is a
+       project of its own, not a side effect of a compiler update. */
+    "strict": false,
+    /* TypeScript 6.0 deprecates "baseUrl" (gone in 7.0); the nine imports
+       from 'src/...' that relied on it resolve through "paths" instead.
+       "downlevelIteration" went with it: a no-op since the target is ES2022. */
+    "paths": {
+      "src/*": ["./src/*"]
+    },
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
     "declaration": false,
-    "downlevelIteration": true,
     "experimentalDecorators": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
     "module": "es2020",
-    "lib": [
-      "es2018",
-      "dom"
-    ],
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "useDefineForClassFields": false

@@ -17,15 +17,16 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, DOCUMENT, ChangeDetectionStrategy } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { DOCUMENT } from '@angular/common';
+
 import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class AppComponent {
@@ -87,13 +88,13 @@ export class AppComponent {
     translate.addLangs(['de','en','es','fi','hi','it','ko','pl','ta','zh']);
 
     // this language will be used as a fallback when a translation isn't found in the current language
-    translate.setDefaultLang('en');
-//    translate.setDefaultLang('nn'); // uncomment to produce translate key screenshots
+    translate.setFallbackLang('en');
+//    translate.setFallbackLang('nn'); // uncomment to produce translate key screenshots
 
     // the lang to use, if the lang isn't available, it will use the current loader to get them.
     // note that navigator.language may be undefined in rare environments (see issue #273):
     const preferred_lang = (navigator.language || 'en').slice(0,2),
-          used_lang = translate.langs.includes(preferred_lang)?preferred_lang:'en';
+          used_lang = translate.getLangs().includes(preferred_lang)?preferred_lang:'en';
     translate.use(used_lang);
     this.document.documentElement.lang = used_lang; 
   }

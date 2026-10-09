@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <!--
@@ -31,46 +31,50 @@ TODO:
     <ion-buttons slot="end">
 
       <!-- OFFLINE SIGN -->
-      <ng-container *ngIf="!window.navigator.onLine">
+      @if (!window.navigator.onLine) {
         <ion-icon name="cloud-offline-outline" color="grey"
           style="position: relative; bottom: -1px;">
         </ion-icon>
         <ion-icon name="alert-outline" color="grey">
         </ion-icon>
-      </ng-container> 
+      }
 
       <!-- SYNCING SIGN -->
-      <ion-spinner *ngIf="G.show_spinner || !window.navigator.onLine" name="crescent" color="grey"></ion-spinner>
-      <ion-thumbnail *ngIf="!(G.show_spinner || !window.navigator.onLine)">
-        <ion-img src="./assets/topright_icon.png" ></ion-img>
-      </ion-thumbnail>
+      @if (G.show_spinner || !window.navigator.onLine) {
+        <ion-spinner name="crescent" color="grey"></ion-spinner>
+      }
+      @if (!(G.show_spinner || !window.navigator.onLine)) {
+        <ion-thumbnail>
+          <ion-img src="./assets/topright_icon.png" ></ion-img>
+        </ion-thumbnail>
+      }
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <!--
 
 TODO:
-  - hitting enter should submit
+- hitting enter should submit
 
 - if no conn. info in local db:
-  - apparently user new on this device. ask if has used vodle before
-    - if no: ask for new conn. info, try to connect as public user
-      - if success, look for private user doc. 
-        - if exists, notify that conn. info already in use (used vodle before after all?), try connecting as private user and updating user doc.
-          - if success, done
-          - otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
-        - otherwise, try generating user
-          - if success, try connecting as private user and generating user doc.
-            - if success, done
-            - otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
-          - if not, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
-      - otherwise, notify error, ask to verify conn. info, return to form 
-    - if yes: ask for old conn. info or recovery file, ...
+- apparently user new on this device. ask if has used vodle before
+- if no: ask for new conn. info, try to connect as public user
+- if success, look for private user doc.
+- if exists, notify that conn. info already in use (used vodle before after all?), try connecting as private user and updating user doc.
+- if success, done
+- otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+- otherwise, try generating user
+- if success, try connecting as private user and generating user doc.
+- if success, done
+- otherwise, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+- if not, notify error, ask to verify username and password or contact server admin to correct permissions, return to form
+- otherwise, notify error, ask to verify conn. info, return to form
+- if yes: ask for old conn. info or recovery file, ...
 -->
-<ion-content *ngIf="ready" [attr.data-vodle-step]="step">
-  <ion-grid>
-
-    <ng-container *ngIf="step=='language'||step=='start'">
+@if (ready) {
+  <ion-content [attr.data-vodle-step]="step">
+    <ion-grid>
+      @if (step=='language'||step=='start') {
         <ion-item lines="none">
           <ion-label class="ion-text-center"><h1 style="width:100%;" [innerHtml]="'login.welcome'|translate"></h1></ion-label>
         </ion-item>
@@ -88,292 +92,299 @@ TODO:
         <form [formGroup]="languageFormGroup">
           <ion-item>
             <ion-select labelPlacement="floating" #ionSelects interface="popover" formControlName="language" data-vodle="language-select"
-                [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-                (ionChange)="set_language()">
+              [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
+              (ionChange)="set_language()">
               <span slot="label" class="form-label">
-              <ion-icon name="language-outline"></ion-icon>&nbsp;
-              <span [innerHtml]="'language'|translate"></span>
-            </span>
-              <ion-select-option *ngFor="let lang of translate.langs" [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
+                <ion-icon name="language-outline"></ion-icon>&nbsp;
+                <span [innerHtml]="'language'|translate"></span>
+              </span>
+              @for (lang of translate.getLangs(); track lang) {
+                <ion-select-option [value]="lang" [innerHtml]="G.S.language_names[lang]"></ion-select-option>
+              }
             </ion-select>
           </ion-item>
-        </form>    
+        </form>
         <ion-item lines="none">
           <p><br/></p>
         </ion-item>
         <ion-item lines="none">
           <!-- never disable this button, so an empty language selection cannot block the login (see issue #273): -->
-          <ion-button size="larger" color="primary" slot="end" 
-              shape="round" data-vodle="submit-language-button"
-              (click)="submit_language()">
+          <ion-button size="larger" color="primary" slot="end"
+            shape="round" data-vodle="submit-language-button"
+            (click)="submit_language()">
             <span [innerHtml]="'next'|translate"></span>
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
           </ion-button>
         </ion-item>
-    </ng-container>
-
-    <ng-container *ngIf="step=='used_before'">
-      <ion-item class="item-text-wrap" lines="none">
-        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-used-before'|translate"></h1>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-yes-button"
-          (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
-        </ion-button>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-no-button"
-          (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
-        </ion-button>
-      </ion-item>
-    </ng-container>
-
-    <ng-container *ngIf="(step=='fresh_email')||(step=='old_email')">
-      <ion-item class="item-text-wrap" lines="none">
-        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></h1>
-      </ion-item>
-      <ion-item class="item-text-wrap">
-          <p class="ion-text-center" style="width:100%;" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email-2':'login.ask-old-email-2')|translate"></p>
-      </ion-item>
-      <form [formGroup]="emailFormGroup">
-        <ion-grid class="ion-no-padding">
-          <ion-row class="ion-no-padding">
-            <ion-col class="ion-no-padding">
-              <ion-item>
-                <ion-input labelPlacement="floating" #input_email
-                  formControlName="email" [maxlength]="E.max_len.name"
-                  type="text" inputmode="email" [autofocus]="step=='old_email'"
-                  data-vodle="email-input"
-                  (ionInput)="set_email()" debounce="100"
-                  (keydown.enter)="submit_email()">
-                  <span slot="label" class="form-label" [innerHtml]="'email'|translate"></span>
-                </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
-              </ion-item>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-        <div class="validation-errors">
-        <ng-container *ngFor="let validation of G.S.validation_messages.email">
-          <div class="error-message" 
-              *ngIf="emailFormGroup.get('email').hasError(validation.type) 
-                      && (emailFormGroup.get('email').dirty || emailFormGroup.get('email').touched)"
-              [innerHtml]="validation.message|translate">
-          </div>
-        </ng-container>
-        </div>  
-      </form>
-      <ng-container *ngIf="E.privacy_statement_url">
-        <ion-item lines="none" class="item-text-wrap">
-          <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy" data-vodle="accept-privacy-checkbox"></ion-checkbox>
-          <small><p>
-            <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
-          </p></small>
+      }
+      @if (step=='used_before') {
+        <ion-item class="item-text-wrap" lines="none">
+          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-used-before'|translate"></h1>
         </ion-item>
-      </ng-container>
-      <ng-container *ngIf="!E.privacy_statement_url">
-        <ion-checkbox style="visibility: hidden" value="true" [(ngModel)]="accept_privacy"></ion-checkbox>
-      </ng-container>
-      <ion-item lines="none">
-        <ion-button type="submit" size="larger" color="primary" slot="end" 
-            [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''" 
+        <ion-item lines="none">
+          <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-yes-button"
+            (click)="ask_used_before_yes()" [innerHtml]="'yes'|translate">
+          </ion-button>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-button slot="end" size="large" color="primary" shape="round" data-vodle="used-before-no-button"
+            (click)="ask_used_before_no()" [innerHtml]="'no'|translate">
+          </ion-button>
+        </ion-item>
+      }
+      @if ((step=='fresh_email')||(step=='old_email')) {
+        <ion-item class="item-text-wrap" lines="none">
+          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email':'login.ask-old-email')|translate"></h1>
+        </ion-item>
+        <ion-item class="item-text-wrap">
+          <p class="ion-text-center" style="width:100%;" [innerHtml]="(step=='fresh_email'?'login.ask-fresh-email-2':'login.ask-old-email-2')|translate"></p>
+        </ion-item>
+        <form [formGroup]="emailFormGroup">
+          <ion-grid class="ion-no-padding">
+            <ion-row class="ion-no-padding">
+              <ion-col class="ion-no-padding">
+                <ion-item>
+                  <ion-input labelPlacement="floating" #input_email
+                    formControlName="email" [maxlength]="E.max_len.name"
+                    type="text" inputmode="email" [autofocus]="step=='old_email'"
+                    data-vodle="email-input"
+                    (ionInput)="set_email()" debounce="100"
+                    (keydown.enter)="submit_email()">
+                    <span slot="label" class="form-label" [innerHtml]="'email'|translate"></span>
+                  </ion-input><!--TODO: add "required" once the problem is solved that the privacy link does not work properly when field left empty-->
+                </ion-item>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+          <div class="validation-errors">
+            @for (validation of G.S.validation_messages.email; track validation) {
+              @if (emailFormGroup.get('email').hasError(validation.type)
+                && (emailFormGroup.get('email').dirty || emailFormGroup.get('email').touched)) {
+                <div class="error-message"
+                  [innerHtml]="validation.message|translate">
+                </div>
+              }
+            }
+          </div>
+        </form>
+        @if (E.privacy_statement_url) {
+          <ion-item lines="none" class="item-text-wrap">
+            <ion-checkbox slot="start" value="false" [(ngModel)]="accept_privacy" data-vodle="accept-privacy-checkbox"></ion-checkbox>
+            <small><p>
+              <span [innerHtml]="'login.consent-privacy-before-privacy'|translate"></span><a target="_blank" [href]="E.privacy_statement_url" [innerHtml]="'login.consent-privacy-privacy'|translate"></a><span [innerHtml]="'login.consent-privacy-after-privacy'|translate"></span>
+            </p></small>
+          </ion-item>
+        }
+        @if (!E.privacy_statement_url) {
+          <ion-checkbox style="visibility: hidden" value="true" [(ngModel)]="accept_privacy"></ion-checkbox>
+        }
+        <ion-item lines="none">
+          <ion-button type="submit" size="larger" color="primary" slot="end"
+            [disabled]="!emailFormGroup.valid || !accept_privacy || emailFormGroup.get('email').value==''"
             shape="round" data-vodle="submit-email-button"
             (click)="submit_email()">
-          <span [innerHtml]="'next'|translate"></span>
-          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-      <!-- The guest offer is for a visitor who has NO account yet. Someone
-           who is already taking part as a guest came here from the poll
-           page's "log in" button to stop being one, and offering them a
-           guest login there reads as if that were a way of logging in —
-           they press it, nothing about their situation changes, and the
-           banner is still there (#193). -->
-      <ng-container *ngIf="step=='fresh_email' && !G.S.use_guest">
-        <ion-item>
-        </ion-item>
-        <ion-item class="item-text-wrap" lines="none">
-          <small><p style="width:100%;">
-            <span [innerHtml]="'login.login-as-guest-head'|translate"></span><br/>
-            <ion-button type="submit" color="primary" slot="start" 
-                [disabled]="!accept_privacy" 
-                shape="round" data-vodle="login-as-guest-button"
-                (click)="login_as_guest()">
-              <span [innerHtml]="'login.login-as-guest-button'|translate"></span>
-            </ion-button><br/>
-            <span *ngIf="!accept_privacy"style="width:100%;" [innerHtml]="'login.login-as-guest-foot'|translate"></span>
-          </p></small>
-        </ion-item>
-      </ng-container>
-    </ng-container>
-
-    <ng-container *ngIf="step=='fresh_password'">
-      <ion-item class="item-text-wrap" lines="none">
-        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-fresh-password'|translate"></h1>
-      </ion-item>
-      <ion-item class="item-text-wrap">
-        <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-fresh-password-2'|translate"></p>
-      </ion-item>
-      <form [formGroup]="passwordFormGroup">
-        <div formGroupName="pw">
-          <ion-row class="ion-no-padding ion-nowrap">
-            <ion-col class="ion-no-padding">
-              <ion-item>
-                <ion-input labelPlacement="floating" #input_new_password
-                  formControlName="password"
-                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
-                  [type]="showing_password?'text':'password'" required autofocus="true"
-                  autocomplete="off" autocorrect="off"
-                  data-vodle="new-password-input"
-                  (ionInput)="set_password()" debounce="100"
-                  (ionBlur)="blur_password()">
-                  <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
-                </ion-input>
-              </ion-item>
-            </ion-col>
-            <ion-button 
-                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
-                (click)="showing_password=!showing_password">
-              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon><!--&nbsp;
-              <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>-->
-            </ion-button>
-          </ion-row>
-          <div class="validation-errors">
-            <ng-container *ngFor="let validation of G.S.validation_messages.password">
-              <div class="error-message" 
-                  *ngIf="passwordFormGroup.get('pw.password').hasError(validation.type) 
-                          && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)"
-                  [innerHtml]="validation.message|translate">
-              </div>
-            </ng-container>
-          </div>
-          <ng-container>
-            <ion-item>
-              <ion-input labelPlacement="floating" 
-                formControlName="confirm_password" 
-                #input_retype_password  [maxlength]="E.max_len.name"
-                clearOnEdit="false" clearInput="true"
-                [type]="showing_password?'text':'password'" required
-                autocomplete="off" autocorrect="off"
-                data-vodle="confirm-password-input"
-                (ionInput)="set_password()" debounce="100"
-                (keydown.enter)="submit_new_password()">
-                <span slot="label" class="form-label" [innerHtml]="'retype-password'|translate"></span>
-              </ion-input>
-            </ion-item>
-            <div class="validation-errors">
-              <ng-container *ngFor="let validation of G.S.validation_messages.passwords_match">
-                <div class="error-message" 
-                    *ngIf="passwordFormGroup.get('pw').hasError('must_match') 
-                            && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)"
-                    [innerHtml]="validation.message|translate">
-                </div>
-              </ng-container>
-            </div>
-          </ng-container>
-        </div>
-      </form>    
-      <!--
-      <ion-item lines="none" class="item-text-wrap">
-        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
-        <ion-label><span [innerHtml]="'login.store-password'|translate"></span></ion-label>
-      </ion-item>
-      -->
-      <ion-item lines="none">
-        <p><br/><br/></p>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-button size="larger" color="primary" slot="end" [disabled]="!passwordFormGroup.get('pw').valid" 
-            shape="round" data-vodle="submit-new-password-button"
-            (click)="submit_new_password()">
-          <span [innerHtml]="'next'|translate"></span>
-          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-    </ng-container>
-
-    <ng-container *ngIf="step=='old_password'">
-      <ion-item class="item-text-wrap" lines="none">
-        <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-old-password'|translate"></h1>
-      </ion-item>
-      <form [formGroup]="oldPasswordFormGroup">
-        <div formGroupName="pw">
-          <ion-row class="ion-no-padding">
-            <ion-col class="ion-no-padding">
-              <ion-item>
-                <ion-input labelPlacement="floating" #input_old_password
-                  formControlName="password"
-                  clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
-                  [type]="showing_password?'text':'password'" required autofocus="true"
-                  autocomplete="off" autocorrect="off"
-                  data-vodle="old-password-input"
-                  (ionInput)="set_old_password()" debounce="100"
-                  (keydown.enter)="submit_old_password()">
-                  <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
-                </ion-input>
-              </ion-item>
-            </ion-col>
-            <ion-button 
-                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary" 
-                (click)="showing_password=!showing_password">
-              <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
-              <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
-            </ion-button>
-          </ion-row>
-          <div class="validation-errors">
-            <ng-container *ngFor="let validation of G.S.validation_messages.password">
-              <div class="error-message" 
-                  *ngIf="oldPasswordFormGroup.get('pw.password').hasError(validation.type) 
-                          && (oldPasswordFormGroup.get('pw.password').dirty || oldPasswordFormGroup.get('pw.password').touched)"
-                  [innerHtml]="validation.message|translate">
-              </div>
-            </ng-container>
-          </div>
-        </div>
-      </form>    
-      <!--
-      <ion-item lines="none" class="item-text-wrap">
-        <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
-        <ion-label><span [innerHtml]="'login.store-password'|translate"></span></ion-label>
-      </ion-item>
-      -->
-      <ion-item lines="none">
-        <p><br/><br/></p>
-      </ion-item>
-      <ion-item lines="none">
-        <ion-button size="larger" color="primary" slot="end" [disabled]="!oldPasswordFormGroup.valid" 
-            shape="round" data-vodle="submit-old-password-button"
-            (click)="submit_old_password()">
-          <span [innerHtml]="'next'|translate"></span>
-          &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-item>
-    </ng-container>
-
-    <ng-container *ngIf="step=='connected'">
-      <ion-item class="item-text-wrap" lines="none">
-        <ion-col>
-          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
-          <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
-          <p *ngIf="G.S.use_guest" class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-guest'|translate:{email:G.S.email,password:G.S.password}"></p>
-        </ion-col>
-      </ion-item>
-      <ion-item lines="none">
-        <p><br/><br/><br/></p>
-      </ion-item>
-      <form>
-        <ion-item lines="none">
-          <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
-          <ion-button size="larger" color="primary" slot="end"
-              shape="round" type="submit" id="dismiss_button" data-vodle="start-button"
-              (click)="connected_dismissed()">
-            <span [innerHtml]="'start'|translate"></span>
+            <span [innerHtml]="'next'|translate"></span>
             &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
           </ion-button>
         </ion-item>
-      </form>
-      <ion-item *ngIf="terms_expanded">
-      </ion-item>
-    </ng-container>
-
-  </ion-grid>
-</ion-content>
+        <!-- The guest offer is for a visitor who has NO account yet. Someone
+        who is already taking part as a guest came here from the poll
+        page's "log in" button to stop being one, and offering them a
+        guest login there reads as if that were a way of logging in —
+        they press it, nothing about their situation changes, and the
+        banner is still there (#193). -->
+        @if (step=='fresh_email' && !G.S.use_guest) {
+          <ion-item>
+          </ion-item>
+          <ion-item class="item-text-wrap" lines="none">
+            <small><p style="width:100%;">
+              <span [innerHtml]="'login.login-as-guest-head'|translate"></span><br/>
+              <ion-button type="submit" color="primary" slot="start"
+                [disabled]="!accept_privacy"
+                shape="round" data-vodle="login-as-guest-button"
+                (click)="login_as_guest()">
+                <span [innerHtml]="'login.login-as-guest-button'|translate"></span>
+              </ion-button><br/>
+              @if (!accept_privacy) {
+                <span style="width:100%;" [innerHtml]="'login.login-as-guest-foot'|translate"></span>
+              }
+            </p></small>
+          </ion-item>
+        }
+      }
+      @if (step=='fresh_password') {
+        <ion-item class="item-text-wrap" lines="none">
+          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-fresh-password'|translate"></h1>
+        </ion-item>
+        <ion-item class="item-text-wrap">
+          <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-fresh-password-2'|translate"></p>
+        </ion-item>
+        <form [formGroup]="passwordFormGroup">
+          <div formGroupName="pw">
+            <ion-row class="ion-no-padding ion-nowrap">
+              <ion-col class="ion-no-padding">
+                <ion-item>
+                  <ion-input labelPlacement="floating" #input_new_password
+                    formControlName="password"
+                    clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
+                    [type]="showing_password?'text':'password'" required autofocus="true"
+                    autocomplete="off"
+                    data-vodle="new-password-input"
+                    (ionInput)="set_password()" debounce="100"
+                    (ionBlur)="blur_password()">
+                    <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
+                  </ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-button
+                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary"
+                (click)="showing_password=!showing_password">
+                <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon><!--&nbsp;
+                <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>-->
+              </ion-button>
+            </ion-row>
+            <div class="validation-errors">
+              @for (validation of G.S.validation_messages.password; track validation) {
+                @if (passwordFormGroup.get('pw.password').hasError(validation.type)
+                  && (passwordFormGroup.get('pw.password').dirty || passwordFormGroup.get('pw.password').touched)) {
+                  <div class="error-message"
+                    [innerHtml]="validation.message|translate">
+                  </div>
+                }
+              }
+            </div>
+            <ng-container>
+              <ion-item>
+                <ion-input labelPlacement="floating"
+                  formControlName="confirm_password"
+                  #input_retype_password  [maxlength]="E.max_len.name"
+                  clearOnEdit="false" clearInput="true"
+                  [type]="showing_password?'text':'password'" required
+                  autocomplete="off"
+                  data-vodle="confirm-password-input"
+                  (ionInput)="set_password()" debounce="100"
+                  (keydown.enter)="submit_new_password()">
+                  <span slot="label" class="form-label" [innerHtml]="'retype-password'|translate"></span>
+                </ion-input>
+              </ion-item>
+              <div class="validation-errors">
+                @for (validation of G.S.validation_messages.passwords_match; track validation) {
+                  @if (passwordFormGroup.get('pw').hasError('must_match')
+                    && (passwordFormGroup.get('pw.confirm_password').dirty || passwordFormGroup.get('pw.confirm_password').touched)) {
+                    <div class="error-message"
+                      [innerHtml]="validation.message|translate">
+                    </div>
+                  }
+                }
+              </div>
+            </ng-container>
+          </div>
+        </form>
+        <!--
+        <ion-item lines="none" class="item-text-wrap">
+          <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+          <ion-label><span [innerHtml]="'login.store-password'|translate"></span></ion-label>
+        </ion-item>
+        -->
+        <ion-item lines="none">
+          <p><br/><br/></p>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-button size="larger" color="primary" slot="end" [disabled]="!passwordFormGroup.get('pw').valid"
+            shape="round" data-vodle="submit-new-password-button"
+            (click)="submit_new_password()">
+            <span [innerHtml]="'next'|translate"></span>
+            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+      }
+      @if (step=='old_password') {
+        <ion-item class="item-text-wrap" lines="none">
+          <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ask-old-password'|translate"></h1>
+        </ion-item>
+        <form [formGroup]="oldPasswordFormGroup">
+          <div formGroupName="pw">
+            <ion-row class="ion-no-padding">
+              <ion-col class="ion-no-padding">
+                <ion-item>
+                  <ion-input labelPlacement="floating" #input_old_password
+                    formControlName="password"
+                    clearOnEdit="false" clearInput="true" [maxlength]="E.max_len.name"
+                    [type]="showing_password?'text':'password'" required autofocus="true"
+                    autocomplete="off"
+                    data-vodle="old-password-input"
+                    (ionInput)="set_old_password()" debounce="100"
+                    (keydown.enter)="submit_old_password()">
+                    <span slot="label" class="form-label" [innerHtml]="'password'|translate"></span>
+                  </ion-input>
+                </ion-item>
+              </ion-col>
+              <ion-button
+                tabindex="-1" style="padding-top: 15px;" fill="clear" color="primary"
+                (click)="showing_password=!showing_password">
+                <ion-icon [name]="showing_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;
+                <span [innerHtml]="(showing_password?'hide':'show')|translate"></span>
+              </ion-button>
+            </ion-row>
+            <div class="validation-errors">
+              @for (validation of G.S.validation_messages.password; track validation) {
+                @if (oldPasswordFormGroup.get('pw.password').hasError(validation.type)
+                  && (oldPasswordFormGroup.get('pw.password').dirty || oldPasswordFormGroup.get('pw.password').touched)) {
+                  <div class="error-message"
+                    [innerHtml]="validation.message|translate">
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </form>
+        <!--
+        <ion-item lines="none" class="item-text-wrap">
+          <ion-checkbox slot="start" value="false" [(ngModel)]="save_password"></ion-checkbox>
+          <ion-label><span [innerHtml]="'login.store-password'|translate"></span></ion-label>
+        </ion-item>
+        -->
+        <ion-item lines="none">
+          <p><br/><br/></p>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-button size="larger" color="primary" slot="end" [disabled]="!oldPasswordFormGroup.valid"
+            shape="round" data-vodle="submit-old-password-button"
+            (click)="submit_old_password()">
+            <span [innerHtml]="'next'|translate"></span>
+            &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+          </ion-button>
+        </ion-item>
+      }
+      @if (step=='connected') {
+        <ion-item class="item-text-wrap" lines="none">
+          <ion-col>
+            <h1 class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start'|translate"></h1>
+            <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-detail'|translate"></p>
+            @if (G.S.use_guest) {
+              <p class="ion-text-center" style="width:100%;" [innerHtml]="'login.ready-to-start-guest'|translate:{email:G.S.email,password:G.S.password}"></p>
+            }
+          </ion-col>
+        </ion-item>
+        <ion-item lines="none">
+          <p><br/><br/><br/></p>
+        </ion-item>
+        <form>
+          <ion-item lines="none">
+            <!-- TODO: make this button (and similar buttons on other pages) respond to hitting "enter" -->
+            <ion-button size="larger" color="primary" slot="end"
+              shape="round" type="submit" id="dismiss_button" data-vodle="start-button"
+              (click)="connected_dismissed()">
+              <span [innerHtml]="'start'|translate"></span>
+              &nbsp;<ion-icon name="arrow-forward-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </form>
+        @if (terms_expanded) {
+          <ion-item>
+          </ion-item>
+        }
+      }
+    </ion-grid>
+  </ion-content>
+}

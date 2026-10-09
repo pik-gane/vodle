@@ -219,29 +219,6 @@ In your deserved breaks from vodling, you can stop and later restart your CouchD
 
 Please don't forget to frequently `git pull` upstream changes and merge them into your working branch to avoid divergence.
 
-### Building native apps
-
-For most of the time, it is probably most convenient to work with the local web app as described above. In some cases, however, you might want to test a native app version of vodle.
-
-#### Android
-For the android version, you need to install [Android Studio](https://developer.android.com/studio) and [configure it as described here](https://ionicframework.com/docs/developing/android) (in that doc, skip the section on Cordova and continue with the section on Capacitor). Instead of 
-```
-$ ionic capacitor copy android
-``` 
-and starting Android Studio manually, you can also do
-```
-$ ionic capacitor build android
-```
-which will automatically start Android Studio, where you can then do `Run -> run app`.
-
-In some cases, running the app like this only succeeds after doing
-```
-$ adb start-server
-```
-
-#### iOS
-For iOS, we have not tested it yet, but [it should work like this](https://ionicframework.com/docs/developing/ios).
-
 ### Running the tests
 
 The ordinary unit tests need nothing but a browser:

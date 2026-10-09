@@ -20,9 +20,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular/lazy';
 
 import { DelegationDialogRankedPageRoutingModule } from './delegation-dialog-ranked-routing.module';
 
@@ -36,7 +36,7 @@ export { DelegationDialogRankedPage } from './delegation-dialog-ranked.page';
     IonicModule,
     ReactiveFormsModule,
     DelegationDialogRankedPageRoutingModule,
-    TranslateModule.forChild()
+    TranslatePipe
   ],
   declarations: [DelegationDialogRankedPage],
   exports: [DelegationDialogRankedPage]

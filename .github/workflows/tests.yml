@@ -67,6 +67,15 @@ jobs:
           echo "no Chrome or Chromium found on the runner" >&2
           exit 1
 
+      - name: Warm up the browser
+        # Chrome's first start on a fresh runner has taken longer than the
+        # launchers wait: puppeteer-core's 30 s in the click-through (run 147,
+        # first attempt), chrome-launcher's 25 s in the e2e suite (run 148),
+        # both on Chrome 154. One throwaway start pays the first-run cost
+        # before anything that measures it; if even this fails, the job says
+        # so here rather than inside a test.
+        run: timeout 120 "$CHROME_BIN" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --dump-dom about:blank > /dev/null
+
       # the guard bot's pure logic (the repair of state that resolution
       # dropped at a close, #334) has node:test unit tests of its own:
       - name: Guard bot unit tests
@@ -194,6 +203,15 @@ jobs:
           done
           echo "no Chrome or Chromium found on the runner" >&2
           exit 1
+
+      - name: Warm up the browser
+        # Chrome's first start on a fresh runner has taken longer than the
+        # launchers wait: puppeteer-core's 30 s in the click-through (run 147,
+        # first attempt), chrome-launcher's 25 s in the e2e suite (run 148),
+        # both on Chrome 154. One throwaway start pays the first-run cost
+        # before anything that measures it; if even this fails, the job says
+        # so here rather than inside a test.
+        run: timeout 120 "$CHROME_BIN" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --dump-dom about:blank > /dev/null
 
       - name: Build
         run: npm run build

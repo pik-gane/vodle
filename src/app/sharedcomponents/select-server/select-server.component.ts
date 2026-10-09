@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl } from '@angular/forms';
 import { environment } from 'src/environments/environment';
 
@@ -27,6 +27,7 @@ import { GlobalService } from "../../global.service";
   selector: 'app-select-server',
   templateUrl: './select-server.component.html',
   styleUrls: ['./select-server.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class SelectServerComponent implements OnInit {

@@ -7,12 +7,10 @@ This doc describes the overall architecture of vodle.
 ### Local app on user's end device
 
 Almost all of the work is done by a local app on the user's end device.
-This is either the *vodle web app* (which is however *not* a "progressive web app") running inside a web browser,
-or a *"native" vodle app* installed on an Android or IOS smartphone.
+This is the *vodle web app* (which is however *not* a "progressive web app") running inside a web browser, on a desktop or on a smartphone.
 
-Even though the app exists in three different platform versions, 
-there is only a single code base for all of them!
-This is made possible by using [Ionic](https://ionicframework.com/) as our top-level development framework, where the native vodle apps are using Ionic's [Capacitor](https://capacitorjs.com/) runtime.
+We use [Ionic](https://ionicframework.com/) as our top-level development framework.
+(Until October 2026 the repository also carried Android and iOS projects on Ionic's [Capacitor](https://capacitorjs.com/) runtime; they were removed because nothing built them any more. The web code still uses two Capacitor plugins, for notifications and for sharing, in their web implementations.)
 
 One level deeper, we use the [Angular](https://angular.io/) flavour of Ionic (not the React or Vue flavours), 
 allowing us to design a complex UI in the form of HTML page templates using the powerful [Angular template language](https://angular.io/guide/template-syntax).
@@ -21,8 +19,6 @@ All logics is implemented in [Typescript](https://www.typescriptlang.org/),
 which is "JavaScript with syntax for types".
 
 ### Web server deploying the web app
-
-The native vodle app versions will be deployed via certain standard app stores and don't require a central web server.
 
 The vodle web app however must be deployed via a standard web server. 
 The web server only serves static files: an `index.html` page, many javascript files, and all needed assets (fonts, icons, images, etc.). 

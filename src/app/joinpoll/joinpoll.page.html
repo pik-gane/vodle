@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <!--
@@ -32,119 +32,133 @@ TODO:
     <ion-buttons slot="end">
 
       <!-- OFFLINE SIGN -->
-      <ng-container *ngIf="!window.navigator.onLine">
+      @if (!window.navigator.onLine) {
         <ion-icon name="cloud-offline-outline" color="grey"
           style="position: relative; bottom: -1px;">
         </ion-icon>
         <ion-icon name="alert-outline" color="grey">
         </ion-icon>
-      </ng-container> 
+      }
 
       <!-- SYNCING SIGN -->
-      <ion-spinner *ngIf="window.navigator.onLine && !ready" name="crescent" color="grey"></ion-spinner>
+      @if (window.navigator.onLine && !ready) {
+        <ion-spinner name="crescent" color="grey"></ion-spinner>
+      }
 
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <!-- a first visit of a magic link on a device without credentials takes
-     part as a guest silently (#193, DataService.login_as_guest); the
-     consent question, if any, waits on the poll page -->
+part as a guest silently (#193, DataService.login_as_guest); the
+consent question, if any, waits on the poll page -->
 
-<ion-content *ngIf="!ready && !join_error">
-  <ion-item class="ion-text-center" lines="none">
-    <h3>
-      <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
-    </h3>
-  </ion-item>
-  <ion-item *ngIf="slow" class="ion-text-center" lines="none" data-vodle="join-poll-slow">
-    <h4>
-      <i [innerHtml]="'joinpoll.still-waiting'|translate"></i>&nbsp;
-    </h4>
-  </ion-item>
-  <!-- what it is doing, for a visitor with no console open (#327) -->
-  <ion-item *ngIf="slow && boot_stage" class="ion-text-center" lines="none" data-vodle="join-poll-stage">
-    <h4>
-      <i>{{boot_stage}} ({{boot_stage_seconds}}s)</i>&nbsp;
-    </h4>
-  </ion-item>
-  <ion-item class="ion-text-center" lines="none">
-    <h1>
-      <ion-spinner name="crescent" size="large"></ion-spinner>
-    </h1>
-  </ion-item>
-</ion-content>
+@if (!ready && !join_error) {
+  <ion-content>
+    <ion-item class="ion-text-center" lines="none">
+      <h3>
+        <i [innerHtml]="'joinpoll.fetching'|translate"></i>&nbsp;
+      </h3>
+    </ion-item>
+    @if (slow) {
+      <ion-item class="ion-text-center" lines="none" data-vodle="join-poll-slow">
+        <h4>
+          <i [innerHtml]="'joinpoll.still-waiting'|translate"></i>&nbsp;
+        </h4>
+      </ion-item>
+    }
+    <!-- what it is doing, for a visitor with no console open (#327) -->
+    @if (slow && boot_stage) {
+      <ion-item class="ion-text-center" lines="none" data-vodle="join-poll-stage">
+        <h4>
+          <i>{{boot_stage}} ({{boot_stage_seconds}}s)</i>&nbsp;
+        </h4>
+      </ion-item>
+    }
+    <ion-item class="ion-text-center" lines="none">
+      <h1>
+        <ion-spinner name="crescent" size="large"></ion-spinner>
+      </h1>
+    </ion-item>
+  </ion-content>
+}
 
-<ion-content *ngIf="join_error" data-vodle="join-poll-error">
-  <ion-item class="ion-text-center" color="danger" lines="none">
-    <ion-col>
-      <h3>Failed to join this poll</h3>
-      <p>{{ join_error }}</p>
-      <p><small>The invite link may be invalid or the poll may no longer exist. Please ask the poll creator for a new link.</small></p>
-      <p><small><i>joinpoll v5</i></small></p>
-    </ion-col>
-  </ion-item>
-</ion-content>
+@if (join_error) {
+  <ion-content data-vodle="join-poll-error">
+    <ion-item class="ion-text-center" color="danger" lines="none">
+      <ion-col>
+        <h3>Failed to join this poll</h3>
+        <p>{{ join_error }}</p>
+        <p><small>The invite link may be invalid or the poll may no longer exist. Please ask the poll creator for a new link.</small></p>
+        <p><small><i>joinpoll v5</i></small></p>
+      </ion-col>
+    </ion-item>
+  </ion-content>
+}
 
-<ion-content *ngIf="ready && !p">
-  <ion-item class="ion-text-center" lines="none">
-    <h3>
-      <i [innerHtml]="'joinpoll.initializing'|translate"></i>&nbsp;
-    </h3>
-  </ion-item>
-  <ion-item class="ion-text-center" lines="none">
-    <h1>
-      <ion-spinner name="crescent" size="large"></ion-spinner>
-    </h1>
-  </ion-item>
-</ion-content>
+@if (ready && !p) {
+  <ion-content>
+    <ion-item class="ion-text-center" lines="none">
+      <h3>
+        <i [innerHtml]="'joinpoll.initializing'|translate"></i>&nbsp;
+      </h3>
+    </ion-item>
+    <ion-item class="ion-text-center" lines="none">
+      <h1>
+        <ion-spinner name="crescent" size="large"></ion-spinner>
+      </h1>
+    </ion-item>
+  </ion-content>
+}
 
-<ion-content *ngIf="ready && (p!=null)" data-vodle="join-poll-page">
-  <ion-item class="ion-text-center" color="warning">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <h4 [innerHtml]="'joinpoll.header'|translate:{poll_title:p.title}"></h4>
-      <p [innerHtml]="(p.type=='winner'?'joinpoll.p1-winner':'joinpoll.p1-share')|translate:{due:p.due_string}"></p>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" color="secondary">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <p [innerHtml]="'joinpoll.p2'|translate"></p>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" color="primary">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <p [innerHtml]="'joinpoll.p3'|translate"></p>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" color="light">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <small>
-        <p [innerHtml]="'joinpoll.p4'|translate"></p>
-      </small>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" lines="none">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <small>
-        <p [innerHtml]="'joinpoll.p5'|translate"></p>
-      </small>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" lines="none">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <ion-button size="large" fill="solid" color="primary" 
+@if (ready && (p!=null)) {
+  <ion-content data-vodle="join-poll-page">
+    <ion-item class="ion-text-center" color="warning">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <h4 [innerHtml]="'joinpoll.header'|translate:{poll_title:p.title}"></h4>
+        <p [innerHtml]="(p.type=='winner'?'joinpoll.p1-winner':'joinpoll.p1-share')|translate:{due:p.due_string}"></p>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" color="secondary">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'joinpoll.p2'|translate"></p>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" color="primary">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <p [innerHtml]="'joinpoll.p3'|translate"></p>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" color="light">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <small>
+          <p [innerHtml]="'joinpoll.p4'|translate"></p>
+        </small>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" lines="none">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <small>
+          <p [innerHtml]="'joinpoll.p5'|translate"></p>
+        </small>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" lines="none">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <ion-button size="large" fill="solid" color="primary"
           shape="round" type="submit" data-vodle="join-poll-go-button"
           (click)="go_button_clicked()">
-        <span [innerHtml]="'joinpoll.lets-go-button'|translate"></span>&nbsp;
-        <ion-icon name="arrow-forward-outline"></ion-icon>
-      </ion-button>
-    </ion-col>
-  </ion-item>
-  <ion-item class="ion-text-center" lines="none">
-    <ion-col class="ion-no-padding ion-no-margin">
-      <small>
-        <p [innerHtml]="'joinpoll.p6'|translate:{link_start:help_link_start,link_end:help_link_end}"></p>
-      </small>
-    </ion-col>
-  </ion-item>
-</ion-content>
+          <span [innerHtml]="'joinpoll.lets-go-button'|translate"></span>&nbsp;
+          <ion-icon name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-col>
+    </ion-item>
+    <ion-item class="ion-text-center" lines="none">
+      <ion-col class="ion-no-padding ion-no-margin">
+        <small>
+          <p [innerHtml]="'joinpoll.p6'|translate:{link_start:help_link_start,link_end:help_link_end}"></p>
+        </small>
+      </ion-col>
+    </ion-item>
+  </ion-content>
+}

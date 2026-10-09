@@ -144,6 +144,10 @@ async function voters(p) {
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROME_BIN,
     headless: 'new',
+    // 30 s, the default, was not enough for Chrome 154's first start on a
+    // CI runner once (run 147); the workflow now warms the browser up
+    // first, and this is the margin should that not suffice
+    timeout: 90000,
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--window-size=1280,900'],
   });
   await browser.defaultBrowserContext().overridePermissions(BASE, ['clipboard-read', 'clipboard-write']);

@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <!--
@@ -37,17 +37,19 @@ TODO:
 <ion-content>
 
   <!-- WHAT THE DELETION IS DOING (#327). It takes tens of seconds — a
-       poll's every voter room is left and forgotten — and until this the
-       page was simply blank for all of it. -->
-  <ion-list *ngIf="deleting">
-    <ion-item color="warning" data-vodle="deleting-data">
-      <ion-spinner name="dots" slot="start" color="dark"></ion-spinner>
+  poll's every voter room is left and forgotten — and until this the
+  page was simply blank for all of it. -->
+  @if (deleting) {
+    <ion-list>
+      <ion-item color="warning" data-vodle="deleting-data">
+        <ion-spinner name="dots" slot="start" color="dark"></ion-spinner>
       <p [innerHtml]="(G.D.deletion_progress?.key || 'delete-all.progress-votes')
                       |translate:(G.D.deletion_progress?.params || {})"></p>
-    </ion-item>
-    <ion-item lines="none">
-      <p [innerHtml]="'delete-all.progress-note'|translate"></p>
-    </ion-item>
-  </ion-list>
+      </ion-item>
+      <ion-item lines="none">
+        <p [innerHtml]="'delete-all.progress-note'|translate"></p>
+      </ion-item>
+    </ion-list>
+  }
 
 </ion-content>

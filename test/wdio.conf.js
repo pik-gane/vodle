@@ -23,15 +23,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  *   npm run build     # produces docs/ (see angular.json outputPath)
  *   npm run e2e       # serves docs/ and drives the real built app
  *
- * Plain JavaScript (not TypeScript): the repo's pinned ts-node 8.x predates
- * what wdio 8's autocompile expects, and the smoke suite is small enough that
- * type checking buys little here.
+ * Plain JavaScript (not TypeScript): the repo has no ts-node (it was a
+ * devDependency nothing used, pinned to 8.x, and went with the library updates
+ * of 2026-10-08), and the smoke suite is small enough that type checking buys
+ * little here.
  *
  * The 'devtools' automation protocol drives the browser over the Chrome
  * DevTools Protocol via puppeteer-core, which comes in through the 'devtools'
- * package that webdriverio itself depends on, so no chromedriver is needed
- * (the pinned chromedriver 119 no longer matches any current Chrome, and wdio
- * 8.3's automatic driver management arrived only in 8.14).
+ * package -- a devDependency of its own since wdio 8.46, which no longer
+ * depends on it (wdio 8.3 did) -- so no chromedriver is needed (the pinned
+ * chromedriver 119 no longer matched any current Chrome).
  *
  * NOTE: this pins the suite to wdio 8 — 'devtools' as an automation protocol
  * was dropped in wdio 9. Upgrading means moving to WebDriver Bidi and letting
@@ -59,8 +60,9 @@ function chrome_binary() {
 
 exports.config = {
   runner: 'local',
-  // everything here is plain JS; without this, wdio detects the repo's
-  // ts-node 8.x and injects an ESM loader path that only exists in ts-node 10+:
+  // everything here is plain JS; this keeps wdio from looking for a ts-node
+  // to compile with (the repo has none; while it had an 8.x, wdio injected an
+  // ESM loader path that only exists in ts-node 10+):
   autoCompileOpts: {autoCompile: false},
   automationProtocol: 'devtools',
   specs: ['./specs/**/*.e2e.js'],
@@ -94,9 +96,10 @@ exports.config = {
 
   onPrepare: function () {
     // wdio's CLI sets this before it reads autoCompileOpts, and the worker
-    // then injects a ts-node ESM loader that the repo's ts-node 8.x does not
-    // have; onPrepare runs in the launcher before workers fork, so this is
-    // the reliable place to withdraw it:
+    // then injects a ts-node ESM loader the repo cannot supply (no ts-node
+    // installed; the 8.x it used to pin did not have the loader either);
+    // onPrepare runs in the launcher before workers fork, so this is the
+    // reliable place to withdraw it:
     delete process.env.WDIO_LOAD_TS_NODE;
     // serve the built app for the duration of the run:
     server = fork(path.join(__dirname, '..', 'scripts', 'serve-app.js'), [String(PORT)],

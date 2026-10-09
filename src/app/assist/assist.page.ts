@@ -17,8 +17,8 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Component, OnInit, Input, ViewChild } from '@angular/core';
-import { ModalController, IonContent } from '@ionic/angular';
+import { Component, OnInit, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { ModalController, IonContent } from '@ionic/angular/lazy';
 import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from '../../environments/environment';
@@ -29,6 +29,7 @@ import { PollPage } from '../poll/poll.module';
   selector: 'app-assist',
   templateUrl: './assist.page.html',
   styleUrls: ['./assist.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class AssistPage implements OnInit {

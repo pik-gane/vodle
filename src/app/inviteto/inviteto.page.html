@@ -3,18 +3,18 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <ion-header>
@@ -26,27 +26,28 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="ready && (p!=null)" data-vodle="invite-to-poll-page">
-  <ion-list lines="full">
-    <ion-item color="warning">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <p [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></p>
-      </ion-col>
-    </ion-item>
-<!--
-    <ion-item (click)="details_expanded=!details_expanded">
-      <ion-col class="ion-no-padding ion-no-margin">
-        <ion-icon class="poll-type"
-          [name]="p.type=='winner'?'trophy':'cut'">
-        </ion-icon>&nbsp;
-        <i [innerHtml]="p.title"></i>
-        <ng-container *ngIf="details_expanded">
-          <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
-            <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="G.format_details(p.desc)"></small></i>
-            <small *ngIf="(p.url||'')!=''">
-              &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
-                  <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
-                </a>)
+@if (ready && (p!=null)) {
+  <ion-content data-vodle="invite-to-poll-page">
+    <ion-list lines="full">
+      <ion-item color="warning">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <p [innerHtml]="(came_from_preview?'inviteto.first-intro':'inviteto.later-intro')|translate"></p>
+        </ion-col>
+      </ion-item>
+      <!--
+      <ion-item (click)="details_expanded=!details_expanded">
+        <ion-col class="ion-no-padding ion-no-margin">
+          <ion-icon class="poll-type"
+            [name]="p.type=='winner'?'trophy':'cut'">
+          </ion-icon>&nbsp;
+          <i [innerHtml]="p.title"></i>
+          <ng-container *ngIf="details_expanded">
+            <p *ngIf="((p.desc||'')!='')||((p.url||'')!='')">
+              <i *ngIf="(p.desc||'')!=''"><small [innerHtml]="G.format_details(p.desc)"></small></i>
+              <small *ngIf="(p.url||'')!=''">
+                &nbsp;(<a [href]="G.D.fix_url(p.url)" target="_blank" rel="noopener noreferrer">
+                <ion-text color="primary" [innerHtml]="'read-more'|translate"></ion-text>
+              </a>)
             </small>
           </p>
           <p>
@@ -55,69 +56,66 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
         </ng-container>
       </ion-col>
       <ion-buttons slot="end">
-        <ion-icon 
-          [name]="details_expanded?'caret-down-outline':'caret-back-outline'" 
+        <ion-icon
+          [name]="details_expanded?'caret-down-outline':'caret-back-outline'"
           size="small" color="primary">
         </ion-icon>
       </ion-buttons>
     </ion-item>
--->
+    -->
     <!--TODO: disable buttons and notify if due is in the past by now-->
-    <ng-container *ngIf="can_share">
+    @if (can_share) {
       <ion-item lines="none">
         <ion-col class="ion-no-padding ion-no-margin">
-          <p [innerHtml]="'inviteto.caution-with-share1'|translate"></p> 
-          <small><p [innerHtml]="'inviteto.caution2'|translate"></p></small> 
-        </ion-col>      
+          <p [innerHtml]="'inviteto.caution-with-share1'|translate"></p>
+          <small><p [innerHtml]="'inviteto.caution2'|translate"></p></small>
+        </ion-col>
       </ion-item>
       <ion-item lines="none" class="ion-text-end" text-wrap>
-        <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-            shape="round" data-vodle="share-invite-button"
-            (click)="share_button_clicked()">
+        <ion-button size="large" color="primary" slot="end" [disabled]="false"
+          shape="round" data-vodle="share-invite-button"
+          (click)="share_button_clicked()">
           <span [innerHtml]="'inviteto.share'|translate"></span>&nbsp;
           <ion-icon name="share-social-outline"></ion-icon> <!--TODO: use correct share icon-->
         </ion-button>
       </ion-item>
-    </ng-container>
-    <ng-container *ngIf="!can_share">
+    }
+    @if (!can_share) {
       <ion-item lines="none">
         <ion-col class="ion-no-padding ion-no-margin">
-          <p [innerHtml]="'inviteto.caution-without-share1'|translate"></p> 
-          <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p> 
-        </ion-col>      
+          <p [innerHtml]="'inviteto.caution-without-share1'|translate"></p>
+          <p><small [innerHtml]="'inviteto.caution2'|translate"></small></p>
+        </ion-col>
       </ion-item>
-    </ng-container>
-    <ion-item 
-        lines="none" class="ion-text-end" text-wrap>
+    }
+    <ion-item
+      lines="none" class="ion-text-end" text-wrap>
       <!--TODO: disable if due is in the past by now-->
-      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-            shape="round">
+      <ion-button size="large" color="primary" slot="end" [disabled]="false"
+        shape="round">
         <a [href]="email_href" target="_top" style="color:inherit;text-decoration:inherit">
           <span [innerHtml]="'inviteto.compose-email'|translate"></span>&nbsp;
           <ion-icon name="mail-open-outline"></ion-icon> <!--TODO: make icon show in correct size and alignment-->
         </a>
       </ion-button>
     </ion-item>
-    <ion-item 
-        lines="none" class="ion-text-end" text-wrap>
+    <ion-item
+      lines="none" class="ion-text-end" text-wrap>
       <!--TODO: disable if due is in the past by now-->
-      <ion-button size="large" color="primary" slot="end" [disabled]="false" 
-          shape="round" data-vodle="copy-invite-link-button"
-          (click)="copy_button_clicked()">
+      <ion-button size="large" color="primary" slot="end" [disabled]="false"
+        shape="round" data-vodle="copy-invite-link-button"
+        (click)="copy_button_clicked()">
         <span [innerHtml]="'inviteto.copy-link'|translate"></span>&nbsp;
         <ion-icon name="copy-outline"></ion-icon> <!--TODO: use correct clipboard icon-->
       </ion-button>
     </ion-item>
-
     <ion-item lines="none" class="ion-text-center">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid" data-vodle="go-to-poll-button">
-          <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
-        </ion-button>  
-    </ion-item>  
-
-
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+      <ion-button class="ion-no-margin ion-no-padding" fill="clear" size="small" [routerLink]="'/poll/'+p.pid" data-vodle="go-to-poll-button">
+        <ion-icon name="arrow-forward-outline" size="small"></ion-icon>&nbsp;<span [innerHtml]="'go-to-poll'|translate"></span>
+      </ion-button>
+    </ion-item>
   </ion-list>
-
 </ion-content>
+}

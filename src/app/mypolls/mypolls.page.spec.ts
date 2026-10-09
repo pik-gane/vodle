@@ -18,7 +18,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular';
+import { By } from '@angular/platform-browser';
+import { RouterLink } from '@angular/router';
+import { IonicModule } from '@ionic/angular/lazy';
 
 import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
 
@@ -89,9 +91,19 @@ describe('MypollsPage', () => {
       return fixture.nativeElement.querySelector('[data-vodle="create-new-poll-button"]');
     }
 
+    /** the RouterLink directive on the "+" button, if it carries one. Read
+     *  from the directive itself: these two specs used to read the
+     *  `ng-reflect-router-link` debug attribute, which Angular 20 no
+     *  longer writes. */
+    function new_poll_link(): RouterLink | null {
+      const button = fixture.debugElement.query(By.css('[data-vodle="create-new-poll-button"]'));
+      return button ? button.injector.get(RouterLink, null) : null;
+    }
+
     it('opens a new draft with the "+" button as long as there is no successor', () => {
       expect(component.G.successor_url).toBe('');
-      expect(new_poll_button().getAttribute('ng-reflect-router-link')).toBe('/draftpoll');
+      new_poll_button();
+      expect(new_poll_link()?.urlTree?.toString()).toBe('/draftpoll');
       expect(fixture.nativeElement.querySelector('[data-vodle="predecessor-note"]')).toBeNull();
     });
 
@@ -99,7 +111,7 @@ describe('MypollsPage', () => {
       (component.G as any).successor_url = 'https://matrix.vodle.it/#/';
       component.G.show_successor_notice = jasmine.createSpy('show_successor_notice').and.returnValue(Promise.resolve(true));
       const button = new_poll_button();
-      expect(button.getAttribute('ng-reflect-router-link')).toBeNull();
+      expect(new_poll_link()).withContext("no router link on the retired deployment's button").toBeNull();
       button.click();
       expect(component.G.show_successor_notice).toHaveBeenCalled();
     });

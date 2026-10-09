@@ -3,51 +3,55 @@
 
 This file is part of vodle.
 
-vodle is free software: you can redistribute it and/or modify it under the 
-terms of the GNU Affero General Public License as published by the Free 
-Software Foundation, either version 3 of the License, or (at your option) 
+vodle is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
 any later version.
 
-vodle is distributed in the hope that it will be useful, but WITHOUT ANY 
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR 
-A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+vodle is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 details.
 
-You should have received a copy of the GNU Affero General Public License 
-along with vodle. If not, see <https://www.gnu.org/licenses/>. 
+You should have received a copy of the GNU Affero General Public License
+along with vodle. If not, see <https://www.gnu.org/licenses/>.
 -->
 
 <form [formGroup]="selectServerFormGroup">
   <ion-item>
-    <ion-select labelPlacement="floating" formControlName="db" [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-        [style]="page!='settings'?'font-size: smaller;':''"
-        (ionChange)="set_db()">
+    <ion-select labelPlacement="floating" formControlName="db" [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
+      [style]="page!='settings'?'font-size: smaller;':''"
+      (ionChange)="set_db()">
       <span slot="label" class="form-label" [innerHtml]="(page=='settings'?'settings.db-label':'draftpoll.db-label')|translate"></span>
-      <ion-select-option *ngIf="page!='settings'" value="default" [innerHtml]="'select-server.same-as-personal'|translate"></ion-select-option>
+      @if (page!='settings') {
+        <ion-select-option value="default" [innerHtml]="'select-server.same-as-personal'|translate"></ion-select-option>
+      }
       <ion-select-option value="central" [innerHtml]="'select-server.central'|translate"></ion-select-option>
       <ion-select-option value="poll" [innerHtml]="(page=='settings'?'select-server.same-as-some-poll':'select-server.same-as-other-poll')|translate"></ion-select-option>
       <ion-select-option value="other" [innerHtml]="'select-server.other'|translate"></ion-select-option>
     </ion-select>
   </ion-item>
-  <ng-container *ngIf="selectServerFormGroup.get('db').value=='poll'">
+  @if (selectServerFormGroup.get('db').value=='poll') {
     <ion-item>
-      <ion-select labelPlacement="floating" formControlName="db_from_pid" 
-          [cancelText]="'cancel'|translate" [okText]="'OK'|translate" 
-          style="font-size: smaller;"
-          (ionChange)="set_db_from_pid()">
+      <ion-select labelPlacement="floating" formControlName="db_from_pid"
+        [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
+        style="font-size: smaller;"
+        (ionChange)="set_db_from_pid()">
         <span slot="label" class="form-label" [innerHtml]="(page=='settings'?'select-server.which-poll':'select-server.which-other-poll')|translate"></span>
-        <ng-container *ngFor="let pid of Object.keys(G.P.polls)">
-          <ion-select-option *ngIf="pid!=page_object.p.pid" [value]="pid" [innerHtml]="G.P.polls[pid].title"></ion-select-option>
-        </ng-container>
+        @for (pid of Object.keys(G.P.polls); track pid) {
+          @if (pid!=page_object.p.pid) {
+            <ion-select-option [value]="pid" [innerHtml]="G.P.polls[pid].title"></ion-select-option>
+          }
+        }
       </ion-select>
     </ion-item>
-  </ng-container>    
-  <ng-container *ngIf="selectServerFormGroup.get('db').value=='other'">
+  }
+  @if (selectServerFormGroup.get('db').value=='other') {
     <ion-item>
       <small [innerHtml]="'select-server.please-enter-couchdb'|translate"></small>
     </ion-item>
     <ion-item>
-      <ion-input labelPlacement="floating" 
+      <ion-input labelPlacement="floating"
         style="font-size: smaller;" type="text" [maxlength]="E.max_len.url"
         formControlName="db_custom_server_url" required
         (ionInput)="set_db_custom_server_url()" debounce="100">
@@ -55,14 +59,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-input>
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_custom_server_url">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_custom_server_url').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_custom_server_url').dirty || selectServerFormGroup.get('db_custom_server_url').touched)" [innerHtml]="validation.message|translate"></div>
-      </ng-container>
+      @for (validation of validation_messages.db_custom_server_url; track validation) {
+        @if (selectServerFormGroup.get('db_custom_server_url').hasError(validation.type)
+          && (selectServerFormGroup.get('db_custom_server_url').dirty || selectServerFormGroup.get('db_custom_server_url').touched)) {
+          <div class="error-message" [innerHtml]="validation.message|translate"></div>
+        }
+      }
     </div>
     <ion-item>
-      <ion-input labelPlacement="floating" 
-        style="font-size: smaller;" 
+      <ion-input labelPlacement="floating"
+        style="font-size: smaller;"
         [type]="showing_db_custom_password?'text':'password'" [maxlength]="E.max_len.name"
         formControlName="db_custom_password" required
         clearOnEdit="false" clearInput="true"
@@ -73,13 +79,15 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
       </ion-input>
       <ion-button slot="end" style="padding-top: 10px;" fill="clear" color="primary" (click)="showing_db_custom_password=!showing_db_custom_password">
         <ion-icon tabindex="-1" [name]="showing_db_custom_password?'eye-off-outline':'eye-outline'"></ion-icon>&nbsp;<span [innerHtml]="(showing_db_custom_password?'hide':'show')|translate"></span>
-      </ion-button>      
+      </ion-button>
     </ion-item>
     <div class="validation-errors">
-      <ng-container *ngFor="let validation of validation_messages.db_custom_password">
-        <div class="error-message" *ngIf="selectServerFormGroup.get('db_custom_password').hasError(validation.type) 
-            && (selectServerFormGroup.get('db_custom_password').dirty || selectServerFormGroup.get('db_custom_password').touched)" [innerHtml]="validation.message|translate"></div>
-      </ng-container>
+      @for (validation of validation_messages.db_custom_password; track validation) {
+        @if (selectServerFormGroup.get('db_custom_password').hasError(validation.type)
+          && (selectServerFormGroup.get('db_custom_password').dirty || selectServerFormGroup.get('db_custom_password').touched)) {
+          <div class="error-message" [innerHtml]="validation.message|translate"></div>
+        }
+      }
     </div>
-  </ng-container>
+  }
 </form>

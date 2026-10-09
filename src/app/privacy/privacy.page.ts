@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 
 import { environment } from '../../environments/environment';
 
@@ -19,6 +19,7 @@ export class SafePipe implements PipeTransform {
   selector: 'app-privacy',
   templateUrl: './privacy.page.html',
   styleUrls: ['./privacy.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false,
 })
 export class PrivacyPage implements OnInit {
