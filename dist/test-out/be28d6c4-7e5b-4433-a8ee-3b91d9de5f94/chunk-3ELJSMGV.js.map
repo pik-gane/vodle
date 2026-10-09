@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "src/app/sharedcomponents/unique-form-validator.ts"
+  ],
+  "sourcesContent": [
+    "import {\n  AbstractControl,\n  ValidationErrors,\n  AsyncValidatorFn,\n} from \"@angular/forms\";\nimport { Observable, of } from \"rxjs\";\nimport { map, take } from \"rxjs/operators\";\n\n/** The option-name has to be unique */\n\nexport function unique_name_validator$(\n  value$: Observable<string[]>\n): AsyncValidatorFn {\n  return (control: AbstractControl): Observable<ValidationErrors | null> => {\n    if (!control.valueChanges || control.pristine) {\n      return of(null);\n    }\n\n    return value$.pipe(\n      map((names) => {\n        return names.includes(control.value) ? { not_unique: true } : null;\n      }),\n      take(1)\n    );\n  };\n}\n"
+  ],
+  "mappings": ";;;;;;;;;;;;AAUM,SAAU,uBACd,QAA4B;AAE5B,SAAO,CAAC,YAAiE;AACvE,QAAI,CAAC,QAAQ,gBAAgB,QAAQ,UAAU;AAC7C,aAAO,GAAG,IAAI;IAChB;AAEA,WAAO,OAAO,KACZ,IAAI,CAAC,UAAS;AACZ,aAAO,MAAM,SAAS,QAAQ,KAAK,IAAI,EAAE,YAAY,KAAI,IAAK;IAChE,CAAC,GACD,KAAK,CAAC,CAAC;EAEX;AACF;AApBA;;;AACA;;;",
+  "names": [],
+  "debugId": "b95c2b9e-4926-5ffe-b1fc-1cac7997ff69"
+}

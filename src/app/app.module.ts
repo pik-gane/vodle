@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { APP_INITIALIZER, NgModule } from '@angular/core';
+import { NgModule, inject, provideAppInitializer } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
 
@@ -85,12 +85,8 @@ export function configureLogging(loggingService: LoggingService): () => void {
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
         { provide: LocationStrategy, useClass: HashLocationStrategy },
         GlobalService,
-        {
-            deps: [LoggingService],
-            multi: true,
-            provide: APP_INITIALIZER,
-            useFactory: configureLogging
-        },
+        // APP_INITIALIZER is deprecated since Angular 19; this is its replacement
+        provideAppInitializer(() => configureLogging(inject(LoggingService))()),
         // HttpClientModule is deprecated as of Angular 18; this is its replacement
         provideHttpClient(withXhr(), withInterceptorsFromDi())
     ],

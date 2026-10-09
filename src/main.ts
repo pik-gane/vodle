@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { enableProdMode, provideZoneChangeDetection } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { platformBrowser } from '@angular/platform-browser';
 
 import { AppModule } from './app/app.module';
 import { environment } from './environments/environment';
@@ -36,6 +36,8 @@ if (environment.production) {
 }
 
 // zone-based change detection, which used to be the bootstrap's default and
-// is a provider since Angular 21 (its update wrote this line)
-platformBrowserDynamic().bootstrapModule(AppModule, {applicationProviders: [provideZoneChangeDetection()]})
+// is a provider since Angular 21 (its update wrote this line). platformBrowser,
+// not the deprecated platformBrowserDynamic: every build is ahead-of-time
+// compiled now (angular.json), so no compiler ships with the app.
+platformBrowser().bootstrapModule(AppModule, {applicationProviders: [provideZoneChangeDetection()]})
   .catch(err => console.log(err));

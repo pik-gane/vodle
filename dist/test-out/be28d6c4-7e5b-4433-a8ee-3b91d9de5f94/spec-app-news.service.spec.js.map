@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "sources": [
+    "src/app/news.service.spec.ts"
+  ],
+  "sourcesContent": [
+    "/*\n(C) Copyright 2015–2022 Potsdam Institute for Climate Impact Research (PIK), authors, and contributors, see AUTHORS file.\n\nThis file is part of vodle.\n\nvodle is free software: you can redistribute it and/or modify it under the \nterms of the GNU Affero General Public License as published by the Free \nSoftware Foundation, either version 3 of the License, or (at your option) \nany later version.\n\nvodle is distributed in the hope that it will be useful, but WITHOUT ANY \nWARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR \nA PARTICULAR PURPOSE. See the GNU Affero General Public License for more \ndetails.\n\nYou should have received a copy of the GNU Affero General Public License \nalong with vodle. If not, see <https://www.gnu.org/licenses/>. \n*/\n\nimport { TestBed } from '@angular/core/testing';\n\nimport { NewsService } from './news.service';\n\ndescribe('NewsService', () => {\n  let service: NewsService;\n\n  beforeEach(() => {\n    TestBed.configureTestingModule({});\n    service = TestBed.inject(NewsService);\n  });\n\n  it('should be created', () => {\n    expect(service).toBeTruthy();\n  });\n});\n"
+  ],
+  "mappings": ";;;;;;;;;;;;;;;;AAmBA;AAEA;AAEA,SAAS,eAAe,MAAK;AAC3B,MAAI;AAEJ,aAAW,MAAK;AACd,YAAQ,uBAAuB,CAAA,CAAE;AACjC,cAAU,QAAQ,OAAO,WAAW;EACtC,CAAC;AAED,KAAG,qBAAqB,MAAK;AAC3B,WAAO,OAAO,EAAE,WAAU;EAC5B,CAAC;AACH,CAAC;",
+  "names": [],
+  "debugId": "20d88c63-37b3-5846-9e9f-93beffe1c305"
+}
