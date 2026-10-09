@@ -1,4 +1,4 @@
-import * as PouchDB from 'pouchdb/dist/pouchdb';
+import PouchDB from 'pouchdb/dist/pouchdb';
 import * as CryptoES from 'crypto-es';
 import { DataService } from './data.service';
 import { CouchDBBackend } from './couchdb-backend';

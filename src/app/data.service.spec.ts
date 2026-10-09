@@ -25,7 +25,7 @@ import { IonicModule } from '@ionic/angular/lazy';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { provideTranslateService } from '@ngx-translate/core';
 import * as CryptoES from 'crypto-es';
-import * as PouchDB from 'pouchdb/dist/pouchdb';
+import PouchDB from 'pouchdb/dist/pouchdb';
 
 import { DataService } from './data.service';
 import { DelegationService } from './delegation.service';

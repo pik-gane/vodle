@@ -12,6 +12,7 @@
     "paths": {
       "src/*": ["./src/*"]
     },
+    "esModuleInterop": true,
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
     "declaration": false,
@@ -20,7 +21,6 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "es2020",
-    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "useDefineForClassFields": false
   },
