@@ -36,7 +36,14 @@ const STEP_TIMEOUT = 60000;
 // hundred state events in a burst, which is where Synapse starts throttling
 // (#327). 0 means an ordinary two-person poll.
 const SIMULATED = parseInt(process.env.VODLE_SIMULATED_VOTERS || '0', 10);
-const CONVERGE_TRIES = parseInt(process.env.VODLE_CONVERGE_TRIES || '30', 10);
+// How long both sides get to show the same voters (tries, two seconds apart).
+// The creator publishes the simulated voters' rooms in the background while
+// the newcomer joins and votes; since the guard bot makes the rooms (Track
+// E2) each one is a request, a room, an invitation and a join on the
+// homeserver, and the newcomer finds them in its fifteen-second discovery
+// and joins each -- 60 s was not always enough on a CI runner (run 167).
+// The time it took is in the report, so the window can be judged.
+const CONVERGE_TRIES = parseInt(process.env.VODLE_CONVERGE_TRIES || '60', 10);
 const stamp = Date.now();
 const EMAIL = `prodtest${stamp}@example.org`;
 const PASSWORD = 'ProdTest!' + stamp;
@@ -328,6 +335,7 @@ async function voters(p) {
     log('13. both sides should count the same voters');
     const expected = SIMULATED + 2;                 // the simulated ones, the creator, the newcomer
     let host_voters = null, seen_guest = guest_voters;
+    const converge_start = Date.now();
     for (let i = 0; i < CONVERGE_TRIES; i++) {
       host_voters = await voters(page);
       seen_guest = await voters(guest);
@@ -335,7 +343,9 @@ async function voters(p) {
       await new Promise(r => setTimeout(r, 2000));
     }
     guest_voters = seen_guest;
-    log('   creator sees:', host_voters, '| guest sees:', guest_voters, '| expected:', expected);
+    const converge_ms = Date.now() - converge_start;
+    log('   creator sees:', host_voters, '| guest sees:', guest_voters, '| expected:', expected,
+      '| after', converge_ms, 'ms of a', CONVERGE_TRIES * 2, 's window');
     await guest.screenshot({path: shot('-guest')});
     if (host_voters !== expected || guest_voters !== expected) {
       throw new Error('the two sides disagree or a vote is missing: creator ' + host_voters
@@ -478,7 +488,7 @@ async function voters(p) {
 
     await page.screenshot({path: shot(''), fullPage: false});
     log('RESULT: the flow completed');
-    report({ok: true, email: EMAIL, user_id, invite_link,
+    report({ok: true, email: EMAIL, user_id, invite_link, converge_ms,
       host_voters, guest_voters, reload, boots, returning_ms,
       diagnostics: diagnostics.slice(-12),
       console_errors: digest(console_errors), page_errors: digest(page_errors),
