@@ -3200,3 +3200,104 @@ describe("signing a poll account in waits out a rate limit (#327)", () => {
     });
   });
 });
+
+describe('MatrixService fetches what a cut-short sync left out of a poll room', () => {
+  // The app asks for one timeline event per room and sync (initialSyncLimit);
+  // a sync that brings more resets the room's live timeline to what it
+  // brought, and the SDK never fetches the rest. The reset is announced, and
+  // the gap is paginated back to the last event the handler had seen.
+  let service: any;
+  let listeners: Record<string, any[]>;
+  let timelineEvents: any[];
+  let pages: number;
+  let gap: any[];
+  let room: any;
+  const ev = (id: string, type: string, content: any = {}) =>
+    ({getId: () => id, getType: () => type, getContent: () => content, getSender: () => '@bob:example.org'});
+
+  beforeEach(() => {
+    const spy = jasmine.createSpyObj('Storage', ['get', 'set', 'remove']);
+    spy.get.and.returnValue(Promise.resolve(null));
+    spy.set.and.returnValue(Promise.resolve());
+    TestBed.configureTestingModule({providers: [MatrixService, {provide: Storage, useValue: spy}]});
+    service = TestBed.inject(MatrixService);
+    service.userId = '@alice:example.org';
+    listeners = {};
+    timelineEvents = [];
+    pages = 0;
+    gap = [];
+    const timeline = {getEvents: () => timelineEvents};
+    room = {roomId: '!poll:example.org', getLiveTimeline: () => timeline};
+    service.client = {
+      on: (name: string, fn: any) => { (listeners[name] ||= []).push(fn); },
+      removeListener: (name: string, fn: any) => { listeners[name] = (listeners[name] || []).filter(f => f !== fn); },
+      getRoom: () => room,
+      // a page of the room's past, newest first, added to the live timeline
+      // and handed to the Room.timeline listeners as the SDK does
+      paginateEventTimeline: async (tl: any, opts: any) => {
+        expect(tl).toBe(timeline);
+        expect(opts.backwards).toBeTrue();
+        pages++;
+        const fetched = gap.splice(0, 50);
+        timelineEvents.unshift(...fetched);
+        for (const e of fetched) { for (const fn of listeners['Room.timeline'] || []) { fn(e, room, true); } }
+        return fetched.length > 0;
+      },
+    };
+    spyOn<any>(service, 'getPollRoom').and.returnValue(Promise.resolve('!poll:example.org'));
+  });
+
+  const settle = () => new Promise(resolve => setTimeout(resolve, 20));
+
+  it('paginates back to the last event it had seen and runs the same handlers on what it fetches', async () => {
+    const announced = spyOn<any>(service, 'handleVoterAnnounce').and.returnValue(Promise.resolve());
+    const optioned = spyOn<any>(service, 'handleOptionEvent').and.returnValue(Promise.resolve());
+    await service.setupPollRoomHandlers('P1');
+    // a live event, seen by the handler
+    for (const fn of listeners['Room.timeline']) { fn(ev('$seen', 'm.room.vodle.poll.option', {option_id: 'o1'}), room, false); }
+    expect(optioned).toHaveBeenCalledTimes(1);
+    // the sync was cut short: two events it left out, then the one seen before
+    gap = [ev('$gap2', 'm.room.vodle.voter.announce', {voter_id: 'v9', voter_room_id: '!v9:example.org'}),
+           ev('$gap1', 'm.room.vodle.poll.option', {option_id: 'o2'}),
+           ev('$seen', 'm.room.vodle.poll.option', {option_id: 'o1'}),
+           ev('$older', 'm.room.message')];
+    for (const fn of listeners['Room.timelineReset']) { fn(room, {}, false); }
+    await settle();
+    expect(pages).withContext('the last seen event was in the first page').toBe(1);
+    expect(announced).toHaveBeenCalledTimes(1);
+    expect((announced.calls.argsFor(0)[1] as any).getId()).toBe('$gap2');
+    expect(optioned.calls.allArgs().map((args: any[]) => args[1].getId())).toEqual(['$seen', '$gap1', '$seen']);
+  });
+
+  it('fetches page after page until the seen event turns up, and gives up after the limit', async () => {
+    await service.setupPollRoomHandlers('P1');
+    for (const fn of listeners['Room.timeline']) { fn(ev('$seen', 'm.room.message'), room, false); }
+    gap = Array.from({length: 120}, (_, i) => ev('$g' + i, 'm.room.message'));
+    gap.push(ev('$seen', 'm.room.message'));
+    for (const fn of listeners['Room.timelineReset']) { fn(room, {}, false); }
+    await settle();
+    expect(pages).withContext('50 + 50 + the rest with the seen event').toBe(3);
+    // a gap longer than the limit: the periodic readers take over (a reset
+    // starts a fresh live timeline, so the events fetched so far are gone)
+    pages = 0;
+    timelineEvents.length = 0;
+    gap = Array.from({length: 50 * (MatrixService.TIMELINE_GAP_MAX_PAGES + 2)}, (_, i) => ev('$h' + i, 'm.room.message'));
+    for (const fn of listeners['Room.timelineReset']) { fn(room, {}, false); }
+    await settle();
+    expect(pages).toBe(MatrixService.TIMELINE_GAP_MAX_PAGES);
+  });
+
+  it('leaves other rooms alone, fetches one page when nothing was seen yet, and is torn down with the other handlers', async () => {
+    await service.setupPollRoomHandlers('P1');
+    for (const fn of listeners['Room.timelineReset']) { fn({roomId: '!other:example.org', getLiveTimeline: () => null}, {}, false); }
+    await settle();
+    expect(pages).toBe(0);
+    gap = [ev('$a', 'm.room.message')];
+    for (const fn of listeners['Room.timelineReset']) { fn(room, {}, false); }
+    await settle();
+    expect(pages).withContext('nothing seen yet: one page, which covers a short gap').toBe(1);
+    service.teardownPollEventHandlers('P1');
+    expect(listeners['Room.timelineReset']).toEqual([]);
+    expect(listeners['Room.timeline']).toEqual([]);
+  });
+});

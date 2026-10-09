@@ -5612,8 +5612,12 @@ export class MatrixService {
     
     // Listen for timeline events in the poll room
     // (delegation requests/responses AND voter room announcements)
-    const timelineHandler = (event: any, room: any) => {
+    let lastLiveEventId: string | null = null;
+    const timelineHandler = (event: any, room: any, toStartOfTimeline?: boolean) => {
       if (room.roomId !== roomId) return;
+      if (!toStartOfTimeline && typeof event.getId === 'function') {
+        lastLiveEventId = event.getId() || lastLiveEventId;   // where a backfill may stop (below)
+      }
       trace("[timelineHandler] poll room event:", event.getType());
       
       const eventType = event.getType();
@@ -5640,6 +5644,27 @@ export class MatrixService {
     };
     (this.client as any).on("Room.timeline", timelineHandler);
     handlers.push({ event: "Room.timeline", handler: timelineHandler });
+    
+    // A sync that brings the room more timeline events than the one per
+    // room this client asks for (initialSyncLimit, startClient) is cut
+    // short: the SDK resets the room's live timeline to what the sync
+    // brought and never fetches the rest, so an option or an announcement
+    // that landed in the same moment as another event would never reach the
+    // handler above (the periodic discovery would find the announcement
+    // within 15 s, the option waited for the poll's next load). The SDK
+    // announces the reset, and the gap is fetched: the new live timeline is
+    // paginated backwards until the last event the handler had seen, and
+    // every event fetched goes through the handler as if it had arrived
+    // live -- each handler takes an event it knows a second time. The
+    // request channel to the guard bot and the ratings do not depend on
+    // this: they are state events, which a sync delivers in full.
+    const resetHandler = (room: any) => {
+      if (room?.roomId !== roomId) return;
+      this.backfillTimelineGap(pollId, room, lastLiveEventId).catch(error =>
+        this.logger?.error("MatrixService.backfillTimelineGap failed", pollId, error));
+    };
+    (this.client as any).on("Room.timelineReset", resetHandler);
+    handlers.push({ event: "Room.timelineReset", handler: resetHandler });
     
     // Listen for state events in the poll room (metadata updates)
     const stateMetaHandler = (event: any, state: any) => {
@@ -5690,6 +5715,38 @@ export class MatrixService {
     
     this.logger?.info("Event handlers set up for poll", pollId);
     this.logger?.exit("MatrixService.setupPollRoomHandlers");
+  }
+
+  /** how many pages of 50 events of the gap behind a cut-short sync are
+   *  fetched at most; a longer gap (a device offline for long) is left to
+   *  the readers that walk the whole timeline (discoverVoterRooms every
+   *  15 s, ensureOptionCache at the poll's load) */
+  static readonly TIMELINE_GAP_MAX_PAGES = 10;
+
+  /**
+   * Fetch what a cut-short sync left out of a poll room's timeline (see
+   * setupPollRoomHandlers): paginate the live timeline backwards, from the
+   * point the sync resumed at, until the last event seen before the reset
+   * is among the events fetched, the room's start is reached, or
+   * TIMELINE_GAP_MAX_PAGES pages were fetched. The SDK hands every fetched
+   * event to the Room.timeline listeners.
+   */
+  private async backfillTimelineGap(pollId: string, room: any, lastSeen: string | null): Promise<void> {
+    const timeline = room.getLiveTimeline?.();
+    if (!timeline || !this.client) {
+      return;
+    }
+    for (let page = 1; page <= MatrixService.TIMELINE_GAP_MAX_PAGES; page++) {
+      const more = await this.retryOnRateLimit(() =>
+        (this.client as any).paginateEventTimeline(timeline, {backwards: true, limit: 50}));
+      const events: any[] = timeline.getEvents?.() || [];
+      if (!lastSeen || events.some((e: any) => e.getId?.() === lastSeen) || !more) {
+        console.log("[backfillTimelineGap]", pollId, room.roomId, "fetched the gap in", page, "page(s)");
+        return;
+      }
+    }
+    this.logger?.warn("MatrixService.backfillTimelineGap: the gap is longer than " + MatrixService.TIMELINE_GAP_MAX_PAGES
+      + " pages; the periodic readers find the rest", pollId, room.roomId);
   }
 
   /**
