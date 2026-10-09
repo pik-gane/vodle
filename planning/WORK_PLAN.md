@@ -301,6 +301,16 @@ right after the last spec, so karma's context is being unloaded while the
 `complete` message never arrives; the cause is not found. Not a test failure;
 a two-minute tax, and an item of its own.
 
+A second one, from the click-through (2026-10-09, run 157, twice in a row):
+`Cannot read properties of null (reading 'focus')` at the e-mail field,
+130 ms after the "no" of the first screen. Ionic loads each component's code
+lazily, and an `ion-input` whose code has not run yet already has its box
+(`visibility: hidden`) but no native `<input>`; the script's `visible()` saw
+the box. Since then `visible()`, `click()` and `type_into()` in
+`scripts/production-clickthrough.js` take an Ionic element for visible only
+once it carries the `hydrated` class, and `type_into()` waits for the native
+input. Anything new that drives the production build should do the same.
+
 ### The hops after the merge (2026-10-08, branch `claude/to-current-versions`)
 
 Each hop is a commit of what `ng update` did and a commit of what vodle had to
