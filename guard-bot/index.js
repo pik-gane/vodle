@@ -292,7 +292,7 @@ async function handleRequest(client, room, event) {
   let result;
   if (!request) {
     stats.requestsRefused++;
-    console.log(`[guard-bot] Refusing a malformed request from ${sender} in ${room.roomId}`);
+    console.log(`[guard-bot] Refusing a malformed request from ${sender} in ${room.roomId}: ${describeRequest(content)}`);
     if (typeof content?.request_id !== "string" || content.request_id.length > 64) return;
     result = { ok: false, error: "malformed request" };
     await respond(client, room.roomId, { request_id: content.request_id }, result);
@@ -322,6 +322,17 @@ async function handleRequest(client, room, event) {
   }
   if (result.ok) stats.requestsAnswered++; else stats.requestsRefused++;
   await respond(client, room.roomId, request, result);
+}
+
+/** what a request said it was, for the log of a refusal: its kind and the
+ *  ids it named (no password or title travels in a request) */
+function describeRequest(content) {
+  if (!content || typeof content !== "object") return `content ${JSON.stringify(content)}`;
+  const parts = [`version ${JSON.stringify(content.version)}`, `kind ${JSON.stringify(content.kind)}`];
+  for (const key of ["poll_id", "voter_id"]) {
+    if (key in content) parts.push(`${key} ${JSON.stringify(content[key]).slice(0, 80)}`);
+  }
+  return parts.join(", ");
 }
 
 async function respond(client, roomId, request, result) {
@@ -472,7 +483,10 @@ function pollIdOf(room) {
   const local = (room.getCanonicalAlias() || "").slice(1).split(":")[0];
   if (local.startsWith("vodle_poll_")) return local.slice("vodle_poll_".length);
   if (local.startsWith("vodle_voter_")) {
-    // #vodle_voter_<pid>_<encoded voter id>: poll ids carry no underscore, the encoded id may
+    // #vodle_voter_<pid>_<encoded voter id>: both halves may carry an
+    // underscore (a test poll's "TEST_" prefix; base64url in the encoding),
+    // so this is a guess from the first one -- the deadline event above is
+    // the source that counts, and a voter room without one is not closed
     const rest = local.slice("vodle_voter_".length);
     return rest.slice(0, rest.indexOf("_")) || null;
   }

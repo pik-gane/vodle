@@ -90,9 +90,12 @@ const LOCKED_EVENT_TYPES = [
 ];
 
 const REQUEST_ID = /^[A-Za-z0-9_-]{1,64}$/;
-// poll ids carry no underscore (the voter-room alias uses it as a separator)
-// and no character an alias localpart could not hold
-const POLL_ID = /^[A-Za-z0-9.-]{1,64}$/;
+// a poll id: the app's are hex, with a "TEST_" prefix for a test poll (the
+// one kind that carries simulated voters); no character an alias localpart
+// could not hold. Until 2026-10-09 the pattern refused the underscore, so
+// every test poll -- the production click-through's among them -- was
+// answered "malformed" and fell back to the app's own version-11 rooms.
+const POLL_ID = /^[A-Za-z0-9._-]{1,64}$/;
 const JOIN_KEY = /^[0-9a-f]{64}$/;
 // a vodle voter id: a short hex vid, "simulated<n>", or -- in the test code
 // -- a Matrix user id; printable ASCII, which the alias then encodes
