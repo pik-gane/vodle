@@ -25,7 +25,7 @@ import { TranslateService } from '@ngx-translate/core';
 
 import { Storage } from '@ionic/storage-angular';
 import { Logger, LoggingService } from "ionic-logging-service";
-import { AlertController } from '@ionic/angular/lazy';
+import { AlertController } from '@ionic/angular';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 

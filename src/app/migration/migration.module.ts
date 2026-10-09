@@ -20,7 +20,26 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonBadge,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonMenuButton,
+  IonNote,
+  IonThumbnail,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { MigrationPageRoutingModule } from './migration-routing.module';
@@ -31,7 +50,24 @@ import { MigrationPage } from './migration.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonBadge,
+    IonButton,
+    IonButtons,
+    IonCard,
+    IonCardContent,
+    IonCardHeader,
+    IonCardTitle,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonMenuButton,
+    IonNote,
+    IonThumbnail,
+    IonTitle,
+    IonToolbar,
     MigrationPageRoutingModule,
     TranslatePipe
   ],

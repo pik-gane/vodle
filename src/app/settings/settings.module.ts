@@ -20,7 +20,27 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCheckbox,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonMenuButton,
+  IonRange,
+  IonRow,
+  IonSelect,
+  IonSelectOption,
+  IonThumbnail,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { SettingsPageRoutingModule } from './settings-routing.module';
@@ -32,7 +52,25 @@ import { SettingsPage } from './settings.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCheckbox,
+    IonCol,
+    IonContent,
+    IonGrid,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonMenuButton,
+    IonRange,
+    IonRow,
+    IonSelect,
+    IonSelectOption,
+    IonThumbnail,
+    IonTitle,
+    IonToolbar,
     ReactiveFormsModule,
     SettingsPageRoutingModule,
     SharedcomponentsModule,

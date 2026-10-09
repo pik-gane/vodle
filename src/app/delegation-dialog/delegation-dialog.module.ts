@@ -22,7 +22,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonCol,
+  IonContent,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonList,
+  IonRange,
+  IonSelect,
+  IonSelectOption
+} from '@ionic/angular';
 
 import { DelegationDialogPageRoutingModule } from './delegation-dialog-routing.module';
 
@@ -33,7 +44,16 @@ export { DelegationDialogPage } from './delegation-dialog.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonCol,
+    IonContent,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonList,
+    IonRange,
+    IonSelect,
+    IonSelectOption,
     ReactiveFormsModule,
     DelegationDialogPageRoutingModule,
     TranslatePipe

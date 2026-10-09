@@ -18,7 +18,6 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular/lazy';
 
 import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
 

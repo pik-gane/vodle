@@ -18,12 +18,12 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular/lazy';
 import { FormsModule } from '@angular/forms';
 
 import { MigrationPage } from './migration.page';
 import { InMemoryBackend } from '../in-memory-backend';
 import { DataAdapter } from '../data-adapter.service';
+import { VodleIonicTestingModule } from '../testing/vodle-testing';
 
 /**
  * Mock DataAdapter that returns null for both services
@@ -43,7 +43,7 @@ describe('MigrationPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [MigrationPage],
-      imports: [IonicModule.forRoot(), FormsModule],
+      imports: [VodleIonicTestingModule, FormsModule],
       providers: [
         { provide: DataAdapter, useClass: MockDataAdapter }
       ]

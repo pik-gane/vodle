@@ -22,7 +22,27 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonDatetime,
+  IonDatetimeButton,
+  IonFabButton,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonMenuButton,
+  IonModal,
+  IonSelect,
+  IonSelectOption,
+  IonTextarea,
+  IonTitle,
+  IonToggle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { DraftpollPageRoutingModule } from './draftpoll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
@@ -34,7 +54,25 @@ export { DraftpollPage } from './draftpoll.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonContent,
+    IonDatetime,
+    IonDatetimeButton,
+    IonFabButton,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonMenuButton,
+    IonModal,
+    IonSelect,
+    IonSelectOption,
+    IonTextarea,
+    IonTitle,
+    IonToggle,
+    IonToolbar,
     ReactiveFormsModule,
     DraftpollPageRoutingModule,
     SharedcomponentsModule,

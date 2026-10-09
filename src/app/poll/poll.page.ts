@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { Component, OnInit, ViewChild, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from "@angular/router";
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, IonContent, IonRouterOutlet, PopoverController, AlertController, ModalController } from '@ionic/angular/lazy'; 
+import { LoadingController, IonContent, IonRouterOutlet, PopoverController, AlertController, ModalController } from '@ionic/angular'; 
 
 import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";

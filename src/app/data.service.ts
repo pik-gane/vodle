@@ -27,7 +27,7 @@ TODO:
 import { Injectable, Inject, OnDestroy, DOCUMENT } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { LoadingController, AlertController } from '@ionic/angular/lazy';
+import { LoadingController, AlertController } from '@ionic/angular';
 import { Storage } from '@ionic/storage-angular';
 
 // rxjs 7 deprecates toPromise(); firstValueFrom is its replacement for a

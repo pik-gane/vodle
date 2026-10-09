@@ -21,7 +21,7 @@ import { Component, OnInit, ViewChild, ViewChildren, QueryList, ChangeDetectionS
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 
-import { IonInput, IonSelect } from '@ionic/angular/lazy';
+import { IonInput, IonSelect } from '@ionic/angular';
 
 import { GlobalService } from "../global.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';

@@ -22,7 +22,23 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCheckbox,
+  IonCol,
+  IonContent,
+  IonFooter,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonMenuButton,
+  IonRouterLink,
+  IonSpinner,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { DelrespondPageRoutingModule } from './delrespond-routing.module';
 
@@ -32,7 +48,21 @@ import { DelrespondPage } from './delrespond.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCheckbox,
+    IonCol,
+    IonContent,
+    IonFooter,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonMenuButton,
+    IonRouterLink,
+    IonSpinner,
+    IonTitle,
+    IonToolbar,
     DelrespondPageRoutingModule,
     TranslatePipe
   ],

@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import { IonButton, IonButtons, IonCol, IonContent, IonIcon, IonItem, IonLabel } from '@ionic/angular';
 
 import { ExplainApprovalPageRoutingModule } from './explain-approval-routing.module';
 
@@ -33,7 +33,13 @@ export { ExplainApprovalPage } from './explain-approval.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCol,
+    IonContent,
+    IonIcon,
+    IonItem,
+    IonLabel,
     ExplainApprovalPageRoutingModule,
     TranslatePipe
   ],

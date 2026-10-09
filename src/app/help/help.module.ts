@@ -22,7 +22,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonMenuButton,
+  IonRouterLinkWithHref,
+  IonThumbnail,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { HelpPageRoutingModule } from './help-routing.module';
 
@@ -32,7 +45,18 @@ import { HelpPage } from './help.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonMenuButton,
+    IonRouterLinkWithHref,
+    IonThumbnail,
+    IonTitle,
+    IonToolbar,
     HelpPageRoutingModule,
     TranslatePipe
   ],

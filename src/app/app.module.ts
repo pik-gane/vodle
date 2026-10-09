@@ -21,7 +21,15 @@ import { NgModule, inject, provideAppInitializer } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
 
-import { IonicModule, IonicRouteStrategy } from '@ionic/angular/lazy';
+// Ionic's standalone build (Ionic 9 deprecates IonicModule): every module
+// imports the Ionic components its templates use, and the configuration
+// that IonicModule.forRoot took is provideIonicAngular's below
+import {
+  IonicRouteStrategy, provideIonicAngular,
+  IonApp, IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuToggle, IonRouterLink, IonRouterOutlet, IonSplitPane, IonTitle, IonToolbar
+} from '@ionic/angular';
+// the icons the templates name, registered once for the whole app
+import './icons';
 
 import { HttpClient, provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
 import { TranslatePipe, TranslateLoader, provideTranslateService } from '@ngx-translate/core';
@@ -52,19 +60,20 @@ export function configureLogging(loggingService: LoggingService): () => void {
     declarations: [AppComponent],
     imports: [
         BrowserModule,
-        IonicModule.forRoot({
-            // vodle's alert and toast messages are HTML -- line breaks and
-            // emphasis in the translations. Ionic turned that off by default,
-            // which rendered the tags as literal text. Turning it back on is
-            // safe here and safer than Ionic 6 was: with it on, Ionic runs the
-            // message through its sanitizer (script/style/iframe/meta/link/
-            // object/embed dropped, every attribute but class/id/href/src/name/
-            // slot dropped, so no on* handlers), whereas Ionic 6 rendered it
-            // raw. Values interpolated INTO a translation are escaped at the
-            // call site -- see escape_html in global.service.ts -- because
-            // href and src do survive sanitizing.
-            innerHTMLTemplatesEnabled: true,
-        }),
+        IonApp,
+        IonContent,
+        IonHeader,
+        IonIcon,
+        IonItem,
+        IonLabel,
+        IonList,
+        IonMenu,
+        IonMenuToggle,
+        IonRouterLink,
+        IonRouterOutlet,
+        IonSplitPane,
+        IonTitle,
+        IonToolbar,
         IonicStorageModule.forRoot(),
         AppRoutingModule,
         TranslatePipe,
@@ -81,6 +90,19 @@ export function configureLogging(loggingService: LoggingService): () => void {
                 useFactory: (createTranslateLoader),
                 deps: [HttpClient]
             }
+        }),
+        provideIonicAngular({
+                // vodle's alert and toast messages are HTML -- line breaks and
+                // emphasis in the translations. Ionic turned that off by default,
+                // which rendered the tags as literal text. Turning it back on is
+                // safe here and safer than Ionic 6 was: with it on, Ionic runs the
+                // message through its sanitizer (script/style/iframe/meta/link/
+                // object/embed dropped, every attribute but class/id/href/src/name/
+                // slot dropped, so no on* handlers), whereas Ionic 6 rendered it
+                // raw. Values interpolated INTO a translation are escaped at the
+                // call site -- see escape_html in global.service.ts -- because
+                // href and src do survive sanitizing.
+            innerHTMLTemplatesEnabled: true,
         }),
         { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
         { provide: LocationStrategy, useClass: HashLocationStrategy },

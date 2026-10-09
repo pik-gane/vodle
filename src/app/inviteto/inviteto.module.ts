@@ -22,7 +22,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonList,
+  IonMenuButton,
+  IonRouterLink,
+  IonText,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { InvitetoPageRoutingModule } from './inviteto-routing.module';
 
@@ -32,7 +46,19 @@ import { InvitetoPage } from './inviteto.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCol,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonList,
+    IonMenuButton,
+    IonRouterLink,
+    IonText,
+    IonTitle,
+    IonToolbar,
     InvitetoPageRoutingModule,
     TranslatePipe
   ],

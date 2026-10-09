@@ -344,6 +344,7 @@ throughout), a plain `npm ci`, and a CI run against the real homeservers.
 | pouchdb 7 → 9 (`d952966`), and the minors the ranges allowed (`0d4d102`: d3 7.9, globalthis 1.0.4) | `pouchdb/dist/pouchdb` is still the browser bundle and still what the package's `browser` field names; the five import sites are unchanged, as is the API vodle uses. The CouchDB two-client and migration specs run in CI only. `0d4d102`'s message counts sass 1.105 among the minors it moved; it did not move — `@angular/build` 22.2.2, which `@angular-devkit/build-angular` carries, pins sass to exactly 1.104.1, the lockfile keeps that single copy, and `npm outdated` will keep reporting 1.105 as wanted. CI run 145. |
 | wdio 8.3 → 8.46, within the pinned major | `npm update` of the four `@wdio/*` packages. webdriverio 8.46 no longer depends on the `devtools` package that the `automationProtocol: 'devtools'` of `test/wdio.conf.js` needs (the run failed with "Automation protocol package is not installed!"), so `devtools` 8.46 is a devDependency of its own now; it is also where the click-through's `puppeteer-core` comes from. The two smoke specs pass. CI run 146. |
 | Angular's application builder and karma builder (branch `claude/application-builder`) | `ng update @angular/cli --migrate-only --name use-application-builder`: `@angular/build:application` (esbuild) builds the app, `@angular/build:karma` runs the suite, `@angular/build` replaces `@angular-devkit/build-angular` and the webpack half of the lockfile goes. Output stays in `docs/` (`outputPath: {base: "docs", browser: ""}`; the migration's default is `docs/browser/`). One code change: `pouchdb/dist/pouchdb` is UMD, and esbuild hands a namespace import of it an object whose `default` is the constructor — the built app died at boot with "ss is not a constructor" (found by loading it headless) until the five import sites became default imports. The test target's `polyfills` had to become an array by hand. Build 25 s instead of about 60, initial bundle 2.56 MB from 2.78; the `~` prefixes in `variables.scss` went, `esModuleInterop` replaces `allowSyntheticDefaultImports`. With the webpack half of the lockfile gone, the audit's remaining unfixable entries drop from 27 to 23 (still only braces and extract-zip). The vitest builder (`migrate-karma-to-vitest`) remains the separate, larger decision. |
+| Ionic's standalone build (branch `claude/ionic-standalone`) | Ionic 9 deprecates `IonicModule`, the lazy-loaded components build, and Ionic 10 removes it; the standalone build serves an NgModule app too. Generated from the templates: each of the 27 modules imports the Ionic components its templates use (46 distinct elements, `IonRouterLink` where an Ionic element carries a `routerLink`); `provideIonicAngular({innerHTMLTemplatesEnabled})` replaces `IonicModule.forRoot`; every import moves from `@ionic/angular/lazy` to `@ionic/angular`; `src/app/icons.ts` registers the 63 icons the templates and menus name (the standalone build loads none by name; a missing one still falls back to the copied `./svg/`). The specs' shared helper gained `VodleIonicTestingModule`. Verified by sixteen pixel-identical screenshots against the lazy build (login's three steps, about, help, privacy, imprint, the poll list; light and dark), the suite, the smoke specs and the click-through. The price: the initial bundle 2.57 → 3.29 MB raw, 614 → 713 kB transfer, since every Ionic component the app uses now ships with the initial chunk where the lazy build fetched them one by one on first use; later pages fetch nothing for Ionic. |
 
 **Still behind** after these hops, each on purpose: `@wdio/*` 8 → 10
 (pinned to 8, see `test/wdio.conf.js`: the devtools automation protocol it
@@ -355,23 +356,34 @@ and two registry-view quirks: the Angular packages with a "latest" of 21.2
 (`npm view @angular/core dist-tags` says `latest: 22.2.2`), and `devtools`
 8.46 against a "latest" of 8.42, where that package's tag points.
 
-**Deprecations now pending**, each a decision of its own and none of them a
-compiler update: the vitest test builder (`migrate-karma-to-vitest`), now
-that the webpack builders are gone and karma itself is in maintenance;
-`IonicModule.forRoot` → `provideIonicAngular()` (Ionic 9 warns about it on
-every test run) — **not a drop-in for this app**: the `provideIonicAngular`
-of `@ionic/angular/standalone` initialises Ionic's custom-elements build,
-while the module-based app runs the lazy loader build (`@ionic/angular/lazy`
-has no such provider), so taking the warning away means the standalone
-migration — the components each template uses imported one by one in 26
-modules, and the icons registered by hand; `strict` TypeScript; OnPush as the
-default strategy, component by component. Done on 2026-10-09 (branch
-`claude/deprecations`): `<ion-img>` → `<img loading="lazy">` for the ten
-top-right icons, `APP_INITIALIZER` → `provideAppInitializer`, and
-`platformBrowserDynamic` → `platformBrowser` with every build compiled
-ahead of time (the development build was JIT, `aot: false`) and the tests on
-`platformBrowserTesting`; `@angular/platform-browser-dynamic` is no longer a
-dependency.
+**Deprecations**, each a decision of its own and none of them a compiler
+update. Done on 2026-10-09 (branch `claude/deprecations`): `<ion-img>` →
+`<img loading="lazy">` for the ten top-right icons, `APP_INITIALIZER` →
+`provideAppInitializer`, and `platformBrowserDynamic` → `platformBrowser`
+with every build compiled ahead of time (the development build was JIT,
+`aot: false`) and the tests on `platformBrowserTesting`;
+`@angular/platform-browser-dynamic` is no longer a dependency. Done the
+same day (branch `claude/ionic-standalone`): `IonicModule.forRoot` →
+`provideIonicAngular()`, the standalone build, which serves an NgModule app
+too — the row above says what it took and what it costs. **Decided by
+measurement and deferred**: the vitest test builder. Angular 22's
+`@angular/build:karma` is not deprecated (no warning on any run; the
+`unit-test` builder offers `runner: karma` as well), karma itself is
+unmaintained upstream, and the suite takes 46 s now. The
+`refactor-jasmine-vitest` schematic on a worktree of main: 50 spec files
+scanned, 48 rewritten, 8 TODOs left (5 runtime `pending()` calls in the
+real-server specs, which become `ctx.skip()`; 3 `expectAsync(…).withContext`
+in the two-client spec), 28 files with 2200 substantive lines changed once
+whitespace is ignored. What the schematic does not do is the harness: the
+`json-result` reporter and `VODLE_PERF` collection of `karma.conf.js` and
+`scripts/check-test-results.js --no-skips` against vitest's reporter
+output, `src/test.ts` against the builder's own setup, a browser provider
+(`@vitest/browser` with playwright) in place of karma-chrome-launcher, and
+the real-server specs, which share two homeservers and must not run as
+parallel files. A day's work with its risk in CI, for a runner change the
+compiler does not ask for; it waits for karma to break or Angular to
+deprecate its builder. Still pending: `strict` TypeScript; OnPush as the
+default strategy, component by component.
 
 ### The dependency audit (2026-10-08, branch `claude/dependency-audit`)
 

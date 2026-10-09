@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import { IonButton, IonContent, IonIcon, IonItem, IonSelect, IonSelectOption } from '@ionic/angular';
 
 import { DraftpollKebapPageRoutingModule } from './draftpoll-kebap-routing.module';
 
@@ -33,7 +33,12 @@ export { DraftpollKebapPage } from './draftpoll-kebap.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonContent,
+    IonIcon,
+    IonItem,
+    IonSelect,
+    IonSelectOption,
     DraftpollKebapPageRoutingModule,
     TranslatePipe
   ],

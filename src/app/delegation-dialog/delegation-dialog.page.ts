@@ -19,7 +19,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import { Component, OnInit, Input, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Validators, UntypedFormBuilder, UntypedFormGroup, UntypedFormControl, ValidationErrors, AbstractControl, Form } from '@angular/forms';
-import { IonInput, PopoverController } from '@ionic/angular/lazy';
+import { IonInput, PopoverController } from '@ionic/angular';
 import { TranslateService } from '@ngx-translate/core';
 
 import { Capacitor } from '@capacitor/core';
