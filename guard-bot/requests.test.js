@@ -20,6 +20,9 @@ test("parseRequest accepts a well-formed ping, create_poll and create_voter_room
   assert.deepEqual(parseRequest({ version: 1, request_id: "r1", kind: "ping" }), { request_id: "r1", kind: "ping" });
   assert.deepEqual(parseRequest({ version: 1, request_id: "r-2_x", kind: "create_poll", poll_id: "P1", join_key: KEY }),
     { request_id: "r-2_x", kind: "create_poll", poll_id: "P1", join_key: KEY });
+  // a test poll -- the one kind with simulated voters -- is "TEST_" and hex; the production click-through publishes one
+  assert.equal(parseRequest({ version: 1, request_id: "r7", kind: "create_poll", poll_id: "TEST_17f53eb7", join_key: KEY }).poll_id, "TEST_17f53eb7");
+  assert.equal(parseRequest({ version: 1, request_id: "r8", kind: "create_voter_room", poll_id: "TEST_17f53eb7", voter_id: "simulated0" }).poll_id, "TEST_17f53eb7");
   // a poll without a password (test code): no join key, a public room
   assert.deepEqual(parseRequest({ version: 1, request_id: "r3", kind: "create_poll", poll_id: "abc" }),
     { request_id: "r3", kind: "create_poll", poll_id: "abc", join_key: null });
@@ -35,7 +38,7 @@ test("parseRequest accepts a well-formed ping, create_poll and create_voter_room
     { version: 1, request_id: "r1", kind: "create_voter_room", poll_id: "P1", voter_id: "" },
     { version: 1, request_id: "r1", kind: "create_voter_room", poll_id: "P1", voter_id: "a b" },    // a space
     { version: 1, request_id: "r1", kind: "create_voter_room", poll_id: "P1", voter_id: "v".repeat(129) },
-    { version: 1, request_id: "r1", kind: "create_voter_room", poll_id: "a_b", voter_id: "a175" },  // the alias separator
+    { version: 1, request_id: "r1", kind: "create_voter_room", poll_id: "a b", voter_id: "a175" },  // a space
     { version: 1, request_id: "r1", kind: "create_voter_room", voter_id: "a175" },                  // no poll id
     { request_id: "r1", kind: "ping" },                                   // no version
     { version: 2, request_id: "r1", kind: "ping" },                       // unknown version
@@ -44,7 +47,6 @@ test("parseRequest accepts a well-formed ping, create_poll and create_voter_room
     { version: 1, request_id: "x".repeat(65), kind: "ping" },
     { version: 1, request_id: "r1", kind: "lock_poll" },                  // unknown kind
     { version: 1, request_id: "r1", kind: "create_poll" },                // no poll id
-    { version: 1, request_id: "r1", kind: "create_poll", poll_id: "a_b" },     // underscore: the voter alias separator
     { version: 1, request_id: "r1", kind: "create_poll", poll_id: "a:b" },
     { version: 1, request_id: "r1", kind: "create_poll", poll_id: "P1", join_key: "abc" },
     { version: 1, request_id: "r1", kind: "create_poll", poll_id: "P1", join_key: KEY.toUpperCase() },
