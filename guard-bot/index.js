@@ -41,7 +41,7 @@ import {
   REQUEST_TYPE, RESPONSE_TYPE, REQUEST_ROOM_ALIAS_PREFIX, ROOM_VERSION, DEADLINE_TYPE,
   parseRequest, pollRoomCreateOptions, pollRoomAliasLocalpart, voterRoomCreateOptions, voterRoomAliasLocalpart,
   isLocked, lockedPowerLevels, responseFor,
-  isRequestId, unansweredRequests,
+  isRequestId, unansweredRequests, isExpired, aliasCandidates, REQUEST_MAX_AGE_MS,
 } from "./requests.js";
 
 // Configuration from environment variables
@@ -314,6 +314,13 @@ async function handleRequest(client, room, event) {
     await respond(client, room.roomId, request, { ok: false, error: "only the room's creator asks here" });
     return;
   }
+  if (isExpired(event.getTs())) {
+    // the app has given up on it and made its own room (REQUEST_MAX_AGE_MS)
+    stats.requestsRefused++;
+    console.log(`[guard-bot] Refusing the ${request.kind} request ${requestId} of ${sender}: made ${Math.round((Date.now() - event.getTs()) / 1000)} s ago`);
+    await respond(client, room.roomId, request, { ok: false, error: `not answered within ${REQUEST_MAX_AGE_MS / 1000} s` });
+    return;
+  }
   try {
     switch (request.kind) {
       case "ping":
@@ -384,8 +391,7 @@ function answerPendingRequests(client) {
  * the requester is not in the room.
  */
 async function createPollRoomOnRequest(client, request, requester) {
-  const alias = `#${pollRoomAliasLocalpart(request.poll_id)}:${serverNameOf(client.getUserId())}`;
-  const existing = await existingRoomFor(client, alias, requester);
+  const existing = await existingRoomFor(client, pollRoomAliasLocalpart(request.poll_id), requester);
   if (existing) {
     if (existing.ok) console.log(`[guard-bot] Poll room ${existing.room_id} for poll ${request.poll_id} exists already; told ${requester} so`);
     return existing;
@@ -412,8 +418,7 @@ async function createVoterRoomOnRequest(client, request, requester) {
   if (!(await isJoinedMember(client, pollRoom, requester))) {
     return { ok: false, error: `${requester} is not a member of the poll room of ${request.poll_id}` };
   }
-  const alias = `#${voterRoomAliasLocalpart(request.poll_id, request.voter_id)}:${serverNameOf(client.getUserId())}`;
-  const existing = await existingRoomFor(client, alias, requester);
+  const existing = await existingRoomFor(client, voterRoomAliasLocalpart(request.poll_id, request.voter_id), requester);
   if (existing) {
     if (existing.ok) console.log(`[guard-bot] Voter room ${existing.room_id} of ${request.voter_id} in poll ${request.poll_id} exists already; told ${requester} so`);
     return existing;
@@ -434,23 +439,27 @@ async function createVoterRoomOnRequest(client, request, requester) {
  * retry, or a request answered before this bot restarted), {ok: false,
  * error} if it is somebody else's; null when the alias is free.
  */
-async function existingRoomFor(client, alias, requester) {
-  let roomId = null;
-  try {
-    roomId = (await client.getRoomIdForAlias(alias)).room_id;
-  } catch (err) {
-    // no such alias: the usual case
+async function existingRoomFor(client, localpart, requester) {
+  // on this bot's server, and on the requester's where that is another: the
+  // app makes a room of its own there once it has given up waiting
+  for (const alias of aliasCandidates(localpart, client.getUserId(), requester)) {
+    let roomId = null;
+    try {
+      roomId = (await client.getRoomIdForAlias(alias)).room_id;
+    } catch (err) {
+      continue;   // no such alias: the usual case
+    }
+    const room = client.getRoom(roomId);
+    if (!room || !createdByThisBot(room, client)) {
+      return { ok: false, error: `a room with the alias ${alias} exists and is not this bot's` };
+    }
+    const membership = room.getMember(requester)?.membership;
+    if (membership !== "join" && membership !== "invite") {
+      await withRateLimitRetry(() => client.invite(roomId, requester));
+    }
+    return { ok: true, room_id: roomId, existed: true };
   }
-  if (!roomId) return null;
-  const room = client.getRoom(roomId);
-  if (!room || !createdByThisBot(room, client)) {
-    return { ok: false, error: `a room with the alias ${alias} exists and is not this bot's` };
-  }
-  const membership = room.getMember(requester)?.membership;
-  if (membership !== "join" && membership !== "invite") {
-    await withRateLimitRetry(() => client.invite(roomId, requester));
-  }
-  return { ok: true, room_id: roomId, existed: true };
+  return null;
 }
 
 /** the poll room of `pollId` this bot is in -- the one it created, or one

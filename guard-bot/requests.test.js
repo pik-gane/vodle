@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   REQUEST_TYPE, RESPONSE_TYPE, ROOM_VERSION, DEADLINE_TYPE, parseRequest, pollRoomCreateOptions,
   pollRoomAliasLocalpart, voterRoomCreateOptions, voterRoomAliasLocalpart, isLocked, lockedPowerLevels, responseFor,
-  isRequestId, unansweredRequests,
+  isRequestId, unansweredRequests, REQUEST_MAX_AGE_MS, isExpired, aliasCandidates, serverNameOf,
 } from "./requests.js";
 import { JOIN_KEY_TYPE } from "./knock.js";
 
@@ -172,4 +172,24 @@ test("unansweredRequests is the other senders' requests without a response under
   assert.deepEqual(unansweredRequests(room, BOT).map((e) => e.getStateKey()), ["r1", "r3"]);
   // a room without any request
   assert.deepEqual(unansweredRequests({ currentState: { getStateEvents: () => null } }, BOT), []);
+});
+
+test("isExpired refuses a room to a request older than the app's wait, and to one without a time", () => {
+  const now = 1_800_000_000_000;
+  assert.equal(REQUEST_MAX_AGE_MS < 30000, true, "under the app's 30 s, so the answer arrives before the app gives up");
+  assert.equal(isExpired(now - 1000, now), false);
+  assert.equal(isExpired(now + 2000, now), false, "a clock ahead of ours is not a late request");
+  assert.equal(isExpired(now - REQUEST_MAX_AGE_MS, now), false);
+  assert.equal(isExpired(now - REQUEST_MAX_AGE_MS - 1, now), true);
+  assert.equal(isExpired(undefined, now), true);
+  assert.equal(isExpired(NaN, now), true);
+});
+
+test("aliasCandidates names the bot's server first and the requester's when it is another", () => {
+  assert.equal(serverNameOf("@vodle-guard:example.org"), "example.org");
+  assert.equal(serverNameOf("nonsense"), "");
+  assert.deepEqual(aliasCandidates("vodle_poll_P1", "@vodle-guard:example.org", "@alice:example.org"),
+    ["#vodle_poll_P1:example.org"]);
+  assert.deepEqual(aliasCandidates("vodle_poll_P1", "@vodle-guard:example.org", "@bob:other.example"),
+    ["#vodle_poll_P1:example.org", "#vodle_poll_P1:other.example"]);
 });

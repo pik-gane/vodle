@@ -44,6 +44,40 @@ export const ROOM_VERSION = "12";
 export const DEADLINE_TYPE = "m.room.vodle.poll.deadline";
 /** the one request format this bot understands */
 export const REQUEST_VERSION = 1;
+/** how old a request may be and still be answered with a room. The app
+ *  waits GUARD_BOT_REQUEST_TIMEOUT_MS (30 s, matrix.service.ts) and then
+ *  makes a room of its own, so a room made for an older request would be a
+ *  second one -- on this bot's server beside the app's on its own, where
+ *  the two servers differ, and found first by the app's other devices,
+ *  which ask this bot's server first. The margin below the 30 s covers the
+ *  creation, the answer's way back and some clock difference between
+ *  servers (a request's time is its origin_server_ts). */
+export const REQUEST_MAX_AGE_MS = 20000;
+
+/** the server name in a Matrix id, or "" when it has none */
+export function serverNameOf(id) {
+  return typeof id === "string" && id.includes(":") ? id.slice(id.indexOf(":") + 1) : "";
+}
+
+/** whether a request made at `ts` (its origin_server_ts) is too old to be
+ *  answered with a room at `now` (see REQUEST_MAX_AGE_MS) */
+export function isExpired(ts, now = Date.now()) {
+  return typeof ts !== "number" || !(now - ts <= REQUEST_MAX_AGE_MS);
+}
+
+/**
+ * The aliases a room with `localpart` may already exist under: on this
+ * bot's server, where the bot makes the rooms, and on the requester's,
+ * where the app makes a room of its own once it has given up waiting for
+ * the bot. A room under either is the one to answer with or to refuse,
+ * never one to make a second room beside.
+ */
+export function aliasCandidates(localpart, botUserId, requester) {
+  const servers = [serverNameOf(botUserId)];
+  const theirs = serverNameOf(requester);
+  if (theirs && theirs !== servers[0]) servers.push(theirs);
+  return servers.map((server) => `#${localpart}:${server}`);
+}
 
 /** the power levels the app has always given a poll room, minus the `users`
  *  map: in room version 12 the creator must not appear in it, and nobody

@@ -169,6 +169,11 @@ export const REQUEST_ROOM_ALIAS_PREFIX = 'vodle_requests_';
  *  ROOM_VERSION stays the version of the rooms this app creates itself */
 export const BOT_ROOM_VERSION = '12';
 /** how long a request to the guard bot waits for its answer */
+/** how long a request to the guard bot is waited for before the app makes
+ *  the room itself. The bot, for its part, answers a request younger than
+ *  REQUEST_MAX_AGE_MS (20 s, guard-bot/requests.js) with a room and refuses
+ *  an older one, so that it never makes a room beside the one the app has
+ *  made by then. */
 export const GUARD_BOT_REQUEST_TIMEOUT_MS = 30000;
 
 /**
@@ -4198,8 +4203,7 @@ export class MatrixService {
     // Fast path: room already exists in cache
     const cachedRoom = this.voterRooms.get(cacheKey);
     if (cachedRoom) {
-      await this.ensureVoterVidStored(cachedRoom, vodleVid);
-      return cachedRoom;
+      return this.readyToWrite(pollId, vodleVid, cachedRoom);
     }
     
     // Everything below this line asks the homeserver, so the mutex belongs
@@ -4211,9 +4215,7 @@ export class MatrixService {
     // hundred and sixty when publishing a poll of fifty (#327).
     const inflight = this.voterRoomCreationMutex.get(cacheKey);
     if (inflight) {
-      const roomId = await inflight;
-      await this.ensureVoterVidStored(roomId, vodleVid);
-      return roomId;
+      return this.readyToWrite(pollId, vodleVid, await inflight);
     }
     
     const resolution = (async () => {
@@ -4228,8 +4230,7 @@ export class MatrixService {
       // the room the account already owns, which its alias names (#333):
       const existing = await this.getVoterRoom(pollId, vodleVid);
       if (existing) {
-        await this.joinOwnVoterRoom(existing);
-        return existing;
+        return existing;   // joined, if need be, by readyToWrite
       }
       // createVoterRoom uses vodleVid for the room alias; the actual
       // Matrix room owner is always this.userId (the creator).
@@ -4249,8 +4250,25 @@ export class MatrixService {
     
     // synchronously, before the first await above can let anyone else in:
     this.voterRoomCreationMutex.set(cacheKey, resolution);
-    const roomId = await resolution;
+    return this.readyToWrite(pollId, vodleVid, await resolution);
+  }
+
+  /**
+   * What every path of getOrCreateVoterRoom hands out: the room joined
+   * (joinOwnVoterRoom), with its vid stored, and announced in the poll room
+   * when it had to be joined here -- a room this account was only invited
+   * to is the guard bot's for a request whose answer was missed, and nobody
+   * has announced it. The cached and the stored room are checked too:
+   * getVoterRoom caches whatever a room's alias names, for readers as well,
+   * so a room read before it was written to could be cached while this
+   * account stood outside it.
+   */
+  private async readyToWrite(pollId: string, vodleVid: string, roomId: string): Promise<string> {
+    const joined = await this.joinOwnVoterRoom(roomId);
     await this.ensureVoterVidStored(roomId, vodleVid);
+    if (joined) {
+      await this.announceVoterRoom(pollId, roomId, vodleVid);
+    }
     return roomId;
   }
   
@@ -4264,14 +4282,16 @@ export class MatrixService {
    * the server refused it as "not in room" -- a 403, which the queue takes
    * as the room's final word. The join is allowed by the invitation, or by
    * the room's restricted join rule for a member of the poll room; a room
-   * this account made itself on another device it is in already.
+   * this account made itself on another device it is in already. Returns
+   * whether a join was needed.
    */
-  private async joinOwnVoterRoom(roomId: string): Promise<void> {
+  private async joinOwnVoterRoom(roomId: string): Promise<boolean> {
     if (this.client!.getRoom(roomId)?.getMyMembership() === 'join') {
-      return;
+      return false;
     }
     await this.joinOnInvitation(roomId, this.roomAliasServers());
     await this.waitForRoom(roomId);
+    return true;
   }
 
   /**

@@ -1679,16 +1679,46 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
     const joins: string[] = [];
     const membership: Record<string, string> = {'!bots:example.org': 'invite'};
     const written: any[] = [];
+    const sent: any[] = [];
     service.client = {
       getRoom: (roomId: string) => membership[roomId] ? {roomId, getMyMembership: () => membership[roomId]} : null,
       getRoomIdForAlias: async () => ({room_id: '!bots:example.org'}),
       joinRoom: async (roomId: string) => { joins.push(roomId); membership[roomId] = 'join'; return {}; },
       sendStateEvent: async (roomId: string, type: string) => { written.push({roomId, type}); return {}; },
+      sendEvent: async (roomId: string, type: string, content: any) => { sent.push({roomId, type, content}); return {}; },
     };
+    service.pollRooms.set('P1', '!poll:example.org');
     spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
     expect(await service.getOrCreateVoterRoom('P1', 'v1')).toBe('!bots:example.org');
     expect(joins).toEqual(['!bots:example.org']);
     expect(written).toEqual([{roomId: '!bots:example.org', type: 'm.room.vodle.voter.vid'}]);
+    // nobody had announced the room: the bot does not, and this account had never used it
+    expect(sent).toEqual([{roomId: '!poll:example.org', type: 'm.room.vodle.voter.announce',
+      content: {voter_id: 'v1', voter_room_id: '!bots:example.org', vodle_vid: 'v1'}}]);
+    // and a room this account is in already is neither joined nor announced again
+    expect(await service.getOrCreateVoterRoom('P1', 'v1')).toBe('!bots:example.org');
+    expect(joins.length).toBe(1);
+    expect(sent.length).toBe(1);
+  });
+
+  it('joins a voter room the cache holds while this account is only invited to it, before the first write', async () => {
+    // getVoterRoom caches what an alias names for readers too (getVoterData),
+    // so the cache can hold a room this account stands outside of
+    const joins: string[] = [];
+    const membership: Record<string, string> = {'!bots:example.org': 'invite'};
+    const sent: any[] = [];
+    service.client = {
+      getRoom: (roomId: string) => membership[roomId] ? {roomId, getMyMembership: () => membership[roomId]} : null,
+      joinRoom: async (roomId: string) => { joins.push(roomId); membership[roomId] = 'join'; return {}; },
+      sendStateEvent: async () => ({}),
+      sendEvent: async (roomId: string, type: string) => { sent.push({roomId, type}); return {}; },
+    };
+    service.pollRooms.set('P1', '!poll:example.org');
+    service.voterRooms.set('P1:v1', '!bots:example.org');
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    expect(await service.getOrCreateVoterRoom('P1', 'v1')).toBe('!bots:example.org');
+    expect(joins).toEqual(['!bots:example.org']);
+    expect(sent).toEqual([{roomId: '!poll:example.org', type: 'm.room.vodle.voter.announce'}]);
   });
 
   it('writes into the room that holds the alias when its own creation finds the alias taken', async () => {
@@ -3020,7 +3050,8 @@ describe("a Matrix account per (poll, voter) — the CouchDB privacy model (#327
     looked_up = created = vid_writes = 0;
     svc = MatrixService.forPoll(storage as any, 'POLL_ONE', 'vid_a');
     svc.userId = '@poll:hs';
-    svc.client = { getRoom: () => null };
+    // the room createVoterRoom hands back is one this account is in
+    svc.client = { getRoom: () => ({getMyMembership: () => 'join'}) };
     svc.getVoterRoom = async () => { looked_up++; return null; };
     svc.createVoterRoom = async () => { created++; return '!voter:hs'; };
     svc.sendStateEvent = async () => { vid_writes++; };
