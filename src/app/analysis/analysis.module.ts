@@ -22,7 +22,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonRow,
+  IonSpinner,
+  IonText,
+  IonToolbar
+} from '@ionic/angular';
 
 import { AnalysisPageRoutingModule } from './analysis-routing.module';
 
@@ -33,7 +46,18 @@ export { AnalysisPage } from './analysis.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCol,
+    IonContent,
+    IonGrid,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonRow,
+    IonSpinner,
+    IonText,
+    IonToolbar,
     AnalysisPageRoutingModule,
     TranslatePipe
   ],

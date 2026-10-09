@@ -22,7 +22,27 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCheckbox,
+  IonCol,
+  IonContent,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonMenuButton,
+  IonRow,
+  IonSelect,
+  IonSelectOption,
+  IonSpinner,
+  IonThumbnail,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { LoginPageRoutingModule } from './login-routing.module';
 
@@ -32,7 +52,25 @@ import { LoginPage } from './login.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCheckbox,
+    IonCol,
+    IonContent,
+    IonGrid,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonMenuButton,
+    IonRow,
+    IonSelect,
+    IonSelectOption,
+    IonSpinner,
+    IonThumbnail,
+    IonTitle,
+    IonToolbar,
     ReactiveFormsModule,
     LoginPageRoutingModule,
     TranslatePipe

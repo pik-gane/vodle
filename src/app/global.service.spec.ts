@@ -21,12 +21,12 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
-import { IonicModule } from '@ionic/angular/lazy';
 import { IonicStorageModule } from '@ionic/storage-angular';
 import { provideTranslateService } from '@ngx-translate/core';
 
 import { GlobalService, web_share_available, web_share_broke } from './global.service';
 import { environment } from '../environments/environment';
+import { VodleIonicTestingModule } from './testing/vodle-testing';
 
 describe('GlobalService', () => {
   let service: GlobalService;
@@ -45,7 +45,7 @@ describe('GlobalService', () => {
     TestBed.configureTestingModule({
       imports: [
         RouterTestingModule,
-        IonicModule.forRoot(),
+        VodleIonicTestingModule,
         IonicStorageModule.forRoot(),
       ],
       providers: [

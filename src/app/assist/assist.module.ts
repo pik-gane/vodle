@@ -22,7 +22,24 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCheckbox,
+  IonContent,
+  IonFab,
+  IonFabButton,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonRadio,
+  IonRadioGroup,
+  IonSpinner,
+  IonText,
+  IonToolbar
+} from '@ionic/angular';
 
 import { AssistPageRoutingModule } from './assist-routing.module';
 
@@ -33,7 +50,22 @@ export { AssistPage } from './assist.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCheckbox,
+    IonContent,
+    IonFab,
+    IonFabButton,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonRadio,
+    IonRadioGroup,
+    IonSpinner,
+    IonText,
+    IonToolbar,
     AssistPageRoutingModule,
     TranslatePipe
   ],

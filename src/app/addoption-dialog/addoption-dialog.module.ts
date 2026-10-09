@@ -22,7 +22,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonList,
+  IonTextarea
+} from '@ionic/angular';
 
 import { AddoptionDialogPageRoutingModule } from './addoption-dialog-routing.module';
 
@@ -33,7 +43,15 @@ export { AddoptionDialogPage } from './addoption-dialog.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCol,
+    IonContent,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonList,
+    IonTextarea,
     ReactiveFormsModule,
     AddoptionDialogPageRoutingModule,
     TranslatePipe

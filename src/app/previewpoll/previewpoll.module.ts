@@ -22,7 +22,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButton,
+  IonButtons,
+  IonCol,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonList,
+  IonMenuButton,
+  IonSelectOption,
+  IonSpinner,
+  IonText,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { PreviewpollPageRoutingModule } from './previewpoll-routing.module';
 
@@ -32,7 +47,20 @@ import { PreviewpollPage } from './previewpoll.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonButtons,
+    IonCol,
+    IonContent,
+    IonHeader,
+    IonIcon,
+    IonItem,
+    IonList,
+    IonMenuButton,
+    IonSelectOption,
+    IonSpinner,
+    IonText,
+    IonTitle,
+    IonToolbar,
     PreviewpollPageRoutingModule,
     TranslatePipe
   ],

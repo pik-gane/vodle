@@ -18,9 +18,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { IonicModule } from '@ionic/angular/lazy';
 
 import { ConfigureServerPage } from './configure-server.page';
+import { VodleIonicTestingModule } from '../testing/vodle-testing';
 
 describe('ConfigureServerPage', () => {
   let component: ConfigureServerPage;
@@ -29,7 +29,7 @@ describe('ConfigureServerPage', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       declarations: [ ConfigureServerPage ],
-      imports: [IonicModule.forRoot()]
+      imports: [VodleIonicTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ConfigureServerPage);

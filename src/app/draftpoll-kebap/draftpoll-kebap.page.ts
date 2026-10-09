@@ -18,7 +18,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, OnInit, Input, ViewChild, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
-import { PopoverController, IonSelect } from '@ionic/angular/lazy';
+import { PopoverController, IonSelect } from '@ionic/angular';
 import { DraftpollPage } from '../draftpoll/draftpoll.module';  
 
 @Component({

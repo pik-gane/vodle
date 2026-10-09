@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import { IonButton, IonCol, IonContent, IonGrid, IonIcon, IonRow } from '@ionic/angular';
 
 import { DelegationDialogDifferentPageRoutingModule } from './delegation-dialog-different-routing.module';
 
@@ -33,7 +33,12 @@ export { DelegationDialogDifferentPage } from './delegation-dialog-different.pag
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButton,
+    IonCol,
+    IonContent,
+    IonGrid,
+    IonIcon,
+    IonRow,
     ReactiveFormsModule,
     DelegationDialogDifferentPageRoutingModule,
     TranslatePipe

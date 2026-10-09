@@ -26,7 +26,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * (see data.service.spec.ts / global.service.spec.ts).
  */
 
-import { IonicModule } from '@ionic/angular/lazy';
+import { NgModule } from '@angular/core';
+import {
+  provideIonicAngular,
+  IonApp, IonBadge, IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCheckbox, IonChip, IonCol, IonContent, IonDatetime, IonDatetimeButton, IonFab, IonFabButton, IonFooter, IonGrid, IonHeader, IonIcon, IonInput, IonItem, IonLabel, IonList, IonMenu, IonMenuButton, IonMenuToggle, IonModal, IonNote, IonRadio, IonRadioGroup, IonRange, IonReorder, IonReorderGroup, IonRouterLink, IonRouterLinkWithHref, IonRouterOutlet, IonRow, IonSelect, IonSelectOption, IonSpinner, IonSplitPane, IonText, IonTextarea, IonThumbnail, IonTitle, IonToggle, IonToolbar
+} from '@ionic/angular';
 import { RouterTestingModule } from '@angular/router/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptorsFromDi, withXhr } from '@angular/common/http';
@@ -115,9 +119,19 @@ export function global_service_stub(): any {
   return stub;
 }
 
+/** Every Ionic component a template of the app uses, imported and exported
+ *  for the TestBed, with Ionic's providers: what `IonicModule.forRoot()` gave
+ *  the smoke tests before the standalone build (Ionic 9 deprecates the
+ *  module; the app's own modules import the components they use). */
+const IONIC_COMPONENTS = [
+  IonApp, IonBadge, IonButton, IonButtons, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCheckbox, IonChip, IonCol, IonContent, IonDatetime, IonDatetimeButton, IonFab, IonFabButton, IonFooter, IonGrid, IonHeader, IonIcon, IonInput, IonItem, IonLabel, IonList, IonMenu, IonMenuButton, IonMenuToggle, IonModal, IonNote, IonRadio, IonRadioGroup, IonRange, IonReorder, IonReorderGroup, IonRouterLink, IonRouterLinkWithHref, IonRouterOutlet, IonRow, IonSelect, IonSelectOption, IonSpinner, IonSplitPane, IonText, IonTextarea, IonThumbnail, IonTitle, IonToggle, IonToolbar
+];
+@NgModule({imports: IONIC_COMPONENTS, exports: IONIC_COMPONENTS, providers: [provideIonicAngular()]})
+export class VodleIonicTestingModule {}
+
 /** imports for a page/component smoke test */
 export const VODLE_PAGE_TEST_IMPORTS = [
-  IonicModule.forRoot(),
+  VodleIonicTestingModule,
   RouterTestingModule,
   TranslatePipe,
   FormsModule,

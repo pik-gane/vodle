@@ -20,7 +20,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Location } from '@angular/common'
 import { TranslateService } from '@ngx-translate/core';
-import { AlertController } from '@ionic/angular/lazy';
+import { AlertController } from '@ionic/angular';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 

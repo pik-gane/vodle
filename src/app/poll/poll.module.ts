@@ -22,7 +22,34 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonBadge,
+  IonButton,
+  IonButtons,
+  IonCard,
+  IonCardContent,
+  IonCheckbox,
+  IonChip,
+  IonCol,
+  IonContent,
+  IonFabButton,
+  IonFooter,
+  IonGrid,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonMenuButton,
+  IonRange,
+  IonRouterLink,
+  IonRow,
+  IonSpinner,
+  IonText,
+  IonToggle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { PollPageRoutingModule } from './poll-routing.module';
 import { SharedcomponentsModule } from '../sharedcomponents/sharedcomponents.module';
@@ -34,7 +61,32 @@ export { PollPage } from './poll.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonBadge,
+    IonButton,
+    IonButtons,
+    IonCard,
+    IonCardContent,
+    IonCheckbox,
+    IonChip,
+    IonCol,
+    IonContent,
+    IonFabButton,
+    IonFooter,
+    IonGrid,
+    IonHeader,
+    IonIcon,
+    IonInput,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonMenuButton,
+    IonRange,
+    IonRouterLink,
+    IonRow,
+    IonSpinner,
+    IonText,
+    IonToggle,
+    IonToolbar,
     PollPageRoutingModule,
     SharedcomponentsModule,
     TranslatePipe

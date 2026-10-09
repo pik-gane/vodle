@@ -21,7 +21,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 
 import { ConfigureServerPageRoutingModule } from './configure-server-routing.module';
 
@@ -31,7 +31,10 @@ import { ConfigureServerPage } from './configure-server.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
     ConfigureServerPageRoutingModule
   ],
   declarations: [ConfigureServerPage]

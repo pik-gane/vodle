@@ -22,7 +22,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { IonicModule } from '@ionic/angular/lazy';
+import {
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonItem,
+  IonList,
+  IonMenuButton,
+  IonSpinner,
+  IonThumbnail,
+  IonTitle,
+  IonToolbar
+} from '@ionic/angular';
 
 import { DeleteAllPageRoutingModule } from './delete-all-routing.module';
 
@@ -32,7 +43,16 @@ import { DeleteAllPage } from './delete-all.page';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
+    IonButtons,
+    IonContent,
+    IonHeader,
+    IonItem,
+    IonList,
+    IonMenuButton,
+    IonSpinner,
+    IonThumbnail,
+    IonTitle,
+    IonToolbar,
     DeleteAllPageRoutingModule,
     TranslatePipe
   ],
