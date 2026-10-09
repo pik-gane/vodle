@@ -27,8 +27,9 @@ The poll account's password is `BLAKE2s("vodle-matrix-poll:" + pid + ":" + vid +
 | User room | none | the person's own account, alone | user data: settings, and one entry per poll the person takes part in |
 | Poll room | `#vodle_poll_<pid>` | the poll accounts of the participants, plus the bot | poll metadata, options, deadline, lifecycle state, voter-room announcements, delegation events |
 | Voter room | `#vodle_voter_<pid>_<base64url(vid)>` | one poll account (power 50), the bot (100), the other participants read-only | that voter's ratings and delegation records |
+| Request room | `#vodle_requests_<hash of the user id>` | the account, alone with the bot | the account's requests to the bot (`create_poll`: a poll id and the join key, which is a hash of the poll password) and the bot's answers (room ids) |
 
-Poll rooms are `knock`: a joiner proves it holds the poll password and the bot invites it. Voter rooms are `restricted` to the poll room's members, so discovery works without invitations. Neither is in the public room directory.
+Poll rooms are `knock`: a joiner proves it holds the poll password and the bot invites it. Voter rooms are `restricted` to the poll room's members, so discovery works without invitations. Request rooms are invite-only. None is in the public room directory. Poll rooms are created by the bot (room version 12: the bot is their creator, with the power that version reserves for a creator), voter rooms by the voter's account.
 
 **What is encrypted, and with what.**
 

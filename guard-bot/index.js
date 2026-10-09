@@ -22,6 +22,11 @@
  *   6. Let the holders of a poll's magic link into its closed poll room
  *      (#328): a knock whose reason proves the poll password is answered
  *      with an invitation; any other knock stays unanswered — see knock.js.
+ *   7. Create poll rooms on the app's request, in room version 12, and so
+ *      be their creator — the one member whose power no power-levels event
+ *      can lower — and lock a poll room's metadata once its poll runs. The
+ *      app asks through its request room (`#vodle_requests_…`), see
+ *      requests.js and planning/WORK_PLAN.md, Track E.
  *
  * This keeps polls immutable after their deadline — no participant can
  * send new events, but the room remains readable.
@@ -31,6 +36,10 @@ import * as sdk from "matrix-js-sdk";
 import http from "node:http";
 import { vodleState, droppedState, parseDelays, recheckTimes, isRemoteAlias } from "./recheck.js";
 import { JOIN_KEY_TYPE, verifyKnock } from "./knock.js";
+import {
+  REQUEST_TYPE, RESPONSE_TYPE, REQUEST_ROOM_ALIAS_PREFIX, POLL_ROOM_VERSION,
+  parseRequest, pollRoomCreateOptions, pollRoomAliasLocalpart, isLocked, lockedPowerLevels, responseFor,
+} from "./requests.js";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";
@@ -85,7 +94,16 @@ const stats = {
   recheckPending: 0,
   invitedTotal: 0,
   declinedTotal: 0,
+  // the request channel (Track E): requests answered with ok, requests
+  // refused or malformed, poll rooms created on request, poll rooms locked
+  requestsAnswered: 0,
+  requestsRefused: 0,
+  pollRoomsCreated: 0,
+  pollRoomsLocked: 0,
 };
+
+/** poll rooms this process has locked (the SDK's room state lags behind its own writes) */
+const lockedByUs = new Set();
 
 /** voter rooms closed by this process whose state is still to be re-read:
  *  roomId -> {snapshot: {type: content}, due: [ms since epoch]} (#334) */
@@ -166,6 +184,24 @@ async function main() {
     }
   });
 
+  // --- 2b. The app's requests, and the lock of a poll room this bot created
+  // (Track E): a request event in a request room is answered; a poll whose
+  // state turns to running has its metadata locked, which only the room's
+  // creator can do in version 12 -- the app at the default power cannot
+  client.on("Room.timeline", (event, room, toStartOfTimeline) => {
+    if (!room || toStartOfTimeline || event.getSender() === client.getUserId()) return;
+    if (event.getType() === REQUEST_TYPE && roomKind(room) === "requests") {
+      handleRequest(client, room, event).catch((e) =>
+        console.error(`[guard-bot] Failed to answer a request in ${room.roomId}:`, e.message)
+      );
+    } else if (event.getType() === POLL_STATE_TYPE && roomKind(room) === "poll"
+               && createdByThisBot(room, client) && event.getContent()?.state === "running") {
+      lockPollRoom(client, room).catch((e) =>
+        console.error(`[guard-bot] Failed to lock poll room ${room.roomId}:`, e.message)
+      );
+    }
+  });
+
   // --- 3. Start syncing ---------------------------------------------------
   await client.startClient({ initialSyncLimit: 10 });
   console.log(`[guard-bot] Sync started — listening for invitations`);
@@ -179,6 +215,7 @@ async function main() {
     if (scanning) return;
     scanning = true;
     try {
+      await lockRunningPollRooms(client);
       await scanForExpiredDeadlines(client);
     } catch (err) {
       stats.lastScanError = err.message;
@@ -217,7 +254,144 @@ function roomKind(room) {
   const alias = room.getCanonicalAlias() || "";
   if (alias.startsWith("#vodle_voter_")) return "voter";
   if (alias.startsWith("#vodle_poll_")) return "poll";
+  if (alias.startsWith("#" + REQUEST_ROOM_ALIAS_PREFIX)) return "requests";
   return "other";
+}
+
+/** whether this bot created the room, i.e. holds a version-12 room's creator power */
+function createdByThisBot(room, client) {
+  return room.currentState.getStateEvents("m.room.create", "")?.getSender() === client.getUserId();
+}
+
+/** the server name in a Matrix id */
+function serverNameOf(id) {
+  return id.slice(id.indexOf(":") + 1);
+}
+
+// ---------------------------------------------------------------------------
+// The request channel (Track E, requests.js)
+// ---------------------------------------------------------------------------
+
+/**
+ * Answer one `m.room.vodle.request` event in a request room. The room is
+ * the requester's own (it created it and invited this bot), so only its
+ * creator is answered; anybody else it let in is refused. A malformed
+ * request is refused with a response when its id is usable, so that the
+ * app does not wait for its timeout, and ignored otherwise.
+ */
+async function handleRequest(client, room, event) {
+  const sender = event.getSender();
+  const content = event.getContent();
+  const request = parseRequest(content);
+  const owner = room.currentState.getStateEvents("m.room.create", "")?.getSender();
+  let result;
+  if (!request) {
+    stats.requestsRefused++;
+    console.log(`[guard-bot] Refusing a malformed request from ${sender} in ${room.roomId}`);
+    if (typeof content?.request_id !== "string" || content.request_id.length > 64) return;
+    result = { ok: false, error: "malformed request" };
+    await respond(client, room.roomId, { request_id: content.request_id }, result);
+    return;
+  }
+  if (sender !== owner) {
+    stats.requestsRefused++;
+    console.log(`[guard-bot] Refusing a ${request.kind} request from ${sender} in ${room.roomId}: not the room's creator ${owner}`);
+    await respond(client, room.roomId, request, { ok: false, error: "only the room's creator asks here" });
+    return;
+  }
+  try {
+    switch (request.kind) {
+      case "ping":
+        result = { ok: true };
+        break;
+      case "create_poll":
+        result = await createPollRoomOnRequest(client, request, sender);
+        break;
+    }
+  } catch (err) {
+    result = { ok: false, error: err?.message || String(err) };
+    console.error(`[guard-bot] The ${request.kind} request of ${sender} failed:`, err?.message || err);
+  }
+  if (result.ok) stats.requestsAnswered++; else stats.requestsRefused++;
+  await respond(client, room.roomId, request, result);
+}
+
+async function respond(client, roomId, request, result) {
+  await withRateLimitRetry(() => client.sendEvent(roomId, RESPONSE_TYPE, responseFor(request, result)));
+}
+
+/**
+ * Create the poll room `request` asks for, with `requester` invited, and
+ * return {ok, room_id}. Idempotent: the same request again (the app's
+ * retry, or a request answered before this bot restarted) finds the room
+ * by its alias and is given the same id, with the invitation renewed if
+ * the requester is not in the room.
+ */
+async function createPollRoomOnRequest(client, request, requester) {
+  const alias = `#${pollRoomAliasLocalpart(request.poll_id)}:${serverNameOf(client.getUserId())}`;
+  let existing = null;
+  try {
+    existing = (await client.getRoomIdForAlias(alias)).room_id;
+  } catch (err) {
+    // no such alias: the usual case
+  }
+  if (existing) {
+    const room = client.getRoom(existing);
+    if (!room || !createdByThisBot(room, client)) {
+      return { ok: false, error: `a room with the alias ${alias} exists and is not this bot's` };
+    }
+    const membership = room.getMember(requester)?.membership;
+    if (membership !== "join" && membership !== "invite") {
+      await withRateLimitRetry(() => client.invite(existing, requester));
+    }
+    console.log(`[guard-bot] Poll room ${existing} for poll ${request.poll_id} exists already; told ${requester} so`);
+    return { ok: true, room_id: existing, existed: true };
+  }
+  const options = pollRoomCreateOptions({ pollId: request.poll_id, joinKey: request.join_key, requester });
+  const { room_id } = await withRateLimitRetry(() => client.createRoom(options));
+  stats.pollRoomsCreated++;
+  console.log(`[guard-bot] Created poll room ${room_id} (room version ${POLL_ROOM_VERSION}) for poll ${request.poll_id} on behalf of ${requester}`);
+  return { ok: true, room_id };
+}
+
+/**
+ * Lock a poll room this bot created, once its poll runs: nobody below 100
+ * -- nobody but the bot -- changes its metadata, deadline, state, join rule
+ * or power levels from now on (what the app's creator did as the creator
+ * before, MatrixService.lockPollMetadata). Idempotent; reads the power
+ * levels from the server, not from the SDK's store, which may lag.
+ */
+async function lockPollRoom(client, room) {
+  const roomId = room.roomId;
+  if (lockedByUs.has(roomId)) return;
+  const current = await client.getStateEvent(roomId, "m.room.power_levels", "");
+  if (isLocked(current)) {
+    lockedByUs.add(roomId);
+    return;
+  }
+  await sendStateWithRetry(client, roomId, "m.room.power_levels", lockedPowerLevels(current));
+  lockedByUs.add(roomId);
+  stats.pollRoomsLocked++;
+  console.log(`[guard-bot] Locked poll room ${roomId}: its poll runs, and its metadata is this bot's to change now`);
+}
+
+/** lock the running polls whose running event this bot did not see live (it was down, or syncing) */
+async function lockRunningPollRooms(client) {
+  for (const room of client.getRooms()) {
+    if (room.getMyMembership() !== "join" || roomKind(room) !== "poll" || !createdByThisBot(room, client)) continue;
+    if (lockedByUs.has(room.roomId)) continue;
+    const state = room.currentState.getStateEvents(POLL_STATE_TYPE, "")?.getContent()?.state;
+    if (state !== "running") continue;
+    if (isLocked(room.currentState.getStateEvents("m.room.power_levels", "")?.getContent())) {
+      lockedByUs.add(room.roomId);
+      continue;
+    }
+    try {
+      await lockPollRoom(client, room);
+    } catch (err) {
+      console.error(`[guard-bot] Failed to lock poll room ${room.roomId} in the scan:`, err.message);
+    }
+  }
 }
 
 /** the vodle poll id a room belongs to (from the app's deadline event or the room alias), or null */

@@ -79,7 +79,7 @@ jobs:
       # the guard bot's pure logic (the repair of state that resolution
       # dropped at a close, #334) has node:test unit tests of its own:
       - name: Guard bot unit tests
-        run: node --test guard-bot/recheck.test.js
+        run: node --test guard-bot/recheck.test.js guard-bot/knock.test.js guard-bot/requests.test.js
 
       # English is the fallback language, so a key missing there renders as
       # itself — a heading reading "mypolls.archived" (#327):
