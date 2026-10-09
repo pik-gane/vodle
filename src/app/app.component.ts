@@ -18,9 +18,36 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 */
 
 import { Component, Inject, DOCUMENT, ChangeDetectionStrategy } from '@angular/core';
+import { NavigationStart, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
 import { environment } from 'src/environments/environment';
+
+/**
+ * Dismiss the overlays that are open: Ionic's alerts (an ion-select's
+ * "alert" interface among them), popovers (its "popover" interface, the
+ * kebap menus), action sheets, pickers and modals (the dialogs, the
+ * datetime picker). Called when the route changes (#58): an overlay belongs
+ * to the page it was opened on, and the browser's back button, a
+ * notification or a link changes the page underneath it while Ionic leaves
+ * it standing. Toasts and loading indicators are left alone: a toast that
+ * confirms the action which navigated away, a loading indicator that spans
+ * the navigation, are what their pages mean. An overlay a page keeps in
+ * the DOM while closed (an inline ion-modal with keepContentsMounted)
+ * carries Ionic's class `overlay-hidden` and is not open. Returns how many
+ * were dismissed.
+ */
+export function dismissOpenOverlays(doc: {querySelectorAll: (selector: string) => ArrayLike<Element>}): number {
+  let dismissed = 0;
+  for (const el of Array.from(doc.querySelectorAll('ion-alert, ion-popover, ion-action-sheet, ion-picker, ion-modal'))) {
+    if (el.classList.contains('overlay-hidden') || typeof (el as any).dismiss !== 'function') {
+      continue;
+    }
+    Promise.resolve((el as any).dismiss(undefined, 'navigation')).catch(() => {});
+    dismissed++;
+  }
+  return dismissed;
+}
 
 @Component({
   selector: 'app-root',
@@ -79,9 +106,19 @@ export class AppComponent {
 
   constructor(
       translate: TranslateService,
+      router: Router,
       @Inject(DOCUMENT) private document: Document
       ) {
     console.log("APP CONSTRUCTOR");
+    // an overlay does not outlive the page it was opened on (#58):
+    router.events.subscribe(event => {
+      if (event instanceof NavigationStart) {
+        const dismissed = dismissOpenOverlays(this.document);
+        if (dismissed > 0) {
+          console.log("[navigation] dismissed", dismissed, "overlay(s) left open by the page before");
+        }
+      }
+    });
     // all languages having a (nearly) complete translation in src/assets/i18n (see issue #273):
     // (Tamil arrived complete from Weblate in PR #317, issue #277; Arabic and
     // French are still mostly untranslated in src/assets/i18n and stay out)
