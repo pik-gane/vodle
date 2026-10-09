@@ -433,6 +433,34 @@ them, `npm audit fix` will take it. Dependabot's three pull requests (#268
 longer in the tree, `follow-redirects` and `express` (both devDependencies'
 dependencies) are at fixed versions; the three can be closed.
 
+### Build and CI hygiene (2026-10-09, branch `claude/build-hygiene`)
+
+A production build printed fourteen warnings, noise around the one or two
+that would matter; `ng build` prints none now:
+
+- `src/global.scss` pulled the expandable component's stylesheet in with
+  Sass `@import`, which Dart Sass deprecates (gone in 3.0); it is `@use`
+  now. The styles bundle is byte-identical apart from its hash.
+- The initial-bundle budget in `angular.json` still warned at 2 MB, from
+  before Ionic was bundled whole, so every build warned about the 3.29 MB
+  the bundle has had since the standalone migration (the hops above). The
+  warning is at 3.5 MB now, the error stays at 5 MB: the budget is there to
+  catch growth, and a jump past 3.5 MB deserves a look.
+- Twelve "is not ESM" notices for CommonJS modules under matrix-js-sdk
+  (another-json, events, loglevel, matrix-events-sdk, matrix-widget-api,
+  sdp-transform, unhomoglyph), ionic-logging-service (log4javascript),
+  @ionic/storage (localforage) and the app's own blake2s-js, venn.js and
+  pouchdb are listed in `allowedCommonJsDependencies`, next to libsodium.
+  They are what those libraries ship; the notice said nothing new at every
+  build. pouchdb leaves with C1.
+- The workflow's actions (checkout, setup-node, upload-artifact) went from
+  v4 to v5: every run warned that v4 targets Node.js 20, which the runners
+  force onto Node.js 24 since 2025-09. The two other workflow files, CodeQL
+  (disabled by GitHub for inactivity; it targets the long-gone
+  `update_ionic` branch with codeql-action v1) and CodeSee (disabled by
+  hand in 2024-12; the service no longer exists), are the owner's to delete
+  or renew; nothing runs them.
+
 ### Three questions this session could not answer
 
 - **#343, the Share button on Waterfox 6.7.2.** That browser answers
