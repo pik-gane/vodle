@@ -503,6 +503,17 @@ comparison had filed and left:
   `explain-approval.page.ts`), which is what page one gets by being rendered
   into a fresh SVG. Spec: the clock is turned back before the second page
   is rendered, and a seen page is not replayed.
+- **#58** (2021: alerts, popovers and menus stayed open when the page
+  changed under them; the ion-select's popover or alert on the draft poll
+  page especially). Fixed 2026-10-09 (branch `claude/overlays-on-navigation`):
+  the app component dismisses the open alerts, popovers, action sheets,
+  pickers and modals at every `NavigationStart` (`dismissOpenOverlays` in
+  `app.component.ts`; the browser's back button, a notification and a link
+  are how a page changes under an overlay). Toasts and loading indicators
+  stay, since a toast confirms the action that navigated and a loading
+  indicator may span the navigation; an inline modal that is kept mounted
+  while closed carries Ionic's `overlay-hidden` and is not touched. Specs
+  on the helper and on the route change.
 - **#341** (a delegation link never resolved for someone not logged in).
   Two causes. A fresh device learns its polls from the server after the
   start, so the page's one request for the poll's contents came before the
