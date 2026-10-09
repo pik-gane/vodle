@@ -42,9 +42,9 @@ jobs:
       KARMA_RESULT_FILE: karma-results.json
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -153,7 +153,7 @@ jobs:
       # unreadable (#327)
       - name: Upload the click-through result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: production-clickthrough-result
           path: clickthrough-result.json
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload the click-through screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: production-clickthrough-screenshots
           path: e2e-screenshots/
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: karma-results
           path: |
@@ -183,9 +183,9 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -224,7 +224,7 @@ jobs:
       # a failed e2e run is otherwise just a timeout message in the log:
       - name: Upload e2e screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-screenshots
           path: e2e-screenshots/

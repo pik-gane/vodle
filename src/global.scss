@@ -37,7 +37,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 /* custom CSS: */
 
-@import './app/sharedcomponents/expandable/expandable.component';
+@use './app/sharedcomponents/expandable/expandable.component';
 
 /* quicksand-regular - vietnamese_latin-ext_latin */
 @font-face {
