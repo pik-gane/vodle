@@ -17,7 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-import { Injectable, HostListener, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { format_details } from './simple-format';
 import { environment } from '../environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -124,8 +124,10 @@ export class GlobalService implements OnDestroy {
     Del.init(this);
     N.init(this);
 
+    // one listener, added rather than assigned: assigning window.onbeforeunload
+    // replaced whatever handler was there (karma's, which reports a test
+    // that reloads the page) and ran this one a second time
     window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
-    window.onbeforeunload = this.onBeforeUnload.bind(this);
 
     window.onunhandledrejection = event => {
       console.warn(`UNHANDLED PROMISE REJECTION: ${event.reason}`);
@@ -144,9 +146,13 @@ export class GlobalService implements OnDestroy {
     console.log("GlobalService.ngOnDestroy exit");
   }
 
-  @HostListener('window:beforeunload', ['$event'])
+  /** The page is being left or closed: save what is unsaved and let the
+   *  page do its leaving. Nothing here writes to the console: the browser
+   *  runs this when karma closes it after a suite run, and a console line
+   *  arriving after the run's completion re-arms karma's no-activity timer
+   *  (see src/test.ts), which kept every run alive for two more minutes. */
   onBeforeUnload(event: Event) {
-    console.log("DATA onBeforeUnload entry");
+    this.L.entry("GlobalService.onBeforeUnload");
     if (!!this.storage) {
       this.D.save_state();
       if (this.D.page) {
@@ -161,7 +167,7 @@ export class GlobalService implements OnDestroy {
         }
       }  
     }
-    console.log("DATA onBeforeUnload exit");
+    this.L.exit("GlobalService.onBeforeUnload");
   }
 
   // HANDOVER OF A DEPLOYMENT (environment.handover, deployment guide §6):

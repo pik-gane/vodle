@@ -290,17 +290,28 @@ repository with a `git add -A` (removed again in the PR after it). Read a
 commit's file count before pushing; `git add -A` after a test run is how it
 happened.
 
-One observation, so that nobody chases it as a regression: every suite run,
-locally and in CI alike, ends with karma reporting the browser
-`DISCONNECTED`, "no message in 120000 ms", two minutes after the last spec —
-after all specs have reported, and with `ng test` still exiting 0 when they
-passed (run 146's log: `Executed 992 of 992 SUCCESS` at 3 min 51 s, the
-disconnect at 5 min 51 s). It was there before the hops (the first run of the
-day, on the PR branch, had it) and costs every CI run two minutes. The
-browser's console shows `GlobalService.onBeforeUnload` running several times
-right after the last spec, so karma's context is being unloaded while the
-`complete` message never arrives; the cause is not found. Not a test failure;
-a two-minute tax, and an item of its own.
+One observation, found and fixed on 2026-10-09 (branch `claude/quiet-unload`):
+every suite run, locally and in CI alike, ended with karma reporting the
+browser `DISCONNECTED`, "no message in 120000 ms", two minutes after the
+last spec, with `ng test` still exiting 0 (run 146's log: `Executed 992 of
+992 SUCCESS` at 3 min 51 s, the disconnect at 5 min 51 s). The cause, from
+karma's `lib/browser.js`: the `complete` message clears karma's no-activity
+timer, but any message after it re-arms the timer for `browserNoActivityTimeout`
+(120 s in `karma.conf.js`), and nothing clears it again — so it keeps the
+process alive until it fires and prints the error. Every console line of
+the page is such a message, and lines did come after completion: the
+`[vodle boot]` stages of a `DataService` that the last spec had left
+booting, and `GlobalService.onBeforeUnload`'s two `console.log` lines, run
+once per `GlobalService` the suite had constructed, when karma closes the
+browser (a half of the spec files without the real `GlobalService` had no
+tail; the half with it did). Fixed in the harness: `src/test.ts` registers
+a jasmine reporter whose `jasmineDone` silences `console.log/info/warn/debug`
+(errors stay). And in the service: the unload handler logs through the
+logger, and `window.onbeforeunload` is no longer assigned — that replaced
+karma's own handler, the one that reports a test reloading the page, and
+ran the handler twice; a spec in `global.service.spec.ts` pins both. The
+test target also serves the ionicons now (`angular.json`), which ends the
+`404: /svg/….svg` warnings in the test log.
 
 A second one, from the click-through (2026-10-09, run 157, twice in a row):
 `Cannot read properties of null (reading 'focus')` at the e-mail field,
