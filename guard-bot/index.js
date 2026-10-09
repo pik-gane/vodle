@@ -22,11 +22,12 @@
  *   6. Let the holders of a poll's magic link into its closed poll room
  *      (#328): a knock whose reason proves the poll password is answered
  *      with an invitation; any other knock stays unanswered — see knock.js.
- *   7. Create poll rooms on the app's request, in room version 12, and so
- *      be their creator — the one member whose power no power-levels event
- *      can lower — and lock a poll room's metadata once its poll runs. The
- *      app asks through its request room (`#vodle_requests_…`), see
- *      requests.js and planning/WORK_PLAN.md, Track E.
+ *   7. Create the poll rooms and the voter rooms on the app's request, in
+ *      room version 12, and so be their creator — the one member whose
+ *      power no power-levels event can lower — and lock a poll room's
+ *      metadata once its poll runs. The app asks through its request room
+ *      (`#vodle_requests_…`), see requests.js and planning/WORK_PLAN.md,
+ *      Track E.
  *
  * This keeps polls immutable after their deadline — no participant can
  * send new events, but the room remains readable.
@@ -34,11 +35,12 @@
 
 import * as sdk from "matrix-js-sdk";
 import http from "node:http";
-import { vodleState, droppedState, parseDelays, recheckTimes, isRemoteAlias } from "./recheck.js";
+import { vodleState, droppedState, parseDelays, recheckTimes, isRemoteAlias, hasRemoteWriter } from "./recheck.js";
 import { JOIN_KEY_TYPE, verifyKnock } from "./knock.js";
 import {
-  REQUEST_TYPE, RESPONSE_TYPE, REQUEST_ROOM_ALIAS_PREFIX, POLL_ROOM_VERSION,
-  parseRequest, pollRoomCreateOptions, pollRoomAliasLocalpart, isLocked, lockedPowerLevels, responseFor,
+  REQUEST_TYPE, RESPONSE_TYPE, REQUEST_ROOM_ALIAS_PREFIX, ROOM_VERSION, DEADLINE_TYPE,
+  parseRequest, pollRoomCreateOptions, pollRoomAliasLocalpart, voterRoomCreateOptions, voterRoomAliasLocalpart,
+  isLocked, lockedPowerLevels, responseFor,
 } from "./requests.js";
 
 // Configuration from environment variables
@@ -77,9 +79,10 @@ const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || "0", 10);
 // whatever vodle state the room held right before the close and lost since
 // is written back (see guard-bot/recheck.js, #334): a rating that forked with
 // the closing power-level event takes the previous value of its state key
-// down with it in state resolution. A voter room on ANOTHER homeserver is
-// written again unconditionally right after its close (reaffirmState), since
-// a fork there never shows on this server.
+// down with it in state resolution. A voter room on ANOTHER homeserver, or
+// whose voter writes from one (the bot creates the voter rooms here since
+// Track E), is written again unconditionally right after its close
+// (reaffirmState), since a fork there never shows on this server.
 const RECHECK_DELAYS_MS = parseDelays(process.env.RECHECK_DELAYS_MS, [5000, 60000, 600000]);
 
 /** what /healthz reports */
@@ -95,10 +98,12 @@ const stats = {
   invitedTotal: 0,
   declinedTotal: 0,
   // the request channel (Track E): requests answered with ok, requests
-  // refused or malformed, poll rooms created on request, poll rooms locked
+  // refused or malformed, poll and voter rooms created on request, poll
+  // rooms locked
   requestsAnswered: 0,
   requestsRefused: 0,
   pollRoomsCreated: 0,
+  voterRoomsCreated: 0,
   pollRoomsLocked: 0,
 };
 
@@ -112,7 +117,7 @@ const pendingRechecks = new Map();
 // The deadline state event the vodle app writes (MatrixService.setPollDeadline):
 // content.due is an ISO 8601 date. It is written into the poll room and
 // copied into each voter room, so this bot closes both kinds of room.
-const APP_DEADLINE_TYPE = "m.room.vodle.poll.deadline";
+const APP_DEADLINE_TYPE = DEADLINE_TYPE;
 // The lifecycle state the app reads (MatrixService.getAllPollData /
 // getPollClosure). Once a poll runs only power 100 may write it, i.e. this
 // bot: its "closed" event is the shared, server-side fact that the poll is
@@ -307,6 +312,9 @@ async function handleRequest(client, room, event) {
       case "create_poll":
         result = await createPollRoomOnRequest(client, request, sender);
         break;
+      case "create_voter_room":
+        result = await createVoterRoomOnRequest(client, request, sender);
+        break;
     }
   } catch (err) {
     result = { ok: false, error: err?.message || String(err) };
@@ -329,29 +337,92 @@ async function respond(client, roomId, request, result) {
  */
 async function createPollRoomOnRequest(client, request, requester) {
   const alias = `#${pollRoomAliasLocalpart(request.poll_id)}:${serverNameOf(client.getUserId())}`;
-  let existing = null;
-  try {
-    existing = (await client.getRoomIdForAlias(alias)).room_id;
-  } catch (err) {
-    // no such alias: the usual case
-  }
+  const existing = await existingRoomFor(client, alias, requester);
   if (existing) {
-    const room = client.getRoom(existing);
-    if (!room || !createdByThisBot(room, client)) {
-      return { ok: false, error: `a room with the alias ${alias} exists and is not this bot's` };
-    }
-    const membership = room.getMember(requester)?.membership;
-    if (membership !== "join" && membership !== "invite") {
-      await withRateLimitRetry(() => client.invite(existing, requester));
-    }
-    console.log(`[guard-bot] Poll room ${existing} for poll ${request.poll_id} exists already; told ${requester} so`);
-    return { ok: true, room_id: existing, existed: true };
+    if (existing.ok) console.log(`[guard-bot] Poll room ${existing.room_id} for poll ${request.poll_id} exists already; told ${requester} so`);
+    return existing;
   }
   const options = pollRoomCreateOptions({ pollId: request.poll_id, joinKey: request.join_key, requester });
   const { room_id } = await withRateLimitRetry(() => client.createRoom(options));
   stats.pollRoomsCreated++;
-  console.log(`[guard-bot] Created poll room ${room_id} (room version ${POLL_ROOM_VERSION}) for poll ${request.poll_id} on behalf of ${requester}`);
+  console.log(`[guard-bot] Created poll room ${room_id} (room version ${ROOM_VERSION}) for poll ${request.poll_id} on behalf of ${requester}`);
   return { ok: true, room_id };
+}
+
+/**
+ * Create the voter room `request` asks for -- `requester`'s own room in the
+ * poll, as voter `voter_id`, restricted to the poll room's members -- and
+ * return {ok, room_id}. The requester must be a member of the poll room,
+ * which this bot is in too (as its creator since E1, or invited by the app
+ * before that). Idempotent like createPollRoomOnRequest.
+ */
+async function createVoterRoomOnRequest(client, request, requester) {
+  const pollRoom = pollRoomOf(client, request.poll_id);
+  if (!pollRoom) {
+    return { ok: false, error: `no poll room of ${request.poll_id} that this bot is in` };
+  }
+  if (!(await isJoinedMember(client, pollRoom, requester))) {
+    return { ok: false, error: `${requester} is not a member of the poll room of ${request.poll_id}` };
+  }
+  const alias = `#${voterRoomAliasLocalpart(request.poll_id, request.voter_id)}:${serverNameOf(client.getUserId())}`;
+  const existing = await existingRoomFor(client, alias, requester);
+  if (existing) {
+    if (existing.ok) console.log(`[guard-bot] Voter room ${existing.room_id} of ${request.voter_id} in poll ${request.poll_id} exists already; told ${requester} so`);
+    return existing;
+  }
+  const deadline = pollRoom.currentState.getStateEvents(APP_DEADLINE_TYPE, "")?.getContent() || null;
+  const options = voterRoomCreateOptions({
+    pollId: request.poll_id, voterId: request.voter_id, requester, pollRoomId: pollRoom.roomId, deadline,
+  });
+  const { room_id } = await withRateLimitRetry(() => client.createRoom(options));
+  stats.voterRoomsCreated++;
+  console.log(`[guard-bot] Created voter room ${room_id} (room version ${ROOM_VERSION}) for voter ${request.voter_id} in poll ${request.poll_id} on behalf of ${requester}`);
+  return { ok: true, room_id };
+}
+
+/**
+ * The room `alias` names when there is one: {ok: true, room_id, existed}
+ * with the requester's invitation renewed if it is this bot's (the app's
+ * retry, or a request answered before this bot restarted), {ok: false,
+ * error} if it is somebody else's; null when the alias is free.
+ */
+async function existingRoomFor(client, alias, requester) {
+  let roomId = null;
+  try {
+    roomId = (await client.getRoomIdForAlias(alias)).room_id;
+  } catch (err) {
+    // no such alias: the usual case
+  }
+  if (!roomId) return null;
+  const room = client.getRoom(roomId);
+  if (!room || !createdByThisBot(room, client)) {
+    return { ok: false, error: `a room with the alias ${alias} exists and is not this bot's` };
+  }
+  const membership = room.getMember(requester)?.membership;
+  if (membership !== "join" && membership !== "invite") {
+    await withRateLimitRetry(() => client.invite(roomId, requester));
+  }
+  return { ok: true, room_id: roomId, existed: true };
+}
+
+/** the poll room of `pollId` this bot is in -- the one it created, or one
+ *  the app created and invited it to -- found by its canonical alias */
+function pollRoomOf(client, pollId) {
+  const prefix = `#${pollRoomAliasLocalpart(pollId)}:`;
+  return client.getRooms().find((room) =>
+    room.getMyMembership() === "join" && (room.getCanonicalAlias() || "").startsWith(prefix)) || null;
+}
+
+/** whether `userId` has joined `room`, by the room state this bot holds or,
+ *  when that has not caught up with a join of a moment ago, by the server's */
+async function isJoinedMember(client, room, userId) {
+  if (room.getMember(userId)?.membership === "join") return true;
+  try {
+    const member = await client.getStateEvent(room.roomId, "m.room.member", userId);
+    return member?.membership === "join";
+  } catch (err) {
+    return false;   // no membership event at all
+  }
 }
 
 /**
@@ -466,9 +537,12 @@ async function serverVodleState(client, roomId) {
   return vodleState(await client.roomState(roomId));
 }
 
-/** whether the room lives on another homeserver than this bot (see recheck.js) */
-function isRemoteRoom(room, botUserId) {
-  return isRemoteAlias(room.getCanonicalAlias() || "", botUserId);
+/** whether a fork with this bot's close could show on another homeserver
+ *  and not on this one (see recheck.js): the room lives there (the app made
+ *  it, on the voter's server) or its voter writes from there (this bot made
+ *  it here, Track E) */
+function isRemoteRoom(room, botUserId, powerLevels) {
+  return isRemoteAlias(room.getCanonicalAlias() || "", botUserId) || hasRemoteWriter(powerLevels, botUserId);
 }
 
 /** a request that waits out the homeserver's rate limit */
@@ -691,7 +765,7 @@ async function considerRoom(client, room, now, openVoterRooms = []) {
     const snapshot = roomKind(room) === "voter" ? await serverVodleState(client, room.roomId) : null;
     await closeRoom(client, room.roomId, plEvent.getContent());
     if (snapshot && closedByUs.has(room.roomId)) {
-      if (isRemoteRoom(room, client.getUserId())) {
+      if (isRemoteRoom(room, client.getUserId(), plEvent.getContent())) {
         await reaffirmState(client, room.roomId, snapshot);
       }
       pendingRechecks.set(room.roomId, { snapshot, due: recheckTimes(Date.now(), RECHECK_DELAYS_MS) });

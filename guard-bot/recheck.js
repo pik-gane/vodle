@@ -82,6 +82,20 @@ export function isRemoteAlias(alias, botUserId) {
   return !!server && !!botServer && server !== botServer;
 }
 
+/** whether a voter room's writer -- a member holding the power to write its
+ *  state, the voter at 50 -- is on another homeserver than the bot
+ *  `botUserId`. A room the bot created (room version 12, Track E) lives on
+ *  the bot's server, but its voter may not: that voter's late write goes to
+ *  THEIR server first, and a fork with the bot's close then shows there and
+ *  never here, exactly as for a room of another server (isRemoteAlias).
+ *  Judged by the power levels from before the close. */
+export function hasRemoteWriter(powerLevels, botUserId) {
+  const botServer = typeof botUserId === "string" ? botUserId.slice(botUserId.indexOf(":") + 1) : "";
+  const threshold = powerLevels?.state_default ?? 50;
+  return !!botServer && Object.entries(powerLevels?.users || {}).some(([userId, level]) =>
+    userId !== botUserId && level >= threshold && userId.slice(userId.indexOf(":") + 1) !== botServer);
+}
+
 /** the absolute times (ms since epoch) of the re-checks of a room closed at `closedAt` */
 export function recheckTimes(closedAt, delays) {
   return delays.map((delay) => closedAt + delay);

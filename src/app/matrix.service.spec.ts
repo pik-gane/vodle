@@ -1418,6 +1418,7 @@ describe('MatrixService closed poll rooms (#328)', () => {
 
   it("creates a voter room that only the poll room's members may join", async () => {
     const created: any[] = [];
+    service.guardBotUnreachableUntil = Number.MAX_SAFE_INTEGER;   // the app's own room, not the bot's (Track E, below)
     service.client = {
       createRoom: async (opts: any) => { created.push(opts); return {room_id: '!voter:example.org'}; },
       getStateEvent: async () => ({users: {'@alice:example.org': 100}}),
@@ -1460,11 +1461,11 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
   // names the version itself instead of taking the server's default; the
   // production click-through of 2026-10-08 is what happened when it did not.
   //
-  // Since Track E the poll rooms of a deployment with a guard bot are the
-  // bot's: the app asks it through its request room, the bot creates the
-  // room in version 12 and is its creator, and the app joins on the bot's
-  // invitation. The app's own version-11 room is what a deployment without
-  // a bot, or with one that does not answer, still gets.
+  // Since Track E the poll rooms and the voter rooms of a deployment with a
+  // guard bot are the bot's: the app asks it through its request room, the
+  // bot creates the room in version 12 and is its creator, and the app
+  // joins on the bot's invitation. The app's own version-11 room is what a
+  // deployment without a bot, or with one that does not answer, still gets.
   let service: any;
   let previous: {guard_bot_user_id: string, server_name: string};
   const BOT = '@vodle-guard:example.org';
@@ -1609,6 +1610,98 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
     await service.lockPollMetadata('P1');
     expect(sent.length).withContext('the app at the default power could not raise anything to 100; the bot locks when the poll runs').toBe(0);
     expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it('asks the guard bot for its voter room in a poll and joins on its invitation (E2)', async () => {
+    const {client, created, requests, joins} = client_with_bot(() => ({ok: true, room_id: '!voter:example.org'}));
+    service.client = client;
+    service.pollRooms.set('P1', '!poll:example.org');
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    const deadline = spyOn<any>(service, 'copyPollDeadlineInto').and.returnValue(Promise.resolve());
+    const roomId = await service.createVoterRoom('P1', 'v1');
+    expect(roomId).toBe('!voter:example.org');
+    expect(created.length).withContext('the request room is the one room the app made itself').toBe(1);
+    expect(created[0].room_alias_name).toMatch(/^vodle_requests_/);
+    expect(requests.length).toBe(1);
+    expect(requests[0].content).toEqual(jasmine.objectContaining({kind: 'create_voter_room', poll_id: 'P1', voter_id: 'v1'}));
+    expect(joins).toEqual(['!voter:example.org']);
+    expect(service.voterRooms.get('P1:v1')).toBe('!voter:example.org');
+    expect(service.voterRoomReverseLookup.get('!voter:example.org')).toEqual({pollId: 'P1', voterId: 'v1'});
+    expect(deadline).toHaveBeenCalledWith('P1', '!voter:example.org');
+  });
+
+  it('creates the voter room itself, in room version 11 with the demotion, when the guard bot does not answer', async () => {
+    const {client, created} = client_with_bot(null);
+    const demotions: any[] = [];
+    (client as any).getStateEvent = async () => ({users: {'@alice:example.org': 100}});
+    (client as any).sendStateEvent = async (roomId: string, type: string, content: any) => { demotions.push(content); return {}; };
+    service.client = client;
+    service.pollRooms.set('P1', '!poll:example.org');
+    service.guardBotRequestTimeoutMs = 50;
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    spyOn<any>(service, 'copyPollDeadlineInto').and.returnValue(Promise.resolve());
+    const roomId = await service.createVoterRoom('P1', 'v1');
+    expect(created.length).withContext('the request room, then the voter room the app made on its own').toBe(2);
+    expect(roomId).toBe('!r2:example.org');
+    expect(created[1].room_alias_name).toBe('vodle_voter_P1_djE');
+    expect(created[1].room_version).toBe('11');
+    expect(created[1].power_level_content_override.users['@alice:example.org']).toBe(100);
+    expect(demotions[0].users['@alice:example.org']).withContext('demoted to 50 after the creation, as always').toBe(50);
+    expect(service.guardBotUnreachableUntil).toBeGreaterThan(Date.now());
+  });
+
+  it('makes its own voter room when the guard bot refuses, and asks the bot again the next time', async () => {
+    const {client, created, requests} = client_with_bot(() => ({ok: false, error: 'not a member of the poll room'}));
+    (client as any).getStateEvent = async () => ({users: {'@alice:example.org': 100}});
+    service.client = client;
+    service.pollRooms.set('P1', '!poll:example.org');
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    spyOn<any>(service, 'copyPollDeadlineInto').and.returnValue(Promise.resolve());
+    expect(await service.createVoterRoom('P1', 'v1')).toBe('!r2:example.org');
+    expect(created[1].room_version).toBe('11');
+    expect(service.guardBotUnreachableUntil).withContext('a refusal is an answer: the bot is not written off').toBe(0);
+    await service.createVoterRoom('P1', 'v2');
+    expect(requests.length).withContext('asked again for the next room').toBe(2);
+  });
+
+  it("looks a voter room's alias up on the guard bot's server first, then on its own", async () => {
+    environment.matrix.guard_bot_user_id = '@vodle-guard:bot.example.org';
+    const asked: string[] = [];
+    service.client = {
+      getRoom: () => null,
+      getRoomIdForAlias: async (alias: string) => {
+        asked.push(alias);
+        if (alias.endsWith(':example.org')) { return {room_id: '!old:example.org'}; }
+        throw {httpStatus: 404, errcode: 'M_NOT_FOUND'};
+      },
+    };
+    expect(await service.getVoterRoom('P1', 'v1')).toBe('!old:example.org');
+    expect(asked).toEqual(['#vodle_voter_P1_djE:bot.example.org', '#vodle_voter_P1_djE:example.org']);
+    expect(service.voterRooms.get('P1:v1')).toBe('!old:example.org');
+  });
+
+  it('makes the request room once for requests that arrive together', async () => {
+    const {client, created} = client_with_bot(() => ({ok: true}));
+    service.client = client;
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    const answers = await Promise.all([service.askGuardBot('ping'), service.askGuardBot('ping'), service.askGuardBot('ping')]);
+    expect(answers.map((a: any) => a.ok)).toEqual([true, true, true]);
+    expect(created.length).toBe(1);
+  });
+
+  it('writes the deadline into a voter room only when the room does not hold it yet', async () => {
+    const due = '2030-01-01T00:00:00.000Z';
+    const held: Record<string, any> = {'!poll:example.org': {due}, '!bots:example.org': {due, poll_id: 'P1'}, '!own:example.org': null};
+    const sent: any[] = [];
+    service.client = {
+      getRoom: (roomId: string) => ({currentState: {getStateEvents: () => held[roomId] ? {getContent: () => held[roomId]} : null}}),
+      sendStateEvent: async (roomId: string, type: string, content: any) => { sent.push({roomId, type, content}); return {}; },
+    };
+    service.pollRooms.set('P1', '!poll:example.org');
+    await service.copyPollDeadlineInto('P1', '!bots:example.org');   // the bot copied it in at the creation
+    expect(sent.length).toBe(0);
+    await service.copyPollDeadlineInto('P1', '!own:example.org');    // the app's own room
+    expect(sent).toEqual([{roomId: '!own:example.org', type: 'm.room.vodle.poll.deadline', content: {due, poll_id: 'P1'}}]);
   });
 
   it('keeps a room version the caller names', async () => {
