@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/sharedcomponents/expandable/expandable.component.scss"],
-  "sourcesContent": ["app-expandable {\n\n    .expand-wrapper {\n        transition: height 1s ease;\n    }   \n\n    .collapsed {\n        display: none;\n        height: 0 !important;\n    }\n\n}"],
-  "mappings": ";AAEI,eAAA,CAAA;AACI,cAAA,OAAA,GAAA;;AAGJ,eAAA,CAAA;AACI,WAAA;AACA,UAAA;;",
-  "names": []
-}
