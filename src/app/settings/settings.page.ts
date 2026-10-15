@@ -200,6 +200,8 @@ export class SettingsPage implements OnInit {
   /** so that a second click while the first is still waiting does not
    *  start a second wait */
   private watching_language_dialog = false;
+  /** per open dialog, the language it was last asked to speak */
+  private dialog_language = new WeakMap<object, string>();
 
   /** Make the language dialog speak the language it is pointing at.
    *
@@ -254,6 +256,10 @@ export class SettingsPage implements OnInit {
 
   /** Put `dialog`'s heading and buttons into the language `lang`. */
   async speak_in_dialog(dialog: any, lang: string): Promise<void> {
+    // the language asked for last: picking Deutsch and then हिन्दी starts
+    // two loads, and the German file arriving second must not relabel a
+    // dialog that is pointing at Hindi by then
+    this.dialog_language.set(dialog, lang);
     let words: any;
     try {
       // the app's own loader, which reads the language's file without
@@ -264,6 +270,7 @@ export class SettingsPage implements OnInit {
       this.G.L.warn("SettingsPage.speak_in_dialog could not read", lang, error);
       return;
     }
+    if (this.dialog_language.get(dialog) !== lang) { return; }
     const buttons = (dialog.buttons || []).map((button: any) => {
       if (typeof button === 'string') { return button; }
       const word = button.role == 'cancel' ? words['cancel'] : words['OK'];

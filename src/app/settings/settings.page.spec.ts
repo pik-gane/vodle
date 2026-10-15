@@ -21,7 +21,7 @@ import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
 import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
 
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 
 import { SettingsPage } from './settings.page';
 
@@ -118,6 +118,23 @@ describe('SettingsPage', () => {
       await expectAsync(component.speak_in_dialog(dialog, 'xx')).toBeResolved();
       expect(dialog.buttons.map((b: any) => b.text)).toEqual(['Cancel', 'OK']);
       expect(dialog.header).toBe('Language');
+    });
+
+    // two picks in quick succession start two loads; the one that answers
+    // last is not necessarily the one picked last
+    it('is not relabelled by a load that an earlier pick started', async () => {
+      const pending: Record<string, Subject<any>> = {de: new Subject(), hi: new Subject()};
+      ((component as any).translations.getTranslation as jasmine.Spy)
+        .and.callFake((lang: string) => pending[lang].asObservable());
+      const dialog = make_dialog();
+      const german = component.speak_in_dialog(dialog, 'de');
+      const hindi = component.speak_in_dialog(dialog, 'hi');
+      pending['hi'].next(WORDS['hi']); pending['hi'].complete();
+      await hindi;
+      pending['de'].next(WORDS['de']); pending['de'].complete();
+      await german;
+      expect(dialog.buttons.map((b: any) => b.text)).toEqual(['रद्द करें', 'ठीक है']);
+      expect(dialog.header).toBe('भाषा');
     });
 
     it('keeps a label the language has no word for', async () => {
