@@ -299,7 +299,16 @@ export class GlobalService implements OnDestroy {
     if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){
       var elem = document.documentElement;
       if (!!elem.requestFullscreen) {
-        elem.requestFullscreen();
+        // A browser gives fullscreen only to a request that a person's
+        // click started. The login page asks outside one, so the request
+        // is refused -- "TypeError: Permissions check failed" in Chromium
+        // -- and a refusal nobody catches is an uncaught error: one on
+        // every start-up of the Android, iPhone and iPad profiles of
+        // scripts/clickthrough-profiles.js, which is how this was found.
+        // Nothing here depends on it succeeding.
+        Promise.resolve(elem.requestFullscreen()).catch(error => {
+          this.L.trace("GlobalService.go_fullscreen_on_mobile was refused", error);
+        });
       } /* else if (elem.msRequestFullscreen) {
         elem.msRequestFullscreen();
       } else if (elem.mozRequestFullScreen) {

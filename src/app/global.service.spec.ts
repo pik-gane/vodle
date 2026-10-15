@@ -191,4 +191,55 @@ describe('GlobalService', () => {
       expect(service.web_share_broken).toBeFalse();
     });
   });
+
+  // A browser gives fullscreen only to a request a person's click started;
+  // the login page asks outside one, and the refusal nobody caught became
+  // an uncaught "TypeError: Permissions check failed" on every start-up of
+  // the touch profiles of scripts/clickthrough-profiles.js
+  describe('going fullscreen on a phone', () => {
+    const PHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
+    let previous: any;
+
+    const pretend = (ua: string, request: any) => {
+      Object.defineProperty(navigator, 'userAgent', {configurable: true, value: ua});
+      Object.defineProperty(document.documentElement, 'requestFullscreen',
+        {configurable: true, writable: true, value: request});
+    };
+
+    beforeEach(() => {
+      previous = Object.getOwnPropertyDescriptor(document.documentElement, 'requestFullscreen');
+    });
+
+    afterEach(() => {
+      delete (navigator as any).userAgent;
+      if (previous) { Object.defineProperty(document.documentElement, 'requestFullscreen', previous); }
+      else { delete (document.documentElement as any).requestFullscreen; }
+    });
+
+    it('does not let a refusal become an uncaught error', async () => {
+      let caught: any = 'nothing was rejected';
+      window.onunhandledrejection = (event: any) => { caught = event.reason; };
+      pretend(PHONE, () => Promise.reject(new TypeError('Permissions check failed')));
+      expect(() => service.go_fullscreen_on_mobile()).not.toThrow();
+      // let the rejection, and any report of it, through the microtasks
+      await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+      expect(caught).toBe('nothing was rejected');
+    });
+
+    it('asks on a phone and not on a desktop', () => {
+      let asked = 0;
+      pretend(PHONE, () => { asked++; return Promise.resolve(); });
+      service.go_fullscreen_on_mobile();
+      expect(asked).toBe(1);
+      pretend('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/141.0.0.0',
+        () => { asked++; return Promise.resolve(); });
+      service.go_fullscreen_on_mobile();
+      expect(asked).withContext('a desktop browser is left alone').toBe(1);
+    });
+
+    it('survives a browser whose requestFullscreen returns nothing', () => {
+      pretend(PHONE, () => undefined);
+      expect(() => service.go_fullscreen_on_mobile()).not.toThrow();
+    });
+  });
 });
