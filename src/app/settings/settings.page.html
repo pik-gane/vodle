@@ -176,7 +176,13 @@ TODO:
     <form [formGroup]="formGroup">
       <ion-item color="primary"><span [innerHtml]="'settings.appearance'|translate"></span></ion-item>
       <ion-item>
+        <!-- the dialog relabels itself in the language it is pointing at,
+             so that whoever opened it can read its own two buttons; the
+             class is how the page finds the dialog Ionic builds -->
         <ion-select labelPlacement="floating" #ionSelects formControlName="language"
+          data-vodle="language-select"
+          [interfaceOptions]="{cssClass: 'language-dialog'}"
+          (click)="watch_language_dialog()" (keyup)="watch_language_dialog()"
           [cancelText]="'cancel'|translate" [okText]="'OK'|translate"
           (ionChange)="set_language()">
           <span slot="label" class="form-label">
