@@ -719,11 +719,23 @@ With the merged fixes in front of the same server, six of six reported
 nothing, and the same page reads "Ending soon Thursday, October 15".
 
 One thing the run turned up that is not one of the four: on the three touch
-profiles the page raises an unhandled `TypeError: Permissions check failed`.
-Chromium rejects `Notification.requestPermission()` without a user gesture,
-Capacitor's LocalNotifications web implementation calls it, and nothing
-catches the rejection — a notification a browser was never going to show
-(see #367) now also leaves an uncaught error in the console.
+profiles every page load raised an unhandled `TypeError: Permissions check
+failed`. The login page calls `go_fullscreen_on_mobile`, which calls
+`Element.requestFullscreen` on a mobile user agent; a browser gives
+fullscreen only to a request a person's click started, so outside one it
+refuses, and the refusal nobody caught became an uncaught error. Fixed by
+catching it (PR #374).
+
+Worth recording, because two plausible suspects cost an hour first:
+Capacitor's LocalNotifications plugin asks for notification permission at
+start-up, and its web implementation decides whether notifications are
+supported by CONSTRUCTING one (`new Notification('')`), whose own
+permission check fails asynchronously past every try and catch. Both show
+up in a stack trace that looks exactly like the culprit. What settled it
+was logging EVERY console message rather than filtering for the suspected
+one: Chromium's own warning, "Failed to execute 'requestFullscreen' on
+'Element': API can only be initiated by a user gesture", sat one line
+above the error.
 
 ### The side-by-side deployment
 
