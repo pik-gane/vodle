@@ -4051,6 +4051,39 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(matrix.deleteAllUserData).toHaveBeenCalled();
   });
 
+  // Until 2026-10-15 the courtesies owed to the other participants were
+  // awaited plainly, and revoke_delegation throws for a poll this session
+  // never opened. The deletion then rejected before it had deleted
+  // anything, and the page -- whose only report was a local notification
+  // the browser does not show -- went back with every byte still in place
+  // (#367).
+  it('deletes the data although a delegation cannot be withdrawn', async () => {
+    svc.outgoing_dids_caches = {p1: new Map([['o1', 'd1']])};
+    svc.G.Del.revoke_delegation = jasmine.createSpy('revoke_delegation').and
+      .returnValue(Promise.reject(new Error('Cannot revoke a delegation without its owner\'s poll')));
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(svc.G.Del.revoke_delegation).toHaveBeenCalled();
+    expect(matrix.deleteAllUserData).toHaveBeenCalled();
+    expect(svc.clear_all_local).toHaveBeenCalled();
+    expect(svc.deletion_left_undone).toEqual(['withdraw the delegation request d1 of p1']);
+  });
+
+  it('deletes the data although a request cannot be declined', async () => {
+    svc.incoming_dids_caches = {p1: new Map([['d2', ['someone', 'url', ['pending']]]])};
+    svc.G.Del.decline = jasmine.createSpy('decline').and.throwError('no such poll');
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(matrix.deleteAllUserData).toHaveBeenCalled();
+    expect(svc.deletion_left_undone).toEqual(['decline the delegation request d2 of p1']);
+  });
+
+  it('deletes the data although a wap cannot be set to zero', async () => {
+    svc.G.P.polls.p1.set_my_own_rating = jasmine.createSpy('set_my_own_rating').and
+      .throwError('the room is closed');
+    await expectAsync(svc.delete_all()).toBeResolved();
+    expect(matrix.deleteAllUserData).toHaveBeenCalled();
+    expect(svc.deletion_left_undone.length).withContext('one per option').toBe(2);
+  });
+
   it('says what it is doing while it does it (#327)', async () => {
     svc._pids = new Set(['p1', 'p2']);
     const seen: any[] = [];

@@ -42,4 +42,30 @@ describe('DeleteAllPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  // A browser shows nothing for a local notification, so a deletion that
+  // failed looked like one that did nothing: the page went back and every
+  // poll was still listed (#367).
+  describe('when the deletion fails', () => {
+    it('says so in a dialog, and goes back only when that is acknowledged', async () => {
+      const presented: any[] = [];
+      spyOn((component as any).alertCtrl, 'create').and.callFake(async (options: any) => {
+        presented.push(options);
+        return {present: () => Promise.resolve()} as any;
+      });
+      const back = spyOn((component as any).location, 'back');
+      await component.report_failure(new Error('the homeserver said no'));
+      expect(presented.length).toBe(1);
+      expect(presented[0].message).toContain('the homeserver said no');
+      expect(back).withContext('not until the dialog is acknowledged').not.toHaveBeenCalled();
+      presented[0].buttons[0].handler();
+      expect(back).toHaveBeenCalled();
+    });
+
+    it('survives an error that carries no message', async () => {
+      spyOn((component as any).alertCtrl, 'create').and.returnValue(
+        Promise.resolve({present: () => Promise.resolve()} as any));
+      await expectAsync(component.report_failure(undefined)).toBeResolved();
+    });
+  });
 });

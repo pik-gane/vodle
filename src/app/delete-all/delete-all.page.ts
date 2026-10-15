@@ -110,18 +110,40 @@ export class DeleteAllPage implements OnInit {
             }).catch(error => {
               this.deleting = false;
               this.G.D.deletion_progress = null;
+              this.G.L.error("DeleteAllPage: the deletion failed", error);
               LocalNotifications.schedule({ notifications: [{ id: null,
                   title: this.translate.instant("delete-all.failed"),
                   body: null
               }]});
-              // go back to previous page:
-              this.location.back();
+              // and SAY so on the page. A browser shows nothing for a local
+              // notification -- there is no native layer to show it and no
+              // permission asked for one -- so a failed deletion looked like
+              // a deletion that did nothing: the page went back and every
+              // poll was still listed (#367).
+              this.report_failure(error);
             })
           } 
         } 
       ] 
     }); 
     await dialog.present(); 
+  }
+
+  /** what went wrong, in a dialog the person has to acknowledge, and only
+   *  then back to the page they came from (#367) */
+  async report_failure(error: any): Promise<void> {
+    const reason = (error && (error.message || error.toString())) || '';
+    const dialog = await this.alertCtrl.create({
+      header: this.translate.instant('delete-all.failed'),
+      message: this.translate.instant('delete-all.failed-body')
+        + (reason ? '<p><small>' + reason.replace(/[<>&]/g, '') + '</small></p>' : ''),
+      buttons: [{
+        text: this.translate.instant('OK'),
+        role: 'ok',
+        handler: () => { this.location.back(); },
+      }],
+    });
+    await dialog.present();
   }
 
 }
