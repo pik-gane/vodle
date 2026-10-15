@@ -176,7 +176,7 @@ Session 10: B1 + B2 — done 2026-09-10 (B1 except the owner's decisions). Sessi
 | --- | --- | --- |
 | D1 | #193 | **Done 2026-09-10** (session 12, reworked in session 15 as the owner asked: "voting should be possible before registering"): a magic link opened on a device without credentials no longer leads to the login flow. The joinpoll page takes part as a guest right away, without any question, and goes on to the poll page; when the deployment has a privacy statement, the consent checkbox (the login page's text and link) sits at the bottom of the poll page, and until it is checked the sliders, "add option" and "delegate" stay disabled and no rating is stored (`DataService.consent_pending`, `Poll.set_my_own_rating`); once checked, the page stores its ratings. The login page stays as it is. A guest is a normal account with random credentials (about 115 bits; the old "Guest" + number scheme let anyone enumerate every guest account) that only the device knows; the poll page shows a banner with a login button, the settings page a note, the logout page a warning. Logging in later — from the banner, the login page or the settings page — moves the guest's polls, votes and settings to the account with the machinery of B4 (the voter id stays, so the tally does not change), then deactivates the guest account. Both backends. Specs: unit (`data.service.spec.ts`), against a real Synapse (`matrix-two-client.spec.ts`: the account changes the guest's vote in the same voter room, the guest's credentials are dead afterwards), e2e (`test/specs/guest-join.e2e.js`: the built app keeps a magic-link visitor on the join page). The guest account itself cannot be avoided (the Matrix backend needs an account to read the poll), but the visitor never sees or types anything for it; the login *as an overlay* is not wanted (owner, 2026-09-10). |
 | D2 | #61 #60 #56 #54 | Translations via Weblate; a language is offered in the app once it is mostly translated (Tamil #277 was added this way; Arabic and French are still mostly untranslated). |
-| D3 | PRs #285 #253 #202 #268–#270 | Open pull requests need a decision by the owner: #285 (weighted delegation and UI changes — **examined 2026-09-13: not incorporable as it stands**. It targets the `hemped` branch, not `main`, and is the last 13 commits of a 29-commit feature branch that forked on 2024-10-14. Every symbol its diff patches exists only there — `get_weighted_delegation_allowed`, `get_different_delegation_allowed`, `get_direct_delegation_map`, `self_rating_map`, `effective_rating_map`, `get_inverse_indirect_map`, `update_effective_votes` are all zero occurrences on `main` — so there is nothing to cherry-pick: it is a patch to a feature, and the feature is `hemped`'s other 16 commits (weighted, ranked and per-option delegation with cycle checking, four dialog pages). `hemped` is 289 commits BEHIND main, having forked before the whole Matrix migration, and carries Angular 14→19, Ionic 6→8 and TypeScript 4.4→5.8; its 360k-line diff is `docs/`, 1742 files of committed build output that `main` does not have at all. The last review (mensch72, 2025-04-12) reports it broken — missing toggles, an undefined variable, a banner without the delegate's name — and six commits followed with no re-review. Integrating it is its own job: a framework upgrade plus a two-year rebase plus the feature, and easier after the Matrix work has landed than during it. When it is done, note that per-option delegation writes `del_oid.<oid>` as a vodle data key, and a data key becomes part of the unencrypted Matrix event type — not a new kind of exposure, since ratings already ship as `m.room.vodle.voter.rating.rating.<oid>`, but it extends PRIVACY.md §6 from "the delegation graph by vid" to "and for which option"), #253 (CSS theme option from 2023, probably superseded by the dark theme of PR #291), #202 (Finnish translation from 2022; Finnish is in the app, so probably superseded), the dependabot bumps #268–#270 (2024; the lock file still carries the old versions of `express`, `follow-redirects` and `ip`, so they are still applicable — merge them or bump the three with a fresh `npm audit`). Community PRs #254 and #298 were ported and closed only in 2026-09; a week from opening to a decision should be the rule. |
+| D3 | PRs #285 #253 #202 #268–#270 | **Done 2026-10-10/15 (the owner).** All five were closed as stale or superseded, and the weekly-decision rule the row asked for stands. The reasons, for the record: #285 (weighted delegation and UI changes) was examined on 2026-09-13 and found not incorporable as it stood — it targets the `hemped` branch, not `main`, and is the last 13 commits of a 29-commit feature branch that forked on 2024-10-14, every symbol its diff patches existing only there; `hemped` had forked before the Matrix migration and carried its own framework upgrades and 1742 files of committed build output. What it wanted is in `main` now by another road: weighted, ranked and per-option delegation on vodle's own model (#336, row 37). #253 (a CSS theme option from 2023) is superseded by the dark theme of #291; #202 (a Finnish translation from 2022) by the Finnish already in the app; the dependabot bumps #268–#270 by the dependency audit — `ip` is out of the tree, `follow-redirects` and `express` are at fixed versions. One note from #285 survives it: per-option delegation writes `del_oid.<oid>` as a vodle data key, and a data key becomes part of the unencrypted Matrix event type, which extends PRIVACY.md §6 from "the delegation graph by vid" to "and for which option". | 
 | D4 | backlog | The older "ready to implement" features (#84, #62, #86, #156, #173, #182, #184, #201, #169) stay unscheduled until Tracks A–B are done. |
 
 ### Track E — room version 12: the guard bot creates the rooms
@@ -213,6 +213,24 @@ questions below are answered.
 
 ### What is in flight
 
+Nothing, as of 2026-10-15. **Read this paragraph before the one below it:
+the state of 2026-10-09 that follows is kept for its reasons, not for its
+facts.** Between 2026-10-10 and 2026-10-15 the owner closed every old pull
+request (#285, #253, #202, #268–#270: stale or superseded, see D3) and
+triaged the issues — #24, #156, #163 and #346 closed as done; #341, #343
+and #344 labelled "ready for review", with the reservation that on the
+owner's Waterfox #344 still shows two password eyes, so it is **not**
+solved there; the CouchDB sync defects and #293/#327 labelled "in
+progress". Hindi (#56) was enabled in Weblate by removing `hi` from the
+user-interface component's language filter and rescanning; the volunteer
+@yathuverma2-collab took it to 98%, and their Weblate pull request #364 is
+green and waits only for the owner's approval — the only open pull request
+there is. On 2026-10-15 the owner's four test findings were fixed and
+merged: #368 (an icon that renders nothing, PR #369), #365 and #366 (the
+ended poll's header and its results, PR #370), #367 ("Delete my data"
+reporting nothing when it fails, PR #371) and the late-results defect
+behind #366 (PR #372). No session is watching anything.
+
 Nothing, as of 2026-10-09. Everything this section named is merged into
 `main`: #339 (2026-10-08) and, on 2026-10-08/09, #350–#358 (the hops to
 the current versions, the dependency audit, the application builder,
@@ -223,24 +241,23 @@ room joined before it is written into — the defect that made runs 173 and
 178 red on `main`), #361 (the gap behind a cut-short sync is fetched) and
 #362 (#58: an overlay does not outlive its page). `main` is green again
 since run 182 (#360). No pull request from this work is open; the open
-pull requests are the owner's to decide (D3: #285, #253, #268–#270). No
-session is watching anything.
+pull requests are the owner's to decide (D3) — all of which the owner has
+since closed.
 
 Open, and whose:
 
-- **The owner**: the deployment run on the test server
-  (`deploy/README.md`; `deploy/deploy.sh update` for an existing
-  deployment, or `down`, move `matrix-data/` and `postgres-data/` away,
-  `up` for a fresh one — the app and the bot must both be on today's
-  `main`, since #360 changed the channel between them), then the production
-  install and the handover of the CouchDB deployment (B1, session 17); the
-  verification of #341, #343, #344 and #346 against a real deployment or
-  the reporter's browser (each issue has a comment saying what to look at;
-  #342, #345 and #155 are closed); the Dependabot pull requests; the two
+- **The owner**: the test server is up and was run against (see below),
+  so what is left of this is the production install and the handover of
+  the CouchDB deployment (B1, session 17), and an update of the test
+  server to a `main` carrying #369–#372 before the four findings are
+  checked again there; the approval of the Weblate pull request #364
+  (Hindi at 98%); #344, which the merged fix did not solve on the owner's
+  Waterfox and which therefore needs that browser looked at again; the two
   disabled workflow files (CodeQL, CodeSee: delete or renew).
 - **Production observation**: B6 (#159 #161 #162 #171 #251), then C1
   (#332, the removal of the CouchDB backend).
-- **Weblate**: D2, the translations.
+- **Weblate**: D2, the translations — Hindi (#56) is at 98% and waits in
+  #364.
 - **Known noise, left**: matrix-js-sdk 43 asks every homeserver for
   `org.matrix.msc4143/rtc/transports` once per client start and logs the
   404 at error level (app console and bot log); Synapse 1.162 does not
@@ -617,6 +634,108 @@ the running app** — a real `ion-content`, the real stylesheet, the real
 cascade — and measure that. The datetime fix (#342) went the other way, into
 the page's own karma harness, which renders the real `DraftpollPage` and is
 where its regression tests now live.
+
+### The four test findings of 2026-10-15, and how each was checked (#365–#368)
+
+The owner's test server produced four findings in one sitting. None of them
+showed in the suite, which renders no control, so each fix was looked at in
+a real browser against the **production** build.
+
+- **#368, the kebab button that was an empty space.** Ionic's standalone
+  build ships no icon that `addIcons` was not told about, and a name it
+  does not know renders `<div class="icon-inner"><slot></slot></div>` and
+  makes **no request** — measured in the deployed app, where
+  `/svg/ellipsis-vertical.svg` answers 200 and the icon asks for nothing.
+  `ellipsis-horizontal` and `ellipsis-vertical` were registered, and
+  `scripts/check-icons.js` now cross-checks every icon name in the
+  templates and the menu entries against `src/app/icons.ts` on every pull
+  request. It reads the bindings as written: a literal that an expression
+  compares to or glues onto is not an icon name, a `>` inside a binding
+  does not end the tag, and a commented-out registration registers nothing.
+- **#365, "EndedFriday, October 9".** Angular's template compiler trims the
+  text that follows a control-flow block's `}`, and JavaScript's `trim()`
+  counts a non-breaking space as whitespace, so `}&nbsp;<b>` loses the
+  separator. The Angular 21 control-flow migration left this shape in six
+  places. The remedy is `}<span>&nbsp;</span><b>`, and
+  `scripts/check-templates.js` fails CI on a separator that would vanish.
+  Its scanner skips HTML comments, interpolations and the parenthesised
+  expression of a block head — an apostrophe in a comment and a `<` in a
+  condition each used to blind it to every brace that followed.
+- **#366, the ended poll with two empty coloured bars.** The page asked for
+  `p.options[p.winner].name` for a poll whose stored result named no
+  option; the binding threw and left both bars blank. The results section
+  is one chain now, with a `result_is_empty` getter that answers per poll
+  type — and treats a type that never reached the device as empty whatever
+  the shares say, since the winner bar below would dereference the winner
+  that is not there.
+- **#367, "Delete my data" that looked like it did nothing.** A courtesy
+  step (declining a delegation request, revoking one, zeroing a rating)
+  that throws used to abort the whole deletion, and the only report was a
+  Capacitor local notification, which a browser never shows: the page went
+  back and every poll was still listed. Each step is wrapped now, what
+  could not be done is recorded, and a failure is reported in a dialog the
+  person has to acknowledge.
+
+Behind #366 sat a deeper defect, which is why PR #372 followed: a device
+that opens a poll already ended constructs the poll, sees the deadline has
+passed and ends it within seconds — and the Matrix path tallied before
+`load_poll_contents` had fetched the options. With no options the tally
+counts nothing, and in weighted delegation mode (what the deployment runs)
+even the ratings are folded in per option, so no voter was registered at
+all. Three repairs, each of which the review found could have been
+defeated by the next: `Poll.end()` waits for the contents; the loader makes
+the Poll's `Option` objects, which only the live timeline handler used to
+make, so options read back from a room's history reached the caches and
+nothing else; the voter room is not created for a poll the Poll object has
+already closed, which `getp` cannot see because the cached state still says
+running; and every scan over "the options" — the weighted blend and the two
+rescans that find a voter's new maximum — covers the options that only have
+a rating, not just the ones that have arrived.
+
+### Click-throughs across emulated browsers and devices
+
+`scripts/clickthrough-profiles.js` drives a deployment through six profiles
+— desktop Chrome, a Firefox and a Safari user agent, an Android phone, an
+iPhone and an iPad, each with its viewport, scale and touch flag — and
+*looks* at my polls, a fresh draft poll, an existing poll and the settings
+page. Per page it records the console errors, the icons whose shadow root
+has no SVG, the laid-out controls with no size, horizontal overflow and a
+screenshot. It is the complement of `production-clickthrough.js`, which
+walks one flow in one browser at one size: these defects are per page, not
+per flow.
+
+It needs an account that already exists on the deployment, since
+registering needs the registration token that only the deployment's own
+build carries. `--serve-dir docs` answers the app's own requests from a
+local build while the page keeps the deployment's **origin**, so a fix can
+be seen against the deployment's real polls before the server is updated;
+the local build's `matrix.server_name` has to name the deployment's
+homeserver, or the login derives a user id the server does not have.
+
+Measured on 2026-10-15 against the test server: six of six profiles
+reported #368 (the draft poll page's `ellipsis-horizontal` rendering
+nothing) and the poll page read "Ending soonThursday, October 15" (#365).
+With the merged fixes in front of the same server, six of six reported
+nothing, and the same page reads "Ending soon Thursday, October 15".
+
+One thing the run turned up that is not one of the four: on the three touch
+profiles every page load raised an unhandled `TypeError: Permissions check
+failed`. The login page calls `go_fullscreen_on_mobile`, which calls
+`Element.requestFullscreen` on a mobile user agent; a browser gives
+fullscreen only to a request a person's click started, so outside one it
+refuses, and the refusal nobody caught became an uncaught error. Fixed by
+catching it (PR #374).
+
+Worth recording, because two plausible suspects cost an hour first:
+Capacitor's LocalNotifications plugin asks for notification permission at
+start-up, and its web implementation decides whether notifications are
+supported by CONSTRUCTING one (`new Notification('')`), whose own
+permission check fails asynchronously past every try and catch. Both show
+up in a stack trace that looks exactly like the culprit. What settled it
+was logging EVERY console message rather than filtering for the suspected
+one: Chromium's own warning, "Failed to execute 'requestFullscreen' on
+'Element': API can only be initiated by a user gesture", sat one line
+above the error.
 
 ### The side-by-side deployment
 
