@@ -827,4 +827,27 @@ describe('Poll ratings that arrive before the option list (weighted delegation)'
     expect(p.T.n_not_abstaining).toBe(1);
     expect(p.T.oids_descending).toEqual(['o1']);
   });
+
+  // the same ordering with a favourite that falls: finding the voter's new
+  // maximum rescans their ratings, and that scan ran over the known options
+  // only, so with none known it found nothing, deleted the maximum and left
+  // the next-best option short of its effective 100 (#366)
+  it('finds the new maximum among the options it only has ratings for', () => {
+    const p = make_poll();
+    p.update_own_rating('v1', 'o1', 80);
+    p.update_own_rating('v1', 'o2', 70);
+    expect(p.max_proxy_ratings_map.get('v1')).withContext('o1 is the favourite').toBe(80);
+    // o1 falls below o2, which makes o2 the favourite and therefore
+    // effectively a 100
+    p.update_own_rating('v1', 'o1', 60);
+    expect(p.max_proxy_ratings_map.get('v1')).toBe(70);
+    expect([...(p.argmax_proxy_ratings_map.get('v1') || [])]).toEqual(['o2']);
+    expect(p.effective_ratings_map.get('o2').get('v1')).toBe(100);
+    // and the voter is still a voter
+    p._add_option({oid: 'o1'});
+    p._add_option({oid: 'o2'});
+    p.tally_all();
+    expect(p.T.n_not_abstaining).toBe(1);
+    expect(p.T.oids_descending[0]).toBe('o2');
+  });
 });

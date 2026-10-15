@@ -1999,8 +1999,17 @@ export class DataService implements OnDestroy {
     // is needed before the page can be rated on, but not before the poll
     // list can be shown -- and not at all once the poll has ended: nothing
     // is written into a closed poll, and a room made for it now would be
-    // announced into a poll room that refuses the announcement (403)
-    if (this.getp(pid, 'state') != 'closed') {
+    // announced into a poll room that refuses the announcement (403), whose
+    // rejection would end this load before the options were read.
+    //
+    // The Poll instance is asked as well as the cache. Poll.end() sets its
+    // own state to closed and change_poll_state writes that into the user
+    // cache, while getp reads a non-draft poll's state out of poll_caches,
+    // which still says "running" until the guard bot's closing state event
+    // arrives -- and Poll.end() awaits this load in between (#366).
+    const closed = this.getp(pid, 'state') == 'closed'
+                   || this.G.P.polls[pid]?.state == 'closed';
+    if (!closed) {
       await (await this.poll_matrix(pid)).getOrCreateMyVoterRoom(pid, myVid);
     }
     // join and read the other voters' rooms, and keep watching them:
@@ -2015,12 +2024,20 @@ export class DataService implements OnDestroy {
       this._pid_oids[pid] = new Set();
     }
     this.ensure_poll_cache(pid);
+    const poll = this.G.P.polls[pid];
     for (const [oid, opt] of options) {
       this._pid_oids[pid].add(oid);
       this.poll_caches[pid]['option.' + oid + '.oid'] = oid;
       this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
       this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
       this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
+      // and an Option object on the Poll, which is where Poll.oids reads
+      // them and therefore what every tally counts over. Only the live
+      // timeline handler (onOptionAdded) made them, so options read back
+      // from the room's history -- every option, on a device that arrives
+      // after they were added -- reached the caches and nothing else: the
+      // poll was tallied over an empty option list (#366)
+      if (poll && !(oid in poll.options)) { new Option(this.G, poll, oid); }
     }
 
     // Bridge other voters' ratings from Matrix into poll_caches and tally system.

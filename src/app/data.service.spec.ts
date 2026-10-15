@@ -3651,6 +3651,36 @@ describe("a poll's contents are fetched when the poll is opened (#327)", () => {
     expect(svc.G.P.update_own_rating).toHaveBeenCalledWith('p1', 'v-other', 'o1', 50, false);
   });
 
+  // the caches alone are not the poll's options: Poll.oids reads the Option
+  // objects, and only the live timeline handler made them, so a poll whose
+  // options were all read back from history was tallied over nothing (#366)
+  it("makes the Poll's Option objects, not only the cache entries", async () => {
+    const added: string[] = [];
+    svc.G.P.polls['p1'] = {
+      options: {} as any,
+      _add_option(o: any) { this.options[o.oid] = o; added.push(o.oid); return true; },
+    };
+    await svc.connect_to_remote_poll_db('p1');
+    await svc.ensure_poll_loaded('p1');
+    expect(added).toEqual(['o1']);
+    expect(svc.G.P.polls['p1'].options['o1'].oid).toBe('o1');
+  });
+
+  // Poll.end() sets the Poll's own state to closed and then awaits this
+  // load; getp still reads "running" out of poll_caches until the guard
+  // bot's closing event arrives, and a voter room made in between is
+  // announced into a poll room that refuses it (#366)
+  it("makes no voter room for a poll the Poll object has already closed", async () => {
+    svc.G.P.polls['p1'] = {state: 'closed', options: {}, _add_option: () => true};
+    await svc.connect_to_remote_poll_db('p1');
+    expect(svc.poll_caches['p1']['state']).withContext('the cache still says running').toBe('running');
+    await svc.ensure_poll_loaded('p1');
+    expect(matrix.getOrCreateMyVoterRoom).not.toHaveBeenCalled();
+    // and the rest of the load still happened
+    expect(matrix.warmupCache).toHaveBeenCalled();
+    expect(Array.from(svc._pid_oids['p1'])).toEqual(['o1']);
+  });
+
   it("retries the load after a failure instead of remembering it as done", async () => {
     matrix.warmupCache.and.returnValue(Promise.reject(new Error("no homeserver")));
     await expectAsync(svc.ensure_poll_loaded('p1')).toBeRejected();

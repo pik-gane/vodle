@@ -1392,6 +1392,17 @@ export class Poll {
     }
   }
 
+  /** Every option a tally has to cover: the poll's own options, and any
+   *  option that `ratings` holds a rating for without the option itself
+   *  having arrived. On a device that loads a poll which has already ended,
+   *  the final ratings are read from the server before the option list is,
+   *  and a scan over this.oids alone counted none of them (#366). */
+  private oids_and_rated(ratings: Map<string, Map<string, number>>): Set<string> {
+    const oids = new Set<string>(this.oids);
+    for (const oid of ratings.keys()) { oids.add(oid); }
+    return oids;
+  }
+
   /** In a poll with weighted delegation, a voter's rating of an option is a
    *  blend: what each of their delegates rates it, in the proportion of the
    *  wap they were trusted with, plus what the voter rates it themselves
@@ -1419,8 +1430,7 @@ export class Poll {
     // known options alone left every voter unregistered -- "all
     // participants abstained", a winner drawn from nothing (found on the
     // owner's test server, 2026-10-09)
-    const oids = new Set<string>(this.oids);
-    for (const oid of this.own_ratings_map.keys()) { oids.add(oid); }
+    const oids = this.oids_and_rated(this.own_ratings_map);
     for (const oid of oids) {
       const own = this.own_ratings_map.get(oid) || new Map<string, number>(),
             trusts = this.G.Del.get_trust_matrix(this._pid, oid);
@@ -1523,8 +1533,12 @@ export class Poll {
             // oid was sole favourite, have to find new max!
             max_r = -1;
             argmax_r_set = new Set();
-            for (const oid2 of this.oids) {
-              const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
+            // every option with a rating, not only those that have arrived:
+            // an option rated before the poll's option list reached this
+            // device was missed here, which deleted the voter's maximum and
+            // left the rest at the wrong effective rating (#366)
+            for (const oid2 of this.oids_and_rated(this.proxy_ratings_map)) {
+              const r2 = this.proxy_ratings_map.get(oid2)?.get(vid) || 0;
               if (r2 > max_r) {
                 max_r = r2;
                 argmax_r_set = new Set([oid2]);
@@ -1579,8 +1593,13 @@ export class Poll {
               // oid was sole favourite, have to find new max!
               max_r = -1;
               argmax_r_set = new Set();
-              for (const oid2 of this.oids) {
-                const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
+              // every option with a rating, not only those that have
+              // arrived: an option rated before the poll's option list
+              // reached this device was missed here, which deleted the
+              // voter's maximum and left the rest at the wrong effective
+              // rating (#366)
+              for (const oid2 of this.oids_and_rated(this.proxy_ratings_map)) {
+                const r2 = this.proxy_ratings_map.get(oid2)?.get(vid) || 0;
                 if (r2 > max_r) {
                   max_r = r2;
                   argmax_r_set = new Set([oid2]);
