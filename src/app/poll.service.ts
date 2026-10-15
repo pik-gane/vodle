@@ -1392,6 +1392,17 @@ export class Poll {
     }
   }
 
+  /** Every option a tally has to cover: the poll's own options, and any
+   *  option that `ratings` holds a rating for without the option itself
+   *  having arrived. On a device that loads a poll which has already ended,
+   *  the final ratings are read from the server before the option list is,
+   *  and a scan over this.oids alone counted none of them (#366). */
+  private oids_and_rated(ratings: Map<string, Map<string, number>>): Set<string> {
+    const oids = new Set<string>(this.oids);
+    for (const oid of ratings.keys()) { oids.add(oid); }
+    return oids;
+  }
+
   /** In a poll with weighted delegation, a voter's rating of an option is a
    *  blend: what each of their delegates rates it, in the proportion of the
    *  wap they were trusted with, plus what the voter rates it themselves
@@ -1413,7 +1424,14 @@ export class Poll {
     if (!this.allow_weighted) { return; }
     this.G.L.entry("Poll.update_weighted_proxy_ratings", this._pid);
     const settled = 0.01, most_rounds = 1000;
-    for (const oid of this.oids) {
+    // every option that is known, and every option that has a rating: on a
+    // device that loads a poll already ended, the final ratings are read
+    // from the server before the option list is, and a blend over the
+    // known options alone left every voter unregistered -- "all
+    // participants abstained", a winner drawn from nothing (found on the
+    // owner's test server, 2026-10-09)
+    const oids = this.oids_and_rated(this.own_ratings_map);
+    for (const oid of oids) {
       const own = this.own_ratings_map.get(oid) || new Map<string, number>(),
             trusts = this.G.Del.get_trust_matrix(this._pid, oid);
       // everyone the blend covers: whoever has rated, and whoever trusts or
@@ -1515,8 +1533,12 @@ export class Poll {
             // oid was sole favourite, have to find new max!
             max_r = -1;
             argmax_r_set = new Set();
-            for (const oid2 of this.oids) {
-              const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
+            // every option with a rating, not only those that have arrived:
+            // an option rated before the poll's option list reached this
+            // device was missed here, which deleted the voter's maximum and
+            // left the rest at the wrong effective rating (#366)
+            for (const oid2 of this.oids_and_rated(this.proxy_ratings_map)) {
+              const r2 = this.proxy_ratings_map.get(oid2)?.get(vid) || 0;
               if (r2 > max_r) {
                 max_r = r2;
                 argmax_r_set = new Set([oid2]);
@@ -1571,8 +1593,13 @@ export class Poll {
               // oid was sole favourite, have to find new max!
               max_r = -1;
               argmax_r_set = new Set();
-              for (const oid2 of this.oids) {
-                const r2 = this.proxy_ratings_map.get(oid2).get(vid) || 0;
+              // every option with a rating, not only those that have
+              // arrived: an option rated before the poll's option list
+              // reached this device was missed here, which deleted the
+              // voter's maximum and left the rest at the wrong effective
+              // rating (#366)
+              for (const oid2 of this.oids_and_rated(this.proxy_ratings_map)) {
+                const r2 = this.proxy_ratings_map.get(oid2)?.get(vid) || 0;
                 if (r2 > max_r) {
                   max_r = r2;
                   argmax_r_set = new Set([oid2]);
@@ -2071,8 +2098,22 @@ export class Poll {
         if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
-        this.G.D.wait_for_matrix_poll_closure(this.pid, is_current)
+        // the poll's options and voter rooms first: a device that loads a
+        // poll already ended -- a late visitor, a second device -- ends it
+        // within seconds of constructing it, and a tally before the
+        // contents are loaded counts nothing and draws a winner from
+        // nothing (found on the owner's test server, 2026-10-09). A load
+        // that fails is not a reason never to end the poll.
+        this.G.D.ensure_poll_loaded(this.pid)
+        .catch(err => {
+          this.G.L.warn("Poll.end (Matrix) the poll's contents could not be loaded before the final tally", this._pid, err);
+        })
+        .then<{closed: boolean; event_id: string | null} | 'abort'>(() => {
+          if (!is_current()) { return 'abort'; }
+          return this.G.D.wait_for_matrix_poll_closure(this.pid, is_current);
+        })
         .then((closure => {
+          if (closure === 'abort') { return 'abort'; }
           if (!is_current()) { return 'abort'; }
           return this.G.D.reconcile_matrix_ratings(this.pid).then(() => closure);
         }).bind(this))
