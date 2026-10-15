@@ -209,6 +209,15 @@ export class DraftpollPage implements OnInit {
         poll_due_type: this.pd.due_type||'', 
         poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
       });
+      // A draft can arrive already set to end at a custom date but with no
+      // date: the "Fledermauszüchterverein" example does exactly that, as
+      // does any draft saved before #342. The date button then renders
+      // nothing, and it only appeared after switching the end type away and
+      // back, which is the one path that seeded a date. So seed here too --
+      // without opening the picker, which is for when someone asks for it.
+      if (this.formGroup.get('poll_due_type').value == 'custom') {
+        this.seed_poll_due_custom();
+      }
       if (this.pd.language||this.pd.db_from_pid||this.pd.db_custom_server_url) {
         this.advanced_expanded = true;
       }

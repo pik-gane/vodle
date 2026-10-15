@@ -115,6 +115,45 @@ describe('DraftpollPage', () => {
       expect(box.height).toBeGreaterThan(0);
     });
 
+    // The "Fledermauszüchterverein" example arrives set to end at a custom
+    // date but with no date, and the button stayed empty until the end type
+    // was switched away and back -- the only path that seeded a date.
+    it('gives a draft that arrives set to "custom" but without a date one, without opening the picker', async () => {
+      const open = spyOn(component, 'open_due_custom');
+      (component as any).pid = undefined;
+      (component as any).ready = false;
+      (component as any).pd = {type: 'winner', language: 'de', title: 'Urlaub', due_type: 'custom',
+                               options: [{name: 'Südsee'}, {name: 'Ski'}]};
+      component.onDataReady();
+      fixture.detectChanges();
+
+      const control = component.formGroup.get('poll_due_custom');
+      expect(control.value).withContext('a starting date').toBeTruthy();
+      expect(control.valid).toBeTrue();
+      expect((component as any).pd.due_custom).toEqual(new Date(control.value));
+      expect(open).withContext('nobody asked for the picker').not.toHaveBeenCalled();
+
+      const button: HTMLElement = fixture.nativeElement.querySelector('ion-datetime-button');
+      expect(button).toBeTruthy();
+      let box = button.getBoundingClientRect();
+      for (let i = 0; i < 80 && box.width === 0; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        box = button.getBoundingClientRect();
+      }
+      expect(box.width).toBeGreaterThan(0);
+    });
+
+    it('keeps the date of a draft that arrives with one', () => {
+      const due = new Date(Date.now() + 3*24*60*60*1000);
+      due.setSeconds(0, 0);
+      (component as any).pid = undefined;
+      (component as any).ready = false;
+      (component as any).pd = {type: 'winner', title: 'Urlaub', due_type: 'custom', due_custom: due.toISOString(),
+                               options: [{name: 'Südsee'}, {name: 'Ski'}]};
+      component.onDataReady();
+      expect(component.formGroup.get('poll_due_custom').value).toEqual(due.toISOString());
+    });
+
     it('keeps a date the draft already carries, and does not reopen the picker', () => {
       const open = spyOn(component, 'open_due_custom');
       const existing = new Date(Date.now() + 3*24*60*60*1000).toISOString();
