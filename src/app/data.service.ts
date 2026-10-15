@@ -34,6 +34,7 @@ import { Storage } from '@ionic/storage-angular';
 // source that emits once and completes, which is what HttpClient.get does
 import { firstValueFrom } from 'rxjs';
 
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { environment } from '../environments/environment';
@@ -7130,9 +7131,53 @@ export class DataService implements OnDestroy {
     })
   }
 
+  /** What this device already says about permission to show
+   *  notifications, without asking for it. On the web the browser's own
+   *  Notification.permission answers; Capacitor's plugin is only asked on a
+   *  native platform, since its web implementation decides whether
+   *  notifications are supported by constructing one. */
+  private async notification_permission(): Promise<string> {
+    try {
+      if (!Capacitor.isNativePlatform()) {
+        if (!('Notification' in window)) { return 'denied'; }
+        const permission = window.Notification.permission;
+        return permission == 'default' ? 'prompt' : permission;
+      }
+      return (await LocalNotifications.checkPermissions())['display'];
+    } catch (error) {
+      this.G.L.warn("DataService.notification_permission could not be read", error);
+      return 'denied';
+    }
+  }
+
+  /** Ask for permission to show notifications. Call this from a button's
+   *  handler and nowhere else: a browser grants it only to a request a
+   *  person's click started. */
+  private async ask_for_notifications(): Promise<void> {
+    try {
+      const display = Capacitor.isNativePlatform()
+        ? (await LocalNotifications.requestPermissions())['display']
+        : await window.Notification.requestPermission();
+      this.can_notify = display == 'granted';
+      this.G.L.info("DataService.ask_for_notifications", display);
+    } catch (error) {
+      this.can_notify = false;
+      this.G.L.warn("DataService.ask_for_notifications was refused", error);
+    }
+  }
+
+  /** Whether this device may show notifications, and -- if `prompt` and
+   *  nobody has been asked yet -- vodle's own explanation of what it would
+   *  use them for, whose "yes" is what asks for the permission.
+   *
+   *  Start-up used to ask the browser outright: a permission prompt out of
+   *  nowhere, before vodle had said what it wanted it for and before any
+   *  click. Firefox refuses such a request and throws "The Notification
+   *  permission may only be requested from inside a short running
+   *  user-generated event handler", which was an uncaught error on every
+   *  start in Mull. Reading the state costs nothing and asks nobody. */
   init_notifications(prompt:boolean) {
-    LocalNotifications.requestPermissions().then(async res => {
-      const state = res['display'];
+    this.notification_permission().then(async state => {
       if (state.startsWith('prompt') && prompt) {
         const dialog = await this.alertCtrl.create({ 
           header: this.translate.instant('data.notifications-permission-header'), 
@@ -7143,6 +7188,7 @@ export class DataService implements OnDestroy {
               role: 'cancel',
               handler: () => { 
                 this.G.L.trace('DataService.init_notifications user No');
+                this.can_notify = false;
               } 
             },
             { 
@@ -7150,7 +7196,9 @@ export class DataService implements OnDestroy {
               role: 'ok', 
               handler: () => {
                 this.G.L.trace('DataService.init_notifications user Yes');
-                this.init_notifications(prompt=false);
+                // inside the handler, so the browser sees a request its
+                // user started
+                this.ask_for_notifications();
               } 
             } 
           ] 
@@ -7160,13 +7208,12 @@ export class DataService implements OnDestroy {
         this.G.L.info("DataService.init_notifications granted");
         this.can_notify = true;
       } else {
-        this.G.L.info("DataService.init_notifications denied:", res);        
+        this.G.L.info("DataService.init_notifications not granted:", state);
         this.can_notify = false;
       }
     }).catch(err => {
-      console.warn("DataService.init_notifications failed:", err);
+      this.G.L.warn("DataService.init_notifications failed:", err);
     });
-    // TODO: test this!
   }
 
   /** Voter data that arrived from a voter room and is not a rating: store it
