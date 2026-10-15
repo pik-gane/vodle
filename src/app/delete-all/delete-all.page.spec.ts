@@ -58,6 +58,9 @@ describe('DeleteAllPage', () => {
       expect(presented.length).toBe(1);
       expect(presented[0].message).toContain('the homeserver said no');
       expect(back).withContext('not until the dialog is acknowledged').not.toHaveBeenCalled();
+      // a click on the backdrop runs no handler, so it would leave the blank
+      // page behind the dialog and no way off it
+      expect(presented[0].backdropDismiss).withContext('dismissable by the backdrop').toBeFalse();
       presented[0].buttons[0].handler();
       expect(back).toHaveBeenCalled();
     });

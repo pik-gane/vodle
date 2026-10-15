@@ -137,6 +137,11 @@ export class DeleteAllPage implements OnInit {
       header: this.translate.instant('delete-all.failed'),
       message: this.translate.instant('delete-all.failed-body')
         + (reason ? '<p><small>' + reason.replace(/[<>&]/g, '') + '</small></p>' : ''),
+      // the way back to the previous page is the button's handler, and an
+      // Ionic alert is dismissed by a click on its backdrop by default,
+      // which would run no handler: the page is blank once `deleting` is
+      // false, so a stray click outside would leave an empty screen
+      backdropDismiss: false,
       buttons: [{
         text: this.translate.instant('OK'),
         role: 'ok',
