@@ -86,6 +86,12 @@ jobs:
       - name: Every translation key a template asks for exists in English
         run: node scripts/check-i18n-keys.js
 
+      # Ionic's standalone build renders nothing for an icon name that is not
+      # in src/app/icons.ts — no request, no fallback — which is how the draft
+      # poll page's kebab button became an empty space (#368):
+      - name: Every icon a template names is registered
+        run: node scripts/check-icons.js --self-test && node scripts/check-icons.js
+
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 
