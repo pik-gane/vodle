@@ -155,27 +155,15 @@ export class PreviewpollPage implements OnInit {
       // if test, register simulated voters:
       this.G.L.trace("PreviewpollPage.publish_button_clicked poll is_test", this.p.is_test, this.G.D.getp(this.pid, 'is_test'));
       if (this.p.is_test) {
-        // A test poll of 50 voters over 5 options is some 400 writes. They
-        // are not awaited here — the invitation page must not wait half a
-        // minute for them — but MatrixService paces them so the homeserver
-        // accepts them rather than refusing the tail of the burst (#327).
-        for (const oid of this.p.oids) {
-          const ratings = JSON.parse(this.G.D.getp(this.pid, 'simulated_ratings.'+oid));
-          if (Array.isArray(ratings)) {
-            this.G.L.trace("PreviewpollPage.publish_button_clicked registering simulated voters...");
-            for (const i in ratings) {
-              const vid = "simulated"+i,
-                    r = ratings[i];
-              // setv_in_polldb returns true synchronously but fires the
-              // Matrix call internally. We call setVoterData directly
-              // to get the promise for awaiting.
-              this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
-              this.G.P.update_own_rating(this.pid, vid, oid, r, false);
-              this.G.L.trace("PreviewpollPage.publish_button_clicked registered simulated voter", i);
-            }
-          }
+        // By now the poll is running and its room exists, so nothing in
+        // here may keep the page from moving on: a failure used to reach
+        // the catch below, which put the start button back for a poll that
+        // had already started (see register_simulated_voters).
+        try {
+          this.register_simulated_voters();
+        } catch (error) {
+          this.G.L.error("PreviewpollPage.publish_button_clicked could not register the simulated voters", error);
         }
-        this.p.tally_all();
       }
       // go to invitation page:
       this.router.navigate(['/inviteto/'+this.pid]);
@@ -185,6 +173,37 @@ export class PreviewpollPage implements OnInit {
       this.publishing = false;
       this.G.L.error("PreviewpollPage.publish_button_clicked failed", error);
     });
+  }
+
+  /** The ratings of a test poll's simulated voters, written as theirs.
+   *
+   *  A test poll of 50 voters over 5 options is some 400 writes. They are
+   *  not awaited here — the invitation page must not wait half a minute for
+   *  them — but MatrixService paces them so the homeserver accepts them
+   *  rather than refusing the tail of the burst (#327).
+   *
+   *  Only the options the test poll was generated with have simulated
+   *  ratings. One the person added by hand has none, and reading it as
+   *  JSON.parse('') threw — after the poll had started, which put the
+   *  start button back on the page as if nothing had happened. */
+  register_simulated_voters() {
+    for (const oid of this.p.oids) {
+      const stored = this.G.D.getp(this.pid, 'simulated_ratings.'+oid);
+      if (!stored) { continue; }    // added by hand: nobody simulated rated it
+      const ratings = JSON.parse(stored);
+      if (Array.isArray(ratings)) {
+        this.G.L.trace("PreviewpollPage.register_simulated_voters", oid, ratings.length);
+        for (const i in ratings) {
+          const vid = "simulated"+i,
+                r = ratings[i];
+          // setv_in_polldb returns true synchronously but fires the
+          // Matrix call internally
+          this.G.D.setv_in_polldb(this.pid, 'rating.'+oid, r, vid);
+          this.G.P.update_own_rating(this.pid, vid, oid, r, false);
+        }
+      }
+    }
+    this.p.tally_all();
   }
 
 }
