@@ -46,6 +46,7 @@ import { map, startWith } from 'rxjs/operators'
 type option_data_t = { oid?, name?, desc?, url?, ratings? };
 
 import { apply_format_shortcut } from '../simple-format';
+import { parse_draft_spec } from './draft-spec';
 
 function is_forward_key(ev: KeyboardEvent) {
   return (ev.key == "Tab" || ev.key == "Enter") && !ev.ctrlKey && !ev.shiftKey && !ev.metaKey && !ev.altKey;
@@ -119,7 +120,9 @@ export class DraftpollPage implements OnInit {
     this.G.L.entry("DraftpollPage.constructor");
     this.route.params.subscribe( params => { 
       this.pid = params['pid'];
-      this.pd = JSON.parse(decodeURIComponent(params['pd']||"{}"));
+      // a pre-filled draft link may only set what the draft page shows (#384)
+      this.pd = parse_draft_spec(params['pd'], field =>
+        this.G.L.info("DraftpollPage ignores a field of the pre-filled draft link", field));
     } );
   }
   
