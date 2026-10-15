@@ -217,6 +217,7 @@
         "success-title": "Deine Daten wurden gelöscht.",
         "success-body": "vodle hofft, Dich bald wiederzusehen, auch wenn es sich nicht an Dich erinnern wird :-)",
         "failed": "Aus irgendeinem Grund konnten nicht alle Deine Daten gelöscht werden.",
+        "failed-body": "Das Löschen konnte nicht abgeschlossen werden. Ein Teil Deiner Daten ist möglicherweise schon gelöscht, der Rest ist noch da — bitte versuche es noch einmal; wenn es wieder fehlschlägt, melde bitte den unten genannten Grund.",
         "progress-votes": "Deine Waps werden auf Null gesetzt und Deine Delegationen widerrufen…",
         "progress-polls": "Du wirst aus Deinen Abstimmungen entfernt ({{done}} von {{total}})…",
         "progress-user": "Deine persönlichen Daten werden vom Server gelöscht…",

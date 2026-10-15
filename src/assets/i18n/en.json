@@ -223,6 +223,7 @@
         "success-title": "Your data was deleted.",
         "success-body": "vodle hopes to see you again soon, even though it won't remember you :-)",
         "failed": "Could not delete all data for some reason.",
+        "failed-body": "The deletion could not be finished. Some of your data may already be gone and the rest is still there, so please try again — if it fails again, the reason below is what to report.",
         "progress-votes": "Setting your ratings to zero and withdrawing your delegations…",
         "progress-polls": "Removing you from your polls ({{done}} of {{total}})…",
         "progress-user": "Deleting your personal data from the server…",

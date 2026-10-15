@@ -6930,15 +6930,41 @@ export class DataService implements OnDestroy {
    *  all of it (#327). */
   deletion_progress: {key: string, params?: any} | null = null;
 
+  /** What courtesy to the other participants could not be managed before
+   *  the data went: the declined requests, the withdrawn ones, the zeroed
+   *  waps. Read by the page, which tells the person what is left of them. */
+  deletion_left_undone: string[] = [];
+
+  /** A step of the deletion that is owed to OTHER people -- declining a
+   *  request, withdrawing one, zeroing a wap -- run so that it cannot stop
+   *  the deletion itself. Until 2026-10-15 these were awaited plainly, and
+   *  revoke_delegation throws for a poll this session never opened, which
+   *  is a poll the person may well have: the deletion then rejected before
+   *  it had deleted anything, the page reported the failure through a local
+   *  notification the browser does not show, went back to where it came
+   *  from, and every byte was still there (#367). The person asked for
+   *  their data to go; a courtesy that cannot be paid is recorded, not an
+   *  excuse to keep the data. */
+  private async courtesy(what: string, step: () => any): Promise<void> {
+    try {
+      await step();
+    } catch (error) {
+      this.G.L.warn("DataService.delete_all could not " + what, error);
+      this.deletion_left_undone.push(what);
+    }
+  }
+
   async delete_all(): Promise<any> {
       this.deletion_progress = {key: 'delete-all.progress-votes'};
+      this.deletion_left_undone = [];
       // decline all not yet declined delegation requests:
       for (const [pid, cache] of Object.entries(this.G.D.incoming_dids_caches)) {
         if (cache) {
           for (const [did, [from, url, status]] of cache) {
             if (!status[0].startsWith('declined')) {
               this.G.L.trace("DataService.delete_all declining request", did);
-              this.G.Del.decline(pid, did);
+              await this.courtesy(`decline the delegation request ${did} of ${pid}`,
+                () => this.G.Del.decline(pid, did));
             }
           }
         }
@@ -6949,7 +6975,8 @@ export class DataService implements OnDestroy {
           for (const [oid, did] of cache) {
             if (did) {
               this.G.L.trace("DataService.delete_all revoking request", did);
-              await this.G.Del.revoke_delegation(pid, did, oid);
+              await this.courtesy(`withdraw the delegation request ${did} of ${pid}`,
+                () => this.G.Del.revoke_delegation(pid, did, oid));
             }
           }
         }
@@ -6958,7 +6985,8 @@ export class DataService implements OnDestroy {
       for (const [pid, p] of Object.entries(this.G.P.polls)) {
         this.G.L.trace("DataService.delete_all setting zero waps for", pid);
         for (const oid of p.oids) {
-          p.set_my_own_rating(oid, 0, true);
+          await this.courtesy(`set the wap of ${oid} in ${pid} to zero`,
+            () => p.set_my_own_rating(oid, 0, true));
         }
       }
       await Promise.all(Object.keys(this.G.P.polls).map(pid =>
