@@ -207,7 +207,7 @@ export class DraftpollPage implements OnInit {
         poll_desc: this.pd.desc||'',
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
-        poll_due_custom: (!this.pd.due_custom)?'':this.pd.due_custom.toISOString(),
+        poll_due_custom: (!this.pd.due_custom)?'':this.local_iso(this.pd.due_custom),
       });
       // A draft can arrive already set to end at a custom date but with no
       // date: the "Fledermauszüchterverein" example does exactly that, as
@@ -569,7 +569,7 @@ export class DraftpollPage implements OnInit {
     const due = new Date();
     due.setSeconds(0, 0);
     due.setTime(due.getTime() + 24*60*60*1000);
-    c.setValue(due.toISOString());
+    c.setValue(this.local_iso(due));
     this.set_poll_due_custom();
     return true;
   }
@@ -884,6 +884,19 @@ export class DraftpollPage implements OnInit {
       }
       return null;
     }
+  }
+
+  /** A date as the date picker must be given it: the wall-clock time in
+   *  the zone the browser reports, without an offset. ion-datetime shows
+   *  the fields of an ISO string as they stand, so toISOString() made it
+   *  show UTC -- two hours early in Berlin, beside a label saying GMT+2 --
+   *  and allowed a deadline up to two hours in the past. A value without
+   *  an offset is also what the picker hands back, and new Date() reads it
+   *  in the same zone. */
+  local_iso(date: Date): string {
+    const two = (n: number) => String(n).padStart(2, '0');
+    return date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate())
+      + 'T' + two(date.getHours()) + ':' + two(date.getMinutes()) + ':' + two(date.getSeconds());
   }
 
   get_max_due() {
