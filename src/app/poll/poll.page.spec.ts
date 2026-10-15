@@ -394,6 +394,21 @@ describe('PollPage', () => {
       expect(component.result_is_empty).toBeTrue();
     });
 
+    // the options can arrive after the type is already missing, and a tally
+    // over them puts shares in the map. Reading those as a result sent the
+    // page into the winner bar, which asks for p.options[p.winner] -- the
+    // dereference that threw (#366)
+    it('a poll whose type never arrived shows nothing even with shares', () => {
+      const poll = ended('winner', 'o1');
+      poll.type = undefined;
+      poll.options = {o1: {oid: 'o1', name: 'Pears'}, o2: {oid: 'o2', name: 'Plums'}};
+      poll.winner = undefined;
+      poll.T.shares_map = new Map([['o1', 0.5], ['o2', 0.5]]);
+      component.p = poll;
+      component.oidsorted = ['o1', 'o2'];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
     it('a poll still being tallied is not an empty result', () => {
       const poll = ended('winner');
       poll.has_results = false;

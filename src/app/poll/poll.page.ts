@@ -113,9 +113,14 @@ export class PollPage implements OnInit {
     if (this.p.type == 'winner') {
       return !this.p.winner || !this.p.options[this.p.winner];
     }
-    // a share poll, and a poll whose type never reached this device either:
-    // both come down to whether any option has a share of the budget
-    return !this.oidsorted.some(oid => (this.p.T.shares_map.get(oid) || 0) > 0);
+    if (this.p.type == 'share') {
+      return !this.oidsorted.some(oid => (this.p.T.shares_map.get(oid) || 0) > 0);
+    }
+    // a poll whose type never reached this device: neither bar can be shown,
+    // whatever the tally left in shares_map. The share bar would be a kind of
+    // result the poll may not have, and the winner bar below it asks for
+    // p.options[p.winner], which is the dereference that threw (#366).
+    return true;
   }
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;

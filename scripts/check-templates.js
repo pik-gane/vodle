@@ -41,6 +41,25 @@ const NBSP = ' ';
 /** whitespace, in the sense JavaScript's trim() uses — which includes NBSP */
 const TRIMMED = /^[\s ]*$/;
 
+// the blocks whose head carries an expression in parentheses. That expression
+// is not markup: `@if (n < 1) {` holds a `<` that opens no tag, and reading it
+// as one swallowed the rest of the line, closing brace and all.
+const BLOCK_HEAD_RE = /@(?:else\s+if|if|for|switch|case|defer|placeholder|loading)\s*\(/y;
+
+/** the index just past the `)` that closes the parenthesis at `open` */
+function pastExpression(html, open) {
+  let i = open, depth = 0, quote = '';
+  while (i < html.length) {
+    const c = html[i];
+    if (quote) { if (c === quote) quote = ''; }
+    else if (c === '"' || c === "'") quote = c;
+    else if (c === '(') depth++;
+    else if (c === ')' && --depth === 0) return i + 1;
+    i++;
+  }
+  return html.length;
+}
+
 /**
  * The places in `html` where a separator after a block's `}` is lost.
  * Returns [{index, text}], `text` being the run that will not survive.
@@ -63,15 +82,26 @@ function vanishingSeparators(html) {
       continue;
     }
     if (c === '<') { inTag = true; i++; continue; }
+    if (c === '@') {                                 // a block's head, not markup
+      BLOCK_HEAD_RE.lastIndex = i;
+      const head = BLOCK_HEAD_RE.exec(html);
+      if (head) { i = pastExpression(html, i + head[0].length - 1); continue; }
+      i++;
+      continue;
+    }
     if (c === '{' && html[i + 1] === '{') {          // an interpolation's braces
       const end = html.indexOf('}}', i + 2);
       i = end === -1 ? html.length : end + 2;
       continue;
     }
     if (c !== '}') { i++; continue; }
-    // a block's closing brace: what follows, up to the next element or block
+    // a block's closing brace: what follows, up to the next element, block or
+    // interpolation -- `}{{ x }}&nbsp;units` ends the run at the `{{`, so the
+    // branch above reads the interpolation and its `}}` closes nothing
     let j = i + 1;
-    while (j < html.length && html[j] !== '<' && html[j] !== '@' && html[j] !== '}') j++;
+    while (j < html.length
+           && html[j] !== '<' && html[j] !== '@' && html[j] !== '}'
+           && !(html[j] === '{' && html[j + 1] === '{')) j++;
     const run = html.slice(i + 1, j)
       .replace(/&nbsp;/g, NBSP).replace(/&#160;|&#xa0;/gi, NBSP);
     // the whole run is whitespace and holds a non-breaking space, or the run
@@ -102,6 +132,15 @@ function selfTest() {
     // braces inside an attribute value or an interpolation are not blocks
     ['<div [style]="{a: 1}">&nbsp;x</div>', 0],
     ['<div>{{ {a: 1} }}&nbsp;x</div>', 0],
+    // an interpolation right after a block ends the run; its own `}}` closes
+    // no block, so the separator behind it is not the block's
+    ['@if (x) {<i>x</i>}{{ label }}&nbsp;units', 0],
+    // ... but a separator between the block and the interpolation is
+    ['@if (x) {<i>x</i>}&nbsp;{{ label }}', 1],
+    // a `<` in a block's condition opens no tag: reading it as one swallowed
+    // the closing brace and everything up to the next `>`
+    ['@if (n < 1) {Closed}&nbsp;<b>date</b>', 1],
+    ['@for (x of xs; track x) {<i>y</i>}&nbsp;<b>z</b>', 1],
     // an apostrophe inside a comment used to leave the scanner looking for a
     // closing quote, and every brace after it went unseen
     [`<!--the slider's bar-->@if (x) {<i>y</i>}&nbsp;<b>z</b>`, 1],

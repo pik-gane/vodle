@@ -616,7 +616,7 @@
         "wait-for-results": "The results are being determined. This can take a few minutes: every vote cast before the deadline is collected first, so that everyone sees the same result.",
         "results": "Results:",
         "winner-is": "The winner is <i>{{winner}}</i>",
-        "no-result": "This poll ended without a result: no options or votes of it had reached this device when the poll was closed, so nothing could be determined. The polls you take part in on this device keep their results; this one cannot be worked out after the fact, because the draw has to give every participant the same answer.",
+        "no-result": "No result can be shown for this poll on this device: the options and votes it would need had not arrived when the poll was closed. A device that holds them may be able to show it; this one cannot work it out after the fact, because the draw has to give every participant the same answer.",
         "reason": "Why?",
         "reason-all-abstained": "All participants abstained. So vodle had to draw a lot. This option won.",
         "reason-full-consensus-unique": "This is the only option that all non-abstaining participants have approved. So it was the sure winner and vodle did not have to use a lottery this time.",
