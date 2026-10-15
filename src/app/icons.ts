@@ -22,10 +22,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  * Ionic's standalone build bundles no icon it is not told about: each name an
  * `<ion-icon name>` or a menu entry uses is imported here and registered
  * (ionicons' addIcons), so the build carries these sixty-odd SVGs instead of
- * loading them one by one. A name missing here still resolves to
- * `./svg/<name>.svg`, which the build copies from ionicons (angular.json),
- * so a forgotten icon costs a request, not the icon. Generated from the
- * templates on 2026-10-09; add to it when a template gains an icon.
+ * loading them one by one.
+ *
+ * A name that is NOT here renders nothing at all. The build does copy
+ * ionicons' SVGs to `./svg/` (angular.json) and the deployment serves them,
+ * but the standalone `ion-icon` never asks: measured in the deployed app on
+ * 2026-10-15, an unregistered name leaves the icon's shadow root at
+ * `<div class="icon-inner"><slot></slot></div>` with no request made. So a
+ * forgotten icon costs the icon, which is how the draft poll page's kebab
+ * button came to be an empty space (#368).
+ *
+ * `node scripts/check-icons.js` compares this list against every name the
+ * templates and the menu entries use; CI runs it on every pull request.
  */
 import { addIcons } from 'ionicons';
 import {
@@ -61,6 +69,8 @@ import {
   cut,
   cutOutline,
   documentOutline,
+  ellipsisHorizontal,
+  ellipsisVertical,
   eyeOffOutline,
   eyeOutline,
   flagOutline,
@@ -127,6 +137,8 @@ addIcons({
   'cut': cut,
   'cut-outline': cutOutline,
   'document-outline': documentOutline,
+  'ellipsis-horizontal': ellipsisHorizontal,
+  'ellipsis-vertical': ellipsisVertical,
   'eye-off-outline': eyeOffOutline,
   'eye-outline': eyeOutline,
   'flag-outline': flagOutline,
