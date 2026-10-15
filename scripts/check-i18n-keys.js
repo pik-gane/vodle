@@ -58,6 +58,35 @@ for (const file of walk(SRC)) {
   }
 }
 
+// The FAQ's keys are computed ('help.faq.' + id + '.q'), so the loop above
+// cannot see them: the page lists its ids in HelpPage.FAQ_IDS, and each must
+// have a question and an answer in English. A language may lag behind, but
+// it may not carry an id the page does not show -- a renamed id would leave
+// its translation behind, unseen.
+const HELP_TS = path.join(SRC, 'app/help/help.page.ts');
+const idsBlock = /FAQ_IDS = \[([\s\S]*?)\];/.exec(fs.readFileSync(HELP_TS, 'utf8'));
+if (!idsBlock) {
+  missing.push('src/app/help/help.page.ts: no FAQ_IDS list to check');
+} else {
+  const ids = [...idsBlock[1].replace(/\/\/.*$/gm, '').matchAll(/'([^']+)'/g)].map(m => m[1]);
+  for (const id of ids) {
+    for (const part of ['q', 'a']) {
+      keyCount++;
+      const value = lookup(en, `help.faq.${id}.${part}`);
+      if (typeof value !== 'string' || !value.trim()) missing.push(`help.faq.${id}.${part} (FAQ_IDS)`);
+    }
+  }
+  const I18N = path.dirname(EN);
+  for (const file of fs.readdirSync(I18N).filter(f => f.endsWith('.json'))) {
+    const faq = lookup(JSON.parse(fs.readFileSync(path.join(I18N, file), 'utf8')), 'help.faq') || {};
+    for (const key of Object.keys(faq)) {
+      if (key !== 'title' && !key.startsWith('_') && !ids.includes(key)) {
+        missing.push(`${file}: help.faq.${key} is not in FAQ_IDS`);
+      }
+    }
+  }
+}
+
 if (missing.length > 0) {
   console.error(`${missing.length} translation key(s) missing from src/assets/i18n/en.json:`);
   for (const entry of missing) console.error('  ' + entry);

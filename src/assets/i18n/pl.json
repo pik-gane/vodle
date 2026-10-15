@@ -410,7 +410,78 @@
         "p24": "Teraz gdy zrozumieliśmy już, w jaki sposób obliczane jest akceptacja, możemy przejść do pytania, w jaki sposób określane są <b>prawdopodobieństwa wygranej</b> lub <b>udziały w budżecie</b> oraz w jaki sposób ustalany jest rzeczywisty zwycięzca, jeśli ankieta polega na wybraniu jednej opcji. Jeśli dokładnie jedna opcja ma 100% aprobaty, to na pewno wygra (lub uzyska cały budżet). Jeśli kilka opcji ma 100% aprobaty, ta z nich, która ma największy średni wap, na pewno wygra (lub zdobędzie cały budżet). <br/>Jeśli żadna opcja nie ma 100% akceptacji, <i>vodle</i> rozdziela prawdopodobieństwo wygranej lub budżet między co najmniej dwie opcje. W takim przypadku opcja z największą akceptacją najprawdopodobniej wygra lub uzyska największy udział. Ale inne opcje, które mają jakąś aprobatę, mogą wtedy wygrać z mniejszym prawdopodobieństwem lub też uzyskać mniejszą część budżetu. <br/>W przypadku ankiet wybierających pojedynczą opcję oznacza to, że istnieje pewien element losowości, który pomaga wyłonić faktycznego zwycięzcę. Dzieje się tak, ponieważ musimy upewnić się, że żadna grupa osób uczestniczących nie może zostać po prostu zignorowana przez inne osoby, jak to ma miejsce w przypadku zasady większości. W ten sposób <i>vodle</i> daje każdej osobie uczestniczącej dokładnie taki sam wpływ i daje każdej frakcji wpływ, który odpowiada jej rozmiarowi.",
         "p25": "Jeśli ankieta dotyczy wyboru pojedynczej opcji, dokładna procedura znalezienia zwycięzcy, w przypadku gdy żadna opcja nie posiada 100% akceptacji, jest bardzo prosta. Jedna osoba uczestnicząca jest wybierana losowo, każda osoba ma taką samą szansę zostać wybrana. Wśród wariantów akceptowanych przez tę osobę zwycięża ten o największej ogólnej akceptacji. (W przypadku remisu, średni wap jak używany do wyłonienia zwycieżcy.) Fragmenty wykresu kołowego po lewej stronie pokazują obliczone prawdopodobieństwa, że dana opcja wygra.",
         "p26": "Jeśli ankieta dotyczy przydzielenia budżetu, wielkość udziałów każdej opcji obliczana jest w ten sam sposób: udział jest proporcjonalny do liczby osób uczestniczących, którzy (i) akceptują tę opcję, ale (ii) nie akceptują żadnej innej opcji, która posiadałaby większą akceptację.",
-        "p27": "Wiemy więc, jak wygrywająca opcja lub jej udziały są ustalane. <b><i>Ale w jaki sposób możesz teraz ustawić swoje wapy w praktyce?</i></b> Poniższa rada zazwyczaj działa całkiem sprawnie, aby znaleźć dobry konsensus: <b>Przypisz swojej ulubionej opcji wap o wartości 100. Przypisz wszystkim opcjom, które są lepsze niż przeciętne, wap większy niż zero, skalując wapy zgodnie ze swoimi względnymi preferencjami. Wreszcie wszystkim opcjom, które są gorsze od przeciętnej przypisz wap równy zero.</b>"
+        "p27": "Wiemy więc, jak wygrywająca opcja lub jej udziały są ustalane. <b><i>Ale w jaki sposób możesz teraz ustawić swoje wapy w praktyce?</i></b> Poniższa rada zazwyczaj działa całkiem sprawnie, aby znaleźć dobry konsensus: <b>Przypisz swojej ulubionej opcji wap o wartości 100. Przypisz wszystkim opcjom, które są lepsze niż przeciętne, wap większy niż zero, skalując wapy zgodnie ze swoimi względnymi preferencjami. Wreszcie wszystkim opcjom, które są gorsze od przeciętnej przypisz wap równy zero.</b>",
+        "faq": {
+            "title": "Najczęściej zadawane pytania",
+            "pronounce": {
+                "q": "Jak wymawiać ‚vodle’?",
+                "a": "Jak angielskie ‚yodel’! (Nie jak ‚model’ ani ‚noodle’.)"
+            },
+            "wap-37": {
+                "q": "Co oznacza na przykład wap równy 37?",
+                "a": "Jeśli dajesz opcji wap równy 37, obiecujesz zaakceptować tę opcję, jeśli mniej niż 37% wszystkich osób uczestniczących jej nie akceptuje."
+            },
+            "approve": {
+                "q": "Co się dzieje, gdy akceptuję opcję?",
+                "a": "Gdy akceptujesz opcję (zielony suwak), zwiększasz prawdopodobieństwo, że wygra (w ankietach wybierających jedną opcję), albo udział w budżecie, jaki otrzyma (w ankietach dzielących budżet)."
+            },
+            "winning-probabilities": {
+                "q": "Jak moja akceptacja wpływa na prawdopodobieństwa wygranej?",
+                "a": "Jeśli dokładnie jedna opcja jest akceptowana przez wszystkie osoby uczestniczące, wygrywa na pewno. W przeciwnym razie losowana jest jedna osoba uczestnicząca i wygrywa jedna z opcji, które ta osoba akceptuje. Jeśli to Ty jesteś tą osobą, Twoja akceptacja decyduje o tym, która opcja wygra: spośród wszystkich opcji, które akceptujesz, wygrywa ta o największej łącznej akceptacji."
+            },
+            "shares": {
+                "q": "Jak moja akceptacja wpływa na przydzielone udziały?",
+                "a": "Udział opcji jest proporcjonalny do liczby osób, które akceptują tę opcję i nie akceptują żadnej innej opcji o większej łącznej akceptacji. Jeśli więc łącznie uczestniczy N osób, kontrolujesz udział 1/N całego budżetu. Jeśli akceptujesz tylko jedną opcję, kontrolowany przez Ciebie udział trafia do niej. Jeśli akceptujesz kilka opcji, Twój udział trafia do tej spośród nich, która ma największą łączną akceptację."
+            },
+            "most-approved": {
+                "q": "Dlaczego najbardziej akceptowana opcja może jednak nie wygrać?",
+                "a": "Jeśli dokładnie jedna opcja jest akceptowana przez wszystkie osoby uczestniczące, wygrywa. Ale jeśli żadna opcja nie ma akceptacji wszystkich, konsensus jest niepełny. Aby dać wszystkim osobom uczestniczącym taki sam wpływ, vodle nie może wtedy po prostu ogłosić zwycięzcą opcji najbardziej akceptowanej. Zamiast tego postępuje podobnie jak w loterii zielonych kart: losowana jest jedna osoba uczestnicząca i wygrywa opcja przez nią akceptowana. Nawet wtedy szuka się jak najszerszego konsensusu: spośród opcji akceptowanych przez wylosowaną osobę wygrywa ta o największej łącznej akceptacji."
+            },
+            "chance": {
+                "q": "Dlaczego mam się godzić na to, że przypadek może odegrać rolę?",
+                "a": "vodle używa przypadku tylko po to, by każda osoba miała uczciwą szansę zostać wysłuchaną. Można matematycznie udowodnić, że nie da się dać wszystkim osobom uczestniczącym takiej samej władzy bez użycia w niektórych sytuacjach pewnej dozy przypadku. Możesz sprawić, że przypadek <i>nie</i> odegra roli, jeśli znajdziesz opcję, którą wszystkie osoby mogą zaakceptować, i dasz jej wap co najmniej 1. Z drugiej strony przypadek jest nieuniknionym składnikiem życia. Nawet jeśli reguła decyzyjna nie używa przypadku wprost, w rzeczywistości cały proces decyzyjny zawsze zawiera elementy przypadku: kiedy szuka się decyzji, jakie opcje są do wyboru, kto ma jakie informacje, jakie byłyby skutki opcji – wszystkie te pytania zawierają element przypadku."
+            },
+            "not-summed": {
+                "q": "Dlaczego wapy nie są po prostu sumowane?",
+                "a": "Proste zsumowanie wszystkich wapów opcji może na pierwszy rzut oka wydawać się dobrym pomysłem, ale nie dałoby każdej osobie uczestniczącej uczciwej szansy wpływu na wynik. Wyobraź sobie dwie przeciwstawne opcje A i B: A preferuje 55% osób uczestniczących, a B – 45%. Załóżmy też, że istnieje potencjalna opcja konsensusu C, którą wszystkie osoby uważają za prawie tak dobrą jak swoją ulubioną. Wtedy chcielibyśmy, by wygrała C, i vodle czyni to bardzo prawdopodobnym.<br/> Gdyby jednak wapy były po prostu sumowane, 55% preferujących A mogłoby dać A wap 100, a B i C wap 0. Wtedy A wygrałaby na pewno, niezależnie od wapów pozostałych 45%. Te 45% nie miałyby żadnego wpływu na wynik, a potencjalna opcja konsensusu nie miałaby szans.<br/> W vodle natomiast te same „niekooperacyjne” wapy zapewniłyby A jedynie 55%, a nie 100% prawdopodobieństwa wygranej, ponieważ każda grupa osób uczestniczących może kontrolować tylko taki udział w prawdopodobieństwie wygranej, jaki odpowiada jej udziałowi wśród osób uczestniczących. Jeśli C jest potencjalnym konsensusem, te 55% wolałyby na pewno dostać C niż A z prawdopodobieństwem zaledwie 55% i B z prawdopodobieństwem 45%. W vodle te 55% dałyby więc C dodatni wap, podobnie jak pozostałe 45%. W ten sposób obie strony unikają niepewnej loterii między A i B i zamiast tego czynią C pewnym zwycięzcą. Za pomocą teorii gier można nawet udowodnić, że takie wapy tworzą bardzo silną formę równowagi strategicznej, gdy osoby uczestniczące działają racjonalnie.<br/> Podobnie można udowodnić, że gdyby wapy były po prostu sumowane, racjonalne osoby uczestniczące nigdy nie dawałyby żadnej opcji wapu innego niż 0 lub 100, a większość zawsze stawiałaby na swoim, choćby była najmniejsza – taka metoda niewiele różniłaby się od zwykłego głosowania większościowego."
+            },
+            "one-at-100": {
+                "q": "Dlaczego warto dać <i>co najmniej jednej</i> opcji wap 100?",
+                "a": "Wap 100 nie oznacza, że ta opcja w pełni Cię zadowala! Oznacza raczej, że jest najlepsza lub najmniej zła <i>spośród dostępnych opcji</i>. Jeśli nie dasz żadnej opcji wapu 100, Twój udział może pójść na marne, bo może się okazać, że nie akceptujesz żadnej opcji. Dając co najmniej jednej opcji wap 100, zapewniasz sobie kontrolę nad uczciwym udziałem w całej władzy decyzyjnej i sprawiasz, że kontrolowany przez Ciebie udział w prawdopodobieństwie wygranej nie trafi do opcji z wapem 0."
+            },
+            "more-than-one": {
+                "q": "Dlaczego warto dać <i>dodatni</i> wap <i>więcej niż jednej</i> opcji?",
+                "a": "Jeśli wszystkie osoby dają dodatni wap tylko jednej opcji, zwycięzca jest losowany, a każda opcja wygrywa z prawdopodobieństwem równym jej akceptacji (w procentach wszystkich osób, które nie wstrzymały się od głosu). Żadna potencjalna opcja konsensusu nie miałaby szans. Tego bardzo losowego wyniku można uniknąć, dając dodatni wap także potencjalnym opcjom konsensusu. W ten sposób sygnalizujesz, że zgodzisz się przenieść kontrolowany przez Ciebie udział w prawdopodobieństwie wygranej ze swojej ulubionej opcji na opcję konsensusu, jeśli inne osoby uczestniczące zrobią to samo."
+            },
+            "which-positive": {
+                "q": "Które opcje powinny dostać dodatni wap?",
+                "a": "Dobra praktyczna zasada: daj opcji dodatni wap, jeśli jest „lepsza niż przeciętna”."
+            },
+            "better-than-average": {
+                "q": "Co znaczy „lepsza niż przeciętna”?",
+                "a": "Wyobraź sobie, że jedna osoba uczestnicząca zostaje wylosowana i może zdecydować sama. Nazwijmy to „loterią losowego dyktatora”. Teraz zapytaj siebie przy każdej opcji: czy wolę mieć tę opcję na pewno, niż przeprowadzić loterię losowego dyktatora? Jeśli tak, ta opcja jest „lepsza niż przeciętna” i powinna dostać dodatni wap.<br/> Jeśli nie wiesz nic o preferencjach innych osób, możesz założyć, że każda opcja ma mniej więcej taką samą akceptację. W miarę trwania ankiety możesz obserwować akceptację każdej opcji i w ten sposób poprawiać swoją ocenę tego, co dałaby loteria losowego dyktatora."
+            },
+            "how-large": {
+                "q": "Jak duży powinien być wap opcji „lepszej niż przeciętna”?",
+                "a": "Jeśli masz pojęcie o poglądach innych osób uczestniczących, ustaw wap w ten sposób. Najpierw oszacuj, jaki procent osób uważa tę opcję za gorszą niż przeciętna. Powiedzmy, że szacujesz to na 37%. Następnie dodaj margines bezpieczeństwa (w tym przykładzie np. do 40). To powinien być Twój wap.<br/> <i>Dlaczego?</i> Bo jeśli wszystkie osoby uważające tę opcję za lepszą niż przeciętna postąpią tak samo, vodle prawidłowo policzy każdą z tych osób, także Ciebie, jako akceptującą tę opcję: Twój wap (40) jest wtedy większy niż procent osób, które jej nie akceptują – a to właśnie jest kryterium akceptacji stosowane przez vodle.<br/> <b>A co, jeśli nie mam pojęcia, kto uważa opcję za gorszą lub lepszą niż przeciętna?</b> Wtedy dobra zasada to rozłożyć swoje wapy od 0 do 100 według względnej preferencji: 0 oznaczałoby „dokładnie przeciętna”, a 100 „najlepsza z dostępnych opcji”. W miarę trwania ankiety możesz obserwować, jak rośnie akceptacja każdej opcji, i sprawdzać, jak daleko w prawo musisz przesunąć suwak, zanim akceptacja wzrośnie. Jeśli inne osoby ustawiły już wapy według tej zasady, jasnoszary pasek akceptacji powinien zacząć przesuwać się w stronę Twojego suwaka, gdy Twój wap będzie wystarczająco duży."
+            },
+            "not-too-many": {
+                "q": "Dlaczego nie warto dawać wapu 100 <i>zbyt wielu</i> opcjom?",
+                "a": "Dając opcji kompromisowej dodatni wap mniejszy niż 100, sygnalizujesz, że zaakceptujesz ją tylko wtedy, gdy wystarczająco wiele innych osób zrobi to samo. W ten sposób dajesz innym osobom zachętę, by również dały jej dodatni wap. Gdyby ta opcja dostała od Ciebie wap 100, pozostałe osoby mogłyby po prostu dać jej wap 0. Twój udział w prawdopodobieństwie wygranej mógłby wtedy zostać przeniesiony z Twojej ulubionej opcji na opcję kompromisową, podczas gdy udziały innych pozostałyby przy ich ulubionych opcjach. To nie byłby kompromis, tylko Twoja strata. Tylko wap wyraźnie pomiędzy 0 a 100 może zapewnić, że Ty i inne osoby uczestniczące przeniesiecie swoje udziały z różnych ulubionych opcji na opcję kompromisową <i>wspólnie</i>."
+            },
+            "no-consensus": {
+                "q": "A jeśli żadna opcja nie odpowiada wszystkim?",
+                "a": "W idealnym przypadku wszystkie osoby uczestniczące, jeśli są szczere, <i>uznałyby</i> jakąś opcję za lepszą niż przeciętna, i wtedy bardzo mały dodatni wap równy zaledwie 1 wystarczyłby, by ta opcja wygrała na pewno. W rzeczywistości jednak nawet wtedy pewien niewielki odsetek osób prawdopodobnie nie zauważy, że ta opcja byłaby dobrym konsensusem, i da jej wap 0. Dlatego warto dodać margines bezpieczeństwa i dać raczej wap, powiedzmy, 5 lub 10 niż tylko 1.<br/> Jeśli naprawdę nie ma opcji o niemal pełnym potencjale konsensusu, może wciąż istnieć taka, która odpowiada co najmniej, powiedzmy, 80 procentom. Wtedy te 80% powinny dać jej wap 100 − 80 = 20 plus margines bezpieczeństwa, czyli może 25. W ten sposób ta szeroka opcja „częściowego” konsensusu wygrywa z bardzo dużym prawdopodobieństwem 80%, a pozostałe 20% prawdopodobieństwa wygranej pozostaje pod kontrolą 20-procentowej mniejszości, która nie może zgodzić się na ten konsensus – co jest tylko sprawiedliwe."
+            },
+            "several-consensus": {
+                "q": "A jeśli <i>kilka</i> opcji odpowiada wszystkim?",
+                "a": "W tym szczęśliwym przypadku kilka opcji zostaje w końcu zaakceptowanych przez wszystkie osoby. Gdy tak się dzieje, o wyniku między nimi rozstrzyga suma ich wapów. Jeśli więc opcję A akceptuje 60%, a opcje B i C – po 100%, i sumy wapów wynoszą 345 dla A, 123 dla B i 234 dla C, to C ma największą sumę wśród opcji ze 100% akceptacji, więc wygrywa C – mimo że A ma większą sumę (ale nie akceptują jej wszystkie osoby)."
+            },
+            "agreement": {
+                "q": "Co oznacza x% porozumienia?",
+                "a": "Porozumienie obliczamy tak: dla każdej opcji mnożymy jej akceptację przez jej udział, a następnie sumujemy wszystkie te liczby. Poziom porozumienia 100% oznacza, że cały udział trafia do opcji akceptowanej przez wszystkie osoby, które nie wstrzymały się od głosu. W ankiecie wybierającej jedną opcję poziom porozumienia można interpretować tak: jeśli weźmiesz tysiąc ankiet, z których każda miała, powiedzmy, 23% porozumienia, i spojrzysz na akceptację, jaką uzyskały zwycięskie opcje, średnia akceptacja wyniesie około 23%."
+            }
+        }
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",

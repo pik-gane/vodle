@@ -119,16 +119,16 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
   <ion-item button (click)="e_faq = !e_faq" no-padding color="primary">
     <ion-icon [name]="e_faq?'caret-down-outline':'caret-forward-outline'" no-padding no-margin></ion-icon>
-    <ion-label><b>FAQ</b></ion-label>
+    <ion-label><b [innerHtml]="'help.faq.title'|translate"></b></ion-label>
   </ion-item>
   @if (e_faq) {
-    @for (q of faqs; track q) {
-      <ion-item button (click)="e_q[q[0]] = !(e_q[q[0]] || false)">
-        <ion-icon [name]="e_q[q[0]]?'chevron-down-outline':'chevron-forward-outline'" no-padding no-margin size="small"></ion-icon>
+    @for (id of faqs; track id) {
+      <ion-item button (click)="e_q[id] = !e_q[id]" [attr.data-vodle-faq]="id">
+        <ion-icon [name]="e_q[id]?'chevron-down-outline':'chevron-forward-outline'" no-padding no-margin size="small"></ion-icon>
         <ion-label button text-wrap>
-          <div [innerHTML]="'<b>'+q[0]+'</b>'"></div>
-          @if (e_q[q[0]]) {
-            <div [innerHTML]="q[1]"></div>
+          <b [innerHtml]="('help.faq.'+id+'.q')|translate"></b>
+          @if (e_q[id]) {
+            <div [innerHtml]="('help.faq.'+id+'.a')|translate"></div>
           }
         </ion-label>
       </ion-item>

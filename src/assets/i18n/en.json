@@ -437,7 +437,79 @@
         "p24": "Now that we have understood how approval is calculated, we can turn to the question of how the <b>winning probabilities</b> or <b>budget shares</b>  are found and how the actual winner is determined if the poll is about picking a single option. If exactly one option has 100% approval, it will win for sure (or get all of the budget). If several options each have 100% approval, the one among them that has the largest average wap will win for sure (or get all of the budget). <br/>If no option has 100% approval, <i>vodle</i> distributes the winning probability or budget among two or more options. In that case, the option with the largest approval will win most likely or get the largest share. But other options that have at least some approval may then win as well with some smaller probability, or also get some smaller share of the budget. <br/>For polls selecting a single option this means that then there is a certain chance element involved to determine the actual winner. This is because we must make sure that no group of participants can simply be ignored by the other participants as it is the case with majority rule. This way, <i>vodle</i> gives every participant the exact same influence and gives every faction an influence that matches its size.",
         "p25": "If the poll is about selecting one option, the exact procedure to find the winner when no option has 100% approval is very simple. One participant is determined by lot, everyone having the same chance of being that participant. Among the options that this participant approves, the one with the largest overall approval is the winner. (In case of a tie, the average wap is used to break the tie.) The pie piece to the left of each option shows the resulting probability that this option wins.",
         "p26": "If the poll is about allocating a budget, the size of each optionʼs shares is calculated the same way: the share is proportional to the number of participants that (i) approve this option but (ii) do not approve any other option that has a larger overall approval.",
-        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>"
+        "p27": "So now we know how the winner or the shares are found. <b><i>But how should you now set your waps in practice?</i></b> The following rule of thumb usually works quite well to find a good consensus: <b>Give your favourite a wap of 100. Give all options which are better than average some wap larger than zero, scaling your waps according to relative preference. Finally, give all options which are worse than average a wap of zero.</b>",
+        "faq": {
+            "_COMMENT_SECTION_": "[COMMENT] the questions and answers of the FAQ on the Help page",
+            "title": "FAQ",
+            "pronounce": {
+                "q": "How to pronounce ‘vodle’?",
+                "a": "Like ‘yodel’! (not like ‘model’ or ‘noodle’)."
+            },
+            "wap-37": {
+                "q": "What does a wap of, say, 37 mean?",
+                "a": "If you give an option a wap of 37, you promise to approve that option if less than 37% of all participants disapprove it."
+            },
+            "approve": {
+                "q": "What happens if I approve an option?",
+                "a": "If you approve an option (green slider), you increase the likelihood that it wins (in polls that select a single option) or the share of the budget it gets (in polls that allocate a budget)."
+            },
+            "winning-probabilities": {
+                "q": "How does my approval affect the winning probabilities?",
+                "a": "If a unique option is approved by all participants, it wins for sure. Otherwise, one participant is drawn by lot, and one of the options this participant approves wins. If you are this participant, your approval decides which option wins: among all options you approve, the one with the largest overall approval wins."
+            },
+            "shares": {
+                "q": "How does my approval affect the allocated shares?",
+                "a": "An optionʼs share is proportional to the number of participants who approve this option and approve no other option with a larger overall approval. So if there are N participants in total, you control a share of 1/N of the total budget. If you approve only one option, the share under your control goes to that option. If you approve several options, your share goes to the one with the largest overall approval among those you approve."
+            },
+            "most-approved": {
+                "q": "Why may the most-approved option still not win?",
+                "a": "If a unique option is approved by all participants, it wins. But if no option is approved by all participants, there is incomplete consensus. To give all participants the same influence, vodle cannot simply declare the most-approved option the winner. Instead, it must then follow an approach similar to a green-card lottery: one participant is drawn by lot, and an option approved by that participant wins. Even then, the broadest possible consensus is sought: among the options approved by the drawn participant, the one with the largest overall approval wins."
+            },
+            "chance": {
+                "q": "Why should I accept that chance may play a role?",
+                "a": "vodle uses chance only to make sure everyone has a fair chance of being heard. One can prove mathematically that it is not possible to give all participants the same power without using some amount of chance in some situations. You can make sure that chance does <i>not</i> play a role if you find an option that everyone can approve and give that option a wap of at least 1. On the other hand, chance is an unavoidable ingredient of life. Even if a decision rule does not use chance explicitly, the overall decision process always contains elements of chance in the real world: when a decision is sought, which options are on offer, who has which information, what the consequences of the options would be – all these questions involve some element of chance."
+            },
+            "not-summed": {
+                "q": "Why are the waps not simply summed up?",
+                "a": "Simply summing up all waps for an option might sound like a good idea at first, but it would not give every participant a fair chance of influencing the result. Imagine there are two polar options A and B, with A being favoured by 55% of the participants and B by 45%, and assume there is a potential consensus option C that all participants consider almost as good as their favourite. Then one would want C to win, and vodle makes this very likely.<br/> But if waps were simply summed up instead, the 55% who favour A could give A a wap of 100 and B and C a wap of 0. Then A would win for sure, no matter what the waps of the other 45% are. So those 45% would have no influence on the result at all, and the potential consensus option would not stand a chance.<br/> With vodle, however, the same “non-cooperative” waps would guarantee A only a winning probability of 55% rather than 100%, since every group of participants can only control a share of the winning probability that equals their share of the participants. If C is a potential consensus, those 55% would rather get C for sure than get A with a probability of only 55% and B with a probability of 45%. So with vodle, the 55% would give C a positive wap, and so would the other 45%. This way, both factions avoid the uncertain lottery between A and B and instead make C the sure winner. One can even prove with game theory that such waps form a very strong kind of strategic equilibrium when participants act rationally.<br/> Similarly, one can prove that if waps were simply summed up, rational participants would never give any option a wap other than 0 or 100, and a majority would always get its way however slight it is, so that method would not be much different from plain majority voting."
+            },
+            "one-at-100": {
+                "q": "Why should I give <i>at least one</i> option a wap of 100?",
+                "a": "A wap of 100 does not mean that you are completely happy with that option! It rather means that this option is the best or least bad <i>among the options on offer</i>. If you give no option a wap of 100, your participation may be wasted, since you may end up approving no option at all. By giving at least one option a wap of 100, you make sure that you retain control over a fair share of the overall decision power, and that the share of the winning probability you control does not go to an option you gave a wap of zero."
+            },
+            "more-than-one": {
+                "q": "Why should I give <i>more than one</i> option a <i>positive</i> wap?",
+                "a": "If everyone gives just one option a positive wap, the winner is determined by lot, and every option wins with a probability equal to its approval (in percent of all participants who did not abstain). No potential consensus option would get a chance. This highly random result can be avoided by giving potential consensus options a positive wap as well. By doing so, you indicate that you would agree to transfer the share of the winning probability you control from your favourite option to the consensus option if other participants do so as well."
+            },
+            "which-positive": {
+                "q": "Which options should get a positive wap?",
+                "a": "A good rule of thumb is to give an option a positive wap if it is “better than average”."
+            },
+            "better-than-average": {
+                "q": "What does “better than average” mean?",
+                "a": "Imagine one participant was drawn by lot and could decide on their own. Letʼs call this the “random dictator lottery”. Now ask yourself for each option: would I rather have this option for sure than have the random dictator lottery performed? If the answer is yes, this option is “better than average” and should get a positive wap.<br/> If you have no idea about the other participantsʼ preferences, you could assume that every option has roughly the same approval. As the poll goes on, you can watch the approval each option gets and thus improve your estimate of what the random dictator lottery would bring."
+            },
+            "how-large": {
+                "q": "How large should the wap of a “better-than-average” option be?",
+                "a": "If you have an idea about the views of the other participants, set your wap as follows. First, estimate what percentage of the participants find this option worse than average. Say you think 37% of the participants find it worse than average. Then add some safety margin (giving something like 40 in this example). This should be your wap.<br/> <i>Why?</i> Because if all participants who find the option better than average use the same logic, vodle will correctly count all of you as approving this option: your wap (40) is then larger than the percentage of participants who disapprove the option, and this is the criterion for approval that vodle uses.<br/> <b>And what if I have no idea who finds an option worse or better than average?</b> Then a good rule of thumb is to scale your waps from 0 to 100 according to your relative preference: 0 would mean “just average” and 100 “best of the available options”. As the poll goes on, you can watch how the approval of each option grows, and you can test how far to the right you have to move your slider before the approval increases. If other participants have already set their waps by the above rule of thumb, the light grey approval bar should start moving towards your slider once your wap is large enough."
+            },
+            "not-too-many": {
+                "q": "Why should I not give <i>too many</i> options a wap of 100?",
+                "a": "By giving a compromise option a positive wap smaller than 100, you indicate that you will approve this option only if enough other participants do so as well. This way, you give the others an incentive to also give that option a positive wap. If you gave the option a wap of 100, the others could simply give it a wap of 0. Your share of the winning probability might then be transferred from your favourite option to the compromise option, while the othersʼ shares would stay with their favourite options. That would be no compromise but only to your disadvantage. Only a wap properly between 0 and 100 can make sure that you and the other participants transfer your shares from your various favourite options to the compromise option <i>collectively</i>."
+            },
+            "no-consensus": {
+                "q": "What if no option appeals to everyone?",
+                "a": "Ideally, some option <i>would be</i> considered better than average by all participants if they are honest, and then a very small positive wap of just 1 would suffice to make this option the sure winner. In reality, however, even then a small percentage of participants will probably not realise that this option would make a good consensus and give it a wap of zero instead. This is why you should add some safety margin and rather give a wap of, say, 5 or 10 than just 1.<br/> If there really is no option with almost full consensus potential, there may still be one that appeals to at least, say, 80 percent. In that case, these 80% should give it a wap of 100 − 80 = 20, plus some safety margin, so maybe 25. This way, this broad “partial” consensus option wins with a very large probability of 80%, and the remaining 20% of the winning probability stays under the control of the 20% minority who cannot agree to that consensus, which is only fair."
+            },
+            "several-consensus": {
+                "q": "What if <i>several</i> options appeal to everyone?",
+                "a": "In this lucky case, several options end up being approved by everyone. Whenever that happens, their total waps are used as a tie-breaker. So if option A is approved by 60% but options B and C are both approved by 100%, and the total waps are 345 for A, 123 for B and 234 for C, then C has the largest total wap among the options with 100% approval, so C wins – even though A has a larger total wap (but is not approved by everyone)."
+            },
+            "agreement": {
+                "q": "What does x% agreement mean?",
+                "a": "We calculate agreement as follows: for each option, we multiply its approval score by its share, and then we sum up all these numbers. An agreement level of 100% means that the whole share goes to an option that is approved by all non-abstaining participants. For a poll that selects a single option, the agreement level can be interpreted as follows: if you take a thousand polls that each had, say, 23% agreement, and look at the approval scores the winning options got, the average approval score will be approximately 23%."
+            }
+        }
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
