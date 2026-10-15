@@ -243,6 +243,10 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 </span>
               </ion-label>
               <ion-datetime-button datetime="poll_due_custom"></ion-datetime-button>
+              <!-- the picker shows no zone, and a browser can report a zone
+                   that is not the personʼs (Mull reports UTC) -->
+              <small class="time-zone" slot="end" data-vodle="due-time-zone"
+                [innerText]="G.D.time_zone_name(pd.due_custom || undefined)"></small>
               <ion-modal [keepContentsMounted]="true">
                 <ng-template>
                   <ion-datetime

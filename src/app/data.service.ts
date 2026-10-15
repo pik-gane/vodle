@@ -7222,10 +7222,33 @@ export class DataService implements OnDestroy {
     return 'voter.' + (vid ? vid : this.getp(pid, 'myvid')) + "§";
   }
   
+  /** A date and time as people read it, with the time zone named.
+   *
+   *  The zone is the one the browser reports, which is not always the one
+   *  the person is in: Mull, Tor Browser and Firefox with
+   *  privacy.resistFingerprinting report UTC whatever the device says, and
+   *  a poll that ends at 22:03 in Berlin then reads "20:03". Naming the
+   *  zone -- "20:03 UTC", or "20:03 MESZ" where the zone is real -- makes
+   *  the time right rather than silently two hours off. It also tells the
+   *  recipient of an invitation, which carries this text, whose clock it
+   *  is. */
   format_date(date: Date): string {
     // getCurrentLang() is null before a language is set (ngx-translate 18);
     // undefined lets the browser pick its own locale then
-    return date ? date.toLocaleDateString(this.translate.getCurrentLang() || undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' }) : '';
+    return date ? date.toLocaleDateString(this.translate.getCurrentLang() || undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', timeZoneName: 'short' }) : '';
+  }
+
+  /** The short name of the time zone times are shown in ("MESZ", "UTC"),
+   *  for the places where a time is shown by a component that does not say
+   *  it itself -- the date picker's button. */
+  time_zone_name(date: Date = new Date()): string {
+    try {
+      const parts = new Intl.DateTimeFormat(this.translate.getCurrentLang() || undefined,
+        { timeZoneName: 'short' }).formatToParts(date);
+      return (parts.find(part => part.type == 'timeZoneName') || {value: ''}).value;
+    } catch (error) {
+      return '';
+    }
   }
 
   hash(what): string {

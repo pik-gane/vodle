@@ -4222,3 +4222,31 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(svc.sync_is_stalled).toBeTrue();
   });
 });
+
+describe('times shown with their time zone', () => {
+  // Mull and Firefox with privacy.resistFingerprinting report UTC: a poll
+  // ending at 22:03 in Berlin reads "20:03" there, and only the zone's name
+  // tells the reader whose clock that is
+  let svc: any;
+
+  beforeEach(() => {
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.translate = { getCurrentLang: () => 'en' };
+  });
+
+  it('names the zone in every formatted date', () => {
+    const date = new Date(2026, 9, 15, 22, 3);
+    const zone = svc.time_zone_name(date);
+    expect(zone).withContext('the browser names some zone').not.toBe('');
+    expect(svc.format_date(date)).toContain(zone);
+  });
+
+  it('formats nothing when there is no date', () => {
+    expect(svc.format_date(null)).toBe('');
+  });
+
+  it('gives an empty name rather than failing on a language the browser rejects', () => {
+    svc.translate = { getCurrentLang: () => 'not a language tag!' };
+    expect(svc.time_zone_name(new Date())).toBe('');
+  });
+});

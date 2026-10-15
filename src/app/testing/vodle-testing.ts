@@ -93,6 +93,7 @@ export function global_service_stub(): any {
       save_state: () => {},
       fix_url: (url: string) => url,
       format_date: () => '',
+      time_zone_name: () => '',
       getu: () => '',
       getp: () => '',
       getv: () => '',
