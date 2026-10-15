@@ -271,7 +271,7 @@ contents are being fetched -->
                 style="position: relative; top: 5px; right: 10px; margin-left:20px; margin-bottom:5px!important;">
                 @if (details_expanded) {
                   <ion-label style="color:var(--vodle-highlight); white-space: normal; text-align: right; font-size: 11.5px;"><span [innerHtml]="'poll.assist-me-button' | translate"></span></ion-label>
-                  }&nbsp;<ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
+                  }<span>&nbsp;</span><ion-button shape="round" class="ion-no-padding ion-no-margin" color="success">
                   <ion-icon name="color-wand-outline" slot="icon-only"
                   style="margin: 5px;"></ion-icon>
                 </ion-button>
@@ -296,7 +296,7 @@ contents are being fetched -->
                   <span
                     [innerHtml]="'poll.closed' | translate">
                   </span>
-                  }&nbsp;<b
+                  }<span>&nbsp;</span><b
                   [innerHtml]="G.D.format_date(p.due)">
                 </b>
               </span><br/>
@@ -452,63 +452,71 @@ contents are being fetched -->
 }
 }
 <!-- FINAL RESULTS (if ended and results are ready): -->
-<!-- winner exists: -->
-@if (p.has_results && p.type=='winner') {
+<!-- One "Results:" heading for every kind of poll, and under it the
+     winner, the shares, or the fact that there is neither: a poll tallied
+     before this device had read its options stores a result that names no
+     option and no share, and the winner bar used to ask for
+     p.options[undefined].name there, throw, and leave itself and the bar
+     below it empty (#366). A poll whose type never arrived lands here too,
+     where it showed nothing at all. -->
+@if (p.has_results) {
   <ion-item color="light">
     <p [innerHtml]="'poll.results'|translate">
     </p>
   </ion-item>
-  <ion-item color="danger">
-    <h3>
-      <b [innerHtml]="'poll.winner-is'|translate:{winner:p.options[p.winner].name}"></b>
-    </h3>
-  </ion-item>
-  <ion-item color="warning">
-    <p>
-      <b [innerHtml]="'poll.reason'|translate"></b>&nbsp;
-      @if (p.T.n_not_abstaining == 0) {
-        <span
-        [innerHtml]="'poll.reason-all-abstained'|translate:{}"></span>
-      }
-      @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) < p.T.n_not_abstaining) {
-        <span
-        [innerHtml]="'poll.reason-full-consensus-unique'|translate:{}"></span>
-      }
-      @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) == p.T.n_not_abstaining) {
-        <span
-        [innerHtml]="'poll.reason-full-consensus-highest'|translate:{}"></span>
-      }
-      @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner == oidsorted[0]) {
-        <span
-            [innerHtml]="'poll.reason-largest-approval'|translate:{
-              approval:(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1),
-              disapproval:(100-p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1)}"></span>
-      }
-      @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner != oidsorted[0]) {
-        <span
-            [innerHtml]="'poll.reason-smaller-approval'|translate:{
-              share:(p.T.shares_map.get(p.winner)*100).toFixed(1)}"></span>
-      }
-    </p>
-  </ion-item>
-}
-<!-- shares exist: -->
-@if (p.has_results && p.type=='share') {
-  <ion-item color="light">
-    <p [innerHtml]="'poll.results'|translate">
-    </p>
-  </ion-item>
-  <ion-item color="danger">
-    <ion-text>
-      @for (item of [].constructor(oidsorted.length); track item; let i = $index) {
-        @if (p.T.shares_map.get(oidsorted[i]) > 0) {
-          <h3><b>
-            <span [innerHtml]="'poll.of-the-budget-go-to'|translate:{share:(p.T.shares_map.get(oidsorted[i])*100).toFixed(1), option:p.options[oidsorted[i]].name}"></span>
-          </b></h3>
+  @if (result_is_empty) {
+    <ion-item color="warning" data-vodle="no-result">
+      <p [innerHtml]="'poll.no-result'|translate"></p>
+    </ion-item>
+  } @else if (p.type=='share') {
+    <!-- shares exist: -->
+    <ion-item color="danger">
+      <ion-text>
+        @for (item of [].constructor(oidsorted.length); track item; let i = $index) {
+          @if (p.T.shares_map.get(oidsorted[i]) > 0) {
+            <h3><b>
+              <span [innerHtml]="'poll.of-the-budget-go-to'|translate:{share:(p.T.shares_map.get(oidsorted[i])*100).toFixed(1), option:p.options[oidsorted[i]].name}"></span>
+            </b></h3>
+          }
         }
-      }
-    </ion-text>
-  </ion-item>
+      </ion-text>
+    </ion-item>
+  } @else {
+    <!-- a winner was drawn: -->
+    <ion-item color="danger">
+      <h3>
+        <b [innerHtml]="'poll.winner-is'|translate:{winner:p.options[p.winner].name}"></b>
+      </h3>
+    </ion-item>
+    <ion-item color="warning">
+      <p>
+        <b [innerHtml]="'poll.reason'|translate"></b><span>&nbsp;</span>
+        @if (p.T.n_not_abstaining == 0) {
+          <span
+          [innerHtml]="'poll.reason-all-abstained'|translate:{}"></span>
+        }
+        @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) < p.T.n_not_abstaining) {
+          <span
+          [innerHtml]="'poll.reason-full-consensus-unique'|translate:{}"></span>
+        }
+        @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) == p.T.n_not_abstaining && p.T.approval_scores_map.get(oidsorted[1]) == p.T.n_not_abstaining) {
+          <span
+          [innerHtml]="'poll.reason-full-consensus-highest'|translate:{}"></span>
+        }
+        @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner == oidsorted[0]) {
+          <span
+              [innerHtml]="'poll.reason-largest-approval'|translate:{
+                approval:(p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1),
+                disapproval:(100-p.T.approval_scores_map.get(oidsorted[0])/p.T.n_not_abstaining*100).toFixed(1)}"></span>
+        }
+        @if (p.T.n_not_abstaining > 0 && p.T.approval_scores_map.get(oidsorted[0]) < p.T.n_not_abstaining && p.winner != oidsorted[0]) {
+          <span
+              [innerHtml]="'poll.reason-smaller-approval'|translate:{
+                share:(p.T.shares_map.get(p.winner)*100).toFixed(1)}"></span>
+        }
+      </p>
+    </ion-item>
+  }
 }
 <!-- results not ready yet: the poll has ended and the last votes are
 still being collected, which takes as long as the closing event and
@@ -567,7 +575,7 @@ the final read take — up to two minutes (#327) -->
                   [innerHtml]="(n_indirect_clients == 0 ? 'poll.declined-all' : 'poll.declined-some') | translate">
                 </span>
               }
-              &nbsp;
+              <span>&nbsp;</span>
             </small>
           </ion-col>
         </ion-row>
@@ -1073,7 +1081,7 @@ the final read take — up to two minutes (#327) -->
                               }">
                             </span>
                           </span>
-                          }&nbsp;
+                          }<span>&nbsp;</span>
                           <!-- explanation link: -->
                           <span style="color:var(--vodle-dark); white-space: nowrap;">
                             (<a

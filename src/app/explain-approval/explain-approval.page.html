@@ -192,7 +192,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                                   <text x="0" y="-1" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-1'|translate"></tspan>&nbsp;&nbsp;</text>
                                   <text x="0" y="4" [attr.fill]="cs[myi]" text-anchor="end"><tspan [innerHtml]="'explain.your-rating-line-2'|translate"></tspan>@if (eff_unequal_proxy) {
                                   <tspan>*</tspan>
-                                }&nbsp;&nbsp;</text>
+                                }<tspan>&nbsp;&nbsp;</tspan></text>
                               </ng-container>
                             }
                             <g [attr.transform]="mypos >= 13 ? 'translate(0 20)' : ''">
