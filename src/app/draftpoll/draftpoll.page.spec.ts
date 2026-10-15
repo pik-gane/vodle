@@ -151,7 +151,28 @@ describe('DraftpollPage', () => {
       (component as any).pd = {type: 'winner', title: 'Urlaub', due_type: 'custom', due_custom: due.toISOString(),
                                options: [{name: 'Südsee'}, {name: 'Ski'}]};
       component.onDataReady();
-      expect(component.formGroup.get('poll_due_custom').value).toEqual(due.toISOString());
+      const value = component.formGroup.get('poll_due_custom').value;
+      expect(new Date(value).valueOf()).withContext('the same moment').toBe(due.valueOf());
+      expect(value).toBe(component.local_iso(due));
+    });
+
+    // ion-datetime shows an ISO string's fields as they stand: given UTC it
+    // showed a Berlin deadline two hours early, beside a label naming GMT+2
+    it('gives the date picker local wall-clock time, without an offset', () => {
+      const due = new Date(2026, 9, 15, 22, 3, 0);
+      const value = component.local_iso(due);
+      expect(value).toBe('2026-10-15T22:03:00');
+      expect(value).not.toMatch(/Z|[+-]\d\d:\d\d$/);
+      expect(new Date(value).valueOf()).withContext('read back in the same zone').toBe(due.valueOf());
+
+      (component as any).pid = undefined;
+      (component as any).ready = false;
+      (component as any).pd = {type: 'winner', title: 'Urlaub', due_type: 'custom',
+                               options: [{name: 'Südsee'}, {name: 'Ski'}]};
+      component.onDataReady();
+      const seeded = component.formGroup.get('poll_due_custom').value;
+      expect(seeded).withContext('a seeded date too').not.toMatch(/Z|[+-]\d\d:\d\d$/);
+      expect(new Date(seeded).getHours()).toBe(Number(seeded.slice(11, 13)));
     });
 
     it('keeps a date the draft already carries, and does not reopen the picker', () => {
