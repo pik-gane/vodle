@@ -68,6 +68,13 @@ describe('AssistPage', () => {
       expect(AssistPage.stepped(40, -5, 40)).withContext('a threshold may not go below the estimate').toBe(40);
     });
 
+    it('stays within 0-100 whatever estimate was typed as the floor', () => {
+      expect(AssistPage.stepped(0, -5, -5)).withContext('estimate typed as −5').toBe(0);
+      expect(AssistPage.stepped(5, -5, -20)).toBe(0);
+      expect(AssistPage.stepped(100, 5, 150)).withContext('estimate typed as 150').toBe(100);
+      expect(AssistPage.stepped(100, -5, 150)).toBe(100);
+    });
+
     it('takes a typed value as it comes', () => {
       expect(AssistPage.stepped('37', 5)).toBe(40);
       expect(AssistPage.stepped('', 5)).toBe(5);

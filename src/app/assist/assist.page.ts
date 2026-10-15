@@ -217,11 +217,13 @@ export class AssistPage implements OnInit {
   /** `value` moved by one step of 5 in the direction of `delta`'s sign, onto
    *  the next multiple of 5 (37 goes up to 40 and down to 35), and kept
    *  within [min, 100]. The fields take typed values too, so the start may
-   *  be any number, or a string. */
+   *  be any number, or a string. So may the floor: a threshold's is its
+   *  typed estimate, which nothing keeps within 0-100 (#387). */
   static stepped(value: any, delta: number, min = 0): number {
     const v = Number(value) || 0;
     const next = delta > 0 ? Math.floor(v / 5) * 5 + 5 : Math.ceil(v / 5) * 5 - 5;
-    return Math.max(min, Math.min(100, next));
+    const floor = Math.max(0, Math.min(100, Number(min) || 0));
+    return Math.max(floor, Math.min(100, next));
   }
 
   /** the − and + beside an estimate: a phone draws no arrows on a number

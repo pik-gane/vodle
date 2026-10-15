@@ -317,7 +317,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           </p>
           <ion-buttons slot="end">
             <ion-button class="stepper" fill="clear" color="primary" (click)="step_threshold(thresholded_oids[current_index], -5)"
-              [disabled]="thresholds[thresholded_oids[current_index]] <= estimates[thresholded_oids[current_index]]"
+              [disabled]="thresholds[thresholded_oids[current_index]] <= estimates[thresholded_oids[current_index]] || thresholds[thresholded_oids[current_index]] <= 0"
               aria-label="−5" data-vodle="threshold-minus">
               <ion-icon slot="icon-only" name="remove-circle-outline"></ion-icon>
             </ion-button>
