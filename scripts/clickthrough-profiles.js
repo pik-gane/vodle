@@ -19,11 +19,18 @@
  *
  * It needs an ACCOUNT that already exists on the deployment: registering
  * needs the registration token, which only the deployment's own build
- * carries. Nothing it does changes a poll: it opens a draft and leaves it.
+ * carries.
+ *
+ * It opens an ENDED poll, and a draft it leaves as it found it. Opening a
+ * poll that still runs is not a read: the page writes the account's
+ * default rating into every option it has not rated
+ * (PollPage.seed_default_ratings), which is a vote the account never cast.
+ * --may-vote allows it, and --poll names a poll whatever its state, so use
+ * either only with an account whose votes do not matter.
  *
  *   node scripts/clickthrough-profiles.js --base https://vodle.example.org \
  *       --email someone@example.org --password '…' [--profiles desktop,phone]
- *       [--poll <pid>] [--shots dir] [--report file.json]
+ *       [--poll <pid>] [--may-vote] [--shots dir] [--report file.json]
  *       [--serve-dir docs]
  *
  * --serve-dir answers the app's own requests from a local build while the
@@ -33,7 +40,8 @@
  * (matrix.server_name), or the login derives a user id the server does not
  * have.
  *
- * Exit code 1 if any profile reported a problem.
+ * Exit code 1 if any profile reported a problem, a console error or an
+ * uncaught exception.
  */
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +61,8 @@ const REPORT = arg('report');
 // so a fix can be looked at against the deployment's real polls before the
 // deployment is updated (see serve_locally)
 const SERVE_DIR = arg('serve-dir') ? path.resolve(arg('serve-dir')) : null;
+// opening a poll that still runs is not a read: see the poll step below
+const MAY_VOTE = process.argv.includes('--may-vote');
 const CHROME = process.env.CHROME_BIN || '/usr/bin/google-chrome';
 const STEP_TIMEOUT = parseInt(arg('timeout', '60000'), 10);
 
@@ -124,7 +134,7 @@ const LOOK = `(() => {
     }; });
   return {
     title: (document.querySelector('ion-title') || {}).innerText || '',
-    text: document.body.innerText.replace(/\\s+/g, ' ').slice(0, 400),
+    text: document.body.innerText.replace(/\\s+/g, ' '),
     icons_without_svg: icons.filter(i => i.empty).map(i => i.name),
     icons_seen: icons.length,
     empty_controls: controls.filter(c => c.laid_out && (c.w === 0 || c.h === 0)),
@@ -139,7 +149,11 @@ async function look(page, profile, step, out) {
     fs.mkdirSync(SHOTS, {recursive: true});
     await page.screenshot({path: path.join(SHOTS, `${profile}-${step}.png`), fullPage: false});
   }
-  out.pages.push({step, ...seen});
+  // the report gets an excerpt; what is returned to the caller keeps the
+  // whole page's text, because the checks below read it and a long title
+  // or description would otherwise push the date, or the result, past the
+  // end of a truncated string
+  out.pages.push({...seen, step, text: seen.text.slice(0, 400)});
   for (const icon of seen.icons_without_svg) {
     out.problems.push(`${step}: the icon "${icon}" renders nothing (not registered in src/app/icons.ts?)`);
   }
@@ -201,9 +215,13 @@ async function run_profile(key) {
       deviceScaleFactor: profile.scale || 1, isMobile: !!profile.mobile, hasTouch: !!profile.touch});
     page.on('console', m => {
       const text = m.text();
-      // the SDK asks every homeserver for an endpoint Synapse does not serve
-      // and logs the 404 as an error; nothing depends on it (WORK_PLAN)
-      if (m.type() === 'error' && !/rtc\/transports|Failed to load resource/.test(text)) {
+      // the SDK asks every homeserver for an endpoint Synapse does not
+      // serve and logs the 404 as an error; nothing depends on it
+      // (WORK_PLAN). Exempted by the URL it names, so that a stylesheet
+      // that did not load, or an API call that failed, is still reported:
+      // "Failed to load resource" is the message of every one of them.
+      const where = (m.location && m.location() || {}).url || '';
+      if (m.type() === 'error' && !/rtc\/transports/.test(text + ' ' + where)) {
         out.console_errors.push(text.slice(0, 200));
       }
     });
@@ -257,8 +275,24 @@ async function run_profile(key) {
       await page.goto(BASE + '/#/mypolls', {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
       await visible(page, '[data-vodle="my-polls-page"]');
       await new Promise(r => setTimeout(r, 4000));
-      const opened = await page.evaluate(() => {
-        for (const kind of ['closed-poll-item', 'running-poll-item', 'archived-poll-item']) {
+      // the ended and archived sections start collapsed and render their
+      // items only once opened, so an account whose polls have all ended
+      // looked like an account with no polls at all
+      await page.evaluate(() => {
+        for (const section of ['closed-polls-section', 'archived-polls-section']) {
+          const head = document.querySelector(`[data-vodle="${section}"]`);
+          if (head) { head.click(); }
+        }
+      });
+      await new Promise(r => setTimeout(r, 1500));
+      // An ENDED poll for preference, and only an ended one unless
+      // --may-vote says otherwise: opening a poll that still runs makes
+      // the page write this account's default rating into every option it
+      // has not rated (PollPage.seed_default_ratings), which is a vote.
+      const kinds = ['closed-poll-item', 'archived-poll-item'];
+      if (MAY_VOTE) { kinds.push('running-poll-item'); }
+      const opened = await page.evaluate(wanted => {
+        for (const kind of wanted) {
           const item = Array.from(document.querySelectorAll(`[data-vodle="${kind}"]`))
             .find(n => n.getBoundingClientRect().height > 0);
           // the label carries the routerLink; the item itself is not the link
@@ -266,7 +300,7 @@ async function run_profile(key) {
           if (label) { label.click(); return kind; }
         }
         return null;
-      });
+      }, kinds);
       if (opened) {
         await new Promise(r => setTimeout(r, 4000));
         const m = /#\/poll\/([A-Za-z0-9_-]+)/.exec(await page.evaluate(() => location.hash));
@@ -275,8 +309,15 @@ async function run_profile(key) {
     }
     if (pid) {
       await page.goto(BASE + '/#/poll/' + pid, {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
-      await page.waitForFunction(() => /Ends|Ended|Results|wap/i.test(document.body.innerText),
-        {timeout: STEP_TIMEOUT}).catch(() => {});
+      // the poll's own page, not whatever stands at that address: a pid
+      // this account does not have sends the app back to my polls with a
+      // warning, and the step used to record THAT page as the poll
+      const shown = await page.waitForFunction(() =>
+        !!document.querySelector('[data-vodle="poll-voting-page"]'),
+        {timeout: STEP_TIMEOUT}).then(() => true).catch(() => false);
+      if (!shown) {
+        out.problems.push(`5-poll: the poll ${pid} did not come up (still loading, or not this account's)`);
+      }
       await new Promise(r => setTimeout(r, 8000));
       const seen = await look(page, key, '5-poll', out);
       // the label and the date of an ended poll, which lost their separator
@@ -292,7 +333,8 @@ async function run_profile(key) {
       }
       out.poll = pid;
     } else {
-      out.problems.push('3-my-polls: no poll to open — this account has none');
+      out.problems.push('3-my-polls: no ended poll to open'
+        + (MAY_VOTE ? ' and no running one either' : ' (--may-vote would allow a running one)'));
     }
 
     await page.goto(BASE + '/#/settings', {waitUntil: 'networkidle2', timeout: STEP_TIMEOUT});
@@ -324,7 +366,9 @@ async function run_profile(key) {
     console.log('   pages seen: ' + result.pages.map(p => p.step).join(', '));
   }
   if (REPORT) { fs.writeFileSync(REPORT, JSON.stringify({base: BASE, when: new Date().toISOString(), results}, null, 1)); }
-  const bad = results.filter(r => r.problems.length);
+  // a console error or an uncaught exception is a finding too: a run that
+  // only has those is not a clean run
+  const bad = results.filter(r => r.problems.length || r.console_errors.length);
   console.log(`\n${results.length} profile(s), ${bad.length} with something to report.`);
   process.exit(bad.length ? 1 : 0);
 })();
