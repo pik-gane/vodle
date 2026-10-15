@@ -41,13 +41,41 @@ function uncommented(text, file) {
     : text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-const ION_ICON_RE = /<ion-icon\b[^>]*>/g;
 // name="x" / ios="x" / md="x", and [name]="…'x'…" with its literals
 const PLAIN_ATTR_RE = /\b(?:name|ios|md)="([^"{}]*)"/g;
 const BOUND_ATTR_RE = /\[(?:name|ios|md)\]="([^"]*)"/g;
 const STRING_LITERAL_RE = /'([^']*)'/g;
-// …== 'x' / …!== 'x': the literal is what the expression tests, not an icon
-const COMPARED_RE = /[=!]==?\s*$/;
+// What an expression compares to, or glues onto, is not an icon name:
+// [name]="type=='winner'?'trophy':'cut'" and its mirror image 'winner'==type
+// name trophy and cut; [name]="'custom-'+suffix" names an icon this cannot
+// know, so neither half is reported.
+const COMPARED_BEFORE_RE = /(?:[=!]==?|[<>]=?|\+)\s*$/;
+const COMPARED_AFTER_RE = /^\s*(?:[=!]==?|[<>]=?|\+)/;
+
+/**
+ * The <ion-icon …> tags in `html`, with their text. A plain regular
+ * expression ends the tag at the first `>`, which inside a binding is an
+ * operator — <ion-icon [name]="n > 1 ? 'a' : 'b'"> — so the quotes are
+ * tracked.
+ */
+function ionIconTags(html) {
+  const tags = [];
+  const OPEN = /<ion-icon\b/g;
+  let open;
+  while ((open = OPEN.exec(html)) !== null) {
+    let i = open.index + open[0].length, quote = '';
+    while (i < html.length) {
+      const c = html[i];
+      if (quote) { if (c === quote) quote = ''; }
+      else if (c === '"' || c === "'") quote = c;
+      else if (c === '>') break;
+      i++;
+    }
+    tags.push({index: open.index, text: html.slice(open.index, i + 1)});
+    OPEN.lastIndex = i;
+  }
+  return tags;
+}
 // the menu entries of app.component.ts and the like: icon: 'home'
 const TS_ICON_FIELD_RE = /\bicon:\s*'([^']*)'/g;
 // ionicons' names: lower-case words joined by hyphens, nothing else
@@ -61,20 +89,19 @@ function iconNamesIn(text, file) {
     found.push({name, line: text.slice(0, index).split('\n').length});
   };
   if (file.endsWith('.html')) {
-    let tag;
-    while ((tag = ION_ICON_RE.exec(text)) !== null) {
-      // <ion-spinner name="crescent"> and <ion-input name="…"> are not icons,
-      // so only what stands inside an <ion-icon> tag is read
-      const at = tag.index, inner = tag[0];
+    // <ion-spinner name="crescent"> and <ion-input name="…"> are not icons,
+    // so only what stands inside an <ion-icon> tag is read
+    for (const tag of ionIconTags(text)) {
+      const at = tag.index, inner = tag.text;
       let m;
       while ((m = PLAIN_ATTR_RE.exec(inner)) !== null) { add(m[1], at); }
       while ((m = BOUND_ATTR_RE.exec(inner)) !== null) {
         const expression = m[1];
         let lit;
         while ((lit = STRING_LITERAL_RE.exec(expression)) !== null) {
-          // what an expression COMPARES to is not an icon:
-          // [name]="type=='winner'?'trophy':'cut'" names trophy and cut
-          if (COMPARED_RE.test(expression.slice(0, lit.index))) { continue; }
+          const before = expression.slice(0, lit.index);
+          const after = expression.slice(lit.index + lit[0].length);
+          if (COMPARED_BEFORE_RE.test(before) || COMPARED_AFTER_RE.test(after)) { continue; }
           add(lit[1], at);
         }
       }
@@ -88,7 +115,8 @@ function iconNamesIn(text, file) {
 
 /** the names src/app/icons.ts registers with addIcons */
 function registeredNames(source) {
-  const block = /addIcons\(\{([\s\S]*?)\}\)/.exec(source);
+  // a commented-out line registers nothing, however much it looks like it does
+  const block = /addIcons\(\{([\s\S]*?)\}\)/.exec(uncommented(source, 'icons.ts'));
   if (!block) throw new Error('no addIcons({...}) call in src/app/icons.ts');
   const names = new Set();
   let m;
@@ -108,6 +136,12 @@ function selfTest() {
     ['<ion-icon [name]="p.icon"></ion-icon>', 'html', []],
     // 'winner' is what the expression tests for, not an icon (#368)
     [`<ion-icon [name]="poll_type=='winner'?'trophy':'cut'"></ion-icon>`, 'html', ['trophy', 'cut']],
+    [`<ion-icon [name]="'winner'==poll_type?'trophy':'cut'"></ion-icon>`, 'html', ['trophy', 'cut']],
+    // a name glued together at runtime is not one this can read
+    [`<ion-icon [name]="'custom-'+suffix"></ion-icon>`, 'html', []],
+    // a > inside the binding does not end the tag
+    [`<ion-icon [name]="n > 1 ? 'people-outline' : 'person-outline'"></ion-icon>`, 'html',
+     ['people-outline', 'person-outline']],
     // other components' name attributes are not icons
     ['<ion-spinner name="crescent"></ion-spinner><ion-input name="email"></ion-input>', 'html', []],
     ['<!-- <ion-icon name="ghost-outline"></ion-icon> -->', 'html', []],
@@ -123,9 +157,10 @@ function selfTest() {
       failed++;
     }
   }
-  const registered = registeredNames(`addIcons({\n  'add': add,\n  'trash-outline': trashOutline,\n});`);
-  if (registered.size !== 2 || !registered.has('trash-outline')) {
-    console.error('self-test: registeredNames did not read the addIcons block');
+  const registered = registeredNames(
+    `addIcons({\n  'add': add,\n  // 'star': star,\n  'trash-outline': trashOutline,\n});`);
+  if (registered.size !== 2 || !registered.has('trash-outline') || registered.has('star')) {
+    console.error('self-test: registeredNames did not read the addIcons block as written');
     failed++;
   }
   if (failed) { process.exit(1); }
