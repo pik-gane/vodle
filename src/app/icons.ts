@@ -38,6 +38,7 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 import { addIcons } from 'ionicons';
 import {
   add,
+  addCircleOutline,
   alertOutline,
   analyticsOutline,
   archiveOutline,
@@ -92,6 +93,7 @@ import {
   playSkipForwardOutline,
   refreshOutline,
   reloadOutline,
+  removeCircleOutline,
   settings,
   share,
   shareSocial,
@@ -106,6 +108,7 @@ import {
 
 addIcons({
   'add': add,
+  'add-circle-outline': addCircleOutline,
   'alert-outline': alertOutline,
   'analytics-outline': analyticsOutline,
   'archive-outline': archiveOutline,
@@ -160,6 +163,7 @@ addIcons({
   'play-skip-forward-outline': playSkipForwardOutline,
   'refresh-outline': refreshOutline,
   'reload-outline': reloadOutline,
+  'remove-circle-outline': removeCircleOutline,
   'settings': settings,
   'share': share,
   'share-social': shareSocial,
