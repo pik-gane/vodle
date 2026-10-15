@@ -42,4 +42,20 @@ describe('HelpPage', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  // the FAQ was hard-coded English; it reads its questions and answers from
+  // the translation files now, by id (help.faq.<id>.q / .a). With no
+  // translations loaded the pipe shows the key, which is what is checked.
+  it('shows every FAQ question by its translation key, and its answer once opened', () => {
+    component.e_faq = true;
+    fixture.detectChanges();
+    const items: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('[data-vodle-faq]'));
+    expect(items.map(i => i.getAttribute('data-vodle-faq'))).toEqual([...HelpPage.FAQ_IDS]);
+    expect(items[0].textContent).toContain('help.faq.pronounce.q');
+    expect(items[0].textContent).not.toContain('help.faq.pronounce.a');
+    items[0].click();
+    fixture.detectChanges();
+    expect(items[0].textContent).toContain('help.faq.pronounce.a');
+    expect(items[1].textContent).withContext('only the one opened').not.toContain('help.faq.wap-37.a');
+  });
 });

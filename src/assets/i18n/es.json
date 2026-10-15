@@ -410,7 +410,78 @@
         "p24": "Ahora que entendemos como se calcula la aprobación, podemos seguir con ¿cómo las <b>probabilidades de ganar</b> o <b>cuotas del presupuesto</b> son calculadas? y ¿cómo realmente se elige una opción ganadora? Si una opción tiene exactamente una aprobación del 100%, va a ganar (o se llevará el 100% del presupuesto). <br/>Si ninguna opción tiene el 100% de aprobación, <i>vodle</i> distribuye la probabilidad de ganar o el presupuesto, entre dos o más opciones. En este caso, la opción con la mayor aprobación seguramente gane o se lleve la mayor cuota. Pero otras opciones que tengan al menos cierta aprobación pueden entonces ganar también aunque con menor probabilidad, u obtener una menor cuota del presupuesto. <br/>Para encuestas que seleccionen una sola opción esto significa que hay una cierta cantidad de suerte para determinar la opción ganadora. Esto es porque debemos asegurarnos que ningún grupo de participantes sea simplemente ignorado por los otros participantes como es el caso con la regla de la mayoría. De esta manera, <i>vodle</i> le da a cada participante exactamente la misma cantidad de influencia y a cada facción una influencia que se adecúe a su tamaño.",
         "p25": "Si la encuesta se trata sobre seleccionar una opción, el procedimiento exacto para encontrar al ganador cuando ninguna opción tiene una aprobación del 100% es muy simple. Se elige un participante aleatoriamente, cada uno tiene la misma chance de ser elegido. Entre las opciones que este participante haya aprobado, aquella con la mayor aprobación general es la ganadora. (En caso de un empate, el wap promedio es usado para romper el empate). La porción de torta a la izquierda de cada opción muestra la probabilidad de que esta opción gane.",
         "p26": "Si la encuesta se trata sobre distribuir un presupuesto, el tamaño de la cuota de cada opción es calculado de la misma manera: la cuota es proporcional al número de participantes que (i) aprueben esta opción pero (ii) no aprueben otra opción que tenga una aprobación general mayor.",
-        "p27": "Entonces ahora sabemos como se elige a la opción ganadora o se calculan las cuotas. <b><i>Pero, ¿cómo pondrías tus waps en práctica?</i></b> La siguiente regla de pulgar normalmente funciona bastante bien para encontrar un consenso: <b>Otorga a tu opción favorita un wap de 100. A las opciones que sean mejor que el promedio indica un wap mayor que cero, incrementando tus waps de acuerdo a tu preferencia. Finalmente, a las opciones que sean peor que el promedio, otorga un wap de 0.</b>"
+        "p27": "Entonces ahora sabemos como se elige a la opción ganadora o se calculan las cuotas. <b><i>Pero, ¿cómo pondrías tus waps en práctica?</i></b> La siguiente regla de pulgar normalmente funciona bastante bien para encontrar un consenso: <b>Otorga a tu opción favorita un wap de 100. A las opciones que sean mejor que el promedio indica un wap mayor que cero, incrementando tus waps de acuerdo a tu preferencia. Finalmente, a las opciones que sean peor que el promedio, otorga un wap de 0.</b>",
+        "faq": {
+            "title": "Preguntas frecuentes",
+            "pronounce": {
+                "q": "¿Cómo se pronuncia ‘vodle’?",
+                "a": "¡Como el inglés ‘yodel’! (no como ‘model’ ni ‘noodle’)."
+            },
+            "wap-37": {
+                "q": "¿Qué significa, por ejemplo, un wap de 37?",
+                "a": "Si le das a una opción un wap de 37, prometes aprobar esa opción si menos del 37% de todos los participantes no la aprueba."
+            },
+            "approve": {
+                "q": "¿Qué pasa si apruebo una opción?",
+                "a": "Si apruebas una opción (deslizador verde), aumentas la probabilidad de que gane (en encuestas que eligen una sola opción) o la parte del presupuesto que recibe (en encuestas que reparten un presupuesto)."
+            },
+            "winning-probabilities": {
+                "q": "¿Cómo afecta mi aprobación a las probabilidades de ganar?",
+                "a": "Si una única opción es aprobada por todos los participantes, gana con seguridad. Si no, se sortea a un participante, y gana una de las opciones que ese participante aprueba. Si tú eres ese participante, tu aprobación decide qué opción gana: entre todas las opciones que apruebas, gana la que tiene la mayor aprobación total."
+            },
+            "shares": {
+                "q": "¿Cómo afecta mi aprobación a las partes del presupuesto?",
+                "a": "La parte de una opción es proporcional al número de participantes que aprueban esa opción y no aprueban ninguna otra opción con mayor aprobación total. Así que, si hay N participantes en total, tú controlas una parte de 1/N del presupuesto total. Si apruebas una sola opción, la parte que controlas va a esa opción. Si apruebas varias, tu parte va a la que tenga la mayor aprobación total entre las que apruebas."
+            },
+            "most-approved": {
+                "q": "¿Por qué puede no ganar la opción más aprobada?",
+                "a": "Si una única opción es aprobada por todos los participantes, gana. Pero si ninguna opción tiene la aprobación de todos, el consenso es incompleto. Para dar a todos los participantes la misma influencia, vodle no puede simplemente declarar ganadora a la opción más aprobada. En su lugar, sigue entonces un procedimiento parecido a la lotería de la green card: se sortea a un participante, y gana una opción que ese participante aprueba. Aun así se busca el consenso más amplio posible: entre las opciones que aprueba el participante sorteado, gana la que tiene la mayor aprobación total."
+            },
+            "chance": {
+                "q": "¿Por qué debería aceptar que el azar pueda influir?",
+                "a": "vodle usa el azar solo para asegurar que todos tengan una oportunidad justa de ser escuchados. Se puede demostrar matemáticamente que no es posible dar a todos los participantes el mismo poder sin usar algo de azar en algunas situaciones. Puedes asegurarte de que el azar <i>no</i> influya si encuentras una opción que todos puedan aprobar y le das a esa opción un wap de al menos 1. Por otra parte, el azar es un ingrediente inevitable de la vida. Aunque una regla de decisión no use el azar de forma explícita, en el mundo real todo proceso de decisión contiene elementos de azar: cuándo se busca una decisión, qué opciones se ofrecen, quién tiene qué información, cuáles serían las consecuencias de las opciones – todas estas cuestiones implican algo de azar."
+            },
+            "not-summed": {
+                "q": "¿Por qué no se suman simplemente los waps?",
+                "a": "Sumar todos los waps de una opción puede parecer una buena idea al principio, pero no daría a cada participante una oportunidad justa de influir en el resultado. Imagina dos opciones opuestas A y B, A preferida por el 55% de los participantes y B por el 45%, y supón que hay una posible opción de consenso C que todos consideran casi tan buena como su favorita. Entonces lo deseable sería que ganara C, y vodle lo hace muy probable.<br/> Pero si los waps se sumaran simplemente, el 55% que prefiere A podría darle a A un wap de 100 y a B y C un wap de 0. Entonces A ganaría con seguridad, sin importar los waps del otro 45%. Ese 45% no tendría ninguna influencia en el resultado, y la posible opción de consenso no tendría ninguna oportunidad.<br/> Con vodle, en cambio, esos mismos waps “no cooperativos” solo garantizarían a A una probabilidad de ganar del 55% en lugar del 100%, porque cada grupo de participantes solo puede controlar una parte de la probabilidad de ganar igual a su parte de los participantes. Si C es un posible consenso, ese 55% preferiría obtener C con seguridad antes que A con solo un 55% de probabilidad y B con un 45%. Así que con vodle el 55% daría a C un wap positivo, y el otro 45% también. De este modo, ambas facciones evitan la lotería incierta entre A y B y hacen de C la ganadora segura. Incluso se puede demostrar con teoría de juegos que tales waps forman un tipo muy fuerte de equilibrio estratégico cuando los participantes actúan racionalmente.<br/> De forma similar se puede demostrar que, si los waps se sumaran simplemente, los participantes racionales nunca darían a ninguna opción un wap distinto de 0 o 100, y una mayoría siempre se saldría con la suya por pequeña que fuera, así que ese método no sería muy distinto de una simple votación por mayoría."
+            },
+            "one-at-100": {
+                "q": "¿Por qué debería dar a <i>al menos una</i> opción un wap de 100?",
+                "a": "¡Un wap de 100 no significa que esa opción te satisfaga por completo! Significa más bien que esa opción es la mejor o la menos mala <i>entre las opciones ofrecidas</i>. Si no le das a ninguna opción un wap de 100, tu participación puede quedar sin efecto, porque podrías acabar sin aprobar ninguna opción. Al dar a al menos una opción un wap de 100, te aseguras de conservar el control sobre una parte justa del poder de decisión total, y de que la parte de la probabilidad de ganar que controlas no vaya a una opción a la que diste un wap de cero."
+            },
+            "more-than-one": {
+                "q": "¿Por qué debería dar a <i>más de una</i> opción un wap <i>positivo</i>?",
+                "a": "Si todos dan un wap positivo a una sola opción, la ganadora se decide por sorteo, y cada opción gana con una probabilidad igual a su aprobación (en porcentaje de todos los participantes que no se abstuvieron). Ninguna posible opción de consenso tendría oportunidad. Este resultado tan aleatorio se puede evitar dando también un wap positivo a las posibles opciones de consenso. Así indicas que estarías de acuerdo en transferir la parte de la probabilidad de ganar que controlas desde tu opción favorita a la opción de consenso, si otros participantes hacen lo mismo."
+            },
+            "which-positive": {
+                "q": "¿Qué opciones deberían recibir un wap positivo?",
+                "a": "Una buena regla práctica es dar a una opción un wap positivo si es “mejor que el promedio”."
+            },
+            "better-than-average": {
+                "q": "¿Qué significa “mejor que el promedio”?",
+                "a": "Imagina que se sortea a un participante y que esa persona puede decidir sola. Llamemos a esto la “lotería del dictador aleatorio”. Ahora pregúntate para cada opción: ¿preferiría tener esta opción con seguridad antes que realizar la lotería del dictador aleatorio? Si la respuesta es sí, esa opción es “mejor que el promedio” y debería recibir un wap positivo.<br/> Si no tienes idea de las preferencias de los demás participantes, puedes suponer que todas las opciones tienen más o menos la misma aprobación. A medida que avanza la encuesta, puedes observar la aprobación que recibe cada opción y así mejorar tu estimación de lo que daría la lotería del dictador aleatorio."
+            },
+            "how-large": {
+                "q": "¿Qué tan grande debería ser el wap de una opción “mejor que el promedio”?",
+                "a": "Si tienes una idea de lo que piensan los demás participantes, fija tu wap así. Primero, estima qué porcentaje de los participantes considera esta opción peor que el promedio. Digamos que crees que es el 37%. Luego añade un margen de seguridad (por ejemplo, hasta 40). Ese debería ser tu wap.<br/> <i>¿Por qué?</i> Porque si todos los participantes que consideran la opción mejor que el promedio siguen la misma lógica, vodle contará correctamente a todos ellos como aprobándola: tu wap (40) es entonces mayor que el porcentaje de participantes que no aprueban la opción, y ese es el criterio de aprobación que usa vodle.<br/> <b>¿Y si no tengo idea de quién considera una opción peor o mejor que el promedio?</b> Entonces una buena regla práctica es escalar tus waps de 0 a 100 según tu preferencia relativa: 0 significaría “justo en el promedio” y 100 “la mejor de las opciones disponibles”. A medida que avanza la encuesta, puedes observar cómo crece la aprobación de cada opción y probar cuánto tienes que mover tu deslizador a la derecha antes de que aumente la aprobación. Si otros participantes ya han fijado sus waps según esta regla, la barra gris clara de aprobación debería empezar a acercarse a tu deslizador en cuanto tu wap sea lo bastante grande."
+            },
+            "not-too-many": {
+                "q": "¿Por qué no debería dar un wap de 100 a <i>demasiadas</i> opciones?",
+                "a": "Al dar a una opción de compromiso un wap positivo menor que 100, indicas que solo la aprobarás si suficientes participantes hacen lo mismo. Así das a los demás un incentivo para darle también un wap positivo. Si le dieras a la opción un wap de 100, los demás podrían simplemente darle un wap de 0. Tu parte de la probabilidad de ganar podría entonces pasar de tu opción favorita a la opción de compromiso, mientras que las partes de los demás seguirían en sus favoritas. Eso no sería un compromiso, sino solo una desventaja para ti. Solo un wap claramente entre 0 y 100 puede asegurar que tú y los demás participantes transfieran sus partes <i>conjuntamente</i> desde sus distintas opciones favoritas a la opción de compromiso."
+            },
+            "no-consensus": {
+                "q": "¿Y si ninguna opción convence a todos?",
+                "a": "Idealmente, alguna opción <i>sería</i> considerada mejor que el promedio por todos los participantes si son sinceros, y entonces bastaría un wap positivo muy pequeño, de solo 1, para que esa opción ganara con seguridad. En la realidad, sin embargo, incluso entonces probablemente un pequeño porcentaje de participantes no se dará cuenta de que esa opción sería un buen consenso y le dará un wap de cero. Por eso conviene añadir un margen de seguridad y dar un wap de, digamos, 5 o 10 en lugar de solo 1.<br/> Si de verdad no hay ninguna opción con potencial de consenso casi total, quizá haya una que convenza al menos a, digamos, el 80 por ciento. En ese caso, ese 80% debería darle un wap de 100 − 80 = 20, más un margen de seguridad, así que quizá 25. De este modo, esa amplia opción de consenso “parcial” gana con una probabilidad muy alta del 80%, y el 20% restante de la probabilidad de ganar queda bajo el control de la minoría del 20% que no puede aceptar ese consenso, lo cual es justo."
+            },
+            "several-consensus": {
+                "q": "¿Y si <i>varias</i> opciones convencen a todos?",
+                "a": "En este caso afortunado, varias opciones acaban siendo aprobadas por todos. Cuando eso ocurre, la suma de sus waps sirve para desempatar. Así, si la opción A es aprobada por el 60% pero B y C por el 100%, y la suma de los waps es 345 para A, 123 para B y 234 para C, entonces C tiene la mayor suma entre las opciones con el 100% de aprobación, así que gana C – aunque A tenga una suma mayor (pero no la aprobación de todos)."
+            },
+            "agreement": {
+                "q": "¿Qué significa un x% de consenso?",
+                "a": "Calculamos el nivel de consenso así: para cada opción multiplicamos su aprobación por su parte, y luego sumamos todos esos números. Un nivel de consenso del 100% significa que toda la parte va a una opción aprobada por todos los participantes que no se abstienen. En una encuesta que elige una sola opción, el nivel de consenso puede interpretarse así: si tomas mil encuestas con, digamos, un 23% de consenso cada una, y miras la aprobación que obtuvieron las opciones ganadoras, la aprobación media será de aproximadamente el 23%."
+            }
+        }
     },
     "imprint": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Imprint page:",
