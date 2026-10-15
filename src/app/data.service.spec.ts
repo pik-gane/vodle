@@ -4222,3 +4222,75 @@ describe('deleting all of a person\'s data (#327)', () => {
     expect(svc.sync_is_stalled).toBeTrue();
   });
 });
+
+// Start-up used to ask the browser for notification permission outright,
+// before vodle had explained anything and before any click; Firefox refuses
+// that and threw an uncaught error on every start in Mull. The state is read
+// at start-up now, and only the "yes" of vodle's own dialog asks.
+describe('DataService.init_notifications', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, asked: number, presented: any[], previous: PropertyDescriptor | undefined;
+
+  const browser_says = (permission: string, answer = 'granted') => {
+    Object.defineProperty(window, 'Notification', {configurable: true, writable: true, value: {
+      permission,
+      requestPermission: () => { asked++; return Promise.resolve(answer); },
+    }});
+  };
+  const settle = async () => { for (let i = 0; i < 10; i++) { await Promise.resolve(); } };
+
+  beforeEach(() => {
+    previous = Object.getOwnPropertyDescriptor(window, 'Notification');
+    asked = 0; presented = [];
+    svc = Object.create(DataService.prototype);
+    svc.G = { L };
+    svc.translate = { instant: (key: string) => key };
+    svc.alertCtrl = { create: (options: any) => { presented.push(options); return Promise.resolve({ present: () => Promise.resolve() }); } };
+  });
+
+  afterEach(() => {
+    if (previous) { Object.defineProperty(window, 'Notification', previous); }
+    else { delete (window as any).Notification; }
+  });
+
+  it('asks nobody at start-up', async () => {
+    browser_says('default');
+    svc.init_notifications(false);
+    await settle();
+    expect(asked).toBe(0);
+    expect(presented.length).toBe(0);
+    expect(svc.can_notify).toBeFalse();
+  });
+
+  it('asks the browser only from the yes of its own dialog', async () => {
+    browser_says('default', 'granted');
+    svc.init_notifications(true);
+    await settle();
+    expect(presented.length).toBe(1);
+    expect(asked).withContext('not before the dialog is answered').toBe(0);
+    presented[0].buttons.find((b: any) => b.role == 'ok').handler();
+    await settle();
+    expect(asked).toBe(1);
+    expect(svc.can_notify).toBeTrue();
+  });
+
+  it('does not ask when the answer was no', async () => {
+    browser_says('default');
+    svc.init_notifications(true);
+    await settle();
+    presented[0].buttons.find((b: any) => b.role == 'cancel').handler();
+    await settle();
+    expect(asked).toBe(0);
+    expect(svc.can_notify).toBeFalse();
+  });
+
+  it('needs no question once the browser has granted it', async () => {
+    browser_says('granted');
+    svc.init_notifications(true);
+    await settle();
+    expect(presented.length).toBe(0);
+    expect(asked).toBe(0);
+    expect(svc.can_notify).toBeTrue();
+  });
+});
