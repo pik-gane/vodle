@@ -513,7 +513,10 @@ describe('Poll.end final replication handling (#292)', () => {
           wait_for_poll_db: jasmine.createSpy('wait_for_poll_db'),
           replicate_once: jasmine.createSpy('replicate_once'),
           get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc'),
-          // the Matrix branch waits for the guard bot's closing (#325); here it never comes:
+          // the Matrix branch loads the poll's contents before it tallies
+          // (#366) and then waits for the guard bot's closing (#325), which
+          // here never comes:
+          ensure_poll_loaded: jasmine.createSpy('ensure_poll_loaded').and.returnValue(Promise.resolve()),
           wait_for_matrix_poll_closure: jasmine.createSpy('wait_for_matrix_poll_closure').and.returnValue(new Promise(() => {})),
           reconcile_matrix_ratings: jasmine.createSpy('reconcile_matrix_ratings').and.returnValue(Promise.resolve()),
         };
@@ -685,11 +688,12 @@ describe('Poll.end on the Matrix backend (#325)', () => {
 
   const settle = async () => { for (let i = 0; i < 30; i++) { await Promise.resolve(); } };
 
-  const make_D = (closure: any): any => {
+  const make_D = (closure: any, load: Promise<void> = Promise.resolve()): any => {
     const calls: string[] = [];
     return {
       calls,
       getp: (_pid: string, key: string) => key === 'due' ? '2026-09-10T12:00:00.000Z' : '',
+      ensure_poll_loaded: jasmine.createSpy('load').and.callFake(() => { calls.push('load'); return load; }),
       wait_for_matrix_poll_closure: jasmine.createSpy('wait').and.callFake(() => {
         calls.push('wait');
         return closure instanceof Error ? Promise.reject(closure) : Promise.resolve(closure);
@@ -709,11 +713,24 @@ describe('Poll.end on the Matrix backend (#325)', () => {
     jasmine.clock().tick(environment.closing.grace_period_1_ms);
     expect(p.state).toBe('closed');
     await settle();
-    expect(D.calls).toEqual(['wait', 'reconcile', 'stop', 'tally']);
+    // the poll's contents (options, voter rooms) before anything else: a
+    // device that loads a poll already ended tallied before it had them
+    expect(D.calls).toEqual(['load', 'wait', 'reconcile', 'stop', 'tally']);
     expect(p.make_final_rand).toHaveBeenCalledWith('p1$closing-event');
     expect(p.make_winner).toHaveBeenCalledTimes(1);
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
     expect(p.has_results).toBeTrue();
+  });
+
+  it('still ends the poll when its contents cannot be loaded', async () => {
+    const D = make_D({closed: true, event_id: '$closing-event'}, Promise.reject(new Error('no homeserver')));
+    const p = make_poll(D);
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(D.calls).toEqual(['load', 'wait', 'reconcile', 'stop']);
+    expect(p.tally_all).toHaveBeenCalledTimes(1);
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
 
   it('closes by convention, with the due date as the seed, when no guard bot closes the poll', async () => {
@@ -755,5 +772,59 @@ describe('Poll.end on the Matrix backend (#325)', () => {
     await settle();
     expect(D.reconcile_matrix_ratings).toHaveBeenCalledTimes(2);
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Poll ratings that arrive before the option list (weighted delegation)', () => {
+  // On a device that loads a poll already ended, the final ratings are read
+  // from the server before the options are; with delegation in weighted
+  // mode the blend ran over the known options only, so no voter was
+  // registered and the poll ended with "all participants abstained".
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let previous_mode: string;
+
+  beforeEach(() => {
+    previous_mode = environment.delegation.mode;
+    (environment.delegation as any).mode = 'weighted';
+  });
+
+  afterEach(() => {
+    (environment.delegation as any).mode = previous_mode;
+  });
+
+  const make_poll = (): any => {
+    const p: any = Object.create(Poll.prototype);
+    p._pid = 'p1';
+    p._options = {};
+    p.G = {
+      L,
+      D: {own_ratings_map_caches: {}, proxy_ratings_map_caches: {}, max_proxy_ratings_map_caches: {},
+          argmax_proxy_ratings_map_caches: {}, effective_ratings_map_caches: {}, direct_delegation_map_caches: {},
+          inv_direct_delegation_map_caches: {}, indirect_delegation_map_caches: {}, inv_indirect_delegation_map_caches: {},
+          effective_delegation_map_caches: {}, inv_effective_delegation_map_caches: {}, tally_caches: {}},
+      Del: {get_trust_matrix: () => new Map()},
+      P: {polls: {}},
+    };
+    // the ordering's tie-breaker hashes an option's name (update_ordering)
+    p.G.D.hash = (what: string) => (what || '').split('')
+      .reduce((h: number, c: string) => (h * 31 + c.charCodeAt(0)) % 0xffff, 7).toString(16);
+    p.reset_tally();
+    return p;
+  };
+
+  it('registers the voter and the rating although the option is not known yet', () => {
+    const p = make_poll();
+    expect(p.allow_weighted).toBeTrue();
+    p.update_own_rating('v1', 'o1', 60);
+    p.update_own_rating('v2', 'o1', 0);
+    expect(p.proxy_ratings_map.get('o1').get('v1')).toBe(60);
+    expect(p.T.all_vids_set.has('v1')).toBeTrue();
+    expect(p.T.n_not_abstaining).withContext('v1 rated, v2 abstains').toBe(1);
+    // the option arrives, and the tally finds the rating
+    p._add_option({oid: 'o1'});
+    p.tally_all();
+    expect(p.T.n_not_abstaining).toBe(1);
+    expect(p.T.oids_descending).toEqual(['o1']);
   });
 });

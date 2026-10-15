@@ -481,6 +481,37 @@ that would matter; `ng build` prints none now:
   hand in 2024-12; the service no longer exists), are the owner's to delete
   or renew; nothing runs them.
 
+### The ended poll that counted nobody (found 2026-10-09, landed 2026-10-15)
+
+The owner deployed today's `main` on the test server; the production
+click-through run against it passed (register, publish with 8 simulated
+voters, join by magic link, both sides count 10, converged in 3 ms), and
+the guard bot closed the poll at its deadline. Then a fresh visitor opening
+the closed poll saw **"0 non-abstaining, all participants abstained"** and
+a winner drawn by lot, although ten voters had rated; the creator on a
+second device saw the same. A trace-logging build pointed at the server
+through a local proxy showed why: delegation runs in `weighted` mode on
+the deployment, and in that mode a rating is folded into the tally by
+`update_weighted_proxy_ratings`, which blended over the poll's *known*
+options — and on a device that loads an ended poll, `Poll.end()` fires
+three seconds after construction, reads the final ratings and tallies
+before the option list is loaded, so the blend ran over nothing: no voter
+registered, `has_results` stored as true, the empty result final. Clients
+present while the poll ran never see this, so no suite did. Three repairs:
+the blend covers every option that has a rating, known or not; `Poll.end()`
+on Matrix waits for the poll's contents (`ensure_poll_loaded`: options,
+voter rooms) before the closure wait and the final read, a failed load
+being a warning rather than a reason never to end; and a device loading a
+closed poll no longer makes a voter room for itself (it had, and its
+announcement was refused by the closed poll room). Specs: the end's order
+(`load, wait, reconcile, stop, tally`), the end despite a failed load, and
+a weighted rating before its option. A poll that already stored such a
+result keeps it: the lottery's seed is mixed with the ratings the device
+had, so drawing again on one device could disagree with the others. What
+that poll shows instead is #366's doing — the page used to ask for
+`p.options[undefined].name`, throw, and leave two coloured bars empty, and
+now says plainly that the poll ended without a result.
+
 ### Three questions this session could not answer
 
 - **#343, the Share button on Waterfox 6.7.2.** That browser answers

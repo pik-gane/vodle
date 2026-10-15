@@ -1997,8 +1997,12 @@ export class DataService implements OnDestroy {
     const myVid = this.getp(pid, 'myvid');
     // this device's own voter room is where its ratings are written, so it
     // is needed before the page can be rated on, but not before the poll
-    // list can be shown:
-    await (await this.poll_matrix(pid)).getOrCreateMyVoterRoom(pid, myVid);
+    // list can be shown -- and not at all once the poll has ended: nothing
+    // is written into a closed poll, and a room made for it now would be
+    // announced into a poll room that refuses the announcement (403)
+    if (this.getp(pid, 'state') != 'closed') {
+      await (await this.poll_matrix(pid)).getOrCreateMyVoterRoom(pid, myVid);
+    }
     // join and read the other voters' rooms, and keep watching them:
     await (await this.poll_matrix(pid)).startVoterSync(pid);
     // options, ratings and delegations into the service's caches:

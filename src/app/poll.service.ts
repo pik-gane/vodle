@@ -1413,7 +1413,15 @@ export class Poll {
     if (!this.allow_weighted) { return; }
     this.G.L.entry("Poll.update_weighted_proxy_ratings", this._pid);
     const settled = 0.01, most_rounds = 1000;
-    for (const oid of this.oids) {
+    // every option that is known, and every option that has a rating: on a
+    // device that loads a poll already ended, the final ratings are read
+    // from the server before the option list is, and a blend over the
+    // known options alone left every voter unregistered -- "all
+    // participants abstained", a winner drawn from nothing (found on the
+    // owner's test server, 2026-10-09)
+    const oids = new Set<string>(this.oids);
+    for (const oid of this.own_ratings_map.keys()) { oids.add(oid); }
+    for (const oid of oids) {
       const own = this.own_ratings_map.get(oid) || new Map<string, number>(),
             trusts = this.G.Del.get_trust_matrix(this._pid, oid);
       // everyone the blend covers: whoever has rated, and whoever trusts or
@@ -2071,8 +2079,22 @@ export class Poll {
         if (!is_current()) { return; }
         this.G.L.trace("Poll.end (Matrix) setting state to closed", this._pid);
         this.state = "closed";
-        this.G.D.wait_for_matrix_poll_closure(this.pid, is_current)
+        // the poll's options and voter rooms first: a device that loads a
+        // poll already ended -- a late visitor, a second device -- ends it
+        // within seconds of constructing it, and a tally before the
+        // contents are loaded counts nothing and draws a winner from
+        // nothing (found on the owner's test server, 2026-10-09). A load
+        // that fails is not a reason never to end the poll.
+        this.G.D.ensure_poll_loaded(this.pid)
+        .catch(err => {
+          this.G.L.warn("Poll.end (Matrix) the poll's contents could not be loaded before the final tally", this._pid, err);
+        })
+        .then<{closed: boolean; event_id: string | null} | 'abort'>(() => {
+          if (!is_current()) { return 'abort'; }
+          return this.G.D.wait_for_matrix_poll_closure(this.pid, is_current);
+        })
         .then((closure => {
+          if (closure === 'abort') { return 'abort'; }
           if (!is_current()) { return 'abort'; }
           return this.G.D.reconcile_matrix_ratings(this.pid).then(() => closure);
         }).bind(this))
