@@ -92,6 +92,12 @@ jobs:
       - name: Every icon a template names is registered
         run: node scripts/check-icons.js --self-test && node scripts/check-icons.js
 
+      # Angular's compiler trims the text after a control-flow block, and
+      # trim() counts a non-breaking space as whitespace, so `}&nbsp;<b>`
+      # renders "EndedFriday, October 9" (#365):
+      - name: No separator is lost after a control-flow block
+        run: node scripts/check-templates.js --self-test && node scripts/check-templates.js
+
       - name: Provision the test CouchDB
         run: scripts/test-couchdb.sh provision
 

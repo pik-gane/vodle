@@ -334,6 +334,91 @@ describe('PollPage', () => {
       expect(component.needs_refresh).toBeTrue();
     });
   });
+  // A poll that was tallied before this device had read its options ends up
+  // closed with no winner and no shares. The page asked for
+  // p.options[undefined].name there, which threw, and the two result bars
+  // rendered as empty colour (#366).
+  describe('an ended poll whose result says nothing', () => {
+
+    /** an ended poll of `type`, with `winner` drawn or not */
+    function ended(type: string, winner?: string): any {
+      return {
+        has_results: true, allow_voting: false, type, winner,
+        options: winner ? {[winner]: {oid: winner, name: 'Pears'}} : {},
+        T: {oids_descending: winner ? [winner] : [], shares_map: new Map(winner ? [[winner, 1]] : []),
+            approval_scores_map: new Map(), n_not_abstaining: 0},
+      };
+    }
+
+    it('a winner poll with no winner has nothing to show', () => {
+      component.p = ended('winner');
+      component.oidsorted = [];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
+    it('a winner poll whose option was dropped meanwhile has nothing to show', () => {
+      const poll = ended('winner', 'o1');
+      poll.options = {};                      // the winner's oid, but no option by it
+      component.p = poll;
+      component.oidsorted = ['o1'];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
+    it('a drawn winner is a result', () => {
+      component.p = ended('winner', 'o1');
+      component.oidsorted = ['o1'];
+      expect(component.result_is_empty).toBeFalse();
+    });
+
+    it('a share poll with no share above zero has nothing to show', () => {
+      const poll = ended('share');
+      poll.T.shares_map = new Map([['o1', 0]]);
+      component.p = poll;
+      component.oidsorted = ['o1'];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
+    it('a share poll with a share is a result', () => {
+      const poll = ended('share');
+      poll.T.shares_map = new Map([['o1', 0.5], ['o2', 0.5]]);
+      component.p = poll;
+      component.oidsorted = ['o1', 'o2'];
+      expect(component.result_is_empty).toBeFalse();
+    });
+
+    it('a poll whose type never arrived has nothing to show either', () => {
+      const poll = ended('winner');
+      poll.type = undefined;        // the metadata never reached this device
+      component.p = poll;
+      component.oidsorted = [];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
+    // the options can arrive after the type is already missing, and a tally
+    // over them puts shares in the map. Reading those as a result sent the
+    // page into the winner bar, which asks for p.options[p.winner] -- the
+    // dereference that threw (#366)
+    it('a poll whose type never arrived shows nothing even with shares', () => {
+      const poll = ended('winner', 'o1');
+      poll.type = undefined;
+      poll.options = {o1: {oid: 'o1', name: 'Pears'}, o2: {oid: 'o2', name: 'Plums'}};
+      poll.winner = undefined;
+      poll.T.shares_map = new Map([['o1', 0.5], ['o2', 0.5]]);
+      component.p = poll;
+      component.oidsorted = ['o1', 'o2'];
+      expect(component.result_is_empty).toBeTrue();
+    });
+
+    it('a poll still being tallied is not an empty result', () => {
+      const poll = ended('winner');
+      poll.has_results = false;
+      component.p = poll;
+      component.oidsorted = [];
+      expect(component.result_is_empty).toBeFalse();
+      expect(component.results_pending).toBeTrue();
+    });
+  });
+
   // the Matrix backend reports data as it arrives, before this page has its
   // poll; that threw once per arriving voter room on a newcomer's first
   // load (#327)

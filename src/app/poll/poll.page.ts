@@ -98,6 +98,30 @@ export class PollPage implements OnInit {
   get results_pending(): boolean {
     return !!this.p && !this.p.allow_voting && !this.p.has_results;
   }
+
+  /** the poll says it has its results, and they say nothing: no winner was
+   *  drawn, or no option has a share of the budget. A poll that was tallied
+   *  before this device had read its options ends up here -- the owner's
+   *  test poll of 2026-10-12 did, with 0 non-abstaining and no winner
+   *  (#366) -- and the page used to ask for `p.options[undefined].name`,
+   *  which threw and left both result bars empty. The state is final once
+   *  stored (the lottery's seed is mixed with the ratings this device had,
+   *  so drawing again here could disagree with the other participants), so
+   *  the page says what there is to say instead of pretending. */
+  get result_is_empty(): boolean {
+    if (!this.p?.has_results) { return false; }
+    if (this.p.type == 'winner') {
+      return !this.p.winner || !this.p.options[this.p.winner];
+    }
+    if (this.p.type == 'share') {
+      return !this.oidsorted.some(oid => (this.p.T.shares_map.get(oid) || 0) > 0);
+    }
+    // a poll whose type never reached this device: neither bar can be shown,
+    // whatever the tally left in shares_map. The share bar would be a kind of
+    // result the poll may not have, and the winner bar below it asks for
+    // p.options[p.winner], which is the dereference that threw (#366).
+    return true;
+  }
   rate_yourself_toggle: Record<string, boolean> = {};
   n_delegated = 0;
 
