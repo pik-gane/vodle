@@ -17,3 +17,23 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+
+/* The − and + beside a percentage. In the end slot of an item, flex layout
+   gave the number field the row and squeezed these buttons until their icons
+   were 4 px wide: a dot. They keep their size now, and the field is only as
+   wide as three digits need. */
+ion-button.stepper {
+  flex-shrink: 0;
+  min-width: 40px;
+  --padding-start: 6px;
+  --padding-end: 6px;
+}
+ion-button.stepper ion-icon {
+  flex-shrink: 0;
+  font-size: 28px;
+}
+ion-input.percentage {
+  flex: 0 0 3.5em;
+  max-width: 3.5em;
+  text-align: center;
+}

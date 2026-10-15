@@ -232,12 +232,21 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             @if (P.oidsorted[i] != favourite) {
               <ion-label><i [innerHtml]="P.p.options[P.oidsorted[i]].name"></i>&nbsp;</ion-label>
               <ion-buttons slot="end">
-                <ion-input
+                <!-- a phone draws no arrows on a number field: steps of 5 -->
+                <ion-button class="stepper" fill="clear" color="primary" (click)="step_estimate(P.oidsorted[i], -5)"
+                  [disabled]="estimates[P.oidsorted[i]] <= 0" aria-label="−5" data-vodle="estimate-minus">
+                  <ion-icon slot="icon-only" name="remove-circle-outline"></ion-icon>
+                </ion-button>
+                <ion-input class="percentage"
                   inputmode="numeric" maxlength="3" size="3" type="number" min="0" max="100" step="5"
                   [(ngModel)]="estimates[P.oidsorted[i]]"
                   debounce="100" (ngModelChange)="estimate_change()"
                   [attr.aria-label]="P.p.options[P.oidsorted[i]].name"
                 ></ion-input>&nbsp;%
+                <ion-button class="stepper" fill="clear" color="primary" (click)="step_estimate(P.oidsorted[i], 5)"
+                  [disabled]="estimates[P.oidsorted[i]] >= 100" aria-label="+5" data-vodle="estimate-plus">
+                  <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+                </ion-button>
               </ion-buttons>
             }
           </ion-item>
@@ -307,12 +316,22 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <span [innerHtml]="'assist.thresholds-question-2'|translate"></span>
           </p>
           <ion-buttons slot="end">
-            <ion-input
+            <ion-button class="stepper" fill="clear" color="primary" (click)="step_threshold(thresholded_oids[current_index], -5)"
+              [disabled]="thresholds[thresholded_oids[current_index]] <= estimates[thresholded_oids[current_index]]"
+              aria-label="−5" data-vodle="threshold-minus">
+              <ion-icon slot="icon-only" name="remove-circle-outline"></ion-icon>
+            </ion-button>
+            <ion-input class="percentage"
               inputmode="numeric" maxlength="3" size="3" type="number"
               [min]="estimates[thresholded_oids[current_index]]" max="100" step="5"
               [(ngModel)]="thresholds[thresholded_oids[current_index]]" (ngModelChange)="threshold_change()"
               debounce="100">
             </ion-input>&nbsp;%
+            <ion-button class="stepper" fill="clear" color="primary" (click)="step_threshold(thresholded_oids[current_index], 5)"
+              [disabled]="thresholds[thresholded_oids[current_index]] >= 100"
+              aria-label="+5" data-vodle="threshold-plus">
+              <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+            </ion-button>
           </ion-buttons>
         </ion-item>
       }
