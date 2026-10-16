@@ -17,3 +17,18 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+
+/* a share poll's budget (#201): the total and its unit share one row */
+ion-item.budget ion-input.budget-total {
+  flex: 0 0 8em;
+  margin-right: 16px;
+}
+ion-item.budget ion-input.budget-unit {
+  flex: 1 1 auto;
+}
+
+/* how to write an option's allowed amounts */
+.amounts-hint {
+  padding: 2px 16px 6px 16px;
+  color: var(--vodle-medium);
+}

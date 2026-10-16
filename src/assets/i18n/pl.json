@@ -292,7 +292,12 @@
         "import-options-msg": "Plik musi być zapisany w formacie .csv.<br/><br/>Każdy wiersz musi określać jedną opcję, w formacie<br/>&nbsp;&nbsp;&nbsp;<i>\"Nazwa\"</i><br/>lub<br/>&nbsp;&nbsp;&nbsp;<i>\"Nazwa\", \"Opis\"</i><br/>lub<br/>&nbsp;&nbsp;&nbsp;<i>\"Nazwa\", \"Opis\", \"URL\"</i>",
         "use-example-from-db": "Użyj przykładu:",
         "use-example-from-db-none": "(Nie używaj przykładu)",
-        "notification-saved-title": "Wersja robocza zapisana w \"Moje ankiety\"."
+        "notification-saved-title": "Wersja robocza zapisana w \"Moje ankiety\".",
+        "budget-total-label": "Budżet całkowity",
+        "budget-unit-label": "Jednostka",
+        "budget-unit-default": "euro",
+        "option-amounts-label": "Dozwolone kwoty",
+        "option-amounts-hint": "Zapisuje się je jak zakresy stron przy drukowaniu, np. <i>3, 5-9, 12</i>. <i>20-</i> oznacza co najmniej 20, <i>-50</i> najwyżej 50, <i>0-</i> dowolną kwotę. Opcja zawsze może też nie otrzymać nic."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -680,7 +685,19 @@
         "sorting": "Sortowanie opcji według poziomu akceptacji...",
         "consent-lead": "Zanim Twoje wapy zostaną zapisane, potwierdź proszę: ",
         "guest-banner": "Bierzesz udział jako gość. Twoje wapy i ankiety pozostają tylko na tym urządzeniu, dopóki nie zalogujesz się własnym adresem e-mail; vodle przeniesie je wtedy na Twoje konto.",
-        "guest-login-button": "Zaloguj się"
+        "guest-login-button": "Zaloguj się",
+        "type-share-budget": "Opcjom przypisano udziały w {{total}}",
+        "allowed-amounts": "Dozwolone kwoty: {{amounts}} (lub nic)",
+        "of-the-budget-amount": "<small>dostałby obecnie </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-amount": "<small>ostatecznie dostaje </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-allocated": "<small>ostatecznie dostaje </small>{{amount}}<small> (cel: {{target}})</small>",
+        "amount-goes-to": "{{amount}} trafia do <i>{{option}}</i>",
+        "amount-target": "(cel: {{target}})",
+        "amount-unspent": "{{amount}} pozostaje niewydane",
+        "rounding-heading": "Jak ustalono te kwoty?",
+        "rounding-explanation": "Głosy wyznaczają dla każdej opcji kwotę docelową (w nawiasach). Ponieważ niektóre opcje mogą otrzymać tylko określone kwoty, losowanie przesunęło części budżetu między opcjami, zaokrąglając ich przydziały w górę lub w dół do dozwolonych kwot. Prawdopodobieństwa losowania dobrano tak, aby średnio każdej opcji przydzielono dokładnie jej kwotę docelową. Losowanie korzysta z liczby losowej wyprowadzonej z zamknięcia głosowania, dzięki czemu urządzenie każdego uczestnika otrzymuje ten sam wynik. Każda opcja otrzymuje największą dozwoloną kwotę nieprzekraczającą jej przydziału; różnica nie jest przekazywana innym opcjom.",
+        "rounding-unspent": "W rezultacie {{amount}} pozostaje niewydane.",
+        "rounding-all-spent": "W tym głosowaniu wydano cały budżet."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -692,7 +709,8 @@
         "publish": "Rozpocznij ankietę teraz",
         "type-label": "W tej ankiecie grupa będzie",
         "is-in-past": "Data końcowa jest w przeszłości. Proszę najpierw ją zmienić.",
-        "publishing": "Uruchamianie ankiety"
+        "publishing": "Uruchamianie ankiety",
+        "budget": "Budżet całkowity:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -743,7 +761,11 @@
         "delegate-nickname-required": "Nazwa użytkownika jest wymagana",
         "option-name-required": "Nazwa jest wymagana.",
         "option-name-unique": "The option name already exists.",
-        "option-url-valid": "Proszę wprowadzić prawidłowy adres URL."
+        "option-url-valid": "Proszę wprowadzić prawidłowy adres URL.",
+        "budget-total-positive": "Podaj budżet całkowity większy od zera.",
+        "option-amounts-syntax": "Wymień kwoty i zakresy oddzielone przecinkami, np. 3, 5-9, 12. Ułamki zapisuj z kropką: 2.5.",
+        "option-amounts-reversed": "Zakres zaczyna się od mniejszej kwoty, np. 5-9.",
+        "option-amounts-too-large": "Kwota przekracza budżet całkowity ({{total}})."
     },
     "handover": {
         "successor-title": "Nowe ankiety zakłada się gdzie indziej",

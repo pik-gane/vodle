@@ -43,9 +43,10 @@ import { unique_name_validator$ } from '../sharedcomponents/unique-form-validato
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators'
 
-type option_data_t = { oid?, name?, desc?, url?, ratings? };
+type option_data_t = { oid?, name?, desc?, url?, amounts?, ratings? };
 
 import { apply_format_shortcut } from '../simple-format';
+import { amount_set, ANY_AMOUNT, format_amount, format_amount_items, is_restricted, parse_amounts } from '../budget';
 
 function is_forward_key(ev: KeyboardEvent) {
   return (ev.key == "Tab" || ev.key == "Enter") && !ev.ctrlKey && !ev.shiftKey && !ev.metaKey && !ev.altKey;
@@ -88,6 +89,7 @@ export class DraftpollPage implements OnInit {
     type?, language?, 
     title?, desc?, url?, 
     due_type?, due_custom?,
+    budget_total?, budget_unit?,
     db?, db_from_pid?, db_custom_server_url?, db_custom_password?,
     options?: option_data_t[] 
   };
@@ -181,12 +183,13 @@ export class DraftpollPage implements OnInit {
           type:p.type, language:p.language,
           title:p.title, desc:p.desc, url:p.url, 
           due_type:p.due_type, due_custom:p.due_custom,
+          budget_total:p.budget_total, budget_unit:p.budget_unit,
           db:p.db, db_from_pid:p.db_from_pid, db_custom_server_url:p.db_custom_server_url, db_custom_password:p.db_custom_password,
           options: [] 
         };
         this.stage = !(!!p.due_custom)?6:p.due_type?6:p.url!=''?4:p.desc!=''?3:p.title!=''?4:p.type?1:0;
         for (let [oid, o] of Object.entries(p.options)) {
-          this.pd.options.push({ oid:oid, name:o.name, desc:o.desc, url:o.url });
+          this.pd.options.push({ oid:oid, name:o.name, desc:o.desc, url:o.url, amounts:o.amounts });
           this.stage = 6;
           this.option_stage = 10;
         }
@@ -208,7 +211,11 @@ export class DraftpollPage implements OnInit {
         poll_url: this.pd.url||'', 
         poll_due_type: this.pd.due_type||'', 
         poll_due_custom: (!this.pd.due_custom)?'':this.local_iso(this.pd.due_custom),
+        budget_total: this.pd.budget_total > 0 ? this.pd.budget_total : DraftpollPage.DEFAULT_BUDGET,
+        budget_unit: (this.pd.budget_unit||'')!='' ? this.pd.budget_unit : this.translate.instant('draftpoll.budget-unit-default'),
       });
+      this.set_budget_total();
+      this.set_budget_unit();
       // A draft can arrive already set to end at a custom date but with no
       // date: the "Fledermauszüchterverein" example does exactly that, as
       // does any draft saved before #342. The date button then renders
@@ -224,6 +231,11 @@ export class DraftpollPage implements OnInit {
       if (this.pd.desc||this.pd.url) {
         this.show_details = true;
       }
+      // a budget that is not the default is a detail worth showing:
+      if (this.pd.type == 'share' && (this.formGroup.get('budget_total').value != DraftpollPage.DEFAULT_BUDGET
+          || this.formGroup.get('budget_unit').value != this.translate.instant('draftpoll.budget-unit-default'))) {
+        this.show_details = true;
+      }
       if (!this.pd.options) {
         this.pd.options = [];
       }
@@ -232,9 +244,10 @@ export class DraftpollPage implements OnInit {
         this.formGroup.get('option_name'+i).setValue(od.name); 
         this.formGroup.get('option_desc'+i).setValue(od.desc); 
         this.formGroup.get('option_url'+i).setValue(od.url); 
+        this.formGroup.get('option_amounts'+i).setValue(this.shown_amounts(od.amounts));
         this.stage = 6;
         this.option_stage = 10;
-        if (od.desc||od.url) {
+        if (od.desc||od.url||this.restricts(od.amounts)) {
           this.show_details = true;
         }
       }
@@ -298,6 +311,18 @@ export class DraftpollPage implements OnInit {
       p.due_type = this.pd.due_type;
       p.due_custom = this.pd.due_custom;
       p.set_due();
+      // a budget only for a poll that divides one (#201); a draft that was a
+      // share poll before loses it, rather than carrying empty keys along
+      // into the poll room:
+      const share = this.pd.type == 'share';
+      if (share) {
+        p.budget_total = this.pd.budget_total;
+        p.budget_unit = this.pd.budget_unit;
+      } else {
+        for (const key of ['budget_total', 'budget_unit']) {
+          if (this.G.D.getp(this.pid, key)) this.G.D.delp(this.pid, key);
+        }
+      }
       p.db = this.pd.db;
       p.db_from_pid = this.pd.db_from_pid;
       p.db_custom_server_url = this.pd.db_custom_server_url;
@@ -314,13 +339,15 @@ export class DraftpollPage implements OnInit {
           if (!(od.oid in p.options)) {
             // generate new options object:
             this.G.L.trace("  creating new Option object");
-            o = new Option(this.G, p, od.oid, od.name, od.desc, od.url);
+            o = new Option(this.G, p, od.oid, od.name, od.desc, od.url, share ? this.stored_amounts(od.amounts) : '');
           } else {
             o = p.options[od.oid];
             this.G.L.trace("  reusing Option object", o);
             o.name = od.name;
             o.desc = od.desc;
             o.url = od.url;
+            const amounts = share ? this.stored_amounts(od.amounts) : '';
+            if (amounts != o.amounts) o.amounts = amounts;
           }
           oids.push(od.oid);
           if (p.is_test && !!od.ratings) {
@@ -425,6 +452,86 @@ export class DraftpollPage implements OnInit {
   set_option_url(i: number) {
     let c = this.formGroup.get('option_url'+i);
     if (c.valid) this.pd.options[i].url = c.value;
+  }
+
+  // the budget of a share poll (#201):
+
+  static readonly DEFAULT_BUDGET = 100;
+
+  set_budget_total() {
+    const c = this.formGroup.get('budget_total');
+    if (c.valid) this.pd.budget_total = Number(c.value);
+    // the options' amounts are checked against the total:
+    for (let i = 0; i < this.n_options; i++) {
+      this.formGroup.get('option_amounts'+i)?.updateValueAndValidity();
+    }
+  }
+
+  set_budget_unit() {
+    const c = this.formGroup.get('budget_unit');
+    if (c.valid) this.pd.budget_unit = (c.value||'').trim();
+  }
+
+  set_option_amounts(i: number) {
+    const c = this.formGroup.get('option_amounts'+i);
+    if (c.valid) this.pd.options[i].amounts = c.value;
+  }
+
+  /** an amounts field left empty means any amount, and shows it: "0-" */
+  blur_option_amounts(i: number) {
+    const c = this.formGroup.get('option_amounts'+i);
+    if (c.valid) {
+      c.setValue(this.shown_amounts(c.value));
+      this.set_option_amounts(i);
+    }
+  }
+
+  option_amounts_onKeydown(ev: KeyboardEvent, i: number) {
+    if (is_forward_key(ev)) {
+      if (this.formGroup.get('option_amounts'+i).valid) {
+        this.blur_option_amounts(i);
+        if (i == this.n_options - 1) {
+          this.next_option(i);
+        } else {
+          this.set_focus('input_option_name'+(i+1));
+        }
+      } else {
+        this.set_focus('input_option_amounts'+i);
+      }
+    }
+  }
+
+  /** what an amounts field shows: the canonical form, "0-" for any amount */
+  shown_amounts(text: string): string {
+    const parsed = parse_amounts(text||'');
+    if (parsed.error) return text;
+    return parsed.items.length ? format_amount_items(parsed.items) : ANY_AMOUNT;
+  }
+
+  /** what is stored: the canonical form, nothing for any amount */
+  stored_amounts(text: string): string {
+    return this.restricts(text) ? this.shown_amounts(text) : '';
+  }
+
+  restricts(text: string): boolean {
+    const total = this.pd?.budget_total > 0 ? this.pd.budget_total : DraftpollPage.DEFAULT_BUDGET;
+    return !parse_amounts(text||'', total).error && is_restricted(amount_set(text||'', total), total);
+  }
+
+  /** the total budget with its unit, as people read it */
+  budget_text(): string {
+    const total = Number(this.formGroup.get('budget_total').value),
+          unit = (this.formGroup.get('budget_unit').value || '').trim();
+    return format_amount(total, this.G.S.language) + (unit ? '\u00a0' + unit : '');
+  }
+
+  private amounts_validator(control: AbstractControl): ValidationErrors | null {
+    const total = Number(this.formGroup?.get('budget_total')?.value);
+    const parsed = parse_amounts(control?.value || '', total > 0 ? total : undefined);
+    if (parsed.error == 'syntax') return {amounts_syntax: true};
+    if (parsed.error == 'reversed') return {amounts_reversed: true};
+    if (parsed.error == 'too_large') return {amounts_too_large: true};
+    return null;
   }
 
   // selectServer component hooks:
@@ -635,7 +742,10 @@ export class DraftpollPage implements OnInit {
   option_url_onKeydown(ev: KeyboardEvent, i: number) {
     if (is_forward_key(ev)) {
       if (this.formGroup.get('option_url'+i).valid) {
-        if (i == this.n_options - 1) {
+        if (this.formGroup.get('poll_type').value == 'share') {
+          // a share poll's option has one more detail, its allowed amounts:
+          this.set_focus('input_option_amounts'+i);
+        } else if (i == this.n_options - 1) {
           this.next_option(i);
         } else {
           this.set_focus('input_option_name'+(i+1));
@@ -784,6 +894,8 @@ export class DraftpollPage implements OnInit {
       poll_url: new UntypedFormControl('', Validators.pattern(this.G.urlRegex)),
       poll_due_type: new UntypedFormControl('', Validators.required),
       poll_due_custom: new UntypedFormControl('', this.allowed_date.bind(this)),
+      budget_total: new UntypedFormControl(DraftpollPage.DEFAULT_BUDGET, [Validators.required, Validators.min(Number.MIN_VALUE)]),
+      budget_unit: new UntypedFormControl(''),
     });
     this.G.P.update_ref_date();
   }
@@ -842,12 +954,14 @@ export class DraftpollPage implements OnInit {
     this.formGroup.get('option_name'+i).setValue(od.name); 
     this.formGroup.get('option_desc'+i).setValue(od.desc); 
     this.formGroup.get('option_url'+i).setValue(od.url); 
+    this.formGroup.get('option_amounts'+i).setValue(this.shown_amounts(od.amounts));
   }
 
   private add_option_inputs(i:number) {
     this.formGroup.addControl('option_name' + i, new UntypedFormControl("", [Validators.required], [unique_name_validator$(this.existingOptionName$( 'option_name' + i))]));
     this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
     this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
+    this.formGroup.addControl('option_amounts'+i, new UntypedFormControl(ANY_AMOUNT, this.amounts_validator.bind(this)));
     this.option_stage = 0;
   }
   
@@ -857,6 +971,7 @@ export class DraftpollPage implements OnInit {
       this.formGroup.get('option_name'+(j-1)).setValue(this.formGroup.get('option_name'+j).value); 
       this.formGroup.get('option_desc'+(j-1)).setValue(this.formGroup.get('option_desc'+j).value); 
       this.formGroup.get('option_url'+(j-1)).setValue(this.formGroup.get('option_url'+j).value); 
+      this.formGroup.get('option_amounts'+(j-1)).setValue(this.formGroup.get('option_amounts'+j).value); 
       this.pd.options[j-1] = this.pd.options[j];
     }
     // remove last:
@@ -864,6 +979,7 @@ export class DraftpollPage implements OnInit {
     this.formGroup.removeControl('option_name'+j);
     this.formGroup.removeControl('option_desc'+j);
     this.formGroup.removeControl('option_url'+j);
+    this.formGroup.removeControl('option_amounts'+j);
     this.pd.options.pop();
   }
 
@@ -935,6 +1051,15 @@ export class DraftpollPage implements OnInit {
     ],
     'option_url': [
       { type: 'pattern', message: 'validation.option-url-valid' },
+    ],
+    'budget_total': [
+      { type: 'required', message: 'validation.budget-total-positive' },
+      { type: 'min', message: 'validation.budget-total-positive' },
+    ],
+    'option_amounts': [
+      { type: 'amounts_syntax', message: 'validation.option-amounts-syntax' },
+      { type: 'amounts_reversed', message: 'validation.option-amounts-reversed' },
+      { type: 'amounts_too_large', message: 'validation.option-amounts-too-large' },
     ],
   }
 

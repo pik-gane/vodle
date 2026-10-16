@@ -54,7 +54,7 @@ describe('Poll.end final replication handling (#292)', () => {
     jasmine.clock().uninstall();
   });
 
-  const make_poll = (D: any, type = 'winner'): any => {
+  const make_poll = (D: any, type = 'winner', amount_constraints = false): any => {
     if (!D.prepare_poll_finalization) {
       D.prepare_poll_finalization = () => Promise.resolve(D.poll_mutation_generation());
     }
@@ -88,6 +88,10 @@ describe('Poll.end final replication handling (#292)', () => {
     p.notify_of_end = jasmine.createSpy('notify_of_end');
     p.make_final_rand = jasmine.createSpy('make_final_rand');
     p.make_winner = jasmine.createSpy('make_winner');
+    // a budget poll whose options may receive only certain amounts needs the
+    // same shared seed as a winner poll (#201):
+    Object.defineProperty(p, 'has_amount_constraints', { get: () => type == 'share' && amount_constraints });
+    p.make_allocation = jasmine.createSpy('make_allocation');
     return p;
   };
 
@@ -307,6 +311,32 @@ describe('Poll.end final replication handling (#292)', () => {
       expect(D.get_remote_poll_state_doc).not.toHaveBeenCalled();
       expect(p.notify_of_end).not.toHaveBeenCalled();
       expect(p.end_retry_timeout_id).not.toBeNull();
+    });
+  }
+
+  for (const amount_constraints of [false, true]) {
+    it(`ends a budget poll ${amount_constraints ? 'with' : 'without'} allowed amounts ${amount_constraints ? 'with' : 'without'} a shared seed (#201)`, async () => {
+      const D = {
+        stop_poll_sync: noop,
+        wait_for_poll_db: () => Promise.resolve(),
+        replicate_once: jasmine.createSpy('replicate_once').and.returnValue(Promise.resolve(true)),
+        get_remote_poll_state_doc: jasmine.createSpy('get_remote_poll_state_doc')
+          .and.returnValue(Promise.resolve(state_doc('3-c'))),
+      };
+      const p = make_poll(D, 'share', amount_constraints);
+
+      await run_end_to_completion(p);
+
+      expect(D.get_remote_poll_state_doc).toHaveBeenCalledTimes(amount_constraints ? 1 : 0);
+      if (amount_constraints) {
+        expect(p.make_final_rand).toHaveBeenCalledOnceWith('p13-c');
+      } else {
+        expect(p.make_final_rand).not.toHaveBeenCalled();
+      }
+      expect(p.tally_all).toHaveBeenCalledTimes(1);
+      expect(p.make_allocation).toHaveBeenCalledTimes(1);
+      expect(p.make_winner).not.toHaveBeenCalled();
+      expect(p.notify_of_end).toHaveBeenCalledTimes(1);
     });
   }
 
@@ -664,7 +694,7 @@ describe('Poll.end on the Matrix backend (#325)', () => {
     jasmine.clock().uninstall();
   });
 
-  const make_poll = (D: any, type = 'winner'): any => {
+  const make_poll = (D: any, type = 'winner', amount_constraints = false): any => {
     const p: any = Object.create(Poll.prototype);
     p.end_retry_timeout_id = null;
     p.end_retry_delay_ms = environment.closing.grace_period_3_ms;
@@ -683,6 +713,10 @@ describe('Poll.end on the Matrix backend (#325)', () => {
     p.notify_of_end = jasmine.createSpy('notify_of_end').and.callFake(() => { has_results = true; p.end_in_progress = false; });
     p.make_final_rand = jasmine.createSpy('make_final_rand');
     p.make_winner = jasmine.createSpy('make_winner');
+    // a budget poll whose options may receive only certain amounts needs the
+    // same shared seed as a winner poll (#201):
+    Object.defineProperty(p, 'has_amount_constraints', { get: () => type == 'share' && amount_constraints });
+    p.make_allocation = jasmine.createSpy('make_allocation');
     return p;
   };
 
@@ -753,6 +787,22 @@ describe('Poll.end on the Matrix backend (#325)', () => {
     expect(p.make_final_rand).not.toHaveBeenCalled();
     expect(p.make_winner).not.toHaveBeenCalled();
     expect(p.tally_all).toHaveBeenCalledTimes(1);
+    expect(p.make_allocation).withContext('a budget, if it has one, is divided').toHaveBeenCalledTimes(1);
+    expect(p.notify_of_end).toHaveBeenCalledTimes(1);
+  });
+
+  it("seeds a budget poll's rounding to allowed amounts with the closing event (#201)", async () => {
+    const D = make_D({closed: true, event_id: '$closing-event'});
+    const p = make_poll(D, 'share', true);
+    p.tally_all.and.callFake(() => D.calls.push('tally'));
+    p.make_final_rand.and.callFake(() => D.calls.push('seed'));
+    p.make_allocation.and.callFake(() => D.calls.push('allocate'));
+    p.end();
+    jasmine.clock().tick(environment.closing.grace_period_1_ms);
+    await settle();
+    expect(D.calls).toEqual(['load', 'wait', 'reconcile', 'stop', 'tally', 'seed', 'allocate']);
+    expect(p.make_final_rand).toHaveBeenCalledWith('p1$closing-event');
+    expect(p.make_winner).not.toHaveBeenCalled();
     expect(p.notify_of_end).toHaveBeenCalledTimes(1);
   });
 
@@ -849,5 +899,82 @@ describe('Poll ratings that arrive before the option list (weighted delegation)'
     p.tally_all();
     expect(p.T.n_not_abstaining).toBe(1);
     expect(p.T.oids_descending[0]).toBe('o2');
+  });
+});
+
+describe('Poll.make_allocation (#201)', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: jasmine.createSpy('error') };
+
+  /** a closed budget poll: total 100 euros, three options with targets of
+   *  52, 30 and 18 euros */
+  const make_poll = (amounts: Record<string, string>, final_rand: number | null = 0.4321): any => {
+    const data: Record<string, string> = {
+      type: 'share', budget_total: '100', budget_unit: 'euros',
+      final_rand: final_rand === null ? '' : String(final_rand),
+    };
+    for (const [oid, a] of Object.entries(amounts)) {
+      data['option.' + oid + '.amounts'] = a;
+    }
+    // a seeded stand-in for str2rand: the same string, the same number
+    const str2rand = (str: string) => {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0; }
+      return h / 4294967296;
+    };
+    const p: any = Object.create(Poll.prototype);
+    p._pid = 'p1';
+    p.G = { L, S: { language: 'en' },
+            D: { getp: (_pid: string, key: string) => data[key], setp: (_pid: string, key: string, v: string) => { data[key] = v; },
+                 str2rand } };
+    p._options = {};
+    for (const oid of ['a', 'b', 'c']) {
+      p._options[oid] = { get amounts() { return data['option.' + oid + '.amounts'] || ''; } };
+    }
+    p.T = { oids_descending: ['a', 'b', 'c'], shares_map: new Map([['a', 0.52], ['b', 0.30], ['c', 0.18]]) };
+    return p;
+  };
+
+  it('pays the targets when every option may receive any amount', () => {
+    const p = make_poll({});
+    expect(p.has_amount_constraints).toBeFalse();
+    p.make_allocation();
+    expect(p.allocation.a).toBeCloseTo(52, 9);
+    expect(p.allocation.b).toBeCloseTo(30, 9);
+    expect(p.allocation.c).toBeCloseTo(18, 9);
+    expect(p.unspent_amount).toBe(0);
+  });
+
+  it('pays allowed amounts only, the same on every device, and says what is left', () => {
+    const amounts = { a: '50-', b: '20, 40', c: '25' };
+    const p = make_poll(amounts), q = make_poll(amounts);
+    expect(p.has_amount_constraints).toBeTrue();
+    p.make_allocation();
+    q.make_allocation();
+    expect(p.allocation).toEqual(q.allocation);
+    const allowed = (oid: string, x: number) => p.amount_set(oid).some(([lo, hi]: number[]) => lo - 1e-9 <= x && x <= hi + 1e-9);
+    for (const oid of ['a', 'b', 'c']) {
+      expect(allowed(oid, p.allocation[oid])).withContext(oid + ' got ' + p.allocation[oid]).toBeTrue();
+    }
+    const spent = p.allocation.a + p.allocation.b + p.allocation.c;
+    expect(p.unspent_amount).toBeCloseTo(100 - spent, 9);
+    expect(p.amount_text(p.budget_total)).toBe('100\u00a0euros');
+    expect(p.amounts_text('a')).toBe('≥\u00a050\u00a0euros');
+    expect(p.amounts_text('b')).toBe('20, 40\u00a0euros');
+  });
+
+  it('makes no allocation without the shared random number', () => {
+    const p = make_poll({ c: '25' }, null);
+    p.make_allocation();
+    expect(p.allocation).toBeNull();
+    expect(L.error).toHaveBeenCalled();
+  });
+
+  it('leaves a poll without a budget alone', () => {
+    const p = make_poll({});
+    p.G.D.setp('p1', 'budget_total', '');
+    expect(p.has_budget).toBeFalse();
+    p.make_allocation();
+    expect(p.allocation).toBeNull();
   });
 });

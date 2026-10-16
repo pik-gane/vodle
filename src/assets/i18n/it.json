@@ -292,7 +292,12 @@
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-        "notification-saved-title": "Draft saved under “My polls”."
+        "notification-saved-title": "Draft saved under “My polls”.",
+        "budget-total-label": "Budget totale",
+        "budget-unit-label": "Unità",
+        "budget-unit-default": "euro",
+        "option-amounts-label": "Importi ammessi",
+        "option-amounts-hint": "Si scrivono come gli intervalli di pagine nella stampa, ad es. <i>3, 5-9, 12</i>. <i>20-</i> significa almeno 20, <i>-50</i> al massimo 50, <i>0-</i> qualsiasi importo. Unʼopzione può sempre anche non ricevere nulla."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -680,7 +685,19 @@
         "sorting": "Sorting options by approval...",
         "consent-lead": "Prima che i tuoi Wap vengano salvati, conferma per favore: ",
         "guest-banner": "Stai partecipando con un account ospite. I tuoi Wap e i tuoi sondaggi restano solo su questo dispositivo finché non accedi con un indirizzo e-mail tuo; vodle li sposta allora sul tuo account.",
-        "guest-login-button": "Accedi"
+        "guest-login-button": "Accedi",
+        "type-share-budget": "Alle opzioni vengono assegnate quote di {{total}}",
+        "allowed-amounts": "Importi ammessi: {{amounts}} (oppure nulla)",
+        "of-the-budget-amount": "<small>riceverebbe attualmente </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-amount": "<small>riceve infine </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-allocated": "<small>riceve infine </small>{{amount}}<small> (obiettivo: {{target}})</small>",
+        "amount-goes-to": "{{amount}} vanno a <i>{{option}}</i>",
+        "amount-target": "(obiettivo: {{target}})",
+        "amount-unspent": "{{amount}} restano inutilizzati",
+        "rounding-heading": "Come sono stati determinati questi importi?",
+        "rounding-explanation": "I voti determinano un importo obiettivo per ogni opzione (tra parentesi). Poiché alcune opzioni possono ricevere solo determinati importi, unʼestrazione casuale ha spostato parti del budget tra le opzioni, arrotondando le loro assegnazioni per eccesso o per difetto a importi ammessi. Le probabilità dellʼestrazione sono fissate in modo che, in media, a ogni opzione venga assegnato esattamente il suo obiettivo. Lʼestrazione usa un numero casuale derivato dalla chiusura della votazione, così il dispositivo di ogni partecipante ottiene lo stesso risultato. Ogni opzione riceve il massimo importo ammesso che non supera la sua assegnazione; la differenza non viene trasferita ad altre opzioni.",
+        "rounding-unspent": "Restano quindi inutilizzati {{amount}}.",
+        "rounding-all-spent": "In questa votazione viene utilizzato lʼintero budget."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -692,7 +709,8 @@
         "publish": "Start the poll now",
         "type-label": "In this poll, the group will",
         "is-in-past": "The end date is in the past by now. Please change it first.",
-        "publishing": "Avvio del sondaggio"
+        "publishing": "Avvio del sondaggio",
+        "budget": "Budget totale:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -743,7 +761,11 @@
         "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
         "option-name-unique": "The option name already exists.",
-        "option-url-valid": "Please enter a valid URL."
+        "option-url-valid": "Please enter a valid URL.",
+        "budget-total-positive": "Inserisci un budget totale maggiore di zero.",
+        "option-amounts-syntax": "Elenca importi e intervalli separati da virgole, ad es. 3, 5-9, 12. I decimali si scrivono con il punto: 2.5.",
+        "option-amounts-reversed": "Un intervallo inizia con lʼimporto minore, ad es. 5-9.",
+        "option-amounts-too-large": "Un importo supera il budget totale ({{total}})."
     },
     "handover": {
         "successor-title": "I nuovi sondaggi si avviano altrove",

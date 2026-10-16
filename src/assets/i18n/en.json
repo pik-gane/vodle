@@ -319,7 +319,12 @@
         "import-options-msg": "The file must be a .csv file.<br/><br/>Each row must specify one option, either in the format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\"</i><br/>or<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Description\", \"URL\"</i>",
         "use-example-from-db": "Use an example:",
         "use-example-from-db-none": "(Donʼt use an example)",
-        "notification-saved-title": "Draft saved under “My polls”."
+        "notification-saved-title": "Draft saved under “My polls”.",
+        "budget-total-label": "Total budget",
+        "budget-unit-label": "Unit",
+        "budget-unit-default": "euros",
+        "option-amounts-label": "Allowed amounts",
+        "option-amounts-hint": "Written like page ranges when printing, e.g. <i>3, 5-9, 12</i>. <i>20-</i> means at least 20, <i>-50</i> at most 50, <i>0-</i> any amount. An option can always receive nothing."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -732,7 +737,19 @@
         "add-option": "Add option",
         "add-option-info": "If you believe some important option is missing and is not covered by any of the listed options, you can add it until {{deadline}}. Once added, options cannot be edited or removed again, however.",
         "sorting": "Sorting options by approval...",
-        "add-option-expired": "Time to add new options has expired."
+        "add-option-expired": "Time to add new options has expired.",
+        "type-share-budget": "Options are assigned shares of {{total}}",
+        "allowed-amounts": "Allowed amounts: {{amounts}} (or nothing)",
+        "of-the-budget-amount": "<small>would currently get </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-amount": "<small>finally gets </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-allocated": "<small>finally gets </small>{{amount}}<small> (target: {{target}})</small>",
+        "amount-goes-to": "{{amount}} go to <i>{{option}}</i>",
+        "amount-target": "(target: {{target}})",
+        "amount-unspent": "{{amount}} remain unspent",
+        "rounding-heading": "How were these amounts determined?",
+        "rounding-explanation": "The votes determine a target amount for every option (in brackets). Because some options may receive only certain amounts, a random draw shifted parts of the budget between options, rounding their allotments up or down to allowed amounts. The probabilities of the draw are set so that, on average, every option is allotted exactly its target. The draw uses a random number derived from the closing of the poll, so every participantʼs device obtains the same result. Each option receives the largest allowed amount that does not exceed its allotment; any difference is not passed on to other options.",
+        "rounding-unspent": "This leaves {{amount}} unspent.",
+        "rounding-all-spent": "In this poll, the whole budget is spent."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -744,7 +761,8 @@
         "publish": "Start the poll now",
         "publishing": "Starting the poll",
         "type-label": "In this poll, the group will",
-        "is-in-past": "The end date is in the past by now. Please change it first."
+        "is-in-past": "The end date is in the past by now. Please change it first.",
+        "budget": "Total budget:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -795,6 +813,10 @@
         "delegate-nickname-required": "Nickname is required",
         "option-name-required": "A name is required.",
         "option-name-unique": "The option name already exists.",
-        "option-url-valid": "Please enter a valid URL."
+        "option-url-valid": "Please enter a valid URL.",
+        "budget-total-positive": "Please enter a total budget greater than zero.",
+        "option-amounts-syntax": "Please list amounts and ranges separated by commas, e.g. 3, 5-9, 12. Decimals take a point: 2.5.",
+        "option-amounts-reversed": "A range starts with the smaller amount, e.g. 5-9.",
+        "option-amounts-too-large": "An amount exceeds the total budget ({{total}})."
     }
 }

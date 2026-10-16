@@ -313,7 +313,12 @@
         "import-options-msg": "Die Datei muss eine .csv-Datei sein.<br/><br/>Jede Zeile muss eine Option enthalten, entweder im Format<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\"</i><br/>oder<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\", \"Beschreibung\", \"URL\"</i>",
         "use-example-from-db": "Ein Beispiel verwenden:",
         "use-example-from-db-none": "(Kein Beispiel verwenden)",
-        "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“."
+        "notification-saved-title": "Entwurf gespeichert unter „Meine Abstimmungen“.",
+        "budget-total-label": "Gesamtbudget",
+        "budget-unit-label": "Einheit",
+        "budget-unit-default": "Euro",
+        "option-amounts-label": "Zulässige Beträge",
+        "option-amounts-hint": "Wie Seitenbereiche beim Drucken, z. B. <i>3, 5-9, 12</i>. <i>20-</i> bedeutet mindestens 20, <i>-50</i> höchstens 50, <i>0-</i> jeden Betrag. Eine Option kann immer auch nichts erhalten."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -721,7 +726,19 @@
         "add-option": "Option hinzufügen",
         "add-option-info": "Wenn Du denkst, eine wichtige Option fehlt noch und ist nicht von den anderen Optionen mit abgedeckt, kannst Du sie bis {{deadline}} hinzufügen. Einmal hinzugefügte Optionen kann allerdings niemand mehr verändern oder löschen.",
         "add-option-expired": "Die Zeit zum Hinzufügen neuer Optionen ist abgelaufen.",
-        "sorting": "Optionen werden neu sortiert..."
+        "sorting": "Optionen werden neu sortiert...",
+        "type-share-budget": "Optionen bekommen Anteile an {{total}}",
+        "allowed-amounts": "Zulässige Beträge: {{amounts}} (oder nichts)",
+        "of-the-budget-amount": "<small>bekäme jetzt </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-amount": "<small>bekommt </small>{{amount}}<small> ({{percentage}}%)</small>",
+        "final-budget-allocated": "<small>bekommt </small>{{amount}}<small> (Zielbetrag: {{target}})</small>",
+        "amount-goes-to": "{{amount}} gehen an <i>{{option}}</i>",
+        "amount-target": "(Zielbetrag: {{target}})",
+        "amount-unspent": "{{amount}} bleiben ungenutzt",
+        "rounding-heading": "Wie kamen diese Beträge zustande?",
+        "rounding-explanation": "Die Stimmen bestimmen für jede Option einen Zielbetrag (in Klammern). Da manche Optionen nur bestimmte Beträge erhalten dürfen, hat eine Zufallsziehung Teile des Budgets zwischen Optionen verschoben und deren Zuteilungen auf zulässige Beträge auf- oder abgerundet. Die Wahrscheinlichkeiten der Ziehung sind so gewählt, dass jeder Option im Mittel genau ihr Zielbetrag zugeteilt wird. Die Ziehung verwendet eine Zufallszahl, die aus dem Abschluss der Abstimmung abgeleitet wird, sodass die Geräte aller Teilnehmenden dasselbe Ergebnis erhalten. Jede Option erhält den größten zulässigen Betrag, der ihre Zuteilung nicht übersteigt; eine Differenz wird nicht an andere Optionen weitergegeben.",
+        "rounding-unspent": "Dadurch bleiben {{amount}} ungenutzt.",
+        "rounding-all-spent": "In dieser Abstimmung wird das gesamte Budget verwendet."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -733,7 +750,8 @@
         "publish": "Abstimmung starten",
         "publishing": "Abstimmung wird gestartet",
         "type-label": "In dieser Abstimmung wird die Gruppe",
-        "is-in-past": "Das Enddatum liegt mittlerweile in der Vergangenheit. Bitte ändere es erst."
+        "is-in-past": "Das Enddatum liegt mittlerweile in der Vergangenheit. Bitte ändere es erst.",
+        "budget": "Gesamtbudget:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -784,6 +802,10 @@
         "delegate-nickname-required": "Ein Kurzname wird benötigt.",
         "option-name-required": "Ein Name wird benötigt.",
         "option-name-unique": "Dieser Name wird bereits verwendet.",
-        "option-url-valid": "Bitte gib eine gültige URL ein."
+        "option-url-valid": "Bitte gib eine gültige URL ein.",
+        "budget-total-positive": "Bitte gib ein Gesamtbudget größer als null ein.",
+        "option-amounts-syntax": "Bitte gib Beträge und Bereiche durch Kommas getrennt an, z. B. 3, 5-9, 12. Dezimalzahlen mit Punkt: 2.5.",
+        "option-amounts-reversed": "Ein Bereich beginnt mit dem kleineren Betrag, z. B. 5-9.",
+        "option-amounts-too-large": "Ein Betrag übersteigt das Gesamtbudget ({{total}})."
     }
 }

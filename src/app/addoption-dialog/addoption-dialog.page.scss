@@ -17,3 +17,9 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+
+/* how to write an option's allowed amounts (#201) */
+.amounts-hint {
+  padding: 2px 16px 6px 16px;
+  color: var(--vodle-medium);
+}

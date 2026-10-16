@@ -22,6 +22,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
+import { allocate, amount_set, amount_set_t, describe_amounts, format_amount, is_restricted } from './budget';
 
 /* TODO:
 - add state, allow only certain state transitions, allow attribute change only in draft state
@@ -460,6 +461,84 @@ export class Poll {
 
   get url(): string { return this.G.D.getp(this._pid, 'url'); }
   set url(value: string) { this.G.D.setp(this._pid, 'url', value); }
+
+  // constrained budgeting (#201): a share poll divides a total budget, given
+  // in some unit, and each option may receive only certain amounts
+  // (Option.amounts). A poll without a total predates this and shows shares.
+
+  /** the total budget, or null if the poll has none */
+  get budget_total(): number | null {
+    const value = Number.parseFloat(this.G.D.getp(this._pid, 'budget_total'));
+    return value > 0 ? value : null;
+  }
+  set budget_total(value: number | null) {
+    this.G.D.setp(this._pid, 'budget_total', value > 0 ? String(value) : '');
+  }
+
+  get budget_unit(): string { return this.G.D.getp(this._pid, 'budget_unit') || ''; }
+  set budget_unit(value: string) { this.G.D.setp(this._pid, 'budget_unit', value || ''); }
+
+  get has_budget(): boolean { return this.type == 'share' && this.budget_total !== null; }
+
+  /** the allowed amounts of an option, as a set (0 is always allowed) */
+  amount_set(oid: string): amount_set_t {
+    return amount_set(this.options[oid]?.amounts || '', this.budget_total);
+  }
+
+  /** whether some option may receive only certain amounts, so that the
+   *  result needs a random rounding */
+  get has_amount_constraints(): boolean {
+    return this.has_budget && this.oids.some(oid => is_restricted(this.amount_set(oid), this.budget_total));
+  }
+
+  /** whether the end of the poll needs a random number all devices agree on */
+  get needs_draw(): boolean {
+    return this.type == 'winner' || this.has_amount_constraints;
+  }
+
+  /** the amounts paid to the options at the end, by oid (stored only in the
+   *  user's own database, like the winner), or null before that */
+  get allocation(): Record<string, number> | null {
+    const str = this.G.D.getp(this._pid, 'allocation');
+    if (!str) { return null; }
+    try {
+      return JSON.parse(str);
+    } catch (error) {
+      return null;
+    }
+  }
+  set allocation(value: Record<string, number> | null) {
+    this.G.D.setp(this._pid, 'allocation', value ? JSON.stringify(value) : '');
+  }
+
+  /** the target amount of an option: its share of the total budget */
+  target_amount(oid: string): number {
+    return (this.T.shares_map.get(oid) || 0) * (this.budget_total || 0);
+  }
+
+  /** an amount with the poll's unit, as people read it: "1,250 euros" */
+  amount_text(amount: number): string {
+    const unit = this.budget_unit;
+    return format_amount(amount, this.G.S.language) + (unit ? '\u00a0' + unit : '');
+  }
+
+  /** an option's allowed amounts as people read them, with the unit, or ''
+   *  if it may receive any amount */
+  amounts_text(oid: string): string {
+    if (!this.has_budget) { return ''; }
+    const text = describe_amounts(this.options[oid]?.amounts || '', this.budget_total, this.G.S.language);
+    const unit = this.budget_unit;
+    return text && unit ? text + '\u00a0' + unit : text;
+  }
+
+  /** what the result leaves unspent */
+  get unspent_amount(): number {
+    const allocation = this.allocation;
+    if (!allocation || !this.budget_total) { return 0; }
+    const spent = Object.values(allocation).reduce((a, b) => a + b, 0);
+    const rest = this.budget_total - spent;
+    return rest > 1e-9 * this.budget_total ? rest : 0;
+  }
 
   get due_type(): poll_due_type_t { return this.G.D.getp(this._pid, 'due_type') as poll_due_type_t; }
   set due_type(value: poll_due_type_t) { this.G.D.setp(this._pid, 'due_type', value); }
@@ -2122,13 +2201,19 @@ export class Poll {
           this.G.L.trace("Poll.end (Matrix) final tally", this._pid, closure);
           this.G.D.stop_poll_sync(this.pid);
           this.tally_all();
-          if (this.type == 'winner') {
+          // a winner poll's lottery, and a budget poll's rounding to
+          // allowed amounts (#201), use the same seed:
+          if (this.needs_draw) {
             const seed = closure.event_id || ('due:' + this.G.D.getp(this._pid, 'due'));
             if (!closure.event_id) {
               this.G.L.warn("Poll.end (Matrix) no closing event to seed the lottery with, using the due date", this._pid);
             }
             this.make_final_rand(this.pid + seed);
+          }
+          if (this.type == 'winner') {
             this.make_winner();
+          } else {
+            this.make_allocation();
           }
           this.notify_of_end();
         }).bind(this))
@@ -2183,7 +2268,7 @@ export class Poll {
             if (mutation_generation !== this.G.D.poll_mutation_generation(this.pid)) {
               throw new Error("Poll changed during the final replication");
             }
-            if (this.type == 'winner') {
+            if (this.needs_draw) {
               // 9. get the revision number of the remote poll state doc:
               this.G.L.trace("Poll.end getting state doc revision", this._pid);
               return this.G.D.get_remote_poll_state_doc(this.pid)
@@ -2198,11 +2283,16 @@ export class Poll {
                 // and turn the result into a random number:
                 this.G.L.trace("Poll.end making random number", this._pid, doc._rev);
                 this.make_final_rand(this.pid + doc._rev);
-                this.make_winner();
+                if (this.type == 'winner') {
+                  this.make_winner();
+                } else {
+                  this.make_allocation();
+                }
                 this.notify_of_end();
               }).bind(this));
             } else {
               this.tally_all();
+              this.make_allocation();
               this.notify_of_end();
             }
           }).bind(this))
@@ -2233,6 +2323,36 @@ export class Poll {
         }
       }
     } 
+  }
+
+  /** Divide a budget poll's total among its options (#201): every option's
+   *  target is its share of the total, rounded to an amount it may receive
+   *  by a draw (budget.ts: allocate) when some option may receive only
+   *  certain amounts. The draw's random numbers come from final_rand, so
+   *  every device that ends the poll gets the same amounts. */
+  make_allocation() {
+    if (!this.has_budget) { return; }
+    // in the order of the tally, which every device agrees on; an option the
+    // tally has not ordered has a target of 0 and comes last
+    const ordered = this.T.oids_descending.filter(oid => oid in this.options),
+          total = this.budget_total,
+          oids = [...ordered, ...this.oids.filter(oid => !ordered.includes(oid)).sort()];
+    const targets = oids.map(oid => this.target_amount(oid)),
+          sets = oids.map(oid => this.amount_set(oid));
+    let choose = (p: number, step: number) => true;
+    if (this.has_amount_constraints) {
+      const rand = this.final_rand;
+      if (!(rand >= 0)) {
+        this.G.L.error("Poll.make_allocation without a random number, no allocation made", this._pid);
+        return;
+      }
+      choose = (p, step) => this.G.D.str2rand(rand.toString() + ':' + step) < p;
+    }
+    const result = allocate(targets, sets, total, choose);
+    const allocation: Record<string, number> = {};
+    oids.forEach((oid, i) => { allocation[oid] = result.paid[i]; });
+    this.G.L.trace("Poll.make_allocation", this._pid, targets, result);
+    this.allocation = allocation;
   }
 
   notify_of_end() {
@@ -2298,7 +2418,7 @@ export class Option {
   private p: Poll;
 
   constructor (G:GlobalService, poll:Poll, oid:string=null, 
-               name:string=null, desc:string=null, url:string=null) { 
+               name:string=null, desc:string=null, url:string=null, amounts:string=null) { 
     // TODO: ensure uniqueness of name within poll!
     this.G = G;
 //    this.G.L.entry("Option constructor");
@@ -2312,6 +2432,7 @@ export class Option {
     if ((name||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.name', name);
     if ((desc||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.desc', desc);
     if ((url||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.url', url);
+    if ((amounts||'')!='') this.G.D.setp(poll.pid, 'option.'+oid+'.amounts', amounts);
     poll._add_option(this);
 //    this.G.L.exit("Option constructor");
   }
@@ -2321,6 +2442,7 @@ export class Option {
     this.G.D.delp(this.p.pid, 'option.'+this.oid+'.name');
     this.G.D.delp(this.p.pid, 'option.'+this.oid+'.desc');
     this.G.D.delp(this.p.pid, 'option.'+this.oid+'.url');
+    this.G.D.delp(this.p.pid, 'option.'+this.oid+'.amounts');
   }
 
   private _oid: string;
@@ -2338,5 +2460,10 @@ export class Option {
 
   get url(): string { return this.G.D.getp(this.p.pid, 'option.'+this._oid+'.url'); }
   set url(value: string) { this.G.D.setp(this.p.pid, 'option.'+this._oid+'.url', value); }
+
+  /** the amounts this option may receive in a budget poll (#201), written
+   *  like page ranges: "3, 5-9, 12"; "0-" (or nothing) allows any amount */
+  get amounts(): string { return this.G.D.getp(this.p.pid, 'option.'+this._oid+'.amounts') || ''; }
+  set amounts(value: string) { this.G.D.setp(this.p.pid, 'option.'+this._oid+'.amounts', value || ''); }
 
 }

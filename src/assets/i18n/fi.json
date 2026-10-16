@@ -287,7 +287,12 @@
         "import-options-msg": "Tiedoston on oltava .csv-tiedosto.<br/><br/>Kullakin rivillä on oltava vain yksi vaihtoehto, joko muodossa<br/>&nbsp;&nbsp;&nbsp;<i>\"Nimi\"</i><br/>tai<br/>&nbsp;&nbsp;&nbsp;<i>\"Nimi\", \"Kuvaus\"</i><br/>tai<br/>&nbsp;&nbsp;&nbsp;<i>\"Nimi\", \"Kuvaus\", \"URL-osoite\"</i>",
         "use-example-from-db": "Käytä esimerkkiä",
         "use-example-from-db-none": "(Älä käytä esimerkkiä)",
-        "notification-saved-title": "Luonnos on tallennettu kohtaan Omat kyselyt."
+        "notification-saved-title": "Luonnos on tallennettu kohtaan Omat kyselyt.",
+        "budget-total-label": "Kokonaisbudjetti",
+        "budget-unit-label": "Yksikkö",
+        "budget-unit-default": "euroa",
+        "option-amounts-label": "Sallitut summat",
+        "option-amounts-hint": "Kirjoitetaan kuten sivualueet tulostettaessa, esim. <i>3, 5-9, 12</i>. <i>20-</i> tarkoittaa vähintään 20, <i>-50</i> enintään 50 ja <i>0-</i> mitä tahansa summaa. Vaihtoehto voi aina myös jäädä ilman."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -675,7 +680,19 @@
         "sorting": "Järjestetään vaihtoehtoja kannatuksen perusteella...",
         "consent-lead": "Ennen kuin puoltopisteesi tallennetaan, vahvista: ",
         "guest-banner": "Osallistut vieraana. Puoltopisteesi ja kyselysi pysyvät vain tällä laitteella, kunnes kirjaudut sisään omalla sähköpostiosoitteellasi; silloin vodle siirtää ne tilillesi.",
-        "guest-login-button": "Kirjaudu sisään"
+        "guest-login-button": "Kirjaudu sisään",
+        "type-share-budget": "Vaihtoehdoille määritetään osuudet summasta {{total}}",
+        "allowed-amounts": "Sallitut summat: {{amounts}} (tai ei mitään)",
+        "of-the-budget-amount": "<small>saisi tällä hetkellä </small>{{amount}}<small> ({{percentage}} %)</small>",
+        "final-budget-amount": "<small>saa lopulta </small>{{amount}}<small> ({{percentage}} %)</small>",
+        "final-budget-allocated": "<small>saa lopulta </small>{{amount}}<small> (tavoite: {{target}})</small>",
+        "amount-goes-to": "{{amount}} menee vaihtoehdolle <i>{{option}}</i>",
+        "amount-target": "(tavoite: {{target}})",
+        "amount-unspent": "{{amount}} jää käyttämättä",
+        "rounding-heading": "Miten nämä summat määräytyivät?",
+        "rounding-explanation": "Äänet määräävät jokaiselle vaihtoehdolle tavoitesumman (suluissa). Koska jotkin vaihtoehdot voivat saada vain tiettyjä summia, satunnaisarvonta siirsi osia budjetista vaihtoehtojen välillä ja pyöristi niiden osuudet ylös- tai alaspäin sallittuihin summiin. Arvonnan todennäköisyydet on valittu niin, että keskimäärin jokaiselle vaihtoehdolle osoitetaan täsmälleen sen tavoitesumma. Arvonta käyttää äänestyksen päättymisestä johdettua satunnaislukua, joten jokaisen osallistujan laite saa saman tuloksen. Kukin vaihtoehto saa suurimman sallitun summan, joka ei ylitä sille osoitettua osuutta; erotusta ei siirretä muille vaihtoehdoille.",
+        "rounding-unspent": "Näin ollen {{amount}} jää käyttämättä.",
+        "rounding-all-spent": "Tässä äänestyksessä koko budjetti käytetään."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -687,7 +704,8 @@
         "publish": "Aloita kysely",
         "type-label": "Tässä kyselyssä ryhmä",
         "is-in-past": "Päättymispäivä on jo menneisyydessä. Korjaa se ensin.",
-        "publishing": "Kyselyä käynnistetään"
+        "publishing": "Kyselyä käynnistetään",
+        "budget": "Kokonaisbudjetti:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -738,7 +756,11 @@
         "delegate-nickname-required": "Kutsumanimi on pakollinen",
         "option-name-required": "Nimi on pakollinen.",
         "option-name-unique": "Tämä vaihtoehto on annettu aiemmin.",
-        "option-url-valid": "Anna kelvollinen URL-osoite."
+        "option-url-valid": "Anna kelvollinen URL-osoite.",
+        "budget-total-positive": "Anna nollaa suurempi kokonaisbudjetti.",
+        "option-amounts-syntax": "Luettele summat ja alueet pilkuilla erotettuina, esim. 3, 5-9, 12. Desimaalit pisteellä: 2.5.",
+        "option-amounts-reversed": "Alue alkaa pienemmästä summasta, esim. 5-9.",
+        "option-amounts-too-large": "Summa ylittää kokonaisbudjetin ({{total}})."
     },
     "handover": {
         "successor-title": "Uudet kyselyt aloitetaan muualla",

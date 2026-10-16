@@ -292,7 +292,12 @@
         "import-options-msg": "फ़ाइल एक .csv फ़ाइल होनी चाहिए।<br/><br/>प्रत्येक पंक्ति में एक विकल्प निर्दिष्ट होना चाहिए, या तो प्रारूप में<br/>&nbsp;&nbsp;&nbsp;<i>\"Name\"</i><br />या<br/>&nbsp;&nbsp;&nbsp;<i>\"नाम\", \"विवरण\"</i><br/>या<br/>&nbsp;&nbsp;&nbsp;<i>\"नाम\", \" विवरण\", \"यूआरएल\"</i>",
         "use-example-from-db": "एक उदाहरण का प्रयोग करें:",
         "use-example-from-db-none": "(उदाहरण का प्रयोग न करें)",
-        "notification-saved-title": "ड्राफ़्ट“मेरे मतदान” के अंतर्गत सहेजा गया"
+        "notification-saved-title": "ड्राफ़्ट“मेरे मतदान” के अंतर्गत सहेजा गया",
+        "budget-total-label": "कुल बजट",
+        "budget-unit-label": "इकाई",
+        "budget-unit-default": "यूरो",
+        "option-amounts-label": "अनुमत राशियाँ",
+        "option-amounts-hint": "छपाई के समय पृष्ठ-सीमाओं की तरह लिखें, जैसे <i>3, 5-9, 12</i>। <i>20-</i> का अर्थ है कम से कम 20, <i>-50</i> का अर्थ है अधिकतम 50, और <i>0-</i> का अर्थ है कोई भी राशि। किसी विकल्प को कुछ भी न मिलना हमेशा संभव है।"
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -680,7 +685,19 @@
         "sorting": "स्वीकृति के आधार पर विकल्पों को क्रमित किया जा रहा है...",
         "consent-lead": "आपके वैप सहेजे जाने से पहले, कृपया पुष्टि करें: ",
         "guest-banner": "आप अतिथि के रूप में भाग ले रहे हैं। जब तक आप अपने ईमेल पते से लॉग इन नहीं करते, आपके वैप और मतदान केवल इसी डिवाइस पर रहते हैं; लॉग इन करने पर वोडल उन्हें आपके खाते में भेज देता है।",
-        "guest-login-button": "लॉग इन"
+        "guest-login-button": "लॉग इन",
+        "type-share-budget": "विकल्पों को {{total}} में से हिस्से दिए जाते हैं",
+        "allowed-amounts": "अनुमत राशियाँ: {{amounts}} (या कुछ नहीं)",
+        "of-the-budget-amount": "<small>वर्तमान में </small>{{amount}}<small> प्राप्त होगा ({{percentage}}%)</small>",
+        "final-budget-amount": "<small>आखिरकार </small>{{amount}}<small> प्राप्त होता है ({{percentage}}%)</small>",
+        "final-budget-allocated": "<small>आखिरकार </small>{{amount}}<small> प्राप्त होता है (लक्ष्य: {{target}})</small>",
+        "amount-goes-to": "{{amount}} <i>{{option}}</i> को जाता है",
+        "amount-target": "(लक्ष्य: {{target}})",
+        "amount-unspent": "{{amount}} बिना खर्च के बचा रहता है",
+        "rounding-heading": "ये राशियाँ कैसे तय हुईं?",
+        "rounding-explanation": "मत हर विकल्प के लिए एक लक्ष्य राशि तय करते हैं (कोष्ठक में)। क्योंकि कुछ विकल्पों को केवल कुछ निश्चित राशियाँ ही मिल सकती हैं, एक यादृच्छिक ड्रॉ ने बजट के हिस्सों को विकल्पों के बीच खिसकाया और उनके आवंटन को अनुमत राशियों तक ऊपर या नीचे पूर्णांकित किया। ड्रॉ की प्रायिकताएँ इस तरह तय की जाती हैं कि औसतन हर विकल्प को ठीक उसकी लक्ष्य राशि आवंटित हो। ड्रॉ मतदान के समापन से प्राप्त एक यादृच्छिक संख्या का उपयोग करता है, इसलिए हर प्रतिभागी के उपकरण को एक ही परिणाम मिलता है। हर विकल्प को वह सबसे बड़ी अनुमत राशि मिलती है जो उसके आवंटन से अधिक न हो; अंतर अन्य विकल्पों को नहीं दिया जाता।",
+        "rounding-unspent": "इस कारण {{amount}} बिना खर्च के बचा रहता है।",
+        "rounding-all-spent": "इस मतदान में पूरा बजट खर्च होता है।"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -692,7 +709,8 @@
         "publish": "अभी मतदान शुरू करें",
         "type-label": "इस पोल में, समूह करेगा",
         "is-in-past": "खत्म होने की तारीख अब तक बीत चुकी है. कृपया इसे पहले बदलें।",
-        "publishing": "मतदान शुरू हो रहा है"
+        "publishing": "मतदान शुरू हो रहा है",
+        "budget": "कुल बजट:"
     },
     "privacy": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Privacy & Terms page:",
@@ -743,7 +761,11 @@
         "delegate-nickname-required": "उपनाम की आवश्यकता है।",
         "option-name-required": "नाम की आवश्यकता है।",
         "option-name-unique": "नाम पहले से मौजूद है।",
-        "option-url-valid": "कृपया एक ठीक URL दर्ज करे"
+        "option-url-valid": "कृपया एक ठीक URL दर्ज करे",
+        "budget-total-positive": "कृपया शून्य से बड़ा कुल बजट दर्ज करें।",
+        "option-amounts-syntax": "कृपया राशियाँ और सीमाएँ अल्पविराम से अलग करके लिखें, जैसे 3, 5-9, 12। दशमलव के लिए बिंदु का उपयोग करें: 2.5।",
+        "option-amounts-reversed": "सीमा छोटी राशि से शुरू होती है, जैसे 5-9।",
+        "option-amounts-too-large": "एक राशि कुल बजट ({{total}}) से अधिक है।"
     },
     "handover": {
         "successor-title": "नए मतदान कहीं और शुरू होते हैं",
