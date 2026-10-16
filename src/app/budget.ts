@@ -97,7 +97,11 @@ export function parse_amounts(text: string, total?: number): parsed_amounts_t {
 
 /** the canonical text of parsed items: "3, 5-9, 12, 20-" */
 export function format_amount_items(items: amount_item_t[]): string {
-  const num = (v: number) => String(v);
+  // in the notation the parser reads: String(0.0000001) is "1e-7"
+  const num = (v: number) => {
+    const str = String(v);
+    return /e/i.test(str) && v < 1 ? v.toFixed(20).replace(/0+$/, '').replace(/\.$/, '') : str;
+  };
   return items.map(item => !item.range ? num(item.lo)
     : (item.lo === null ? '' : num(item.lo)) + '-' + (item.hi === null ? '' : num(item.hi))
   ).join(', ');
@@ -134,7 +138,7 @@ export function amount_set(text: string, total: number): amount_set_t {
   }
   parts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const merged: amount_set_t = [];
-  const eps = 1e-9 * Math.max(1, total);
+  const eps = tolerance(total);
   for (const [lo, hi] of parts) {
     const last = merged[merged.length - 1];
     if (last && lo <= last[1] + eps) {
@@ -148,8 +152,16 @@ export function amount_set(text: string, total: number): amount_set_t {
 
 /** whether a set restricts anything, i.e. is not all of [0, total] */
 export function is_restricted(set: amount_set_t, total: number): boolean {
-  const eps = 1e-9 * Math.max(1, total);
+  const eps = tolerance(total);
   return !(set.length == 1 && set[0][0] <= eps && set[0][1] >= total - eps);
+}
+
+/** how close two amounts may be and still count as equal: enough for the
+ *  rounding errors of adding up shares (about 1e-16 of the total each), far
+ *  below any difference between amounts people write, even in a large
+ *  budget (1 in a total of 1,000,000,000 is 1e-9 of it) */
+function tolerance(total: number): number {
+  return 1e-12 * Math.max(1, total);
 }
 
 /** the largest allowed amount not above x */
@@ -228,7 +240,7 @@ export type allocation_t = {
 export function allocate(targets: number[], sets: amount_set_t[], total: number,
                          choose: (p: number, step: number) => boolean): allocation_t {
   const n = targets.length,
-        eps = 1e-9 * Math.max(1, total),
+        eps = tolerance(total),
         t = targets.map(x => Math.max(0, x));
   let step = 0;
   const gaps = sets.map((set, i) => gap_of(set, t[i], eps));

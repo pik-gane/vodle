@@ -254,6 +254,38 @@ describe('DraftpollPage', () => {
       expect(component.formGroup.get('budget_total').valid).toBeFalse();
     });
 
+    it('takes an amount into the draft once a larger total makes it fit', () => {
+      open_share_draft([{name: 'Park'}, {name: 'Bibliothek'}]);
+      const c = component.formGroup.get('option_amounts0');
+      c.setValue('150');
+      component.set_option_amounts(0);
+      expect((component as any).pd.options[0].amounts).withContext('not while it is too large').not.toBe('150');
+      component.formGroup.get('budget_total').setValue(200);
+      component.set_budget_total();
+      expect((component as any).pd.options[0].amounts).toBe('150');
+    });
+
+    it('keeps in the draft an amount that a lowered total no longer allows', () => {
+      open_share_draft([{name: 'Park', amounts: '20'}, {name: 'Bibliothek'}]);
+      (component as any).pd.budget_total = 10;
+      expect(component.stored_amounts('20')).withContext('not dropped as "any amount"').toBe('20');
+      expect(component.stored_amounts('9-5')).withContext('nor a field being written').toBe('9-5');
+    });
+
+    it('does not let hidden budget fields keep a winner poll from being started', () => {
+      open_share_draft([{name: 'Park'}, {name: 'Bibliothek'}]);
+      component.formGroup.get('budget_total').setValue(0);
+      component.formGroup.get('option_amounts1').setValue('9-5');
+      expect(component.formGroup.valid).toBeFalse();
+      component.formGroup.get('poll_type').setValue('winner');
+      component.set_poll_type();
+      expect(component.formGroup.valid).withContext('a winner poll has no budget').toBeTrue();
+      // and back: the fields count again
+      component.formGroup.get('poll_type').setValue('share');
+      component.set_poll_type();
+      expect(component.formGroup.valid).toBeFalse();
+    });
+
     it('writes the amounts in one form, and an emptied field back as "0-"', () => {
       open_share_draft([{name: 'Park'}, {name: 'Bibliothek'}]);
       const c = component.formGroup.get('option_amounts0');

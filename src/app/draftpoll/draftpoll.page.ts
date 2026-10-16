@@ -216,6 +216,7 @@ export class DraftpollPage implements OnInit {
       });
       this.set_budget_total();
       this.set_budget_unit();
+      this.enable_budget_controls();
       // A draft can arrive already set to end at a custom date but with no
       // date: the "Fledermauszüchterverein" example does exactly that, as
       // does any draft saved before #342. The date button then renders
@@ -404,6 +405,21 @@ export class DraftpollPage implements OnInit {
   set_poll_type() {
     let c = this.formGroup.get('poll_type');
     if (c.valid) this.pd.type = c.value;
+    this.enable_budget_controls();
+  }
+
+  /** The budget and the allowed amounts belong to share polls only (#201):
+   *  in a winner poll they are hidden, and disabled so that a value left in
+   *  them cannot keep the poll from being started. */
+  enable_budget_controls() {
+    const share = this.formGroup.get('poll_type').value == 'share';
+    const names = ['budget_total', 'budget_unit'];
+    for (let i = 0; i < this.n_options; i++) names.push('option_amounts'+i);
+    for (const name of names) {
+      const c = this.formGroup.get(name);
+      if (!c || c.enabled == share) continue;
+      if (share) c.enable(); else c.disable();
+    }
   }
 
   set_poll_language() {
@@ -461,9 +477,13 @@ export class DraftpollPage implements OnInit {
   set_budget_total() {
     const c = this.formGroup.get('budget_total');
     if (c.valid) this.pd.budget_total = Number(c.value);
-    // the options' amounts are checked against the total:
+    // the options' amounts are checked against the total, and one that
+    // fits it now reaches the draft:
     for (let i = 0; i < this.n_options; i++) {
-      this.formGroup.get('option_amounts'+i)?.updateValueAndValidity();
+      const c = this.formGroup.get('option_amounts'+i);
+      if (!c) continue;
+      c.updateValueAndValidity();
+      this.set_option_amounts(i);
     }
   }
 
@@ -508,9 +528,17 @@ export class DraftpollPage implements OnInit {
     return parsed.items.length ? format_amount_items(parsed.items) : ANY_AMOUNT;
   }
 
-  /** what is stored: the canonical form, nothing for any amount */
+  /** what is stored: the canonical form, nothing for any amount. A draft
+   *  keeps what does not fit (yet): an amount above a total that was just
+   *  lowered, or a field still being written. Ready is disabled then, so
+   *  only a draft can hold it, and the field shows its error on return. */
   stored_amounts(text: string): string {
-    return this.restricts(text) ? this.shown_amounts(text) : '';
+    const parsed = parse_amounts(text||'');
+    if (parsed.error) return (text||'').trim();
+    if (parsed.items.length == 0) return '';
+    const total = this.pd?.budget_total > 0 ? this.pd.budget_total : DraftpollPage.DEFAULT_BUDGET;
+    if (parse_amounts(text, total).error) return format_amount_items(parsed.items);
+    return is_restricted(amount_set(text, total), total) ? format_amount_items(parsed.items) : '';
   }
 
   restricts(text: string): boolean {
@@ -961,7 +989,8 @@ export class DraftpollPage implements OnInit {
     this.formGroup.addControl('option_name' + i, new UntypedFormControl("", [Validators.required], [unique_name_validator$(this.existingOptionName$( 'option_name' + i))]));
     this.formGroup.addControl('option_desc'+i, new UntypedFormControl(""));
     this.formGroup.addControl('option_url'+i, new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
-    this.formGroup.addControl('option_amounts'+i, new UntypedFormControl(ANY_AMOUNT, this.amounts_validator.bind(this)));
+    this.formGroup.addControl('option_amounts'+i, new UntypedFormControl(
+      {value: ANY_AMOUNT, disabled: this.formGroup.get('poll_type').value != 'share'}, this.amounts_validator.bind(this)));
     this.option_stage = 0;
   }
   

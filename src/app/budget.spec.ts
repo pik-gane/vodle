@@ -90,6 +90,20 @@ describe('constrained budgeting (#201)', () => {
       expect(parse_amounts('10, 150').error).withContext('no total to compare with').toBeUndefined();
     });
 
+    it('writes small amounts in the notation it reads (not 1e-7)', () => {
+      const text = format_amount_items(parse_amounts('0.0000001, 0.5-2').items);
+      expect(text).toBe('0.0000001, 0.5-2');
+      expect(parse_amounts(text, 100).error).toBeUndefined();
+    });
+
+    it('keeps small amounts apart in a large budget', () => {
+      expect(amount_set('1, 2', 1e9)).toEqual([[0, 0], [1, 1], [2, 2]]);
+      const outs = check([1.5, 1e9 - 1.5], [amount_set('1, 2', 1e9), amount_set('', 1e9)], 1e9);
+      for (const o of outs) {
+        expect([0, 1, 2]).withContext('paid ' + o.paid[0]).toContain(o.paid[0]);
+      }
+    });
+
     it('allows nothing, the listed amounts, and any amount when empty', () => {
       expect(amount_set('3, 5-9, 12', 100)).toEqual([[0, 0], [3, 3], [5, 9], [12, 12]]);
       expect(amount_set('20-', 100)).toEqual([[0, 0], [20, 100]]);
