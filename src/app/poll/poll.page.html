@@ -301,7 +301,7 @@ contents are being fetched -->
                 </b>
               </span><br/>
               <span style="white-space: nowrap;">
-                <ion-icon color="light" style="position: relative; top: 2px" [name]="(p.type=='share')?'cut-outline':'trophy-outline'"></ion-icon>&nbsp;<span [innerHtml]="((p.type=='share')?'poll.type-share':'poll.type-winner')|translate"></span>
+                <ion-icon color="light" style="position: relative; top: 2px" [name]="(p.type=='share')?'cut-outline':'trophy-outline'"></ion-icon>&nbsp;<span [innerHtml]="p.has_budget ? ('poll.type-share-budget'|translate:{total: p.amount_text(p.budget_total)}) : (((p.type=='share')?'poll.type-share':'poll.type-winner')|translate)"></span>
               </span>
             </small>
             <br/>
@@ -468,6 +468,36 @@ contents are being fetched -->
     <ion-item color="warning" data-vodle="no-result">
       <p [innerHtml]="'poll.no-result'|translate"></p>
     </ion-item>
+  } @else if (p.type=='share' && p.has_budget && p.allocation) {
+    <!-- a budget was divided (#201): the amounts, and what is left -->
+    <ion-item color="danger" data-vodle="budget-result">
+      <ion-text>
+        @for (oid of oidsorted; track oid) {
+          @if ((p.allocation[oid] || 0) > 0 || p.target_amount(oid) > 0) {
+            <h3 data-vodle="budget-result-line">
+              <b [innerHtml]="'poll.option-receives'|translate:{amount: p.amount_text(p.allocation[oid] || 0), option: p.options[oid].name}"></b>
+              <small>&nbsp;<span [innerHtml]="(p.has_amount_constraints ? 'poll.share-and-target' : 'poll.share-of-budget')|translate:{
+                share: ((p.T.shares_map.get(oid) || 0) * 100).toFixed(1), target: p.amount_text(p.target_amount(oid))}"></span></small>
+            </h3>
+          }
+        }
+        @if (p.unspent_amount > 0) {
+          <h3 data-vodle="budget-unspent">
+            <span [innerHtml]="'poll.amount-unspent'|translate:{amount: p.amount_text(p.unspent_amount)}"></span>
+          </h3>
+        }
+      </ion-text>
+    </ion-item>
+    @if (p.has_amount_constraints) {
+      <ion-item color="warning" data-vodle="budget-explanation">
+        <p>
+          <b [innerHtml]="'poll.rounding-heading'|translate"></b><span>&nbsp;</span>
+          <span [innerHtml]="'poll.rounding-explanation'|translate"></span><span>&nbsp;</span>
+          <span [innerHtml]="(p.allocation_method == 'pairwise' ? 'poll.rounding-simple' : 'poll.rounding-optimal')|translate"></span><span>&nbsp;</span>
+          <span [innerHtml]="(p.unspent_amount > 0 ? 'poll.rounding-unspent' : 'poll.rounding-all-spent')|translate:{amount: p.amount_text(p.unspent_amount)}"></span>
+        </p>
+      </ion-item>
+    }
   } @else if (p.type=='share') {
     <!-- shares exist: -->
     <ion-item color="danger">
@@ -1045,7 +1075,19 @@ the final read take — up to two minutes (#327) -->
                             | translate: {percentage: 
                               (p.T.shares_map.get(oidsorted[i]) * 100).toFixed(1)
                             }">
-                          </span><small><wbr> <span style="color:var(--vodle-darkgreen);"
+                          </span>
+                          <!-- in a budget poll (#201), the amount: expected while the
+                               poll runs, received once the draw is made -->
+                          @if (p.has_budget) {
+                            <span data-vodle="option-amount" [innerHtml]="
+                              (!p.allow_voting && p.allocation ? 'poll.received-amount' : 'poll.expected-amount')
+                              | translate: {
+                                amount: p.amount_number(!p.allow_voting && p.allocation
+                                  ? (p.allocation[oidsorted[i]] || 0) : p.expected_amount(oidsorted[i])),
+                                unit: p.budget_unit
+                              }">
+                            </span>
+                          }<small><wbr> <span style="color:var(--vodle-darkgreen);"
                           [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                           [innerHtml]="'poll.including-your-share' | translate">
                         </span>,
@@ -1106,6 +1148,11 @@ the final read take — up to two minutes (#327) -->
                         </ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
                       </small>
                     </span>
+                    <!-- Allowed amounts, in a budget poll (#201): -->
+                    @if (p.amounts_text(oidsorted[i])) {
+                      <br/><small data-vodle="option-allowed-amounts" style="color:var(--vodle-dark);"
+                        [innerHtml]="'poll.allowed-amounts' | translate: {amounts: p.amounts_text(oidsorted[i])}"></small>
+                    }
                     <!-- debugging info: - ->
                     <small>
                       <br/>direct_delegation_map: {{G.map2str(p.direct_delegation_map.get(oidsorted[i]))}}

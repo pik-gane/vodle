@@ -65,6 +65,11 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
           <ion-text [innerHtml]="'previewpoll.is-in-past'|translate" color="danger"></ion-text>
         }
       </p>
+      @if (p.has_budget) {
+        <p data-vodle="preview-budget">
+          <ion-text [innerHtml]="'previewpoll.budget'|translate"></ion-text>&nbsp;<ion-text color="primary" [innerText]="p.amount_text(p.budget_total)"></ion-text>
+        </p>
+      }
       @if (((p.language||'')!='') && (p.language!=G.S.language)) {
         <p>
           <small>
@@ -104,6 +109,9 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             <ion-text style="font-size: smaller;" color="primary">&nbsp;
               (<span (click)="G.open_url_in_new_tab(G.D.fix_url(o.url))"><ion-text class="externallink" [innerHtml]="'read-more'|translate"></ion-text>&nbsp;<ion-icon name="open-outline" style="position: relative; top: 2px;"></ion-icon></span>)
             </ion-text>
+          }
+          @if (p.amounts_text(o.oid)) {
+            <br/><small data-vodle="preview-option-amounts"><ion-text [innerHtml]="'poll.allowed-amounts'|translate:{amounts: p.amounts_text(o.oid)}"></ion-text></small>
           }
         </p>
       </ion-col>

@@ -2972,6 +2972,14 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
     expect(svc.pids.has('p1')).toBeTrue();
   });
 
+  it("sends a budget poll's option with the amounts it may receive (#201)", async () => {
+    svc.setp('p1', 'option.o7.oid', 'o7');
+    svc.setp('p1', 'option.o7.name', 'Seven');
+    svc.setp('p1', 'option.o7.amounts', '3, 5-9');
+    await new Promise(resolve => setTimeout(resolve, 5));
+    expect(matrix.addOption).toHaveBeenCalledOnceWith('p1', 'o7', {name: 'Seven', description: '', url: '', amounts: '3, 5-9'});
+  });
+
   it('does not send an option that never got a name', async () => {
     svc.setp('p1', 'option.o8.oid', 'o8');
     await new Promise(resolve => setTimeout(resolve, 5));

@@ -227,7 +227,7 @@ const poll_keystarts_in_user_db = [
   'poll_page',
   'simulated_ratings',
   'start_date',
-  'final_rand', 'winner'
+  'final_rand', 'winner', 'allocation'
 ];
 
 const user_keys_unencrypted = ['consent', 'last_access'];
@@ -2032,6 +2032,7 @@ export class DataService implements OnDestroy {
       this.poll_caches[pid]['option.' + oid + '.name'] = opt.name || '';
       this.poll_caches[pid]['option.' + oid + '.desc'] = opt.description || '';
       this.poll_caches[pid]['option.' + oid + '.url'] = opt.url || '';
+      this.poll_caches[pid]['option.' + oid + '.amounts'] = opt.amounts || '';
       // and an Option object on the Poll, which is where Poll.oids reads
       // them and therefore what every tally counts over. Only the live
       // timeline handler (onOptionAdded) made them, so options read back
@@ -2457,7 +2458,8 @@ export class DataService implements OnDestroy {
               await (await this.poll_matrix(pid)).addOption(pid, oid, {
                 name: fields['name'],
                 description: fields['desc'] || '',
-                url: fields['url'] || ''
+                url: fields['url'] || '',
+                ...(fields['amounts'] ? {amounts: fields['amounts']} : {})
               });
               this.G.L.warn("change_poll_state: option sent successfully", oid);
               // Populate poll_caches so getp() finds option data immediately
@@ -2466,6 +2468,7 @@ export class DataService implements OnDestroy {
               this.poll_caches[pid]['option.' + oid + '.name'] = fields['name'];
               this.poll_caches[pid]['option.' + oid + '.desc'] = fields['desc'] || '';
               this.poll_caches[pid]['option.' + oid + '.url'] = fields['url'] || '';
+              this.poll_caches[pid]['option.' + oid + '.amounts'] = fields['amounts'] || '';
               if (!(pid in this._pid_oids)) this._pid_oids[pid] = new Set();
               this._pid_oids[pid].add(oid);
               // NOW safe to delete option keys from user_cache since the
@@ -3725,7 +3728,7 @@ export class DataService implements OnDestroy {
               this.G.L.error("DataService Matrix onVoterDataChange callback failed", pollId, key, err);
             }
           },
-          onOptionAdded: (pollId: string, oid: string, option: {name: string; description: string; url: string}) => {
+          onOptionAdded: (pollId: string, oid: string, option: {name: string; description: string; url: string; amounts?: string}) => {
             // an option another participant added while the poll runs
             // (#324): register it like doc2poll_cache does for CouchDB, so
             // the Poll object gets an Option and the page (onDataChange
@@ -3737,6 +3740,7 @@ export class DataService implements OnDestroy {
               cache['option.' + oid + '.name'] = option.name || '';
               cache['option.' + oid + '.desc'] = option.description || '';
               cache['option.' + oid + '.url'] = option.url || '';
+              cache['option.' + oid + '.amounts'] = option.amounts || '';
               if (!(pollId in this._pid_oids)) {
                 this._pid_oids[pollId] = new Set();
               }
@@ -4318,7 +4322,9 @@ export class DataService implements OnDestroy {
       this.poll_matrix(pid).then(m => m.addOption(pid, oid, {
         name,
         description: cache['option.' + oid + '.desc'] || '',
-        url: cache['option.' + oid + '.url'] || ''
+        url: cache['option.' + oid + '.url'] || '',
+        // the amounts a budget poll's option may receive (#201):
+        ...(cache['option.' + oid + '.amounts'] ? {amounts: cache['option.' + oid + '.amounts']} : {})
       })).catch(err => {
         this.G.L.error("DataService: sending the new option to Matrix failed", pid, oid, err);
       });
