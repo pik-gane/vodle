@@ -729,16 +729,16 @@
         "sorting": "Optionen werden neu sortiert...",
         "type-share-budget": "Optionen bekommen Anteile an {{total}}",
         "allowed-amounts": "Zulässige Beträge: {{amounts}} (oder nichts)",
-        "of-the-budget-amount": "<small>bekäme jetzt </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>bekommt </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>bekommt </small>{{amount}}<small> (Zielbetrag: {{target}})</small>",
-        "amount-goes-to": "{{amount}} gehen an <i>{{option}}</i>",
-        "amount-target": "(Zielbetrag: {{target}})",
         "amount-unspent": "{{amount}} bleiben ungenutzt",
         "rounding-heading": "Wie kamen diese Beträge zustande?",
         "rounding-explanation": "Die Stimmen bestimmen für jede Option einen Zielbetrag (in Klammern). Da manche Optionen nur bestimmte Beträge erhalten dürfen, hat eine Zufallsziehung Teile des Budgets zwischen Optionen verschoben und deren Zuteilungen auf zulässige Beträge auf- oder abgerundet. Die Wahrscheinlichkeiten der Ziehung sind so gewählt, dass jeder Option im Mittel genau ihr Zielbetrag zugeteilt wird. Die Ziehung verwendet eine Zufallszahl, die aus dem Abschluss der Abstimmung abgeleitet wird, sodass die Geräte aller Teilnehmenden dasselbe Ergebnis erhalten. Jede Option erhält den größten zulässigen Betrag, der ihre Zuteilung nicht übersteigt; eine Differenz wird nicht an andere Optionen weitergegeben.",
         "rounding-unspent": "Dadurch bleiben {{amount}} ungenutzt.",
-        "rounding-all-spent": "In dieser Abstimmung wird das gesamte Budget verwendet."
+        "rounding-all-spent": "In dieser Abstimmung wird das gesamte Budget verwendet.",
+        "expected-amount": "<small> (erwartet: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (erhält </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> erhält {{amount}}",
+        "share-and-target": "({{share}}% des Budgets, Zielbetrag: {{target}})",
+        "share-of-budget": "({{share}}% des Budgets)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

@@ -688,16 +688,16 @@
         "guest-login-button": "लॉग इन",
         "type-share-budget": "विकल्पों को {{total}} में से हिस्से दिए जाते हैं",
         "allowed-amounts": "अनुमत राशियाँ: {{amounts}} (या कुछ नहीं)",
-        "of-the-budget-amount": "<small>वर्तमान में </small>{{amount}}<small> प्राप्त होगा ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>आखिरकार </small>{{amount}}<small> प्राप्त होता है ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>आखिरकार </small>{{amount}}<small> प्राप्त होता है (लक्ष्य: {{target}})</small>",
-        "amount-goes-to": "{{amount}} <i>{{option}}</i> को जाता है",
-        "amount-target": "(लक्ष्य: {{target}})",
         "amount-unspent": "{{amount}} बिना खर्च के बचा रहता है",
         "rounding-heading": "ये राशियाँ कैसे तय हुईं?",
         "rounding-explanation": "मत हर विकल्प के लिए एक लक्ष्य राशि तय करते हैं (कोष्ठक में)। क्योंकि कुछ विकल्पों को केवल कुछ निश्चित राशियाँ ही मिल सकती हैं, एक यादृच्छिक ड्रॉ ने बजट के हिस्सों को विकल्पों के बीच खिसकाया और उनके आवंटन को अनुमत राशियों तक ऊपर या नीचे पूर्णांकित किया। ड्रॉ की प्रायिकताएँ इस तरह तय की जाती हैं कि औसतन हर विकल्प को ठीक उसकी लक्ष्य राशि आवंटित हो। ड्रॉ मतदान के समापन से प्राप्त एक यादृच्छिक संख्या का उपयोग करता है, इसलिए हर प्रतिभागी के उपकरण को एक ही परिणाम मिलता है। हर विकल्प को वह सबसे बड़ी अनुमत राशि मिलती है जो उसके आवंटन से अधिक न हो; अंतर अन्य विकल्पों को नहीं दिया जाता।",
         "rounding-unspent": "इस कारण {{amount}} बिना खर्च के बचा रहता है।",
-        "rounding-all-spent": "इस मतदान में पूरा बजट खर्च होता है।"
+        "rounding-all-spent": "इस मतदान में पूरा बजट खर्च होता है।",
+        "expected-amount": "<small> (अपेक्षित: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (प्राप्त: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> को {{amount}} मिलता है",
+        "share-and-target": "(बजट का {{share}}%, लक्ष्य: {{target}})",
+        "share-of-budget": "(बजट का {{share}}%)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

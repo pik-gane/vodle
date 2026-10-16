@@ -474,11 +474,10 @@ contents are being fetched -->
       <ion-text>
         @for (oid of oidsorted; track oid) {
           @if ((p.allocation[oid] || 0) > 0 || p.target_amount(oid) > 0) {
-            <h3>
-              <b [innerHtml]="'poll.amount-goes-to'|translate:{amount: p.amount_text(p.allocation[oid] || 0), option: p.options[oid].name}"></b>
-              @if (p.has_amount_constraints) {
-                <small>&nbsp;<span [innerHtml]="'poll.amount-target'|translate:{target: p.amount_text(p.target_amount(oid))}"></span></small>
-              }
+            <h3 data-vodle="budget-result-line">
+              <b [innerHtml]="'poll.option-receives'|translate:{amount: p.amount_text(p.allocation[oid] || 0), option: p.options[oid].name}"></b>
+              <small>&nbsp;<span [innerHtml]="(p.has_amount_constraints ? 'poll.share-and-target' : 'poll.share-of-budget')|translate:{
+                share: ((p.T.shares_map.get(oid) || 0) * 100).toFixed(1), target: p.amount_text(p.target_amount(oid))}"></span></small>
             </h3>
           }
         }
@@ -1068,19 +1067,6 @@ the final read take — up to two minutes (#327) -->
                       <b [style.display]="(show_live||!p.allow_voting)?'inline':'none'">
                         <!-- Winning chance/budget share: -->
                         <span style="color:var(--vodle-medium);">
-                          @if (p.has_budget) {
-                            <!-- a budget poll (#201): amounts, the final ones after the draw -->
-                            <span style="white-space: nowrap;" data-vodle="option-amount" [innerHtml]="
-                              (p.allow_voting ? 'poll.of-the-budget-amount'
-                                : p.allocation ? 'poll.final-budget-allocated' : 'poll.final-budget-amount')
-                              | translate: {
-                                percentage: (p.T.shares_map.get(oidsorted[i]) * 100).toFixed(1),
-                                amount: p.amount_text(p.allocation && !p.allow_voting
-                                  ? (p.allocation[oidsorted[i]] || 0) : p.target_amount(oidsorted[i])),
-                                target: p.amount_text(p.target_amount(oidsorted[i]))
-                              }">
-                            </span>
-                          } @else {
                           <span style="white-space: nowrap;" [innerHtml]="
                             (p.type == 'winner' 
                                 ? (p.allow_voting?'poll.chance-to-win':'poll.final-chance-to-win') 
@@ -1089,6 +1075,17 @@ the final read take — up to two minutes (#327) -->
                               (p.T.shares_map.get(oidsorted[i]) * 100).toFixed(1)
                             }">
                           </span>
+                          <!-- in a budget poll (#201), the amount: expected while the
+                               poll runs, received once the draw is made -->
+                          @if (p.has_budget) {
+                            <span data-vodle="option-amount" [innerHtml]="
+                              (!p.allow_voting && p.allocation ? 'poll.received-amount' : 'poll.expected-amount')
+                              | translate: {
+                                amount: p.amount_number(!p.allow_voting && p.allocation
+                                  ? (p.allocation[oidsorted[i]] || 0) : p.expected_amount(oidsorted[i])),
+                                unit: p.budget_unit
+                              }">
+                            </span>
                           }<small><wbr> <span style="color:var(--vodle-darkgreen);"
                           [style.display]="(votedfor == oidsorted[i]) ? 'inline' : 'none'"
                           [innerHtml]="'poll.including-your-share' | translate">

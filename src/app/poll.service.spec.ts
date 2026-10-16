@@ -963,6 +963,14 @@ describe('Poll.make_allocation (#201)', () => {
     expect(p.amounts_text('b')).toBe('20, 40\u00a0euros');
   });
 
+  it('expects the target while the poll runs, but no more than an option may receive', () => {
+    const p = make_poll({ a: '-40', b: '20, 40' });
+    expect(p.expected_amount('a')).withContext('target 52, at most 40').toBe(40);
+    expect(p.expected_amount('b')).toBeCloseTo(30, 9);
+    expect(p.expected_amount('c')).toBeCloseTo(18, 9);
+    expect(p.amount_number(1234.5)).toBe('1,234.50');
+  });
+
   it('makes no allocation without the shared random number', () => {
     const p = make_poll({ c: '25' }, null);
     p.make_allocation();

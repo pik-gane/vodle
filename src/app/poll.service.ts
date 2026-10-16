@@ -516,6 +516,18 @@ export class Poll {
     return (this.T.shares_map.get(oid) || 0) * (this.budget_total || 0);
   }
 
+  /** what an option can expect while the poll runs: its target, but no
+   *  more than the largest amount it may receive */
+  expected_amount(oid: string): number {
+    const set = this.amount_set(oid);
+    return Math.min(this.target_amount(oid), set[set.length - 1][1]);
+  }
+
+  /** an amount without its unit, as people read it: "1,250" */
+  amount_number(amount: number): string {
+    return format_amount(amount, this.G.S.language);
+  }
+
   /** an amount with the poll's unit, as people read it: "1,250 euros" */
   amount_text(amount: number): string {
     const unit = this.budget_unit;

@@ -683,16 +683,16 @@
         "guest-login-button": "Kirjaudu sisään",
         "type-share-budget": "Vaihtoehdoille määritetään osuudet summasta {{total}}",
         "allowed-amounts": "Sallitut summat: {{amounts}} (tai ei mitään)",
-        "of-the-budget-amount": "<small>saisi tällä hetkellä </small>{{amount}}<small> ({{percentage}} %)</small>",
-        "final-budget-amount": "<small>saa lopulta </small>{{amount}}<small> ({{percentage}} %)</small>",
-        "final-budget-allocated": "<small>saa lopulta </small>{{amount}}<small> (tavoite: {{target}})</small>",
-        "amount-goes-to": "{{amount}} menee vaihtoehdolle <i>{{option}}</i>",
-        "amount-target": "(tavoite: {{target}})",
         "amount-unspent": "{{amount}} jää käyttämättä",
         "rounding-heading": "Miten nämä summat määräytyivät?",
         "rounding-explanation": "Äänet määräävät jokaiselle vaihtoehdolle tavoitesumman (suluissa). Koska jotkin vaihtoehdot voivat saada vain tiettyjä summia, satunnaisarvonta siirsi osia budjetista vaihtoehtojen välillä ja pyöristi niiden osuudet ylös- tai alaspäin sallittuihin summiin. Arvonnan todennäköisyydet on valittu niin, että keskimäärin jokaiselle vaihtoehdolle osoitetaan täsmälleen sen tavoitesumma. Arvonta käyttää äänestyksen päättymisestä johdettua satunnaislukua, joten jokaisen osallistujan laite saa saman tuloksen. Kukin vaihtoehto saa suurimman sallitun summan, joka ei ylitä sille osoitettua osuutta; erotusta ei siirretä muille vaihtoehdoille.",
         "rounding-unspent": "Näin ollen {{amount}} jää käyttämättä.",
-        "rounding-all-spent": "Tässä äänestyksessä koko budjetti käytetään."
+        "rounding-all-spent": "Tässä äänestyksessä koko budjetti käytetään.",
+        "expected-amount": "<small> (odotettu: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (saa </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> saa {{amount}}",
+        "share-and-target": "({{share}} % budjetista, tavoite: {{target}})",
+        "share-of-budget": "({{share}} % budjetista)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

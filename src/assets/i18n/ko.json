@@ -688,16 +688,16 @@
         "guest-login-button": "로그인",
         "type-share-budget": "선택지들에게 지분이 배정됨 (총 {{total}})",
         "allowed-amounts": "허용 금액: {{amounts}} (또는 없음)",
-        "of-the-budget-amount": "<small>현재 예상 배정액: </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>최종 배정액: </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>최종 배정액: </small>{{amount}}<small> (목표: {{target}})</small>",
-        "amount-goes-to": "<i>{{option}}</i>: {{amount}}",
-        "amount-target": "(목표: {{target}})",
         "amount-unspent": "사용되지 않은 금액: {{amount}}",
         "rounding-heading": "이 금액들은 어떻게 정해졌나요?",
         "rounding-explanation": "투표 결과는 각 선택지의 목표 금액(괄호 안)을 정합니다. 일부 선택지는 특정 금액만 받을 수 있으므로, 무작위 추첨이 예산의 일부를 선택지들 사이에서 옮겨 각 배정액을 허용 금액으로 올리거나 내렸습니다. 추첨 확률은 평균적으로 각 선택지에 정확히 목표 금액이 배정되도록 정해집니다. 추첨은 투표 종료에서 얻은 난수를 사용하므로 모든 참여자의 기기가 같은 결과를 얻습니다. 각 선택지는 배정액을 넘지 않는 가장 큰 허용 금액을 받으며, 그 차액은 다른 선택지로 넘어가지 않습니다.",
         "rounding-unspent": "따라서 사용되지 않은 금액은 {{amount}}입니다.",
-        "rounding-all-spent": "이 투표에서는 예산 전체가 사용됩니다."
+        "rounding-all-spent": "이 투표에서는 예산 전체가 사용됩니다.",
+        "expected-amount": "<small> (예상: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (수령액: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i>: {{amount}}",
+        "share-and-target": "(예산의 {{share}}%, 목표: {{target}})",
+        "share-of-budget": "(예산의 {{share}}%)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

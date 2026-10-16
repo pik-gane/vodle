@@ -688,16 +688,16 @@
         "guest-login-button": "Zaloguj się",
         "type-share-budget": "Opcjom przypisano udziały w {{total}}",
         "allowed-amounts": "Dozwolone kwoty: {{amounts}} (lub nic)",
-        "of-the-budget-amount": "<small>dostałby obecnie </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>ostatecznie dostaje </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>ostatecznie dostaje </small>{{amount}}<small> (cel: {{target}})</small>",
-        "amount-goes-to": "{{amount}} trafia do <i>{{option}}</i>",
-        "amount-target": "(cel: {{target}})",
         "amount-unspent": "{{amount}} pozostaje niewydane",
         "rounding-heading": "Jak ustalono te kwoty?",
         "rounding-explanation": "Głosy wyznaczają dla każdej opcji kwotę docelową (w nawiasach). Ponieważ niektóre opcje mogą otrzymać tylko określone kwoty, losowanie przesunęło części budżetu między opcjami, zaokrąglając ich przydziały w górę lub w dół do dozwolonych kwot. Prawdopodobieństwa losowania dobrano tak, aby średnio każdej opcji przydzielono dokładnie jej kwotę docelową. Losowanie korzysta z liczby losowej wyprowadzonej z zamknięcia głosowania, dzięki czemu urządzenie każdego uczestnika otrzymuje ten sam wynik. Każda opcja otrzymuje największą dozwoloną kwotę nieprzekraczającą jej przydziału; różnica nie jest przekazywana innym opcjom.",
         "rounding-unspent": "W rezultacie {{amount}} pozostaje niewydane.",
-        "rounding-all-spent": "W tym głosowaniu wydano cały budżet."
+        "rounding-all-spent": "W tym głosowaniu wydano cały budżet.",
+        "expected-amount": "<small> (oczekiwane: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (otrzymuje </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> otrzymuje {{amount}}",
+        "share-and-target": "({{share}}% budżetu, cel: {{target}})",
+        "share-of-budget": "({{share}}% budżetu)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

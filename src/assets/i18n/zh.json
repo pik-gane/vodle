@@ -178,16 +178,16 @@
         "guest-login-button": "登录",
         "type-share-budget": "各选项分配 {{total}} 中的份额",
         "allowed-amounts": "允许的金额：{{amounts}}（或零）",
-        "of-the-budget-amount": "<small>目前将获得 </small>{{amount}}<small>（{{percentage}}%）</small>",
-        "final-budget-amount": "<small>最终获得 </small>{{amount}}<small>（{{percentage}}%）</small>",
-        "final-budget-allocated": "<small>最终获得 </small>{{amount}}<small>（目标：{{target}}）</small>",
-        "amount-goes-to": "{{amount}} 归 <i>{{option}}</i>",
-        "amount-target": "（目标：{{target}}）",
         "amount-unspent": "{{amount}} 未被使用",
         "rounding-heading": "这些金额是如何确定的？",
         "rounding-explanation": "投票为每个选项确定一个目标金额（括号内）。由于有些选项只能获得特定金额，一次随机抽签在选项之间转移了部分预算，将它们的分配额向上或向下取整到允许的金额。抽签的概率经过设定，使每个选项平均而言恰好分得其目标金额。抽签使用由投票结束时得出的随机数，因此每位参与者的设备都得到相同的结果。每个选项获得不超过其分配额的最大允许金额；差额不会转给其他选项。",
         "rounding-unspent": "因此有 {{amount}} 未被使用。",
-        "rounding-all-spent": "本次投票用完了全部预算。"
+        "rounding-all-spent": "本次投票用完了全部预算。",
+        "expected-amount": "<small>（预计：</small>{{amount}}<small>&nbsp;{{unit}}）</small>",
+        "received-amount": "<small>（获得 </small>{{amount}}<small>&nbsp;{{unit}}）</small>",
+        "option-receives": "<i>{{option}}</i> 获得 {{amount}}",
+        "share-and-target": "（预算的 {{share}}%，目标：{{target}}）",
+        "share-of-budget": "（预算的 {{share}}%）"
     },
     "invite-email": {
         "body-before-link": "",

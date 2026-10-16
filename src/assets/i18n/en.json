@@ -740,16 +740,16 @@
         "add-option-expired": "Time to add new options has expired.",
         "type-share-budget": "Options are assigned shares of {{total}}",
         "allowed-amounts": "Allowed amounts: {{amounts}} (or nothing)",
-        "of-the-budget-amount": "<small>would currently get </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>finally gets </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>finally gets </small>{{amount}}<small> (target: {{target}})</small>",
-        "amount-goes-to": "{{amount}} go to <i>{{option}}</i>",
-        "amount-target": "(target: {{target}})",
         "amount-unspent": "{{amount}} remain unspent",
         "rounding-heading": "How were these amounts determined?",
         "rounding-explanation": "The votes determine a target amount for every option (in brackets). Because some options may receive only certain amounts, a random draw shifted parts of the budget between options, rounding their allotments up or down to allowed amounts. The probabilities of the draw are set so that, on average, every option is allotted exactly its target. The draw uses a random number derived from the closing of the poll, so every participantʼs device obtains the same result. Each option receives the largest allowed amount that does not exceed its allotment; any difference is not passed on to other options.",
         "rounding-unspent": "This leaves {{amount}} unspent.",
-        "rounding-all-spent": "In this poll, the whole budget is spent."
+        "rounding-all-spent": "In this poll, the whole budget is spent.",
+        "expected-amount": "<small> (expected: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (receives </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> receives {{amount}}",
+        "share-and-target": "({{share}}% of the budget, target: {{target}})",
+        "share-of-budget": "({{share}}% of the budget)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",

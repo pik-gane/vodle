@@ -688,16 +688,16 @@
         "guest-login-button": "Accedi",
         "type-share-budget": "Alle opzioni vengono assegnate quote di {{total}}",
         "allowed-amounts": "Importi ammessi: {{amounts}} (oppure nulla)",
-        "of-the-budget-amount": "<small>riceverebbe attualmente </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-amount": "<small>riceve infine </small>{{amount}}<small> ({{percentage}}%)</small>",
-        "final-budget-allocated": "<small>riceve infine </small>{{amount}}<small> (obiettivo: {{target}})</small>",
-        "amount-goes-to": "{{amount}} vanno a <i>{{option}}</i>",
-        "amount-target": "(obiettivo: {{target}})",
         "amount-unspent": "{{amount}} restano inutilizzati",
         "rounding-heading": "Come sono stati determinati questi importi?",
         "rounding-explanation": "I voti determinano un importo obiettivo per ogni opzione (tra parentesi). Poiché alcune opzioni possono ricevere solo determinati importi, unʼestrazione casuale ha spostato parti del budget tra le opzioni, arrotondando le loro assegnazioni per eccesso o per difetto a importi ammessi. Le probabilità dellʼestrazione sono fissate in modo che, in media, a ogni opzione venga assegnato esattamente il suo obiettivo. Lʼestrazione usa un numero casuale derivato dalla chiusura della votazione, così il dispositivo di ogni partecipante ottiene lo stesso risultato. Ogni opzione riceve il massimo importo ammesso che non supera la sua assegnazione; la differenza non viene trasferita ad altre opzioni.",
         "rounding-unspent": "Restano quindi inutilizzati {{amount}}.",
-        "rounding-all-spent": "In questa votazione viene utilizzato lʼintero budget."
+        "rounding-all-spent": "In questa votazione viene utilizzato lʼintero budget.",
+        "expected-amount": "<small> (previsto: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "received-amount": "<small> (riceve </small>{{amount}}<small>&nbsp;{{unit}})</small>",
+        "option-receives": "<i>{{option}}</i> riceve {{amount}}",
+        "share-and-target": "({{share}}% del budget, obiettivo: {{target}})",
+        "share-of-budget": "({{share}}% del budget)"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
