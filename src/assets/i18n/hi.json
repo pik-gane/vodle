@@ -86,7 +86,7 @@
         "p18": "सटीक प्रक्रिया: विकल्पों को अवरोही अनुमोदन द्वारा क्रमबद्ध किया जाता है। फिर प्रत्येक विकल्प का हिस्सा उन प्रतिभागियों की संख्या के समानुपाती होता है जिन्होंने इस विकल्प को मंजूरी दी है लेकिन कोई उच्च-अप विकल्प नहीं है।",
         "h2": "इसके पीछे कौन है?",
         "p21": "vodleʼs algorithm (called “maximum partial consensus”) was developed and optimizied for fairness at the Potsdam Institute for Climate Impact Research (PIK) by the mathematician Jobst Heitzig in collaboration with Forest W. Simmons. It is inspired by the “threshold model” of famous sociologist Mark Granovetter. This app is open-source, code hosted on <a href=\"{{github_url}}\" target=\"_blank\">github</a>. Main developer: Jobst Heitzig. Significant contributions by: Marius Amrhein. Consulted by: Adrian Lison. Additional contributions: see program code.",
-        "p22-this-instance": "This instance of the vodle web-app is generously hosted by <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>",
+        "p22-this-instance": "वोडल वेब -एप का यह इन्स्टेन्स <i><a href=\"{{hosting_institution_url}}\" target=\"_blank\">{{hosting_institution_name}}</a>.</i>के द्वारा होस्ट किया गया हैं |",
         "h3": "वोडल का समर्थन करें!",
         "p31": "जैसा कि हम सभी के लिए वोडल मुक्त रखने के लिए प्रतिबद्ध हैं, हमें अभी भी और सहायता की आवश्यकता है। यदि आप एक बेवकूफ, रचनात्मक, प्रभावशाली, वैज्ञानिक, परोपकारी, कार्यकर्ता, राजनीतिज्ञ, मित्रवत विदेशी हैं ... जो निष्पक्ष और भविष्य के भविष्य में विश्वास करते हैं; कुशल आम सहमति बनाना और किसी भी छोटे तरीके से योगदान देना चाहते हैं, हमारे पास कुछ विचार हैं <a href=\"{{support_vodle_url}}\" target=\"_blank\">आप हमें कैसे समर्थन दे सकते हैं!</a>"
     },
@@ -147,7 +147,7 @@
         "-step-5-title": "सारांश",
         "ratings-intro-1": "आपको धन्यवाद! मैंने अब आपके वैप सेट कर दिए हैं ताकि वे आपकी स्वीकृति की इच्छा के अनुरूप हों।",
         "ratings-intro-2": "वैप इस तरह काम करते हैं: जब कोई <i>X</i> का वैप सेट करता है, तो 100% से अधिक कम<i>X</i> प्रतिभागियों द्वारा स्वीकृत किए जाने पर कोई स्वीकृति देगा। इसलिए मैंने आपके वैप इस प्रकार निर्धारित किए हैं:",
-        "ratings-favourite": "यह आपका <b>पसंदीदा</b> विकल्प है। मैंने इसे <b>100</b> का वैप दिया है क्योंकि आप इसे निश्चित रूप से अनुमोदित करना चाहते हैं।",
+        "ratings-favourite": "यह आपका <b>पसंदीदा</b> विकल्प है। मैंने इसे <b>100</b> का wap दिया है क्योंकि आप इसे निश्चित रूप से अनुमोदित करना चाहते हैं।",
         "ratings-acceptable": "This option you want to approve if at least {{threshold}}% of the participants approve. I have added a very small uncertainty buffer of one per cent and have given the option a wap of <b>{{wap}}</b>. This ensures that you approve this option if strictly more than {{more_than}}% approve.",
         "ratings-other": "अन्य सभी विकल्पों को <b>0</b> मिलता है क्योंकि आप उन्हें स्वीकृत नहीं करना चाहते, चाहे कुछ भी हो।",
         "ratings-extro": "आप स्लाइडर का उपयोग करके अपने वैप को कभी भी समायोजित कर सकते हैं, उदा. वास्तविक अनुमोदन स्कोर के विकास पर प्रतिक्रिया करने के लिए। वर्तमान स्वीकृति हमेशा एक लाइट बार के रूप में दिखाई जाती है। आप मतदान पृष्ठ में रेखांकित शब्दों पर क्लिक करके अधिक जानकारी प्राप्त कर सकते हैं।"
@@ -189,7 +189,21 @@
         "message-body-explanation": "यदि आप स्वीकार करते हैं, तो वोडल मेरे वैप्स को भी सेट करने के लिए स्वचालित रूप से आपके वैप का उपयोग करेगा, आपको किसी अतिरिक्त कार्य की आवश्यकता नहीं होगी।",
         "message-body-before-link": "इस अनुरोध को अनुमोदित करने के लिए कृपया निम्नलिखित लिंक पर क्लिक करें:",
         "message-body-dont-share": "कृपया इस लिंक को किसी और के साथ साझा न करें।",
-        "message-body-regards": "सादर"
+        "message-body-regards": "सादर",
+        "rank-label": "प्रतिनिधिमंडल का दर्जा:",
+        "different-label": "विकल्प चुनिये :",
+        "nickname": "उपनाम",
+        "rank": "दर्जा",
+        "status": "स्थिति",
+        "reorder": "प्रतिनिधिमंडल को फिर से व्यवसतिथ करे",
+        "edit-shares": "शेयर का सम्पादन करे",
+        "shares-for": "शेयर के लिए :",
+        "shares-in-general": "सभी विकल्प , सामान्य रूप में",
+        "use-general-shares": "मेरे सामान्य शेयर यहा इस्तेमाल करे",
+        "share-intro": "आप इस व्यक्ति को अपने वैप का हिस्सा दे सकते हैं | जो भी आप नहीं देंगे वह आपका रह जाएगा: आपके अपने वैप्स उस हिस्से के लिए फिर भी गिने जाएंगे ।",
+        "share-label": "उनका हिस्सा: {{share}}%",
+        "share-balance": "आप अपने wap का {{kept}}% हिस्सा रखेंगे ,आप अब भी उसका {{left }}% हिस्सा दे सकते हैं ।",
+        "you-keep": "आप {{kept}}% रखेंगे"
     },
     "delete-all": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Delete My Data page:",
@@ -238,7 +252,10 @@
         "try-again": "हम क्षमा चाहते हैं, वोडल अभी भी इस अनुरोध पर कुछ डेटा की प्रतीक्षा कर रहा है। कृपया इस लिंक को बाद में पुन: प्रयास करें।",
         "closed": "दुर्भाग्य से, यह मतदान पहले ही समाप्त हो चुका है।",
         "is-self": "यह अनुरोध आपके द्वारा बनाया गया था :-) कृपया यह लिंक उस व्यक्ति को भेजें जिसे आप प्रतिनिधिमंडल के लिए पूछना चाहते हैं!",
-        "checking": "इस अनुरोध की जाँच की जा रही है…"
+        "checking": "इस अनुरोध की जाँच की जा रही है…",
+        "intro-weighted": "आपके waps एक हद तक दूसरे प्रतिभागियों के waps को भी नियंत्रित करेंगे ।",
+        "details_ranked": "इस मतदान में एक प्रतिभागी कई लोगों से अपना प्रतिनिधिमंडल बनने के लिए पूछ सकता हैं , वरीयता के आधार पर : उन्मे से स्वीकार करने वालों में से उत्तम दर्जे वाले लोगों के waps इस्तेमाल किए जाएंगे ।",
+        "details-weighted": "इस मतदान में एक प्रतिनिधिमंडल सब-or-nothing नहीं है: अन्य प्रतिभागी अपने प्रत्येक प्रतिनिधि को अपने wap का हिस्सा देता है, प्रतिशत में, और बाकी के लिए खुद को बोलता है। कई प्रतिनिधि एक बार में इसके कुछ हिस्सों को ले सकते हैं और वे आपके शेयर को बदल सकते हैं या किसी भी समय वापस ले सकते हैं।।"
     },
     "draftpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Edit Draft Poll page:",
@@ -580,14 +597,20 @@
         "older": "पुराना",
         "drafts": "मसौदा",
         "no-draft-polls-1": "वर्तमान में, आपके पास कोई पोल मसौदा नहीं है।",
-        "no-draft-polls-2": "एक नया मतदान शुरू करने या मसौदा तैयार करने के लिए, नीचे दिए गए '+' बटन पर क्लिक करें!"
+        "no-draft-polls-2": "एक नया मतदान शुरू करने या मसौदा तैयार करने के लिए, नीचे दिए गए '+' बटन पर क्लिक करें!",
+        "archived": "संग्रहीत किए हुए",
+        "no-archived-polls": "आपने किसी भी अंतिम मतदान को संग्रहीत नहीं किया है। संग्रहीत मतदान बचा कर रखे जाते है, जबकि अन्य समाप्त मतदान इस उपकरण से कुछ समय बाद उनके अंत के बाद हटा दिए जाते हैं।",
+        "archive": "इस मतदान को संग्रहीत करे",
+        "unarchive": "इस मतदान को असंग्रहित करे"
     },
     "news-title": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as titles of News items:",
         "delegation_accepted": "{{nickname}} ने आपका प्रतिनिधिमंडल अनुरोध स्वीकार कर लिया।",
         "delegation_declined": "दुर्भाग्य से, {{nickname}} ने आपके प्रतिनिधिमंडल के अनुरोध को अस्वीकार कर दिया।",
         "delegation_accepted_after_all": "{{nickname}} ने अब आपका प्रतिनिधिमंडल अनुरोध स्वीकार कर लिया है।",
-        "delegation_revoked": "दुर्भाग्य से, {{nickname}} ने आपके प्रतिनिधिमंडल के अनुरोध के लिए उसके पहले के समझौते को रद्द कर दिया।"
+        "delegation_revoked": "दुर्भाग्य से, {{nickname}} ने आपके प्रतिनिधिमंडल के अनुरोध के लिए उसके पहले के समझौते को रद्द कर दिया।",
+        "delegation_declined_cycle": "दुर्भाग्य से, {{nickname}} ने आपके प्रतिनिधिमंडल अनुरोध को अस्वीकार कर दिया क्योंकि यह एक चक्र बना देता ।",
+        "delegation_decline_self": "दुर्भाग्य से, {{nickname}} ने आपके प्रतिनिधिमंडल अनुरोध को अस्वीकार कर दिया क्योंकि वे पहले से ही आपके प्रतिनिधि हैं।।"
     },
     "news-body": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as bodies of News items:",
@@ -699,7 +722,13 @@
         "share-and-target": "(बजट का {{share}}%, लक्ष्य: {{target}})",
         "share-of-budget": "(बजट का {{share}}%)",
         "rounding-optimal": "इन गुणों वाले सभी ड्रॉ में से vodle वह ड्रॉ उपयोग करता है जो औसतन बजट का सबसे कम हिस्सा बिना खर्च के छोड़ता है।",
-        "rounding-simple": "इस मतदान में इतने अधिक विकल्प और राशियाँ हैं कि औसतन सबसे कम बिना खर्च छोड़ने वाला ड्रॉ गणना नहीं किया जा सका; vodle ने समान गुणों वाला एक सरल ड्रॉ उपयोग किया, जो अधिक राशि बिना खर्च छोड़ सकता है।"
+        "rounding-simple": "इस मतदान में इतने अधिक विकल्प और राशियाँ हैं कि औसतन सबसे कम बिना खर्च छोड़ने वाला ड्रॉ गणना नहीं किया जा सका; vodle ने समान गुणों वाला एक सरल ड्रॉ उपयोग किया, जो अधिक राशि बिना खर्च छोड़ सकता है।",
+        "delegate-different-info": "आपके waps को एक प्रतिनिधि द्वारा नियंत्रित किया जाता है।",
+        "wap-shared-out": "आपने अपने waps साझा किए है। <b>{{kept}}%</b> उनमें से प्रत्येक अभी भी आपका अपना है।।",
+        "wap-shared-out-varying": "आपने अलग-अलग विकल्पों के लिए अलग-अलग राशियों से अपने wap को साझा किया है: <b>{{least}}%</b> और<b>{{most}}%</b> के बीच, उनमें से प्रत्येक अभी भी आपका अपना है।",
+        "shared": "{{kept}}% मेरे",
+        "own-shares": "{{kept}}% मेरे , यहाँ सेट करे",
+        "add-option-expired": "नए विकल्प जोड़ने का समय समाप्त हो गया है।"
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -777,5 +806,10 @@
         "successor-go": "{{host}} पर जाएं",
         "predecessor-note": "इस सर्वर पर आने से पहले शुरू हुए मतदान अब भी <a href=\"{{url}}\">{{host}}</a> पर हैं।"
     },
-    "sync-pending": "आपके बदलाव सर्वर की ओर जा रहे हैं।"
+    "sync-pending": "आपके बदलाव सर्वर की ओर जा रहे हैं।",
+    "close": "बंद करे",
+    "nickname": "उपनाम",
+    "option": "विकल्प",
+    "status": "स्थिति",
+    "sync-stalled": "सर्वर के साथ समन्वयन रुक गया हैं | वोडल दोबारा कोशिश करता रहता हैं ।"
 }
