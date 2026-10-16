@@ -120,6 +120,33 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             }
           }
         </div>
+        <!-- ALLOWED AMOUNTS, in a budget poll (#201): -->
+        @if (p.has_budget) {
+          <ion-item>
+            <ion-input labelPlacement="floating"
+              [disabled]="!p.can_add_option()"
+              formControlName="option_amounts"
+              type="text" inputmode="text" maxlength="200"
+              data-vodle="new-option-amounts-input"
+              (ionBlur)="blur_option_amounts()">
+              <span slot="label" class="form-label">
+                <span [innerHtml]="'draftpoll.option-amounts-label'|translate:{unit: p.budget_unit}"></span>
+              </span>
+            </ion-input>
+          </ion-item>
+          <div class="amounts-hint">
+            <small [innerHtml]="'draftpoll.option-amounts-hint'|translate"></small>
+          </div>
+          <div class="validation-errors">
+            @for (validation of validation_messages_amounts; track validation) {
+              @if (formGroup.get('option_amounts').hasError(validation.type)) {
+                <div class="error-message"
+                  [innerHtml]="validation.message|translate:{total: p.amount_text(p.budget_total)}">
+                </div>
+              }
+            }
+          </div>
+        }
         <!-- BUTTONS: -->
         <ion-item lines="none" class="ion-text-right">
           <ion-buttons slot="end">

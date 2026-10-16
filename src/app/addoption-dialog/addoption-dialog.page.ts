@@ -34,6 +34,7 @@ import { environment } from '../../environments/environment';
 import { GlobalService } from "../global.service";
 import { PollPage } from '../poll/poll.module';  
 import { Poll, Option } from '../poll.service';
+import { amount_set, ANY_AMOUNT, format_amount_items, is_restricted, parse_amounts } from '../budget';
 
 @Component({
   selector: 'app-addoption-dialog',
@@ -83,6 +84,8 @@ export class AddoptionDialogPage implements OnInit {
     this.formGroup.addControl('option_name', new UntypedFormControl("", [Validators.required], [unique_name_validator$(of(this.p.oids.map(oid => this.p.options[oid].name)))]));
     this.formGroup.addControl('option_desc', new UntypedFormControl(""));
     this.formGroup.addControl('option_url', new UntypedFormControl("", Validators.pattern(this.G.urlRegex)));
+    // the amounts the option may receive, in a budget poll (#201):
+    this.formGroup.addControl('option_amounts', new UntypedFormControl(ANY_AMOUNT, this.amounts_validator.bind(this)));
 
     this.ready = true;
   }
@@ -92,6 +95,41 @@ export class AddoptionDialogPage implements OnInit {
   ionViewDidEnter() {
     setTimeout(() => this.focus_element.setFocus(), 100);
   }
+
+  private amounts_validator(control: AbstractControl): ValidationErrors | null {
+    if (!this.p?.has_budget) return null;
+    const parsed = parse_amounts(control?.value || '', this.p.budget_total);
+    if (parsed.error == 'syntax') return {amounts_syntax: true};
+    if (parsed.error == 'reversed') return {amounts_reversed: true};
+    if (parsed.error == 'too_large') return {amounts_too_large: true};
+    if (parsed.error == 'sequence') return {amounts_sequence: true};
+    if (parsed.error == 'too_many') return {amounts_too_many: true};
+    return null;
+  }
+
+  /** the canonical form of a restricting field, nothing for any amount */
+  private stored_amounts(text: string): string {
+    if (!this.p.has_budget) return '';
+    const total = this.p.budget_total, parsed = parse_amounts(text || '', total);
+    return !parsed.error && is_restricted(amount_set(text || '', total), total)
+      ? format_amount_items(parsed.items) : '';
+  }
+
+  /** an emptied field means any amount, and shows it */
+  blur_option_amounts() {
+    const c = this.formGroup.get('option_amounts'), parsed = parse_amounts(c.value || '');
+    if (!parsed.error) {
+      c.setValue(parsed.items.length ? format_amount_items(parsed.items) : ANY_AMOUNT);
+    }
+  }
+
+  validation_messages_amounts = [
+    { type: 'amounts_syntax', message: 'validation.option-amounts-syntax' },
+    { type: 'amounts_reversed', message: 'validation.option-amounts-reversed' },
+    { type: 'amounts_too_large', message: 'validation.option-amounts-too-large' },
+    { type: 'amounts_sequence', message: 'validation.option-amounts-sequence' },
+    { type: 'amounts_too_many', message: 'validation.option-amounts-too-many' },
+  ];
 
   isAddButtonDisabled(): boolean {
       // Combine both conditions here
@@ -104,7 +142,8 @@ export class AddoptionDialogPage implements OnInit {
       const name = this.formGroup.get('option_name').value,
             desc = this.formGroup.get('option_desc').value,
             url = this.formGroup.get('option_url').value,
-            o = new Option(this.G, this.p, null, name, desc, url);
+            amounts = this.stored_amounts(this.formGroup.get('option_amounts').value),
+            o = new Option(this.G, this.p, null, name, desc, url, amounts);
       LocalNotifications.schedule({
         notifications: [{
           title: this.translate.instant("addoption.notification-added-title"),

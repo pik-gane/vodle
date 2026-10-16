@@ -175,7 +175,21 @@
         "add-option-expired": "",
         "consent-lead": "在保存你的 wap 之前，请确认： ",
         "guest-banner": "你正以访客身份参加。你的 wap 和投票只保存在本设备上，直到你用自己的电子邮箱登录；届时 vodle 会把它们转移到你的账户。",
-        "guest-login-button": "登录"
+        "guest-login-button": "登录",
+        "type-share-budget": "各选项分配 {{total}} 中的份额",
+        "allowed-amounts": "允许的金额：{{amounts}}（或零）",
+        "amount-unspent": "{{amount}} 未被使用",
+        "rounding-heading": "这些金额是如何确定的？",
+        "rounding-explanation": "投票为每个选项确定一个目标金额（括号内）。由于有些选项只能获得特定金额，各项金额由随机抽签确定。抽签的概率经过设定，使每个选项平均而言恰好分得其目标金额，并且没有任何选项平均所得少于其目标金额向下取整到允许金额后的数额。抽签使用由投票结束时得出的随机数，因此每位参与者的设备都得到相同的结果。每个选项获得不超过其分配额的最大允许金额；差额不会转给其他选项。",
+        "rounding-unspent": "因此有 {{amount}} 未被使用。",
+        "rounding-all-spent": "本次投票用完了全部预算。",
+        "expected-amount": "<small>（预计：</small>{{amount}}<small>&nbsp;{{unit}}）</small>",
+        "received-amount": "<small>（获得 </small>{{amount}}<small>&nbsp;{{unit}}）</small>",
+        "option-receives": "<i>{{option}}</i> 获得 {{amount}}",
+        "share-and-target": "（预算的 {{share}}%，目标：{{target}}）",
+        "share-of-budget": "（预算的 {{share}}%）",
+        "rounding-optimal": "在具有这些性质的所有抽签中，vodle 采用平均未使用预算最少的那一种。",
+        "rounding-simple": "本次投票的选项和金额过多，无法计算平均未使用金额最少的抽签；vodle 采用了具有相同性质的更简单的抽签，未使用的金额可能更多。"
     },
     "invite-email": {
         "body-before-link": "",
@@ -425,7 +439,13 @@
         "db-pw-required": "",
         "poll-title-required": "",
         "poll-due-future": "",
-        "poll-url-valid": ""
+        "poll-url-valid": "",
+        "budget-total-positive": "请输入大于零的总预算。",
+        "option-amounts-syntax": "请用逗号分隔金额和范围，例如 3, 5-9, 12。小数用点号：2.5。",
+        "option-amounts-reversed": "范围应以较小的金额开头，例如 5-9。",
+        "option-amounts-too-large": "有金额超过了总预算（{{total}}）。",
+        "option-amounts-sequence": "请在“...”之前给出两个确定步长的金额，之后最多给出一个更大的金额，例如 10, 20, ..., 100。",
+        "option-amounts-too-many": "这代表超过 1000 个金额。请使用更大的步长或一个范围。"
     },
     "delrespond": {
         "no-change": "不要改变",
@@ -568,7 +588,8 @@
         "publish": "",
         "caution1": "",
         "_COMMENT_SECTION_": "",
-        "publishing": "正在启动投票"
+        "publishing": "正在启动投票",
+        "budget": "总预算："
     },
     "delete-all": {
         "_COMMENT_SECTION_": "",
@@ -709,7 +730,12 @@
         "import-options-header": "从文件中导入选项",
         "import-options-msg": "该文件必须是一个.csv文件。<br/><br/>每一行必须指向一个选项，格式为<br/>&nbsp;&nbsp;&nbsp; <i> \"名称\"</i><br/>或<br/>&nbsp;&nbsp;&nbsp; <i> \"名称\"、\"描述\"</i><br/>或<br/>&nbsp;&nbsp;&nbsp; <i> \"名称\"、\"描述\"、\"URL\"</i>",
         "use-example-from-db": "使用一个例子。",
-        "use-example-from-db-none": "(不要举例)"
+        "use-example-from-db-none": "(不要举例)",
+        "budget-total-label": "总预算",
+        "budget-unit-label": "单位",
+        "budget-unit-default": "欧元",
+        "option-amounts-label": "允许的金额",
+        "option-amounts-hint": "写法与打印时的页码范围相同，例如 <i>3, 5-9, 12</i>。<i>20-</i> 表示至少 20，<i>-50</i> 表示至多 50，<i>0-</i> 表示任意金额，<i>10, 20, ..., 100</i> 表示从 10 到 100 每隔 10。选项总是也可以一分不得。"
     },
     "logout": {
         "confirm-intro": "",

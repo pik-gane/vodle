@@ -272,7 +272,7 @@ export interface PollEventListener {
   onPollMetaUpdate?(pollId: string, meta: Record<string, any>): void;
   /** an option added to the running poll by any participant (a
    *  m.room.vodle.poll.option timeline event), the own ones included */
-  onOptionAdded?(pollId: string, optionId: string, option: {name: string; description: string; url: string}): void;
+  onOptionAdded?(pollId: string, optionId: string, option: {name: string; description: string; url: string; amounts?: string}): void;
   onDataChange?(): void;
   /** Fired once after setupPollEventHandlers has finished restoring the poll's
    *  existing ratings (voter room discovery + retroactive state scan).
@@ -370,7 +370,7 @@ export class MatrixService {
   private voterVidMap: Map<string, string> = new Map();
   // Cache of poll options indexed by pollId -> (optionId -> option data)
   // Built from timeline scan on first access, then maintained locally.
-  private optionCaches: Map<string, Map<string, { name: string; description: string; url: string }>> = new Map();
+  private optionCaches: Map<string, Map<string, { name: string; description: string; url: string; amounts?: string }>> = new Map();
   
   // Phase 4: Rating cache — pollId -> (voterId -> (optionId -> rating))
   // Aggregated from all voter rooms for a poll.
@@ -3399,7 +3399,7 @@ export class MatrixService {
    * getOptions use first-occurrence semantics, so the result is
    * deterministic and the option data remains immutable.
    */
-  async addOption(pollId: string, optionId: string, option: { name: string; description?: string; url?: string }): Promise<void> {
+  async addOption(pollId: string, optionId: string, option: { name: string; description?: string; url?: string; amounts?: string }): Promise<void> {
     this.logger?.entry("MatrixService.addOption", pollId, optionId);
     
     if (!this.client) {
@@ -3417,11 +3417,16 @@ export class MatrixService {
       throw new Error(`Option ${optionId} already exists in poll ${pollId} and cannot be modified`);
     }
     
-    const optionData = {
+    const optionData: { name: string; description: string; url: string; amounts?: string } = {
       name: option.name,
       description: option.description || '',
       url: option.url || ''
     };
+    // the amounts a budget poll's option may receive (#201); clients that
+    // predate them ignore the field
+    if (option.amounts) {
+      optionData.amounts = option.amounts;
+    }
     
     // Send as timeline event (immutable by Matrix protocol); the option's
     // texts are encrypted with the poll password, its id stays plain:
@@ -3455,13 +3460,13 @@ export class MatrixService {
    * Paginates backward through the room timeline to ensure older option
    * events (beyond the initial sync window) are included.
    */
-  private async ensureOptionCache(pollId: string): Promise<Map<string, { name: string; description: string; url: string }>> {
+  private async ensureOptionCache(pollId: string): Promise<Map<string, { name: string; description: string; url: string; amounts?: string }>> {
     const cached = this.optionCaches.get(pollId);
     if (cached) {
       return cached;
     }
     
-    const options = new Map<string, { name: string; description: string; url: string }>();
+    const options = new Map<string, { name: string; description: string; url: string; amounts?: string }>();
     
     // Gracefully handle missing client — return empty map without caching
     if (!this.client) {
@@ -3489,7 +3494,8 @@ export class MatrixService {
               options.set(oid, {
                 name: fields.name,
                 description: fields.description || '',
-                url: fields.url || ''
+                url: fields.url || '',
+                ...(typeof fields.amounts === 'string' && fields.amounts ? {amounts: fields.amounts} : {})
               });
             }
           }
@@ -3516,7 +3522,7 @@ export class MatrixService {
    * Uses a local cache built from the timeline on first access.
    * Async because it may need to resolve the poll room on first access.
    */
-  async getOption(pollId: string, optionId: string): Promise<{ name: string; description: string; url: string } | null> {
+  async getOption(pollId: string, optionId: string): Promise<{ name: string; description: string; url: string; amounts?: string } | null> {
     this.logger?.entry("MatrixService.getOption", pollId, optionId);
     
     const options = await this.ensureOptionCache(pollId);
@@ -3528,7 +3534,7 @@ export class MatrixService {
    * Uses a local cache built from the timeline on first access.
    * Async because it may need to resolve the poll room on first access.
    */
-  async getOptions(pollId: string): Promise<Map<string, { name: string; description: string; url: string }>> {
+  async getOptions(pollId: string): Promise<Map<string, { name: string; description: string; url: string; amounts?: string }>> {
     this.logger?.entry("MatrixService.getOptions", pollId);
     return await this.ensureOptionCache(pollId);
   }
@@ -5963,7 +5969,8 @@ export class MatrixService {
         if (!fields) {
           return;
         }
-        options.set(optionId, {name: fields.name || '', description: fields.description || '', url: fields.url || ''});
+        options.set(optionId, {name: fields.name || '', description: fields.description || '', url: fields.url || '',
+                               ...(typeof fields.amounts === 'string' && fields.amounts ? {amounts: fields.amounts} : {})});
       }
       const option = options.get(optionId);
       const listeners = this.pollEventListeners.get(pollId);

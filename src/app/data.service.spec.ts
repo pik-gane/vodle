@@ -2972,6 +2972,14 @@ describe('options added to a running poll on the Matrix backend (#324)', () => {
     expect(svc.pids.has('p1')).toBeTrue();
   });
 
+  it("sends a budget poll's option with the amounts it may receive (#201)", async () => {
+    svc.setp('p1', 'option.o7.oid', 'o7');
+    svc.setp('p1', 'option.o7.name', 'Seven');
+    svc.setp('p1', 'option.o7.amounts', '3, 5-9');
+    await new Promise(resolve => setTimeout(resolve, 5));
+    expect(matrix.addOption).toHaveBeenCalledOnceWith('p1', 'o7', {name: 'Seven', description: '', url: '', amounts: '3, 5-9'});
+  });
+
   it('does not send an option that never got a name', async () => {
     svc.setp('p1', 'option.o8.oid', 'o8');
     await new Promise(resolve => setTimeout(resolve, 5));
@@ -4220,5 +4228,105 @@ describe('deleting all of a person\'s data (#327)', () => {
     poll_matrix.syncIsStalled = true;
     svc.replication_stalled = {};
     expect(svc.sync_is_stalled).toBeTrue();
+  });
+});
+
+describe('times shown with their time zone', () => {
+  // Mull and Firefox with privacy.resistFingerprinting report UTC: a poll
+  // ending at 22:03 in Berlin reads "20:03" there, and only the zone's name
+  // tells the reader whose clock that is
+  let svc: any;
+
+  beforeEach(() => {
+    svc = new (DataService as any)(null, null, null, null, null, null, null);
+    svc.translate = { getCurrentLang: () => 'en' };
+  });
+
+  it('names the zone in every formatted date', () => {
+    const date = new Date(2026, 9, 15, 22, 3);
+    const zone = svc.time_zone_name(date);
+    expect(zone).withContext('the browser names some zone').not.toBe('');
+    expect(svc.format_date(date)).toContain(zone);
+  });
+
+  it('formats nothing when there is no date', () => {
+    expect(svc.format_date(null)).toBe('');
+  });
+
+  it('gives an empty name rather than failing on a language the browser rejects', () => {
+    svc.translate = { getCurrentLang: () => 'not a language tag!' };
+    expect(svc.time_zone_name(new Date())).toBe('');
+  });
+});
+
+// Start-up used to ask the browser for notification permission outright,
+// before vodle had explained anything and before any click; Firefox refuses
+// that and threw an uncaught error on every start in Mull. The state is read
+// at start-up now, and only the "yes" of vodle's own dialog asks.
+describe('DataService.init_notifications', () => {
+  const noop = () => {};
+  const L = { entry: noop, exit: noop, trace: noop, debug: noop, info: noop, warn: noop, error: noop };
+  let svc: any, asked: number, presented: any[], previous: PropertyDescriptor | undefined;
+
+  const browser_says = (permission: string, answer = 'granted') => {
+    Object.defineProperty(window, 'Notification', {configurable: true, writable: true, value: {
+      permission,
+      requestPermission: () => { asked++; return Promise.resolve(answer); },
+    }});
+  };
+  const settle = async () => { for (let i = 0; i < 10; i++) { await Promise.resolve(); } };
+
+  beforeEach(() => {
+    previous = Object.getOwnPropertyDescriptor(window, 'Notification');
+    asked = 0; presented = [];
+    svc = Object.create(DataService.prototype);
+    svc.G = { L };
+    svc.translate = { instant: (key: string) => key };
+    svc.alertCtrl = { create: (options: any) => { presented.push(options); return Promise.resolve({ present: () => Promise.resolve() }); } };
+  });
+
+  afterEach(() => {
+    if (previous) { Object.defineProperty(window, 'Notification', previous); }
+    else { delete (window as any).Notification; }
+  });
+
+  it('asks nobody at start-up', async () => {
+    browser_says('default');
+    svc.init_notifications(false);
+    await settle();
+    expect(asked).toBe(0);
+    expect(presented.length).toBe(0);
+    expect(svc.can_notify).toBeFalse();
+  });
+
+  it('asks the browser only from the yes of its own dialog', async () => {
+    browser_says('default', 'granted');
+    svc.init_notifications(true);
+    await settle();
+    expect(presented.length).toBe(1);
+    expect(asked).withContext('not before the dialog is answered').toBe(0);
+    presented[0].buttons.find((b: any) => b.role == 'ok').handler();
+    await settle();
+    expect(asked).toBe(1);
+    expect(svc.can_notify).toBeTrue();
+  });
+
+  it('does not ask when the answer was no', async () => {
+    browser_says('default');
+    svc.init_notifications(true);
+    await settle();
+    presented[0].buttons.find((b: any) => b.role == 'cancel').handler();
+    await settle();
+    expect(asked).toBe(0);
+    expect(svc.can_notify).toBeFalse();
+  });
+
+  it('needs no question once the browser has granted it', async () => {
+    browser_says('granted');
+    svc.init_notifications(true);
+    await settle();
+    expect(presented.length).toBe(0);
+    expect(asked).toBe(0);
+    expect(svc.can_notify).toBeTrue();
   });
 });

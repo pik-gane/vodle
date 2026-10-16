@@ -206,6 +206,41 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
             }
           </div>
         }
+        <!-- Budget of a share poll (#201): the total and its unit, in one row -->
+        @if (stage>2 && show_details && formGroup.get('poll_type').value=='share') {
+          <ion-item class="budget" data-vodle="budget-item">
+            <ion-input labelPlacement="floating" class="budget-total"
+              id="input_budget_total"
+              formControlName="budget_total"
+              type="number" inputmode="decimal" min="0" step="any" required tabindex="0"
+              data-vodle="budget-total-input"
+              (ionInput)="set_budget_total()" debounce="100">
+              <span slot="label" class="form-label"
+                [innerHtml]="'draftpoll.budget-total-label'|translate">
+              </span>
+            </ion-input>
+            <ion-input labelPlacement="floating" class="budget-unit"
+              id="input_budget_unit"
+              formControlName="budget_unit"
+              type="text" maxlength="40" tabindex="0"
+              [placeholder]="'draftpoll.budget-unit-default'|translate"
+              data-vodle="budget-unit-input"
+              (ionInput)="set_budget_unit()" debounce="100">
+              <span slot="label" class="form-label"
+                [innerHtml]="'draftpoll.budget-unit-label'|translate">
+              </span>
+            </ion-input>
+          </ion-item>
+          <div class="validation-errors">
+            @for (validation of validation_messages.budget_total; track validation) {
+              @if (formGroup.get('budget_total').hasError(validation.type)) {
+                <div class="error-message"
+                  [innerHtml]="validation.message|translate">
+                </div>
+              }
+            }
+          </div>
+        }
         <!-- Due type: -->
         @if (stage>3) {
           <ion-item [color]="stage==4?'warning':''"><!--stage 4-->
@@ -243,14 +278,18 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                 </span>
               </ion-label>
               <ion-datetime-button datetime="poll_due_custom"></ion-datetime-button>
+              <!-- the picker shows no zone, and a browser can report a zone
+                   that is not the personʼs (Mull reports UTC) -->
+              <small class="time-zone" slot="end" data-vodle="due-time-zone"
+                [innerText]="G.D.time_zone_name(pd.due_custom || undefined)"></small>
               <ion-modal [keepContentsMounted]="true">
                 <ng-template>
                   <ion-datetime
                     id="poll_due_custom"
                     tabindex="0"
                     formControlName="poll_due_custom"
-                    [min]="G.P.ref_date.toISOString()"
-                    [max]="get_max_due().toISOString()"
+                    [min]="local_iso(G.P.ref_date)"
+                    [max]="local_iso(get_max_due())"
                     (ionClick)="G.P.update_ref_date();"
                     (ionChange)="set_poll_due_custom();changed_poll_due_custom()"
                     [cancelText]="'cancel'|translate"
@@ -451,6 +490,35 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
                         && (formGroup.get('option_url'+i).dirty || formGroup.get('option_url'+i).touched)) {
                         <div class="error-message"
                           [innerHtml]="validation.message|translate">
+                        </div>
+                      }
+                    }
+                  </div>
+                }
+                <!-- Allowed amounts, in a share poll (#201): -->
+                @if (option_stage>1 && expanded[i] && formGroup.get('poll_type').value=='share') {
+                  <ion-item>
+                    <ion-input labelPlacement="floating"
+                      [id]="'input_option_amounts'+i"
+                      [formControlName]="'option_amounts'+i"
+                      type="text" inputmode="text" tabindex="0" maxlength="200"
+                      data-vodle="option-amounts-input" [attr.data-vodle-option-index]="i"
+                      (ionInput)="set_option_amounts(i)" debounce="100"
+                      (keydown)="option_amounts_onKeydown($event, i)"
+                      (ionBlur)="blur_option_amounts(i)">
+                      <span slot="label" class="form-label"
+                        [innerHtml]="'draftpoll.option-amounts-label'|translate:{unit: formGroup.get('budget_unit').value}">
+                      </span>
+                    </ion-input>
+                  </ion-item>
+                  <div class="amounts-hint">
+                    <small [innerHtml]="'draftpoll.option-amounts-hint'|translate"></small>
+                  </div>
+                  <div class="validation-errors">
+                    @for (validation of validation_messages.option_amounts; track validation) {
+                      @if (formGroup.get('option_amounts'+i).hasError(validation.type)) {
+                        <div class="error-message"
+                          [innerHtml]="validation.message|translate:{total: budget_text()}">
                         </div>
                       }
                     }
