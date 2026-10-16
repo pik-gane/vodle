@@ -559,6 +559,8 @@ export class DraftpollPage implements OnInit {
     if (parsed.error == 'syntax') return {amounts_syntax: true};
     if (parsed.error == 'reversed') return {amounts_reversed: true};
     if (parsed.error == 'too_large') return {amounts_too_large: true};
+    if (parsed.error == 'sequence') return {amounts_sequence: true};
+    if (parsed.error == 'too_many') return {amounts_too_many: true};
     return null;
   }
 
@@ -1089,6 +1091,8 @@ export class DraftpollPage implements OnInit {
       { type: 'amounts_syntax', message: 'validation.option-amounts-syntax' },
       { type: 'amounts_reversed', message: 'validation.option-amounts-reversed' },
       { type: 'amounts_too_large', message: 'validation.option-amounts-too-large' },
+      { type: 'amounts_sequence', message: 'validation.option-amounts-sequence' },
+      { type: 'amounts_too_many', message: 'validation.option-amounts-too-many' },
     ],
   }
 

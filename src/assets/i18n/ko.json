@@ -297,7 +297,7 @@
         "budget-unit-label": "단위",
         "budget-unit-default": "유로",
         "option-amounts-label": "허용 금액",
-        "option-amounts-hint": "인쇄할 때의 페이지 범위처럼 씁니다. 예: <i>3, 5-9, 12</i>. <i>20-</i>은 20 이상, <i>-50</i>은 50 이하, <i>0-</i>은 모든 금액을 뜻합니다. 선택지는 언제나 아무것도 받지 않을 수도 있습니다."
+        "option-amounts-hint": "인쇄할 때의 페이지 범위처럼 씁니다. 예: <i>3, 5-9, 12</i>. <i>20-</i>은 20 이상, <i>-50</i>은 50 이하, <i>0-</i>은 모든 금액, <i>10, 20, ..., 100</i>은 10부터 100까지 10 간격을 뜻합니다. 선택지는 언제나 아무것도 받지 않을 수도 있습니다."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -690,14 +690,16 @@
         "allowed-amounts": "허용 금액: {{amounts}} (또는 없음)",
         "amount-unspent": "사용되지 않은 금액: {{amount}}",
         "rounding-heading": "이 금액들은 어떻게 정해졌나요?",
-        "rounding-explanation": "투표 결과는 각 선택지의 목표 금액(괄호 안)을 정합니다. 일부 선택지는 특정 금액만 받을 수 있으므로, 무작위 추첨이 예산의 일부를 선택지들 사이에서 옮겨 각 배정액을 허용 금액으로 올리거나 내렸습니다. 추첨 확률은 평균적으로 각 선택지에 정확히 목표 금액이 배정되도록 정해집니다. 추첨은 투표 종료에서 얻은 난수를 사용하므로 모든 참여자의 기기가 같은 결과를 얻습니다. 각 선택지는 배정액을 넘지 않는 가장 큰 허용 금액을 받으며, 그 차액은 다른 선택지로 넘어가지 않습니다.",
+        "rounding-explanation": "투표 결과는 각 선택지의 목표 금액(괄호 안)을 정합니다. 일부 선택지는 특정 금액만 받을 수 있으므로 금액은 무작위 추첨으로 정해졌습니다. 추첨 확률은 평균적으로 각 선택지에 정확히 목표 금액이 배정되고, 어떤 선택지도 평균적으로 목표 금액을 허용 금액으로 내림한 값보다 적게 받지 않도록 정해집니다. 추첨은 투표 종료에서 얻은 난수를 사용하므로 모든 참여자의 기기가 같은 결과를 얻습니다. 각 선택지는 배정액을 넘지 않는 가장 큰 허용 금액을 받으며, 그 차액은 다른 선택지로 넘어가지 않습니다.",
         "rounding-unspent": "따라서 사용되지 않은 금액은 {{amount}}입니다.",
         "rounding-all-spent": "이 투표에서는 예산 전체가 사용됩니다.",
         "expected-amount": "<small> (예상: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (수령액: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i>: {{amount}}",
         "share-and-target": "(예산의 {{share}}%, 목표: {{target}})",
-        "share-of-budget": "(예산의 {{share}}%)"
+        "share-of-budget": "(예산의 {{share}}%)",
+        "rounding-optimal": "vodle은 이러한 성질을 가진 모든 추첨 중에서 평균적으로 사용되지 않는 예산이 가장 적은 추첨을 사용합니다.",
+        "rounding-simple": "이 투표는 선택지와 금액이 너무 많아 평균적으로 사용되지 않는 금액이 가장 적은 추첨을 계산할 수 없습니다. vodle은 같은 성질을 가진 더 간단한 추첨을 사용했으며, 이 경우 사용되지 않는 금액이 더 많을 수 있습니다."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -765,7 +767,9 @@
         "budget-total-positive": "0보다 큰 총 예산을 입력하세요.",
         "option-amounts-syntax": "금액과 범위를 쉼표로 구분해 입력하세요. 예: 3, 5-9, 12. 소수는 마침표로 씁니다: 2.5.",
         "option-amounts-reversed": "범위는 작은 금액부터 씁니다. 예: 5-9.",
-        "option-amounts-too-large": "금액이 총 예산을 초과합니다 ({{total}})."
+        "option-amounts-too-large": "금액이 총 예산을 초과합니다 ({{total}}).",
+        "option-amounts-sequence": "“...” 앞에는 간격을 정하는 두 금액을, 뒤에는 더 큰 금액을 하나까지만 쓰세요. 예: 10, 20, ..., 100.",
+        "option-amounts-too-many": "1000개가 넘는 금액이 됩니다. 더 큰 간격이나 범위를 사용하세요."
     },
     "handover": {
         "successor-title": "새 투표는 다른 곳에서 시작합니다",

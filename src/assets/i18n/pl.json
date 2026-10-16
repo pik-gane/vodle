@@ -297,7 +297,7 @@
         "budget-unit-label": "Jednostka",
         "budget-unit-default": "euro",
         "option-amounts-label": "Dozwolone kwoty",
-        "option-amounts-hint": "Zapisuje się je jak zakresy stron przy drukowaniu, np. <i>3, 5-9, 12</i>. <i>20-</i> oznacza co najmniej 20, <i>-50</i> najwyżej 50, <i>0-</i> dowolną kwotę. Opcja zawsze może też nie otrzymać nic."
+        "option-amounts-hint": "Zapisuje się je jak zakresy stron przy drukowaniu, np. <i>3, 5-9, 12</i>. <i>20-</i> oznacza co najmniej 20, <i>-50</i> najwyżej 50, <i>0-</i> dowolną kwotę, a <i>10, 20, ..., 100</i> co 10 od 10 do 100. Opcja zawsze może też nie otrzymać nic."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -690,14 +690,16 @@
         "allowed-amounts": "Dozwolone kwoty: {{amounts}} (lub nic)",
         "amount-unspent": "{{amount}} pozostaje niewydane",
         "rounding-heading": "Jak ustalono te kwoty?",
-        "rounding-explanation": "Głosy wyznaczają dla każdej opcji kwotę docelową (w nawiasach). Ponieważ niektóre opcje mogą otrzymać tylko określone kwoty, losowanie przesunęło części budżetu między opcjami, zaokrąglając ich przydziały w górę lub w dół do dozwolonych kwot. Prawdopodobieństwa losowania dobrano tak, aby średnio każdej opcji przydzielono dokładnie jej kwotę docelową. Losowanie korzysta z liczby losowej wyprowadzonej z zamknięcia głosowania, dzięki czemu urządzenie każdego uczestnika otrzymuje ten sam wynik. Każda opcja otrzymuje największą dozwoloną kwotę nieprzekraczającą jej przydziału; różnica nie jest przekazywana innym opcjom.",
+        "rounding-explanation": "Głosy wyznaczają dla każdej opcji kwotę docelową (w nawiasach). Ponieważ niektóre opcje mogą otrzymać tylko określone kwoty, kwoty ustalono w drodze losowania. Jego prawdopodobieństwa dobrano tak, aby średnio każdej opcji przydzielono dokładnie jej kwotę docelową i aby żadna opcja nie otrzymała średnio mniej niż swoją kwotę docelową zaokrągloną w dół do dozwolonej kwoty. Losowanie korzysta z liczby losowej wyprowadzonej z zamknięcia głosowania, dzięki czemu urządzenie każdego uczestnika otrzymuje ten sam wynik. Każda opcja otrzymuje największą dozwoloną kwotę nieprzekraczającą jej przydziału; różnica nie jest przekazywana innym opcjom.",
         "rounding-unspent": "W rezultacie {{amount}} pozostaje niewydane.",
         "rounding-all-spent": "W tym głosowaniu wydano cały budżet.",
         "expected-amount": "<small> (oczekiwane: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (otrzymuje </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i> otrzymuje {{amount}}",
         "share-and-target": "({{share}}% budżetu, cel: {{target}})",
-        "share-of-budget": "({{share}}% budżetu)"
+        "share-of-budget": "({{share}}% budżetu)",
+        "rounding-optimal": "Spośród wszystkich losowań o tych właściwościach vodle stosuje to, które średnio pozostawia niewydaną najmniejszą część budżetu.",
+        "rounding-simple": "To głosowanie ma zbyt wiele opcji i kwot, aby obliczyć losowanie pozostawiające średnio najmniej niewydanych środków; vodle zastosowało prostsze losowanie o tych samych właściwościach, które może pozostawić więcej niewydanych środków."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -765,7 +767,9 @@
         "budget-total-positive": "Podaj budżet całkowity większy od zera.",
         "option-amounts-syntax": "Wymień kwoty i zakresy oddzielone przecinkami, np. 3, 5-9, 12. Ułamki zapisuj z kropką: 2.5.",
         "option-amounts-reversed": "Zakres zaczyna się od mniejszej kwoty, np. 5-9.",
-        "option-amounts-too-large": "Kwota przekracza budżet całkowity ({{total}})."
+        "option-amounts-too-large": "Kwota przekracza budżet całkowity ({{total}}).",
+        "option-amounts-sequence": "Przed „...” podaj dwie kwoty wyznaczające krok, a po nim najwyżej jedną większą kwotę, np. 10, 20, ..., 100.",
+        "option-amounts-too-many": "To oznacza ponad 1000 kwot. Użyj większego kroku lub zakresu."
     },
     "handover": {
         "successor-title": "Nowe ankiety zakłada się gdzie indziej",

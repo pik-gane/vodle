@@ -292,7 +292,7 @@
         "budget-unit-label": "Yksikkö",
         "budget-unit-default": "euroa",
         "option-amounts-label": "Sallitut summat",
-        "option-amounts-hint": "Kirjoitetaan kuten sivualueet tulostettaessa, esim. <i>3, 5-9, 12</i>. <i>20-</i> tarkoittaa vähintään 20, <i>-50</i> enintään 50 ja <i>0-</i> mitä tahansa summaa. Vaihtoehto voi aina myös jäädä ilman."
+        "option-amounts-hint": "Kirjoitetaan kuten sivualueet tulostettaessa, esim. <i>3, 5-9, 12</i>. <i>20-</i> tarkoittaa vähintään 20, <i>-50</i> enintään 50, <i>0-</i> mitä tahansa summaa ja <i>10, 20, ..., 100</i> kymmenen välein 10:stä 100:aan. Vaihtoehto voi aina myös jäädä ilman."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -685,14 +685,16 @@
         "allowed-amounts": "Sallitut summat: {{amounts}} (tai ei mitään)",
         "amount-unspent": "{{amount}} jää käyttämättä",
         "rounding-heading": "Miten nämä summat määräytyivät?",
-        "rounding-explanation": "Äänet määräävät jokaiselle vaihtoehdolle tavoitesumman (suluissa). Koska jotkin vaihtoehdot voivat saada vain tiettyjä summia, satunnaisarvonta siirsi osia budjetista vaihtoehtojen välillä ja pyöristi niiden osuudet ylös- tai alaspäin sallittuihin summiin. Arvonnan todennäköisyydet on valittu niin, että keskimäärin jokaiselle vaihtoehdolle osoitetaan täsmälleen sen tavoitesumma. Arvonta käyttää äänestyksen päättymisestä johdettua satunnaislukua, joten jokaisen osallistujan laite saa saman tuloksen. Kukin vaihtoehto saa suurimman sallitun summan, joka ei ylitä sille osoitettua osuutta; erotusta ei siirretä muille vaihtoehdoille.",
+        "rounding-explanation": "Äänet määräävät jokaiselle vaihtoehdolle tavoitesumman (suluissa). Koska jotkin vaihtoehdot voivat saada vain tiettyjä summia, summat määritettiin satunnaisarvonnalla. Sen todennäköisyydet on valittu niin, että keskimäärin jokaiselle vaihtoehdolle osoitetaan täsmälleen sen tavoitesumma eikä mikään vaihtoehto saa keskimäärin vähemmän kuin tavoitesummansa alaspäin sallittuun summaan pyöristettynä. Arvonta käyttää äänestyksen päättymisestä johdettua satunnaislukua, joten jokaisen osallistujan laite saa saman tuloksen. Kukin vaihtoehto saa suurimman sallitun summan, joka ei ylitä sille osoitettua osuutta; erotusta ei siirretä muille vaihtoehdoille.",
         "rounding-unspent": "Näin ollen {{amount}} jää käyttämättä.",
         "rounding-all-spent": "Tässä äänestyksessä koko budjetti käytetään.",
         "expected-amount": "<small> (odotettu: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (saa </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i> saa {{amount}}",
         "share-and-target": "({{share}} % budjetista, tavoite: {{target}})",
-        "share-of-budget": "({{share}} % budjetista)"
+        "share-of-budget": "({{share}} % budjetista)",
+        "rounding-optimal": "Kaikista arvonnoista, joilla on nämä ominaisuudet, vodle käyttää sitä, joka jättää keskimäärin vähiten budjetista käyttämättä.",
+        "rounding-simple": "Tässä äänestyksessä on liian monta vaihtoehtoa ja summaa sen arvonnan laskemiseen, joka jättää keskimäärin vähiten käyttämättä; vodle käytti yksinkertaisempaa arvontaa, jolla on samat ominaisuudet mutta joka voi jättää enemmän käyttämättä."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -760,7 +762,9 @@
         "budget-total-positive": "Anna nollaa suurempi kokonaisbudjetti.",
         "option-amounts-syntax": "Luettele summat ja alueet pilkuilla erotettuina, esim. 3, 5-9, 12. Desimaalit pisteellä: 2.5.",
         "option-amounts-reversed": "Alue alkaa pienemmästä summasta, esim. 5-9.",
-        "option-amounts-too-large": "Summa ylittää kokonaisbudjetin ({{total}})."
+        "option-amounts-too-large": "Summa ylittää kokonaisbudjetin ({{total}}).",
+        "option-amounts-sequence": "Anna ennen merkintää ”...” kaksi summaa, jotka määräävät askeleen, ja sen jälkeen enintään yksi suurempi summa, esim. 10, 20, ..., 100.",
+        "option-amounts-too-many": "Tämä tarkoittaa yli 1000 summaa. Käytä suurempaa askelta tai aluetta."
     },
     "handover": {
         "successor-title": "Uudet kyselyt aloitetaan muualla",

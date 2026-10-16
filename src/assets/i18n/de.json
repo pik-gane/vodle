@@ -318,7 +318,7 @@
         "budget-unit-label": "Einheit",
         "budget-unit-default": "Euro",
         "option-amounts-label": "Zulässige Beträge",
-        "option-amounts-hint": "Wie Seitenbereiche beim Drucken, z. B. <i>3, 5-9, 12</i>. <i>20-</i> bedeutet mindestens 20, <i>-50</i> höchstens 50, <i>0-</i> jeden Betrag. Eine Option kann immer auch nichts erhalten."
+        "option-amounts-hint": "Wie Seitenbereiche beim Drucken, z. B. <i>3, 5-9, 12</i>. <i>20-</i> bedeutet mindestens 20, <i>-50</i> höchstens 50, <i>0-</i> jeden Betrag und <i>10, 20, ..., 100</i> alle Zehner von 10 bis 100. Eine Option kann immer auch nichts erhalten."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -731,14 +731,16 @@
         "allowed-amounts": "Zulässige Beträge: {{amounts}} (oder nichts)",
         "amount-unspent": "{{amount}} bleiben ungenutzt",
         "rounding-heading": "Wie kamen diese Beträge zustande?",
-        "rounding-explanation": "Die Stimmen bestimmen für jede Option einen Zielbetrag (in Klammern). Da manche Optionen nur bestimmte Beträge erhalten dürfen, hat eine Zufallsziehung Teile des Budgets zwischen Optionen verschoben und deren Zuteilungen auf zulässige Beträge auf- oder abgerundet. Die Wahrscheinlichkeiten der Ziehung sind so gewählt, dass jeder Option im Mittel genau ihr Zielbetrag zugeteilt wird. Die Ziehung verwendet eine Zufallszahl, die aus dem Abschluss der Abstimmung abgeleitet wird, sodass die Geräte aller Teilnehmenden dasselbe Ergebnis erhalten. Jede Option erhält den größten zulässigen Betrag, der ihre Zuteilung nicht übersteigt; eine Differenz wird nicht an andere Optionen weitergegeben.",
+        "rounding-explanation": "Die Stimmen bestimmen für jede Option einen Zielbetrag (in Klammern). Da manche Optionen nur bestimmte Beträge erhalten dürfen, wurden die Beträge durch eine Zufallsziehung bestimmt. Ihre Wahrscheinlichkeiten sind so gewählt, dass jeder Option im Mittel genau ihr Zielbetrag zugeteilt wird und keine Option im Mittel weniger erhält als ihren auf einen zulässigen Betrag abgerundeten Zielbetrag. Die Ziehung verwendet eine Zufallszahl, die aus dem Abschluss der Abstimmung abgeleitet wird, sodass die Geräte aller Teilnehmenden dasselbe Ergebnis erhalten. Jede Option erhält den größten zulässigen Betrag, der ihre Zuteilung nicht übersteigt; eine Differenz wird nicht an andere Optionen weitergegeben.",
         "rounding-unspent": "Dadurch bleiben {{amount}} ungenutzt.",
         "rounding-all-spent": "In dieser Abstimmung wird das gesamte Budget verwendet.",
         "expected-amount": "<small> (erwartet: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (erhält </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i> erhält {{amount}}",
         "share-and-target": "({{share}}% des Budgets, Zielbetrag: {{target}})",
-        "share-of-budget": "({{share}}% des Budgets)"
+        "share-of-budget": "({{share}}% des Budgets)",
+        "rounding-optimal": "Unter allen Ziehungen mit diesen Eigenschaften verwendet vodle diejenige, die im Mittel am wenigsten vom Budget ungenutzt lässt.",
+        "rounding-simple": "Diese Abstimmung hat zu viele Optionen und Beträge, um die Ziehung zu berechnen, die im Mittel am wenigsten ungenutzt lässt; vodle hat eine einfachere Ziehung mit denselben Eigenschaften verwendet, die mehr ungenutzt lassen kann."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -806,6 +808,8 @@
         "budget-total-positive": "Bitte gib ein Gesamtbudget größer als null ein.",
         "option-amounts-syntax": "Bitte gib Beträge und Bereiche durch Kommas getrennt an, z. B. 3, 5-9, 12. Dezimalzahlen mit Punkt: 2.5.",
         "option-amounts-reversed": "Ein Bereich beginnt mit dem kleineren Betrag, z. B. 5-9.",
-        "option-amounts-too-large": "Ein Betrag übersteigt das Gesamtbudget ({{total}})."
+        "option-amounts-too-large": "Ein Betrag übersteigt das Gesamtbudget ({{total}}).",
+        "option-amounts-sequence": "Vor „...“ zwei Beträge angeben, die die Schrittweite festlegen, danach höchstens einen größeren Betrag, z. B. 10, 20, ..., 100.",
+        "option-amounts-too-many": "Das sind mehr als 1000 Beträge. Bitte eine größere Schrittweite oder einen Bereich verwenden."
     }
 }

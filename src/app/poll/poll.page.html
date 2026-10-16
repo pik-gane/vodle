@@ -493,6 +493,7 @@ contents are being fetched -->
         <p>
           <b [innerHtml]="'poll.rounding-heading'|translate"></b><span>&nbsp;</span>
           <span [innerHtml]="'poll.rounding-explanation'|translate"></span><span>&nbsp;</span>
+          <span [innerHtml]="(p.allocation_method == 'pairwise' ? 'poll.rounding-simple' : 'poll.rounding-optimal')|translate"></span><span>&nbsp;</span>
           <span [innerHtml]="(p.unspent_amount > 0 ? 'poll.rounding-unspent' : 'poll.rounding-all-spent')|translate:{amount: p.amount_text(p.unspent_amount)}"></span>
         </p>
       </ion-item>

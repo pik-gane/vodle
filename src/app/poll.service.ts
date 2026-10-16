@@ -22,7 +22,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
-import { allocate, amount_set, amount_set_t, describe_amounts, format_amount, is_restricted } from './budget';
+import { allocate_budget, allocation_method_t, amount_set, amount_set_t, describe_amounts, format_amount, is_restricted } from './budget';
 
 /* TODO:
 - add state, allow only certain state transitions, allow attribute change only in draft state
@@ -496,19 +496,27 @@ export class Poll {
     return this.type == 'winner' || this.has_amount_constraints;
   }
 
-  /** the amounts paid to the options at the end, by oid (stored only in the
-   *  user's own database, like the winner), or null before that */
-  get allocation(): Record<string, number> | null {
+  /** the result of the draw at the end (stored only in the user's own
+   *  database, like the winner): the amounts paid, by oid, and how they were
+   *  found (budget.ts: allocate_budget) */
+  private get stored_allocation(): { paid: Record<string, number>; method: allocation_method_t } | null {
     const str = this.G.D.getp(this._pid, 'allocation');
     if (!str) { return null; }
     try {
-      return JSON.parse(str);
+      const value = JSON.parse(str);
+      return value && value.paid ? value : null;
     } catch (error) {
       return null;
     }
   }
-  set allocation(value: Record<string, number> | null) {
-    this.G.D.setp(this._pid, 'allocation', value ? JSON.stringify(value) : '');
+
+  /** the amounts paid to the options at the end, by oid, or null before */
+  get allocation(): Record<string, number> | null {
+    return this.stored_allocation?.paid || null;
+  }
+
+  get allocation_method(): allocation_method_t | null {
+    return this.stored_allocation?.method || null;
   }
 
   /** the target amount of an option: its share of the total budget */
@@ -2339,9 +2347,10 @@ export class Poll {
 
   /** Divide a budget poll's total among its options (#201): every option's
    *  target is its share of the total, rounded to an amount it may receive
-   *  by a draw (budget.ts: allocate) when some option may receive only
-   *  certain amounts. The draw's random numbers come from final_rand, so
-   *  every device that ends the poll gets the same amounts. */
+   *  by a draw (budget.ts: allocate_budget) when some option may receive
+   *  only certain amounts. The draw's random numbers come from final_rand,
+   *  and the lottery it draws from is computed alike everywhere, so every
+   *  device that ends the poll gets the same amounts. */
   make_allocation() {
     if (!this.has_budget) { return; }
     // in the order of the tally, which every device agrees on; an option the
@@ -2351,20 +2360,20 @@ export class Poll {
           oids = [...ordered, ...this.oids.filter(oid => !ordered.includes(oid)).sort()];
     const targets = oids.map(oid => this.target_amount(oid)),
           sets = oids.map(oid => this.amount_set(oid));
-    let choose = (p: number, step: number) => true;
+    let random = (step: number) => 0;
     if (this.has_amount_constraints) {
       const rand = this.final_rand;
       if (!(rand >= 0)) {
         this.G.L.error("Poll.make_allocation without a random number, no allocation made", this._pid);
         return;
       }
-      choose = (p, step) => this.G.D.str2rand(rand.toString() + ':' + step) < p;
+      random = step => this.G.D.str2rand(rand.toString() + ':' + step);
     }
-    const result = allocate(targets, sets, total, choose);
-    const allocation: Record<string, number> = {};
-    oids.forEach((oid, i) => { allocation[oid] = result.paid[i]; });
+    const result = allocate_budget(targets, sets, total, random);
+    const paid: Record<string, number> = {};
+    oids.forEach((oid, i) => { paid[oid] = result.paid[i]; });
     this.G.L.trace("Poll.make_allocation", this._pid, targets, result);
-    this.allocation = allocation;
+    this.G.D.setp(this._pid, 'allocation', JSON.stringify({ paid, method: result.method }));
   }
 
   notify_of_end() {

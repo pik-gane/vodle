@@ -297,7 +297,7 @@
         "budget-unit-label": "Unidad",
         "budget-unit-default": "euros",
         "option-amounts-label": "Importes permitidos",
-        "option-amounts-hint": "Se escriben como los rangos de páginas al imprimir, p. ej. <i>3, 5-9, 12</i>. <i>20-</i> significa al menos 20, <i>-50</i> como máximo 50, <i>0-</i> cualquier importe. Una opción siempre puede no recibir nada."
+        "option-amounts-hint": "Se escriben como los rangos de páginas al imprimir, p. ej. <i>3, 5-9, 12</i>. <i>20-</i> significa al menos 20, <i>-50</i> como máximo 50, <i>0-</i> cualquier importe y <i>10, 20, ..., 100</i> de 10 en 10 hasta 100. Una opción siempre puede no recibir nada."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -690,14 +690,16 @@
         "allowed-amounts": "Importes permitidos: {{amounts}} (o nada)",
         "amount-unspent": "{{amount}} quedan sin gastar",
         "rounding-heading": "¿Cómo se determinaron estos importes?",
-        "rounding-explanation": "Los votos determinan un importe objetivo para cada opción (entre paréntesis). Como algunas opciones solo pueden recibir ciertos importes, un sorteo desplazó partes del presupuesto entre opciones y redondeó sus asignaciones hacia arriba o hacia abajo a importes permitidos. Las probabilidades del sorteo están fijadas de modo que, en promedio, a cada opción se le asigna exactamente su objetivo. El sorteo usa un número aleatorio derivado del cierre de la votación, de modo que el dispositivo de cada participante obtiene el mismo resultado. Cada opción recibe el mayor importe permitido que no supera su asignación; la diferencia no se transfiere a otras opciones.",
+        "rounding-explanation": "Los votos determinan un importe objetivo para cada opción (entre paréntesis). Como algunas opciones solo pueden recibir ciertos importes, los importes se determinaron mediante un sorteo. Sus probabilidades están fijadas de modo que, en promedio, a cada opción se le asigna exactamente su objetivo y ninguna recibe en promedio menos que su objetivo redondeado hacia abajo a un importe permitido. El sorteo usa un número aleatorio derivado del cierre de la votación, de modo que el dispositivo de cada participante obtiene el mismo resultado. Cada opción recibe el mayor importe permitido que no supera su asignación; la diferencia no se transfiere a otras opciones.",
         "rounding-unspent": "Por ello quedan {{amount}} sin gastar.",
         "rounding-all-spent": "En esta votación se gasta todo el presupuesto.",
         "expected-amount": "<small> (previsto: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (recibe </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i> recibe {{amount}}",
         "share-and-target": "({{share}}% del presupuesto, objetivo: {{target}})",
-        "share-of-budget": "({{share}}% del presupuesto)"
+        "share-of-budget": "({{share}}% del presupuesto)",
+        "rounding-optimal": "Entre todos los sorteos con estas propiedades, vodle usa el que, en promedio, deja sin gastar la menor parte del presupuesto.",
+        "rounding-simple": "Esta votación tiene demasiadas opciones e importes para calcular el sorteo que, en promedio, deja menos sin gastar; vodle usó un sorteo más sencillo con las mismas propiedades, que puede dejar más sin gastar."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -765,7 +767,9 @@
         "budget-total-positive": "Introduce un presupuesto total mayor que cero.",
         "option-amounts-syntax": "Indica importes y rangos separados por comas, p. ej. 3, 5-9, 12. Los decimales llevan punto: 2.5.",
         "option-amounts-reversed": "Un rango empieza por el importe menor, p. ej. 5-9.",
-        "option-amounts-too-large": "Un importe supera el presupuesto total ({{total}})."
+        "option-amounts-too-large": "Un importe supera el presupuesto total ({{total}}).",
+        "option-amounts-sequence": "Antes de «...» indica dos importes que fijan el paso, y después como mucho un importe mayor, p. ej. 10, 20, ..., 100.",
+        "option-amounts-too-many": "Esto equivale a más de 1000 importes. Usa un paso mayor o un rango."
     },
     "handover": {
         "successor-title": "Las encuestas nuevas se crean en otro sitio",

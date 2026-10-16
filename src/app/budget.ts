@@ -22,21 +22,35 @@ Constrained budgeting (#201): a share poll divides a total budget, and each
 option may receive only certain amounts.
 
 The amounts an option may receive are written like the page ranges of a print
-dialogue: "3, 5-9, 12". "20-" means at least 20, "-50" at most 50, and an
-empty field any amount up to the total. Receiving nothing is always allowed.
+dialogue: "3, 5-9, 12". "20-" means at least 20, "-50" at most 50, and "0-"
+(or an empty field) any amount up to the total. "10, 20, ..., 100" is every
+10 from 10 to 100; without the last number, up to the total. Receiving
+nothing is always allowed.
 
 At the end of the poll the tallied shares give every option a target amount.
-allocate() rounds the targets to allowed amounts by a random draw whose
-probabilities keep every option's expected nominal amount equal to its
-target; an option is paid the largest allowed amount not above its nominal
-amount, and the rest is not spent. This is the pairwise rounding of the
-issue's comment of 2026-10-15, with a second step that also lets options
-whose amount may vary continuously absorb the last rounding.
+allocate_budget() rounds the targets to allowed amounts by a random draw:
+every option is allotted a nominal amount whose expectation is exactly its
+target, and paid the largest allowed amount not above it; the rest is not
+spent. Which lottery, is the mechanism of the issue's comment of 2026-10-15:
+
+- floor_lottery(): among all lotteries over nominal vectors with E[t] = s,
+  the one that maximises expected spending, subject to the floor guarantee
+  E f_i(t_i) >= f_i(s_i) (no option worse off in expectation than under
+  rounding its target down), ties broken by the least E sum (paid - s)^2 and
+  then the least E sum (t - s)^2. A linear program over the vertices of the
+  cells on which every f_i is affine (simplex.ts).
+- pairwise_allocate(): for polls whose candidate vertices are too many for
+  the program. Pairwise rounding, with a second step that lets options whose
+  amount may vary continuously absorb the last rounding. Same expectations
+  and floor, but it may spend less.
 */
 
-/** one item of an amounts field: a single amount, or a range whose ends may
- *  be open (null: 0 below, the total budget above) */
-export type amount_item_t = { lo: number | null; hi: number | null; range: boolean };
+import { solve_lp } from './simplex';
+
+/** one item of an amounts field: a single amount, a range whose ends may be
+ *  open (null: 0 below, the total budget above), or "..." continuing the
+ *  step of the two single amounts before it */
+export type amount_item_t = { lo: number | null; hi: number | null; range: boolean; ellipsis?: boolean };
 
 /** allowed amounts as sorted, disjoint closed intervals; a single amount is
  *  [a, a]. Always contains 0. */
@@ -45,7 +59,10 @@ export type amount_set_t = Array<[number, number]>;
 /** what an amounts field shows for "any amount up to the total" */
 export const ANY_AMOUNT = '0-';
 
-export type amounts_error_t = 'syntax' | 'reversed' | 'too_large';
+export type amounts_error_t = 'syntax' | 'reversed' | 'too_large' | 'sequence' | 'too_many';
+
+/** the most amounts a "..." may stand for */
+export const MAX_SEQUENCE = 1000;
 
 export type parsed_amounts_t = {
   items: amount_item_t[];
@@ -67,6 +84,10 @@ export function parse_amounts(text: string, total?: number): parsed_amounts_t {
     if (part == '') {
       continue;
     }
+    if (part == '...' || part == '…') {
+      items.push({ lo: null, hi: null, range: false, ellipsis: true });
+      continue;
+    }
     const m = ITEM_RE.exec(part);
     if (!m || (m[1] === undefined && m[3] === undefined)) {
       return { items, error: 'syntax' };
@@ -83,6 +104,15 @@ export function parse_amounts(text: string, total?: number): parsed_amounts_t {
       items.push({ lo, hi, range: true });
     }
   }
+  // "a, b, ..., c": a < b give the step, c (if any) is a single amount
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i].ellipsis) { continue; }
+    const a = items[i - 2], b = items[i - 1], c = items[i + 1];
+    const single = (it: amount_item_t) => !!it && !it.range && !it.ellipsis;
+    if (!single(a) || !single(b) || b.lo <= a.lo || (c && (!single(c) || c.lo < b.lo))) {
+      return { items, error: 'sequence' };
+    }
+  }
   if (total > 0) {
     for (const item of items) {
       for (const v of [item.lo, item.hi]) {
@@ -91,8 +121,32 @@ export function parse_amounts(text: string, total?: number): parsed_amounts_t {
         }
       }
     }
+    if (sequence_values(items, total).some(values => values.length > MAX_SEQUENCE)) {
+      return { items, error: 'too_many' };
+    }
   }
   return { items };
+}
+
+/** the amounts each "..." stands for, between its neighbours */
+function sequence_values(items: amount_item_t[], total: number): number[][] {
+  const result: number[][] = [];
+  items.forEach((item, i) => {
+    if (!item.ellipsis) { return; }
+    // up to the next amount, which is an item of its own, or up to and
+    // including the total
+    const a = items[i - 2].lo, step = items[i - 1].lo - a, open = !items[i + 1],
+          end = open ? total : items[i + 1].lo,
+          eps = tolerance(total), values: number[] = [];
+    // a + k step, not repeated addition, so that 0.1 steps do not drift
+    for (let k = 2; values.length <= MAX_SEQUENCE; k++) {
+      const v = a + k * step;
+      if (open ? v > end + eps : v >= end - eps) { break; }
+      values.push(Math.min(v, total));
+    }
+    result.push(values);
+  });
+  return result;
 }
 
 /** the canonical text of parsed items: "3, 5-9, 12, 20-" */
@@ -102,7 +156,7 @@ export function format_amount_items(items: amount_item_t[]): string {
     const str = String(v);
     return /e/i.test(str) && v < 1 ? v.toFixed(20).replace(/0+$/, '').replace(/\.$/, '') : str;
   };
-  return items.map(item => !item.range ? num(item.lo)
+  return items.map(item => item.ellipsis ? '...' : !item.range ? num(item.lo)
     : (item.lo === null ? '' : num(item.lo)) + '-' + (item.hi === null ? '' : num(item.hi))
   ).join(', ');
 }
@@ -115,7 +169,7 @@ export function describe_amounts(text: string, total: number, language?: string)
     return '';
   }
   const num = (v: number) => format_amount(v, language);
-  return parsed.items.map(item => !item.range ? num(item.lo)
+  return parsed.items.map(item => item.ellipsis ? '…' : !item.range ? num(item.lo)
     : item.hi === null ? '≥\u00a0' + num(item.lo || 0)
     : item.lo === null ? '≤\u00a0' + num(item.hi)
     : num(item.lo) + '–' + num(item.hi)
@@ -132,9 +186,13 @@ export function amount_set(text: string, total: number): amount_set_t {
   }
   const parts: Array<[number, number]> = [[0, 0]];
   for (const item of parsed.items) {
+    if (item.ellipsis) { continue; }
     const lo = item.lo === null ? 0 : item.lo,
           hi = item.hi === null ? total : item.hi;
     parts.push([Math.max(0, Math.min(lo, total)), Math.max(0, Math.min(hi, total))]);
+  }
+  for (const values of sequence_values(parsed.items, total)) {
+    for (const v of values) { parts.push([v, v]); }
   }
   parts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const merged: amount_set_t = [];
@@ -169,7 +227,7 @@ function paid_for(set: amount_set_t, x: number, eps: number): number {
   let best = 0;
   for (const [lo, hi] of set) {
     if (lo <= x + eps) {
-      best = Math.max(best, Math.min(hi, x));
+      best = Math.max(best, x < lo ? lo : Math.min(hi, x));
     }
   }
   return best;
@@ -213,7 +271,8 @@ export type allocation_t = {
 };
 
 /**
- * Round target amounts to allowed amounts by a random draw.
+ * Round target amounts to allowed amounts by pairwise rounding: the fallback
+ * for polls too large for floor_lottery().
  *
  * targets[i] is option i's target amount (they sum to total), sets[i] its
  * allowed amounts. The options are visited in the order given, which must be
@@ -237,7 +296,7 @@ export type allocation_t = {
  * outcome. Unspent remains: what an option above its largest allowed amount
  * cannot take, and the rest of the one option that may stay inside a gap.
  */
-export function allocate(targets: number[], sets: amount_set_t[], total: number,
+export function pairwise_allocate(targets: number[], sets: amount_set_t[], total: number,
                          choose: (p: number, step: number) => boolean): allocation_t {
   const n = targets.length,
         eps = tolerance(total),
@@ -300,6 +359,167 @@ export function allocate(targets: number[], sets: amount_set_t[], total: number,
   }
   const paid = t.map((x, i) => paid_for(sets[i], x, eps));
   return { nominal: t, paid };
+}
+
+// THE LOTTERY OF THE ISSUE (#201): a linear program
+
+/** at most this many candidate vectors, and this many steps to enumerate
+ *  them; a poll beyond that is rounded pairwise. The number grows
+ *  exponentially with the options: measured on a desktop, four options with
+ *  ranges or a few amounts each take 8 ms, seven 0.1 s, eight 0.6 s (a slow
+ *  phone takes several times that, once, at the end of the poll); nine or
+ *  more such options exceed the limit. */
+const CANDIDATE_LIMIT = 60000, ENUMERATION_LIMIT = 4000000;
+
+/** the coordinate values a vertex may take: 0, the total, the target, the
+ *  ends of the allowed ranges, and the ends of the target's gap */
+function breakpoints(set: amount_set_t, x: number, total: number, eps: number): number[] {
+  const values = [0, total, x];
+  for (const [lo, hi] of set) { values.push(lo, hi); }
+  const gap = gap_of(set, x, eps);
+  if (gap) { values.push(gap[0], gap[1]); }
+  const sorted = values.filter(v => v >= -eps && v <= total + eps).sort((a, b) => a - b);
+  return sorted.filter((v, i) => i == 0 || v - sorted[i - 1] > eps);
+}
+
+/** The points with all coordinates but one at breakpoints and the last one
+ *  fixed by the sum. They include every vertex of the cells on which every
+ *  f_i is affine, so some optimal lottery uses only them. Options with a
+ *  target of 0 are allotted 0 in every outcome (E[t_i] = 0 with t_i >= 0)
+ *  and stay there. Sorted, so that every device lists them alike; null if
+ *  there are too many. */
+function candidates(s: number[], sets: amount_set_t[], total: number, eps: number): number[][] | null {
+  const n = s.length;
+  const Bs = s.map((x, i) => x > eps ? breakpoints(sets[i], x, total, eps) : [0]);
+  const seen = new Set<string>(), points: number[][] = [];
+  let steps = 0;
+  for (let free = 0; free < n; free++) {
+    if (s[free] <= eps) { continue; }
+    const t = new Array<number>(n).fill(0);
+    const visit = (j: number, sum: number): boolean => {
+      if (++steps > ENUMERATION_LIMIT) { return false; }
+      if (j == n) {
+        const rest = total - sum;
+        if (rest < -eps || rest > total + eps) { return true; }
+        t[free] = Math.max(0, rest);
+        const point = t.map(v => Math.round(v * 1e12) / 1e12);
+        const key = point.join(',');
+        if (!seen.has(key)) {
+          seen.add(key);
+          points.push(point);
+          if (points.length > CANDIDATE_LIMIT) { return false; }
+        }
+        return true;
+      }
+      if (j == free) { return visit(j + 1, sum); }
+      for (const v of Bs[j]) {
+        if (sum + v > total + eps) { break; }      // breakpoints are sorted
+        t[j] = v;
+        if (!visit(j + 1, sum + v)) { return false; }
+      }
+      t[j] = 0;
+      return true;
+    };
+    if (!visit(0, 0)) { return null; }
+  }
+  points.sort((a, b) => {
+    for (let i = 0; i < n; i++) {
+      if (a[i] != b[i]) { return a[i] - b[i]; }
+    }
+    return 0;
+  });
+  return points;
+}
+
+/** a lottery over allotments: outcome k has probability prob[k], allots
+ *  nominal[k][i] to option i and pays it paid[k][i] */
+export type lottery_t = { prob: number[]; nominal: number[][]; paid: number[][] };
+
+/**
+ * The lottery of the issue: E[nominal] = targets, the largest expected
+ * spending subject to E paid_i >= (target_i rounded down to an allowed
+ * amount) for every i, ties broken by the least E sum (paid - target)^2,
+ * then the least E sum (nominal - target)^2. Computed in shares of the total,
+ * which keeps the numbers of the program near 1. Null if the poll has too
+ * many candidate vertices, or the program does not solve.
+ */
+export function floor_lottery(targets: number[], sets: amount_set_t[], total: number): lottery_t | null {
+  const n = targets.length, sum = targets.reduce((a, b) => a + Math.max(0, b), 0);
+  if (!(total > 0) || !(sum > 0)) { return null; }
+  const s = targets.map(x => Math.max(0, x) / sum),
+        A = sets.map(set => set.map(([lo, hi]) => [lo / total, hi / total] as [number, number])),
+        eps = 1e-12;
+  const T = candidates(s, A, 1, eps);
+  if (!T || T.length == 0) { return null; }
+  const P = T.map(t => t.map((x, i) => paid_for(A[i], x, eps)));
+  const spend = P.map(p => p.reduce((a, b) => a + b, 0));
+  const dev_paid = P.map(p => p.reduce((a, x, i) => a + (x - s[i]) ** 2, 0));
+  const dev_nominal = T.map(t => t.reduce((a, x, i) => a + (x - s[i]) ** 2, 0));
+  const active = s.map((x, i) => i).filter(i => s[i] > eps);
+  const floor = s.map((x, i) => paid_for(A[i], x, eps));
+
+  const lp = (cost: number[], rows: number[][], rhs: number[], cols: number[]) => {
+    const pick = (row: number[]) => cols.map(k => row[k]);
+    return solve_lp(pick(cost), active.map(i => cols.map(k => T[k][i])), active.map(i => s[i]),
+                    rows.map(pick), rhs);
+  };
+  const every = T.map((_, k) => k);
+  // E[t] = s; the floor: -E paid_i <= -floor_i
+  let rows = active.map(i => P.map(p => -p[i])), rhs = active.map(i => -floor[i]);
+  const r1 = lp(spend.map(v => -v), rows, rhs, every);
+  if (r1.status != 'optimal') { return null; }
+  const best = -r1.value;
+  rows = [...rows, spend.map(v => -v)];
+  rhs = [...rhs, -(best - 1e-9 * Math.max(1, best))];
+  const r2 = lp(dev_paid, rows, rhs, every);
+  if (r2.status != 'optimal') { return null; }
+  rows = [...rows, dev_paid];
+  rhs = [...rhs, r2.value + 1e-9];
+  const r3 = lp(dev_nominal, rows, rhs, every);
+  if (r3.status != 'optimal') { return null; }
+  // drop solver-noise atoms, re-fitting the rest so that E[t] = s still holds
+  let x = r3.x;
+  const keep = every.filter(k => x[k] > 1e-7);
+  const refit = lp(dev_nominal, rows, rhs, keep);
+  if (refit.status == 'optimal') {
+    x = new Array<number>(T.length).fill(0);
+    keep.forEach((k, i) => { x[k] = refit.x[i]; });
+  }
+  const used = every.filter(k => x[k] > 1e-12), mass = used.reduce((a, k) => a + x[k], 0);
+  return {
+    prob: used.map(k => x[k] / mass),
+    nominal: used.map(k => T[k].map(v => v * total)),
+    paid: used.map(k => P[k].map(v => v * total)),
+  };
+}
+
+export type allocation_method_t = 'exact' | 'lp' | 'pairwise';
+
+/**
+ * Round target amounts to allowed amounts, the same way on every device for
+ * the same random numbers: random(step) in [0, 1) for step 0, 1, ...
+ *
+ * Without any restriction the targets are paid as they are ('exact'). Else
+ * the lottery of the issue ('lp') is drawn from with random(0); a poll too
+ * large for it is rounded pairwise ('pairwise').
+ */
+export function allocate_budget(targets: number[], sets: amount_set_t[], total: number,
+                                random: (step: number) => number): allocation_t & { method: allocation_method_t } {
+  if (!sets.some(set => is_restricted(set, total))) {
+    const t = targets.map(x => Math.max(0, x));
+    return { nominal: t, paid: [...t], method: 'exact' };
+  }
+  const lottery = floor_lottery(targets, sets, total);
+  if (lottery) {
+    const u = random(0);
+    let k = 0, cum = lottery.prob[0];
+    while (cum <= u && k < lottery.prob.length - 1) {
+      k++;
+      cum += lottery.prob[k];
+    }
+    return { nominal: lottery.nominal[k], paid: lottery.paid[k], method: 'lp' };
+  }
+  return { ...pairwise_allocate(targets, sets, total, (p, step) => random(step) < p), method: 'pairwise' };
 }
 
 /** an amount as people read it: whole numbers without decimals, others with

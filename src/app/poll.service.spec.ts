@@ -939,6 +939,7 @@ describe('Poll.make_allocation (#201)', () => {
     const p = make_poll({});
     expect(p.has_amount_constraints).toBeFalse();
     p.make_allocation();
+    expect(p.allocation_method).toBe('exact');
     expect(p.allocation.a).toBeCloseTo(52, 9);
     expect(p.allocation.b).toBeCloseTo(30, 9);
     expect(p.allocation.c).toBeCloseTo(18, 9);
@@ -956,6 +957,7 @@ describe('Poll.make_allocation (#201)', () => {
     for (const oid of ['a', 'b', 'c']) {
       expect(allowed(oid, p.allocation[oid])).withContext(oid + ' got ' + p.allocation[oid]).toBeTrue();
     }
+    expect(p.allocation_method).withContext("the issue's lottery").toBe('lp');
     const spent = p.allocation.a + p.allocation.b + p.allocation.c;
     expect(p.unspent_amount).toBeCloseTo(100 - spent, 9);
     expect(p.amount_text(p.budget_total)).toBe('100\u00a0euros');

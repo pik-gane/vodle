@@ -324,7 +324,7 @@
         "budget-unit-label": "Unit",
         "budget-unit-default": "euros",
         "option-amounts-label": "Allowed amounts",
-        "option-amounts-hint": "Written like page ranges when printing, e.g. <i>3, 5-9, 12</i>. <i>20-</i> means at least 20, <i>-50</i> at most 50, <i>0-</i> any amount. An option can always receive nothing."
+        "option-amounts-hint": "Written like page ranges when printing, e.g. <i>3, 5-9, 12</i>. <i>20-</i> means at least 20, <i>-50</i> at most 50, <i>0-</i> any amount, and <i>10, 20, ..., 100</i> every 10 from 10 to 100. An option can always receive nothing."
     },
     "external-link": {
         "_COMMENT_SECTION_": "[COMMENT] strings concerning external links:",
@@ -742,14 +742,16 @@
         "allowed-amounts": "Allowed amounts: {{amounts}} (or nothing)",
         "amount-unspent": "{{amount}} remain unspent",
         "rounding-heading": "How were these amounts determined?",
-        "rounding-explanation": "The votes determine a target amount for every option (in brackets). Because some options may receive only certain amounts, a random draw shifted parts of the budget between options, rounding their allotments up or down to allowed amounts. The probabilities of the draw are set so that, on average, every option is allotted exactly its target. The draw uses a random number derived from the closing of the poll, so every participantʼs device obtains the same result. Each option receives the largest allowed amount that does not exceed its allotment; any difference is not passed on to other options.",
+        "rounding-explanation": "The votes determine a target amount for every option (in brackets). Because some options may receive only certain amounts, the amounts were determined by a random draw. Its probabilities are set so that, on average, every option is allotted exactly its target, and no option receives less on average than its target rounded down to an allowed amount. The draw uses a random number derived from the closing of the poll, so every participantʼs device obtains the same result. Each option receives the largest allowed amount that does not exceed its allotment; any difference is not passed on to other options.",
         "rounding-unspent": "This leaves {{amount}} unspent.",
         "rounding-all-spent": "In this poll, the whole budget is spent.",
         "expected-amount": "<small> (expected: </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "received-amount": "<small> (receives </small>{{amount}}<small>&nbsp;{{unit}})</small>",
         "option-receives": "<i>{{option}}</i> receives {{amount}}",
         "share-and-target": "({{share}}% of the budget, target: {{target}})",
-        "share-of-budget": "({{share}}% of the budget)"
+        "share-of-budget": "({{share}}% of the budget)",
+        "rounding-optimal": "Among all draws with these properties, vodle uses the one that leaves the least of the budget unspent on average.",
+        "rounding-simple": "This poll has too many options and amounts for vodle to compute the draw that leaves the least unspent on average; it used a simpler draw with the same properties, which may leave more unspent."
     },
     "previewpoll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Please Check (Poll Preview) page:",
@@ -817,6 +819,8 @@
         "budget-total-positive": "Please enter a total budget greater than zero.",
         "option-amounts-syntax": "Please list amounts and ranges separated by commas, e.g. 3, 5-9, 12. Decimals take a point: 2.5.",
         "option-amounts-reversed": "A range starts with the smaller amount, e.g. 5-9.",
-        "option-amounts-too-large": "An amount exceeds the total budget ({{total}})."
+        "option-amounts-too-large": "An amount exceeds the total budget ({{total}}).",
+        "option-amounts-sequence": "Before “...”, give two amounts that set the step, and after it at most one larger amount, e.g. 10, 20, ..., 100.",
+        "option-amounts-too-many": "This stands for more than 1000 amounts. Please use a larger step or a range."
     }
 }

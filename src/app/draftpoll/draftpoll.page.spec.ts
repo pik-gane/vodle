@@ -295,6 +295,12 @@ describe('DraftpollPage', () => {
       c.setValue('');
       component.blur_option_amounts(0);
       expect(c.value).toBe('0-');
+      // a regular sequence, and one that cannot be read
+      c.setValue('10,20,…,100');
+      component.blur_option_amounts(0);
+      expect(c.value).toBe('10, 20, ..., 100');
+      c.setValue('10, ..., 100');
+      expect(c.hasError('amounts_sequence')).toBeTrue();
       // what is stored: nothing for any amount
       expect(component.stored_amounts('0-')).toBe('');
       expect(component.stored_amounts('')).toBe('');

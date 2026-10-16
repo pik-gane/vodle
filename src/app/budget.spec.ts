@@ -1,4 +1,7 @@
-import { allocate, amount_set, amount_set_t, format_amount, format_amount_items, is_restricted, parse_amounts } from './budget';
+import { allocate_budget, amount_set, amount_set_t, describe_amounts, floor_lottery, format_amount, format_amount_items, is_restricted,
+         pairwise_allocate, parse_amounts } from './budget';
+import { LOTTERY_REFERENCE } from './budget-lp.fixtures';
+import { solve_lp } from './simplex';
 
 /** every outcome of allocate() with its probability, by following both
  *  branches of every random move */
@@ -6,7 +9,7 @@ function outcomes(targets: number[], sets: amount_set_t[], total: number) {
   const result: Array<{ prob: number; nominal: number[]; paid: number[] }> = [];
   const explore = (path: boolean[]) => {
     let prob = 1, branch_at = -1;
-    const run = allocate(targets, sets, total, (p, step) => {
+    const run = pairwise_allocate(targets, sets, total, (p, step) => {
       expect(p).withContext('a probability').toBeGreaterThan(0);
       expect(p).toBeLessThan(1);
       if (step < path.length) {
@@ -90,6 +93,28 @@ describe('constrained budgeting (#201)', () => {
       expect(parse_amounts('10, 150').error).withContext('no total to compare with').toBeUndefined();
     });
 
+    it('reads regular sequences: "10, 20, ..., 100", and without an end up to the total', () => {
+      expect(amount_set('10, 20, ..., 100', 1000).map(([lo]) => lo)).toEqual([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+      expect(amount_set('250, 500, ...', 1000).map(([lo]) => lo)).toEqual([0, 250, 500, 750, 1000]);
+      expect(amount_set('0.1, 0.2, …, 0.5', 1)).withContext('no drift in small steps')
+        .toEqual([[0, 0], [0.1, 0.1], [0.2, 0.2], [0.30000000000000004, 0.30000000000000004], [0.4, 0.4], [0.5, 0.5]]);
+      // with other items around it, and an end off the step
+      expect(amount_set('5, 10, 20, ..., 45, 60-70', 100).map(([lo, hi]) => lo + '-' + hi))
+        .toEqual(['0-0', '5-5', '10-10', '20-20', '30-30', '40-40', '45-45', '60-70']);
+      expect(format_amount_items(parse_amounts('10,20,…,100').items)).toBe('10, 20, ..., 100');
+      expect(describe_amounts('10, 20, ..., 100', 1000, 'en')).toBe('10, 20, …, 100');
+    });
+
+    it('names a sequence it cannot read, and one that is too long', () => {
+      expect(parse_amounts('..., 100', 1000).error).toBe('sequence');
+      expect(parse_amounts('10, ..., 100', 1000).error).toBe('sequence');
+      expect(parse_amounts('20, 10, ..., 100', 1000).error).withContext('the step must be positive').toBe('sequence');
+      expect(parse_amounts('10-20, 30, ..., 100', 1000).error).withContext('a range sets no step').toBe('sequence');
+      expect(parse_amounts('10, 20, ..., 5', 1000).error).withContext('an end below the step').toBe('sequence');
+      expect(parse_amounts('1, 2, ...', 100000).error).toBe('too_many');
+      expect(parse_amounts('100, 200, ..., 2000', 1000)).toEqual(jasmine.objectContaining({ error: 'too_large', value: 2000 }));
+    });
+
     it('writes small amounts in the notation it reads (not 1e-7)', () => {
       const text = format_amount_items(parse_amounts('0.0000001, 0.5-2').items);
       expect(text).toBe('0.0000001, 0.5-2');
@@ -117,10 +142,10 @@ describe('constrained budgeting (#201)', () => {
     });
   });
 
-  describe('the draw', () => {
+  describe('the pairwise rounding, for polls too large for the program', () => {
     it('pays the targets as they are when nothing is restricted, without a draw', () => {
       const choose = jasmine.createSpy('choose');
-      const run = allocate([23.4, 50, 26.6], [[[0, 100]], [[0, 100]], [[0, 100]]], 100, choose);
+      const run = pairwise_allocate([23.4, 50, 26.6], [[[0, 100]], [[0, 100]], [[0, 100]]], 100, choose);
       expect(run.paid).toEqual([23.4, 50, 26.6]);
       expect(choose).not.toHaveBeenCalled();
     });
@@ -144,7 +169,7 @@ describe('constrained budgeting (#201)', () => {
     });
 
     it('leaves unspent what an option above its largest amount cannot take', () => {
-      const run = allocate([50, 50], [amount_set('-30', 100), amount_set('', 100)], 100, () => true);
+      const run = pairwise_allocate([50, 50], [amount_set('-30', 100), amount_set('', 100)], 100, () => true);
       expect(run.paid).toEqual([30, 50]);
     });
 
@@ -183,9 +208,100 @@ describe('constrained budgeting (#201)', () => {
     it('is the same on every device for the same random numbers', () => {
       const sets = [amount_set('20-', 100), amount_set('15', 100), amount_set('', 100)];
       const draw = (k: number) => [0.31, 0.77, 0.05, 0.6][k % 4];
-      const a = allocate([30, 12, 58], sets, 100, (p, k) => draw(k) < p);
-      const b = allocate([30, 12, 58], sets, 100, (p, k) => draw(k) < p);
+      const a = pairwise_allocate([30, 12, 58], sets, 100, (p, k) => draw(k) < p);
+      const b = pairwise_allocate([30, 12, 58], sets, 100, (p, k) => draw(k) < p);
       expect(a).toEqual(b);
+    });
+  });
+
+  describe('the linear program', () => {
+    it('solves small programs', () => {
+      // min -x - y  s.t.  x + y = 1, x <= 0.3
+      const r = solve_lp([-1, -2], [[1, 1]], [1], [[1, 0]], [0.3]);
+      expect(r.status).toBe('optimal');
+      expect(r.x[0]).toBeCloseTo(0, 12);
+      expect(r.x[1]).toBeCloseTo(1, 12);
+      expect(solve_lp([1], [[1]], [-1]).status).toBe('infeasible');
+      expect(solve_lp([-1, 0], [[0, 1]], [1]).status).toBe('unbounded');
+      // a redundant equation
+      const red = solve_lp([1, 1], [[1, 1], [2, 2]], [1, 2]);
+      expect(red.status).toBe('optimal');
+      expect(red.value).toBeCloseTo(1, 12);
+    });
+  });
+
+  describe('the lottery of the issue (a linear program)', () => {
+    /** the guarantees, and the expected values, of a lottery */
+    const check_lottery = (s: number[], sets: amount_set_t[], total: number) => {
+      const L = floor_lottery(s, sets, total);
+      expect(L).withContext('solved').not.toBeNull();
+      expect(L.prob.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+      const E = (key: 'nominal' | 'paid', i: number) => L.prob.reduce((a, p, k) => a + p * L[key][k][i], 0);
+      s.forEach((x, i) => {
+        expect(E('nominal', i)).withContext('E nominal = target, option ' + i).toBeCloseTo(x, 7);
+        expect(E('paid', i)).withContext('the floor, option ' + i).toBeGreaterThanOrEqual(floor_in(sets[i], x) - 1e-7 * total);
+      });
+      L.paid.forEach((paid, k) => paid.forEach((p, i) => {
+        expect(allowed(sets[i], p)).withContext('allowed, option ' + i + ': ' + p).toBeTrue();
+        expect(p).toBeLessThanOrEqual(L.nominal[k][i] + 1e-9 * total);
+      }));
+      const spend = s.reduce((a, _, i) => a + E('paid', i), 0);
+      const v2 = L.prob.reduce((a, p, k) => a + p * L.paid[k].reduce((b, x, i) => b + ((x - s[i]) / total) ** 2, 0), 0);
+      const v3 = L.prob.reduce((a, p, k) => a + p * L.nominal[k].reduce((b, x, i) => b + ((x - s[i]) / total) ** 2, 0), 0);
+      return { L, spend, v2, v3 };
+    };
+
+    it("reproduces the issue's example: the floor costs spending", () => {
+      const sets: amount_set_t[] = [[[0, 0], [0.5, 0.5]], [[0, 0], [0.6, 0.6]], [[0, 0], [0.5, 0.5]]];
+      const { L, spend } = check_lottery([0.52, 0.46, 0.02], sets, 1);
+      expect(spend).toBeCloseTo(0.52, 7);
+      const E = (i: number) => L.prob.reduce((a, p, k) => a + p * L.paid[k][i], 0);
+      expect(E(0)).withContext('option 1 is guaranteed its 0.5').toBeCloseTo(0.5, 7);
+      expect(E(1)).withContext('option 2, below its smallest amount, is not protected').toBeCloseTo(0, 7);
+    });
+
+    it('spends everything where the issue says it can', () => {
+      expect(check_lottery([0.95, 0.05], [amount_set('1', 1), amount_set('', 1)], 1).spend).toBeCloseTo(1, 7);
+      const units = amount_set('10, 20, ..., 100', 100);
+      expect(check_lottery([23, 41, 36], [units, units, units], 100).spend).toBeCloseTo(100, 6);
+      expect(check_lottery([88, 12], [amount_set('', 100), amount_set('20-', 100)], 100).spend).toBeCloseTo(100, 6);
+    });
+
+    it('finds the optimal values of the reference implementation on 40 random instances', () => {
+      for (const [n, ref] of LOTTERY_REFERENCE.entries()) {
+        const { spend, v2, v3 } = check_lottery(ref.s, ref.sets, 1);
+        expect(spend).withContext('case ' + n + ': expected spending').toBeCloseTo(ref.spend, 6);
+        expect(v2).withContext('case ' + n + ': first tie-break').toBeCloseTo(ref.v2, 6);
+        expect(v3).withContext('case ' + n + ': second tie-break').toBeCloseTo(ref.v3, 6);
+      }
+    });
+
+    it('is the same lottery on every device', () => {
+      const sets = [amount_set('200-400', 1000), amount_set('250, 500', 1000), amount_set('', 1000), amount_set('300-', 1000)];
+      const targets = [428.57142857142856, 285.7142857142857, 142.85714285714286, 142.85714285714286];
+      expect(floor_lottery(targets, sets, 1000)).toEqual(floor_lottery(targets, sets, 1000));
+    });
+
+    it('draws from the lottery, rounds pairwise only a poll too large for it, and pays targets as they are without restrictions', () => {
+      const sets = [amount_set('200-400', 1000), amount_set('250, 500', 1000), amount_set('', 1000), amount_set('300-', 1000)];
+      const targets = [428.57142857142856, 285.7142857142857, 142.85714285714286, 142.85714285714286];
+      const L = floor_lottery(targets, sets, 1000);
+      // u below the first atom's probability draws the first atom, and so on
+      let cum = 0;
+      L.prob.forEach((p, k) => {
+        const u = cum + p / 2;
+        const drawn = allocate_budget(targets, sets, 1000, () => u);
+        expect(drawn.method).toBe('lp');
+        expect(drawn.paid).toEqual(L.paid[k]);
+        cum += p;
+      });
+      const free = [amount_set('', 1000), amount_set('', 1000)];
+      expect(allocate_budget([600, 400], free, 1000, () => 0.5)).toEqual({ nominal: [600, 400], paid: [600, 400], method: 'exact' });
+      // twelve options on a grid of 50: too many vertices for the program
+      const grid = amount_set('50, 100, ..., 1000', 1000);
+      const many = allocate_budget(Array(12).fill(1000 / 12), Array(12).fill(grid), 1000, step => (step * 0.37) % 1);
+      expect(many.method).toBe('pairwise');
+      many.paid.forEach(p => expect(allowed(grid, p)).toBeTrue());
     });
   });
 
