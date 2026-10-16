@@ -56,6 +56,19 @@ describe('the pre-filled draft link (/draftpoll/use/:pd)', () => {
     expect(sanitize_draft_spec(example)).toEqual(expected);
   });
 
+  it("keeps a share poll's budget and its options' allowed amounts (#201)", () => {
+    const spec = {
+      type: 'share', title: 'Parish budget', due_type: 'week', budget_total: 1000, budget_unit: 'Euro',
+      options: [{ name: 'Playground', amounts: '200-400' }, { name: 'Benches', amounts: '50, 100, ..., 300' }],
+    };
+    expect(sanitize_draft_spec(spec)).toEqual(spec);
+    // a total that is no positive number is not a budget
+    for (const budget_total of [0, -5, '1000', Infinity, NaN]) {
+      expect(sanitize_draft_spec({ budget_total })).withContext(String(budget_total)).toEqual({});
+    }
+    expect(sanitize_draft_spec({ options: [{ name: 'A', amounts: 5 }] })).toEqual({ options: [{ name: 'A' }] });
+  });
+
   it('accepts a field only with the type the page expects', () => {
     expect(sanitize_draft_spec({
       title: { toString: 'x' }, desc: 7, is_test: 'true', options: 'Pizza',

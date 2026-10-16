@@ -29,19 +29,24 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
  *  a pid or option ids, which the app generates itself.
  *
  *  is_test and the options' ratings stay: the example polls (assets/examples)
- *  come through this route and use them for their simulated voters. */
+ *  come through this route and use them for their simulated voters.
+ *
+ *  A share poll's budget and its options' allowed amounts (#201) stay too:
+ *  the draft page shows them among the details, which it opens when they
+ *  differ from the defaults. */
 
-export type draft_spec_option_t = { name?: string, desc?: string, url?: string, ratings?: number[] };
+export type draft_spec_option_t = { name?: string, desc?: string, url?: string, amounts?: string, ratings?: number[] };
 export type draft_spec_t = {
   is_test?: boolean,
   type?: string, language?: string,
   title?: string, desc?: string, url?: string,
   due_type?: string, due_custom?: string,
+  budget_total?: number, budget_unit?: string,
   options?: draft_spec_option_t[],
 };
 
-const STRING_FIELDS = ['type', 'language', 'title', 'desc', 'url', 'due_type', 'due_custom'];
-const OPTION_STRING_FIELDS = ['name', 'desc', 'url'];
+const STRING_FIELDS = ['type', 'language', 'title', 'desc', 'url', 'due_type', 'due_custom', 'budget_unit'];
+const OPTION_STRING_FIELDS = ['name', 'desc', 'url', 'amounts'];
 
 /** The allowed part of a draft spec, with everything else dropped. `dropped`
  *  is told the name of each field left out, so that it can be logged. */
@@ -55,6 +60,8 @@ export function sanitize_draft_spec(raw: unknown, dropped?: (field: string) => v
       spec[key] = value;
     } else if (key == 'is_test' && value === true) {
       spec.is_test = true;
+    } else if (key == 'budget_total' && typeof value === 'number' && isFinite(value) && value > 0) {
+      spec.budget_total = value;
     } else if (key == 'options' && Array.isArray(value)) {
       spec.options = value
         .filter(o => o && typeof o === 'object' && !Array.isArray(o))
