@@ -160,6 +160,26 @@ describe('AiAssessmentPage', () => {
       expect([name.endsWith('.json'), text, type]).toEqual([true, DATA, 'application/json']);
     });
 
+    it('shares all of it as text where the browser shares no files', async () => {
+      const {page, browser} = dialog();
+      browser.can_share = (data: ShareData) => !data.files;
+      page.ngOnInit();
+      expect(page.can_share).toBeTrue();
+      await page.share();
+      const data = (browser.share as jasmine.Spy).calls.mostRecent().args[0];
+      expect(data.files).toBeUndefined();
+      expect(data.text).toBe(page.text());
+      expect(data.text.startsWith(page.prompt.trim())).toBeTrue();
+      expect(data.text).toContain(DATA);
+    });
+
+    it('offers no share where the browser shares nothing', () => {
+      const {page, browser} = dialog();
+      browser.can_share = () => false;
+      page.ngOnInit();
+      expect(page.can_share).toBeFalse();
+    });
+
     it('remembers what the voter chose to share', () => {
       const {page, stored} = dialog();
       expect([page.texts, page.histograms, page.individual]).toEqual([true, true, false]);

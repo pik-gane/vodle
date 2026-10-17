@@ -79,7 +79,7 @@ Expanded, and once an API is set up, the lower part reads:
 
 - **The address field** is empty at first and keeps what the voter enters, on all of their devices. Its hint says to enter the page where a new chat starts. The example address in the field is a placeholder of the reserved domain `example.org`, not a service.
 - **Without an address**, the main button reads "Copy" and opens nothing.
-- **"Share…"** appears only where the device offers a share sheet; chatbot apps that are installed and accept shared files are listed there by the operating system.
+- **"Share…"** appears only where the device offers a share sheet; chatbot apps that are installed and accept what is shared are listed there by the operating system.
 - **For a closed poll**, the heading reads "Ask an AI what can be learned from this poll", and the closed-poll prompt is used (§5).
 - **With an API set up**, "Ask" is the main button and the chat path stays available below it. The answer is shown in the dialog and kept only until the dialog is closed; "Copy" puts it on the clipboard.
 
@@ -241,7 +241,7 @@ The last sentence of each carries the language name, so that the answer comes in
    - **An address typed without a scheme** ("chat.example.org/new") gets `https://` in front, or `http://` for `localhost`, `127.0.0.1` and `[::1]`; the field shows the completed address once the voter leaves it.
    - **The address is checked before it is stored or opened:** it must parse as a URL, with `https:`, or `http:` only for `localhost` and `127.0.0.1` (a chatbot running on the voter's own computer). Anything else, `javascript:` and `data:` included, is refused with a message.
    - **No data in the address.** vodle appends nothing to it, so neither the prompt nor the data ends up in browser history or server logs. Pre-filling a chat through undocumented URL parameters is deliberately not used.
-2. **The share sheet** (Web Share API with files), offered as a second button where `navigator.canShare({files, text})` is true, mainly on phones.
+2. **The share sheet** (Web Share API), offered as a second button where the browser has one, mainly on phones: with a file where `navigator.canShare({files, text})` is true, else the prompt and the data together as one text, as the clipboard gets them. Firefox for Android has a share sheet for text and links but shares no files; with the file as the only form, the button was missing there.
    - The data is shared as `vodle-poll-<date>.txt` with the type `text/plain`. Chromium's share accepts `.txt` but not `.json` (checked in `chrome/browser/webshare/share_service_impl.cc`).
    - The prompt goes along as the shared text.
    - The existing guard for browsers that claim to share but do nothing (`web_share_broke`, #343) applies.

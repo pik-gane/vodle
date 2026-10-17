@@ -250,12 +250,20 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
     });
   }
 
+  /** What the share sheet gets: the question as text and the data as a
+   *  file, where the browser shares files; else the question and the data
+   *  together as text, as the chat path copies them. Firefox for Android has
+   *  a share sheet for text and links but shares no files. */
   share_data(): ShareData {
-    return {
+    const with_file: ShareData = {
       title: 'vodle',
       text: this.prompt,
       files: [new File([this.json], snapshot_file_name(new Date(), 'txt'), { type: 'text/plain' })],
     };
+    if (this.browser.can_share(with_file)) {
+      return with_file;
+    }
+    return { title: 'vodle', text: snapshot_text(this.prompt, this.json) };
   }
 
   async share() {
