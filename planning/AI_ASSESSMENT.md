@@ -85,7 +85,7 @@ Expanded, and once an API is set up, the lower part reads:
 
 ## 4. The snapshot
 
-A versioned JSON document. Option labels (A, B, …) follow the current ranking, so "A" is the option that leads. Voters are "me" and, where included, V1…Vn in random order, newly drawn for each export. A vid never appears, so two exports cannot be linked through it.
+A versioned JSON document. The options are listed by their current rank, as on the poll page, and are called by their names everywhere else, or by "rank 1", "rank 2", … where the voter does not share the poll's texts. They carry no letters or ids of their own: an AI that cites such an id cites something the voter never sees in the app. Voters are "me" and, where included, V1…Vn in random order, newly drawn for each export. A vid never appears, so two exports cannot be linked through it.
 
 ```json
 {
@@ -105,28 +105,28 @@ A versioned JSON document. Option labels (A, B, …) follow the current ranking,
     "voters_not_abstaining": 7
   },
   "options": [
-    { "label": "A", "name": "Mountain hut", "description": "…",
+    { "rank": 1, "name": "Mountain hut", "description": "…",
       "approval_threshold": 30, "approvals": 7, "approval_percent": 100,
       "mean_effective_rating": 61.4, "share_percent": 100,
       "effective_rating_histogram": [0, 0, 0, 1, 1, 1, 1, 1, 1, 1] },
-    { "label": "B", "name": "Lake hotel", "approval_threshold": 20, "approvals": 6,
+    { "rank": 2, "name": "Lake hotel", "approval_threshold": 20, "approvals": 6,
       "approval_percent": 85.7, "mean_effective_rating": 61.4, "share_percent": 0,
       "effective_rating_histogram": [1, 0, 1, 0, 0, 1, 1, 0, 0, 3] },
-    { "label": "C", "name": "City hostel", "approval_threshold": 30, "approvals": 5, "…": "…" }
+    { "rank": 3, "name": "City hostel", "approval_threshold": 30, "approvals": 5, "…": "…" }
   ],
   "me": {
-    "waps": { "A": 60, "B": 80, "C": 30 },
-    "effective_ratings": { "A": 60, "B": 100, "C": 30 },
+    "waps": { "Mountain hut": 60, "Lake hotel": 80, "City hostel": 30 },
+    "effective_ratings": { "Mountain hut": 60, "Lake hotel": 100, "City hostel": 30 },
     "default_wap": 10,
     "abstaining": false,
-    "approves": ["A", "B", "C"],
-    "vote_goes_to": "A",
-    "lowest_wap_that_approves": { "A": 1, "B": 15, "C": 29 },
+    "approves": ["Mountain hut", "Lake hotel", "City hostel"],
+    "vote_goes_to": "Mountain hut",
+    "lowest_wap_that_approves": { "Mountain hut": 1, "Lake hotel": 15, "City hostel": 29 },
     "delegated_options": []
   },
   "agreement_level_percent": 100,
   "individual_waps": [
-    { "voter": "V1", "waps": { "A": 30, "B": 90, "C": 10 } }
+    { "voter": "V1", "waps": { "Mountain hut": 30, "Lake hotel": 90, "City hostel": 10 } }
   ]
 }
 ```
@@ -142,8 +142,8 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 - **What a first real answer got wrong (version 1).** An AI's assessment of a 51-voter test poll showed four misreadings, each traced to the data or the method text: (1) the voter, whose waps were all at the default 10, was told they "rate everything 100" (only effective ratings were exported); (2) it recomputed the thresholds from the histograms with any whole number as candidate and called vodle's thresholds inconsistent (the text did not say that only given ratings are candidates); (3) it advised rating 100 or 0 only (the text did not say what a wap in between does); (4) it had to reverse-engineer the agreement level. Version 2 addresses all four, and the running-poll prompt asks for a concrete wap per option.
 - **`effective_rating_histogram`:** counts in ten bins of ten points (the last bin is 90–100). It is present when the voter ticks the distribution box.
 - **`me`:**
-  - `lowest_wap_that_approves` is computed by vodle: the voter's wap for the option is varied while their other waps and the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold, and a wap at or above the voter's highest other wap makes the option a favourite that counts as 100. In the example, a wap of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end.
-  - `delegated_options` lists the options for which the voter's waps come from a delegate.
+  - `lowest_wap_that_approves` is computed by vodle: the voter's wap for the option is varied while their other waps and the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold, and a wap at or above the voter's highest other wap makes the option a favourite that counts as 100. In the example, a wap of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end. It is `null` for delegated options: with weighted delegation, the wap that counts is a blend of the voter's and the delegate's, so a bound on it is not a wap the voter could enter.
+  - `delegated_options` lists the options for which the voter's waps come from a delegate, wholly or in part.
 - **`individual_waps`:** only when the voter ticks the box. It contains the waps that count for each other voter (after delegation), shuffled, without delegation structure; their effective ratings follow by the rule in `method`.
 - **Never included:** the poll id, vids, the poll password, invitation and delegation links, nicknames, server names, or anyone else's delegations.
 - **Not included because vodle does not know it:** who added which option. vodle stores no author for an option, so the prompts do not ask about "my options".
@@ -167,10 +167,12 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 > the option below r (only ratings that were given are candidates, so the
 > threshold is the lowest approving rating; any number in between would make
 > the same voters approve). Voters whose effective rating is at or above the
-> threshold approve the option. An effective rating r therefore ensures
-> approval whenever fewer than r percent of the voters rate the option below
-> r: 100 always approves, while a low rating approves only when nearly
-> everyone rates the option at least as high. Waps between 0 and 100 thus
+> threshold approve the option. An effective rating r therefore approves at
+> least whenever fewer than r percent of the voters rate the option below r
+> (the threshold is then at most r), and also whenever the threshold is lower
+> for other reasons. So 100 always approves, while for a low rating the first
+> condition holds only when nearly everyone rates the option at least as
+> high. Waps between 0 and 100 thus
 > express conditional approval, which lets voters move to a compromise
 > together without any of them having to give up their favourite first.
 > Options are ranked by their number of approvals, ties broken by the
@@ -308,7 +310,7 @@ The voter's browser sends the request directly to the API address the voter ente
 1. **`src/app/ai-snapshot.ts`** (pure functions, no Angular):
    - `snapshot(input, choices)` builds the document from a plain input (options, effective ratings, tally maps, my vid, the poll's facts and, for a closed poll, its result);
    - `lowest_wap_that_approves`, which reuses the threshold rule extracted from `update_threshold_and_approvals` into a shared function so that the two cannot diverge;
-   - `anonymise` (cryptographic shuffle and relabelling);
+   - `anonymise` (cryptographic shuffle and renumbering of the voters);
    - `snapshot_text(prompt, json)`;
    - `chat_url_ok(url)`, the address check of §6.1, also used for the API address.
 2. **`src/app/ai-assessment-dialog/`:** a modal component with the dialog of §3. It contains the transfer logic of §6.1, with the share, clipboard and window functions injectable for tests.

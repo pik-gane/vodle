@@ -174,7 +174,9 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
   /** the data, freshly read from the poll */
   data_json(): string {
     const language = this.translate.getCurrentLang?.() || this.G.S.language || 'en';
-    const data = snapshot(poll_snapshot_input(this.p, language, this.G.S.default_wap),
+    const partly_delegated = (oid: string) =>
+      this.p.allow_weighted && !!this.G.Del?.get_trust_matrix(this.p.pid, oid)?.get(this.p.myvid)?.size;
+    const data = snapshot(poll_snapshot_input(this.p, language, this.G.S.default_wap, new Date(), partly_delegated),
                           { texts: this.texts, histograms: this.histograms, individual: this.individual });
     return JSON.stringify(data, null, 2);
   }

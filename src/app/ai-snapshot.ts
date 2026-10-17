@@ -48,10 +48,11 @@ export const METHOD_TEXT =
   'r, such that fewer than r percent of the non-abstaining voters rate the option below r (only ratings that were ' +
   'given are candidates, so the threshold is the lowest approving rating; any number in between would make the ' +
   'same voters approve). Voters whose effective rating is at or above the threshold approve the option. ' +
-  'An effective rating r therefore ensures approval whenever fewer than r percent of the voters rate the option ' +
-  'below r: 100 always approves, while a low rating approves only when nearly everyone rates the option at least ' +
-  'as high. Waps between 0 and 100 thus express conditional approval, which lets voters move to a compromise ' +
-  'together without any of them having to give up their favourite first. ' +
+  'An effective rating r therefore approves at least whenever fewer than r percent of the voters rate the option ' +
+  'below r (the threshold is then at most r), and also whenever the threshold is lower for other reasons. So 100 ' +
+  'always approves, while for a low rating the first condition holds only when nearly everyone rates the option ' +
+  'at least as high. Waps between 0 and 100 thus express conditional approval, which lets voters move to a ' +
+  'compromise together without any of them having to give up their favourite first. ' +
   'Options are ranked by their number of approvals, ties broken by the sum of effective ratings. Each voter\'s ' +
   'vote goes to the highest-ranked option they approve. An option\'s share is its fraction of all votes. ' +
   'In a "winner" poll, the winner is drawn at random with these shares as probabilities when the poll closes; ' +
@@ -63,12 +64,16 @@ export const METHOD_TEXT =
 
 /** what the less obvious fields mean, for the AI; each only where its field is present */
 export const FIELD_NOTES = {
-  labels: 'Option labels follow the current ranking: A leads.',
+  names: 'Options are listed by their current rank, as on the poll page (rank 1 leads), and named by their ' +
+    'names everywhere else.',
+  ranks: 'Options are listed by their current rank, as on the poll page (rank 1 leads). Their names are not ' +
+    'shared, so they are named "rank 1", "rank 2", ... everywhere else.',
   me: 'me.waps are my waps as I set them; me.effective_ratings are what the tally uses (see method).',
   lowest: 'me.lowest_wap_that_approves: for each option, the lowest wap with which I would approve it, my other ' +
     'waps and the other voters\' ratings staying as they are. A wap at or above my highest other wap makes the ' +
     'option one of my favourites, which counts as 100; a wap above it also turns my former favourites back into ' +
-    'their waps, which may cost them my approval. Options in me.delegated_options take their waps from a delegate.',
+    'their waps, which may cost them my approval. It is null for the options in me.delegated_options, where a ' +
+    'delegate\'s waps count, wholly or in part, so that no wap of mine alone decides.',
   histograms: 'effective_rating_histogram: how many non-abstaining voters, me included, give the option an ' +
     'effective rating of 0-9, 10-19, ..., 90-100.',
   individual: 'individual_waps: the other non-abstaining voters\' waps, after delegation, anonymised and in ' +
@@ -118,7 +123,7 @@ export interface snapshot_input_t {
     approves: string[];
     /** oid, or '' when abstaining */
     vote: string;
-    /** oids whose effective rating comes from a delegate */
+    /** oids whose rating comes from a delegate, wholly or (weighted delegation) in part */
     delegated: string[];
   };
   /** the other non-abstaining voters' waps (after delegation) and effective ratings by oid, in any order */
@@ -141,13 +146,23 @@ export interface snapshot_choices_t {
 
 // HELPERS:
 
-/** A, B, …, Z, AA, AB, … */
-export function option_label(index: number): string {
-  let label = '';
-  for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) {
-    label = String.fromCharCode(65 + (n - 1) % 26) + label;
+/** What the snapshot calls each option, by oid: its name where the poll's
+ *  texts are shared, else its current rank ("rank 1" leads), as the voter
+ *  sees the options on the poll page; never an id. An option without a name,
+ *  or with the name of another, gets its rank added. */
+export function option_keys(options: Array<{oid: string, name: string}>, texts: boolean): Record<string, string> {
+  const keys: Record<string, string> = {};
+  const count = new Map<string, number>();
+  for (const o of options) {
+    const name = (o.name || '').trim();
+    count.set(name, (count.get(name) || 0) + 1);
   }
-  return label;
+  options.forEach((o, index) => {
+    const name = (o.name || '').trim();
+    const rank = 'rank ' + (index + 1);
+    keys[o.oid] = !texts || !name ? rank : count.get(name)! > 1 ? `${name} (${rank})` : name;
+  });
+  return keys;
 }
 
 function round1(x: number): number {
@@ -192,13 +207,10 @@ export function lowest_wap_that_approves(others_effective: number[], highest_oth
 
 export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
                          random_uint32: () => number = crypto_uint32): any {
-  const label: Record<string, string> = {};
-  input.options.forEach((o, index) => { label[o.oid] = option_label(index); });
-  const by_label = (record: Record<string, number>) => {
-    const result: Record<string, number> = {};
-    for (const o of input.options) { result[label[o.oid]] = record[o.oid] ?? 0; }
-    return result;
-  };
+  const key = option_keys(input.options, choices.texts);
+  // fromEntries, so that an option named "__proto__" stays a key
+  const by_option = (record: Record<string, number>): Record<string, number> =>
+    Object.fromEntries(input.options.map(o => [key[o.oid], record[o.oid] ?? 0]));
   const N = input.n_not_abstaining;
 
   const poll: any = { type: input.type, state: input.state };
@@ -221,9 +233,9 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
   const options = input.options.map(o => {
     const ratings = input.others.map(r => r.effective[o.oid] ?? 0);
     if (!input.me.abstaining) { ratings.push(input.me.effective[o.oid] ?? 0); }
-    const entry: any = { label: label[o.oid] };
+    const entry: any = { rank: input.options.indexOf(o) + 1 };
     if (choices.texts) {
-      entry.name = o.name || '';
+      entry.name = key[o.oid];
       if (o.desc) { entry.description = o.desc; }
       if (o.url) { entry.link = o.url; }
     }
@@ -245,17 +257,20 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
   });
 
   const me: any = {
-    waps: by_label(input.me.waps),
-    effective_ratings: by_label(input.me.effective),
+    waps: by_option(input.me.waps),
+    effective_ratings: by_option(input.me.effective),
     default_wap: input.me.default_wap,
     abstaining: input.me.abstaining,
-    approves: input.options.filter(o => input.me.approves.includes(o.oid)).map(o => label[o.oid]),
-    vote_goes_to: input.me.vote ? label[input.me.vote] || null : null,
-    lowest_wap_that_approves: Object.fromEntries(input.options.map(o => [label[o.oid], lowest_wap_that_approves(
-      input.others.map(r => r.effective[o.oid] ?? 0),
-      Math.max(0, ...input.options.filter(other => other.oid != o.oid).map(other => input.me.proxy[other.oid] ?? 0)),
-    )])),
-    delegated_options: input.options.filter(o => input.me.delegated.includes(o.oid)).map(o => label[o.oid]),
+    approves: input.options.filter(o => input.me.approves.includes(o.oid)).map(o => key[o.oid]),
+    vote_goes_to: input.me.vote ? key[input.me.vote] || null : null,
+    // not where a delegate's waps count too: the wap that counts is then a
+    // blend (weighted delegation) or not the voter's at all
+    lowest_wap_that_approves: Object.fromEntries(input.options.map(o => [key[o.oid],
+      input.me.delegated.includes(o.oid) ? null : lowest_wap_that_approves(
+        input.others.map(r => r.effective[o.oid] ?? 0),
+        Math.max(0, ...input.options.filter(other => other.oid != o.oid).map(other => input.me.proxy[other.oid] ?? 0)),
+      )])),
+    delegated_options: input.options.filter(o => input.me.delegated.includes(o.oid)).map(o => key[o.oid]),
   };
 
   const result: any = {
@@ -264,7 +279,7 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     created: input.now.toISOString(),
     language: input.language,
     method: METHOD_TEXT,
-    notes: [FIELD_NOTES.labels, FIELD_NOTES.me, FIELD_NOTES.lowest, FIELD_NOTES.agreement,
+    notes: [choices.texts ? FIELD_NOTES.names : FIELD_NOTES.ranks, FIELD_NOTES.me, FIELD_NOTES.lowest, FIELD_NOTES.agreement,
             ...(choices.histograms ? [FIELD_NOTES.histograms] : []),
             ...(choices.individual ? [FIELD_NOTES.individual] : [])],
     poll,
@@ -275,9 +290,9 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
 
   if (input.state == 'closed' && input.result) {
     const r: any = {};
-    if (input.result.winner) { r.winner = label[input.result.winner] || null; }
+    if (input.result.winner) { r.winner = key[input.result.winner] || null; }
     if (input.result.allocation) {
-      r.allocation = by_label(input.result.allocation);
+      r.allocation = by_option(input.result.allocation);
       if (input.result.allocation_method) { r.allocation_method = input.result.allocation_method; }
       if (input.result.unspent !== undefined) { r.unspent = input.result.unspent; }
     }
@@ -286,7 +301,7 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
 
   if (choices.individual) {
     result.individual_waps = shuffled(input.others, random_uint32)
-      .map((ratings, index) => ({ voter: 'V' + (index + 1), waps: by_label(ratings.waps) }));
+      .map((ratings, index) => ({ voter: 'V' + (index + 1), waps: by_option(ratings.waps) }));
   }
   return result;
 }
@@ -335,7 +350,11 @@ export function snapshot_file_name(now: Date, extension: 'json' | 'txt'): string
 // READING THE POLL:
 
 /** The plain input of `snapshot`, read from a poll and its tally. */
-export function poll_snapshot_input(p: Poll, language: string, default_wap: number, now: Date = new Date()): snapshot_input_t {
+/** `partly_delegated(oid)`: whether the voter has given part of their wap
+ *  for the option to delegates (weighted delegation), which the poll alone
+ *  does not tell */
+export function poll_snapshot_input(p: Poll, language: string, default_wap: number, now: Date = new Date(),
+                                    partly_delegated: (oid: string) => boolean = () => false): snapshot_input_t {
   const T = p.T;
   const myvid = p.myvid;
   const in_order = [...(T?.oids_descending || [])].filter(oid => oid in p.options);
@@ -395,7 +414,7 @@ export function poll_snapshot_input(p: Poll, language: string, default_wap: numb
       abstaining: !not_abstaining(myvid),
       approves: in_order.filter(oid => !!T?.approvals_map.get(oid)?.get(myvid)),
       vote: T?.votes_map.get(myvid) || '',
-      delegated: in_order.filter(oid => !!p.effective_delegation_map.get(oid)?.has(myvid)),
+      delegated: in_order.filter(oid => !!p.effective_delegation_map.get(oid)?.has(myvid) || partly_delegated(oid)),
     },
     others,
     agreement_level: T ? p.agreement_level : 0,
