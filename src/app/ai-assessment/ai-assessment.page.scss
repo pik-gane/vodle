@@ -1,0 +1,88 @@
+.intro {
+  margin-top: 0;
+}
+
+h3 {
+  font-size: 1.05em;
+  margin: 1.2em 0 0.3em 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.block {
+  display: block;
+  margin: 0.4em 0;
+}
+
+pre.data {
+  max-height: 40vh;
+  overflow: auto;
+  font-size: 0.8em;
+  padding: 0.6em;
+  background: var(--ion-color-light);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt, .manual {
+  font-size: 0.95em;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin: 0.6em 0;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4em;
+  margin-top: 0.6em;
+
+  ion-input {
+    flex: 1;
+  }
+}
+
+.formats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1em;
+  margin-top: 0.6em;
+
+  .label {
+    font-size: 0.9em;
+    color: var(--ion-color-medium);
+  }
+}
+
+.api {
+  border-left: 3px solid var(--ion-color-light-shade);
+  padding-left: 0.8em;
+}
+
+.answer {
+  margin-top: 0.8em;
+}
+
+.answer-text {
+  user-select: text;
+  line-height: 1.45;
+}
+
+/* the answer's own tags come in through innerHTML, outside this
+   component's style scope */
+:host ::ng-deep .answer-text {
+  h4 {
+    margin: 0.8em 0 0.3em 0;
+  }
+
+  code {
+    font-size: 0.9em;
+  }
+}

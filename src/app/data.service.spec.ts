@@ -906,7 +906,7 @@ describe('DataService consistency hardening (#292)', () => {
       const handler1 = make_handler();
       const handler2 = make_handler();
       const sync_spy = jasmine.createSpy('sync').and.returnValues(handler1, handler2);
-      spyOn(window, 'setTimeout').and.callFake((cb: any) => { cb(); return 1 as any; });
+      spyOn(window, 'setTimeout').and.callFake(((cb: any) => { cb(); return 1; }) as any);
       svc.local_synced_user_db = { sync: sync_spy };
       svc.remote_user_db = {};
       svc.get_email_and_pw_hash = () => 'hash';
@@ -939,7 +939,7 @@ describe('DataService consistency hardening (#292)', () => {
         const handler1 = make_handler();
         const handler2 = make_handler();
         const sync_spy = jasmine.createSpy('sync').and.returnValues(handler1, handler2);
-        spyOn(window, 'setTimeout').and.callFake((cb: any) => { cb(); return 1 as any; });
+        spyOn(window, 'setTimeout').and.callFake(((cb: any) => { cb(); return 1; }) as any);
         svc.local_poll_dbs = { p11: { sync: sync_spy } };
         svc.remote_poll_dbs = { p11: {} };
         svc.G.P.polls['p11'] = { syncing: true };

@@ -23,6 +23,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { environment } from '../environments/environment';
 import { GlobalService } from './global.service';
 import { allocate_budget, allocation_method_t, amount_set, amount_set_t, describe_amounts, format_amount, is_restricted } from './budget';
+import { approval_threshold } from './approval-threshold';
 
 /* TODO:
 - add state, allow only certain state transitions, allow attribute change only in draft state
@@ -1965,19 +1966,8 @@ export class Poll {
 
   update_threshold_and_approvals(oid: string, effective_ratings_map: Map<string, number>, effective_ratings_ascending: Array<number>): [number, boolean, boolean] {
     this.G.L.entry("Poll.update_threshold_and_approvals", oid, this.T.n_not_abstaining, [...effective_ratings_map], effective_ratings_ascending);
-    // update approval threshold:
-    let threshold = 100;
-    const threshold_factor = 100 / this.T.n_not_abstaining,
-          offset = this.T.n_not_abstaining - effective_ratings_ascending.length; // accounts for potentially missing leading zeros in array
-    for (let index = 0; index < effective_ratings_ascending.length; index++) {
-      const rating = effective_ratings_ascending[index];
-      // check whether strictly less than r percent have a rating strictly less than r:
-      const pct_less_than_r = threshold_factor * (index + offset);
-      if (pct_less_than_r < rating && rating > 0) {
-        threshold = rating;
-        break;
-      }
-    }
+    // update approval threshold (the rule is shared with the AI snapshot):
+    const threshold = approval_threshold(effective_ratings_ascending, this.T.n_not_abstaining);
     if (!(this.T.approvals_map.has(oid))) {
       this.T.approvals_map.set(oid, new Map());
     }

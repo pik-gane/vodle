@@ -314,6 +314,19 @@ the recipients' providers).
 Restarting the bot loses nothing; new options that arrive while it is down
 are not reported.
 
+## AI assessment
+
+Participants can pass a poll's state to an AI service of their own choice, through their chatbot's page or, with their own API key, its API (planning/AI_ASSESSMENT.md). The requests go from their browsers to that service; nothing passes through this deployment, and it needs no configuration. `src/environments/environment.prod.ts` can switch it off:
+
+```ts
+ai_assessment: {
+  enabled: true,      // false: no AI assessment at all
+  api_enabled: true,  // false: only the chat path, no API keys
+},
+```
+
+The privacy statement should say that participants can do this (`documentation/PRIVACY.md` §5). Should a Content Security Policy be added to the web server, the API path needs `connect-src https:` (and the local addresses `http://localhost` and `http://127.0.0.1` for models run on a participant's own computer).
+
 ## Operations
 
 **Update to a newer vodle**: `deploy/deploy.sh update` (pull, rebuild,

@@ -1293,6 +1293,21 @@ export class PollPage implements OnInit {
     }
   }
   
+  /** open the AI assessment dialog (planning/AI_ASSESSMENT.md), loaded
+   *  only when it is first used */
+  async ai_assessment_dialog() {
+    this.p.end_if_past_due();
+    const { AiAssessmentPage } = await import('../ai-assessment/ai-assessment.page');
+    const modal = await this.modalController.create({
+        component: AiAssessmentPage,
+        cssClass: 'ai-assessment',
+        componentProps: {P: this},
+        backdropDismiss: true
+    });
+    modal.present();
+    this.currentModal = modal;
+  }
+
   async analysis_dialog() {
     /** open the analysis modal */
     this.p.end_if_past_due();

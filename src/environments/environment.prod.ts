@@ -171,6 +171,14 @@ export const environment = {
   // A deployment whose polls are more about finding what everyone can
   // live with than about picking favourites may want this higher.
   default_wap: 10,
+  // AI assessment of a poll (planning/AI_ASSESSMENT.md): a voter hands the
+  // poll's state to an AI of their own choice, through its chat page or, with
+  // their own key, its API. Nothing passes through this deployment.
+  // `api_enabled` switches off only the API path.
+  ai_assessment: {
+    enabled: true,
+    api_enabled: true,
+  },
   default_lang: "en",
   github_url: "https://github.com/pik-gane/vodle",
   // where the app is served: invitation links are built from this

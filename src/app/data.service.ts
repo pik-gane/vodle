@@ -171,8 +171,10 @@ function make_consistency_failure_error(message: string): Error {
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
 // (pending_user_data_move: a credential change whose data move has not
-// completed yet, see move_user_data / perform_user_data_move, #330)
-const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move'];
+// completed yet, see move_user_data / perform_user_data_move, #330;
+// ai_api_key: the voter's key for an AI API, which must not leave the
+// device, planning/AI_ASSESSMENT.md §7)
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move', 'ai_api_key'];
 /** Keys the ACCOUNT owns rather than the device: on these the user room wins
  *  the sync, where every other key is local-wins.
  *

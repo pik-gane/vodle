@@ -115,6 +115,15 @@ Two things can still unmask a vid, and neither is the protocol's doing:
 - **The invitation.** Whoever sent a magic link knows who they sent it to. With one invitee, the vid that appears next is theirs.
 - **The content.** A poll of three people, or a rating pattern only one person would produce, identifies itself.
 
+**Passing a poll to an AI.** Any participant can hand what they see to an AI service of their own choice, from the poll page (planning/AI_ASSESSMENT.md): through their chatbot's page (vodle copies the text and opens the page) or, with their own API key, from their browser directly to that API. vodle's servers are not involved. What leaves:
+
+- always the results, the participant's own ratings and vodle's rules;
+- by default also the poll's texts and each option's rating distribution;
+- only if the participant ticks it, every other participant's ratings, anonymised: relabelled V1…Vn in a new random order for each export, without vids;
+- never the poll id, vids, passwords, invitation or delegation links, nicknames or anyone else's delegations.
+
+The copy then lies outside the end-to-end encryption, with the provider the participant chose, under that provider's terms. No per-poll setting limits this, since a participant could copy the same data by hand; participants learn about it from the FAQ, and a deployment's privacy statement should say it. An API key a participant enters stays on their device (it is one of the device-local keys, like the login password) and is sent only to the address they entered.
+
 ---
 
 ## 6. Delegations

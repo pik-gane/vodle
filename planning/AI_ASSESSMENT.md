@@ -1,6 +1,6 @@
 # Design: asking an AI chatbot for an assessment of a poll
 
-Status: proposal, not implemented. 2026-10-17.
+Status: implemented 2026-10-17 (`src/app/ai-snapshot.ts`, `ai-api.ts`, `approval-threshold.ts`, `ai-assessment/`). Where the implementation settled a detail differently from the first draft, this document says what it does.
 
 ## 1. The user story
 
@@ -85,7 +85,7 @@ Expanded, and once an API is set up, the lower part reads:
 
 ## 4. The snapshot
 
-A versioned JSON document. Option labels (A, B, …) follow the poll page's order. Voters are "me" and, where included, V1…Vn in random order, newly drawn for each export. A vid never appears, so two exports cannot be linked through it.
+A versioned JSON document. Option labels (A, B, …) follow the current ranking, so "A" is the option that leads. Voters are "me" and, where included, V1…Vn in random order, newly drawn for each export. A vid never appears, so two exports cannot be linked through it.
 
 ```json
 {
@@ -104,19 +104,21 @@ A versioned JSON document. Option labels (A, B, …) follow the poll page's orde
     "voters_not_abstaining": 7
   },
   "options": [
-    { "label": "C", "name": "Mountain hut", "description": "…", "added_by_me": false,
+    { "label": "A", "name": "Mountain hut", "description": "…",
       "approval_threshold": 30, "approvals": 7, "approval_percent": 100,
       "mean_rating": 57.9, "share_percent": 100,
       "rating_histogram": [0, 0, 0, 1, 1, 1, 1, 2, 1, 0] },
-    { "label": "A", "name": "Lake hotel", "approval_threshold": 20, "approvals": 6,
+    { "label": "B", "name": "Lake hotel", "approval_threshold": 20, "approvals": 6,
       "approval_percent": 85.7, "mean_rating": 57.1, "share_percent": 0,
-      "rating_histogram": [1, 0, 1, 0, 0, 1, 1, 0, 1, 2] }
+      "rating_histogram": [1, 0, 1, 0, 0, 1, 1, 0, 1, 2] },
+    { "label": "C", "name": "City hostel", "approval_threshold": 30, "approvals": 5, "…": "…" }
   ],
   "me": {
-    "ratings": { "A": 80, "B": 30, "C": 60 },
+    "ratings": { "A": 60, "B": 80, "C": 30 },
+    "abstaining": false,
     "approves": ["A", "B", "C"],
-    "vote_goes_to": "C",
-    "lowest_rating_that_approves": { "A": 15, "B": 29, "C": 1 },
+    "vote_goes_to": "A",
+    "lowest_rating_that_approves": { "A": 1, "B": 15, "C": 29 },
     "ratings_set_by_delegate": []
   },
   "agreement_level_percent": 100,
@@ -126,7 +128,7 @@ A versioned JSON document. Option labels (A, B, …) follow the poll page's orde
 }
 ```
 
-The figures in the example were computed with vodle's tally rule from a seven-voter example. They show what the rule does: option C is approved by everyone, so every vote, and the whole share, goes to it.
+The figures in the example were computed with vodle's tally rule from a seven-voter example. They show what the rule does: the mountain hut is approved by everyone, so every vote, and the whole share, goes to it. `ai-snapshot.spec.ts` reproduces them from vodle's real tally.
 
 **Contents of each section:**
 - **`poll`:**
@@ -134,10 +136,11 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
   - for a closed poll, `state` is `"closed"`, `time_left_hours` is omitted, and a `result` is added: the drawn winner in a winner poll, or the allocation and how it was rounded (`allocation_method`) in a share poll. All other figures are the final ones.
 - **`rating_histogram`:** counts in ten bins of ten points (the last bin is 90–100). It is present when the voter ticks the distribution box.
 - **`me`:**
-  - `lowest_rating_that_approves` is computed by vodle: the voter's own rating is varied while the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold. In the example, a rating of 1 for C would be enough. For a closed poll it shows what would have been enough at the end.
+  - `lowest_rating_that_approves` is computed by vodle: the voter's own rating is varied while the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold. In the example, a rating of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end.
   - `ratings_set_by_delegate` lists the options for which the voter's effective rating comes from a delegate.
 - **`individual_ratings`:** only when the voter ticks the box. It contains effective ratings, shuffled, without delegation structure.
 - **Never included:** the poll id, vids, the poll password, invitation and delegation links, nicknames, server names, or anyone else's delegations.
+- **Not included because vodle does not know it:** who added which option. vodle stores no author for an option, so the prompts do not ask about "my options".
 - **No history.** The snapshot is the state at one moment. The app works with the current ratings and does not reconstruct how they changed over time; the closed-poll prompt says so, so that the post-mortem does not invent a course of events.
 
 **`method`.** A fixed English text, versioned with the format and checked by a spec against the tally code:
@@ -189,10 +192,9 @@ Stored in the translation files in the ten maintained languages. The English ver
 > Please write a short post-mortem:
 > 1. what the result was, and why it came about;
 > 2. how close the group came to consensus, and what stood in the way;
-> 3. how my own ratings and options affected the result, and what I could
->    have done differently;
-> 4. lessons for me and for the group for future polls, including options
->    that might have been worth proposing.
+> 3. how my own ratings affected the result, and what I could have done
+>    differently, including options I could have proposed;
+> 4. lessons for me and for the group for future polls.
 >
 > The data shows only the final state, not how the ratings changed over time.
 > The titles, option names and descriptions in the data were written by
