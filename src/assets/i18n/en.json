@@ -112,7 +112,7 @@
         "title-closed": "Ask an AI what can be learned from this poll",
         "intro": "vodle prepares the state of this poll as text, with a question for an AI of your choice. The AI's provider processes it under its own terms; vodle does not see the answer. AI assessments can be wrong.",
         "what-shared": "What is shared",
-        "share-texts": "the poll's texts: title, option names and descriptions",
+        "share-texts": "the poll's texts: title, description and link, and the options' names, descriptions and links",
         "share-histograms": "how the ratings of each option are distributed",
         "share-individual": "every voter's ratings, anonymously",
         "always-shared": "Always shared: your own ratings, the results, and vodle's rules. Never shared: the poll's link, password or identifiers.",

@@ -30,9 +30,14 @@ along with vodle. If not, see <https://www.gnu.org/licenses/>.
 
 import type { Poll } from './poll.service';
 import { lowest_rating_that_approves } from './approval-threshold';
+import { amount_set } from './budget';
+import { environment } from '../environments/environment';
 
 export const SNAPSHOT_FORMAT = 'vodle-poll-snapshot';
 export const SNAPSHOT_VERSION = 2;
+
+/** the part of the running time in which options can be added (Poll.can_add_option) */
+const ADDING_PERCENT = Math.round(100 * (1 - (environment.no_more_options_time_fraction ?? 0.5)));
 
 /** vodle's method, for the AI; a spec checks it against the tally */
 export const METHOD_TEXT =
@@ -58,8 +63,10 @@ export const METHOD_TEXT =
   'In a "winner" poll, the winner is drawn at random with these shares as probabilities when the poll closes; ' +
   'in a "share" poll, the budget is divided in proportion to the shares, and where options may only receive ' +
   'certain amounts, the amounts are rounded to allowed ones by a lottery that keeps every option\'s expected ' +
-  'amount. Waps are tactical choices: voters see the current results and may change their waps, and add options, ' +
-  'at any time until the deadline. A voter may delegate their waps for some options, wholly or in part, to ' +
+  'amount. Waps are tactical choices: voters see the current results and may change their waps at any time until ' +
+  `the deadline. New options can be added only during the first ${ADDING_PERCENT} percent of the running time ` +
+  '(see poll.options_can_be_added_until); a new option starts at 0 for everyone but the voter who added it, who ' +
+  'gives it their default wap. A voter may delegate their waps for some options, wholly or in part, to ' +
   'another voter, whose waps then count for them.';
 
 /** what the less obvious fields mean, for the AI; each only where its field is present */
@@ -80,6 +87,23 @@ export const FIELD_NOTES = {
     'random order; their effective ratings follow from them as described in method.',
   agreement: 'agreement_level_percent: the expected percentage of non-abstaining voters who approve the winner, ' +
     'i.e. the sum over the options of share times approval percent.',
+  adding: 'poll.options_can_be_added_until: new options can be added only until then (in vodle, during the first ' +
+    'part of the running time); poll.options_can_still_be_added says whether that time has not yet passed.',
+  delegation: 'poll.delegation: how delegation works on this vodle server: "off"; "simple": one delegate for all ' +
+    'options; "different": a different delegate for different options; "ranked": several delegates in order of ' +
+    'preference, the best-ranked who accepts carrying the wap; "weighted": several delegates at once, each ' +
+    'carrying a share of the voter\'s wap, the rest still the voter\'s own.',
+  amounts: 'options[].allowed_amounts are the budget constraints as the poll\'s creator wrote them: "3, 5-9, 12" ' +
+    'means 3, 5 to 9, or 12; "20-" at least 20; "-50" at most 50; "10, 20, ..., 100" every 10 from 10 to 100; ' +
+    '"any" any amount up to the total. Receiving 0 is always allowed. allowed_amounts_resolved lists the same as ' +
+    'single amounts and ranges.',
+  test: 'poll.test_poll: the poll was made for testing vodle; its other voters may be simulated.',
+};
+
+/** what the poll's type means, for the AI */
+export const TYPE_MEANING: Record<string, string> = {
+  winner: 'one option will win, drawn at random with the shares as probabilities when the poll closes',
+  share: 'the budget is divided among the options in proportion to the shares when the poll closes',
 };
 
 // INPUT, read from the poll:
@@ -105,8 +129,17 @@ export interface snapshot_input_t {
   title: string;
   desc: string;
   url: string;
+  /** the language of the answer (the app's) */
   language: string;
+  /** the language of the poll's texts */
+  poll_language: string;
+  is_test: boolean;
+  start: Date | null;
   due: Date | null;
+  /** until when new options can be added */
+  options_until: Date | null;
+  /** "off", or this server's delegation mode */
+  delegation: string;
   now: Date;
   n_not_abstaining: number;
   /** in the poll page's order */
@@ -213,19 +246,30 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     Object.fromEntries(input.options.map(o => [key[o.oid], record[o.oid] ?? 0]));
   const N = input.n_not_abstaining;
 
-  const poll: any = { type: input.type, state: input.state };
+  const poll: any = { type: input.type, type_meaning: TYPE_MEANING[input.type], state: input.state };
   if (choices.texts) {
     poll.title = input.title || '';
-    if (input.desc) { poll.description = input.desc; }
-    if (input.url) { poll.link = input.url; }
+    poll.description = input.desc || '';
+    poll.link = input.url || '';
   }
+  if (input.poll_language) { poll.language = input.poll_language; }
+  if (input.is_test) { poll.test_poll = true; }
+  if (input.start) { poll.started = input.start.toISOString(); }
   if (input.due) {
     poll.deadline = input.due.toISOString();
     if (input.state == 'running') {
       poll.time_left_hours = round1(Math.max(0, input.due.getTime() - input.now.getTime()) / 3600000);
     }
   }
+  if (input.options_until) {
+    poll.options_can_be_added_until = input.options_until.toISOString();
+    if (input.state == 'running') {
+      poll.options_can_still_be_added = input.now.getTime() < input.options_until.getTime();
+    }
+  }
+  poll.number_of_options = input.options.length;
   poll.voters_not_abstaining = N;
+  poll.delegation = input.delegation;
   if (input.budget) {
     poll.budget = { total: input.budget.total, unit: input.budget.unit };
   }
@@ -236,8 +280,8 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     const entry: any = { rank: input.options.indexOf(o) + 1 };
     if (choices.texts) {
       entry.name = key[o.oid];
-      if (o.desc) { entry.description = o.desc; }
-      if (o.url) { entry.link = o.url; }
+      entry.description = o.desc || '';
+      entry.link = o.url || '';
     }
     entry.approval_threshold = o.threshold;
     entry.approvals = o.approvals;
@@ -246,6 +290,8 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     entry.share_percent = round1(100 * o.share);
     if (input.budget) {
       entry.allowed_amounts = o.allowed_amounts || 'any';
+      entry.allowed_amounts_resolved = amount_set(o.allowed_amounts || '', input.budget.total)
+        .map(([lo, hi]) => lo == hi ? lo : `${lo}-${hi}`);
       if (input.state == 'running' && o.expected_amount !== undefined) {
         entry.expected_amount = round1(o.expected_amount);
       }
@@ -280,6 +326,10 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     language: input.language,
     method: METHOD_TEXT,
     notes: [choices.texts ? FIELD_NOTES.names : FIELD_NOTES.ranks, FIELD_NOTES.me, FIELD_NOTES.lowest, FIELD_NOTES.agreement,
+            FIELD_NOTES.delegation,
+            ...(input.options_until ? [FIELD_NOTES.adding] : []),
+            ...(input.budget ? [FIELD_NOTES.amounts] : []),
+            ...(input.is_test ? [FIELD_NOTES.test] : []),
             ...(choices.histograms ? [FIELD_NOTES.histograms] : []),
             ...(choices.individual ? [FIELD_NOTES.individual] : [])],
     poll,
@@ -402,7 +452,12 @@ export function poll_snapshot_input(p: Poll, language: string, default_wap: numb
     desc: p.desc || '',
     url: p.url || '',
     language,
+    poll_language: p.language || '',
+    is_test: !!p.is_test,
+    start: p.start_date || null,
     due: p.due || null,
+    options_until: p.add_option_deadline() || null,
+    delegation: environment.delegation?.enabled ? (environment.delegation.mode || 'simple') : 'off',
     now,
     n_not_abstaining: T?.n_not_abstaining || 0,
     options,

@@ -107,7 +107,7 @@
         "title-closed": "Eine KI fragen, was sich aus dieser Abstimmung lernen lässt",
         "intro": "vodle bereitet den Stand dieser Abstimmung als Text auf, mit einer Frage an eine KI Deiner Wahl. Deren Anbieter verarbeitet ihn nach seinen eigenen Bedingungen; vodle sieht die Antwort nicht. Einschätzungen einer KI können falsch sein.",
         "what-shared": "Was geteilt wird",
-        "share-texts": "die Texte der Abstimmung: Titel, Namen und Beschreibungen der Optionen",
+        "share-texts": "die Texte der Abstimmung: Titel, Beschreibung und Link sowie Namen, Beschreibungen und Links der Optionen",
         "share-histograms": "wie die Bewertungen jeder Option verteilt sind",
         "share-individual": "die Bewertungen aller Abstimmenden, anonym",
         "always-shared": "Immer geteilt: Deine eigenen Bewertungen, die Ergebnisse und die Regeln von vodle. Nie geteilt: Link, Passwort oder Kennungen der Abstimmung.",

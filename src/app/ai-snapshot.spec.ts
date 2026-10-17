@@ -21,7 +21,7 @@ import { Poll } from './poll.service';
 import { environment } from '../environments/environment';
 import { approval_threshold, lowest_rating_that_approves } from './approval-threshold';
 import {
-  METHOD_TEXT, chat_url_ok, lowest_wap_that_approves, option_keys, poll_snapshot_input, rating_histogram, shuffled, snapshot,
+  METHOD_TEXT, TYPE_MEANING, chat_url_ok, lowest_wap_that_approves, option_keys, poll_snapshot_input, rating_histogram, shuffled, snapshot,
   snapshot_file_name, snapshot_text, with_scheme,
 } from './ai-snapshot';
 
@@ -318,6 +318,39 @@ describe('AI snapshot', () => {
       const lowest = data.me.lowest_wap_that_approves['y'];
       expect(approves(lowest)).withContext(`y at ${lowest}`).toBeTrue();
       if (lowest > 1) { expect(approves(lowest - 1)).withContext(`y at ${lowest - 1}`).toBeFalse(); }
+    });
+
+    it('carries the poll\'s and the options\' metadata: type, texts, links, language, times, budget constraints', () => {
+      const poll = make_poll({o1: 'Intro round', o2: 'Strategy'}, {
+        type: 'share', title: 'Meeting time', desc: 'How to use 90 minutes', url: 'https://example.org/meeting',
+        language: 'de', is_test: 'true', start_date: '2026-10-10T18:00:00.000Z', due: '2026-10-20T18:00:00.000Z',
+        budget_total: '90', budget_unit: 'minutes',
+      });
+      Object.assign(poll._options.o1, {desc: 'Who is new', url: 'https://example.org/intro', amounts: '5, 10'});
+      poll._options.o2.amounts = '15, 20, ..., 30';
+      rate(poll, {me: {o1: 80, o2: 40}, v1: {o1: 30, o2: 90}});
+      const data = snapshot(poll_snapshot_input(poll, 'en', 10, new Date('2026-10-17T18:00:00.000Z')), ALL);
+      expect(data.poll).toEqual(jasmine.objectContaining({
+        type: 'share', type_meaning: TYPE_MEANING['share'], state: 'running',
+        title: 'Meeting time', description: 'How to use 90 minutes', link: 'https://example.org/meeting',
+        language: 'de', test_poll: true,
+        started: '2026-10-10T18:00:00.000Z', deadline: '2026-10-20T18:00:00.000Z',
+        // options only in the first half of the running time
+        options_can_be_added_until: '2026-10-15T18:00:00.000Z', options_can_still_be_added: false,
+        number_of_options: 2, budget: {total: 90, unit: 'minutes'},
+      }));
+      expect(data.poll.delegation).toBe(environment.delegation.enabled ? 'simple' : 'off');
+      const intro = data.options.find((o: any) => o.name == 'Intro round');
+      const strategy = data.options.find((o: any) => o.name == 'Strategy');
+      expect([intro.description, intro.link, intro.allowed_amounts, intro.allowed_amounts_resolved])
+        .toEqual(['Who is new', 'https://example.org/intro', '5, 10', [0, 5, 10]]);
+      // present even where empty, so that the AI knows there is none
+      expect([strategy.description, strategy.link]).toEqual(['', '']);
+      expect(strategy.allowed_amounts_resolved).toEqual([0, 15, 20, 25, 30]);
+      for (const field of ['allowed_amounts', 'options_can_be_added_until', 'test_poll', 'poll.delegation']) {
+        expect(data.notes.join(' ')).withContext(field).toContain(field);
+      }
+      expect(data.method).toContain('New options can be added only during the first 50 percent');
     });
 
     it('carries no identifier, password or link of the poll or its voters', () => {

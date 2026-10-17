@@ -97,15 +97,23 @@ A versioned JSON document. The options are listed by their current rank, as on t
   "notes": ["… what the less obvious fields mean …"],
   "poll": {
     "type": "winner",
+    "type_meaning": "one option will win, drawn at random with the shares as probabilities when the poll closes",
     "state": "running",
     "title": "Where should the team retreat take place?",
     "description": "…",
+    "link": "",
+    "language": "en",
+    "started": "2026-10-13T18:00:00Z",
     "deadline": "2026-10-20T18:00:00Z",
     "time_left_hours": 75.9,
-    "voters_not_abstaining": 7
+    "options_can_be_added_until": "2026-10-17T06:00:00Z",
+    "options_can_still_be_added": true,
+    "number_of_options": 3,
+    "voters_not_abstaining": 7,
+    "delegation": "weighted"
   },
   "options": [
-    { "rank": 1, "name": "Mountain hut", "description": "…",
+    { "rank": 1, "name": "Mountain hut", "description": "…", "link": "",
       "approval_threshold": 30, "approvals": 7, "approval_percent": 100,
       "mean_effective_rating": 61.4, "share_percent": 100,
       "effective_rating_histogram": [0, 0, 0, 1, 1, 1, 1, 1, 1, 1] },
@@ -134,8 +142,8 @@ A versioned JSON document. The options are listed by their current rank, as on t
 The figures in the example were computed with vodle's tally rule from a seven-voter example. They show what the rule does: the mountain hut is approved by everyone, so every vote, and the whole share, goes to it. `ai-snapshot.spec.ts` reproduces them from vodle's real tally.
 
 **Contents of each section:**
-- **`poll`:**
-  - for share polls, also the budget, its unit and the unspent amount, and for each option the allowed amounts and the expected amount (#201);
+- **`poll`:** all of the poll's metadata that identifies nobody: the type and what it means, the state, the title, description and link (empty where there is none, so that the AI knows there is none), the language of the poll's texts, whether it is a test poll, the start, the deadline, until when options can be added (#201's "first half of the running time", which the AI otherwise cannot know and an AI once ignored, proposing a new option minutes before the deadline), the number of options and of non-abstaining voters, and how delegation works on this server;
+  - for share polls, also the budget and its unit, and for each option its budget constraints: the allowed amounts as the creator wrote them, the same resolved into single amounts and ranges, and the expected amount (#201);
   - for a closed poll, `state` is `"closed"`, `time_left_hours` is omitted, and a `result` is added: the drawn winner in a winner poll, or the allocation and how it was rounded (`allocation_method`) in a share poll. All other figures are the final ones.
 - **Waps and effective ratings.** A voter sets waps; the tally uses effective ratings, in which each voter's highest-wap option or options count as 100. Version 1 of the format gave only the effective ratings, labelled "ratings". A voter who had left every option at the default wap of 10 then appeared to have rated everything 100, and an AI took that literally. Version 2 gives the waps as set, the voter's own effective ratings and default wap, and a method text that explains both rules.
 - **`notes`:** short explanations of the less obvious fields, each only where its field is present, including how `agreement_level_percent` is defined.
@@ -181,10 +189,12 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 > poll, the winner is drawn at random with these shares as probabilities when
 > the poll closes; in a "share" poll, the budget is divided in proportion to
 > the shares [and rounded to allowed amounts by a fair lottery]. Waps are
-> tactical choices: voters see the current results and may change their waps,
-> and add options, at any time until the deadline. A voter may delegate their
-> waps for some options, wholly or in part, to another voter, whose waps then
-> count for them.
+> tactical choices: voters see the current results and may change their waps
+> at any time until the deadline. New options can be added only during the
+> first 50 percent of the running time (see poll.options_can_be_added_until);
+> a new option starts at 0 for everyone but the voter who added it, who gives
+> it their default wap. A voter may delegate their waps for some options,
+> wholly or in part, to another voter, whose waps then count for them.
 
 ## 5. The default prompts
 

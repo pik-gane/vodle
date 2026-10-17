@@ -101,7 +101,7 @@
         "title-closed": "Kysy tekoälyltä, mitä tästä kyselystä voi oppia",
         "intro": "vodle kokoaa tämän kyselyn tilanteen tekstiksi ja liittää siihen kysymyksen valitsemallesi tekoälylle. Tekoälyn tarjoaja käsittelee sen omien ehtojensa mukaan; vodle ei näe vastausta. Tekoälyn arviot voivat olla vääriä.",
         "what-shared": "Mitä jaetaan",
-        "share-texts": "kyselyn tekstit: otsikko sekä vaihtoehtojen nimet ja kuvaukset",
+        "share-texts": "kyselyn tekstit: otsikko, kuvaus ja linkki sekä vaihtoehtojen nimet, kuvaukset ja linkit",
         "share-histograms": "miten kunkin vaihtoehdon arviot jakautuvat",
         "share-individual": "jokaisen äänestäjän arviot nimettöminä",
         "always-shared": "Jaetaan aina: omat arviosi, tulokset ja vodlen säännöt. Ei koskaan: kyselyn linkkiä, salasanaa tai tunnisteita.",

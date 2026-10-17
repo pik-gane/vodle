@@ -84,7 +84,7 @@
         "title-closed": "问问 AI 能从这次投票中学到什么",
         "intro": "vodle 会把这次投票的状态整理成文本，并附上一个给你所选 AI 的问题。AI 的提供方按其自身条款处理这些内容；vodle 看不到回答。AI 的评估可能有误。",
         "what-shared": "共享哪些内容",
-        "share-texts": "投票的文字：标题、选项名称和说明",
+        "share-texts": "投票的文字：标题、说明和链接，以及选项的名称、说明和链接",
         "share-histograms": "每个选项的评分如何分布",
         "share-individual": "每位投票者的评分（匿名）",
         "always-shared": "始终共享：你自己的评分、结果和 vodle 的规则。从不共享：投票的链接、密码或标识符。",

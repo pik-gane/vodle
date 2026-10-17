@@ -105,7 +105,7 @@
         "title-closed": "Chiedi a un'IA che cosa si può imparare da questo sondaggio",
         "intro": "vodle prepara lo stato di questo sondaggio come testo, con una domanda per un'IA di tua scelta. Il suo fornitore lo elabora secondo le proprie condizioni; vodle non vede la risposta. Le valutazioni di un'IA possono essere sbagliate.",
         "what-shared": "Che cosa viene condiviso",
-        "share-texts": "i testi del sondaggio: titolo, nomi e descrizioni delle opzioni",
+        "share-texts": "i testi del sondaggio: titolo, descrizione e link, e nomi, descrizioni e link delle opzioni",
         "share-histograms": "come sono distribuite le valutazioni di ogni opzione",
         "share-individual": "le valutazioni di ogni votante, in forma anonima",
         "always-shared": "Sempre condivisi: le tue valutazioni, i risultati e le regole di vodle. Mai condivisi: il link, la password o gli identificativi del sondaggio.",

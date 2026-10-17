@@ -105,7 +105,7 @@
         "title-closed": "Zapytaj AI, czego można się nauczyć z tej ankiety",
         "intro": "vodle przygotowuje stan tej ankiety jako tekst, z pytaniem do wybranej przez Ciebie AI. Jej dostawca przetwarza go na własnych warunkach; vodle nie widzi odpowiedzi. Oceny AI mogą być błędne.",
         "what-shared": "Co jest udostępniane",
-        "share-texts": "teksty ankiety: tytuł, nazwy i opisy opcji",
+        "share-texts": "teksty ankiety: tytuł, opis i link oraz nazwy, opisy i linki opcji",
         "share-histograms": "jak rozkładają się oceny każdej opcji",
         "share-individual": "oceny każdego głosującego, anonimowo",
         "always-shared": "Zawsze udostępniane: Twoje oceny, wyniki i zasady vodle. Nigdy: link, hasło ani identyfikatory ankiety.",
