@@ -16,14 +16,14 @@ Status: proposal, not implemented. 2026-10-17.
 | --- | --- | --- |
 | Who runs the AI? | The voter's own chatbot account (ChatGPT, Claude, Gemini, Le Chat, …). vodle calls no AI service and never sees the answer. | No API keys or costs for the deployment, no additional data processor for its operator, and the voter's free choice of provider, as the story asks. |
 | How does the data get there? | In order of preference: the device's share sheet (file and prompt); otherwise the clipboard plus opening the provider's chat page; always also a download. | No chatbot offers an official way for a web page to hand over a file. These three mechanisms work without any cooperation from the provider (§6). |
-| What is "the complete poll state"? | Everything the voter can see on the poll page, plus figures vodle computes for the AI. It never includes identifiers, passwords or links. Other voters' individual ratings are included only anonymised, and only where the poll allows it (§7). | Exporting to a third party lifts the end-to-end encryption for this copy. The other participants did not consent to that, so the default is aggregate figures. |
-| Who decides how much may leave? | The poll's creator sets an upper limit when drafting the poll. The voter may share less than that limit, never more. | It is the other participants' data. The creator's setting is shown to everyone before they join. |
+| What is "the complete poll state"? | Everything the voter can see on the poll page, plus figures vodle computes for the AI. It never includes identifiers, passwords or links. Other voters' individual ratings are included only anonymised (§7). | Exporting to a third party lifts the end-to-end encryption for this copy. The other participants did not consent to that, so the default is aggregate figures. |
+| Who decides how much may leave? | The voter, in the dialog, within what the app offers. There is no per-poll setting. Other voters' individual ratings are an opt-in, unticked by default. | Each participant already sees all of this data and could copy it by hand; a per-poll limit could not be enforced. The defaults keep the export to aggregates unless the voter chooses otherwise. |
 | The prompt | A default in the voter's language that the voter can edit. The edited version is kept as a user setting (synced across devices) and can be reset. | As the story asks. |
 | Accuracy | The snapshot contains vodle's own computation of every number the AI needs, and a precise statement of the method. | Chatbots make arithmetic errors and do not know vodle's rules. Giving them computed facts reduces wrong advice. |
 
 ## 3. What the voter sees
 
-On the poll page of a running poll, a button with a "sparkles" icon in the toolbar, labelled "AI assessment", opens a dialog. The button is hidden when the deployment switches the feature off or the poll's creator disallowed it.
+On the poll page of a running poll, a button with a "sparkles" icon in the toolbar, labelled "AI assessment", opens a dialog. The button is hidden only when the deployment switches the feature off.
 
 ```
 ┌ Ask an AI for an assessment ─────────────────────────────── ✕ ┐
@@ -35,7 +35,7 @@ On the poll page of a running poll, a button with a "sparkles" icon in the toolb
 │ What is shared                                                │
 │  ☑ the poll's title and descriptions                          │
 │  ☑ how the ratings of each option are distributed             │
-│  ☐ every voter's ratings, anonymously        (if allowed)     │
+│  ☐ every voter's ratings, anonymously                         │
 │  Always: your own ratings, the current results, vodle's rules │
 │  ▸ Show the file (4.2 kB)                                     │
 │                                                               │
@@ -104,7 +104,7 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 - **`me`:**
   - `lowest_rating_that_approves` is computed by vodle: the voter's own rating is varied while the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold. In the example, a rating of 1 for C would be enough.
   - `ratings_set_by_delegate` lists the options for which the voter's effective rating comes from a delegate.
-- **`individual_ratings`:** only when the poll allows it and the voter ticks the box. It contains effective ratings, shuffled, without delegation structure.
+- **`individual_ratings`:** only when the voter ticks the box. It contains effective ratings, shuffled, without delegation structure.
 - **Never included:** the poll id, vids, the poll password, invitation and delegation links, nicknames, server names, or anyone else's delegations.
 
 **`method`.** A fixed English text, versioned with the format and checked by a spec against the tally code:
@@ -153,18 +153,12 @@ What a web page can do, in the order the dialog tries it:
 
 If the clipboard is refused (no secure context, or permission denied), the dialog shows the text in a selectable box with a "Select all" button.
 
-## 7. Privacy and the poll's setting
+## 7. Privacy
 
-- **What changes.** Within vodle, every participant already sees every rating, keyed by vid (`PRIVACY.md` §5). The export creates a copy outside the end-to-end encryption, held by the chatbot's provider and possibly used for training, depending on the voter's account settings there. Hence the following:
-- **The creator's setting.** A new poll field, "AI assessments by participants", is chosen in the draft:
-  - *not offered*;
-  - *results and distributions only* (the default);
-  - *also anonymous individual ratings*.
-
-  The field is shown on the preview and join pages so that participants know before they rate. Polls from before the feature are treated as the default. It is stored like the other poll fields (encrypted), added to the draft-link whitelist (#386), and immutable once the poll runs.
-- **Limits.** The setting cannot be enforced technically: a participant can always copy what they see. It states the group's norm, and the app keeps to it.
-- **Minimisation.** By default only aggregates, labels instead of identifiers, a fresh voter order for each export, and none of the identifiers listed in §4.
-- **Documentation.** A new subsection in `PRIVACY.md` and an FAQ entry. The deployment's privacy statement must mention that participants can pass poll data to third parties of their choice.
+- **What changes.** Within vodle, every participant already sees every rating, keyed by vid (`PRIVACY.md` §5). The export creates a copy outside the end-to-end encryption, held by the chatbot's provider and possibly used for training, depending on the voter's account settings there.
+- **Who decides.** The voter alone, in the dialog. The poll has no setting for it; the deployment can only switch the feature off as a whole (§8).
+- **Minimisation.** By default only aggregates: other voters' individual ratings leave only when the voter ticks that box, and then anonymised. Labels instead of identifiers, a fresh voter order for each export, and none of the identifiers listed in §4.
+- **Informing the participants.** Since no poll announces it, participants learn from the FAQ and the privacy statement that any participant can pass a poll's current state, including anonymous individual ratings, to a chatbot of their choice. A new subsection in `PRIVACY.md` says the same, and the deployment's privacy statement must mention it.
 
 ## 8. Configuration
 
@@ -174,8 +168,7 @@ If the clipboard is refused (no secure context, or permission denied), the dialo
 - **User settings (synced):**
   - `ai_service`: the preferred service;
   - `ai_prompt`: the edited prompt, empty meaning the default;
-  - `ai_share_titles`, `ai_share_histograms`, `ai_share_individual`: the last choices in the dialog.
-- **Poll field:** `ai_export` = `off` | `aggregate` | `individual`.
+  - `ai_share_titles`, `ai_share_histograms`, `ai_share_individual`: the last choices in the dialog. `ai_share_individual` starts unticked.
 
 ## 9. Implementation plan
 
@@ -185,24 +178,22 @@ If the clipboard is refused (no secure context, or permission denied), the dialo
    - `anonymise` (cryptographic shuffle and relabelling);
    - `snapshot_text(prompt, json)`.
 2. **`src/app/ai-assessment-dialog/`:** a modal component with the dialog of §3. It contains the transfer logic of §6, with the share, clipboard and window functions injectable for tests.
-3. **Poll page:** the toolbar button; and `Poll.ai_export` with its default.
-4. **Draft, preview and join pages:** the creator's setting and its display; draft-link whitelist.
-5. **`environment.ts` and `environment.prod.ts`:** the `ai_assessment` block.
-6. **i18n:** dialog strings, the default prompt and the setting's labels in ten languages; the `method` text stays English.
-7. **Specs:**
+3. **Poll page:** the toolbar button.
+4. **`environment.ts` and `environment.prod.ts`:** the `ai_assessment` block.
+5. **i18n:** dialog strings and the default prompt in ten languages; the `method` text stays English.
+6. **Specs:**
    - the snapshot never contains the pid, any vid, the password or a link (searched for in the serialised text);
-   - the poll's setting caps the voter's choices;
+   - individual ratings appear only when chosen, and then without vids and in a different order on each export;
    - every tally figure in the snapshot equals the poll's own tally;
    - `lowest_rating_that_approves` agrees with a brute-force re-tally;
    - the transfer order and its fallbacks, with stubbed browser APIs;
    - a test for the `method` text against the example of §4.
-8. **Documentation:** `PRIVACY.md`, FAQ/help, `deploy/README.md` (the configuration).
+7. **Documentation:** `PRIVACY.md`, FAQ/help, `deploy/README.md` (the configuration).
 
 Before release, the three transfer paths should be tried by hand on Android, iOS and a desktop browser with the providers in the default list, and the prefill parameters that do not work should be removed.
 
 ## 10. Open questions for the owner
 
-1. **Default for the creator's setting:** "results and distributions only", as proposed, or "not offered" until participants are used to the feature?
-2. **The default list of providers:** listing commercial services by name may read as an endorsement. Alternatives are a neutral list that the deployment fills in, or an institutional chatbot first.
-3. **Strategic advice:** advice on "voting behaviour" may push some voters towards tactical ratings that others do not use. The proposed prompt asks for advice that is consistent with the voter's own preferences and with a broadly acceptable result, and the `method` text states what vodle intends ratings to mean. Whether that is enough, or whether the recommendation part should be phrased more narrowly, is a question of the method's design rather than of the code.
-4. **Closed polls:** the story concerns running polls. The same snapshot could serve a reflection on a closed poll ("why did it end like this?") at almost no extra cost.
+1. **The default list of providers:** listing commercial services by name may read as an endorsement. Alternatives are a neutral list that the deployment fills in, or an institutional chatbot first.
+2. **Strategic advice:** advice on "voting behaviour" may push some voters towards tactical ratings that others do not use. The proposed prompt asks for advice that is consistent with the voter's own preferences and with a broadly acceptable result, and the `method` text states what vodle intends ratings to mean. Whether that is enough, or whether the recommendation part should be phrased more narrowly, is a question of the method's design rather than of the code.
+3. **Closed polls:** the story concerns running polls. The same snapshot could serve a reflection on a closed poll ("why did it end like this?") at almost no extra cost.
