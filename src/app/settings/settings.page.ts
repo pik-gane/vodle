@@ -72,7 +72,6 @@ export class SettingsPage implements OnInit {
   };
 
   // email notifications (EmailService):
-  email_available = false;
   email_types = EMAIL_TYPES;
   email_type_labels = EMAIL_TYPE_LABELS;
   email_notify_of: Record<string, boolean> = {};
@@ -130,14 +129,15 @@ export class SettingsPage implements OnInit {
   ionViewDidEnter() {
     this.G.L.entry("SettingsPage.ionViewDidEnter");
     if (this.G.D.ready && !this.ready) this.onDataReady();
-    // the email part shows only where the guard bot sends email
-    this.G.E.check_available().then(ok => { this.email_available = ok; });
+    // asked again on every visit while the last check got no answer
+    if (this.ready) this.check_email_available();
   }
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("SettingsPage.onDataReady");
     this.ready = true;
+    this.check_email_available();
   }
 
   onSelectServerReady(select_server:SelectServerComponent) {
@@ -372,6 +372,18 @@ export class SettingsPage implements OnInit {
   }
 
   // email notifications:
+
+  /** whether this server sends e-mails, as far as known: the section says so, and offers the address and the kinds only when it does */
+  get email_state(): 'checking' | 'available' | 'unavailable' | 'unreachable' {
+    const available = this.G.E.available;
+    if (available === null) { return 'checking'; }
+    if (available) { return 'available'; }
+    return this.G.E.unreachable ? 'unreachable' : 'unavailable';
+  }
+
+  check_email_available() {
+    this.G.E.check_available();
+  }
 
   email_address_valid(): boolean { return is_email(this.email_address); }
   email_code_valid(): boolean { return /^\d{6}$/.test((this.email_code || '').trim()); }

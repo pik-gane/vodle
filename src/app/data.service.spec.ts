@@ -4330,3 +4330,32 @@ describe('DataService.init_notifications', () => {
     expect(svc.can_notify).toBeTrue();
   });
 });
+
+// the settings page asks the guard bot whether it sends e-mails; opened right
+// after a reload, it asked while the login was still under way, the request
+// failed at once, and the e-mail settings stayed hidden
+describe('DataService.ask_guard_bot', () => {
+  it('asks through the account\'s own session only once its login is through', async () => {
+    let logged_in!: () => void;
+    const asked: string[] = [];
+    const fake: any = {
+      matrix_ready: new Promise<void>(resolve => { logged_in = resolve; }),
+      matrixService: { askGuardBot: async (kind: string) => { asked.push(kind); return {ok: true}; } },
+    };
+    const answer = DataService.prototype.ask_guard_bot.call(fake, 'ping', {});
+    await new Promise(resolve => setTimeout(resolve));
+    expect(asked).toEqual([]);
+    logged_in();
+    expect(await answer).toEqual({ok: true});
+    expect(asked).toEqual(['ping']);
+  });
+
+  it('still asks, and lets the request report the failure, when the login failed', async () => {
+    const fake: any = {
+      matrix_ready: Promise.reject(new Error('login failed')),
+      matrixService: { askGuardBot: async () => { throw new Error('Matrix client not initialized'); } },
+    };
+    fake.matrix_ready.catch(() => {});
+    await expectAsync(DataService.prototype.ask_guard_bot.call(fake, 'ping', {})).toBeRejectedWithError(/not initialized/);
+  });
+});

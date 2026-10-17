@@ -17,6 +17,7 @@ You should have received a copy of the GNU Affero General Public License
 along with vodle. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
 import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/vodle-testing';
@@ -24,6 +25,7 @@ import { VODLE_PAGE_TEST_IMPORTS, vodle_page_test_providers } from '../testing/v
 import { of, throwError, Subject } from 'rxjs';
 
 import { SettingsPage } from './settings.page';
+import { EMAIL_TYPE_LABELS } from '../email.service';
 
 describe('SettingsPage', () => {
   let component: SettingsPage;
@@ -33,7 +35,9 @@ describe('SettingsPage', () => {
     TestBed.configureTestingModule({
       declarations: [ SettingsPage ],
       imports: VODLE_PAGE_TEST_IMPORTS,
-      providers: vodle_page_test_providers()
+      providers: vodle_page_test_providers(),
+      // the server picker (app-select-server) is not under test here
+      schemas: [ CUSTOM_ELEMENTS_SCHEMA ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SettingsPage);
@@ -43,6 +47,59 @@ describe('SettingsPage', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  // the e-mail notifications have a section of their own, shown whatever the
+  // server does: it says whether e-mails are sent, and the kinds can be
+  // chosen while they are
+  describe('the e-mail section', () => {
+    const text = () => (fixture.nativeElement as HTMLElement).textContent || '';
+    const kinds = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('ion-checkbox.email-kind'));
+    const show = async (E: Record<string, any>) => {
+      Object.assign((component as any).G.E, E);
+      if (!component.ready) {
+        component.ionViewWillEnter();
+        component.onDataReady();
+      }
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    it('is shown where the server sends no e-mails, and says so, with the kinds greyed out', async () => {
+      await show({available: false, unreachable: false});
+      expect(text()).toContain('settings.email-notifications');
+      expect(text()).toContain('settings.email-unavailable');
+      expect(text()).not.toContain('settings.email-address');
+      expect(kinds().length).toBe(Object.keys(EMAIL_TYPE_LABELS).length);
+      expect(kinds().every(box => (box as any).disabled)).toBeTrue();
+    });
+
+    it('says when it is still asking, and offers to ask again when the server did not answer', async () => {
+      await show({available: null});
+      expect(text()).toContain('settings.email-checking');
+      await show({available: false, unreachable: true});
+      expect(text()).toContain('settings.email-unreachable');
+      const check = spyOn((component as any).G.E, 'check_available').and.resolveTo(true);
+      const retry = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('ion-button'))
+        .find(button => (button.textContent || '').includes('settings.email-retry')) as HTMLElement;
+      retry.click();
+      expect(check).toHaveBeenCalled();
+    });
+
+    it('asks for the address, and lets the kinds be chosen, where the server sends e-mails', async () => {
+      await show({available: true, unreachable: false, confirmed: false});
+      expect(text()).toContain('settings.email-notifications-intro');
+      expect(text()).toContain('settings.email-send-code');
+      expect(kinds().some(box => (box as any).disabled)).toBeFalse();
+    });
+
+    it('names the confirmed address and offers to stop', async () => {
+      await show({available: true, unreachable: false, confirmed: true, address: 'ann@example.org'});
+      expect(text()).toContain('settings.email-stop');
+      expect(text()).not.toContain('settings.email-send-code');
+      expect(kinds().some(box => (box as any).disabled)).toBeFalse();
+    });
   });
 
   // Ionic builds the language dialog with its heading and buttons in the

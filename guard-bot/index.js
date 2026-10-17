@@ -934,6 +934,8 @@ function startHealthServer(client) {
     res.writeHead(ok ? 200 : 503, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
       ok, syncState, ...stats,
+      // whether the app offers the email notifications (the "ping" request)
+      email: notifier?.enabled ? `on, through ${process.env.SMTP_HOST}` : "off (no SMTP_HOST)",
       uptimeSeconds: Math.round(process.uptime()),
       settings: { scanIntervalMs: SCAN_INTERVAL, closeGraceMs: CLOSE_GRACE_MS, quietPeriodMs: QUIET_PERIOD_MS, retentionMs: RETENTION_MS, adminPurge: ADMIN_PURGE, recheckDelaysMs: RECHECK_DELAYS_MS },
     }));

@@ -677,7 +677,11 @@ export class DataService implements OnDestroy {
     if (pid) {
       return this.poll_matrix(pid).then(m => m.askGuardBot(kind, params, options));
     }
-    return this.matrixService.askGuardBot(kind, params, options);
+    // the account's own session: not before the login, which runs in the
+    // background (the settings page, opened right after a reload, asks
+    // while it is still under way)
+    return this.matrix_ready.catch(() => { /* the request reports it */ })
+      .then(() => this.matrixService.askGuardBot(kind, params, options));
   }
 
   /** Drop the memoised Matrix session for a poll, so that the next
