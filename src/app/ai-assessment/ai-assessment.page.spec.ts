@@ -123,6 +123,22 @@ describe('AiAssessmentPage', () => {
       expect(stored['ai_chat_url']).toBe('https://chat.example.org/');
     });
 
+    it('puts https:// in front of an address typed without it, before opening or keeping it', () => {
+      const {page, stored, opened} = dialog('running', {ai_chat_url: 'chat.example.org/new'});
+      expect(page.chat_url_valid()).toBeTrue();
+      expect(page.chat_host()).toBe('chat.example.org');
+      page.copy_and_open();
+      expect(opened).toEqual(['https://chat.example.org/new']);
+      page.chat_url = ' chat.example.org ';
+      page.chat_url_changed();
+      expect(page.chat_url).toBe('https://chat.example.org');
+      expect(stored['ai_chat_url']).toBe('https://chat.example.org');
+      page.api_url = 'api.example.org/v1';
+      page.api_settings_changed();
+      expect(page.api_url).toBe('https://api.example.org/v1');
+      expect(stored['ai_api_url']).toBe('https://api.example.org/v1');
+    });
+
     it('offers the text to copy by hand when the clipboard refuses', async () => {
       const {page, browser} = dialog('running', {ai_chat_url: 'https://chat.example.org/'});
       browser.fail_copy = true;

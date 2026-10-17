@@ -250,7 +250,8 @@ The app's notifications (a poll closes soon, it has closed, it has new
 options, a delegation request was answered) are shown on the device while
 the app runs. Users may also have them sent by email; the guard bot sends
 these, in one of two ways set in `.env`, followed by `deploy/deploy.sh up`.
-With neither, the app offers no email notifications.
+With neither, the settings page's "E-mail notifications" section says that
+this server does not send e-mails, and its choices are greyed out.
 
 **Through an existing SMTP server** — the institution's, or a sending
 service's (the more reliable way, since such a server already has the

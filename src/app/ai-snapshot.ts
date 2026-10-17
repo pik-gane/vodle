@@ -253,6 +253,17 @@ export function snapshot_text(prompt: string, json: string): string {
   return `${prompt.trim()}\n\n${fence}json\n${json}\n${fence}\n`;
 }
 
+/** An address as the voter typed it, with the scheme put in front where it
+ *  has none: "chat.example.org/new" becomes "https://chat.example.org/new",
+ *  and an address on this computer ("localhost:11434") gets "http://", which
+ *  is what a model server there speaks. Everything else is left as it is. */
+export function with_scheme(value: string): string {
+  const address = (value || '').trim();
+  if (!address || /^[a-z][a-z0-9+.-]*:\/\//i.test(address)) { return address; }
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])([:/?#]|$)/i.test(address);
+  return (local ? 'http://' : 'https://') + address;
+}
+
 /** Whether an address may be opened or called: https, or http only on this
  *  computer (a chatbot or model server running locally); no credentials in
  *  the address. */

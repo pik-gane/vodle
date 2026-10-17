@@ -22,7 +22,7 @@ import { environment } from '../environments/environment';
 import { approval_threshold, lowest_rating_that_approves } from './approval-threshold';
 import {
   METHOD_TEXT, chat_url_ok, option_label, poll_snapshot_input, rating_histogram, shuffled, snapshot,
-  snapshot_file_name, snapshot_text,
+  snapshot_file_name, snapshot_text, with_scheme,
 } from './ai-snapshot';
 
 const ALL = {texts: true, histograms: true, individual: true};
@@ -311,6 +311,20 @@ describe('AI snapshot', () => {
       for (const bad of ['', 'chat.example.org', 'http://chat.example.org/', 'javascript:alert(1)',
                          'data:text/html,<b>x</b>', 'ftp://example.org/', 'https://user:pw@example.org/']) {
         expect(chat_url_ok(bad)).withContext(bad).toBeFalse();
+      }
+    });
+
+    it('put a scheme in front of an address without one, and nothing in front of one with it', () => {
+      expect(with_scheme(' chat.example.org/new ')).toBe('https://chat.example.org/new');
+      expect(with_scheme('localhost:11434/v1')).toBe('http://localhost:11434/v1');
+      expect(with_scheme('127.0.0.1')).toBe('http://127.0.0.1');
+      expect(with_scheme('localhost.example.org')).toBe('https://localhost.example.org');
+      for (const kept of ['', 'https://chat.example.org/', 'http://chat.example.org/', 'ftp://example.org/']) {
+        expect(with_scheme(kept)).withContext(kept).toBe(kept);
+      }
+      // without "//", a scheme is taken for a host name, which then fails the check
+      for (const bad of ['javascript:alert(1)', 'data:text/html,<b>x</b>']) {
+        expect(chat_url_ok(with_scheme(bad))).withContext(bad).toBeFalse();
       }
     });
 

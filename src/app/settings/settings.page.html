@@ -257,64 +257,85 @@ TODO:
       <span [innerHtml]="'notify_of.poll_closed'|translate"></span>
     </ion-checkbox>
   </ion-item>
-  <!-- the same by email, where the guard bot sends email (EmailService) -->
-  @if (email_available) {
-    <ion-item lines="none" class="email-notifications">
-      <ion-label class="ion-text-wrap">
-        <b [innerHtml]="'settings.email-notifications'|translate"></b>
-        <p [innerHtml]="'settings.email-notifications-intro'|translate"></p>
-      </ion-label>
-    </ion-item>
-    @if (G.E.confirmed) {
-      <ion-item>
-        <ion-label class="ion-text-wrap" [innerText]="'settings.email-confirmed'|translate:{email: G.E.address}"></ion-label>
-        <ion-button slot="end" fill="outline" size="small" (click)="stop_emails()" [disabled]="email_busy">
-          <span [innerHtml]="'settings.email-stop'|translate"></span>
-        </ion-button>
-      </ion-item>
-      @for (type of email_types; track type) {
-        <ion-item>
-          <ion-checkbox labelPlacement="end" justify="start"
-            [(ngModel)]="email_notify_of[type]" (ngModelChange)="email_type_changed(type)">
-            <span [innerHtml]="email_type_labels[type]|translate"></span>
-          </ion-checkbox>
-        </ion-item>
-      }
-      <ion-item>
-        <ion-checkbox labelPlacement="end" justify="start"
-          [(ngModel)]="email_titles" (ngModelChange)="email_titles_changed()">
-          <span [innerHtml]="'settings.email-titles'|translate"></span>
-        </ion-checkbox>
-      </ion-item>
+  <!--E-MAIL NOTIFICATIONS, which the guard bot sends where an SMTP server is configured (EmailService)-->
+  <ion-item color="primary"><span [innerHtml]="'settings.email-notifications'|translate"></span></ion-item>
+  @switch (email_state) {
+    @case ('checking') {
       <ion-item lines="none">
-        <ion-note class="ion-text-wrap" [innerHtml]="'settings.email-titles-hint'|translate"></ion-note>
+        <ion-note class="ion-text-wrap" [innerHtml]="'settings.email-checking'|translate"></ion-note>
       </ion-item>
-    } @else {
-      <ion-item>
-        <ion-input type="email" inputmode="email" autocomplete="email" labelPlacement="stacked"
-          [label]="'settings.email-address'|translate" [(ngModel)]="email_address"
-          (keyup.enter)="send_email_code()"></ion-input>
-        <ion-button slot="end" size="small" (click)="send_email_code()" [disabled]="email_busy || !email_address_valid()">
-          <span [innerHtml]="'settings.email-send-code'|translate"></span>
+    }
+    @case ('unavailable') {
+      <ion-item lines="none">
+        <ion-note class="ion-text-wrap" [innerHtml]="'settings.email-unavailable'|translate"></ion-note>
+      </ion-item>
+    }
+    @case ('unreachable') {
+      <ion-item lines="none">
+        <ion-note class="ion-text-wrap" [innerHtml]="'settings.email-unreachable'|translate"></ion-note>
+        <ion-button slot="end" fill="outline" size="small" (click)="check_email_available()">
+          <span [innerHtml]="'settings.email-retry'|translate"></span>
         </ion-button>
       </ion-item>
-      @if (email_code_sent) {
+    }
+    @case ('available') {
+      @if (G.E.confirmed) {
         <ion-item>
-          <ion-input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" labelPlacement="stacked"
-            [label]="'settings.email-code'|translate" [(ngModel)]="email_code"
-            (keyup.enter)="confirm_email()"></ion-input>
-          <ion-button slot="end" size="small" (click)="confirm_email()" [disabled]="email_busy || !email_code_valid()">
-            <span [innerHtml]="'settings.email-confirm'|translate"></span>
+          <ion-label class="ion-text-wrap" [innerText]="'settings.email-confirmed'|translate:{email: G.E.address}"></ion-label>
+          <ion-button slot="end" fill="outline" size="small" (click)="stop_emails()" [disabled]="email_busy">
+            <span [innerHtml]="'settings.email-stop'|translate"></span>
           </ion-button>
         </ion-item>
+      } @else {
+        <ion-item lines="none">
+          <ion-label class="ion-text-wrap">
+            <p [innerHtml]="'settings.email-notifications-intro'|translate"></p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-input type="email" inputmode="email" autocomplete="email" labelPlacement="stacked"
+            [label]="'settings.email-address'|translate" [(ngModel)]="email_address"
+            (keyup.enter)="send_email_code()"></ion-input>
+          <ion-button slot="end" size="small" (click)="send_email_code()" [disabled]="email_busy || !email_address_valid()">
+            <span [innerHtml]="'settings.email-send-code'|translate"></span>
+          </ion-button>
+        </ion-item>
+        @if (email_code_sent) {
+          <ion-item>
+            <ion-input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" labelPlacement="stacked"
+              [label]="'settings.email-code'|translate" [(ngModel)]="email_code"
+              (keyup.enter)="confirm_email()"></ion-input>
+            <ion-button slot="end" size="small" (click)="confirm_email()" [disabled]="email_busy || !email_code_valid()">
+              <span [innerHtml]="'settings.email-confirm'|translate"></span>
+            </ion-button>
+          </ion-item>
+        }
       }
     }
-    @if (email_message) {
-      <ion-item lines="none">
-        <ion-note class="ion-text-wrap" [color]="email_message_is_error ? 'danger' : 'medium'" [innerText]="email_message"></ion-note>
-      </ion-item>
-    }
   }
+  @if (email_message) {
+    <ion-item lines="none">
+      <ion-note class="ion-text-wrap" [color]="email_message_is_error ? 'danger' : 'medium'" [innerText]="email_message"></ion-note>
+    </ion-item>
+  }
+  <!-- which kinds: chosen here whatever the server does, and in effect while it sends e-mails to a confirmed address -->
+  @for (type of email_types; track type) {
+    <ion-item>
+      <ion-checkbox class="email-kind" labelPlacement="end" justify="start" [disabled]="email_state != 'available'"
+        [(ngModel)]="email_notify_of[type]" (ngModelChange)="email_type_changed(type)">
+        <span [innerHtml]="email_type_labels[type]|translate"></span>
+      </ion-checkbox>
+    </ion-item>
+  }
+  <ion-item>
+    <ion-checkbox labelPlacement="end" justify="start" [disabled]="email_state != 'available'"
+      [(ngModel)]="email_titles" (ngModelChange)="email_titles_changed()">
+      <span [innerHtml]="'settings.email-titles'|translate"></span>
+    </ion-checkbox>
+  </ion-item>
+  <ion-item lines="none">
+    <ion-note class="ion-text-wrap" [innerHtml]="'settings.email-titles-hint'|translate"></ion-note>
+  </ion-item>
   <!--and:
   when my vote turns into an abstention
   when my voting weight changes

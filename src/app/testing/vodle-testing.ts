@@ -119,6 +119,7 @@ export function global_service_stub(): any {
     // email notifications (EmailService): not offered by default
     E: {
       available: false,
+      unreachable: false,
       confirmed: false,
       address: '',
       titles: false,

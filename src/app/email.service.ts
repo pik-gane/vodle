@@ -121,6 +121,8 @@ export class EmailService {
 
   /** whether this deployment's guard bot sends email; null until known */
   available: boolean | null = null;
+  /** whether the last check got no answer from the guard bot, so that available is false for want of one */
+  unreachable = false;
   private availability: Promise<boolean> | null = null;
 
   /** per poll, the request last answered with ok */
@@ -170,10 +172,15 @@ export class EmailService {
       return Promise.resolve(false);
     }
     if (!this.availability) {
+      this.available = null;
       this.availability = this.G.D.ask_guard_bot('ping', {})
-        .then(answer => !!answer?.ok && Array.isArray(answer.features) && answer.features.includes('email'))
+        .then(answer => {
+          this.unreachable = false;
+          return !!answer?.ok && Array.isArray(answer.features) && answer.features.includes('email');
+        })
         .catch(err => {
           this.G.L.warn("EmailService.check_available: the guard bot did not answer", err);
+          this.unreachable = true;
           this.availability = null;
           return false;
         });

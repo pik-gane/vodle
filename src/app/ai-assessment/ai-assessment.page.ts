@@ -36,7 +36,7 @@ import {
 import { environment } from '../../environments/environment';
 import { GlobalService, web_share_available, web_share_broke } from '../global.service';
 import type { Poll } from '../poll.service';
-import { chat_url_ok, poll_snapshot_input, snapshot, snapshot_file_name, snapshot_text } from '../ai-snapshot';
+import { chat_url_ok, poll_snapshot_input, snapshot, snapshot_file_name, snapshot_text, with_scheme } from '../ai-snapshot';
 import { ApiError, api_format_t, api_settings_t, ask, list_models, render_answer, test } from '../ai-api';
 
 /** the browser's means, replaceable in specs */
@@ -206,21 +206,28 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
 
   // THE CHAT PATH:
 
+  /** the address to open: as typed, with "https://" in front if it has no scheme */
+  chat_address(): string {
+    return with_scheme(this.chat_url);
+  }
+
   chat_url_valid(): boolean {
-    return chat_url_ok(this.chat_url);
+    return chat_url_ok(this.chat_address());
   }
 
   chat_host(): string {
     try {
-      return new URL(this.chat_url.trim()).host;
+      return new URL(this.chat_address()).host;
     } catch (e) {
       return '';
     }
   }
 
+  /** on leaving the field: show the address as it will be opened, and keep it */
   chat_url_changed() {
     if (!this.chat_url.trim() || this.chat_url_valid()) {
-      this.G.D.setu('ai_chat_url', this.chat_url.trim());
+      this.chat_url = this.chat_address();
+      this.G.D.setu('ai_chat_url', this.chat_url);
     }
   }
 
@@ -233,7 +240,7 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
     this.manual_text = '';
     const copying = this.browser.copy(text);
     if (this.chat_url_valid()) {
-      this.browser.open(this.chat_url.trim());
+      this.browser.open(this.chat_address());
     }
     copying.then(() => {
       this.show_message('ai-assessment.copied');
@@ -280,11 +287,11 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
   // THE API PATH:
 
   api_settings(): api_settings_t {
-    return { url: this.api_url.trim(), format: this.api_format, key: this.api_key.trim(), model: this.api_model.trim() };
+    return { url: with_scheme(this.api_url), format: this.api_format, key: this.api_key.trim(), model: this.api_model.trim() };
   }
 
   api_url_valid(): boolean {
-    return chat_url_ok(this.api_url);
+    return chat_url_ok(with_scheme(this.api_url));
   }
 
   api_ready(): boolean {
@@ -293,7 +300,8 @@ export class AiAssessmentPage implements OnInit, OnDestroy {
 
   api_settings_changed() {
     if (!this.api_url.trim() || this.api_url_valid()) {
-      this.G.D.setu('ai_api_url', this.api_url.trim());
+      this.api_url = with_scheme(this.api_url);
+      this.G.D.setu('ai_api_url', this.api_url);
     }
     this.G.D.setu('ai_api_format', this.api_format);
     this.G.D.setu('ai_api_model', this.api_model.trim());
