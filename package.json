@@ -35,6 +35,7 @@
     "@angular/forms": "^22.2.2",
     "@angular/platform-browser": "^22.2.2",
     "@angular/router": "^22.2.2",
+    "@anthropic-ai/sdk": "^0.135.0",
     "@capacitor/core": "^8.5.3",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.3",

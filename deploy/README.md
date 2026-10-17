@@ -3,7 +3,8 @@
 Scripts for a single docker host: the web app (nginx), the Synapse
 homeserver, its PostgreSQL database and the guard bot, all as containers
 (`docker-compose.prod.yml`), with the host's TLS certificate files
-(`docker-compose.tls.yml`). Written for the virtual server of #327; nothing
+(`docker-compose.tls.yml`) and, optionally, a mail server of its own for the
+e-mail notifications (`docker-compose.mail.yml`). Written for the virtual server of #327; nothing
 in them is specific to it. The decisions behind the settings are in
 [`documentation/deployment/MATRIX.md`](../documentation/deployment/MATRIX.md).
 
@@ -12,6 +13,7 @@ in them is specific to it. The decisions behind the settings are in
 | `deploy/generate-secrets.sh` | writes `.env`: the secrets (generated) and the host settings (to fill in) |
 | `deploy/deploy.sh up` | brings everything up, first time and every time after (idempotent) |
 | `deploy/deploy.sh status`, `logs [service]`, `down` | what runs, what it says, stop |
+| `deploy/deploy.sh mail-dns` | the DNS records the own mail server needs, and whether DNS has them (`MAIL_SERVER=own`) |
 | `deploy/deploy.sh update` | `git pull --ff-only`, then `up` (rebuilds the app and the bot) |
 | `deploy/backup.sh` (= `deploy.sh backup`) | database dump and homeserver keys into `deploy/backups/` |
 | `deploy/disk-report.sh` | where the disk has gone: filesystem, directories, docker, the Synapse database per table and per poll (read-only) |
@@ -242,6 +244,91 @@ homeservers then connect straight to that host and port, and no
 `.well-known` is consulted at all (Synapse only looks it up for a name
 without a port).
 
+## Email notifications
+
+The app's notifications (a poll closes soon, it has closed, it has new
+options, a delegation request was answered) are shown on the device while
+the app runs. Users may also have them sent by email; the guard bot sends
+these, in one of two ways set in `.env`, followed by `deploy/deploy.sh up`.
+With neither, the app offers no email notifications.
+
+**Through an existing SMTP server** — the institution's, or a sending
+service's (the more reliable way, since such a server already has the
+reputation that large mail providers look for):
+
+```sh
+SMTP_HOST=smtp.example.org
+SMTP_PORT=587                        # 465 with SMTP_SECURE=true
+SMTP_USER=vodle@example.org
+SMTP_PASSWORD=...
+MAIL_FROM="vodle <vodle@example.org>"
+```
+
+**Through a mail server of its own** — `MAIL_SERVER=own`. `deploy.sh` then
+adds `docker-compose.mail.yml`: a send-only Postfix with DKIM signing
+(`boky/postfix`) that publishes no port, takes mail only from the bot, and
+delivers straight to the recipients' mail servers. It sends from
+`noreply@<MAIL_DOMAIN>`; `MAIL_DOMAIN` is by default the name browsers reach
+the deployment at, and `MAIL_FROM` may name another sender in that domain.
+What it needs, and what `deploy.sh up` checks or prints:
+
+- **Outgoing port 25.** Many hosting providers block it until asked
+  (AWS, Google Cloud, Azure, and Hetzner for new accounts, among others).
+  `deploy.sh up` tries a connection and says so if it fails.
+- **Reverse DNS**: the PTR record of the host's public address must be the
+  host's name, and that name must resolve back to the address. It is set at
+  the hosting provider, not in the zone.
+- **Three DNS records** in the zone of `MAIL_DOMAIN`: SPF, the DKIM key
+  (generated on the first start into `mail-data/dkim/` and kept there), and
+  DMARC. `deploy.sh up` prints them once the mail server runs, and
+  `deploy/deploy.sh mail-dns` prints them again and, where `dig` is
+  installed, compares them with what DNS answers.
+
+Even with all of this, a new address has no reputation, and some providers
+(Microsoft's in particular) file its mail as spam at first. The first
+e-mails are worth sending to a few test addresses at the large providers.
+The queue survives restarts (`mail-data/spool/`); `deploy.sh status` shows
+its length, and `deploy/deploy.sh logs mail` what happened to each e-mail.
+
+How the notifications work:
+
+- A user confirms an address once, with a six-digit code the bot sends to
+  it (at most three codes per address and hour). The code and the token the
+  app keeps afterwards are derived from `EMAIL_SECRET` (by default the
+  bot's password); changing it makes every address be confirmed anew.
+- For each poll the app then asks for the kinds of email the user chose,
+  from the user's account in that poll. The bot keeps the address, the
+  chosen kinds and the email texts (in the user's language, from the app)
+  in its own account data of that poll's room, and deletes them once the
+  poll has closed and the last email is sent. The poll's title is part of
+  the email only when the user allowed it in the settings; otherwise the
+  bot never learns it (the poll's content is end-to-end encrypted).
+- Every email ends with a link to the app's settings, where the user turns
+  the emails off; switching them off removes the address from every
+  running poll.
+
+The privacy statement must say that addresses are kept for this purpose
+and for how long, and name the SMTP provider if it is a third party (with
+`MAIL_SERVER=own` there is none: the e-mails go from this host straight to
+the recipients' providers).
+Restarting the bot loses nothing; new options that arrive while it is down
+are not reported. An e-mail the mail server refuses is tried again after 1,
+2, 4, … minutes and given up after eight tries; the mail server's slowness
+never delays the bot's closing of polls, which runs separately.
+
+## AI assessment
+
+Participants can pass a poll's state to an AI service of their own choice, through their chatbot's page or, with their own API key, its API (planning/AI_ASSESSMENT.md). The requests go from their browsers to that service; nothing passes through this deployment, and it needs no configuration. `src/environments/environment.prod.ts` can switch it off:
+
+```ts
+ai_assessment: {
+  enabled: true,      // false: no AI assessment at all
+  api_enabled: true,  // false: only the chat path, no API keys
+},
+```
+
+The privacy statement should say that participants can do this (`documentation/PRIVACY.md` §5). Should a Content Security Policy be added to the web server, the API path needs `connect-src https:` (and the local addresses `http://localhost` and `http://127.0.0.1` for models run on a participant's own computer).
+
 ## Operations
 
 **Update to a newer vodle**: `deploy/deploy.sh update` (pull, rebuild,
@@ -291,8 +378,9 @@ nothing for anyone else
 
 **Backups**: `deploy/backup.sh` writes `deploy/backups/<UTC time>/` with the
 database dump (`synapse.sql.gz`), `matrix-data/` without media and logs
-(`matrix-data.tgz`: the signing key, the configuration) and a copy of `.env`,
-and keeps the newest `BACKUP_KEEP` (14). Every poll's data lives in the
+(`matrix-data.tgz`: the signing key, the configuration), a copy of `.env`
+and, with `MAIL_SERVER=own`, the DKIM key (`mail-dkim.tgz`; run the backup as
+root, since the key belongs to the mail container's user), and keeps the newest `BACKUP_KEEP` (14). Every poll's data lives in the
 database, encrypted under the poll passwords; without the signing key the
 server's identity is lost. Run it from cron, and copy the directory off the host:
 
@@ -323,6 +411,7 @@ for `RETENTION_DAYS` — the per-poll roll-up in the report names them.
 git clone https://github.com/pik-gane/vodle.git /opt/vodle && cd /opt/vodle
 cp <backup>/env .env && chmod 600 .env              # the same secrets
 tar xzf <backup>/matrix-data.tgz                    # the same signing key
+[ -f <backup>/mail-dkim.tgz ] && tar xzf <backup>/mail-dkim.tgz   # the same DKIM key (MAIL_SERVER=own)
 docker compose --env-file .env -f docker-compose.prod.yml up -d --wait postgres
 zcat <backup>/synapse.sql.gz | docker compose --env-file .env -f docker-compose.prod.yml exec -T postgres psql -U synapse synapse
 deploy/deploy.sh up
@@ -378,7 +467,8 @@ the host: forward to the host's address on the docker bridge instead
 (`WEB_HTTP_PORT=172.17.0.1:8080`).
 
 **Where the data lives**: `postgres-data/` (the database), `matrix-data/`
-(keys, configuration, logs, media), `deploy/site/` (the copied privacy
+(keys, configuration, logs, media), `mail-data/` (with `MAIL_SERVER=own`:
+the DKIM key and the mail queue), `deploy/site/` (the copied privacy
 statement and imprint), `deploy/backups/`; all ignored by git.
 `deploy/deploy.sh down` stops the containers and keeps all of it. Starting
 over with another server name means moving `matrix-data/` and

@@ -2864,8 +2864,15 @@ export class MatrixService {
    * (`{ok: true, ...}` or `{ok: false, error}`). Rejects when no bot is
    * configured, when the bot is not in the request room in time, or when
    * it does not answer within guardBotRequestTimeoutMs.
+   *
+   * With `redact`, the request and the answer are redacted once the answer
+   * is here (or the wait is over): requests and answers are state events,
+   * readable in the room's state for as long as the room exists, and some
+   * carry what should not stay there -- an e-mail address, a token (the
+   * e-mail notifications). This account created the request room, so it may
+   * redact the bot's answer too.
    */
-  async askGuardBot(kind: string, params: Record<string, any> = {}): Promise<any> {
+  async askGuardBot(kind: string, params: Record<string, any> = {}, options: {redact?: boolean} = {}): Promise<any> {
     const guardBotId = this.getValidatedGuardBotId();
     if (!guardBotId) {
       throw new Error("no guard bot is configured");
@@ -2874,6 +2881,8 @@ export class MatrixService {
     const requestId = this.randomRequestId();
     const client: any = this.client!;
     const timeoutMs = this.guardBotRequestTimeoutMs;
+    let response_event_id: string | null = null;
+    let sent: Promise<any> = Promise.resolve(null);
     return new Promise<any>((resolve, reject) => {
       let settled = false;
       const finish = (outcome: () => void) => {
@@ -2882,6 +2891,9 @@ export class MatrixService {
         window.clearTimeout(timer);
         client.removeListener('RoomState.events', onState);
         outcome();
+        if (options.redact) {
+          this.redactGuardBotExchange(roomId, sent, response_event_id);
+        }
       };
       // the answer is the response state event under this request's key, by
       // the bot, in the request room -- whether the sync brought it in its
@@ -2889,15 +2901,27 @@ export class MatrixService {
       const onState = (event: any, state: any) => {
         if ((state?.roomId ?? event.getRoomId?.()) !== roomId || event.getType() !== RESPONSE_EVENT_TYPE
             || event.getStateKey?.() !== requestId || event.getSender() !== guardBotId) { return; }
+        response_event_id = event.getId?.() || null;
         finish(() => resolve(event.getContent()));
       };
       const timer = window.setTimeout(() => finish(() => reject(new Error(
         `the guard bot ${guardBotId} did not answer the ${kind} request within ${Math.round(timeoutMs / 1000)} s`))), timeoutMs);
       // listen first, then send: the answer can be quick
       client.on('RoomState.events', onState);
-      this.retryOnRateLimit(() => client.sendStateEvent(roomId, REQUEST_EVENT_TYPE, {version: 1, request_id: requestId, kind, ...params}, requestId))
-        .catch((error: any) => finish(() => reject(error)));
+      sent = this.retryOnRateLimit(() => client.sendStateEvent(roomId, REQUEST_EVENT_TYPE, {version: 1, request_id: requestId, kind, ...params}, requestId));
+      sent.catch((error: any) => finish(() => reject(error)));
     });
+  }
+
+  /** redact a request to the guard bot and its answer (askGuardBot's
+   *  `redact`); a failure is logged, never thrown */
+  private redactGuardBotExchange(roomId: string, sent: Promise<any>, response_event_id: string | null): void {
+    const client: any = this.client;
+    if (!client || typeof client.redactEvent !== 'function') { return; }
+    const redact = (event_id: string) => this.retryOnRateLimit(() => client.redactEvent(roomId, event_id))
+      .catch((error: any) => this.logger?.warn("Could not redact a guard bot request or answer", roomId, event_id, error));
+    sent.then((result: any) => { if (result?.event_id) { redact(result.event_id); } }, () => {});
+    if (response_event_id) { redact(response_event_id); }
   }
 
   private randomRequestId(): string {

@@ -1,0 +1,180 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title class="ion-text-wrap"
+      [innerText]="(closed ? 'ai-assessment.title-closed' : 'ai-assessment.title-running') | translate"></ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()" [attr.aria-label]="'close' | translate" data-vodle="ai-assessment-close">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <p class="intro" [innerText]="'ai-assessment.intro' | translate"></p>
+
+  <!-- WHAT IS SHARED -->
+  <h3 [innerText]="'ai-assessment.what-shared' | translate"></h3>
+  <ion-list lines="none">
+    <ion-item>
+      <ion-checkbox labelPlacement="end" justify="start" [(ngModel)]="texts" (ngModelChange)="choices_changed()">
+        <span class="ion-text-wrap" [innerText]="'ai-assessment.share-texts' | translate"></span>
+      </ion-checkbox>
+    </ion-item>
+    <ion-item>
+      <ion-checkbox labelPlacement="end" justify="start" [(ngModel)]="histograms" (ngModelChange)="choices_changed()">
+        <span class="ion-text-wrap" [innerText]="'ai-assessment.share-histograms' | translate"></span>
+      </ion-checkbox>
+    </ion-item>
+    <ion-item>
+      <ion-checkbox labelPlacement="end" justify="start" [(ngModel)]="individual" (ngModelChange)="choices_changed()"
+        data-vodle="ai-share-individual">
+        <span class="ion-text-wrap" [innerText]="'ai-assessment.share-individual' | translate"></span>
+      </ion-checkbox>
+    </ion-item>
+  </ion-list>
+  <ion-note class="block" [innerText]="'ai-assessment.always-shared' | translate"></ion-note>
+  <ion-button fill="clear" size="small" (click)="show_data = !show_data; refresh_data()" data-vodle="ai-show-data">
+    <ion-icon slot="start" [name]="show_data ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+    <span [innerText]="(show_data ? 'ai-assessment.hide-data' : 'ai-assessment.show-data') | translate: {size: json_size}"></span>
+  </ion-button>
+  @if (show_data) {
+    <pre class="data" data-vodle="ai-data-preview">{{ json }}</pre>
+  }
+
+  <!-- THE QUESTION -->
+  <h3>
+    <span [innerText]="'ai-assessment.question' | translate"></span>
+    <ion-button fill="clear" size="small" (click)="reset_prompt()" data-vodle="ai-reset-prompt">
+      <span [innerText]="'ai-assessment.reset' | translate"></span>
+    </ion-button>
+  </h3>
+  <ion-textarea class="prompt" fill="outline" [autoGrow]="true" [rows]="8"
+    [(ngModel)]="prompt" (ionBlur)="prompt_changed()" data-vodle="ai-prompt"
+    [attr.aria-label]="'ai-assessment.question' | translate"></ion-textarea>
+  <ion-note class="block" [innerText]="'ai-assessment.influence-warning' | translate"></ion-note>
+
+  <!-- THE CHAT PATH -->
+  <h3 [innerText]="'ai-assessment.chat-heading' | translate"></h3>
+  <ion-input fill="outline" type="url" inputmode="url" labelPlacement="stacked"
+    [label]="'ai-assessment.chat-url' | translate" [helperText]="'ai-assessment.chat-url-hint' | translate"
+    [errorText]="'ai-assessment.url-invalid' | translate" [class.ion-invalid]="!!chat_url && !chat_url_valid()"
+    [class.ion-touched]="!!chat_url" placeholder="https://chat.example.org/new"
+    [(ngModel)]="chat_url" (ionBlur)="chat_url_changed()" data-vodle="ai-chat-url"></ion-input>
+  <div class="actions">
+    <ion-button (click)="copy_and_open()" data-vodle="ai-copy-and-open">
+      <ion-icon slot="start" [name]="chat_url_valid() ? 'open-outline' : 'copy-outline'"></ion-icon>
+      <span [innerText]="chat_url_valid() ? ('ai-assessment.copy-and-open' | translate: {host: chat_host()})
+                                         : ('ai-assessment.copy' | translate)"></span>
+    </ion-button>
+    @if (can_share) {
+      <ion-button fill="outline" (click)="share()" data-vodle="ai-share">
+        <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        <span [innerText]="'ai-assessment.share' | translate"></span>
+      </ion-button>
+    }
+    <ion-button fill="clear" (click)="download()" data-vodle="ai-download">
+      <ion-icon slot="start" name="download-outline"></ion-icon>
+      <span [innerText]="'ai-assessment.download' | translate"></span>
+    </ion-button>
+  </div>
+  @if (message) {
+    <ion-note class="block" [color]="message_is_error ? 'danger' : 'success'" [innerText]="message"
+      data-vodle="ai-message"></ion-note>
+  }
+  @if (manual_text) {
+    <ion-textarea class="manual" fill="outline" [readonly]="true" [rows]="6" [value]="manual_text"
+      (ionFocus)="select_all($event)" data-vodle="ai-manual-text"></ion-textarea>
+  }
+
+  <!-- THE API PATH -->
+  @if (E.ai_assessment?.api_enabled !== false) {
+    <ion-button fill="clear" size="small" class="api-toggle" (click)="api_open = !api_open" data-vodle="ai-api-toggle">
+      <ion-icon slot="start" [name]="api_open ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+      <span [innerText]="'ai-assessment.use-api' | translate"></span>
+    </ion-button>
+    @if (api_open) {
+      <div class="api">
+        <h3 [innerText]="'ai-assessment.api-heading' | translate"></h3>
+        <ion-input fill="outline" type="url" inputmode="url" labelPlacement="stacked"
+          [label]="'ai-assessment.api-url' | translate" placeholder="https://api.example.org/v1"
+          [errorText]="'ai-assessment.url-invalid' | translate" [class.ion-invalid]="!!api_url && !api_url_valid()"
+          [class.ion-touched]="!!api_url"
+          [(ngModel)]="api_url" (ionBlur)="api_settings_changed()" data-vodle="ai-api-url"></ion-input>
+        <ion-radio-group [(ngModel)]="api_format" (ngModelChange)="api_settings_changed()" class="formats">
+          <span class="label" [innerText]="'ai-assessment.api-format' | translate"></span>
+          <ion-radio value="chat" labelPlacement="end" justify="start">
+            <span [innerText]="'ai-assessment.format-chat' | translate"></span>
+          </ion-radio>
+          <ion-radio value="messages" labelPlacement="end" justify="start">
+            <span [innerText]="'ai-assessment.format-messages' | translate"></span>
+          </ion-radio>
+        </ion-radio-group>
+        <div class="row">
+          <ion-input fill="outline" type="password" autocomplete="off" labelPlacement="stacked"
+            [label]="'ai-assessment.api-key' | translate" [helperText]="'ai-assessment.key-advice' | translate"
+            [(ngModel)]="api_key" (ionBlur)="api_settings_changed()" data-vodle="ai-api-key"></ion-input>
+          @if (api_key) {
+            <ion-button fill="clear" size="small" (click)="forget_key()" data-vodle="ai-forget-key">
+              <span [innerText]="'ai-assessment.forget-key' | translate"></span>
+            </ion-button>
+          }
+        </div>
+        <div class="row">
+          <ion-input fill="outline" labelPlacement="stacked" [label]="'ai-assessment.model' | translate"
+            [(ngModel)]="api_model" (ionBlur)="api_settings_changed()" data-vodle="ai-api-model"></ion-input>
+          <ion-button fill="clear" size="small" (click)="load_models()"
+            [disabled]="!api_url_valid() || !api_key || !!busy" data-vodle="ai-load-models">
+            @if (busy == 'models') { <ion-spinner name="crescent"></ion-spinner> }
+            <span [innerText]="'ai-assessment.load-models' | translate"></span>
+          </ion-button>
+        </div>
+        @if (models.length) {
+          <ion-select interface="popover" [label]="'ai-assessment.choose-model' | translate" labelPlacement="stacked"
+            [value]="api_model" (ionChange)="model_chosen($event.detail.value)" data-vodle="ai-model-list">
+            @for (model of models; track model) {
+              <ion-select-option [value]="model">{{ model }}</ion-select-option>
+            }
+          </ion-select>
+        }
+        <div class="actions">
+          @if (busy == 'ask') {
+            <ion-button color="medium" (click)="stop()" data-vodle="ai-stop">
+              <ion-icon slot="start" name="stop-circle-outline"></ion-icon>
+              <span [innerText]="'ai-assessment.stop' | translate"></span>
+            </ion-button>
+          } @else {
+            <ion-button (click)="ask_api()" [disabled]="!api_ready() || !!busy" data-vodle="ai-ask">
+              <ion-icon slot="start" name="sparkles-outline"></ion-icon>
+              <span [innerText]="'ai-assessment.ask' | translate"></span>
+            </ion-button>
+          }
+          <ion-button fill="outline" (click)="test_api()" [disabled]="!api_ready() || !!busy" data-vodle="ai-test">
+            @if (busy == 'test') { <ion-spinner name="crescent"></ion-spinner> }
+            <span [innerText]="'ai-assessment.test' | translate"></span>
+          </ion-button>
+        </div>
+        <ion-note class="block" [innerText]="'ai-assessment.api-terms' | translate"></ion-note>
+        @if (api_message) {
+          <ion-note class="block" [color]="api_message_is_error ? 'danger' : 'success'" [innerText]="api_message"
+            data-vodle="ai-api-message"></ion-note>
+        }
+        @if (answer || busy == 'ask') {
+          <div class="answer" data-vodle="ai-answer">
+            <h3 [innerText]="'ai-assessment.answer' | translate"></h3>
+            @if (busy == 'ask' && !answer) { <ion-spinner name="dots"></ion-spinner> }
+            <!-- escaped text with our own tags only (ai-api.ts render_answer) -->
+            <div class="answer-text" [innerHTML]="answer_html"></div>
+            @if (answer && busy != 'ask') {
+              <ion-button fill="clear" size="small" (click)="copy_answer()" data-vodle="ai-copy-answer">
+                <ion-icon slot="start" name="copy-outline"></ion-icon>
+                <span [innerText]="'ai-assessment.copy-answer' | translate"></span>
+              </ion-button>
+            }
+            <ion-note class="block" [innerText]="'ai-assessment.influence-warning' | translate"></ion-note>
+          </div>
+        }
+      </div>
+    }
+  }
+</ion-content>

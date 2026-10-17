@@ -171,8 +171,10 @@ function make_consistency_failure_error(message: string): Error {
 
 // some user data keys are only stored locally and not synced to a remote CouchDB:
 // (pending_user_data_move: a credential change whose data move has not
-// completed yet, see move_user_data / perform_user_data_move, #330)
-const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move'];
+// completed yet, see move_user_data / perform_user_data_move, #330;
+// ai_api_key: the voter's key for an AI API, which must not leave the
+// device, planning/AI_ASSESSMENT.md §7)
+const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_from_pid', 'db_other_server_url', 'db_custom_password', 'db_server_url', 'db_password', 'pending_user_data_move', 'ai_api_key'];
 /** Keys the ACCOUNT owns rather than the device: on these the user room wins
  *  the sync, where every other key is local-wins.
  *
@@ -198,7 +200,13 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
  *  retries it if the server is not there. The one thing the account can win
  *  wrongly is a choice made while offline and still in that queue at the next
  *  start, which shows the old value until the queued write lands. */
-const account_wins_user_keys = ['language', 'theme', 'default_wap'];
+// (the e-mail notification settings too: a device's stale copy must not
+// undo turning the e-mails off, or the opt-out from poll titles in them;
+// EmailService.EMAIL_OFF)
+const account_wins_user_keys = ['language', 'theme', 'default_wap',
+  'email_notify_address', 'email_notify_token', 'email_notify_titles',
+  'email_notify_of_closing_soon', 'email_notify_of_closed', 'email_notify_of_new_option',
+  'email_notify_of_delegation_answered'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -657,6 +665,19 @@ export class DataService implements OnDestroy {
 
   respond_to_delegation(pid: string, did: string, accept: boolean): Promise<void> {
     return this.poll_matrix(pid).then(m => m.respondToDelegation(pid, did, accept));
+  }
+
+  /** Ask the guard bot (EmailService): from the person's own account, or,
+   *  with `pid`, from their account in that poll -- the bot takes a poll's
+   *  email subscription only from a member of its poll room. The e-mail
+   *  requests carry addresses and tokens, so they and their answers are
+   *  redacted once answered (MatrixService.askGuardBot). */
+  ask_guard_bot(kind: string, params: Record<string, any>, pid?: string): Promise<any> {
+    const options = {redact: kind.startsWith('email_')};
+    if (pid) {
+      return this.poll_matrix(pid).then(m => m.askGuardBot(kind, params, options));
+    }
+    return this.matrixService.askGuardBot(kind, params, options);
   }
 
   /** Drop the memoised Matrix session for a poll, so that the next
@@ -1278,6 +1299,8 @@ export class DataService implements OnDestroy {
           this.matrix_user_data_ready = this.sync_and_settle_user_data();
           this.matrix_user_data_ready.catch(err =>
             this.G.L.error("DataService: the user data sync failed", err));
+          // the email subscriptions follow the settings the sync brings
+          this.matrix_user_data_ready.then(() => this.G.E?.schedule_sync(), () => {});
           (this as any).boot_log?.("the backend is ready");
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
@@ -5383,6 +5406,9 @@ export class DataService implements OnDestroy {
       p.after_incoming_changes(tally);
     }
 
+    // a poll that started or was joined gets its email subscription
+    this.G.E?.schedule_sync();
+
     this.save_state();
     this.G.L.exit("DataService.after_changes");
   }
@@ -7008,6 +7034,10 @@ export class DataService implements OnDestroy {
             }
           }
         }
+      }
+      // the guard bot forgets the e-mail address in every poll (EmailService):
+      if (this.G.E?.confirmed) {
+        await this.courtesy("have the guard bot forget the e-mail address", () => this.G.E.stop());
       }
       // set all waps to zero:
       for (const [pid, p] of Object.entries(this.G.P.polls)) {

@@ -2,14 +2,15 @@
   "name": "vodle-guard-bot",
   "version": "0.0.1",
   "private": true,
-  "description": "Matrix guard bot for vodle — monitors poll deadlines and closes rooms when they expire",
+  "description": "Matrix guard bot for vodle — monitors poll deadlines, closes rooms when they expire, and sends the email notifications people ask for",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test recheck.test.js knock.test.js requests.test.js"
+    "test": "node --test recheck.test.js knock.test.js requests.test.js email.test.js notifier.test.js"
   },
   "dependencies": {
-    "matrix-js-sdk": "^43.0.0"
+    "matrix-js-sdk": "^43.0.0",
+    "nodemailer": "^10.1.2"
   }
 }

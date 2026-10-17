@@ -43,7 +43,7 @@ export class HelpPage implements OnInit {
     'pronounce', 'wap-37', 'approve', 'winning-probabilities', 'shares',
     'most-approved', 'chance', 'not-summed', 'one-at-100', 'more-than-one',
     'which-positive', 'better-than-average', 'how-large', 'not-too-many',
-    'no-consensus', 'several-consensus', 'agreement',
+    'no-consensus', 'several-consensus', 'agreement', 'ai-assessment',
     // not yet written: why anonymous (minority protection, vote trading);
     // when and how to delegate (trust, better informed, similar
     // preferences); why control some waps yourself when delegating; why not

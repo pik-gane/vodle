@@ -1,0 +1,48 @@
+# vodle — a send-only mail server for the guard bot's e-mail notifications,
+# added to docker-compose.prod.yml when .env has MAIL_SERVER=own
+# (deploy/deploy.sh does that, and sets the names below; deploy/README.md,
+# "Email notifications"):
+#
+#   docker compose --env-file .env -f docker-compose.prod.yml -f docker-compose.mail.yml up -d
+#
+# Postfix with DKIM signing (boky/postfix). It publishes no port and takes
+# mail only from the containers' private network (its default mynetworks),
+# and only with a sender in MAIL_DOMAIN; it delivers straight to the
+# recipients' mail servers on port 25. The DKIM key is generated on its
+# first start into mail-data/dkim/ and kept there; the public part goes into
+# DNS (`deploy/deploy.sh mail-dns` prints the records). The queue is kept in
+# mail-data/spool/, so a restart loses nothing waiting for delivery.
+
+services:
+  mail:
+    image: boky/postfix:5.1.0
+    container_name: vodle-mail
+    environment:
+      - "ALLOWED_SENDER_DOMAINS=${MAIL_DOMAIN:?MAIL_DOMAIN missing (deploy/deploy.sh sets it)}"
+      # the name it greets other mail servers with: the host's own, which the
+      # reverse DNS of the host's address must give back
+      - "POSTFIX_myhostname=${MAIL_HOSTNAME:?MAIL_HOSTNAME missing (deploy/deploy.sh sets it)}"
+      - DKIM_AUTOGENERATE=true
+      - DKIM_SELECTOR=vodle
+      # the hop from the bot stays inside the docker network; the image's
+      # self-signed certificate for it would only be refused by the bot.
+      # Delivery to the recipients uses TLS whenever they offer it.
+      - POSTFIX_smtpd_tls_security_level=none
+    volumes:
+      - ./mail-data/dkim:/etc/opendkim/keys
+      - ./mail-data/spool:/var/spool/postfix
+    restart: unless-stopped
+    networks:
+      - vodle-net
+
+  guard-bot:
+    environment:
+      - SMTP_HOST=mail
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=
+      - SMTP_PASSWORD=
+      - "MAIL_FROM=${MAIL_FROM:?MAIL_FROM missing (deploy/deploy.sh sets it)}"
+    depends_on:
+      mail:
+        condition: service_started

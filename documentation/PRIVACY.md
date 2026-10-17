@@ -94,6 +94,16 @@ The bot creates every poll and voter room and is their creator, with the power r
 
 It needs the deadline and the lifecycle state in the clear. That is why those two are the only poll fields left unencrypted.
 
+**E-mail notifications** (only where the deployment configures a mail server, `deploy/README.md`, and only for a person who asks for them in the settings). The bot then learns, and keeps in its own account data of each poll room the person subscribed from:
+
+- the person's **e-mail address**, confirmed once by a code sent to it, and linked to the person's **poll account** in that poll — so the bot, and the operator who runs it, can tell which polls an address takes part in, which the per-poll accounts otherwise hide (§3);
+- the kinds of e-mail chosen, the language and time zone, and the e-mail texts (the app's translations, with placeholders);
+- the poll's **title**, only if the person allowed it in the settings; otherwise the bot never sees it, since the title is encrypted. The e-mails themselves are not encrypted: the mail server and every provider on the way read them, title included where it was allowed.
+
+To send "new options" and "your delegation request was answered", the bot watches who sends option events in the poll room and which delegation request an answer in a voter room refers to — event types and senders it could see anyway (§3, §6). A subscription is deleted once the poll has closed and its last e-mail is sent, or, if the mail server keeps refusing it, given up after about two hours of tries; stopping the e-mails in the settings, or "Delete my data", deletes it in every poll at once.
+
+The requests that carry the address and the token to the bot, and the bot's answers, are state events in the account's request room. The app redacts both as soon as the answer is in, so that they do not stay in the room's state; the homeserver drops redacted content after its redaction retention period (Synapse's `redaction_retention_period`, 7 days by default).
+
 ---
 
 ## 5. What a co-participant sees
@@ -106,6 +116,15 @@ Two things can still unmask a vid, and neither is the protocol's doing:
 
 - **The invitation.** Whoever sent a magic link knows who they sent it to. With one invitee, the vid that appears next is theirs.
 - **The content.** A poll of three people, or a rating pattern only one person would produce, identifies itself.
+
+**Passing a poll to an AI.** Any participant can hand what they see to an AI service of their own choice, from the poll page (planning/AI_ASSESSMENT.md): through their chatbot's page (vodle copies the text and opens the page) or, with their own API key, from their browser directly to that API. vodle's servers are not involved. What leaves:
+
+- always the results, the participant's own ratings and vodle's rules;
+- by default also the poll's texts and each option's rating distribution;
+- only if the participant ticks it, every other participant's ratings, anonymised: relabelled V1…Vn in a new random order for each export, without vids;
+- never the poll id, vids, passwords, invitation or delegation links, nicknames or anyone else's delegations.
+
+The copy then lies outside the end-to-end encryption, with the provider the participant chose, under that provider's terms. No per-poll setting limits this, since a participant could copy the same data by hand; participants learn about it from the FAQ, and a deployment's privacy statement should say it. An API key a participant enters stays on their device (it is one of the device-local keys, like the login password) and is sent only to the address they entered.
 
 ---
 
@@ -199,6 +218,7 @@ The move to Matrix did not weaken the privacy model, and #327 restored the one t
 
 - The guard bot removes a poll's rooms `RETENTION_DAYS` after the deadline (365 by default) — through the Synapse admin API where `ADMIN_PURGE` is set, so the data leaves the server; otherwise by leaving them, which leaves them on disk.
 - A poll a user deletes locally is left and forgotten by their client; the rooms survive until retention removes them.
+- An e-mail subscription (§4) is deleted by the bot when its poll has closed and the last e-mail is out, and in every poll at once when the person stops the e-mails or deletes their data. The bot's log names addresses only by a hash.
 - A guest who later logs in with an address of their own has their guest account deactivated; its rating events stay as the voter rooms' state, since they are the poll's data rather than the account's.
 - **"Delete my data" (the settings menu)** does, in this order: it declines every delegation request still open and withdraws its own, sets every rating of every poll to zero, waits for those writes to reach the server, then — through each poll's own account, the only member of its rooms — leaves and forgets that poll's room and voter rooms, and finally overwrites every key in the person's user room with empty content and leaves and forgets that room too. Then this device's own storage is destroyed and every Matrix session ended, which is why the app comes back at the login page. What that does **not** do is worth stating plainly:
   - **The events stay on the server** until it purges the rooms. Matrix has no delete: a state event is overwritten, not removed, and its TYPE survives the overwrite — so a user room whose keys were all cleared still says, in the plaintext event types, which polls the person took part in (§8). Once no local member is left in a room, a homeserver may purge it, and vodle's own guard bot purges a poll's rooms at the retention period; neither is immediate, and a federated copy is beyond either.

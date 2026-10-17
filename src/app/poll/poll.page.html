@@ -111,6 +111,15 @@ Instead of having A% Y plus B% Z, you would then have C% X (or more, if even mor
         </ion-button>
       }
 
+      <!-- AI ASSESSMENT BUTTON (planning/AI_ASSESSMENT.md): -->
+      @if (!!p && E.ai_assessment?.enabled && (p.state == 'running' || p.state == 'closed')) {
+        <ion-button class="ion-no-margin" fill="clear" (click)="ai_assessment_dialog()"
+          [title]="'ai-assessment.button' | translate" [attr.aria-label]="'ai-assessment.button' | translate"
+          data-vodle="ai-assessment-button">
+          <ion-icon name="sparkles-outline" color="primary" slot="icon-only"></ion-icon>
+        </ion-button>
+      }
+
       <!-- DELEGATE BUTTON: -->
       @if (!!p && get_allowed_to_delegate() && p.allow_voting) {
         <ion-button

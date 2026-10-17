@@ -91,6 +91,11 @@ services:
       - ADMIN_PURGE=true
       # GET /healthz for the healthcheck below and for monitoring (#327):
       - HEALTH_PORT=8012
+      # email notifications are off without an SMTP server; to try them,
+      # e.g. with a local catcher such as Mailpit on port 1025:
+      # - SMTP_HOST=host.docker.internal
+      # - SMTP_PORT=1025
+      # - MAIL_FROM=vodle <noreply@localhost>
     depends_on:
       - synapse
     restart: unless-stopped

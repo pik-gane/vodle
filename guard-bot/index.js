@@ -28,6 +28,10 @@
  *      metadata once its poll runs. The app asks through its request room
  *      (`#vodle_requests_…`), see requests.js and planning/WORK_PLAN.md,
  *      Track E.
+ *   8. Send email notifications to the people who asked for them, and only
+ *      for the polls they asked for: a poll closes soon, it has closed, it
+ *      has new options, a delegation request was answered. Off unless an
+ *      SMTP server is configured; see email.js, notifier.js and mailer.js.
  *
  * This keeps polls immutable after their deadline — no participant can
  * send new events, but the room remains readable.
@@ -43,6 +47,8 @@ import {
   isLocked, lockedPowerLevels, responseFor,
   isRequestId, unansweredRequests, isExpired, aliasCandidates, REQUEST_MAX_AGE_MS,
 } from "./requests.js";
+import { EmailNotifier, OPTION_EVENT_TYPE, DEL_RESPONSE_PREFIX } from "./notifier.js";
+import { createMailer } from "./mailer.js";
 
 // Configuration from environment variables
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || "http://synapse:8008";
@@ -85,6 +91,14 @@ const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || "0", 10);
 // Track E), is written again unconditionally right after its close
 // (reaffirmState), since a fork there never shows on this server.
 const RECHECK_DELAYS_MS = parseDelays(process.env.RECHECK_DELAYS_MS, [5000, 60000, 600000]);
+// Email notifications (email.js, notifier.js): the SMTP server is set by the
+// variables mailer.js reads; without SMTP_HOST they are off. Confirmation
+// codes and the tokens that prove a confirmed address are derived from
+// EMAIL_SECRET (by default the bot's password, which is as secret and as
+// stable); changing it makes every address be confirmed anew. New options
+// are collected for NEW_OPTION_BATCH_MS into one email.
+const EMAIL_SECRET = process.env.EMAIL_SECRET || BOT_PASSWORD;
+const NEW_OPTION_BATCH_MS = parseInt(process.env.NEW_OPTION_BATCH_MS || String(10 * 60 * 1000), 10);
 
 /** what /healthz reports */
 const stats = {
@@ -107,6 +121,9 @@ const stats = {
   voterRoomsCreated: 0,
   pollRoomsLocked: 0,
 };
+
+/** the email notifications (set up in main) */
+let notifier = null;
 
 /** poll rooms this process has locked (the SDK's room state lags behind its own writes) */
 const lockedByUs = new Set();
@@ -160,10 +177,21 @@ async function main() {
     process.exit(1);
   }
 
+  // --- 1a. Email notifications, if an SMTP server is configured
+  const mailer = await createMailer();
+  notifier = new EmailNotifier({ matrix: matrixForNotifier(client), mailer, secret: EMAIL_SECRET, newOptionBatchMs: NEW_OPTION_BATCH_MS });
+  console.log(`[guard-bot] Email notifications ${mailer ? "on, through " + process.env.SMTP_HOST : "off (no SMTP_HOST)"}`);
+
   // --- 1b. A late event in a closed voter room (a client's write that forked
   // with the close and arrives over federation after it) brings that room's
   // next re-check forward (#334); the timed re-checks stay as the fallback
   client.on("Room.timeline", (event, room) => {
+    // an option added in a running poll, for the email notifications
+    if (room && event.getType() === OPTION_EVENT_TYPE && event.getSender() !== client.getUserId()
+        && roomKind(room) === "poll" && notifier) {
+      notifier.onOption(room, event, runningSince(room)).catch((e) =>
+        console.error(`[guard-bot] email: failed to note an option in ${room.roomId}:`, e.message));
+    }
     const entry = room && pendingRechecks.get(room.roomId);
     if (!entry || event.getSender() === client.getUserId()) return;
     const soon = Date.now() + QUIET_PERIOD_MS;
@@ -205,6 +233,13 @@ async function main() {
     if (!room || event.getSender() === client.getUserId()) return;
     if (event.getType() === REQUEST_TYPE && roomKind(room) === "requests") {
       answerRequest(client, room, event);
+    } else if (event.getType().startsWith(DEL_RESPONSE_PREFIX) && roomKind(room) === "voter" && notifier) {
+      // a delegation request answered, for the email notifications
+      const pollRoom = pollRoomOf(client, pollIdOf(room));
+      if (pollRoom) {
+        notifier.onDelegationResponse(pollRoom, event).catch((e) =>
+          console.error(`[guard-bot] email: failed to handle a delegation answer in ${room.roomId}:`, e.message));
+      }
     } else if (event.getType() === POLL_STATE_TYPE && roomKind(room) === "poll"
                && createdByThisBot(room, client) && event.getContent()?.state === "running") {
       lockPollRoom(client, room).catch((e) =>
@@ -222,6 +257,7 @@ async function main() {
   // outlast the interval, and overlapping scans would close or remove the
   // same room twice
   let scanning = false;
+  let emailing = false;
   const scanTimer = setInterval(async () => {
     if (scanning) return;
     scanning = true;
@@ -234,6 +270,14 @@ async function main() {
       console.error("[guard-bot] Scan failed:", err.message);
     } finally {
       scanning = false;
+    }
+    // the emails in a worker of their own: a slow mail server must never
+    // hold up closing polls at their deadlines
+    if (!emailing && notifier?.enabled) {
+      emailing = true;
+      scanForEmails(client)
+        .catch((err) => console.error("[guard-bot] email scan failed:", err.message))
+        .finally(() => { emailing = false; });
     }
   }, SCAN_INTERVAL);
   console.log(`[guard-bot] Closing ${CLOSE_GRACE_MS} ms after a deadline once a room is quiet for ${QUIET_PERIOD_MS} ms; `
@@ -324,7 +368,22 @@ async function handleRequest(client, room, event) {
   try {
     switch (request.kind) {
       case "ping":
-        result = { ok: true };
+        // what this bot offers beyond rooms: the app shows the email
+        // notifications only where they can be sent
+        result = { ok: true, features: notifier?.enabled ? ["email"] : [] };
+        break;
+      case "email_send_code":
+        result = await notifier.sendCode(request, sender);
+        break;
+      case "email_confirm":
+        result = await notifier.confirm(request, sender);
+        break;
+      case "email_forget":
+        result = await notifier.forget(request, sender);
+        break;
+      case "email_subscribe":
+      case "email_unsubscribe":
+        result = await emailSubscriptionOnRequest(client, request, sender);
         break;
       case "create_poll":
         result = await createPollRoomOnRequest(client, request, sender);
@@ -771,6 +830,96 @@ async function removeRoom(client, room, deadline) {
   } catch (err) {
     console.error(`[guard-bot] Could not leave ${roomId}:`, err.message);
     removedByUs.delete(roomId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Email notifications (email.js, notifier.js)
+// ---------------------------------------------------------------------------
+
+/** account data this process wrote, by "room id type": the SDK's copy is
+ *  updated only when the sync brings the write back, and a scan in between
+ *  must not send an email twice */
+const writtenAccountData = new Map();
+
+/** the Matrix side of the notifier, on this bot's client */
+function matrixForNotifier(client) {
+  return {
+    getAccountData(room, type) {
+      const key = room.roomId + " " + type;
+      if (writtenAccountData.has(key)) return writtenAccountData.get(key);
+      return room.getAccountData(type)?.getContent() || null;
+    },
+    async setAccountData(room, type, content) {
+      await withRateLimitRetry(() => client.setRoomAccountData(room.roomId, type, content));
+      // only once the server has it: a failed write must not look done
+      writtenAccountData.set(room.roomId + " " + type, content);
+    },
+    accountDataTypes(room) {
+      const types = new Set(room.accountData ? [...room.accountData.keys()] : []);
+      for (const key of writtenAccountData.keys()) {
+        if (key.startsWith(room.roomId + " ")) types.add(key.slice(room.roomId.length + 1));
+      }
+      return [...types];
+    },
+    pollRooms() {
+      return client.getRooms().filter((room) => room.getMyMembership() === "join" && roomKind(room) === "poll");
+    },
+    pollRoomOf(pollId) {
+      return pollRoomOf(client, pollId);
+    },
+    voterRoomsOf(pollId) {
+      return client.getRooms().filter((room) => room.getMyMembership() === "join"
+        && roomKind(room) === "voter" && pollIdOf(room) === pollId);
+    },
+    stateEvent(room, type) {
+      return room.currentState.getStateEvents(type, "") || null;
+    },
+  };
+}
+
+/** when the poll of a poll room started running (its state event's time), or null */
+function runningSince(room) {
+  const event = room.currentState.getStateEvents(POLL_STATE_TYPE, "");
+  return event?.getContent()?.state === "running" ? event.getTs() : null;
+}
+
+/** whether the poll of a poll room is closed: the bot's "closed" state event */
+function isPollClosed(room) {
+  return room.currentState.getStateEvents(POLL_STATE_TYPE, "")?.getContent()?.state === "closed";
+}
+
+/** subscribe or unsubscribe the requester -- a poll account, a member of
+ *  the poll room -- for email notifications of that poll */
+async function emailSubscriptionOnRequest(client, request, requester) {
+  const pollRoom = pollRoomOf(client, request.poll_id);
+  if (request.kind === "email_unsubscribe") {
+    return notifier.unsubscribe(request, requester, pollRoom);
+  }
+  if (!pollRoom) {
+    return { ok: false, error: `no poll room of ${request.poll_id} that this bot is in` };
+  }
+  if (!(await isJoinedMember(client, pollRoom, requester))) {
+    return { ok: false, error: `${requester} is not a member of the poll room of ${request.poll_id}` };
+  }
+  return notifier.subscribe(request, requester, pollRoom, { closed: isPollClosed(pollRoom) });
+}
+
+/** send what is due: "closes soon", "closed", new options */
+async function scanForEmails(client) {
+  if (!notifier?.enabled) return;
+  for (const room of client.getRooms()) {
+    if (room.getMyMembership() !== "join" || roomKind(room) !== "poll") continue;
+    const due = roomDeadline(room);
+    try {
+      await notifier.scanRoom(room, {
+        dueMs: due ? Date.parse(due) : null,
+        startMs: runningSince(room),
+        closed: isPollClosed(room),
+      });
+    } catch (err) {
+      console.error(`[guard-bot] email: the scan of ${room.roomId} failed:`, err.message);
+    }
   }
 }
 

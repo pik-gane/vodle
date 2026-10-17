@@ -116,6 +116,17 @@ export function global_service_stub(): any {
       filter: () => [],
     },
     Del: {},
+    // email notifications (EmailService): not offered by default
+    E: {
+      available: false,
+      confirmed: false,
+      address: '',
+      titles: false,
+      check_available: async () => false,
+      get_type: () => true,
+      set_type: () => {},
+      schedule_sync: () => {},
+    },
   };
   return stub;
 }
