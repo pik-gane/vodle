@@ -32,22 +32,43 @@ import type { Poll } from './poll.service';
 import { lowest_rating_that_approves } from './approval-threshold';
 
 export const SNAPSHOT_FORMAT = 'vodle-poll-snapshot';
-export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_VERSION = 2;
 
 /** vodle's method, for the AI; a spec checks it against the tally */
 export const METHOD_TEXT =
-  'Each voter rates each option from 0 to 100 (their "willingness to approve"). ' +
-  'For each option vodle finds an approval threshold: the smallest positive rating r such that fewer than ' +
-  'r percent of the non-abstaining voters rate the option below r. Voters whose rating is at or above the ' +
-  'threshold approve the option. A voter who rates every option 0 abstains and is not counted. ' +
-  'Options are ranked by their number of approvals, ties broken by the sum of ratings. Each voter\'s vote ' +
-  'goes to the highest-ranked option they approve; with none, they abstain. An option\'s share is its ' +
-  'fraction of all votes. In a "winner" poll, the winner is drawn at random with these shares as ' +
-  'probabilities when the poll closes; in a "share" poll, the budget is divided in proportion to the ' +
-  'shares, and where options may only receive certain amounts, the amounts are rounded to allowed ones by ' +
-  'a lottery that keeps every option\'s expected amount. Ratings are tactical choices: voters see the ' +
-  'current results and may change their ratings, and add options, at any time until the deadline. ' +
-  'A voter may delegate their ratings to another voter; the ratings in this data are the effective ones.';
+  'Each voter gives each option a "wap" (willingness to approve) from 0 to 100. When a voter opens the poll, ' +
+  'vodle sets every option they have not rated yet to their default wap, a personal setting that is 10 unless ' +
+  'they changed it; an option added later gets it when they next open the poll and counts as 0 until then. ' +
+  'A wap equal to the default may therefore never have been chosen deliberately. ' +
+  'A voter whose waps are all 0 abstains and is not counted. For every other voter, the option or options with ' +
+  'their highest wap count as 100, so that every voter approves at least their favourite; each other option ' +
+  'counts at its wap. These are the effective ratings. A voter who has given every option the same wap, such as ' +
+  'the default 10, therefore effectively rates all of them 100 and approves all of them. ' +
+  'For each option vodle finds an approval threshold: the smallest positive effective rating r such that fewer ' +
+  'than r percent of the non-abstaining voters rate the option below r. Voters whose effective rating is at or ' +
+  'above the threshold approve the option. ' +
+  'Options are ranked by their number of approvals, ties broken by the sum of effective ratings. Each voter\'s ' +
+  'vote goes to the highest-ranked option they approve. An option\'s share is its fraction of all votes. ' +
+  'In a "winner" poll, the winner is drawn at random with these shares as probabilities when the poll closes; ' +
+  'in a "share" poll, the budget is divided in proportion to the shares, and where options may only receive ' +
+  'certain amounts, the amounts are rounded to allowed ones by a lottery that keeps every option\'s expected ' +
+  'amount. Waps are tactical choices: voters see the current results and may change their waps, and add options, ' +
+  'at any time until the deadline. A voter may delegate their waps for some options, wholly or in part, to ' +
+  'another voter, whose waps then count for them.';
+
+/** what the less obvious fields mean, for the AI; each only where its field is present */
+export const FIELD_NOTES = {
+  labels: 'Option labels follow the current ranking: A leads.',
+  me: 'me.waps are my waps as I set them; me.effective_ratings are what the tally uses (see method).',
+  lowest: 'me.lowest_wap_that_approves: for each option, the lowest wap with which I would approve it, my other ' +
+    'waps and the other voters\' ratings staying as they are. A wap at or above my highest other wap makes the ' +
+    'option one of my favourites, which counts as 100; a wap above it also turns my former favourites back into ' +
+    'their waps, which may cost them my approval. Options in me.delegated_options take their waps from a delegate.',
+  histograms: 'effective_rating_histogram: how many non-abstaining voters, me included, give the option an ' +
+    'effective rating of 0-9, 10-19, ..., 90-100.',
+  individual: 'individual_waps: the other non-abstaining voters\' waps, after delegation, anonymised and in ' +
+    'random order; their effective ratings follow from them as described in method.',
+};
 
 // INPUT, read from the poll:
 
@@ -79,8 +100,13 @@ export interface snapshot_input_t {
   /** in the poll page's order */
   options: snapshot_option_input_t[];
   me: {
+    /** the voter's own waps by oid, as set */
+    waps: Record<string, number>;
+    /** the waps that count for the voter (after delegation) by oid */
+    proxy: Record<string, number>;
     /** effective ratings by oid */
-    ratings: Record<string, number>;
+    effective: Record<string, number>;
+    default_wap: number;
     abstaining: boolean;
     approves: string[];
     /** oid, or '' when abstaining */
@@ -88,8 +114,8 @@ export interface snapshot_input_t {
     /** oids whose effective rating comes from a delegate */
     delegated: string[];
   };
-  /** the other non-abstaining voters' effective ratings by oid, in any order */
-  others: Array<Record<string, number>>;
+  /** the other non-abstaining voters' waps (after delegation) and effective ratings by oid, in any order */
+  others: Array<{ waps: Record<string, number>, effective: Record<string, number> }>;
   /** 0..1 */
   agreement_level: number;
   budget?: { total: number; unit: string };
@@ -146,6 +172,15 @@ function crypto_uint32(): number {
   return buffer[0];
 }
 
+/** The lowest wap with which a voter approves an option, given the other
+ *  voters' effective ratings of it and the voter's highest wap for any other
+ *  option: below that highest wap the option counts at its wap, at or above
+ *  it the option is a favourite and counts as 100. */
+export function lowest_wap_that_approves(others_effective: number[], highest_other_wap: number): number {
+  if (highest_other_wap <= 0) { return 1; }
+  return Math.min(lowest_rating_that_approves(others_effective), highest_other_wap);
+}
+
 // THE SNAPSHOT:
 
 export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
@@ -177,8 +212,8 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
   }
 
   const options = input.options.map(o => {
-    const ratings = input.others.map(r => r[o.oid] ?? 0);
-    if (!input.me.abstaining) { ratings.push(input.me.ratings[o.oid] ?? 0); }
+    const ratings = input.others.map(r => r.effective[o.oid] ?? 0);
+    if (!input.me.abstaining) { ratings.push(input.me.effective[o.oid] ?? 0); }
     const entry: any = { label: label[o.oid] };
     if (choices.texts) {
       entry.name = o.name || '';
@@ -188,7 +223,7 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     entry.approval_threshold = o.threshold;
     entry.approvals = o.approvals;
     entry.approval_percent = N > 0 ? round1(100 * o.approvals / N) : 0;
-    entry.mean_rating = N > 0 ? round1(o.total_rating / N) : 0;
+    entry.mean_effective_rating = N > 0 ? round1(o.total_rating / N) : 0;
     entry.share_percent = round1(100 * o.share);
     if (input.budget) {
       entry.allowed_amounts = o.allowed_amounts || 'any';
@@ -197,22 +232,23 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
       }
     }
     if (choices.histograms) {
-      entry.rating_histogram = rating_histogram(ratings);
+      entry.effective_rating_histogram = rating_histogram(ratings);
     }
     return entry;
   });
 
-  const lowest: Record<string, number> = {};
-  for (const o of input.options) {
-    lowest[label[o.oid]] = lowest_rating_that_approves(input.others.map(r => r[o.oid] ?? 0));
-  }
   const me: any = {
-    ratings: by_label(input.me.ratings),
+    waps: by_label(input.me.waps),
+    effective_ratings: by_label(input.me.effective),
+    default_wap: input.me.default_wap,
     abstaining: input.me.abstaining,
     approves: input.options.filter(o => input.me.approves.includes(o.oid)).map(o => label[o.oid]),
     vote_goes_to: input.me.vote ? label[input.me.vote] || null : null,
-    lowest_rating_that_approves: lowest,
-    ratings_set_by_delegate: input.options.filter(o => input.me.delegated.includes(o.oid)).map(o => label[o.oid]),
+    lowest_wap_that_approves: Object.fromEntries(input.options.map(o => [label[o.oid], lowest_wap_that_approves(
+      input.others.map(r => r.effective[o.oid] ?? 0),
+      Math.max(0, ...input.options.filter(other => other.oid != o.oid).map(other => input.me.proxy[other.oid] ?? 0)),
+    )])),
+    delegated_options: input.options.filter(o => input.me.delegated.includes(o.oid)).map(o => label[o.oid]),
   };
 
   const result: any = {
@@ -221,6 +257,9 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     created: input.now.toISOString(),
     language: input.language,
     method: METHOD_TEXT,
+    notes: [FIELD_NOTES.labels, FIELD_NOTES.me, FIELD_NOTES.lowest,
+            ...(choices.histograms ? [FIELD_NOTES.histograms] : []),
+            ...(choices.individual ? [FIELD_NOTES.individual] : [])],
     poll,
     options,
     me,
@@ -239,8 +278,8 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
   }
 
   if (choices.individual) {
-    result.individual_ratings = shuffled(input.others, random_uint32)
-      .map((ratings, index) => ({ voter: 'V' + (index + 1), ratings: by_label(ratings) }));
+    result.individual_waps = shuffled(input.others, random_uint32)
+      .map((ratings, index) => ({ voter: 'V' + (index + 1), waps: by_label(ratings.waps) }));
   }
   return result;
 }
@@ -289,7 +328,7 @@ export function snapshot_file_name(now: Date, extension: 'json' | 'txt'): string
 // READING THE POLL:
 
 /** The plain input of `snapshot`, read from a poll and its tally. */
-export function poll_snapshot_input(p: Poll, language: string, now: Date = new Date()): snapshot_input_t {
+export function poll_snapshot_input(p: Poll, language: string, default_wap: number, now: Date = new Date()): snapshot_input_t {
   const T = p.T;
   const myvid = p.myvid;
   const in_order = [...(T?.oids_descending || [])].filter(oid => oid in p.options);
@@ -297,17 +336,16 @@ export function poll_snapshot_input(p: Poll, language: string, now: Date = new D
     if (!in_order.includes(oid)) { in_order.push(oid); }
   }
   const effective = (oid: string, vid: string) => p.effective_ratings_map.get(oid)?.get(vid) || 0;
+  const proxy = (oid: string, vid: string) => p.proxy_ratings_map.get(oid)?.get(vid) || 0;
+  const own = (oid: string, vid: string) => p.own_ratings_map.get(oid)?.get(vid) || 0;
   const not_abstaining = (vid: string) => (p.max_proxy_ratings_map.get(vid) || 0) > 0;
+  const per_option = (value: (oid: string) => number) => Object.fromEntries(in_order.map(oid => [oid, value(oid)]));
 
-  const others: Array<Record<string, number>> = [];
+  const others: snapshot_input_t['others'] = [];
   for (const vid of T?.all_vids_set || []) {
     if (vid == myvid || !not_abstaining(vid)) { continue; }
-    const ratings: Record<string, number> = {};
-    for (const oid of in_order) { ratings[oid] = effective(oid, vid); }
-    others.push(ratings);
+    others.push({ waps: per_option(oid => proxy(oid, vid)), effective: per_option(oid => effective(oid, vid)) });
   }
-  const my_ratings: Record<string, number> = {};
-  for (const oid of in_order) { my_ratings[oid] = effective(oid, myvid); }
 
   const has_budget = p.has_budget;
   const options: snapshot_option_input_t[] = in_order.map(oid => {
@@ -343,7 +381,10 @@ export function poll_snapshot_input(p: Poll, language: string, now: Date = new D
     n_not_abstaining: T?.n_not_abstaining || 0,
     options,
     me: {
-      ratings: my_ratings,
+      waps: per_option(oid => own(oid, myvid)),
+      proxy: per_option(oid => proxy(oid, myvid)),
+      effective: per_option(oid => effective(oid, myvid)),
+      default_wap,
       abstaining: !not_abstaining(myvid),
       approves: in_order.filter(oid => !!T?.approvals_map.get(oid)?.get(myvid)),
       vote: T?.votes_map.get(myvid) || '',

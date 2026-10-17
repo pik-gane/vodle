@@ -21,7 +21,7 @@ import { Poll } from './poll.service';
 import { environment } from '../environments/environment';
 import { approval_threshold, lowest_rating_that_approves } from './approval-threshold';
 import {
-  METHOD_TEXT, chat_url_ok, option_label, poll_snapshot_input, rating_histogram, shuffled, snapshot,
+  METHOD_TEXT, chat_url_ok, lowest_wap_that_approves, option_label, poll_snapshot_input, rating_histogram, shuffled, snapshot,
   snapshot_file_name, snapshot_text, with_scheme,
 } from './ai-snapshot';
 
@@ -39,9 +39,16 @@ function seeded(seed: number): () => number {
 }
 
 /** The method as METHOD_TEXT states it, written from the text alone:
- *  thresholds, approvals, ranking, votes and shares. Ratings: vid -> oid -> r. */
-function tally_by_the_text(ratings: Record<string, Record<string, number>>, oids: string[]) {
-  const voters = Object.keys(ratings).filter(vid => oids.some(oid => (ratings[vid][oid] || 0) > 0));
+ *  effective ratings, thresholds, approvals, ranking, votes and shares.
+ *  Waps: vid -> oid -> wap. */
+function tally_by_the_text(waps: Record<string, Record<string, number>>, oids: string[]) {
+  const voters = Object.keys(waps).filter(vid => oids.some(oid => (waps[vid][oid] || 0) > 0));
+  // "the option or options with their highest wap count as 100"
+  const ratings: Record<string, Record<string, number>> = {};
+  for (const vid of voters) {
+    const highest = Math.max(...oids.map(oid => waps[vid][oid] || 0));
+    ratings[vid] = Object.fromEntries(oids.map(oid => [oid, (waps[vid][oid] || 0) == highest ? 100 : (waps[vid][oid] || 0)]));
+  }
   const N = voters.length;
   const threshold: Record<string, number> = {}, approvers: Record<string, string[]> = {}, sum: Record<string, number> = {};
   for (const oid of oids) {
@@ -112,16 +119,12 @@ describe('AI snapshot', () => {
     return poll;
   }
 
-  /** ratings: vid -> oid -> r */
-  function rate(poll: any, ratings: Record<string, Record<string, number>>) {
-    for (const [vid, per_option] of Object.entries(ratings)) {
-      let max = 0;
+  /** waps: vid -> oid -> wap, set as the poll page sets them */
+  function rate(poll: any, waps: Record<string, Record<string, number>>) {
+    for (const [vid, per_option] of Object.entries(waps)) {
       for (const [oid, value] of Object.entries(per_option)) {
-        if (value > 0) { poll.effective_ratings_map.get(oid).set(vid, value); }
-        max = Math.max(max, value);
+        poll.update_own_rating(vid, oid, value, true);
       }
-      if (max > 0) { poll.max_proxy_ratings_map.set(vid, max); }
-      poll.T.all_vids_set.add(vid);
     }
     poll.tally_all();
   }
@@ -195,8 +198,9 @@ describe('AI snapshot', () => {
         }
       }
       expect(compared).toBeGreaterThan(30);
-      for (const phrase of ['0 to 100', 'approval threshold', 'fewer than r percent', 'ties broken by the sum',
-                            'highest-ranked option they approve', 'tactical']) {
+      for (const phrase of ['0 to 100', 'default wap', 'highest wap count as 100', 'approval threshold',
+                            'fewer than r percent', 'ties broken by the sum', 'highest-ranked option they approve',
+                            'tactical']) {
         expect(METHOD_TEXT).toContain(phrase);
       }
     });
@@ -207,7 +211,7 @@ describe('AI snapshot', () => {
       const poll = make_poll({A: 'Lake hotel', B: 'City hostel', C: 'Mountain hut'},
                              {title: 'Where should the team retreat take place?', due: '2026-10-20T18:00:00.000Z'});
       rate(poll, EXAMPLE);
-      const input = poll_snapshot_input(poll, 'en', new Date('2026-10-17T14:05:00Z'));
+      const input = poll_snapshot_input(poll, 'en', 10, new Date('2026-10-17T14:05:00Z'));
       const data = snapshot(input, ALL, seeded(1));
       expect(data.format).toBe('vodle-poll-snapshot');
       expect(data.poll.title).toBe('Where should the team retreat take place?');
@@ -216,20 +220,68 @@ describe('AI snapshot', () => {
       // labels follow the ranking: C, A, B
       expect(data.options.map((o: any) => o.name)).toEqual(['Mountain hut', 'Lake hotel', 'City hostel']);
       const [c, a, b] = data.options;
-      expect([c.label, c.approval_threshold, c.approvals, c.approval_percent, c.mean_rating, c.share_percent])
-        .toEqual(['A', 30, 7, 100, 57.9, 100]);
-      expect([a.approval_threshold, a.approvals, a.approval_percent, a.mean_rating, a.share_percent])
-        .toEqual([20, 6, 85.7, 57.1, 0]);
+      expect([c.label, c.approval_threshold, c.approvals, c.approval_percent, c.mean_effective_rating, c.share_percent])
+        .toEqual(['A', 30, 7, 100, 61.4, 100]);
+      expect([a.approval_threshold, a.approvals, a.approval_percent, a.mean_effective_rating, a.share_percent])
+        .toEqual([20, 6, 85.7, 61.4, 0]);
       expect([b.approval_threshold, b.approvals]).toEqual([30, 5]);
-      expect(c.rating_histogram).toEqual([0, 0, 0, 1, 1, 1, 1, 2, 1, 0]);
-      expect(a.rating_histogram).toEqual([1, 0, 1, 0, 0, 1, 1, 0, 1, 2]);
+      // each voter's highest wap counts as 100
+      expect(c.effective_rating_histogram).toEqual([0, 0, 0, 1, 1, 1, 1, 1, 1, 1]);
+      expect(a.effective_rating_histogram).toEqual([1, 0, 1, 0, 0, 1, 1, 0, 0, 3]);
       // labels are the snapshot's own: C is "A" here
-      expect(data.me.ratings).toEqual({A: 60, B: 80, C: 30});
+      expect(data.me.waps).toEqual({A: 60, B: 80, C: 30});
+      expect(data.me.effective_ratings).toEqual({A: 60, B: 100, C: 30});
+      expect(data.me.default_wap).toBe(10);
       expect(data.me.approves).toEqual(['A', 'B', 'C']);
       expect(data.me.vote_goes_to).toBe('A');
-      expect(data.me.lowest_rating_that_approves).toEqual({A: 1, B: 15, C: 29});
+      expect(data.me.lowest_wap_that_approves).toEqual({A: 1, B: 15, C: 29});
       expect(data.agreement_level_percent).toBe(100);
-      expect(data.individual_ratings.length).toBe(6);
+      expect(data.individual_waps.length).toBe(6);
+      expect(data.notes.length).toBeGreaterThan(0);
+    });
+
+    it('keeps a voter\'s default waps apart from their effective ratings, which are all 100', () => {
+      const poll = make_poll({o1: 'x', o2: 'y', o3: 'z'});
+      rate(poll, {me: {o1: 10, o2: 10, o3: 10}, v1: {o1: 90, o2: 40, o3: 0}, v2: {o1: 0, o2: 20, o3: 70}});
+      const data = snapshot(poll_snapshot_input(poll, 'en', 10), ALL, seeded(2));
+      expect(Object.values(data.me.waps)).toEqual([10, 10, 10]);
+      expect(Object.values(data.me.effective_ratings)).toEqual([100, 100, 100]);
+      expect(data.me.approves.length).toBe(3);
+      // lowering one of three equal waps turns it from a favourite into its wap
+      for (const label of Object.keys(data.me.waps)) {
+        expect(data.me.lowest_wap_that_approves[label]).toBeLessThanOrEqual(10);
+      }
+      expect(data.method).toContain('default wap');
+    });
+
+    it('gives the lowest approving wap, as the real tally shows when the wap is varied', () => {
+      const random = seeded(31);
+      for (let trial = 0; trial < 25; trial++) {
+        const oids = ['o1', 'o2', 'o3'];
+        const others: Record<string, Record<string, number>> = {};
+        for (let v = 0; v < 1 + random() % 6; v++) {
+          others['v' + v] = Object.fromEntries(oids.map(oid => [oid, random() % 3 == 0 ? 0 : random() % 101]));
+        }
+        const mine = Object.fromEntries(oids.map(oid => [oid, random() % 101]));
+        const poll = make_poll({o1: 'x', o2: 'y', o3: 'z'});
+        rate(poll, {me: mine, ...others});
+        const input = poll_snapshot_input(poll, 'en', 10);
+        const data = snapshot(input, ALL, seeded(1));
+        input.options.forEach((o, index) => {
+          const label = option_label(index);
+          const approves = (w: number) => {
+            const again = make_poll({o1: 'x', o2: 'y', o3: 'z'});
+            rate(again, {me: {...mine, [o.oid]: w}, ...others});
+            return !!again.T.approvals_map.get(o.oid)?.get('me');
+          };
+          const lowest = data.me.lowest_wap_that_approves[label];
+          expect(approves(lowest)).withContext(`trial ${trial} ${o.oid} at ${lowest}`).toBeTrue();
+          if (lowest > 1) {
+            expect(approves(lowest - 1)).withContext(`trial ${trial} ${o.oid} at ${lowest - 1}`).toBeFalse();
+          }
+        });
+      }
+      expect(lowest_wap_that_approves([50, 70], 0)).toBe(1);
     });
 
     it('carries no identifier, password or link of the poll or its voters', () => {
@@ -237,7 +289,7 @@ describe('AI snapshot', () => {
       const poll = make_poll({o1: 'Apples', o2: 'Pears'},
                              {title: 'Fruit', password: 'POLLPASSWORD_xyz', due: '2026-10-20T18:00:00.000Z'}, vids[0]);
       rate(poll, {[vids[0]]: {o1: 70, o2: 20}, [vids[1]]: {o1: 30, o2: 90}, [vids[2]]: {o1: 55, o2: 55}});
-      const json = JSON.stringify(snapshot(poll_snapshot_input(poll, 'en'), ALL));
+      const json = JSON.stringify(snapshot(poll_snapshot_input(poll, 'en', 10), ALL));
       for (const secret of [poll.pid, ...vids, 'POLLPASSWORD_xyz', 'o1', 'o2', environment.magic_link_base_url, '#/']) {
         expect(json).not.toContain(secret);
       }
@@ -248,24 +300,25 @@ describe('AI snapshot', () => {
       const others: Record<string, Record<string, number>> = {};
       for (let v = 0; v < 8; v++) { others['v' + v] = {o1: 10 * v + 5, o2: 90 - 10 * v}; }
       rate(poll, {me: {o1: 50, o2: 50}, ...others});
-      const input = poll_snapshot_input(poll, 'en');
-      expect(snapshot(input, {...ALL, individual: false}).individual_ratings).toBeUndefined();
+      const input = poll_snapshot_input(poll, 'en', 10);
+      expect(snapshot(input, {...ALL, individual: false}).individual_waps).toBeUndefined();
       const data = snapshot(input, ALL, seeded(3));
-      const first = data.individual_ratings;
-      const second = snapshot(input, ALL, seeded(99)).individual_ratings;
+      const first = data.individual_waps;
+      const second = snapshot(input, ALL, seeded(99)).individual_waps;
       expect(first.map((v: any) => v.voter)).toEqual(['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8']);
       const x = data.options.find((o: any) => o.name == 'x').label;
-      const order = (list: any[]) => list.map(v => v.ratings[x]).join(',');
+      const order = (list: any[]) => list.map(v => v.waps[x]).join(',');
       expect(order(first)).not.toEqual(order(second));
-      expect([...first.map((v: any) => v.ratings[x])].sort((a, b) => a - b))
+      // the waps as set, not the effective ratings: the favourites are not raised to 100
+      expect([...first.map((v: any) => v.waps[x])].sort((a, b) => a - b))
         .toEqual(Object.values(others).map(r => r['o1']).sort((a, b) => a - b));
     });
 
     it('leaves out the poll\'s texts when the voter does not share them', () => {
       const poll = make_poll({o1: 'Secret plan'}, {title: 'Confidential', desc: 'Very', url: 'https://example.org/x'});
       rate(poll, {me: {o1: 50}});
-      const json = JSON.stringify(snapshot(poll_snapshot_input(poll, 'en'), {texts: false, histograms: false, individual: false}));
-      for (const text of ['Secret plan', 'Confidential', 'Very', 'example.org', 'rating_histogram']) {
+      const json = JSON.stringify(snapshot(poll_snapshot_input(poll, 'en', 10), {texts: false, histograms: false, individual: false}));
+      for (const text of ['Secret plan', 'Confidential', 'Very', 'example.org', 'rating_histogram', 'individual_waps']) {
         expect(json).not.toContain(text);
       }
     });
@@ -275,7 +328,7 @@ describe('AI snapshot', () => {
                              {due: '2026-10-20T18:00:00.000Z', winner: 'C'});
       rate(poll, EXAMPLE);
       poll._state = 'closed';
-      const data = snapshot(poll_snapshot_input(poll, 'en'), ALL);
+      const data = snapshot(poll_snapshot_input(poll, 'en', 10), ALL);
       expect(data.poll.state).toBe('closed');
       expect(data.poll.time_left_hours).toBeUndefined();
       expect(data.result).toEqual({winner: 'A'});   // C ranks first, so it is "A" here

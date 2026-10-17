@@ -90,10 +90,11 @@ A versioned JSON document. Option labels (A, B, …) follow the current ranking,
 ```json
 {
   "format": "vodle-poll-snapshot",
-  "version": 1,
+  "version": 2,
   "created": "2026-10-17T14:05:00Z",
   "language": "en",
   "method": "… fixed English text, see below …",
+  "notes": ["… what the less obvious fields mean …"],
   "poll": {
     "type": "winner",
     "state": "running",
@@ -106,24 +107,26 @@ A versioned JSON document. Option labels (A, B, …) follow the current ranking,
   "options": [
     { "label": "A", "name": "Mountain hut", "description": "…",
       "approval_threshold": 30, "approvals": 7, "approval_percent": 100,
-      "mean_rating": 57.9, "share_percent": 100,
-      "rating_histogram": [0, 0, 0, 1, 1, 1, 1, 2, 1, 0] },
+      "mean_effective_rating": 61.4, "share_percent": 100,
+      "effective_rating_histogram": [0, 0, 0, 1, 1, 1, 1, 1, 1, 1] },
     { "label": "B", "name": "Lake hotel", "approval_threshold": 20, "approvals": 6,
-      "approval_percent": 85.7, "mean_rating": 57.1, "share_percent": 0,
-      "rating_histogram": [1, 0, 1, 0, 0, 1, 1, 0, 1, 2] },
+      "approval_percent": 85.7, "mean_effective_rating": 61.4, "share_percent": 0,
+      "effective_rating_histogram": [1, 0, 1, 0, 0, 1, 1, 0, 0, 3] },
     { "label": "C", "name": "City hostel", "approval_threshold": 30, "approvals": 5, "…": "…" }
   ],
   "me": {
-    "ratings": { "A": 60, "B": 80, "C": 30 },
+    "waps": { "A": 60, "B": 80, "C": 30 },
+    "effective_ratings": { "A": 60, "B": 100, "C": 30 },
+    "default_wap": 10,
     "abstaining": false,
     "approves": ["A", "B", "C"],
     "vote_goes_to": "A",
-    "lowest_rating_that_approves": { "A": 1, "B": 15, "C": 29 },
-    "ratings_set_by_delegate": []
+    "lowest_wap_that_approves": { "A": 1, "B": 15, "C": 29 },
+    "delegated_options": []
   },
   "agreement_level_percent": 100,
-  "individual_ratings": [
-    { "voter": "V1", "ratings": { "A": 90, "B": 10, "C": 30 } }
+  "individual_waps": [
+    { "voter": "V1", "waps": { "A": 30, "B": 90, "C": 10 } }
   ]
 }
 ```
@@ -134,30 +137,43 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 - **`poll`:**
   - for share polls, also the budget, its unit and the unspent amount, and for each option the allowed amounts and the expected amount (#201);
   - for a closed poll, `state` is `"closed"`, `time_left_hours` is omitted, and a `result` is added: the drawn winner in a winner poll, or the allocation and how it was rounded (`allocation_method`) in a share poll. All other figures are the final ones.
-- **`rating_histogram`:** counts in ten bins of ten points (the last bin is 90–100). It is present when the voter ticks the distribution box.
+- **Waps and effective ratings.** A voter sets waps; the tally uses effective ratings, in which each voter's highest-wap option or options count as 100. Version 1 of the format gave only the effective ratings, labelled "ratings". A voter who had left every option at the default wap of 10 then appeared to have rated everything 100, and an AI took that literally. Version 2 gives the waps as set, the voter's own effective ratings and default wap, and a method text that explains both rules.
+- **`notes`:** short explanations of the less obvious fields, each only where its field is present.
+- **`effective_rating_histogram`:** counts in ten bins of ten points (the last bin is 90–100). It is present when the voter ticks the distribution box.
 - **`me`:**
-  - `lowest_rating_that_approves` is computed by vodle: the voter's own rating is varied while the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold. In the example, a rating of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end.
-  - `ratings_set_by_delegate` lists the options for which the voter's effective rating comes from a delegate.
-- **`individual_ratings`:** only when the voter ticks the box. It contains effective ratings, shuffled, without delegation structure.
+  - `lowest_wap_that_approves` is computed by vodle: the voter's wap for the option is varied while their other waps and the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold, and a wap at or above the voter's highest other wap makes the option a favourite that counts as 100. In the example, a wap of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end.
+  - `delegated_options` lists the options for which the voter's waps come from a delegate.
+- **`individual_waps`:** only when the voter ticks the box. It contains the waps that count for each other voter (after delegation), shuffled, without delegation structure; their effective ratings follow by the rule in `method`.
 - **Never included:** the poll id, vids, the poll password, invitation and delegation links, nicknames, server names, or anyone else's delegations.
 - **Not included because vodle does not know it:** who added which option. vodle stores no author for an option, so the prompts do not ask about "my options".
 - **No history.** The snapshot is the state at one moment. The app works with the current ratings and does not reconstruct how they changed over time; the closed-poll prompt says so, so that the post-mortem does not invent a course of events.
 
 **`method`.** A fixed English text, versioned with the format and checked by a spec against the tally code:
 
-> Each voter rates each option from 0 to 100 (their "willingness to approve").
-> For each option vodle finds an approval threshold: the smallest positive
-> rating r such that fewer than r percent of the non-abstaining voters rate
-> the option below r. Voters whose rating is at or above the threshold approve
-> the option. Options are ranked by their number of approvals, ties broken by
-> the sum of ratings. Each voter's vote goes to the highest-ranked option they
-> approve; with none, they abstain. An option's share is its fraction of all
-> votes. In a "winner" poll, the winner is drawn at random with these shares
-> as probabilities when the poll closes; in a "share" poll, the budget is
-> divided in proportion to the shares [and rounded to allowed amounts by a
-> fair lottery]. Ratings are tactical choices: voters see the current results
-> and may change their ratings, and add options, at any time until the
-> deadline.
+> Each voter gives each option a "wap" (willingness to approve) from 0 to 100.
+> When a voter opens the poll, vodle sets every option they have not rated yet
+> to their default wap, a personal setting that is 10 unless they changed it;
+> an option added later gets it when they next open the poll and counts as 0
+> until then. A wap equal to the default may therefore never have been chosen
+> deliberately. A voter whose waps are all 0 abstains and is not counted. For
+> every other voter, the option or options with their highest wap count as
+> 100, so that every voter approves at least their favourite; each other option
+> counts at its wap. These are the effective ratings. A voter who has given
+> every option the same wap, such as the default 10, therefore effectively
+> rates all of them 100 and approves all of them. For each option vodle finds
+> an approval threshold: the smallest positive effective rating r such that
+> fewer than r percent of the non-abstaining voters rate the option below r.
+> Voters whose effective rating is at or above the threshold approve the
+> option. Options are ranked by their number of approvals, ties broken by the
+> sum of effective ratings. Each voter's vote goes to the highest-ranked option
+> they approve. An option's share is its fraction of all votes. In a "winner"
+> poll, the winner is drawn at random with these shares as probabilities when
+> the poll closes; in a "share" poll, the budget is divided in proportion to
+> the shares [and rounded to allowed amounts by a fair lottery]. Waps are
+> tactical choices: voters see the current results and may change their waps,
+> and add options, at any time until the deadline. A voter may delegate their
+> waps for some options, wholly or in part, to another voter, whose waps then
+> count for them.
 
 ## 5. The default prompts
 
@@ -282,7 +298,7 @@ The voter's browser sends the request directly to the API address the voter ente
 
 1. **`src/app/ai-snapshot.ts`** (pure functions, no Angular):
    - `snapshot(input, choices)` builds the document from a plain input (options, effective ratings, tally maps, my vid, the poll's facts and, for a closed poll, its result);
-   - `lowest_rating_that_approves`, which reuses the threshold rule extracted from `update_threshold_and_approvals` into a shared function so that the two cannot diverge;
+   - `lowest_wap_that_approves`, which reuses the threshold rule extracted from `update_threshold_and_approvals` into a shared function so that the two cannot diverge;
    - `anonymise` (cryptographic shuffle and relabelling);
    - `snapshot_text(prompt, json)`;
    - `chat_url_ok(url)`, the address check of §6.1, also used for the API address.
@@ -296,7 +312,7 @@ The voter's browser sends the request directly to the API address the voter ente
    - the snapshot never contains the pid, any vid, the password or a link (searched for in the serialised text);
    - individual ratings appear only when chosen, and then without vids and in a different order on each export;
    - every tally figure in the snapshot equals the poll's own tally; for a closed poll, the result equals the stored one;
-   - `lowest_rating_that_approves` agrees with a brute-force re-tally;
+   - `lowest_wap_that_approves` agrees with the real tally when the wap is varied;
    - `chat_url_ok` takes `https:` addresses and local `http:` ones, and refuses `javascript:`, `data:`, other `http:` and malformed addresses;
    - the prompt follows the poll's state, and each edited prompt is kept for its own case;
    - the transfer and its fallbacks, with stubbed browser APIs;
