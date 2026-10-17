@@ -138,7 +138,8 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
   - for share polls, also the budget, its unit and the unspent amount, and for each option the allowed amounts and the expected amount (#201);
   - for a closed poll, `state` is `"closed"`, `time_left_hours` is omitted, and a `result` is added: the drawn winner in a winner poll, or the allocation and how it was rounded (`allocation_method`) in a share poll. All other figures are the final ones.
 - **Waps and effective ratings.** A voter sets waps; the tally uses effective ratings, in which each voter's highest-wap option or options count as 100. Version 1 of the format gave only the effective ratings, labelled "ratings". A voter who had left every option at the default wap of 10 then appeared to have rated everything 100, and an AI took that literally. Version 2 gives the waps as set, the voter's own effective ratings and default wap, and a method text that explains both rules.
-- **`notes`:** short explanations of the less obvious fields, each only where its field is present.
+- **`notes`:** short explanations of the less obvious fields, each only where its field is present, including how `agreement_level_percent` is defined.
+- **What a first real answer got wrong (version 1).** An AI's assessment of a 51-voter test poll showed four misreadings, each traced to the data or the method text: (1) the voter, whose waps were all at the default 10, was told they "rate everything 100" (only effective ratings were exported); (2) it recomputed the thresholds from the histograms with any whole number as candidate and called vodle's thresholds inconsistent (the text did not say that only given ratings are candidates); (3) it advised rating 100 or 0 only (the text did not say what a wap in between does); (4) it had to reverse-engineer the agreement level. Version 2 addresses all four, and the running-poll prompt asks for a concrete wap per option.
 - **`effective_rating_histogram`:** counts in ten bins of ten points (the last bin is 90–100). It is present when the voter ticks the distribution box.
 - **`me`:**
   - `lowest_wap_that_approves` is computed by vodle: the voter's wap for the option is varied while their other waps and the others' ratings stay fixed. The AI cannot easily work this out, because the voter's own rating also moves the threshold, and a wap at or above the voter's highest other wap makes the option a favourite that counts as 100. In the example, a wap of 1 for the mountain hut would be enough. For a closed poll it shows what would have been enough at the end.
@@ -161,10 +162,18 @@ The figures in the example were computed with vodle's tally rule from a seven-vo
 > counts at its wap. These are the effective ratings. A voter who has given
 > every option the same wap, such as the default 10, therefore effectively
 > rates all of them 100 and approves all of them. For each option vodle finds
-> an approval threshold: the smallest positive effective rating r such that
-> fewer than r percent of the non-abstaining voters rate the option below r.
-> Voters whose effective rating is at or above the threshold approve the
-> option. Options are ranked by their number of approvals, ties broken by the
+> an approval threshold: the smallest of the effective ratings given to the
+> option, r, such that fewer than r percent of the non-abstaining voters rate
+> the option below r (only ratings that were given are candidates, so the
+> threshold is the lowest approving rating; any number in between would make
+> the same voters approve). Voters whose effective rating is at or above the
+> threshold approve the option. An effective rating r therefore ensures
+> approval whenever fewer than r percent of the voters rate the option below
+> r: 100 always approves, while a low rating approves only when nearly
+> everyone rates the option at least as high. Waps between 0 and 100 thus
+> express conditional approval, which lets voters move to a compromise
+> together without any of them having to give up their favourite first.
+> Options are ranked by their number of approvals, ties broken by the
 > sum of effective ratings. Each voter's vote goes to the highest-ranked option
 > they approve. An option's share is its fraction of all votes. In a "winner"
 > poll, the winner is drawn at random with these shares as probabilities when
@@ -188,7 +197,7 @@ Stored in the translation files in the ten maintained languages. The English ver
 > 2. assess the potential for consensus: how close is the group to an option
 >    that nearly everyone approves, what stands in the way, and could a new
 >    option or changed ratings raise the overall approval;
-> 3. recommend how I should rate the options, and whether I should propose a
+> 3. recommend which wap from 0 to 100 I should give each option, and whether I should propose a
 >    new option and what it could look like, so that the result serves my
 >    interests as well as possible, taking into account how the other voters
 >    may react before the deadline.

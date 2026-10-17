@@ -190,6 +190,16 @@ describe('AI snapshot', () => {
           expect(poll.T.thresholds_map.get(oid)).withContext(`trial ${trial} ${oid}`).toBe(expected.threshold[oid]);
           expect(poll.T.approval_scores_map.get(oid)).withContext(`trial ${trial} ${oid}`).toBe(expected.approvals[oid]);
         }
+        // "an effective rating r ensures approval whenever fewer than r percent rate the option below r"
+        for (const oid of oids) {
+          const given = [...poll.effective_ratings_map.get(oid).values()] as number[];
+          for (const [vid, r] of poll.effective_ratings_map.get(oid) as Map<string, number>) {
+            const below = given.filter(x => x < r).length + (expected.N - given.length);
+            if (100 * below / expected.N < r) {
+              expect(poll.T.approvals_map.get(oid)?.get(vid)).withContext(`trial ${trial} ${oid} ${vid}`).toBeTrue();
+            }
+          }
+        }
         if (!expected.ties) {
           compared++;
           for (const oid of oids) {
@@ -199,7 +209,8 @@ describe('AI snapshot', () => {
       }
       expect(compared).toBeGreaterThan(30);
       for (const phrase of ['0 to 100', 'default wap', 'highest wap count as 100', 'approval threshold',
-                            'fewer than r percent', 'ties broken by the sum', 'highest-ranked option they approve',
+                            'fewer than r percent', 'only ratings that were given', 'ensures approval whenever',
+                            'conditional approval', 'ties broken by the sum', 'highest-ranked option they approve',
                             'tactical']) {
         expect(METHOD_TEXT).toContain(phrase);
       }

@@ -175,8 +175,12 @@ export class EmailService {
       this.available = null;
       this.availability = this.G.D.ask_guard_bot('ping', {})
         .then(answer => {
+          if (!answer?.ok) {
+            // refused, say as too old: no answer to the question
+            throw new Error(answer?.error || 'no answer');
+          }
           this.unreachable = false;
-          return !!answer?.ok && Array.isArray(answer.features) && answer.features.includes('email');
+          return Array.isArray(answer.features) && answer.features.includes('email');
         })
         .catch(err => {
           this.G.L.warn("EmailService.check_available: the guard bot did not answer", err);

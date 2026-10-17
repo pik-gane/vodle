@@ -44,9 +44,14 @@ export const METHOD_TEXT =
   'their highest wap count as 100, so that every voter approves at least their favourite; each other option ' +
   'counts at its wap. These are the effective ratings. A voter who has given every option the same wap, such as ' +
   'the default 10, therefore effectively rates all of them 100 and approves all of them. ' +
-  'For each option vodle finds an approval threshold: the smallest positive effective rating r such that fewer ' +
-  'than r percent of the non-abstaining voters rate the option below r. Voters whose effective rating is at or ' +
-  'above the threshold approve the option. ' +
+  'For each option vodle finds an approval threshold: the smallest of the effective ratings given to the option, ' +
+  'r, such that fewer than r percent of the non-abstaining voters rate the option below r (only ratings that were ' +
+  'given are candidates, so the threshold is the lowest approving rating; any number in between would make the ' +
+  'same voters approve). Voters whose effective rating is at or above the threshold approve the option. ' +
+  'An effective rating r therefore ensures approval whenever fewer than r percent of the voters rate the option ' +
+  'below r: 100 always approves, while a low rating approves only when nearly everyone rates the option at least ' +
+  'as high. Waps between 0 and 100 thus express conditional approval, which lets voters move to a compromise ' +
+  'together without any of them having to give up their favourite first. ' +
   'Options are ranked by their number of approvals, ties broken by the sum of effective ratings. Each voter\'s ' +
   'vote goes to the highest-ranked option they approve. An option\'s share is its fraction of all votes. ' +
   'In a "winner" poll, the winner is drawn at random with these shares as probabilities when the poll closes; ' +
@@ -68,6 +73,8 @@ export const FIELD_NOTES = {
     'effective rating of 0-9, 10-19, ..., 90-100.',
   individual: 'individual_waps: the other non-abstaining voters\' waps, after delegation, anonymised and in ' +
     'random order; their effective ratings follow from them as described in method.',
+  agreement: 'agreement_level_percent: the expected percentage of non-abstaining voters who approve the winner, ' +
+    'i.e. the sum over the options of share times approval percent.',
 };
 
 // INPUT, read from the poll:
@@ -257,7 +264,7 @@ export function snapshot(input: snapshot_input_t, choices: snapshot_choices_t,
     created: input.now.toISOString(),
     language: input.language,
     method: METHOD_TEXT,
-    notes: [FIELD_NOTES.labels, FIELD_NOTES.me, FIELD_NOTES.lowest,
+    notes: [FIELD_NOTES.labels, FIELD_NOTES.me, FIELD_NOTES.lowest, FIELD_NOTES.agreement,
             ...(choices.histograms ? [FIELD_NOTES.histograms] : []),
             ...(choices.individual ? [FIELD_NOTES.individual] : [])],
     poll,

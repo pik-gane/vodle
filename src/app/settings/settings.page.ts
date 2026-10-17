@@ -129,13 +129,15 @@ export class SettingsPage implements OnInit {
   ionViewDidEnter() {
     this.G.L.entry("SettingsPage.ionViewDidEnter");
     if (this.G.D.ready && !this.ready) this.onDataReady();
-    this.check_email_available();
+    // asked again on every visit while the last check got no answer
+    if (this.ready) this.check_email_available();
   }
 
   onDataReady() {
     // called when DataService initialization was slower than view initialization
     this.G.L.entry("SettingsPage.onDataReady");
     this.ready = true;
+    this.check_email_available();
   }
 
   onSelectServerReady(select_server:SelectServerComponent) {
