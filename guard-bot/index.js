@@ -257,6 +257,7 @@ async function main() {
   // outlast the interval, and overlapping scans would close or remove the
   // same room twice
   let scanning = false;
+  let emailing = false;
   const scanTimer = setInterval(async () => {
     if (scanning) return;
     scanning = true;
@@ -264,12 +265,19 @@ async function main() {
       answerPendingRequests(client);
       await lockRunningPollRooms(client);
       await scanForExpiredDeadlines(client);
-      await scanForEmails(client);
     } catch (err) {
       stats.lastScanError = err.message;
       console.error("[guard-bot] Scan failed:", err.message);
     } finally {
       scanning = false;
+    }
+    // the emails in a worker of their own: a slow mail server must never
+    // hold up closing polls at their deadlines
+    if (!emailing && notifier?.enabled) {
+      emailing = true;
+      scanForEmails(client)
+        .catch((err) => console.error("[guard-bot] email scan failed:", err.message))
+        .finally(() => { emailing = false; });
     }
   }, SCAN_INTERVAL);
   console.log(`[guard-bot] Closing ${CLOSE_GRACE_MS} ms after a deadline once a room is quiet for ${QUIET_PERIOD_MS} ms; `
@@ -843,8 +851,9 @@ function matrixForNotifier(client) {
       return room.getAccountData(type)?.getContent() || null;
     },
     async setAccountData(room, type, content) {
-      writtenAccountData.set(room.roomId + " " + type, content);
       await withRateLimitRetry(() => client.setRoomAccountData(room.roomId, type, content));
+      // only once the server has it: a failed write must not look done
+      writtenAccountData.set(room.roomId + " " + type, content);
     },
     accountDataTypes(room) {
       const types = new Set(room.accountData ? [...room.accountData.keys()] : []);

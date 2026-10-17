@@ -64,6 +64,12 @@ const SUBJECT_MAX = 200, TEXT_MAX = 2000, TITLE_MAX = 300;
 /** where on the device the subscriptions last sent are remembered */
 const SENT_STORAGE_KEY = 'vodle.email_subscriptions';
 
+/** The stored address and token of e-mails turned off. Not empty: these
+ *  settings belong to the account (DataService.account_wins_user_keys), and
+ *  the sync ignores an empty value in the user room, so a device that still
+ *  had the old ones would bring them back. */
+export const EMAIL_OFF = '-';
+
 export type Translate = (key: string, params?: Record<string, any>) => string;
 
 /** an address the bot will take: one @, a dot in the domain, no spaces or brackets */
@@ -120,8 +126,10 @@ export class EmailService {
   /** per poll, the request last answered with ok */
   private sent: Record<string, string> = {};
   private sync_timer: any = null;
-  private syncing = false;
+  private syncing: Promise<void> | null = null;
   private sync_again = false;
+  /** while the emails are being turned off, nothing is subscribed */
+  private stopping = false;
 
   init(G: GlobalService) {
     this.G = G;
@@ -134,8 +142,8 @@ export class EmailService {
 
   // SETTINGS (user data, so every device of the user has them):
 
-  get address(): string { return this.G.D.getu('email_notify_address'); }
-  get token(): string { return this.G.D.getu('email_notify_token'); }
+  get address(): string { const value = this.G.D.getu('email_notify_address'); return value == EMAIL_OFF ? '' : value; }
+  get token(): string { const value = this.G.D.getu('email_notify_token'); return value == EMAIL_OFF ? '' : value; }
   /** whether an address is confirmed and the emails are on */
   get confirmed(): boolean { return !!this.address && !!this.token; }
 
@@ -190,14 +198,36 @@ export class EmailService {
     return answer;
   }
 
-  /** turn the emails off: the bot forgets the address in every poll */
+  /** Turn the emails off: the bot forgets the address in every poll. The
+   *  address and token are kept until the bot has said so, so that a failed
+   *  attempt can be repeated; a subscription already on its way is waited
+   *  for, and no new one is sent meanwhile, so that none can come back after
+   *  the bot has forgotten. */
   async stop(): Promise<any> {
     const address = this.address, token = this.token;
-    this.G.D.setu('email_notify_token', '');
-    this.G.D.setu('email_notify_address', '');
+    if (!address || !token) {
+      this.turned_off();
+      return { ok: true };
+    }
+    this.stopping = true;
+    clearTimeout(this.sync_timer);
+    try {
+      await this.syncing?.catch(() => {});
+      const answer = await this.G.D.ask_guard_bot('email_forget', { email: address, token });
+      if (answer?.ok || answer?.reason == 'not_confirmed') {
+        // (a token the bot no longer takes subscribes nothing either)
+        this.turned_off();
+      }
+      return answer;
+    } finally {
+      this.stopping = false;
+    }
+  }
+
+  private turned_off() {
+    this.G.D.setu('email_notify_token', EMAIL_OFF);
+    this.G.D.setu('email_notify_address', EMAIL_OFF);
     this.forget_sent();
-    if (!address || !token) { return { ok: true }; }
-    return this.G.D.ask_guard_bot('email_forget', { email: address, token });
   }
 
   // SUBSCRIPTIONS:
@@ -213,16 +243,20 @@ export class EmailService {
   }
 
   /** subscribe the user's account in every running poll as the settings say */
-  async sync(): Promise<void> {
-    if (this.syncing) { this.sync_again = true; return; }
-    if (!this.confirmed) { return; }
-    this.syncing = true;
+  sync(): Promise<void> {
+    if (this.syncing) { this.sync_again = true; return this.syncing; }
+    if (!this.confirmed || this.stopping) { return Promise.resolve(); }
+    this.syncing = this.run_sync();
+    return this.syncing;
+  }
+
+  private async run_sync(): Promise<void> {
     try {
       if (!(await this.check_available())) { return; }
       const types = EMAIL_TYPES.filter(type => this.get_type(type));
       const running = Object.values(this.G.P.polls || {}).filter((p: any) => p?.state == 'running') as any[];
       for (const p of running) {
-        if (!this.confirmed) { return; }
+        if (!this.confirmed || this.stopping) { return; }
         const request = types.length ? this.subscription(p, types) : { poll_id: p.pid };
         if (!request) { continue; }  // the translations are not there yet
         const kind = types.length ? 'email_subscribe' : 'email_unsubscribe';
@@ -235,7 +269,7 @@ export class EmailService {
           } else if (answer?.reason == 'not_confirmed') {
             // the bot's secret changed: the address needs confirming anew
             this.G.L.warn("EmailService.sync: the address is no longer confirmed");
-            this.G.D.setu('email_notify_token', '');
+            this.G.D.setu('email_notify_token', EMAIL_OFF);
             return;
           } else {
             this.G.L.warn("EmailService.sync: the bot refused", kind, p.pid, answer?.error);
@@ -251,7 +285,7 @@ export class EmailService {
       }
     } finally {
       this.save_sent();
-      this.syncing = false;
+      this.syncing = null;
       if (this.sync_again) {
         this.sync_again = false;
         this.schedule_sync(0);

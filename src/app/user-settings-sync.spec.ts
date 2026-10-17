@@ -165,6 +165,30 @@ describe('the settings a person chose (#327)', () => {
     expect(laptop.showing()).withContext('and the second device shows it').toBe('de');
   });
 
+  it('keeps the e-mails off when a device that still had them on starts again (EmailService)', async () => {
+    const laptop_first_start = device({}, 'en');
+    await log_in(laptop_first_start);
+    laptop_first_start.svc.setu('email_notify_address', 'ann@example.org');
+    laptop_first_start.svc.setu('email_notify_token', 'old-token');
+    laptop_first_start.svc.setu('email_notify_titles', '1');
+    const laptop_storage = laptop_first_start.storage();
+
+    // the phone turns the e-mails off, and the titles with them
+    const phone = device({}, 'en');
+    await log_in(phone);
+    phone.svc.setu('email_notify_token', '-');
+    phone.svc.setu('email_notify_address', '-');
+    phone.svc.setu('email_notify_titles', '0');
+
+    const laptop = device(laptop_storage, 'en');
+    await log_in(laptop);
+    expect(room['email_notify_token']).withContext('the account stays off').toBe('-');
+    expect(room['email_notify_address']).toBe('-');
+    expect(room['email_notify_titles']).withContext('and without titles').toBe('0');
+    expect(laptop.svc.getu('email_notify_token')).withContext('and the laptop learns it').toBe('-');
+    expect(laptop.svc.getu('email_notify_titles')).toBe('0');
+  });
+
   it('survives a logout and a login on the same device', async () => {
     const phone = device({}, 'en');
     await log_in(phone);

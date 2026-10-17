@@ -100,7 +100,9 @@ It needs the deadline and the lifecycle state in the clear. That is why those tw
 - the kinds of e-mail chosen, the language and time zone, and the e-mail texts (the app's translations, with placeholders);
 - the poll's **title**, only if the person allowed it in the settings; otherwise the bot never sees it, since the title is encrypted. The e-mails themselves are not encrypted: the mail server and every provider on the way read them, title included where it was allowed.
 
-To send "new options" and "your delegation request was answered", the bot watches who sends option events in the poll room and which delegation request an answer in a voter room refers to — event types and senders it could see anyway (§3, §6). A subscription is deleted once the poll has closed and its last e-mail is sent; stopping the e-mails in the settings, or "Delete my data", deletes it in every poll at once.
+To send "new options" and "your delegation request was answered", the bot watches who sends option events in the poll room and which delegation request an answer in a voter room refers to — event types and senders it could see anyway (§3, §6). A subscription is deleted once the poll has closed and its last e-mail is sent, or, if the mail server keeps refusing it, given up after about two hours of tries; stopping the e-mails in the settings, or "Delete my data", deletes it in every poll at once.
+
+The requests that carry the address and the token to the bot, and the bot's answers, are state events in the account's request room. The app redacts both as soon as the answer is in, so that they do not stay in the room's state; the homeserver drops redacted content after its redaction retention period (Synapse's `redaction_retention_period`, 7 days by default).
 
 ---
 

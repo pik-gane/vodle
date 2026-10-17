@@ -312,7 +312,9 @@ and for how long, and name the SMTP provider if it is a third party (with
 `MAIL_SERVER=own` there is none: the e-mails go from this host straight to
 the recipients' providers).
 Restarting the bot loses nothing; new options that arrive while it is down
-are not reported.
+are not reported. An e-mail the mail server refuses is tried again after 1,
+2, 4, … minutes and given up after eight tries; the mail server's slowness
+never delays the bot's closing of polls, which runs separately.
 
 ## AI assessment
 

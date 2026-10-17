@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { EmailNotifier, SUB_PREFIX, DEL_REQUEST_PREFIX, DEL_RESPONSE_PREFIX, shortHash } from "./notifier.js";
+import { EmailNotifier, SUB_PREFIX, DEL_REQUEST_PREFIX, DEL_RESPONSE_PREFIX, MAX_ATTEMPTS, RETRY_BASE_MS, shortHash } from "./notifier.js";
 import { EMAIL_TYPES, EMAIL_ACCOUNT_DATA_TYPE, emailCode, emailToken } from "./email.js";
 
 const SECRET = "test-secret";
@@ -23,10 +23,18 @@ function world() {
     stateEvent: (room, type) => room.state?.[type] || null,
   };
   const sent = [];
-  const mailer = { async send(email) { sent.push(email); } };
+  const world = { failures: 0, during_send: null };
+  const mailer = {
+    async send(email) {
+      if (world.during_send) { const work = world.during_send; world.during_send = null; await work(); }
+      if (world.failures > 0) { world.failures--; throw new Error("mail server unavailable"); }
+      sent.push(email);
+    },
+  };
   let now = 1_000_000;
   const notifier = new EmailNotifier({ matrix, mailer, secret: SECRET, now: () => now, log: () => {}, newOptionBatchMs: 600 });
-  return { notifier, matrix, rooms, sent, accountData, at: (t) => { now = t; }, get now() { return now; } };
+  Object.assign(world, { notifier, matrix, rooms, sent, accountData, at: (t) => { now = t; } });
+  return Object.defineProperty(world, "now", { get: () => now });
 }
 
 function event({ type, sender, ts, id }) {
@@ -127,16 +135,96 @@ test("an answered delegation request is reported to the person who made it, once
   w.rooms.v1.state[DEL_REQUEST_PREFIX + "d7"] = event({ type: DEL_REQUEST_PREFIX + "d7", sender: "@me:x", ts: 1, id: "$req" });
   w.at(1_000_500);
   const answer = event({ type: DEL_RESPONSE_PREFIX + "d7", sender: "@delegate:x", ts: w.now, id: "$ans" });
+  const facts = { dueMs: 9e12, startMs: 0, closed: false };
   await w.notifier.onDelegationResponse(w.rooms.poll, answer);
+  await w.notifier.scanRoom(w.rooms.poll, facts);
   await w.notifier.onDelegationResponse(w.rooms.poll, answer);   // a restart replays the state
+  await w.notifier.scanRoom(w.rooms.poll, facts);
   assert.equal(w.sent.length, 1);
   assert.match(w.sent[0].subject, /delegation_answered/);
   // someone else's delegation is not mine
   await w.notifier.onDelegationResponse(w.rooms.poll, event({ type: DEL_RESPONSE_PREFIX + "d8", sender: "@delegate:x", ts: w.now, id: "$x" }));
+  await w.notifier.scanRoom(w.rooms.poll, facts);
   assert.equal(w.sent.length, 1);
   // an answer older than the subscription is not news
   w.rooms.v1.state[DEL_REQUEST_PREFIX + "d9"] = event({ type: DEL_REQUEST_PREFIX + "d9", sender: "@me:x", ts: 1, id: "$r9" });
   await w.notifier.onDelegationResponse(w.rooms.poll, event({ type: DEL_RESPONSE_PREFIX + "d9", sender: "@delegate:x", ts: 5, id: "$a9" }));
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(w.sent.length, 1);
+});
+
+test("a send the mail server refuses is tried again later, and recorded only once it goes out", async () => {
+  const w = world();
+  await w.notifier.subscribe(subscribeRequest(["closing_soon"]), "@me:x", w.rooms.poll, { closed: false });
+  const facts = { dueMs: 7_000_000, startMs: 0, closed: false };
+  w.at(6_100_000);
+  w.failures = 2;
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(w.sent.length, 0);
+  const sub = () => w.matrix.getAccountData(w.rooms.poll, SUB_PREFIX + shortHash("@me:x"));
+  assert.equal(sub().sent.closing_soon, undefined, "not recorded as sent");
+  assert.equal(sub().retry.closing_soon.attempts, 1);
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(sub().retry.closing_soon.attempts, 1, "not before the retry is due");
+  w.at(6_100_000 + RETRY_BASE_MS);
+  await w.notifier.scanRoom(w.rooms.poll, facts);   // fails a second time
+  w.at(6_100_000 + 3 * RETRY_BASE_MS);
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(w.sent.length, 1);
+  assert.ok(sub().sent.closing_soon);
+  assert.equal(sub().retry.closing_soon, undefined);
+});
+
+test("a dead address is given up on after MAX_ATTEMPTS, and a closed poll's subscription goes then", async () => {
+  const w = world();
+  await w.notifier.subscribe(subscribeRequest(["closed"]), "@me:x", w.rooms.poll, { closed: false });
+  const facts = { dueMs: 7_000_000, startMs: 0, closed: true };
+  w.failures = 1000;
+  let t = 7_100_000;
+  for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    w.at(t);
+    assert.equal(w.notifier.subscriptions(w.rooms.poll).length, 1, "kept while the email is still owed");
+    await w.notifier.scanRoom(w.rooms.poll, facts);
+    t += RETRY_BASE_MS * 2 ** i;
+  }
+  assert.equal(w.sent.length, 0);
+  assert.deepEqual(w.notifier.subscriptions(w.rooms.poll), [], "given up, and the address is no longer kept");
+});
+
+test("an option that arrives while emails are being sent is reported in the next batch", async () => {
+  const w = world();
+  await w.notifier.subscribe(subscribeRequest(["new_option"]), "@me:x", w.rooms.poll, { closed: false });
+  const startMs = 500;
+  w.at(1_000_100);
+  await w.notifier.onOption(w.rooms.poll, event({ type: "m.room.vodle.poll.option", sender: "@a:x", ts: w.now, id: "$1" }), startMs);
+  w.at(1_000_700);
+  w.during_send = () => w.notifier.onOption(w.rooms.poll,
+    event({ type: "m.room.vodle.poll.option", sender: "@b:x", ts: w.now, id: "$2" }), startMs);
+  await w.notifier.scanRoom(w.rooms.poll, { dueMs: 9e12, startMs, closed: false });
+  assert.equal(w.sent.length, 1);
+  assert.match(w.sent[0].text, /count=1/);
+  w.at(1_000_700 + 600);
+  await w.notifier.scanRoom(w.rooms.poll, { dueMs: 9e12, startMs, closed: false });
+  assert.equal(w.sent.length, 2, "the second option was not lost");
+  assert.match(w.sent[1].text, /count=1/);
+  await w.notifier.scanRoom(w.rooms.poll, { dueMs: 9e12, startMs, closed: false });
+  assert.equal(w.sent.length, 2, "and nothing is told twice");
+});
+
+test("a delegation answer the mail server refuses is told later", async () => {
+  const w = world();
+  await w.notifier.subscribe(subscribeRequest(["delegation_answered"]), "@me:x", w.rooms.poll, { closed: false });
+  w.rooms.v1.state[DEL_REQUEST_PREFIX + "d7"] = event({ type: DEL_REQUEST_PREFIX + "d7", sender: "@me:x", ts: 1, id: "$req" });
+  w.at(1_000_500);
+  await w.notifier.onDelegationResponse(w.rooms.poll, event({ type: DEL_RESPONSE_PREFIX + "d7", sender: "@delegate:x", ts: w.now, id: "$ans" }));
+  const facts = { dueMs: 9e12, startMs: 0, closed: false };
+  w.failures = 1;
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(w.sent.length, 0);
+  w.at(1_000_500 + RETRY_BASE_MS);
+  await w.notifier.scanRoom(w.rooms.poll, facts);
+  assert.equal(w.sent.length, 1);
+  await w.notifier.scanRoom(w.rooms.poll, facts);
   assert.equal(w.sent.length, 1);
 });
 

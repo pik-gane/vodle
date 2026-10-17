@@ -1524,7 +1524,7 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
           if (answer.room_id) { membership[answer.room_id] = 'invite'; }
           window.setTimeout(() => {
             const event = {getType: () => 'm.room.vodle.response', getStateKey: () => stateKey, getRoomId: () => roomId,
-                           getSender: () => BOT, getContent: () => answer};
+                           getSender: () => BOT, getContent: () => answer, getId: () => '$answer-' + stateKey};
             for (const fn of [...listeners]) { fn(event, {roomId}); }
           }, 10);
         }
@@ -1758,6 +1758,21 @@ describe('MatrixService creates its rooms in a version it can govern', () => {
     expect(await service.getVoterRoom('P1', 'v1')).toBe('!old:example.org');
     expect(asked).toEqual(['#vodle_voter_P1_djE:bot.example.org', '#vodle_voter_P1_djE:example.org']);
     expect(service.voterRooms.get('P1:v1')).toBe('!old:example.org');
+  });
+
+  it('redacts a request and its answer when asked to, and only then (e-mail requests carry addresses and tokens)', async () => {
+    const {client, requests} = client_with_bot(() => ({ok: true, token: 'secret-token'}));
+    const redacted: string[] = [];
+    (client as any).redactEvent = async (roomId: string, event_id: string) => { redacted.push(event_id); return {}; };
+    service.client = client;
+    spyOn<any>(service, 'waitForRoom').and.returnValue(Promise.resolve());
+    await service.askGuardBot('ping');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(redacted).toEqual([]);
+    const answer = await service.askGuardBot('email_confirm', {email: 'a@example.org', code: '123456'}, {redact: true});
+    expect(answer.token).toBe('secret-token');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(redacted.sort()).toEqual(['$2', '$answer-' + requests[1].stateKey].sort());
   });
 
   it('makes the request room once for requests that arrive together', async () => {

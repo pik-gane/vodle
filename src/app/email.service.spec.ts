@@ -206,6 +206,42 @@ describe('email notifications', () => {
       await service.stop();
       expect(asked).toEqual([{kind: 'email_forget', params: {email: 'ann@example.org', token: 'T'}, pid: undefined}]);
       expect(service.confirmed).toBeFalse();
+      // stored as "off", not as empty: see EMAIL_OFF
+      expect(user['email_notify_token']).toBe('-');
+      expect(service.address).toBe('');
+    });
+
+    it('keeps the address and token when the bot does not confirm the stop, so that it can be repeated', async () => {
+      user = {email_notify_address: 'ann@example.org', email_notify_token: 'T'};
+      answers['email_forget'] = {ok: false, error: 'busy'};
+      await service.stop();
+      expect(service.confirmed).toBeTrue();
+      delete answers['email_forget'];
+      await service.stop();
+      expect(service.confirmed).toBeFalse();
+    });
+
+    it('lets a subscription on its way finish before the stop, and sends none after it', async () => {
+      user = {email_notify_address: 'ann@example.org', email_notify_token: 'T'};
+      const order: string[] = [];
+      let release: () => void;
+      const held = new Promise<void>(resolve => { release = resolve; });
+      const ask = (service as any).G.D.ask_guard_bot;
+      (service as any).G.D.ask_guard_bot = async (kind: string, params: any, pid?: string) => {
+        order.push(kind);
+        if (kind == 'email_subscribe') { await held; }
+        return ask(kind, params, pid);
+      };
+      const syncing = service.sync();
+      await new Promise(resolve => setTimeout(resolve));
+      const stopping = service.stop();
+      await new Promise(resolve => setTimeout(resolve));
+      expect(order).toEqual(['ping', 'email_subscribe']);
+      release!();
+      await Promise.all([syncing, stopping]);
+      expect(order).toEqual(['ping', 'email_subscribe', 'email_forget']);
+      await service.sync();
+      expect(order.length).toBe(3);
     });
   });
 });

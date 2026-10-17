@@ -200,7 +200,13 @@ const local_only_user_keys = ['local_language', 'email', 'password', 'db', 'db_f
  *  retries it if the server is not there. The one thing the account can win
  *  wrongly is a choice made while offline and still in that queue at the next
  *  start, which shows the old value until the queued write lands. */
-const account_wins_user_keys = ['language', 'theme', 'default_wap'];
+// (the e-mail notification settings too: a device's stale copy must not
+// undo turning the e-mails off, or the opt-out from poll titles in them;
+// EmailService.EMAIL_OFF)
+const account_wins_user_keys = ['language', 'theme', 'default_wap',
+  'email_notify_address', 'email_notify_token', 'email_notify_titles',
+  'email_notify_of_closing_soon', 'email_notify_of_closed', 'email_notify_of_new_option',
+  'email_notify_of_delegation_answered'];
 // some of these trigger a move from one remote user dvb to another when changed:
 const keys_triggering_data_move = ['email', 'password', 'db', 'db_from_pid', 'db_from_pid_server_url', 'db_from_pid_password', 'db_other_server_url','db_custom_password'];
 
@@ -663,12 +669,15 @@ export class DataService implements OnDestroy {
 
   /** Ask the guard bot (EmailService): from the person's own account, or,
    *  with `pid`, from their account in that poll -- the bot takes a poll's
-   *  email subscription only from a member of its poll room. */
+   *  email subscription only from a member of its poll room. The e-mail
+   *  requests carry addresses and tokens, so they and their answers are
+   *  redacted once answered (MatrixService.askGuardBot). */
   ask_guard_bot(kind: string, params: Record<string, any>, pid?: string): Promise<any> {
+    const options = {redact: kind.startsWith('email_')};
     if (pid) {
-      return this.poll_matrix(pid).then(m => m.askGuardBot(kind, params));
+      return this.poll_matrix(pid).then(m => m.askGuardBot(kind, params, options));
     }
-    return this.matrixService.askGuardBot(kind, params);
+    return this.matrixService.askGuardBot(kind, params, options);
   }
 
   /** Drop the memoised Matrix session for a poll, so that the next

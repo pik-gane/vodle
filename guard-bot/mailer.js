@@ -21,6 +21,11 @@ export async function createMailer(env = process.env) {
     port,
     secure: (env.SMTP_SECURE || (port === 465 ? "true" : "false")) === "true",
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD || "" } : undefined,
+    // a mail server that does not answer is given up on within a minute
+    // (nodemailer's own limits are up to ten); the send is tried again later
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
   });
   const from = env.MAIL_FROM || `vodle <noreply@${env.SMTP_HOST}>`;
   return {
