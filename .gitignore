@@ -43,6 +43,8 @@ nohup.out
 matrix-data/
 # a deployment's database, secrets, site files and backups (deploy/README.md)
 postgres-data/
+# a deployment's own mail server: its DKIM key and queue (MAIL_SERVER=own)
+mail-data/
 .env
 deploy/site/
 deploy/acme/

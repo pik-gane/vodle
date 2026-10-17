@@ -81,16 +81,24 @@ FEDERATION=on
 RETENTION_DAYS=365
 # how many backups deploy/backup.sh keeps
 BACKUP_KEEP=14
-# email notifications (deploy/README.md): the guard bot sends them through
-# this SMTP server; leave SMTP_HOST empty to offer none. SMTP_SECURE=true
-# for implicit TLS (port 465), otherwise STARTTLS is used when offered.
-# The privacy statement must say so when they are on.
+# email notifications (deploy/README.md), one of two ways or none:
+# - through an SMTP server, e.g. your mail provider's: SMTP_HOST etc.
+#   SMTP_SECURE=true for implicit TLS (port 465), otherwise STARTTLS is used
+#   when offered;
+# - MAIL_SERVER=own: deploy/deploy.sh runs a send-only mail server of its
+#   own (docker-compose.mail.yml) and prints the DNS records it needs. It
+#   needs outgoing port 25 and the host's reverse DNS; MAIL_DOMAIN is the
+#   domain it sends from, by default the host browsers reach.
+# Leave both empty to offer none. The privacy statement must say so when
+# they are on.
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_SECURE=
 SMTP_USER=
 SMTP_PASSWORD=
 MAIL_FROM=
+MAIL_SERVER=
+MAIL_DOMAIN=
 ENV
 chmod 600 "$ENV_FILE"
 echo "wrote $ENV_FILE (mode 600). Now fill in the host settings in it, then run deploy/deploy.sh up"

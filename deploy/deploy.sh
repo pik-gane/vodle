@@ -7,6 +7,8 @@
 #   deploy/deploy.sh backup    database dump + homeserver keys (deploy/backup.sh)
 #   deploy/deploy.sh logs [service]
 #   deploy/deploy.sh down      stop everything; the data stays in postgres-data/ and matrix-data/
+#   deploy/deploy.sh mail-dns  the DNS records the own mail server needs, and
+#                              whether DNS has them (MAIL_SERVER=own in .env)
 #
 # Two sources of settings:
 #   src/environments/environment.prod.ts — the server name (matrix.server_name,
@@ -54,6 +56,28 @@ load_env() {
     "${REGISTRATION_TOKEN:?missing in .env}"
   BOT_LOCALPART="${BOT_LOCALPART:-vodle-guard}"
   [[ "$REGISTRATION_TOKEN" =~ ^[A-Za-z0-9._~-]+$ ]] || die "REGISTRATION_TOKEN may only contain letters, digits and ._~-"
+  case "${MAIL_SERVER:-}" in
+    ''|own) ;;
+    *) die "MAIL_SERVER may only be empty or 'own'" ;;
+  esac
+  MAIL_DOMAIN_SETTING="${MAIL_DOMAIN:-}"
+  MAIL_FROM_SETTING="${MAIL_FROM:-}"
+  mail_settings
+}
+
+# The own mail server's names (MAIL_SERVER=own, docker-compose.mail.yml): it
+# greets other mail servers as the host browsers reach, and sends from
+# MAIL_DOMAIN, by default that same name. Worked out again once the public
+# origin is known; before that from what .env holds.
+mail_settings() {
+  [ "${MAIL_SERVER:-}" = own ] || return 0
+  local host="${PUBLIC_HOST:-}"
+  [ -n "$host" ] || host=$(printf '%s' "${PUBLIC_ORIGIN:-}" | sed -E 's#^[a-z]+://##; s#[:/].*$##')
+  [ -n "$host" ] || { host="${SERVER_NAME:-}"; host="${host%%:*}"; }
+  MAIL_HOSTNAME="$host"
+  MAIL_DOMAIN="${MAIL_DOMAIN_SETTING:-$host}"
+  MAIL_FROM="${MAIL_FROM_SETTING:-vodle <noreply@$MAIL_DOMAIN>}"
+  export MAIL_HOSTNAME MAIL_DOMAIN MAIL_FROM
 }
 
 # the server name is the app's setting; everything else follows from it
@@ -142,6 +166,7 @@ check_app_settings() {
 compose_files() {
   printf -- '-f docker-compose.prod.yml'
   [ -n "${TLS_DIR:-}" ] && printf -- ' -f docker-compose.tls.yml'
+  [ "${MAIL_SERVER:-}" = own ] && printf -- ' -f docker-compose.mail.yml'
   echo
 }
 
@@ -167,6 +192,80 @@ check_tls() {
       *) echo "note: the certificate does not name $PUBLIC_HOST: $subject" ;;
     esac
     openssl x509 -checkend 604800 -noout -in "$TLS_DIR/$TLS_CERT" >/dev/null 2>&1 || echo "note: the certificate expires within a week (or is expired)"
+  fi
+}
+
+# The e-mail notifications: through an SMTP server named in .env, through
+# the own mail server (MAIL_SERVER=own), or none.
+check_mail() {
+  if [ "${MAIL_SERVER:-}" != own ]; then
+    [ -n "${SMTP_HOST:-}" ] && echo "e-mail notifications: through $SMTP_HOST" \
+      || echo "note: e-mail notifications are off (neither SMTP_HOST nor MAIL_SERVER=own in .env)"
+    return
+  fi
+  mail_settings
+  [[ "$MAIL_DOMAIN" =~ ^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$ ]] || die "MAIL_DOMAIN '$MAIL_DOMAIN' is not a domain name"
+  case "$MAIL_FROM" in
+    *"@$MAIL_DOMAIN>"|*"@$MAIL_DOMAIN") ;;
+    *) die "MAIL_FROM '$MAIL_FROM' must send from MAIL_DOMAIN ($MAIL_DOMAIN): the own mail server signs and sends for that domain only" ;;
+  esac
+  [ -n "${SMTP_HOST:-}" ] && echo "note: MAIL_SERVER=own, so SMTP_HOST ($SMTP_HOST) is not used"
+  echo "e-mail notifications: through the own mail server, from $MAIL_FROM, greeting as $MAIL_HOSTNAME"
+  [ "$DRY_RUN" = 1 ] && return
+  # most hosting providers block outgoing port 25 until asked; without it
+  # every e-mail waits in the queue and is returned to nobody after five days
+  if timeout 10 bash -c 'exec 3<>/dev/tcp/gmail-smtp-in.l.google.com/25' 2>/dev/null; then
+    echo "outgoing connections to port 25: possible"
+  else
+    echo "PROBLEM: this host cannot connect to port 25 of other mail servers (tried gmail-smtp-in.l.google.com). Many hosting providers block it by default: ask yours to unblock it, or use the provider's SMTP relay (SMTP_HOST etc.) without MAIL_SERVER=own"
+  fi
+}
+
+# The DNS records the own mail server needs, and whether DNS has them. Mail
+# without them is refused or filed as spam by the large providers.
+mail_dns() {
+  local txt="$REPO_DIR/mail-data/dkim/$MAIL_DOMAIN.txt" i
+  for i in $(seq 1 30); do [ -f "$txt" ] && break; sleep 2; done
+  if [ ! -f "$txt" ]; then
+    echo "PROBLEM: the mail server has not written its DKIM key to mail-data/dkim/ yet; docker compose logs mail"
+    return
+  fi
+  local dkim spf dmarc
+  dkim=$(grep -o '"[^"]*"' "$txt" | tr -d '"\n')
+  spf="v=spf1 a:$MAIL_HOSTNAME -all"
+  dmarc="v=DMARC1; p=none"
+  log "DNS records for the e-mail notifications (at the DNS provider of $MAIL_DOMAIN)"
+  printf '%-36s TXT  "%s"\n' "$MAIL_DOMAIN." "$spf"
+  printf '%-36s TXT  "%s"\n' "vodle._domainkey.$MAIL_DOMAIN." "$dkim"
+  printf '%-36s TXT  "%s"\n' "_dmarc.$MAIL_DOMAIN." "$dmarc"
+  echo "and, at the hosting provider: the reverse DNS (PTR) of this host's public address must be $MAIL_HOSTNAME,"
+  echo "which must resolve back to that address. If $MAIL_DOMAIN has an SPF record already, add a:$MAIL_HOSTNAME"
+  echo "to it instead of adding a second one. Once mail arrives, DMARC may be tightened to p=quarantine."
+  echo "Where the DNS provider wants long values in parts, split the DKIM value into strings of at most 255 characters."
+  if ! command -v dig >/dev/null 2>&1; then
+    echo "note: dig is not installed (dnsutils/bind-utils), so DNS was not checked"
+    return
+  fi
+  local found ip ptr
+  found=$(dig +short TXT "$MAIL_DOMAIN" | tr -d '"' | grep '^v=spf1' || true)
+  case " $found " in
+    "") echo "SPF: missing" ;;
+    *" a:$MAIL_HOSTNAME "*|*" a "*|*"+a "*) echo "SPF: ok ($found)" ;;
+    *) echo "SPF: present but without a:$MAIL_HOSTNAME ($found)" ;;
+  esac
+  found=$(dig +short TXT "vodle._domainkey.$MAIL_DOMAIN" | tr -d '" \n')
+  if [ -z "$found" ]; then echo "DKIM: missing"
+  elif [ "${found##*p=}" = "${dkim##*p=}" ]; then echo "DKIM: ok"
+  else echo "DKIM: present but a different key (the record must be the one above)"
+  fi
+  found=$(dig +short TXT "_dmarc.$MAIL_DOMAIN" | tr -d '"')
+  [ -n "$found" ] && echo "DMARC: ok ($found)" || echo "DMARC: missing"
+  ip=$(dig +short A "$MAIL_HOSTNAME" | tail -n 1)
+  if [ -z "$ip" ]; then
+    echo "PTR: $MAIL_HOSTNAME has no address"
+  else
+    ptr=$(dig +short -x "$ip" | sed 's/\.$//')
+    [ "$ptr" = "$MAIL_HOSTNAME" ] && echo "PTR: ok ($ip -> $ptr)" || echo "PTR: $ip -> '${ptr:-nothing}', should be $MAIL_HOSTNAME"
   fi
 }
 
@@ -331,6 +430,7 @@ cmd_up() {
   read_public_origin
   check_app_settings
   check_tls
+  check_mail
   prepare_site
   configure_synapse
   log "database and homeserver"
@@ -344,8 +444,10 @@ cmd_up() {
   wait_for_synapse
   accounts_and_token
   log "building and starting the app and the guard bot"
+  [ "${MAIL_SERVER:-}" = own ] && run mkdir -p "$REPO_DIR/mail-data/dkim" "$REPO_DIR/mail-data/spool"
   compose up --build -d
   smoke_checks
+  if [ "${MAIL_SERVER:-}" = own ] && [ "$DRY_RUN" != 1 ]; then mail_dns; fi
   log "done: $(web_url)"
   echo "next: open the app, register a test account, run a rehearsal poll (documentation/deployment/MATRIX.md §5)"
 }
@@ -355,6 +457,7 @@ cmd_status() {
   load_env
   SERVER_NAME="${SERVER_NAME:-$(server_name_from_environment)}"
   read_public_origin > /dev/null
+  mail_settings
   compose ps
   [ "$DRY_RUN" = 1 ] && return
   echo
@@ -365,7 +468,20 @@ cmd_status() {
   if [ -n "${TLS_DIR:-}" ] && command -v openssl >/dev/null 2>&1; then
     echo "certificate: $(openssl x509 -noout -enddate -in "$TLS_DIR/$TLS_CERT" 2>/dev/null)"
   fi
+  if [ "${MAIL_SERVER:-}" = own ]; then
+    echo "mail queue: $(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T mail postqueue -p 2>/dev/null | tail -n 1 || echo 'mail server not answering')"
+  fi
   echo "app: $(web_url)"
+}
+
+cmd_mail_dns() {
+  require_tools
+  load_env
+  read_server_name
+  read_public_origin > /dev/null
+  [ "${MAIL_SERVER:-}" = own ] || die "MAIL_SERVER is not 'own' in .env: there is no own mail server here"
+  mail_settings
+  mail_dns
 }
 
 cmd_update() {
@@ -392,5 +508,6 @@ case "${1:-up}" in
   backup) exec "$REPO_DIR/deploy/backup.sh" ;;
   logs) shift; cmd_logs "$@" ;;
   down) cmd_down ;;
-  *) echo "usage: deploy/deploy.sh up|status|update|backup|logs [service]|down" >&2; exit 2 ;;
+  mail-dns) cmd_mail_dns ;;
+  *) echo "usage: deploy/deploy.sh up|status|update|backup|logs [service]|down|mail-dns" >&2; exit 2 ;;
 esac

@@ -4,7 +4,8 @@
 #   synapse     the Matrix homeserver, on the internal network only
 #   postgres    its database
 #   guard-bot   closes polls at their deadline, lets participants into the
-#               closed poll rooms, removes rooms after the retention period
+#               closed poll rooms, removes rooms after the retention period,
+#               sends the e-mail notifications people ask for
 #
 # Settings come from .env (deploy/generate-secrets.sh) and from
 # src/environments/environment.prod.ts (matrix.server_name, copied into .env
@@ -12,6 +13,9 @@
 # certificate files on the host, add docker-compose.tls.yml:
 #
 #   docker compose --env-file .env -f docker-compose.prod.yml -f docker-compose.tls.yml up --build -d
+#
+# and with MAIL_SERVER=own in .env, docker-compose.mail.yml (a send-only
+# mail server for the e-mail notifications; deploy/deploy.sh adds it).
 
 services:
   vodle-web:
@@ -97,7 +101,8 @@ services:
       - ADMIN_PURGE=true
       # GET /healthz for the healthcheck below and for monitoring (#327):
       - HEALTH_PORT=8012
-      # email notifications, off while SMTP_HOST is empty (deploy/README.md):
+      # email notifications, off while SMTP_HOST is empty (deploy/README.md;
+      # with MAIL_SERVER=own, docker-compose.mail.yml sets these):
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_SECURE=${SMTP_SECURE:-}
