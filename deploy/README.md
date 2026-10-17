@@ -242,6 +242,44 @@ homeservers then connect straight to that host and port, and no
 `.well-known` is consulted at all (Synapse only looks it up for a name
 without a port).
 
+## Email notifications
+
+The app's notifications (a poll closes soon, it has closed, it has new
+options, a delegation request was answered) are shown on the device while
+the app runs. Users may also have them sent by email; the guard bot sends
+these, and only when an SMTP server is configured in `.env`:
+
+```sh
+SMTP_HOST=smtp.example.org
+SMTP_PORT=587                        # 465 with SMTP_SECURE=true
+SMTP_USER=vodle@example.org
+SMTP_PASSWORD=...
+MAIL_FROM="vodle <vodle@example.org>"
+```
+
+then `deploy/deploy.sh up`. Without `SMTP_HOST` the app offers no email
+notifications. How it works:
+
+- A user confirms an address once, with a six-digit code the bot sends to
+  it (at most three codes per address and hour). The code and the token the
+  app keeps afterwards are derived from `EMAIL_SECRET` (by default the
+  bot's password); changing it makes every address be confirmed anew.
+- For each poll the app then asks for the kinds of email the user chose,
+  from the user's account in that poll. The bot keeps the address, the
+  chosen kinds and the email texts (in the user's language, from the app)
+  in its own account data of that poll's room, and deletes them once the
+  poll has closed and the last email is sent. The poll's title is part of
+  the email only when the user allowed it in the settings; otherwise the
+  bot never learns it (the poll's content is end-to-end encrypted).
+- Every email ends with a link to the app's settings, where the user turns
+  the emails off; switching them off removes the address from every
+  running poll.
+
+The privacy statement must say that addresses are kept for this purpose
+and for how long, and name the SMTP provider if it is a third party.
+Restarting the bot loses nothing; new options that arrive while it is down
+are not reported.
+
 ## Operations
 
 **Update to a newer vodle**: `deploy/deploy.sh update` (pull, rebuild,

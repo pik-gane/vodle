@@ -595,13 +595,33 @@
         "was-closed-title": "Kysely {{title}} on päättynyt!",
         "was-closed-body": "Näet lopputulokset kyselyn sivulta."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: kysely päättyy pian",
+        "closing_soon-titled-subject": "vodle: ”{{title}}” päättyy pian",
+        "closing_soon-body": "Kysely, johon osallistut, päättyy pian.\nPäättymisaika: {{due}}\n\nVielä ehdit katsoa sen vaihtoehdot ja muuttaa arvioitasi:\n{{link}}",
+        "closing_soon-titled-body": "Kysely ”{{title}}” päättyy pian.\nPäättymisaika: {{due}}\n\nVielä ehdit katsoa sen vaihtoehdot ja muuttaa arvioitasi:\n{{link}}",
+        "closed-subject": "vodle: kysely on päättynyt",
+        "closed-titled-subject": "vodle: ”{{title}}” on päättynyt",
+        "closed-body": "Kysely, johon osallistut, on päättynyt. Sen tulokset ovat täällä:\n{{link}}",
+        "closed-titled-body": "Kysely ”{{title}}” on päättynyt. Sen tulokset ovat täällä:\n{{link}}",
+        "new_option-subject": "vodle: uusia vaihtoehtoja kyselyssä",
+        "new_option-titled-subject": "vodle: uusia vaihtoehtoja kyselyssä ”{{title}}”",
+        "new_option-body": "Muut ovat lisänneet vaihtoehtoja kyselyyn, johon osallistut (uusia vaihtoehtoja: {{count}}). Haluat ehkä arvioida ne:\n{{link}}",
+        "new_option-titled-body": "Muut ovat lisänneet vaihtoehtoja kyselyyn ”{{title}}” (uusia vaihtoehtoja: {{count}}). Haluat ehkä arvioida ne:\n{{link}}",
+        "delegation_answered-subject": "vodle: edustuspyyntöösi on vastattu",
+        "delegation_answered-titled-subject": "vodle: edustuspyyntöösi kyselyssä ”{{title}}” on vastattu",
+        "delegation_answered-body": "Henkilö, jota pyysit edustajaksesi kyselyssä, on vastannut. Näet kyselystä, hyväksyikö hän pyynnön:\n{{link}}",
+        "delegation_answered-titled-body": "Henkilö, jota pyysit edustajaksesi kyselyssä ”{{title}}”, on vastannut. Näet kyselystä, hyväksyikö hän pyynnön:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "Edustuspyyntö on hyväksytty",
         "delegation_declined": "Edustuspyyntö on hylätty",
         "new_option": "Kyselyyn on lisätty vaihtoehto",
         "poll_closing_soon": "Kysely päättyy pian",
-        "poll_closed": "Kysely on päättynyt"
+        "poll_closed": "Kysely on päättynyt",
+        "delegation_answered": "Edustuspyyntöni on hyväksytty tai hylätty"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -736,6 +756,22 @@
         "behaviour": "Toimintatapa",
         "default-wap": "Oletusarvoiset puoltopisteet",
         "notifications": "Ilmoitukset",
+        "email-notifications": "Sähköpostitse",
+        "email-notifications-intro": "Tämä vodle-palvelin voi lähettää nämä ilmoitukset myös sähköpostitse niistä kyselyistä, joihin osallistut. Vahvista ensin osoitteesi.",
+        "email-address": "Sähköpostiosoite",
+        "email-send-code": "Lähetä koodi",
+        "email-code": "Koodi sähköpostista",
+        "email-confirm": "Vahvista",
+        "email-code-sent": "Koodi on lähetetty osoitteeseen {{email}}. Syötä se tähän 15 minuutin kuluessa.",
+        "email-now-on": "Osoitteesi on vahvistettu. Saat alla valitsemasi sähköpostit.",
+        "email-now-off": "Sähköposteja ei enää lähetetä. Osoitteesi on poistettu kaikista kyselyistä.",
+        "email-confirmed": "Sähköpostit lähetetään osoitteeseen {{email}}.",
+        "email-stop": "Lopeta sähköpostit",
+        "email-titles": "Mainitse kyselyn nimi sähköposteissa",
+        "email-titles-hint": "Kyselyt on salattu päästä päähän, sähköpostit eivät: tämä vodle-palvelin ja sähköpostipalvelujen tarjoajat voivat lukea sähköpostissa olevan kyselyn nimen. Ilman sitä sähköpostit vain linkittävät kyselyyn.",
+        "email-too-many": "Liian monta yritystä. Yritä uudelleen tunnin kuluttua.",
+        "email-wrong-code": "Koodi on väärä tai vanhentunut.",
+        "email-failed": "Tämä ei onnistunut. Yritä myöhemmin uudelleen.",
         "guest-note": "Käytät vierastiliä, jonka vodle loi tälle laitteelle; sen sähköpostiosoite ja salasana näkyvät alla siltä varalta, että haluat käyttää sitä myös toisella laitteella. Tehdäksesi siitä oman tilisi, syötä tähän oma sähköpostiosoitteesi ja salasana: silloin vodle siirtää kyselysi ja puoltopisteesi sinne."
     },
     "validation": {

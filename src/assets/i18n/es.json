@@ -600,13 +600,33 @@
         "was-closed-title": "¡La encuesta {{title}} terminó!",
         "was-closed-body": "Por favor visita la encuesta para ver los resultados."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: una encuesta termina pronto",
+        "closing_soon-titled-subject": "vodle: «{{title}}» termina pronto",
+        "closing_soon-body": "Una encuesta en la que participas termina el {{due}}.\n\nTodavía puedes ver sus opciones y cambiar tus valoraciones:\n{{link}}",
+        "closing_soon-titled-body": "La encuesta «{{title}}» termina el {{due}}.\n\nTodavía puedes ver sus opciones y cambiar tus valoraciones:\n{{link}}",
+        "closed-subject": "vodle: una encuesta ha terminado",
+        "closed-titled-subject": "vodle: «{{title}}» ha terminado",
+        "closed-body": "Una encuesta en la que participas ha terminado. Aquí están sus resultados:\n{{link}}",
+        "closed-titled-body": "La encuesta «{{title}}» ha terminado. Aquí están sus resultados:\n{{link}}",
+        "new_option-subject": "vodle: nuevas opciones en una encuesta",
+        "new_option-titled-subject": "vodle: nuevas opciones en «{{title}}»",
+        "new_option-body": "Otras personas han añadido opciones a una encuesta en la que participas (opciones nuevas: {{count}}). Quizá quieras valorarlas:\n{{link}}",
+        "new_option-titled-body": "Otras personas han añadido opciones a la encuesta «{{title}}» (opciones nuevas: {{count}}). Quizá quieras valorarlas:\n{{link}}",
+        "delegation_answered-subject": "vodle: tu solicitud de delegación ha sido respondida",
+        "delegation_answered-titled-subject": "vodle: tu solicitud de delegación en «{{title}}» ha sido respondida",
+        "delegation_answered-body": "La persona a la que pediste ser tu delegada en una encuesta ha respondido. Si aceptó o no, lo verás en la encuesta:\n{{link}}",
+        "delegation_answered-titled-body": "La persona a la que pediste ser tu delegada en la encuesta «{{title}}» ha respondido. Si aceptó o no, lo verás en la encuesta:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "Una solicitud de delegación fue aceptada",
         "delegation_declined": "Una solicitud de delegación fue rechazada",
         "new_option": "Una opción fue añadida a la encuesta",
         "poll_closing_soon": "Una encuesta terminará pronto",
-        "poll_closed": "Una encuesta terminó"
+        "poll_closed": "Una encuesta terminó",
+        "delegation_answered": "Una de mis solicitudes de delegación fue aceptada o rechazada"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -741,6 +761,22 @@
         "behaviour": "Comportamiento",
         "default-wap": "Wap inicial",
         "notifications": "Notificaciones",
+        "email-notifications": "Por correo electrónico",
+        "email-notifications-intro": "Este servidor de vodle también puede enviarte estas notificaciones por correo electrónico, para las encuestas en las que participas. Primero confirma tu dirección.",
+        "email-address": "Dirección de correo electrónico",
+        "email-send-code": "Enviar código",
+        "email-code": "Código del correo",
+        "email-confirm": "Confirmar",
+        "email-code-sent": "Se ha enviado un código a {{email}}. Introdúcelo aquí en los próximos 15 minutos.",
+        "email-now-on": "Tu dirección está confirmada. Recibirás los correos elegidos abajo.",
+        "email-now-off": "No se enviarán más correos. Tu dirección se ha eliminado de todas las encuestas.",
+        "email-confirmed": "Los correos se envían a {{email}}.",
+        "email-stop": "Dejar de recibir correos",
+        "email-titles": "Nombrar la encuesta en los correos",
+        "email-titles-hint": "Las encuestas están cifradas de extremo a extremo; los correos, no: el título de una encuesta en un correo puede ser leído por este servidor de vodle y por los proveedores de correo. Sin él, los correos solo enlazan a la encuesta.",
+        "email-too-many": "Demasiados intentos. Inténtalo de nuevo dentro de una hora.",
+        "email-wrong-code": "Este código es incorrecto o ha caducado.",
+        "email-failed": "No ha funcionado. Inténtalo de nuevo más tarde.",
         "guest-note": "Estás usando una cuenta de invitado que vodle creó en este dispositivo; su dirección de correo electrónico y su contraseña aparecen abajo, por si quieres usarla también en otro dispositivo. Para convertirla en una cuenta propia, introduce aquí tu propia dirección de correo electrónico y una contraseña: vodle traslada entonces tus encuestas y tus waps a ella."
     },
     "validation": {

@@ -32,6 +32,7 @@
  * sending and receiving.
  */
 import { JOIN_KEY_TYPE } from "./knock.js";
+import { parseEmailRequest } from "./email.js";
 
 export const REQUEST_TYPE = "m.room.vodle.request";
 export const RESPONSE_TYPE = "m.room.vodle.response";
@@ -166,7 +167,19 @@ export function parseRequest(content) {
     if (typeof content.voter_id !== "string" || !VOTER_ID.test(content.voter_id)) return null;
     return { request_id, kind, poll_id: content.poll_id, voter_id: content.voter_id };
   }
+  // email notifications (email.js)
+  if (EMAIL_KINDS.includes(kind)) {
+    return parseEmailRequest(content, { request_id, kind }, isPollId);
+  }
   return null;
+}
+
+/** the request kinds of the email notifications (email.js) */
+export const EMAIL_KINDS = ["email_send_code", "email_confirm", "email_subscribe", "email_unsubscribe", "email_forget"];
+
+/** whether `id` is a poll id this bot handles */
+export function isPollId(id) {
+  return typeof id === "string" && POLL_ID.test(id);
 }
 
 /** whether `id` can be a request id -- the state key of a request and of

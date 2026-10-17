@@ -600,13 +600,33 @@
         "was-closed-title": "Ankieta {{title}} zakończyła się!",
         "was-closed-body": "Proszę, odwiedź ankietę, aby zobaczyć wyniki."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: ankieta wkrótce się kończy",
+        "closing_soon-titled-subject": "vodle: „{{title}}” wkrótce się kończy",
+        "closing_soon-body": "Ankieta, w której bierzesz udział, wkrótce się kończy.\nKoniec: {{due}}\n\nWciąż możesz przejrzeć jej opcje i zmienić swoje oceny:\n{{link}}",
+        "closing_soon-titled-body": "Ankieta „{{title}}” wkrótce się kończy.\nKoniec: {{due}}\n\nWciąż możesz przejrzeć jej opcje i zmienić swoje oceny:\n{{link}}",
+        "closed-subject": "vodle: ankieta się zakończyła",
+        "closed-titled-subject": "vodle: ankieta „{{title}}” się zakończyła",
+        "closed-body": "Ankieta, w której bierzesz udział, zakończyła się. Oto jej wyniki:\n{{link}}",
+        "closed-titled-body": "Ankieta „{{title}}” zakończyła się. Oto jej wyniki:\n{{link}}",
+        "new_option-subject": "vodle: nowe opcje w ankiecie",
+        "new_option-titled-subject": "vodle: nowe opcje w ankiecie „{{title}}”",
+        "new_option-body": "Inni dodali opcje do ankiety, w której bierzesz udział (nowe opcje: {{count}}). Możesz je ocenić:\n{{link}}",
+        "new_option-titled-body": "Inni dodali opcje do ankiety „{{title}}” (nowe opcje: {{count}}). Możesz je ocenić:\n{{link}}",
+        "delegation_answered-subject": "vodle: Twój wniosek o delegację otrzymał odpowiedź",
+        "delegation_answered-titled-subject": "vodle: Twój wniosek o delegację w ankiecie „{{title}}” otrzymał odpowiedź",
+        "delegation_answered-body": "Osoba, którą poproszono o bycie Twoim delegatem w ankiecie, odpowiedziała. Czy się zgodziła, zobaczysz w ankiecie:\n{{link}}",
+        "delegation_answered-titled-body": "Osoba, którą poproszono o bycie Twoim delegatem w ankiecie „{{title}}”, odpowiedziała. Czy się zgodziła, zobaczysz w ankiecie:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "Wniosek o delegację został zaakceptowany",
         "delegation_declined": "Wniosek o delegację został odrzucony",
         "new_option": "Opcja została dodana do ankiety",
         "poll_closing_soon": "Ankieta wkrótce się kończy",
-        "poll_closed": "Ankieta zakończyła się"
+        "poll_closed": "Ankieta zakończyła się",
+        "delegation_answered": "Mój wniosek o delegację został zaakceptowany lub odrzucony"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -741,6 +761,22 @@
         "behaviour": "Behaviour",
         "default-wap": "Default wap",
         "notifications": "Powiadomienia",
+        "email-notifications": "E-mailem",
+        "email-notifications-intro": "Ten serwer vodle może też wysyłać Ci te powiadomienia e-mailem, dla ankiet, w których bierzesz udział. Najpierw potwierdź swój adres.",
+        "email-address": "Adres e-mail",
+        "email-send-code": "Wyślij kod",
+        "email-code": "Kod z e-maila",
+        "email-confirm": "Potwierdź",
+        "email-code-sent": "Kod został wysłany na adres {{email}}. Wpisz go tutaj w ciągu 15 minut.",
+        "email-now-on": "Twój adres jest potwierdzony. Będziesz otrzymywać e-maile wybrane poniżej.",
+        "email-now-off": "E-maile nie będą już wysyłane. Twój adres został usunięty ze wszystkich ankiet.",
+        "email-confirmed": "E-maile trafiają na adres {{email}}.",
+        "email-stop": "Wyłącz e-maile",
+        "email-titles": "Podawaj nazwę ankiety w e-mailach",
+        "email-titles-hint": "Ankiety są szyfrowane end-to-end, e-maile nie: tytuł ankiety w e-mailu mogą przeczytać ten serwer vodle i dostawcy poczty. Bez niego e-maile zawierają tylko link do ankiety.",
+        "email-too-many": "Zbyt wiele prób. Spróbuj ponownie za godzinę.",
+        "email-wrong-code": "Ten kod jest błędny lub wygasł.",
+        "email-failed": "Nie udało się. Spróbuj ponownie później.",
         "guest-note": "Korzystasz z konta gościa, które vodle założyło na tym urządzeniu; jego adres e-mail i hasło znajdziesz poniżej, na wypadek używania go także na innym urządzeniu. Aby zmienić je we własne konto, podaj tutaj swój adres e-mail i hasło: vodle przeniesie wtedy tam Twoje ankiety i wapy."
     },
     "validation": {

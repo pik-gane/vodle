@@ -423,6 +423,8 @@ export class Poll {
         this._state = new_state;
         if (new_state == 'running') {
           this.set_timeouts(new Date());
+          // and the emails the person asked for (EmailService)
+          this.G.E?.schedule_sync();
         }
     } else {
       this.G.L.error("Poll invalid state transition from "+old_state+" to "+new_state);

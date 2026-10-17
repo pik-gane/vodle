@@ -600,13 +600,33 @@
         "was-closed-title": "The poll {{title}} has ended!",
         "was-closed-body": "Please visit the poll to see the results."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: un sondaggio termina presto",
+        "closing_soon-titled-subject": "vodle: «{{title}}» termina presto",
+        "closing_soon-body": "Un sondaggio a cui partecipi termina {{due}}.\n\nC’è ancora tempo per vedere le sue opzioni e cambiare le tue valutazioni:\n{{link}}",
+        "closing_soon-titled-body": "Il sondaggio «{{title}}» termina {{due}}.\n\nC’è ancora tempo per vedere le sue opzioni e cambiare le tue valutazioni:\n{{link}}",
+        "closed-subject": "vodle: un sondaggio è terminato",
+        "closed-titled-subject": "vodle: «{{title}}» è terminato",
+        "closed-body": "Un sondaggio a cui partecipi è terminato. Ecco i risultati:\n{{link}}",
+        "closed-titled-body": "Il sondaggio «{{title}}» è terminato. Ecco i risultati:\n{{link}}",
+        "new_option-subject": "vodle: nuove opzioni in un sondaggio",
+        "new_option-titled-subject": "vodle: nuove opzioni in «{{title}}»",
+        "new_option-body": "Altri hanno aggiunto opzioni a un sondaggio a cui partecipi (nuove opzioni: {{count}}). Potresti volerle valutare:\n{{link}}",
+        "new_option-titled-body": "Altri hanno aggiunto opzioni al sondaggio «{{title}}» (nuove opzioni: {{count}}). Potresti volerle valutare:\n{{link}}",
+        "delegation_answered-subject": "vodle: la tua richiesta di delega ha ricevuto risposta",
+        "delegation_answered-titled-subject": "vodle: la tua richiesta di delega in «{{title}}» ha ricevuto risposta",
+        "delegation_answered-body": "La persona a cui hai chiesto di farti da delegato in un sondaggio ha risposto. Se ha accettato, lo vedi nel sondaggio:\n{{link}}",
+        "delegation_answered-titled-body": "La persona a cui hai chiesto di farti da delegato nel sondaggio «{{title}}» ha risposto. Se ha accettato, lo vedi nel sondaggio:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "A delegation request was accepted",
         "delegation_declined": "A delegation request was declined",
         "new_option": "An option was added to a poll",
         "poll_closing_soon": "A poll is ending soon",
-        "poll_closed": "A poll ended"
+        "poll_closed": "A poll ended",
+        "delegation_answered": "Una mia richiesta di delega è stata accettata o rifiutata"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -741,6 +761,22 @@
         "behaviour": "Behaviour",
         "default-wap": "Default wap",
         "notifications": "Notifications",
+        "email-notifications": "Via e-mail",
+        "email-notifications-intro": "Questo server vodle può inviarti queste notifiche anche via e-mail, per i sondaggi a cui partecipi. Conferma prima il tuo indirizzo.",
+        "email-address": "Indirizzo e-mail",
+        "email-send-code": "Invia codice",
+        "email-code": "Codice ricevuto via e-mail",
+        "email-confirm": "Conferma",
+        "email-code-sent": "È stato inviato un codice a {{email}}. Inseriscilo qui entro 15 minuti.",
+        "email-now-on": "Il tuo indirizzo è confermato. Riceverai le e-mail scelte qui sotto.",
+        "email-now-off": "Non verranno più inviate e-mail. Il tuo indirizzo è stato rimosso da tutti i sondaggi.",
+        "email-confirmed": "Le e-mail vanno a {{email}}.",
+        "email-stop": "Interrompi le e-mail",
+        "email-titles": "Nomina il sondaggio nelle e-mail",
+        "email-titles-hint": "I sondaggi sono cifrati end-to-end, le e-mail no: il titolo di un sondaggio in un’e-mail può essere letto da questo server vodle e dai fornitori di posta. Senza titolo, le e-mail contengono solo il link al sondaggio.",
+        "email-too-many": "Troppi tentativi. Riprova tra un’ora.",
+        "email-wrong-code": "Questo codice è errato o scaduto.",
+        "email-failed": "Non ha funzionato. Riprova più tardi.",
         "guest-note": "Stai usando un account ospite che vodle ha creato su questo dispositivo; il suo indirizzo e-mail e la sua password sono indicati qui sotto, nel caso tu voglia usarlo anche su un altro dispositivo. Per trasformarlo in un account tuo, inserisci qui il tuo indirizzo e-mail e una password: vodle vi sposta allora i tuoi sondaggi e i tuoi Wap."
     },
     "validation": {

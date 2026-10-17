@@ -634,13 +634,33 @@
         "was-closed-title": "Die Abstimmung {{title}} hat geendet!",
         "was-closed-body": "Bitte gehe zur Abstimmung, um das Ergebnis zu sehen."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: Eine Abstimmung endet bald",
+        "closing_soon-titled-subject": "vodle: „{{title}}“ endet bald",
+        "closing_soon-body": "Eine Abstimmung, an der Du teilnimmst, endet am {{due}}.\n\nNoch kannst Du Dir ihre Optionen ansehen und Deine Bewertungen ändern:\n{{link}}",
+        "closing_soon-titled-body": "Die Abstimmung „{{title}}“ endet am {{due}}.\n\nNoch kannst Du Dir ihre Optionen ansehen und Deine Bewertungen ändern:\n{{link}}",
+        "closed-subject": "vodle: Eine Abstimmung hat geendet",
+        "closed-titled-subject": "vodle: „{{title}}“ hat geendet",
+        "closed-body": "Eine Abstimmung, an der Du teilnimmst, hat geendet. Hier sind ihre Ergebnisse:\n{{link}}",
+        "closed-titled-body": "Die Abstimmung „{{title}}“ hat geendet. Hier sind ihre Ergebnisse:\n{{link}}",
+        "new_option-subject": "vodle: Neue Optionen in einer Abstimmung",
+        "new_option-titled-subject": "vodle: Neue Optionen in „{{title}}“",
+        "new_option-body": "Andere haben einer Abstimmung, an der Du teilnimmst, Optionen hinzugefügt (neue Optionen: {{count}}). Vielleicht möchtest Du sie bewerten:\n{{link}}",
+        "new_option-titled-body": "Andere haben der Abstimmung „{{title}}“ Optionen hinzugefügt (neue Optionen: {{count}}). Vielleicht möchtest Du sie bewerten:\n{{link}}",
+        "delegation_answered-subject": "vodle: Deine Bitte um Delegierung wurde beantwortet",
+        "delegation_answered-titled-subject": "vodle: Deine Bitte um Delegierung in „{{title}}“ wurde beantwortet",
+        "delegation_answered-body": "Die Person, die Du in einer Abstimmung um Delegierung gebeten hast, hat geantwortet. Ob sie angenommen hat, siehst Du in der Abstimmung:\n{{link}}",
+        "delegation_answered-titled-body": "Die Person, die Du in der Abstimmung „{{title}}“ um Delegierung gebeten hast, hat geantwortet. Ob sie angenommen hat, siehst Du in der Abstimmung:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "Eine Bitte um Delegierung wurde angenommen",
         "delegation_declined": "Eine Bitte um Delegierung wurde abgelehnt",
         "new_option": "Einer Abstimmung wurde eine Option hinzugefügt",
         "poll_closing_soon": "Eine Abstimmung endet bald",
-        "poll_closed": "Eine Abstimmung hat geendet"
+        "poll_closed": "Eine Abstimmung hat geendet",
+        "delegation_answered": "Eine meiner Bitten um Delegierung wurde angenommen oder abgelehnt"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -782,7 +802,23 @@
         "appearance": "Aussehen",
         "behaviour": "Verhalten",
         "default-wap": "Standard-Wap",
-        "notifications": "Benachrichtigungen"
+        "notifications": "Benachrichtigungen",
+        "email-notifications": "Per E-Mail",
+        "email-notifications-intro": "Dieser vodle-Server kann Dir diese Benachrichtigungen auch per E-Mail schicken, für die Abstimmungen, an denen Du teilnimmst. Bitte bestätige zuerst Deine Adresse.",
+        "email-address": "E-Mail-Adresse",
+        "email-send-code": "Code senden",
+        "email-code": "Code aus der E-Mail",
+        "email-confirm": "Bestätigen",
+        "email-code-sent": "Ein Code wurde an {{email}} geschickt. Bitte gib ihn innerhalb von 15 Minuten hier ein.",
+        "email-now-on": "Deine Adresse ist bestätigt. Du bekommst die unten gewählten E-Mails.",
+        "email-now-off": "Es werden keine E-Mails mehr verschickt. Deine Adresse wurde aus allen Abstimmungen entfernt.",
+        "email-confirmed": "E-Mails gehen an {{email}}.",
+        "email-stop": "E-Mails beenden",
+        "email-titles": "Die Abstimmung in E-Mails beim Namen nennen",
+        "email-titles-hint": "Abstimmungen sind Ende-zu-Ende-verschlüsselt, E-Mails nicht: Den Titel einer Abstimmung in einer E-Mail können dieser vodle-Server und die E-Mail-Anbieter lesen. Ohne ihn verlinken die E-Mails nur auf die Abstimmung.",
+        "email-too-many": "Zu viele Versuche. Bitte versuche es in einer Stunde erneut.",
+        "email-wrong-code": "Dieser Code ist falsch oder abgelaufen.",
+        "email-failed": "Das hat nicht geklappt. Bitte versuche es später erneut."
     },
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",

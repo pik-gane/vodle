@@ -34,6 +34,7 @@ import { SettingsService } from './settings.service';
 import { PollService } from './poll.service';
 import { DelegationService } from './delegation.service';
 import { NewsService } from './news.service';
+import { EmailService } from './email.service';
 
 /**
  * Escape a value that gets interpolated into an Ionic overlay message.
@@ -112,6 +113,7 @@ export class GlobalService implements OnDestroy {
       public S: SettingsService,
       public Del: DelegationService,
       public N: NewsService,
+      public E: EmailService,
       public translate: TranslateService,
       public alertCtrl: AlertController,
       ) {
@@ -123,6 +125,7 @@ export class GlobalService implements OnDestroy {
     S.init(this);
     Del.init(this);
     N.init(this);
+    E.init(this);
 
     // one listener, added rather than assigned: assigning window.onbeforeunload
     // replaced whatever handler was there (karma's, which reports a test

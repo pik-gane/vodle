@@ -27,6 +27,7 @@ import { IonInput, IonSelect } from '@ionic/angular';
 import { GlobalService } from "../global.service";
 import { SelectServerComponent } from '../sharedcomponents/select-server/select-server.component';
 import { environment } from 'src/environments/environment';
+import { EMAIL_TYPES, EMAIL_TYPE_LABELS, is_email } from '../email.service';
 
 /*
 TODO:
@@ -69,6 +70,20 @@ export class SettingsPage implements OnInit {
     poll_closing_soon?:boolean,
     poll_closed?: boolean
   };
+
+  // email notifications (EmailService):
+  email_available = false;
+  email_types = EMAIL_TYPES;
+  email_type_labels = EMAIL_TYPE_LABELS;
+  email_notify_of: Record<string, boolean> = {};
+  email_titles = false;
+  /** the address being confirmed, by default the one the person logged in with */
+  email_address = '';
+  email_code = '';
+  email_code_sent = false;
+  email_busy = false;
+  email_message = '';
+  email_message_is_error = false;
 
   // LIFECYCLE:
 
@@ -115,6 +130,8 @@ export class SettingsPage implements OnInit {
   ionViewDidEnter() {
     this.G.L.entry("SettingsPage.ionViewDidEnter");
     if (this.G.D.ready && !this.ready) this.onDataReady();
+    // the email part shows only where the guard bot sends email
+    this.G.E.check_available().then(ok => { this.email_available = ok; });
   }
 
   onDataReady() {
@@ -192,6 +209,8 @@ export class SettingsPage implements OnInit {
   set_language() {
     let c = this.formGroup.get('language');
     if (c.valid) this.G.S.language = c.value;
+    // the emails are written in it too
+    this.G.E.schedule_sync();
   }
 
   /** The class the language select asks Ionic to put on its dialog, which
@@ -336,6 +355,13 @@ export class SettingsPage implements OnInit {
     for (const cls of this.G.S.notification_classes) {
       this.notify_of[cls] = this.G.S.get_notify_of(cls);
     }
+    for (const type of EMAIL_TYPES) {
+      this.email_notify_of[type] = this.G.E.get_type(type);
+    }
+    this.email_titles = this.G.E.titles;
+    if (!this.email_address) {
+      this.email_address = this.G.E.address || (this.G.S.use_guest ? '' : this.G.S.email) || '';
+    }
   }
 
   notify_changed() {
@@ -343,6 +369,69 @@ export class SettingsPage implements OnInit {
       this.G.S.set_notify_of(cls, value as boolean);
       this.G.L.trace("SettingsPage.notify_changed", cls, value);
     }
+  }
+
+  // email notifications:
+
+  email_address_valid(): boolean { return is_email(this.email_address); }
+  email_code_valid(): boolean { return /^\d{6}$/.test((this.email_code || '').trim()); }
+
+  async send_email_code() {
+    if (this.email_busy || !this.email_address_valid()) { return; }
+    await this.ask_bot(() => this.G.E.send_code(this.email_address), answer => {
+      this.email_code_sent = true;
+      this.email_code = '';
+      this.show_email_message(this.translate.instant('settings.email-code-sent', {email: this.email_address.trim()}));
+    });
+  }
+
+  async confirm_email() {
+    if (this.email_busy || !this.email_code_valid()) { return; }
+    await this.ask_bot(() => this.G.E.confirm(this.email_address, this.email_code), answer => {
+      this.email_code_sent = false;
+      this.email_code = '';
+      this.show_email_message(this.translate.instant('settings.email-now-on'));
+    });
+  }
+
+  async stop_emails() {
+    if (this.email_busy) { return; }
+    await this.ask_bot(() => this.G.E.stop(), answer => {
+      this.show_email_message(this.translate.instant('settings.email-now-off'));
+    });
+  }
+
+  email_type_changed(type: string) {
+    this.G.E.set_type(type, !!this.email_notify_of[type]);
+  }
+
+  email_titles_changed() {
+    this.G.E.titles = this.email_titles;
+  }
+
+  /** ask the bot, show what came of it */
+  private async ask_bot(ask: () => Promise<any>, on_ok: (answer: any) => void) {
+    this.email_busy = true;
+    this.email_message = '';
+    try {
+      const answer = await ask();
+      if (answer?.ok) {
+        on_ok(answer);
+      } else {
+        const key = {rate_limited: 'settings.email-too-many', wrong_code: 'settings.email-wrong-code'}[answer?.reason] || 'settings.email-failed';
+        this.show_email_message(this.translate.instant(key), true);
+      }
+    } catch (err) {
+      this.G.L.warn("SettingsPage.ask_bot: no answer", err);
+      this.show_email_message(this.translate.instant('settings.email-failed'), true);
+    } finally {
+      this.email_busy = false;
+    }
+  }
+
+  private show_email_message(message: string, is_error = false) {
+    this.email_message = message;
+    this.email_message_is_error = is_error;
   }
 
 }

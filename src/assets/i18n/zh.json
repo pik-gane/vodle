@@ -551,7 +551,8 @@
         "new_option": "",
         "poll_closing_soon": "",
         "_COMMENT_SECTION_": "",
-        "poll_closed": ""
+        "poll_closed": "",
+        "delegation_answered": "我的委托请求被接受或拒绝"
     },
     "delegation-request": {
         "share": "使用一个短信息app",
@@ -613,6 +614,25 @@
         "was-closed-body": "",
         "was-closed-title": ""
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle：一项投票即将结束",
+        "closing_soon-titled-subject": "vodle：“{{title}}”即将结束",
+        "closing_soon-body": "你参与的一项投票即将结束。\n结束时间：{{due}}\n\n你仍可以查看其选项并更改你的评分：\n{{link}}",
+        "closing_soon-titled-body": "投票“{{title}}”即将结束。\n结束时间：{{due}}\n\n你仍可以查看其选项并更改你的评分：\n{{link}}",
+        "closed-subject": "vodle：一项投票已结束",
+        "closed-titled-subject": "vodle：“{{title}}”已结束",
+        "closed-body": "你参与的一项投票已结束。结果见：\n{{link}}",
+        "closed-titled-body": "投票“{{title}}”已结束。结果见：\n{{link}}",
+        "new_option-subject": "vodle：投票中有新选项",
+        "new_option-titled-subject": "vodle：“{{title}}”中有新选项",
+        "new_option-body": "其他人在你参与的投票中添加了选项（新选项：{{count}} 个）。你可能想为它们评分：\n{{link}}",
+        "new_option-titled-body": "其他人在投票“{{title}}”中添加了选项（新选项：{{count}} 个）。你可能想为它们评分：\n{{link}}",
+        "delegation_answered-subject": "vodle：你的委托请求已有回复",
+        "delegation_answered-titled-subject": "vodle：你在“{{title}}”中的委托请求已有回复",
+        "delegation_answered-body": "你在一项投票中请其担任你代表的人已作出回复。是否接受，可在投票中查看：\n{{link}}",
+        "delegation_answered-titled-body": "你在投票“{{title}}”中请其担任你代表的人已作出回复。是否接受，可在投票中查看：\n{{link}}"
+    },
     "settings": {
         "behaviour": "",
         "db-label": "",
@@ -625,6 +645,22 @@
         "appearance": "",
         "_COMMENT_SECTION_": "",
         "notifications": "",
+        "email-notifications": "通过电子邮件",
+        "email-notifications-intro": "对于你参与的投票，此 vodle 服务器也可以通过电子邮件向你发送这些通知。请先确认你的邮箱地址。",
+        "email-address": "电子邮箱地址",
+        "email-send-code": "发送验证码",
+        "email-code": "邮件中的验证码",
+        "email-confirm": "确认",
+        "email-code-sent": "验证码已发送至 {{email}}。请在 15 分钟内在此输入。",
+        "email-now-on": "你的地址已确认。你将收到下方所选的邮件。",
+        "email-now-off": "将不再发送邮件。你的地址已从所有投票中删除。",
+        "email-confirmed": "邮件将发送至 {{email}}。",
+        "email-stop": "停止邮件",
+        "email-titles": "在邮件中写明投票名称",
+        "email-titles-hint": "投票是端到端加密的，邮件不是：邮件中的投票标题可以被此 vodle 服务器和邮件服务商读取。不写标题时，邮件只包含投票链接。",
+        "email-too-many": "尝试次数过多。请一小时后再试。",
+        "email-wrong-code": "验证码错误或已过期。",
+        "email-failed": "操作未成功。请稍后再试。",
         "guest-note": "你正在使用 vodle 在本设备上创建的访客账户；它的电子邮箱和密码显示在下方，以便你也能在其他设备上使用。若要把它变成你自己的账户，请在此输入你自己的电子邮箱和密码：vodle 会把你的投票和 wap 转移过去。"
     },
     "_WELCOME_TO_TRANSLATORS_": [

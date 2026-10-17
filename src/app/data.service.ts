@@ -659,6 +659,16 @@ export class DataService implements OnDestroy {
     return this.poll_matrix(pid).then(m => m.respondToDelegation(pid, did, accept));
   }
 
+  /** Ask the guard bot (EmailService): from the person's own account, or,
+   *  with `pid`, from their account in that poll -- the bot takes a poll's
+   *  email subscription only from a member of its poll room. */
+  ask_guard_bot(kind: string, params: Record<string, any>, pid?: string): Promise<any> {
+    if (pid) {
+      return this.poll_matrix(pid).then(m => m.askGuardBot(kind, params));
+    }
+    return this.matrixService.askGuardBot(kind, params);
+  }
+
   /** Drop the memoised Matrix session for a poll, so that the next
    *  operation on it signs in again. For a token the homeserver no longer
    *  accepts (#327): everything else is worth retrying with. */
@@ -1278,6 +1288,8 @@ export class DataService implements OnDestroy {
           this.matrix_user_data_ready = this.sync_and_settle_user_data();
           this.matrix_user_data_ready.catch(err =>
             this.G.L.error("DataService: the user data sync failed", err));
+          // the email subscriptions follow the settings the sync brings
+          this.matrix_user_data_ready.then(() => this.G.E?.schedule_sync(), () => {});
           (this as any).boot_log?.("the backend is ready");
           this.G.L.info("DataService: Matrix initialization complete");
         } catch (err: any) {
@@ -5383,6 +5395,9 @@ export class DataService implements OnDestroy {
       p.after_incoming_changes(tally);
     }
 
+    // a poll that started or was joined gets its email subscription
+    this.G.E?.schedule_sync();
+
     this.save_state();
     this.G.L.exit("DataService.after_changes");
   }
@@ -7008,6 +7023,10 @@ export class DataService implements OnDestroy {
             }
           }
         }
+      }
+      // the guard bot forgets the e-mail address in every poll (EmailService):
+      if (this.G.E?.confirmed) {
+        await this.courtesy("have the guard bot forget the e-mail address", () => this.G.E.stop());
       }
       // set all waps to zero:
       for (const [pid, p] of Object.entries(this.G.P.polls)) {

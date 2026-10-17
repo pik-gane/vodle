@@ -644,13 +644,33 @@
         "was-closed-title": "The poll {{title}} has ended!",
         "was-closed-body": "Please visit the poll to see the results."
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: a poll ends soon",
+        "closing_soon-titled-subject": "vodle: “{{title}}” ends soon",
+        "closing_soon-body": "A poll you take part in ends on {{due}}.\n\nThere is still time to look at its options and change your ratings:\n{{link}}",
+        "closing_soon-titled-body": "The poll “{{title}}” ends on {{due}}.\n\nThere is still time to look at its options and change your ratings:\n{{link}}",
+        "closed-subject": "vodle: a poll has ended",
+        "closed-titled-subject": "vodle: “{{title}}” has ended",
+        "closed-body": "A poll you take part in has ended. Its results are here:\n{{link}}",
+        "closed-titled-body": "The poll “{{title}}” has ended. Its results are here:\n{{link}}",
+        "new_option-subject": "vodle: new options in a poll",
+        "new_option-titled-subject": "vodle: new options in “{{title}}”",
+        "new_option-body": "Others have added options to a poll you take part in (new options: {{count}}). You may want to rate them:\n{{link}}",
+        "new_option-titled-body": "Others have added options to the poll “{{title}}” (new options: {{count}}). You may want to rate them:\n{{link}}",
+        "delegation_answered-subject": "vodle: your delegation request was answered",
+        "delegation_answered-titled-subject": "vodle: your delegation request in “{{title}}” was answered",
+        "delegation_answered-body": "The person you asked to be your delegate in a poll has answered your request. Whether they accepted it is shown in the poll:\n{{link}}",
+        "delegation_answered-titled-body": "The person you asked to be your delegate in the poll “{{title}}” has answered your request. Whether they accepted it is shown in the poll:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "A delegation request was accepted",
         "delegation_declined": "A delegation request was declined",
         "new_option": "An option was added to a poll",
         "poll_closing_soon": "A poll is ending soon",
-        "poll_closed": "A poll ended"
+        "poll_closed": "A poll ended",
+        "delegation_answered": "A delegation request of mine was accepted or declined"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -793,7 +813,23 @@
         "appearance": "Appearance",
         "behaviour": "Behaviour",
         "default-wap": "Default wap",
-        "notifications": "Notifications"
+        "notifications": "Notifications",
+        "email-notifications": "By e-mail",
+        "email-notifications-intro": "This vodle server can also send you these notifications by e-mail, for the polls you take part in. Please confirm your address first.",
+        "email-address": "E-mail address",
+        "email-send-code": "Send code",
+        "email-code": "Code from the e-mail",
+        "email-confirm": "Confirm",
+        "email-code-sent": "A code has been sent to {{email}}. Please enter it here within 15 minutes.",
+        "email-now-on": "Your address is confirmed. You will get the e-mails chosen below.",
+        "email-now-off": "No more e-mails will be sent. Your address has been removed from all polls.",
+        "email-confirmed": "E-mails go to {{email}}.",
+        "email-stop": "Stop e-mails",
+        "email-titles": "Name the poll in e-mails",
+        "email-titles-hint": "Polls are end-to-end encrypted, e-mails are not: a poll title in an e-mail can be read by this vodle server and by the e-mail providers. Without it, the e-mails only link to the poll.",
+        "email-too-many": "Too many attempts. Please try again in an hour.",
+        "email-wrong-code": "This code is wrong or has expired.",
+        "email-failed": "This did not work. Please try again later."
     },
     "validation": {
         "_COMMENT_SECTION_": "[COMMENT] strings used in input validation error messages:",

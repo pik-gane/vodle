@@ -623,13 +623,33 @@
         "was-closed-title": "मतदान {{title}} समाप्त हो गया है!",
         "was-closed-body": "परिणाम देखने के लिए कृपया पोल पर जाएं।"
     },
+    "email-notifications": {
+        "_COMMENT_SECTION_": "[COMMENT] e-mails the vodle server sends when a user asked for them on the Settings page. Keep {{title}}, {{due}}, {{link}} and {{count}} as they are: the server fills them in. Plain text only (no HTML); \\n starts a new line. The 'titled-' variants are used when the user allowed the poll's title in e-mails.",
+        "closing_soon-subject": "vodle: एक मतदान जल्द ही समाप्त हो रहा है",
+        "closing_soon-titled-subject": "vodle: “{{title}}” जल्द ही समाप्त हो रहा है",
+        "closing_soon-body": "जिस मतदान में आप भाग ले रहे हैं, वह जल्द ही समाप्त हो रहा है।\nसमाप्ति: {{due}}\n\nआप अभी भी इसके विकल्प देख सकते हैं और अपनी रेटिंग बदल सकते हैं:\n{{link}}",
+        "closing_soon-titled-body": "मतदान “{{title}}” जल्द ही समाप्त हो रहा है।\nसमाप्ति: {{due}}\n\nआप अभी भी इसके विकल्प देख सकते हैं और अपनी रेटिंग बदल सकते हैं:\n{{link}}",
+        "closed-subject": "vodle: एक मतदान समाप्त हो गया है",
+        "closed-titled-subject": "vodle: “{{title}}” समाप्त हो गया है",
+        "closed-body": "जिस मतदान में आप भाग ले रहे थे, वह समाप्त हो गया है। इसके परिणाम यहाँ हैं:\n{{link}}",
+        "closed-titled-body": "मतदान “{{title}}” समाप्त हो गया है। इसके परिणाम यहाँ हैं:\n{{link}}",
+        "new_option-subject": "vodle: एक मतदान में नए विकल्प",
+        "new_option-titled-subject": "vodle: “{{title}}” में नए विकल्प",
+        "new_option-body": "दूसरों ने उस मतदान में विकल्प जोड़े हैं जिसमें आप भाग ले रहे हैं (नए विकल्प: {{count}})। शायद आप उन्हें रेट करना चाहें:\n{{link}}",
+        "new_option-titled-body": "दूसरों ने मतदान “{{title}}” में विकल्प जोड़े हैं (नए विकल्प: {{count}})। शायद आप उन्हें रेट करना चाहें:\n{{link}}",
+        "delegation_answered-subject": "vodle: आपके प्रतिनिधिमंडल अनुरोध का उत्तर मिला",
+        "delegation_answered-titled-subject": "vodle: “{{title}}” में आपके प्रतिनिधिमंडल अनुरोध का उत्तर मिला",
+        "delegation_answered-body": "जिस व्यक्ति से आपने एक मतदान में अपना प्रतिनिधि बनने का अनुरोध किया था, उसने उत्तर दे दिया है। उसने स्वीकार किया या नहीं, यह आप मतदान में देख सकते हैं:\n{{link}}",
+        "delegation_answered-titled-body": "जिस व्यक्ति से आपने मतदान “{{title}}” में अपना प्रतिनिधि बनने का अनुरोध किया था, उसने उत्तर दे दिया है। उसने स्वीकार किया या नहीं, यह आप मतदान में देख सकते हैं:\n{{link}}"
+    },
     "notify_of": {
         "_COMMENT_SECTION_": "[COMMENT] strings used as labels on the Settings page, Notifications section:",
         "delegation_accepted": "प्रतिनिधिमंडल का अनुरोध स्वीकार किया गया",
         "delegation_declined": "प्रतिनिधिमंडल के अनुरोध को अस्वीकार कर दिया गया था",
         "new_option": "पोल में एक विकल्प जोड़ा गया",
         "poll_closing_soon": "एक मतदान जल्द ही समाप्त हो रहा है",
-        "poll_closed": "मतदान समाप्त"
+        "poll_closed": "मतदान समाप्त",
+        "delegation_answered": "मेरा प्रतिनिधिमंडल अनुरोध स्वीकार या अस्वीकार किया गया"
     },
     "poll": {
         "_COMMENT_SECTION_": "[COMMENT] strings used on the Poll page:",
@@ -770,6 +790,22 @@
         "behaviour": "बर्ताव",
         "default-wap": "डिफ़ॉल्ट वैप",
         "notifications": "सूचनाएँ",
+        "email-notifications": "ई-मेल द्वारा",
+        "email-notifications-intro": "यह vodle सर्वर आपको ये सूचनाएँ ई-मेल द्वारा भी भेज सकता है, उन मतदानों के लिए जिनमें आप भाग लेते हैं। कृपया पहले अपने पते की पुष्टि करें।",
+        "email-address": "ई-मेल पता",
+        "email-send-code": "कोड भेजें",
+        "email-code": "ई-मेल से मिला कोड",
+        "email-confirm": "पुष्टि करें",
+        "email-code-sent": "{{email}} पर एक कोड भेजा गया है। कृपया इसे 15 मिनट के भीतर यहाँ दर्ज करें।",
+        "email-now-on": "आपके पते की पुष्टि हो गई है। आपको नीचे चुने गए ई-मेल मिलेंगे।",
+        "email-now-off": "अब कोई ई-मेल नहीं भेजा जाएगा। आपका पता सभी मतदानों से हटा दिया गया है।",
+        "email-confirmed": "ई-मेल {{email}} पर भेजे जाते हैं।",
+        "email-stop": "ई-मेल बंद करें",
+        "email-titles": "ई-मेल में मतदान का नाम लिखें",
+        "email-titles-hint": "मतदान एंड-टू-एंड एन्क्रिप्टेड हैं, ई-मेल नहीं: ई-मेल में मतदान का शीर्षक यह vodle सर्वर और ई-मेल प्रदाता पढ़ सकते हैं। इसके बिना, ई-मेल में केवल मतदान का लिंक होता है।",
+        "email-too-many": "बहुत अधिक प्रयास। कृपया एक घंटे बाद फिर से प्रयास करें।",
+        "email-wrong-code": "यह कोड गलत है या इसकी अवधि समाप्त हो गई है।",
+        "email-failed": "यह काम नहीं किया। कृपया बाद में फिर से प्रयास करें।",
         "guest-note": "आप एक अतिथि खाते का उपयोग कर रहे हैं जिसे वोडल ने इसी डिवाइस पर बनाया है; उसका ईमेल पता और पासवर्ड नीचे दिखाए गए हैं, ताकि आप उसे किसी अन्य डिवाइस पर भी उपयोग कर सकें। इसे अपना खाता बनाने के लिए यहाँ अपना ईमेल पता और एक पासवर्ड दर्ज करें: तब वोडल आपके मतदान और वैप वहाँ भेज देगा।"
     },
     "validation": {

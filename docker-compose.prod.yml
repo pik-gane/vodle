@@ -97,6 +97,14 @@ services:
       - ADMIN_PURGE=true
       # GET /healthz for the healthcheck below and for monitoring (#327):
       - HEALTH_PORT=8012
+      # email notifications, off while SMTP_HOST is empty (deploy/README.md):
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - EMAIL_SECRET=${EMAIL_SECRET:-}
     depends_on:
       synapse:
         condition: service_healthy
