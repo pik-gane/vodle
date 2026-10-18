@@ -284,9 +284,10 @@ What it needs, and what `deploy.sh up` checks or prints:
   provider's DNS: the records below cannot be added for it, and GoDaddy, for
   one, publishes a sender rule for all such names that excludes the servers
   themselves. `deploy.sh up` recognises such a name by the server's address
-  in it, or by DNS answering every name below it with the same record. The
-  server may keep that name for itself (it greets other mail servers with
-  it); only the sender domain must be your own.
+  in it, and points out DNS that answers every name below a domain with the
+  same record, as such zones do. The server may keep that name for itself
+  (it greets other mail servers with it); only the sender domain must be
+  your own.
 - **Reverse DNS**: the PTR record of the host's public address must be the
   host's name, and that name must resolve back to the address. It is set at
   the hosting provider, not in the zone.

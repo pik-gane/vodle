@@ -289,46 +289,50 @@ mail_summary() {
 # queue id) counts once, in its latest state; recipients appear by their
 # domain only.
 mail_deliveries() {
-  local qid day time domain status reason key sent=0 waiting=0 refused=0 port_25=0 failures=()
-  local -A state=() where=() tries=()
-  local order=()
+  local qid day time domain status reason key n=0 sent=0 waiting=0 refused=0 port_25=0 failures=()
+  local -A state=() where=() tries=() last=() timed_out=()
   while IFS='|' read -r qid day time domain status reason; do
-    [ -n "${state[$qid]+x}" ] || order+=("$qid")
+    n=$((n + 1))
+    last[$qid]=$n
     [ "$domain" != "?" ] || domain="${where[$qid]:-?}"
     where[$qid]="$domain"
     tries[$qid]=$(( ${tries[$qid]:-0} + 1 ))
     state[$qid]="$status|$day $time $domain, $status: $reason"
-    case "$reason" in *":25: Connection timed out"*|*"Network is unreachable"*) port_25=1 ;; esac
+    case "$reason" in *":25: Connection timed out"*|*"Network is unreachable"*) timed_out[$qid]=1 ;; *) timed_out[$qid]=0 ;; esac
   done < <(awk '
     { sub(/^[A-Za-z0-9_.-]+ +[|] /, "") }
     match($0, / status=[a-z]+/) {
       status = substr($0, RSTART + 8, RLENGTH - 8)
       reason = substr($0, RSTART + RLENGTH)
       sub(/^,? ?[(]?/, "", reason); sub(/[)]$/, "", reason)
+      # the receiving server may quote the address: its domain only
+      gsub(/[A-Za-z0-9._%+=-]+@/, "...@", reason)
       qid = "?"
       if (match($0, /[0-9A-Za-z]+: (to|from)=</)) { qid = substr($0, RSTART, RLENGTH); sub(/:.*/, "", qid) }
       domain = "?"
       if (match($0, /to=<[^>]*>/)) { n = split(substr($0, RSTART + 4, RLENGTH - 5), part, "@"); domain = part[n] }
       print qid "|" substr($1, 1, 10) "|" substr($1, 12, 5) "|" domain "|" status "|" reason
     }')
-  for key in "${order[@]+"${order[@]}"}"; do
+  # each e-mail in the order of its latest attempt
+  while read -r _ key; do
     case "${state[$key]%%|*}" in
       sent) sent=$((sent + 1)); continue ;;
       deferred) waiting=$((waiting + 1)) ;;
       *) refused=$((refused + 1)) ;;
     esac
+    [ "${timed_out[$key]}" = 1 ] && port_25=1
     if [ "${tries[$key]}" = 1 ]; then failures+=("${state[$key]#*|} (tried once)")
     else failures+=("${state[$key]#*|} (tried ${tries[$key]} times)"); fi
-  done
+  done < <(for key in "${!last[@]}"; do echo "${last[$key]} $key"; done | sort -n)
   echo "e-mails of the last two days: $sent delivered, $waiting still waiting (tried again later), $refused refused or given up"
   local i
   for ((i = ${#failures[@]} > 5 ? ${#failures[@]} - 5 : 0; i < ${#failures[@]}; i++)); do
     echo "  ${failures[$i]}"
   done
   if [ "$port_25" = 1 ]; then
-    echo "  -> the recipients' mail servers cannot be reached on port 25: the hosting provider blocks it (see deploy/README.md)"
+    echo "  -> not delivered because the recipients' mail servers could not be reached on port 25; if the port 25 check above fails too, the hosting provider blocks it (see deploy/README.md)"
   elif [ "$refused" -gt 0 ]; then
-    echo "  -> refused e-mails: the recipient's mail server gave its reason above; deploy/deploy.sh mail-dns checks the DNS records"
+    echo "  -> refused e-mails: the receiving mail server's reason follows their status (deploy/deploy.sh logs mail shows every attempt); deploy/deploy.sh mail-dns checks the DNS records"
   fi
 }
 
@@ -363,29 +367,31 @@ mail_dns() {
     MAIL_DNS_UNCHECKED=1
     return
   fi
-  local found ip ptr
+  local found ip ptr wildcard=""
+  ip=$(dig +short A "$MAIL_HOSTNAME" | tail -n 1)
   # a zone that answers every name below it (a wildcard), as hosting
-  # providers' zones do for the names they give servers, is not yours
-  found=$(dig +short TXT "vodle-check-$RANDOM$RANDOM._domainkey.$MAIL_DOMAIN" | head -n 1)
-  if [ -n "$found" ]; then
-    mail_problem "the DNS of $MAIL_DOMAIN answers every name below it with the same record ($found), as the zones of hosting providers do: the records above cannot be added there. Set MAIL_DOMAIN in .env to a domain whose DNS you manage"
-    return
+  # providers' zones do for the names they give servers; records of one's
+  # own still take precedence over it, so this alone decides nothing
+  wildcard=$(dig +short TXT "vodle-check-$RANDOM$RANDOM._domainkey.$MAIL_DOMAIN" | head -n 1)
+  if [ -n "$wildcard" ]; then
+    echo "note: the DNS of $MAIL_DOMAIN answers every name below it with $wildcard, as the zones of hosting providers do for the names they give servers; if it is not yours, the records above cannot be added there"
   fi
   found=$(dig +short TXT "$MAIL_DOMAIN" | tr -d '"' | grep '^v=spf1' || true)
   case " $found " in
     "  ") mail_problem "SPF record of $MAIL_DOMAIN missing (the first record above)" ;;
-    *" a:$MAIL_HOSTNAME "*|*" a "*|*"+a "*) echo "SPF: ok ($found)" ;;
-    *) mail_problem "the SPF record of $MAIL_DOMAIN ($found) does not allow this host to send: add a:$MAIL_HOSTNAME to it" ;;
+    *" a:$MAIL_HOSTNAME "*|*" a "*|*" +a "*|*" ip4:${ip:-none} "*|*" +ip4:${ip:-none} "*) echo "SPF: ok ($found)" ;;
+    *" a:"*|*" +a:"*|*" mx"*|*" +mx"*|*" ip4:"*|*" +ip4:"*|*" ip6:"*|*" +ip6:"*|*" include:"*|*" +include:"*|*" exists:"*|*" redirect="*)
+      echo "SPF: present ($found); whether it allows this host (${ip:-no address}) this check cannot tell: one of its entries must" ;;
+    *) mail_problem "the SPF record of $MAIL_DOMAIN ($found) allows no server to send: add a:$MAIL_HOSTNAME to it" ;;
   esac
   found=$(dig +short TXT "vodle._domainkey.$MAIL_DOMAIN" | tr -d '" \n')
   if [ -z "$found" ]; then mail_problem "DKIM record vodle._domainkey.$MAIL_DOMAIN missing (the second record above)"
   elif [ "${found##*p=}" = "${dkim##*p=}" ]; then echo "DKIM: ok"
-  elif [ "${found#*p=}" = "$found" ]; then mail_problem "vodle._domainkey.$MAIL_DOMAIN answers with something that is not a DKIM key ($found)"
+  elif [ "${found#*p=}" = "$found" ]; then mail_problem "vodle._domainkey.$MAIL_DOMAIN answers with something that is not a DKIM key ($found)${wildcard:+, as every name below $MAIL_DOMAIN does: if its DNS is not yours, set MAIL_DOMAIN in .env to a domain whose DNS you manage}"
   else mail_problem "DKIM record vodle._domainkey.$MAIL_DOMAIN has a different key: it must be the one above"
   fi
   found=$(dig +short TXT "_dmarc.$MAIL_DOMAIN" | tr -d '"' | grep '^v=DMARC1' || true)
   [ -n "$found" ] && echo "DMARC: ok ($found)" || echo "DMARC: missing (the third record above; recommended, not required)"
-  ip=$(dig +short A "$MAIL_HOSTNAME" | tail -n 1)
   if [ -z "$ip" ]; then
     echo "PTR: $MAIL_HOSTNAME has no address"
   else
