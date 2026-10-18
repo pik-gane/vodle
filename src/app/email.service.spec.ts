@@ -146,6 +146,17 @@ describe('email notifications', () => {
     it('is not offered where the bot sends none', async () => {
       answers['ping'] = {ok: true, features: []};
       expect(await service.check_available()).toBeFalse();
+      expect(service.unreachable).toBeFalse();
+    });
+
+    it('tells a refused or missing answer from a bot without e-mail, and asks again later', async () => {
+      answers['ping'] = {ok: false, error: 'not answered within 60 s'};
+      expect(await service.check_available()).toBeFalse();
+      expect(service.unreachable).toBeTrue();
+      answers['ping'] = {ok: true, features: ['email']};
+      expect(await service.check_available()).toBeTrue();
+      expect(service.unreachable).toBeFalse();
+      expect(asked.filter(a => a.kind == 'ping').length).toBe(2);
     });
 
     it('keeps the token of a confirmed address, and nothing for a wrong code', async () => {
