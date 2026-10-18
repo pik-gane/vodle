@@ -8,7 +8,8 @@
 #   deploy/deploy.sh logs [service]
 #   deploy/deploy.sh down      stop everything; the data stays in postgres-data/ and matrix-data/
 #   deploy/deploy.sh mail-dns  the DNS records the own mail server needs, and
-#                              whether DNS has them (MAIL_SERVER=own in .env)
+#                              whether DNS has them (MAIL_SERVER=own in .env);
+#                              status also shows what became of recent e-mails
 #
 # Two sources of settings:
 #   src/environments/environment.prod.ts — the server name (matrix.server_name,
@@ -31,6 +32,12 @@ SYNAPSE_IMAGE="${SYNAPSE_IMAGE:-matrixdotorg/synapse:latest}"
 PLACEHOLDER_SERVER_NAME="vodle.example.com"
 DRY_RUN="${DRY_RUN:-0}"
 SYNAPSE_CONFIG_CHANGED=0
+# what stands in the way of the own mail server's e-mails, repeated at the
+# end of `up` and `mail-dns`, where it does not scroll away
+MAIL_PROBLEMS=()
+MAIL_CHECKED=0
+MAIL_DNS_UNCHECKED=0
+MAIL_DOMAIN_NOT_OURS=0
 
 log() { printf '\n== %s\n' "$*"; }
 die() { printf 'deploy: %s\n' "$*" >&2; exit 1; }
@@ -212,12 +219,120 @@ check_mail() {
   [ -n "${SMTP_HOST:-}" ] && echo "note: MAIL_SERVER=own, so SMTP_HOST ($SMTP_HOST) is not used"
   echo "e-mail notifications: through the own mail server, from $MAIL_FROM, greeting as $MAIL_HOSTNAME"
   [ "$DRY_RUN" = 1 ] && return
-  # most hosting providers block outgoing port 25 until asked; without it
-  # every e-mail waits in the queue and is returned to nobody after five days
-  if timeout 10 bash -c 'exec 3<>/dev/tcp/gmail-smtp-in.l.google.com/25' 2>/dev/null; then
+  mail_name_check
+  check_port_25
+}
+
+mail_problem() {
+  MAIL_PROBLEMS+=("$1")
+  echo "PROBLEM: $1"
+}
+
+# Most hosting providers block outgoing port 25 until asked; without it every
+# e-mail waits in the queue ("Connection timed out" in the mail log) and is
+# dropped after five days.
+port_25_open() {
+  timeout 10 bash -c 'exec 3<>/dev/tcp/gmail-smtp-in.l.google.com/25' 2>/dev/null
+}
+
+check_port_25() {
+  if port_25_open; then
     echo "outgoing connections to port 25: possible"
   else
-    echo "PROBLEM: this host cannot connect to port 25 of other mail servers (tried gmail-smtp-in.l.google.com). Many hosting providers block it by default: ask yours to unblock it, or use the provider's SMTP relay (SMTP_HOST etc.) without MAIL_SERVER=own"
+    mail_problem "this host cannot connect to port 25 of other mail servers (tried gmail-smtp-in.l.google.com), so no e-mail leaves it. Many hosting providers block it by default: ask yours to unblock it, or use an existing mail server (SMTP_HOST etc.) without MAIL_SERVER=own"
+  fi
+}
+
+# A name the hosting provider gave the server carries the server's address
+# (148.108.205.92.host.secureserver.net, static.4.3.2.1.clients.example.net,
+# ec2-1-2-3-4.compute.amazonaws.com). Its DNS belongs to the provider: the SPF
+# and DKIM records the e-mails need cannot be added, and the recipients' mail
+# servers refuse the e-mails or file them as spam.
+mail_name_check() {
+  local ip
+  MAIL_CHECKED=1
+  ip=$(getent ahostsv4 "$MAIL_HOSTNAME" 2>/dev/null | awk 'NR == 1 {print $1}') || true
+  if provider_name "$MAIL_DOMAIN" "$ip"; then
+    MAIL_DOMAIN_NOT_OURS=1
+    mail_problem "MAIL_DOMAIN $MAIL_DOMAIN is a name the hosting provider gave this server (it contains the server's address $ip). Its DNS belongs to the provider, so the SPF and DKIM records the e-mails need cannot be added, and the recipients' mail servers refuse them or file them as spam. Set MAIL_DOMAIN in .env to a domain whose DNS you manage, then run deploy/deploy.sh mail-dns for the records to add"
+  fi
+}
+
+provider_name() {  # provider_name NAME IPV4 -> whether NAME contains the address, in either order, with dots or dashes
+  local name=".$1." a b c d f
+  [[ "$2" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || return 1
+  a=${BASH_REMATCH[1]}; b=${BASH_REMATCH[2]}; c=${BASH_REMATCH[3]}; d=${BASH_REMATCH[4]}
+  for f in "$a.$b.$c.$d" "$a-$b-$c-$d" "$d.$c.$b.$a" "$d-$c-$b-$a"; do
+    case "$name" in *[.-]"$f"[.-]*) return 0 ;; esac
+  done
+  return 1
+}
+
+# What the e-mail checks found, once more at the end, where it is read.
+mail_summary() {
+  [ "${MAIL_SERVER:-}" = own ] && [ "$MAIL_CHECKED" = 1 ] || return 0
+  if [ ${#MAIL_PROBLEMS[@]} -eq 0 ]; then
+    log "e-mail: no problem found"
+    [ "$MAIL_DNS_UNCHECKED" = 1 ] && echo "but the DNS records were not checked: install dig (dnsutils/bind-utils) and run deploy/deploy.sh mail-dns"
+    echo "deploy/deploy.sh status shows what became of the latest e-mails"
+    return
+  fi
+  log "e-mail: NOT READY, the notifications will not arrive"
+  local problem
+  for problem in "${MAIL_PROBLEMS[@]}"; do echo "- $problem"; done
+  echo "An existing mail server can send them instead: SMTP_HOST etc. in .env without MAIL_SERVER=own (deploy/README.md)"
+}
+
+# What became of the e-mails of the last two days, from the mail server's log
+# on stdin: how many were delivered, are still waiting or were refused, and
+# for the latest that were not delivered, the reason. Each e-mail (Postfix
+# queue id) counts once, in its latest state; recipients appear by their
+# domain only.
+mail_deliveries() {
+  local qid day time domain status reason key n=0 sent=0 waiting=0 refused=0 port_25=0 failures=()
+  local -A state=() where=() tries=() last=() timed_out=()
+  while IFS='|' read -r qid day time domain status reason; do
+    n=$((n + 1))
+    last[$qid]=$n
+    [ "$domain" != "?" ] || domain="${where[$qid]:-?}"
+    where[$qid]="$domain"
+    tries[$qid]=$(( ${tries[$qid]:-0} + 1 ))
+    state[$qid]="$status|$day $time $domain, $status: $reason"
+    case "$reason" in *":25: Connection timed out"*|*"Network is unreachable"*) timed_out[$qid]=1 ;; *) timed_out[$qid]=0 ;; esac
+  done < <(awk '
+    { sub(/^[A-Za-z0-9_.-]+ +[|] /, "") }
+    match($0, / status=[a-z]+/) {
+      status = substr($0, RSTART + 8, RLENGTH - 8)
+      reason = substr($0, RSTART + RLENGTH)
+      sub(/^,? ?[(]?/, "", reason); sub(/[)]$/, "", reason)
+      # the receiving server may quote the address: its domain only
+      gsub(/[A-Za-z0-9._%+=-]+@/, "...@", reason)
+      qid = "?"
+      if (match($0, /[0-9A-Za-z]+: (to|from)=</)) { qid = substr($0, RSTART, RLENGTH); sub(/:.*/, "", qid) }
+      domain = "?"
+      if (match($0, /to=<[^>]*>/)) { n = split(substr($0, RSTART + 4, RLENGTH - 5), part, "@"); domain = part[n] }
+      print qid "|" substr($1, 1, 10) "|" substr($1, 12, 5) "|" domain "|" status "|" reason
+    }')
+  # each e-mail in the order of its latest attempt
+  while read -r _ key; do
+    case "${state[$key]%%|*}" in
+      sent) sent=$((sent + 1)); continue ;;
+      deferred) waiting=$((waiting + 1)) ;;
+      *) refused=$((refused + 1)) ;;
+    esac
+    [ "${timed_out[$key]}" = 1 ] && port_25=1
+    if [ "${tries[$key]}" = 1 ]; then failures+=("${state[$key]#*|} (tried once)")
+    else failures+=("${state[$key]#*|} (tried ${tries[$key]} times)"); fi
+  done < <(for key in "${!last[@]}"; do echo "${last[$key]} $key"; done | sort -n)
+  echo "e-mails of the last two days: $sent delivered, $waiting still waiting (tried again later), $refused refused or given up"
+  local i
+  for ((i = ${#failures[@]} > 5 ? ${#failures[@]} - 5 : 0; i < ${#failures[@]}; i++)); do
+    echo "  ${failures[$i]}"
+  done
+  if [ "$port_25" = 1 ]; then
+    echo "  -> not delivered because the recipients' mail servers could not be reached on port 25; if the port 25 check above fails too, the hosting provider blocks it (see deploy/README.md)"
+  elif [ "$refused" -gt 0 ]; then
+    echo "  -> refused e-mails: the receiving mail server's reason follows their status (deploy/deploy.sh logs mail shows every attempt); deploy/deploy.sh mail-dns checks the DNS records"
   fi
 }
 
@@ -227,7 +342,12 @@ mail_dns() {
   local txt="$REPO_DIR/mail-data/dkim/$MAIL_DOMAIN.txt" i
   for i in $(seq 1 30); do [ -f "$txt" ] && break; sleep 2; done
   if [ ! -f "$txt" ]; then
-    echo "PROBLEM: the mail server has not written its DKIM key to mail-data/dkim/ yet; docker compose logs mail"
+    mail_problem "the mail server has not written its DKIM key to mail-data/dkim/ yet: deploy/deploy.sh logs mail"
+    return
+  fi
+  if [ "$MAIL_DOMAIN_NOT_OURS" = 1 ]; then
+    log "DNS records for the e-mail notifications"
+    echo "none can be added for $MAIL_DOMAIN, whose DNS belongs to the hosting provider (see above)"
     return
   fi
   local dkim spf dmarc
@@ -244,28 +364,40 @@ mail_dns() {
   echo "Where the DNS provider wants long values in parts, split the DKIM value into strings of at most 255 characters."
   if ! command -v dig >/dev/null 2>&1; then
     echo "note: dig is not installed (dnsutils/bind-utils), so DNS was not checked"
+    MAIL_DNS_UNCHECKED=1
     return
   fi
-  local found ip ptr
+  local found ip ptr wildcard=""
+  ip=$(dig +short A "$MAIL_HOSTNAME" | tail -n 1)
+  # a zone that answers every name below it (a wildcard), as hosting
+  # providers' zones do for the names they give servers; records of one's
+  # own still take precedence over it, so this alone decides nothing
+  wildcard=$(dig +short TXT "vodle-check-$RANDOM$RANDOM._domainkey.$MAIL_DOMAIN" | head -n 1)
+  if [ -n "$wildcard" ]; then
+    echo "note: the DNS of $MAIL_DOMAIN answers every name below it with $wildcard, as the zones of hosting providers do for the names they give servers; if it is not yours, the records above cannot be added there"
+  fi
   found=$(dig +short TXT "$MAIL_DOMAIN" | tr -d '"' | grep '^v=spf1' || true)
   case " $found " in
-    "") echo "SPF: missing" ;;
-    *" a:$MAIL_HOSTNAME "*|*" a "*|*"+a "*) echo "SPF: ok ($found)" ;;
-    *) echo "SPF: present but without a:$MAIL_HOSTNAME ($found)" ;;
+    "  ") mail_problem "SPF record of $MAIL_DOMAIN missing (the first record above)" ;;
+    *" a:$MAIL_HOSTNAME "*|*" a "*|*" +a "*|*" ip4:${ip:-none} "*|*" +ip4:${ip:-none} "*) echo "SPF: ok ($found)" ;;
+    *" a:"*|*" +a:"*|*" mx"*|*" +mx"*|*" ip4:"*|*" +ip4:"*|*" ip6:"*|*" +ip6:"*|*" include:"*|*" +include:"*|*" exists:"*|*" redirect="*)
+      echo "SPF: present ($found); whether it allows this host (${ip:-no address}) this check cannot tell: one of its entries must" ;;
+    *) mail_problem "the SPF record of $MAIL_DOMAIN ($found) allows no server to send: add a:$MAIL_HOSTNAME to it" ;;
   esac
   found=$(dig +short TXT "vodle._domainkey.$MAIL_DOMAIN" | tr -d '" \n')
-  if [ -z "$found" ]; then echo "DKIM: missing"
+  if [ -z "$found" ]; then mail_problem "DKIM record vodle._domainkey.$MAIL_DOMAIN missing (the second record above)"
   elif [ "${found##*p=}" = "${dkim##*p=}" ]; then echo "DKIM: ok"
-  else echo "DKIM: present but a different key (the record must be the one above)"
+  elif [ "${found#*p=}" = "$found" ]; then mail_problem "vodle._domainkey.$MAIL_DOMAIN answers with something that is not a DKIM key ($found)${wildcard:+, as every name below $MAIL_DOMAIN does: if its DNS is not yours, set MAIL_DOMAIN in .env to a domain whose DNS you manage}"
+  else mail_problem "DKIM record vodle._domainkey.$MAIL_DOMAIN has a different key: it must be the one above"
   fi
-  found=$(dig +short TXT "_dmarc.$MAIL_DOMAIN" | tr -d '"')
-  [ -n "$found" ] && echo "DMARC: ok ($found)" || echo "DMARC: missing"
-  ip=$(dig +short A "$MAIL_HOSTNAME" | tail -n 1)
+  found=$(dig +short TXT "_dmarc.$MAIL_DOMAIN" | tr -d '"' | grep '^v=DMARC1' || true)
+  [ -n "$found" ] && echo "DMARC: ok ($found)" || echo "DMARC: missing (the third record above; recommended, not required)"
   if [ -z "$ip" ]; then
     echo "PTR: $MAIL_HOSTNAME has no address"
   else
     ptr=$(dig +short -x "$ip" | sed 's/\.$//')
-    [ "$ptr" = "$MAIL_HOSTNAME" ] && echo "PTR: ok ($ip -> $ptr)" || echo "PTR: $ip -> '${ptr:-nothing}', should be $MAIL_HOSTNAME"
+    [ "$ptr" = "$MAIL_HOSTNAME" ] && echo "PTR: ok ($ip -> $ptr)" \
+      || mail_problem "the reverse DNS of $ip is '${ptr:-nothing}' and should be $MAIL_HOSTNAME: set it at the hosting provider"
   fi
 }
 
@@ -448,6 +580,7 @@ cmd_up() {
   compose up --build -d
   smoke_checks
   if [ "${MAIL_SERVER:-}" = own ] && [ "$DRY_RUN" != 1 ]; then mail_dns; fi
+  mail_summary
   log "done: $(web_url)"
   echo "next: open the app, register a test account, run a rehearsal poll (documentation/deployment/MATRIX.md §5)"
 }
@@ -470,6 +603,9 @@ cmd_status() {
   fi
   if [ "${MAIL_SERVER:-}" = own ]; then
     echo "mail queue: $(docker compose --env-file "$ENV_FILE" $(compose_files) exec -T mail postqueue -p 2>/dev/null | tail -n 1 || echo 'mail server not answering')"
+    port_25_open && echo "outgoing connections to port 25: possible" \
+      || echo "PROBLEM: this host cannot connect to port 25 of other mail servers, so no e-mail leaves it (deploy/README.md)"
+    { docker compose --env-file "$ENV_FILE" $(compose_files) logs --no-color --no-log-prefix --since 48h mail 2>/dev/null || true; } | mail_deliveries
   fi
   echo "app: $(web_url)"
 }
@@ -481,7 +617,10 @@ cmd_mail_dns() {
   read_public_origin > /dev/null
   [ "${MAIL_SERVER:-}" = own ] || die "MAIL_SERVER is not 'own' in .env: there is no own mail server here"
   mail_settings
+  mail_name_check
+  check_port_25
   mail_dns
+  mail_summary
 }
 
 cmd_update() {

@@ -12,8 +12,8 @@ in them is specific to it. The decisions behind the settings are in
 | --- | --- |
 | `deploy/generate-secrets.sh` | writes `.env`: the secrets (generated) and the host settings (to fill in) |
 | `deploy/deploy.sh up` | brings everything up, first time and every time after (idempotent) |
-| `deploy/deploy.sh status`, `logs [service]`, `down` | what runs, what it says, stop |
-| `deploy/deploy.sh mail-dns` | the DNS records the own mail server needs, and whether DNS has them (`MAIL_SERVER=own`) |
+| `deploy/deploy.sh status`, `logs [service]`, `down` | what runs, what it says (with `MAIL_SERVER=own` also what became of the latest e-mails), stop |
+| `deploy/deploy.sh mail-dns` | the DNS records the own mail server needs, whether DNS has them, and whatever else stands in the way of its e-mails (`MAIL_SERVER=own`) |
 | `deploy/deploy.sh update` | `git pull --ff-only`, then `up` (rebuilds the app and the bot) |
 | `deploy/backup.sh` (= `deploy.sh backup`) | database dump and homeserver keys into `deploy/backups/` |
 | `deploy/disk-report.sh` | where the disk has gone: filesystem, directories, docker, the Synapse database per table and per poll (read-only) |
@@ -274,8 +274,20 @@ the deployment at, and `MAIL_FROM` may name another sender in that domain.
 What it needs, and what `deploy.sh up` checks or prints:
 
 - **Outgoing port 25.** Many hosting providers block it until asked
-  (AWS, Google Cloud, Azure, and Hetzner for new accounts, among others).
-  `deploy.sh up` tries a connection and says so if it fails.
+  (AWS, Google Cloud, Azure, GoDaddy, and Hetzner for new accounts, among
+  others). `deploy.sh up` tries a connection and says so if it fails.
+  Without it every e-mail waits in the queue ("Connection timed out" in the
+  mail log) and is dropped after five days.
+- **A domain whose DNS you manage** as `MAIL_DOMAIN`. The name a hosting
+  provider gives a server (`148.108.205.92.host.secureserver.net`,
+  `static.….clients.your-server.de`, `ec2-….amazonaws.com`) lives in the
+  provider's DNS: the records below cannot be added for it, and GoDaddy, for
+  one, publishes a sender rule for all such names that excludes the servers
+  themselves. `deploy.sh up` recognises such a name by the server's address
+  in it, and points out DNS that answers every name below a domain with the
+  same record, as such zones do. The server may keep that name for itself
+  (it greets other mail servers with it); only the sender domain must be
+  your own.
 - **Reverse DNS**: the PTR record of the host's public address must be the
   host's name, and that name must resolve back to the address. It is set at
   the hosting provider, not in the zone.
@@ -285,11 +297,19 @@ What it needs, and what `deploy.sh up` checks or prints:
   `deploy/deploy.sh mail-dns` prints them again and, where `dig` is
   installed, compares them with what DNS answers.
 
+`deploy.sh up` and `deploy.sh mail-dns` end with a summary of whatever of
+this is missing, so that it does not scroll away among the other output.
+
 Even with all of this, a new address has no reputation, and some providers
 (Microsoft's in particular) file its mail as spam at first. The first
 e-mails are worth sending to a few test addresses at the large providers.
-The queue survives restarts (`mail-data/spool/`); `deploy.sh status` shows
-its length, and `deploy/deploy.sh logs mail` what happened to each e-mail.
+The queue survives restarts (`mail-data/spool/`). `deploy.sh status` shows
+its length, whether port 25 is open, and what became of the e-mails of the
+last two days: how many were delivered, are still waiting or were refused,
+and, for the latest that were not delivered, the recipient's domain, the
+number of attempts and the reason, such as the receiving server's own
+words. `deploy/deploy.sh logs mail` shows
+everything.
 
 How the notifications work:
 
